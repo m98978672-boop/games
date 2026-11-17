@@ -3,296 +3,427 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Games — браузерные игры без установки</title>
-<meta name="description" content="Коллекция 17 браузерных игр и интерактивных проектов: карта страны РАТГРАД, пиксельная зомби-выживалка DEAD DISTRICT, 3D-шутер СЕКТОР «ПЕПЕЛ», симуляторы жизни, ГЭС, дорог и Европы. Без установки и CDN.">
-<meta name="theme-color" content="#070908">
+<title>Games — магазин и библиотека браузерных игр</title>
+<meta name="description" content="Стильная витрина браузерных 2D и 3D игр без установки: карта страны РАТГРАД, зомби-выживалка DEAD DISTRICT, 3D-шутер СЕКТОР «ПЕПЕЛ», симуляторы, а также возможность каждому добавить свою игру.">
+<meta name="theme-color" content="#171a21">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="Games — браузерные игры без установки">
-<meta property="og:description" content="17 браузерных 2D и 3D игр, симуляторов, стратегий и инструментов. Работают сразу по ссылке и офлайн.">
+<meta property="og:title" content="Games — магазин и библиотека браузерных игр">
+<meta property="og:description" content="17 браузерных 2D и 3D игр, симуляторов и стратегий в стиле Steam. Запускаются мгновенно и позволяют каждому добавить свою игру.">
 <meta property="og:image" content="assets/country-atlas.jpg">
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c100f'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23e8b45a' stroke-width='2.2'/%3E%3Cpath d='M16 7v18M7 16h18' stroke='%23e8b45a' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171a21'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%2366c0f4' stroke-width='2.4'/%3E%3Cpolygon points='13,11 22,16 13,21' fill='%23a4d007'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="site.css">
 <link rel="manifest" href="site.webmanifest">
 <link rel="canonical" href="https://m98978672-boop.github.io/games/">
 <script src="games-data.js" defer></script>
+<script src="user-games.js" defer></script>
 <script src="portal.js" defer></script>
 <script src="../site/community-games.js" defer></script>
 </head>
 <body data-root="../">
 
-<nav class="site-nav" aria-label="Основная навигация">
-  <div class="site-nav-inner">
+<!-- Глобальная шапка в стиле Steam -->
+<header class="steam-topbar">
+  <div class="steam-topbar-inner">
     <a class="nav-brand" href="#top">
       <span class="nav-logo" aria-hidden="true">G</span>
-      <span class="nav-brand-name">Games</span>
-      <span class="nav-count"><span data-games-total>17</span> игр</span>
+      <span class="nav-brand-wrap">
+        <span class="nav-brand-name">GAMES</span>
+        <span class="nav-brand-sub">WEB STORE &amp; LIBRARY</span>
+      </span>
+      <span class="nav-count"><span data-games-total>17</span></span>
     </a>
 
-    <div class="nav-links">
+    <nav class="nav-links" aria-label="Основная навигация">
+      <a class="is-active" href="#top">Магазин</a>
       <a href="#new-releases">Новинки</a>
       <a href="#games">Каталог</a>
+      <a href="#user-games-section">Мои игры</a>
       <a href="#community-games">Сообщество</a>
-      <a href="#about">О платформе</a>
       <a href="../developers/index.html">Разработчикам ↗</a>
-    </div>
+    </nav>
 
     <div class="nav-actions">
-      <button class="nav-search-btn" type="button" data-focus-search aria-label="Перейти к поиску по каталогу">
-        <span aria-hidden="true">⌕</span>
-        <span>Поиск</span>
-        <kbd>/</kbd>
+      <button class="btn-steam-add" type="button" data-open-add-game>
+        <span aria-hidden="true">+</span>
+        <span>Добавить игру</span>
       </button>
-      <button class="nav-random-btn" type="button" data-random-game aria-label="Открыть случайную игру">
+      <button class="nav-icon-btn" type="button" data-open-save-hub title="Менеджер сохранений и бэкап" aria-label="Менеджер сохранений">
+        <span aria-hidden="true">💾</span>
+        <span class="nav-icon-label">Сейвы</span>
+      </button>
+      <button class="nav-icon-btn" type="button" data-random-game title="Случайная игра (клавиша R)" aria-label="Открыть случайную игру">
         <span aria-hidden="true">🎲</span>
-        <span>Случайная</span>
+        <span class="nav-icon-label">Случайная</span>
       </button>
     </div>
-  </div>
-</nav>
-
-<header class="hero" id="top">
-  <canvas id="hero-canvas" aria-hidden="true"></canvas>
-  <div class="hero-inner">
-    <div class="hero-copy">
-      <p class="kicker"><span class="kicker-dot" aria-hidden="true"></span>браузерные игры · без установки · офлайн</p>
-      <h1>Games</h1>
-      <p class="lede">Коллекция самостоятельных 2D и 3D игр, которые открываются за секунду прямо в браузере:
-        карта целой страны, пиксельная зомби-выживалка, тактический шутер, симуляторы жизни, ГЭС, дорог и Европы —
-        без скачивания, рекламы и внешних CDN.</p>
-
-      <div class="hero-actions">
-        <a class="cta" href="#games">Открыть каталог</a>
-        <button class="cta cta-secondary" type="button" data-random-game>Случайная игра 🎲</button>
-        <a class="cta cta-community" href="../developers/index.html">Для разработчиков ↗</a>
-      </div>
-
-      <div class="hero-metrics" aria-label="Сводка платформы">
-        <div class="metric">
-          <strong data-games-total>17</strong>
-          <span>игр и проектов</span>
-        </div>
-        <div class="metric">
-          <strong data-games-new>6</strong>
-          <span>крупных новинок</span>
-        </div>
-        <div class="metric">
-          <strong>2D / 3D</strong>
-          <span>WebGL и Canvas</span>
-        </div>
-        <div class="metric">
-          <strong>0 МБ</strong>
-          <span>офлайн и file://</span>
-        </div>
-      </div>
-    </div>
-
-    <aside class="spotlight" id="hero-spotlight" aria-label="Главные новинки">
-      <div class="spotlight-bar">
-        <span class="spotlight-label">Главное сейчас</span>
-        <div class="spotlight-nav">
-          <button class="spot-arrow" type="button" data-spot-prev aria-label="Предыдущая игра">‹</button>
-          <button class="spot-arrow" type="button" data-spot-next aria-label="Следующая игра">›</button>
-        </div>
-      </div>
-
-      <div class="spotlight-art-wrap">
-        <div data-spot-art>
-          <picture>
-            <source type="image/webp" srcset="assets/country-atlas.webp">
-            <img src="assets/country-atlas.jpg" alt="РАТГРАД — карта страны 7000×7000 км" width="1280" height="720" fetchpriority="high">
-          </picture>
-        </div>
-        <div class="spotlight-overlay-tags">
-          <span class="gcard-badge is-new" data-spot-badge>Новинка · 7000×7000 км</span>
-          <span class="gcard-dim" data-spot-dim>2D · Карта</span>
-        </div>
-      </div>
-
-      <div class="spotlight-body">
-        <h2 data-spot-title>РАТГРАД</h2>
-        <p class="spotlight-sub" data-spot-sub>Карта целой страны 7000 × 7000 км</p>
-        <p class="spotlight-note" data-spot-note>Ночь и огни городов, поезда, суда, диспетчеры и рост городов</p>
-
-        <div class="spotlight-footer">
-          <div class="spotlight-btns">
-            <a class="btn btn-primary" href="../country-atlas/index.html" data-spot-play data-track-game="country-atlas">Играть</a>
-            <button class="btn" type="button" data-spot-info data-open-modal="country-atlas">Подробнее</button>
-          </div>
-          <div class="spot-dots" data-spot-dots role="group" aria-label="Выбор игры в витрине"></div>
-        </div>
-      </div>
-    </aside>
   </div>
 </header>
 
-<main>
-  <section class="recent-bar" id="recent-section" hidden aria-label="Недавно открытые игры">
-    <span class="recent-title">Недавно открывали</span>
-    <div class="recent-list" id="recent-list"></div>
-    <button class="recent-clear" id="recent-clear" type="button">Очистить</button>
-  </section>
-
-  <section class="section" id="new-releases" aria-labelledby="new-releases-title">
-    <div class="section-head">
-      <div>
-        <p class="section-kicker">СВЕЖИЕ РЕЛИЗЫ И КРУПНЫЕ ОБНОВЛЕНИЯ</p>
-        <h2 id="new-releases-title">Новинки <span class="section-count-badge" data-games-new>6</span></h2>
-        <p class="section-sub">Самые новые проекты и крупные апдейты — готовы к запуску в один клик.</p>
-      </div>
-      <a class="btn btn-ghost" href="#games">Весь каталог ↓</a>
-    </div>
-    <div class="releases-grid" id="new-releases-grid"></div>
-  </section>
-
-  <section class="section section-bordered" id="games" aria-labelledby="catalog-title">
-    <div class="section-head">
-      <div>
-        <p class="section-kicker">ВСЯ КОЛЛЕКЦИЯ · ПОИСК И ФИЛЬТРЫ</p>
-        <h2 id="catalog-title">Каталог игр <span class="section-count-badge" data-games-total>17</span></h2>
-        <p class="section-sub">Ищите по названию, жанру или технологии, сохраняйте любимые в избранное и открывайте превью прямо на странице.</p>
-      </div>
+<!-- Фирменная градиентная лента магазина (Store Ribbon) -->
+<div class="store-ribbon-wrap">
+  <nav class="store-ribbon" aria-label="Навигация по магазину">
+    <div class="store-ribbon-links">
+      <button class="ribbon-link" type="button" data-quick-cat="all">Все игры</button>
+      <button class="ribbon-link" type="button" data-quick-cat="new">Новинки</button>
+      <button class="ribbon-link" type="button" data-quick-cat="3d">3D</button>
+      <button class="ribbon-link" type="button" data-quick-cat="2d">2D</button>
+      <button class="ribbon-link" type="button" data-quick-cat="survival">Выживание</button>
+      <button class="ribbon-link" type="button" data-quick-cat="sim">Симуляторы</button>
+      <button class="ribbon-link" type="button" data-quick-cat="strategy">Стратегии</button>
+      <button class="ribbon-link is-highlight" type="button" data-quick-cat="user">От игроков <span class="ribbon-pill" data-user-games-count>0</span></button>
     </div>
 
-    <div class="catalog-toolbar" role="search" aria-label="Поиск и фильтрация каталога">
-      <div class="toolbar-top">
-        <label class="search-box" for="catalog-search">
-          <span class="sr-only">Поиск по играм</span>
-          <span class="search-icon" aria-hidden="true">⌕</span>
-          <input id="catalog-search" type="search" placeholder="Найти игру: ратград, зомби, 3D, шутер, ГЭС, дороги…" autocomplete="off" spellcheck="false">
-          <button class="search-clear" id="catalog-search-clear" type="button" hidden aria-label="Очистить поиск">×</button>
-          <kbd class="search-kbd" aria-hidden="true">/</kbd>
-        </label>
+    <div class="ribbon-search">
+      <button class="ribbon-search-trigger" type="button" data-focus-search aria-label="Поиск по магазину">
+        <span>Поиск по магазину…</span>
+        <kbd>/</kbd>
+      </button>
+    </div>
+  </nav>
+</div>
 
-        <div class="toolbar-controls">
-          <label class="sr-only" for="catalog-sort">Сортировка</label>
-          <select class="sort-select" id="catalog-sort" aria-label="Сортировка каталога">
-            <option value="new">Сначала новинки</option>
-            <option value="featured">Выбор редакции</option>
-            <option value="alpha">По алфавиту (А–Я)</option>
-            <option value="recent">Недавно открытые</option>
-          </select>
+<!-- Баннер импорта игры по ссылке от друга -->
+<div class="import-banner" id="import-banner" hidden role="region" aria-label="Импорт игры по ссылке">
+  <div class="import-banner-inner">
+    <div class="import-banner-copy">
+      <span class="import-kicker">ИГРА ОТ ДРУГА</span>
+      <strong id="import-banner-title">Название игры</strong>
+      <span id="import-banner-meta">Автор и описание</span>
+    </div>
+    <div class="import-banner-actions">
+      <button class="btn btn-steam-play" id="import-banner-accept" type="button">+ Добавить в витрину</button>
+      <button class="btn" id="import-banner-dismiss" type="button">Закрыть</button>
+    </div>
+  </div>
+</div>
 
-          <div class="view-toggle" role="group" aria-label="Режим отображения каталога">
-            <button class="view-btn active" type="button" data-view-mode="grid" aria-pressed="true">Сетка</button>
-            <button class="view-btn" type="button" data-view-mode="list" aria-pressed="false">Список</button>
+<!-- Главная витрина: Steam Featured & Recommended -->
+<section class="hero-stage" id="top" aria-label="Главное и рекомендуемое">
+  <canvas id="hero-canvas" aria-hidden="true"></canvas>
+  <div class="hero-ambient" id="hero-ambient" aria-hidden="true"></div>
+
+  <div class="hero-stage-inner">
+    <div class="hero-stage-head">
+      <div>
+        <p class="kicker"><span class="kicker-dot" aria-hidden="true"></span>БРАУЗЕРНЫЙ МАГАЗИН · БЕЗ УСТАНОВКИ · БЕСПЛАТНО И ОФЛАЙН</p>
+        <h1 class="hero-heading">Главное и рекомендуемое</h1>
+      </div>
+      <div class="hero-stage-stats" aria-label="Сводка платформы">
+        <div class="hstat"><strong data-games-total>17</strong><span>игр</span></div>
+        <div class="hstat"><strong data-games-new>6</strong><span>новинок</span></div>
+        <div class="hstat"><strong data-user-games-count>0</strong><span>добавлено</span></div>
+        <div class="hstat"><strong id="device-mode-badge">ПК</strong><span>офлайн</span></div>
+      </div>
+    </div>
+
+    <div class="steam-carousel" id="hero-spotlight">
+      <button class="carousel-arrow carousel-prev" type="button" data-spot-prev aria-label="Предыдущая игра">‹</button>
+
+      <div class="spotlight-card">
+        <div class="spotlight-media">
+          <a class="spotlight-art-link" href="../country-atlas/index.html" data-spot-art-link data-track-game="country-atlas">
+            <div class="spotlight-art" data-spot-art>
+              <picture>
+                <source type="image/webp" srcset="assets/country-atlas.webp">
+                <img src="assets/country-atlas.jpg" alt="РАТГРАД — карта страны 7000×7000 км" width="1280" height="720" fetchpriority="high">
+              </picture>
+            </div>
+            <div class="spotlight-overlay-tags">
+              <span class="gcard-badge is-new" data-spot-badge>Новинка · 7000×7000 км</span>
+              <span class="gcard-dim" data-spot-dim>2D · Карта</span>
+            </div>
+            <span class="spotlight-hover-play" aria-hidden="true">▶ Запустить сейчас</span>
+          </a>
+        </div>
+
+        <div class="spotlight-panel">
+          <div class="spotlight-panel-top">
+            <h2 data-spot-title>РАТГРАД</h2>
+            <p class="spotlight-sub" data-spot-sub>Карта целой страны 7000 × 7000 км</p>
           </div>
 
-          <span class="catalog-status" id="catalog-status" aria-live="polite">Показано 17 из 17</span>
+          <div class="spotlight-tiles" data-spot-tiles aria-label="Ключевые особенности"></div>
+
+          <p class="spotlight-note" data-spot-note>Ночь и огни городов, поезда, суда, диспетчеры и рост городов</p>
+
+          <div class="spotlight-bottom">
+            <div class="spotlight-price-row">
+              <span class="steam-free-pill">БЕСПЛАТНО</span>
+              <span class="steam-platform-tags">🖥 ПК · 📱 Тел · ⚡ Офлайн</span>
+            </div>
+            <div class="spotlight-btns">
+              <a class="btn btn-steam-play" href="../country-atlas/index.html" data-spot-play data-track-game="country-atlas">▶ Играть</a>
+              <button class="btn btn-steam-ghost" type="button" data-spot-fav aria-label="В избранное">♡</button>
+              <button class="btn btn-steam-ghost" type="button" data-spot-info data-open-modal="country-atlas">Подробнее</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="category-pills" id="category-pills" role="group" aria-label="Фильтр по категориям"></div>
+      <button class="carousel-arrow carousel-next" type="button" data-spot-next aria-label="Следующая игра">›</button>
     </div>
 
-    <div class="catalog-grid" id="catalog-grid" aria-live="polite"></div>
-
-    <div class="catalog-empty" id="catalog-empty" hidden>
-      <p>По вашему запросу ничего не нашлось. Попробуйте другое слово или сбросьте фильтры.</p>
-      <button class="btn btn-primary" id="catalog-reset-btn" type="button">Сбросить фильтры</button>
-    </div>
-
-    <noscript>
-      <div class="noscript-fallback">
-        <strong>Для интерактивного поиска нужен JavaScript. Все игры доступны напрямую:</strong>
-        <ul>
-          <li><a href="../country-atlas/index.html">РАТГРАД — карта страны 7000×7000 км</a></li>
-          <li><a href="../dead-district/index.html">DEAD DISTRICT — пиксельная зомби-выживалка</a></li>
-          <li><a href="../shooter-2/index.html">СЕКТОР «ПЕПЕЛ» — тактический 3D-шутер</a></li>
-          <li><a href="../1in8b/index.html">1 ИЗ 8 МИЛЛИАРДОВ — симулятор одной жизни</a></li>
-          <li><a href="../frontline-command/index.html">FRONTLINE: COMMAND — тактическая 2D-песочница</a></li>
-          <li><a href="../nika-life/index.html">НИКА: ЖИВАЯ — симулятор жизни с локальным ИИ</a></li>
-          <li><a href="../cascade-hydro/index.html">КАСКАД: Живая Вода — 3D-симулятор ГЭС</a></li>
-          <li><a href="../truck-showroom/index.html">ГАРАЖ 3D — шоурум 64 моделей</a></li>
-          <li><a href="../road-tycoon/index.html">ТРАССА — 3D дорожная империя</a></li>
-          <li><a href="../euro-haul/index.html">ЕВРОТРАК — грузоперевозки по Европе</a></li>
-          <li><a href="../last-shore/index.html">LAST SHORE — 3D-выживание на острове</a></li>
-          <li><a href="../frontline-steel-and-drones/play.html">ЛИНИЯ ФРОНТА — Сталь и Дроны</a></li>
-          <li><a href="../night-taxi/index.html">НОЧНОЕ ТАКСИ — ночная смена</a></li>
-          <li><a href="../folder-os/index.html">FOLDER OS — ОС на папках и файлах</a></li>
-          <li><a href="../game-base/index.html">БАЗА — шаблон и дизайн-система</a></li>
-          <li><a href="../cloud-play/index.html">PLAYBRIDGE — Steam OpenID и PWA</a></li>
-        </ul>
-      </div>
-    </noscript>
-  </section>
-
-  <section class="community-panel" id="community-games" aria-labelledby="community-games-title">
-    <div class="community-heading">
-      <div>
-        <p class="community-kicker">АВТОРСКИЕ ИГРЫ · ПОСЛЕ ПРОВЕРКИ</p>
-        <h2 id="community-games-title">Игры сообщества <span id="community-game-count">—</span></h2>
-        <p class="community-intro">Проекты разработчиков, прошедшие проверку Pull Request и автотесты. Код и метаданные загружаются строго из локального реестра репозитория.</p>
-      </div>
-      <a class="btn btn-primary" href="../developers/index.html">Добавить игру ↗</a>
-    </div>
-    <div class="community-grid" id="community-game-grid" aria-live="polite"></div>
-    <p class="community-empty" id="community-empty">Пока нет опубликованных игр сообщества. <a href="../developers/index.html">Стань первым автором ↗</a></p>
-  </section>
-
-  <section class="section section-bordered" id="about" aria-labelledby="about-title">
-    <div class="section-head">
-      <div>
-        <p class="section-kicker">ПРИНЦИПЫ ПЛАТФОРМЫ</p>
-        <h2 id="about-title">Как это устроено</h2>
+    <div class="carousel-footer">
+      <div class="spot-dots" data-spot-dots role="group" aria-label="Выбор игры в витрине"></div>
+      <div class="carousel-quick-cta">
+        <span>Сделал свою браузерную игру?</span>
+        <button class="link-btn" type="button" data-open-add-game>Добавить на витрину прямо сейчас →</button>
       </div>
     </div>
-    <div class="grid">
-      <div class="tile">
-        <b>Мгновенный запуск</b>
-        <p>Никаких установок, лаунчеров и регистраций. Открывается за секунду в Chrome, Firefox, Edge и Safari на ПК и телефоне.</p>
-      </div>
-      <div class="tile">
-        <b>Процедурная графика и звук</b>
-        <p>Модели по контурам, города, рельеф, вода, текстуры и WebAudio-звук генерируются кодом — без CDN и гигабайтных ассетов.</p>
-      </div>
-      <div class="tile">
-        <b>Автосохранения и офлайн</b>
-        <p>Прогресс, избранное и недавние игры хранятся локально в браузере. Большинство проектов работает прямо с диска (<code>file://</code>).</p>
-      </div>
-      <div class="tile">
-        <b>Проверено автотестами</b>
-        <p>Реестр, логика игр и бот-багоискатель <code>tools/bughunt</code> проверяют проекты в CI перед каждой публикацией.</p>
-      </div>
-    </div>
-  </section>
+  </div>
+</section>
 
-  <section class="section section-bordered" aria-labelledby="roadmap-title">
-    <div class="section-head">
-      <div>
-        <p class="section-kicker">ВЕКТОР РАЗВИТИЯ</p>
-        <h2 id="roadmap-title">Что в работе</h2>
-      </div>
+<!-- Двухколоночная раскладка магазина в стиле Steam -->
+<div class="store-shell">
+  <aside class="steam-sidebar" id="steam-sidebar" aria-label="Библиотека и категории">
+    <div class="sidebar-group">
+      <h3>Ваша библиотека</h3>
+      <button class="side-link" type="button" data-quick-cat="fav">
+        <span>★ Желаемое / Избранное</span>
+        <span class="side-badge" data-fav-count>0</span>
+      </button>
+      <button class="side-link" type="button" data-quick-cat="user">
+        <span>🎮 Мои добавленные игры</span>
+        <span class="side-badge" data-user-games-count>0</span>
+      </button>
+      <button class="side-link" type="button" data-open-save-hub>
+        <span>💾 Менеджер сохранений</span>
+        <span class="side-badge">Бэкап</span>
+      </button>
+      <button class="side-link is-cta" type="button" data-open-add-game>
+        <span>＋ Добавить свою игру</span>
+      </button>
     </div>
-    <div class="roadmap">
-      <div class="road">
-        <span class="tag ls">РАТГРАД</span>
-        <p>Развитие живой карты 7000 × 7000 км: железнодорожные и морские диспетчеры, рост городов, ночной мир, климат и локальный ИИ.</p>
-      </div>
-      <div class="road">
-        <span class="tag ch">КАСКАД И 3D-СИМУЛЯТОРЫ</span>
-        <p>Многоступенчатые каскады ГЭС/ГАЭС, расширение процедурных моделей и единой системы сохранений в 3D-проектах.</p>
-      </div>
-      <div class="road">
-        <span class="tag fl">ЕДИНЫЙ КАРКАС И ИНСТРУМЕНТЫ</span>
-        <p>Развитие дизайн-системы <code>shared/theme.css</code>, шаблона <code>game-base</code> и инструментов автоматической проверки игр.</p>
-      </div>
-    </div>
-  </section>
 
-  <section class="bug-report-panel" id="report-bug" aria-labelledby="bug-report-title">
-    <div class="bug-report-icon" aria-hidden="true">!</div>
-    <div class="bug-report-copy">
-      <p class="community-kicker">ПОМОГИ СДЕЛАТЬ ИГРЫ ЛУЧШЕ</p>
-      <h2 id="bug-report-title">Нашёл баг?</h2>
-      <p>Расскажи, что пошло не так и как это повторить. Форма откроется на GitHub; обращение будет публичным, поэтому не добавляй пароли, личные данные или секреты.</p>
+    <div class="sidebar-group">
+      <h3>По категориям</h3>
+      <div class="side-cat-list" id="sidebar-categories"></div>
     </div>
-    <a class="btn btn-primary" href="https://github.com/m98978672-boop/games/issues/new?template=bug-report.yml" target="_blank" rel="noopener noreferrer">Сообщить об ошибке ↗</a>
-  </section>
-</main>
 
+    <div class="sidebar-group sidebar-workshop-card">
+      <p class="sidebar-kicker">ОТКРЫТО ДЛЯ ВСЕХ</p>
+      <h4>Мастерская Games</h4>
+      <p>Любой может добавить свою HTML5-игру по ссылке или файлом — и сразу поделиться ею с друзьями или отправить в общий каталог.</p>
+      <button class="btn btn-steam-blue btn-full" type="button" data-open-add-game>+ Добавить игру</button>
+    </div>
+  </aside>
+
+  <main class="store-main">
+    <!-- Недавно открытые / Продолжить -->
+    <section class="recent-bar" id="recent-section" hidden aria-label="Продолжить игру">
+      <div class="recent-head">
+        <span class="recent-title">🕒 Продолжить игру</span>
+        <button class="recent-clear" id="recent-clear" type="button">Очистить историю</button>
+      </div>
+      <div class="recent-list" id="recent-list"></div>
+    </section>
+
+    <!-- Новинки и популярное -->
+    <section class="section" id="new-releases" aria-labelledby="new-releases-title">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">ПОПУЛЯРНЫЕ НОВИНКИ И КРУПНЫЕ ОБНОВЛЕНИЯ</p>
+          <h2 id="new-releases-title">Новинки <span class="section-count-badge" data-games-new>6</span></h2>
+        </div>
+        <a class="btn btn-steam-ghost" href="#games">Весь каталог ↓</a>
+      </div>
+      <div class="releases-grid" id="new-releases-grid"></div>
+    </section>
+
+    <!-- Основной каталог магазина -->
+    <section class="section section-bordered" id="games" aria-labelledby="catalog-title">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">КАТАЛОГ МАГАЗИНА · ПОИСК, ТЕГИ И БИБЛИОТЕКА</p>
+          <h2 id="catalog-title">Все игры <span class="section-count-badge" data-games-total>17</span></h2>
+          <p class="section-sub">Наведи курсор на игру для мгновенной предзагрузки, сохраняй в желаемое ★ или переключись в табличный режим Steam.</p>
+        </div>
+      </div>
+
+      <div class="catalog-toolbar" role="search" aria-label="Поиск и фильтрация каталога">
+        <div class="toolbar-top">
+          <label class="search-box" for="catalog-search">
+            <span class="sr-only">Поиск по играм</span>
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input id="catalog-search" type="search" placeholder="Найти игру: ратград, зомби, 3D, шутер, ГЭС, дороги…" autocomplete="off" spellcheck="false">
+            <button class="search-clear" id="catalog-search-clear" type="button" hidden aria-label="Очистить поиск">×</button>
+            <kbd class="search-kbd" aria-hidden="true">/</kbd>
+          </label>
+
+          <div class="toolbar-controls">
+            <label class="sr-only" for="catalog-sort">Сортировка</label>
+            <select class="sort-select" id="catalog-sort" aria-label="Сортировка каталога">
+              <option value="new">Сначала новинки</option>
+              <option value="featured">Популярное</option>
+              <option value="alpha">По алфавиту (А–Я)</option>
+              <option value="recent">Недавно открытые</option>
+            </select>
+
+            <div class="view-toggle" role="group" aria-label="Режим отображения каталога">
+              <button class="view-btn active" type="button" data-view-mode="grid" aria-pressed="true">Капсулы</button>
+              <button class="view-btn" type="button" data-view-mode="list" aria-pressed="false">Список Steam</button>
+            </div>
+
+            <span class="catalog-status" id="catalog-status" aria-live="polite">Показано 17 из 17</span>
+          </div>
+        </div>
+
+        <div class="category-pills" id="category-pills" role="group" aria-label="Фильтр по категориям"></div>
+      </div>
+
+      <div class="catalog-grid" id="catalog-grid" aria-live="polite"></div>
+
+      <div class="catalog-empty" id="catalog-empty" hidden>
+        <p>По вашему запросу ничего не нашлось. Попробуйте другое слово или сбросьте фильтры.</p>
+        <button class="btn btn-steam-blue" id="catalog-reset-btn" type="button">Сбросить фильтры</button>
+      </div>
+
+      <noscript>
+        <div class="noscript-fallback">
+          <strong>Для интерактивного поиска нужен JavaScript. Все игры доступны напрямую:</strong>
+          <ul>
+            <li><a href="../country-atlas/index.html">РАТГРАД — карта страны 7000×7000 км</a></li>
+            <li><a href="../dead-district/index.html">DEAD DISTRICT — пиксельная зомби-выживалка</a></li>
+            <li><a href="../shooter-2/index.html">СЕКТОР «ПЕПЕЛ» — тактический 3D-шутер</a></li>
+            <li><a href="../1in8b/index.html">1 ИЗ 8 МИЛЛИАРДОВ — симулятор одной жизни</a></li>
+            <li><a href="../frontline-command/index.html">FRONTLINE: COMMAND — тактическая 2D-песочница</a></li>
+            <li><a href="../nika-life/index.html">НИКА: ЖИВАЯ — симулятор жизни с локальным ИИ</a></li>
+            <li><a href="../cascade-hydro/index.html">КАСКАД: Живая Вода — 3D-симулятор ГЭС</a></li>
+            <li><a href="../truck-showroom/index.html">ГАРАЖ 3D — шоурум 64 моделей</a></li>
+            <li><a href="../road-tycoon/index.html">ТРАССА — 3D дорожная империя</a></li>
+            <li><a href="../euro-haul/index.html">ЕВРОТРАК — грузоперевозки по Европе</a></li>
+            <li><a href="../last-shore/index.html">LAST SHORE — 3D-выживание на острове</a></li>
+            <li><a href="../frontline-steel-and-drones/play.html">ЛИНИЯ ФРОНТА — Сталь и Дроны</a></li>
+            <li><a href="../night-taxi/index.html">НОЧНОЕ ТАКСИ — ночная смена</a></li>
+            <li><a href="../folder-os/index.html">FOLDER OS — ОС на папках и файлах</a></li>
+            <li><a href="../game-base/index.html">БАЗА — шаблон и дизайн-система</a></li>
+            <li><a href="../cloud-play/index.html">PLAYBRIDGE — Steam OpenID и PWA</a></li>
+          </ul>
+        </div>
+      </noscript>
+    </section>
+
+    <!-- Мастерская: добавить свою игру может КАЖДЫЙ -->
+    <section class="workshop-banner" id="submit-game" aria-labelledby="submit-game-title">
+      <div class="workshop-copy">
+        <p class="section-kicker">МАСТЕРСКАЯ GAMES · ОТКРЫТО ДЛЯ ВСЕХ</p>
+        <h2 id="submit-game-title">Добавь свою игру за 20 секунд</h2>
+        <p>Без регистрации и серверов: вставь ссылку <code>https://</code>, загрузи готовый <code>.html</code>-файл или напиши мини-игру прямо здесь. Она мгновенно появится на витрине, получит безопасный плеер, ссылку для друзей и готовый пакет для публикации в общий каталог для всех!</p>
+        <div class="workshop-steps">
+          <span><strong>1.</strong> Ссылка или HTML-файл</span>
+          <span><strong>2.</strong> Steam-обложка сама</span>
+          <span><strong>3.</strong> Сразу в каталог + публикация всем</span>
+        </div>
+      </div>
+      <div class="workshop-actions">
+        <button class="btn btn-steam-play btn-lg" type="button" data-open-add-game>+ Добавить свою игру</button>
+        <button class="btn btn-steam-ghost" type="button" id="import-pack-btn">📦 Импортировать .gamespack.json</button>
+        <input id="import-pack-input" type="file" accept=".json,application/json" hidden>
+      </div>
+    </section>
+
+    <!-- Секция пользовательских игр (локально + от друзей) -->
+    <section class="user-games-panel" id="user-games-section" aria-labelledby="user-games-title">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">ДОБАВЛЕНО ВАМИ И ДРУЗЬЯМИ · ЛОКАЛЬНАЯ БИБЛИОТЕКА</p>
+          <h2 id="user-games-title">Пользовательские игры <span class="section-count-badge" data-user-games-count>0</span></h2>
+        </div>
+        <div class="user-games-bar-actions">
+          <button class="btn btn-steam-blue" type="button" data-open-add-game>+ Новая игра</button>
+          <button class="btn btn-steam-ghost" type="button" id="export-user-pack-btn" hidden>Скачать пакет (.json)</button>
+        </div>
+      </div>
+      <div class="user-games-grid" id="user-games-grid" aria-live="polite"></div>
+      <div class="user-games-empty" id="user-games-empty">
+        <p>Здесь появятся ваши собственные игры и игры, которыми поделились друзья. Можно даже вставить готовый шаблон мини-игры в 1 клик!</p>
+        <button class="btn btn-steam-play" type="button" data-open-add-game>+ Добавить первую игру</button>
+      </div>
+    </section>
+
+    <!-- Официальные игры сообщества из репозитория -->
+    <section class="community-panel" id="community-games" aria-labelledby="community-games-title">
+      <div class="community-heading">
+        <div>
+          <p class="community-kicker">АВТОРСКИЕ ИГРЫ · ОПУБЛИКОВАНЫ ДЛЯ ВСЕХ ПОСЛЕ ПРОВЕРКИ</p>
+          <h2 id="community-games-title">Игры сообщества <span id="community-game-count">—</span></h2>
+          <p class="community-intro">Проекты разработчиков, прошедшие проверку Pull Request, ClamAV и автотесты. Опубликовать свою игру сюда можно через нашу студию добавления в 1 клик.</p>
+        </div>
+        <div class="community-heading-actions">
+          <button class="btn btn-steam-play" type="button" data-open-add-game="publish">+ Опубликовать для всех</button>
+          <a class="btn btn-steam-ghost" href="../developers/index.html">Инструкция ↗</a>
+        </div>
+      </div>
+      <div class="community-grid" id="community-game-grid" aria-live="polite"></div>
+      <p class="community-empty" id="community-empty">Пока нет опубликованных игр сообщества. <a href="../developers/index.html">Стань первым автором ↗</a></p>
+    </section>
+
+    <section class="section section-bordered" id="about" aria-labelledby="about-title">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">ПРИНЦИПЫ ПЛАТФОРМЫ</p>
+          <h2 id="about-title">Как это устроено</h2>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="tile">
+          <b>Мгновенный запуск</b>
+          <p>Никаких установок, лаунчеров и регистраций. Открывается за секунду в Chrome, Firefox, Edge и Safari на ПК и телефоне.</p>
+        </div>
+        <div class="tile">
+          <b>Открытая мастерская для всех</b>
+          <p>Добавляйте любые свои HTML5-игры по ссылке или файлом, тестируйте в изолированном sandbox-плеере и делитесь с друзьями.</p>
+        </div>
+        <div class="tile">
+          <b>Офлайн PWA и бэкап сейвов</b>
+          <p>Service Worker ускоряет повторный вход, а Save Hub позволяет перенести все сохранения и добавленные игры одним JSON-файлом.</p>
+        </div>
+        <div class="tile">
+          <b>Проверено автотестами</b>
+          <p>Реестр, логика игр, ClamAV и бот-багоискатель <code>tools/bughunt</code> проверяют проекты в CI перед каждой публикацией.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-bordered" aria-labelledby="roadmap-title">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">ВЕКТОР РАЗВИТИЯ</p>
+          <h2 id="roadmap-title">Что в работе</h2>
+        </div>
+      </div>
+      <div class="roadmap">
+        <div class="road">
+          <span class="tag ls">РАТГРАД</span>
+          <p>Развитие живой карты 7000 × 7000 км: железнодорожные и морские диспетчеры, рост городов, ночной мир, погода и локальный ИИ.</p>
+        </div>
+        <div class="road">
+          <span class="tag ch">КАСКАД И 3D-СИМУЛЯТОРЫ</span>
+          <p>Многоступенчатые каскады ГЭС/ГАЭС, расширение процедурных моделей и единой системы сохранений в 3D-проектах.</p>
+        </div>
+        <div class="road">
+          <span class="tag fl">МАСТЕРСКАЯ И ЕДИНЫЙ КАРКАС</span>
+          <p>Развитие открытого каталога сообщества, дизайн-системы <code>shared/theme.css</code>, шаблона <code>game-base</code> и автопроверок.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="bug-report-panel" id="report-bug" aria-labelledby="bug-report-title">
+      <div class="bug-report-icon" aria-hidden="true">!</div>
+      <div class="bug-report-copy">
+        <p class="community-kicker">ПОМОГИ СДЕЛАТЬ ИГРЫ ЛУЧШЕ</p>
+        <h2 id="bug-report-title">Нашёл баг?</h2>
+        <p>Расскажи, что пошло не так и как это повторить. Форма откроется на GitHub; обращение будет публичным, поэтому не добавляй пароли, личные данные или секреты.</p>
+      </div>
+      <a class="btn btn-steam-blue" href="https://github.com/m98978672-boop/games/issues/new?template=bug-report.yml" target="_blank" rel="noopener noreferrer">Сообщить об ошибке ↗</a>
+    </section>
+  </main>
+</div>
+
+<!-- Модалка: быстрый просмотр игры -->
 <div class="gmodal-root" id="game-modal" hidden role="dialog" aria-modal="true" aria-labelledby="game-modal-title">
   <div class="gmodal-backdrop" data-modal-backdrop></div>
   <div class="gmodal-dialog">
@@ -301,12 +432,237 @@
   </div>
 </div>
 
+<!-- Модалка: Студия добавления своей игры (для всех!) -->
+<div class="gmodal-root" id="add-game-modal" hidden role="dialog" aria-modal="true" aria-labelledby="add-game-title">
+  <div class="gmodal-backdrop" data-close-add-modal></div>
+  <div class="gmodal-dialog gmodal-wide">
+    <button class="gmodal-close" type="button" data-close-add-modal aria-label="Закрыть студию">×</button>
+    <div class="studio-wrap">
+      <div class="studio-head">
+        <div>
+          <p class="section-kicker">МАСТЕРСКАЯ GAMES · ДОБАВИТЬ СВОЮ ИГРУ</p>
+          <h2 id="add-game-title">Добавить игру на витрину</h2>
+        </div>
+        <div class="studio-tabs" role="tablist">
+          <button class="studio-tab active" type="button" role="tab" data-studio-tab="create" aria-selected="true">1. Добавить сейчас</button>
+          <button class="studio-tab" type="button" role="tab" data-studio-tab="publish" aria-selected="false">2. Опубликовать для всех</button>
+        </div>
+      </div>
+
+      <div class="studio-body">
+        <form class="studio-form" id="add-game-form" novalidate>
+          <input type="hidden" id="ug-edit-id" value="">
+
+          <div class="studio-panel" data-studio-panel="create">
+            <div class="form-row-2">
+              <label class="field">
+                <span>Название игры *</span>
+                <input id="ug-title" type="text" maxlength="80" required placeholder="Например: Космодром 2099">
+              </label>
+              <label class="field">
+                <span>Ваше имя / ник *</span>
+                <input id="ug-author" type="text" maxlength="40" required placeholder="Например: Алекс">
+              </label>
+            </div>
+
+            <div class="form-row-2">
+              <label class="field">
+                <span>Краткий слоган</span>
+                <input id="ug-subtitle" type="text" maxlength="110" placeholder="2D-аркада про посадку ракет">
+              </label>
+              <label class="field">
+                <span>Категория</span>
+                <select id="ug-category">
+                  <option value="2d">2D</option>
+                  <option value="3d">3D</option>
+                  <option value="action">Экшен</option>
+                  <option value="survival">Выживание</option>
+                  <option value="sim">Симулятор</option>
+                  <option value="strategy">Стратегия</option>
+                  <option value="tools">Инструмент</option>
+                </select>
+              </label>
+            </div>
+
+            <label class="field">
+              <span>Описание *</span>
+              <textarea id="ug-desc" rows="2" maxlength="320" required placeholder="О чём игра, главная фишка и цель игрока…"></textarea>
+            </label>
+
+            <label class="field">
+              <span>Особенности / теги (через запятую, до 4 шт.)</span>
+              <input id="ug-features" type="text" maxlength="200" placeholder="Офлайн, Процедурные уровни, Поддержка телефона">
+            </label>
+
+            <div class="source-switcher">
+              <span class="field-label">Как подключить игру *</span>
+              <div class="source-tabs" role="group" aria-label="Способ добавления игры">
+                <button class="source-btn active" type="button" data-source-mode="url">🌐 Ссылка https://</button>
+                <button class="source-btn" type="button" data-source-mode="file">📁 HTML-файл</button>
+                <button class="source-btn" type="button" data-source-mode="code">💻 HTML/JS код</button>
+              </div>
+            </div>
+
+            <div class="source-pane" data-source-pane="url">
+              <label class="field">
+                <span>Ссылка на игру (GitHub Pages, itch.io, Vercel, свой сайт)</span>
+                <input id="ug-url" type="url" maxlength="400" placeholder="https://username.github.io/my-game/">
+              </label>
+            </div>
+
+            <div class="source-pane" data-source-pane="file" hidden>
+              <label class="file-drop" for="ug-html-file">
+                <span id="ug-html-file-label">Выбрать готовый .html файл игры (до 750 КБ)</span>
+                <input id="ug-html-file" type="file" accept=".html,.htm,text/html">
+              </label>
+              <p class="field-hint">Запускается в безопасном изолированном Steam-плеере прямо на странице, без сервера.</p>
+            </div>
+
+            <div class="source-pane" data-source-pane="code" hidden>
+              <div class="code-pane-head">
+                <span class="field-label">Самостоятельный HTML/CSS/JS файл</span>
+                <button class="link-btn" type="button" id="ug-insert-template">Вставить шаблон мини-игры ⚡</button>
+              </div>
+              <textarea id="ug-html-code" rows="5" class="code-input" placeholder="<!DOCTYPE html><html>..."></textarea>
+            </div>
+
+            <div class="form-row-2">
+              <label class="field">
+                <span>Стиль Steam-обложки</span>
+                <select id="ug-theme">
+                  <option value="steam">Steam Синий</option>
+                  <option value="cyber">Неон Кибер</option>
+                  <option value="emerald">Изумруд</option>
+                  <option value="crimson">Багровый Экшен</option>
+                  <option value="amber">Золото Стратегий</option>
+                  <option value="slate">Сталь 3D</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Иконка на обложке или своя картинка</span>
+                <div class="cover-input-row">
+                  <input id="ug-icon" type="text" maxlength="4" value="🚀" aria-label="Иконка на обложке">
+                  <label class="btn btn-steam-ghost btn-sm" for="ug-cover-file">Картинка…</label>
+                  <input id="ug-cover-file" type="file" accept="image/*" hidden>
+                  <button class="btn btn-steam-ghost btn-sm" type="button" id="ug-cover-reset" hidden>Сброс</button>
+                </div>
+              </label>
+            </div>
+
+            <p class="form-status" id="ug-form-status" role="status" aria-live="polite"></p>
+
+            <div class="studio-submit-row">
+              <button class="btn btn-steam-play" type="submit" id="ug-submit-btn">▶ Добавить на витрину</button>
+              <button class="btn btn-steam-blue" type="button" id="ug-to-publish-btn">🌍 Опубликовать для всех →</button>
+            </div>
+          </div>
+
+          <div class="studio-panel" data-studio-panel="publish" hidden>
+            <p class="publish-intro">Хочешь, чтобы твоя игра появилась в общем каталоге <strong>Games</strong> у всех игроков мира? Мы уже собрали для тебя все нужные файлы — просто скачай их и нажми кнопку публикации на GitHub!</p>
+
+            <div class="publish-grid">
+              <div class="publish-box">
+                <div class="publish-box-head">
+                  <strong>1. Запись для <code>site/community-games.json</code></strong>
+                  <button class="btn btn-steam-ghost btn-sm" type="button" id="ug-copy-json">Копировать JSON</button>
+                </div>
+                <pre class="publish-code" id="ug-publish-json">{}</pre>
+              </div>
+
+              <div class="publish-box">
+                <strong>2. Готовые файлы для папки <code id="ug-publish-slug">my-game/</code></strong>
+                <p class="field-hint">Скачай обложку <code>cover.svg</code>, описание <code>README.md</code> (и свой <code>index.html</code>, если писал код здесь) — и приложи к заявке или PR.</p>
+                <div class="publish-downloads">
+                  <button class="btn btn-steam-ghost btn-sm" type="button" id="ug-dl-svg">⬇ cover.svg</button>
+                  <button class="btn btn-steam-ghost btn-sm" type="button" id="ug-dl-readme">⬇ README.md</button>
+                  <button class="btn btn-steam-ghost btn-sm" type="button" id="ug-dl-html" hidden>⬇ index.html</button>
+                </div>
+                <div class="publish-cta-box">
+                  <a class="btn btn-steam-play btn-full" id="ug-github-issue-link" href="https://github.com/m98978672-boop/games/issues/new?template=game-submission.yml" target="_blank" rel="noopener noreferrer">🚀 Отправить заявку на GitHub (уже заполнена) ↗</a>
+                  <a class="btn btn-steam-blue btn-full" href="https://github.com/m98978672-boop/games/fork" target="_blank" rel="noopener noreferrer">Или сразу открыть Fork / Pull Request ↗</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <aside class="studio-preview" aria-label="Предпросмотр Steam-карточки">
+          <p class="preview-label">ПРЕДПРОСМОТР КАРТОЧКИ В МАГАЗИНЕ</p>
+          <div class="gcard preview-card">
+            <div class="gcard-media">
+              <img id="ug-preview-img" src="assets/country-atlas.jpg" alt="Предпросмотр обложки" width="1280" height="720">
+              <span class="gcard-badge is-user">Сообщество</span>
+              <span class="gcard-dim" id="ug-preview-dim">2D · Сообщество</span>
+            </div>
+            <div class="gcard-body">
+              <h3 class="gcard-title" id="ug-preview-title">Ваша игра</h3>
+              <p class="gcard-sub" id="ug-preview-sub">Краткий слоган игры</p>
+              <p class="gcard-desc" id="ug-preview-desc">Описание появится здесь в реальном времени.</p>
+              <div class="gcard-tags" id="ug-preview-tags"></div>
+              <div class="gcard-foot">
+                <span class="steam-free-pill">БЕСПЛАТНО</span>
+                <span class="btn btn-steam-play btn-sm">▶ Играть</span>
+              </div>
+            </div>
+          </div>
+          <p class="preview-hint">Все пользовательские HTML-игры открываются в изолированном <code>sandbox</code>-плеере, а ссылки проверяются на <code>https://</code>.</p>
+        </aside>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: безопасный встроенный Steam-плеер для HTML-игр -->
+<div class="gmodal-root" id="sandbox-player-modal" hidden role="dialog" aria-modal="true" aria-labelledby="sandbox-player-title">
+  <div class="gmodal-backdrop" data-close-sandbox></div>
+  <div class="sandbox-dialog">
+    <div class="sandbox-bar">
+      <div class="sandbox-title-wrap">
+        <span class="steam-free-pill">SANDBOX</span>
+        <strong id="sandbox-player-title">Игра</strong>
+        <span class="sandbox-author" id="sandbox-player-author"></span>
+      </div>
+      <div class="sandbox-actions">
+        <button class="btn btn-steam-ghost btn-sm" type="button" id="sandbox-fullscreen-btn">⛶ Полный экран</button>
+        <button class="btn btn-steam-ghost btn-sm" type="button" data-close-sandbox>✕ Закрыть</button>
+      </div>
+    </div>
+    <iframe id="sandbox-iframe" class="sandbox-iframe" title="Игровой плеер" sandbox="allow-scripts allow-pointer-lock" referrerpolicy="no-referrer"></iframe>
+  </div>
+</div>
+
+<!-- Модалка: Менеджер сохранений (Save Hub) -->
+<div class="gmodal-root" id="save-hub-modal" hidden role="dialog" aria-modal="true" aria-labelledby="save-hub-title">
+  <div class="gmodal-backdrop" data-close-save-hub></div>
+  <div class="gmodal-dialog">
+    <button class="gmodal-close" type="button" data-close-save-hub aria-label="Закрыть менеджер сохранений">×</button>
+    <div class="savehub-wrap">
+      <p class="section-kicker">ЛОКАЛЬНАЯ БИБЛИОТЕКА · БЭКАП И ПЕРЕНОС</p>
+      <h2 id="save-hub-title">Менеджер сохранений</h2>
+      <p class="savehub-sub">Все сохранения браузерных игр, избранное и ваши добавленные игры хранятся локально. Скачайте один JSON-файл, чтобы перенести прогресс на другой ПК или телефон.</p>
+
+      <div class="savehub-stats" id="savehub-stats"></div>
+      <div class="savehub-list" id="savehub-list"></div>
+
+      <p class="form-status" id="savehub-status" role="status" aria-live="polite"></p>
+
+      <div class="savehub-actions">
+        <button class="btn btn-steam-play" type="button" id="savehub-export">⬇ Скачать полный бэкап (.json)</button>
+        <button class="btn btn-steam-blue" type="button" id="savehub-import-btn">⬆ Восстановить из файла</button>
+        <input id="savehub-import-input" type="file" accept=".json,application/json" hidden>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-host" id="toast-host" aria-live="polite"></div>
+
 <footer>
   <p>Онлайн-витрина Games на GitHub Pages:
     <a href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">m98978672-boop.github.io/games</a>
     · Исходники и планы:
     <a href="https://github.com/m98978672-boop/games" target="_blank" rel="noopener">github.com/m98978672-boop/games</a></p>
-  <p>Подсказка: нажми <code>/</code> для быстрого поиска по каталогу · <code>Esc</code> закрывает предпросмотр.</p>
+  <p>Подсказка: <code>/</code> — поиск · <code>R</code> — случайная игра · <code>Esc</code> — закрыть окно.</p>
 </footer>
 
 </body>

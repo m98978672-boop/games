@@ -1,11 +1,11 @@
 {
-  "name": "Games — браузерные игры",
+  "name": "Games — магазин и библиотека браузерных игр",
   "short_name": "Games",
-  "description": "17 браузерных 2D и 3D игр, симуляторов и стратегий без установки",
+  "description": "17 браузерных 2D и 3D игр в стиле Steam + мастерская добавления своих игр для всех",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#070908",
-  "theme_color": "#070908",
+  "background_color": "#1b2838",
+  "theme_color": "#171a21",
   "icons": [
     {
       "src": "assets/icon.svg",
