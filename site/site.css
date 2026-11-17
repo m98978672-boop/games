@@ -2049,3 +2049,182 @@ footer code { font-family: var(--mono); color: var(--accent-2); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* ==========================================================================
+   Вкладка «Общение» (встроенный мессенджер RatMes + 9 облачных сервисов)
+   ========================================================================== */
+.nav-link-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-2) !important;
+}
+.nav-link-chat.is-active,
+.nav-link-chat:hover {
+  color: #ffffff !important;
+}
+.nav-chat-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(102, 192, 244, 0.18);
+  border: 1px solid rgba(102, 192, 244, 0.42);
+  color: var(--accent);
+}
+.nav-chat-btn.is-active {
+  background: rgba(102, 192, 244, 0.22);
+  border-color: var(--accent);
+  color: #fff;
+}
+.ribbon-link.is-chat {
+  background: linear-gradient(90deg, rgba(102, 192, 244, 0.22), rgba(164, 208, 7, 0.16));
+  border-color: rgba(102, 192, 244, 0.45);
+  color: #eaf6ff;
+}
+.ribbon-link.is-chat:hover {
+  background: linear-gradient(90deg, rgba(102, 192, 244, 0.34), rgba(164, 208, 7, 0.24));
+  color: #ffffff;
+}
+.side-link.is-chat {
+  border-color: rgba(102, 192, 244, 0.36);
+  background: linear-gradient(90deg, rgba(102, 192, 244, 0.14), rgba(22, 32, 45, 0.72));
+}
+.side-link.is-chat:hover {
+  border-color: var(--accent);
+  background: linear-gradient(90deg, rgba(102, 192, 244, 0.24), rgba(22, 32, 45, 0.88));
+}
+
+.portal-chat-panel {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 14px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.portal-chat-panel[hidden] { display: none; }
+body.portal-chat-active { background: #0b121c; }
+
+.portal-chat-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: rgba(23, 26, 33, 0.92);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-card);
+}
+.portal-chat-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.portal-chat-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  background: rgba(164, 208, 7, 0.14);
+  border: 1px solid rgba(164, 208, 7, 0.36);
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.portal-chat-rooms {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.portal-room-btn {
+  appearance: none;
+  cursor: pointer;
+  padding: 6px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(14, 22, 32, 0.82);
+  color: var(--ink-dim);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+.portal-room-btn:hover {
+  border-color: var(--line-strong);
+  color: #fff;
+}
+.portal-room-btn.is-active {
+  background: rgba(102, 192, 244, 0.22);
+  border-color: var(--accent);
+  color: #fff;
+}
+.portal-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.portal-clouds-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: rgba(14, 22, 32, 0.92);
+  border: 1px solid var(--line);
+}
+.portal-clouds-strip[hidden] { display: none; }
+.cloud-chip-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(22, 32, 45, 0.88);
+  text-decoration: none;
+  transition: border-color 140ms ease, transform 140ms ease, background 140ms ease;
+}
+.cloud-chip-link:hover {
+  border-color: var(--accent);
+  background: rgba(30, 45, 63, 0.96);
+  transform: translateY(-1px);
+}
+.cloud-chip-link strong {
+  color: #eef4fa;
+  font-size: 12.5px;
+}
+.cloud-chip-link span {
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.portal-chat-frame-wrap {
+  width: 100%;
+  height: calc(100vh - 156px);
+  min-height: 620px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  background: #0b1019;
+  box-shadow: var(--shadow);
+}
+.portal-chat-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #0b1019;
+}
+
+@media (max-width: 640px) {
+  .portal-chat-panel { padding: 10px 12px 18px; }
+  .portal-chat-frame-wrap { height: calc(100vh - 180px); min-height: 520px; }
+}

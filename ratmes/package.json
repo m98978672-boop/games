@@ -1,0 +1,16 @@
+{
+  "name": "ratmes",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RatMes — ультрабыстрый мессенджер с вечным файловым резервом RatMes-Vault/, 3-фазным движком времени и конвейером передачи через инструменты поверх RatCore-App",
+  "scripts": {
+    "start": "node src/agent/server.mjs",
+    "test": "node tests/engine.mjs && node tests/server.mjs && node tests/p2p.mjs && node tests/stress.mjs",
+    "test:engine": "node tests/engine.mjs",
+    "test:server": "node tests/server.mjs",
+    "test:p2p": "node tests/p2p.mjs",
+    "test:stress": "node tests/stress.mjs",
+    "audit": "node -e \"import('./src/core/code-auditor.mjs').then(m => { const r = m.auditDirectory('.'); console.log(JSON.stringify(r, null, 2)); if (!r.clean) process.exit(1); })\""
+  }
+}

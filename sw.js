@@ -1,11 +1,12 @@
 /* Games — лёгкий Service Worker для мгновенного старта и офлайн-витрины. */
-const CACHE_NAME = 'games-store-v2';
+const CACHE_NAME = 'games-store-v3';
 const PRECACHE = [
   './',
   './index.html',
   './site/site.css',
   './site/games-data.js',
   './site/portal.js',
+  './site/games-tabs.js',
   './site/user-games.js',
   './site/community-games.js',
   './site/community-games.json',
@@ -34,6 +35,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.includes('/ratmes/')) return;
 
   // Stale-While-Revalidate для витрины и ассетов
   const isStoreAsset =

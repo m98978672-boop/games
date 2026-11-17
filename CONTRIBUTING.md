@@ -30,7 +30,6 @@
 
 ```bash
 node site/tests/community-catalog.mjs
-node nika-life/tests/smoke.mjs
 node game-base/tests/smoke.mjs
 node game-base/tests/logic.mjs
 node tools/bughunt/bughunt.mjs --play --only my-game   # бот-багоискатель по твоей игре

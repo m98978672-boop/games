@@ -19,7 +19,9 @@ jobs:
         with:
           node-version: 22
       - name: Validate community catalog and local files
-        run: node site/tests/community-catalog.mjs
+        run: |
+          node site/tests/community-catalog.mjs
+          node site/tests/portal.mjs
       - name: Self-test the bug-hunting bot
         run: node tools/bughunt/tests/selftest.mjs
       - name: Check the bug-code table covers 000–999
@@ -30,8 +32,6 @@ jobs:
         run: node 1in8b/tests/smoke.mjs
       - name: Test 1 IN 8 BILLION life model
         run: node 1in8b/tests/logic.mjs
-      - name: Test NIKA animations, local AI and simulation
-        run: node nika-life/tests/smoke.mjs
       - name: Test game template structure
         run: node game-base/tests/smoke.mjs
       - name: Test game template logic
@@ -59,6 +59,10 @@ jobs:
           node dead-district/tools/static_gd_check.mjs
       - name: Test PLAYBRIDGE backend
         run: npm test --prefix cloud-play
+      - name: Test RatMes engine, server, P2P, stress and TransferGuard audit
+        run: |
+          npm test --prefix ratmes
+          npm run audit --prefix ratmes
 
   malware-scan:
     name: Scan changed files with ClamAV

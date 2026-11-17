@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#131720">
+  <title>RatMes — Единый мессенджер на RatMes Engine</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <!-- Левая колонка: папки, профиль страны, контакты, чаты -->
+    <aside class="sidebar" id="sidebarPanel">
+      <header class="brand-bar">
+        <div class="brand-mark">
+          <span class="brand-badge">RM</span>
+          <div>
+            <h1>RatMes</h1>
+            <p class="brand-sub" id="connectionModeLabel">Подключение к ядру…</p>
+          </div>
+        </div>
+        <div class="brand-actions">
+          <button class="icon-btn" id="btnCommandPalette" title="Глобальный BM25-поиск и команды (Ctrl+K)">🔎</button>
+          <button class="icon-btn" id="btnContactsBook" title="Единая книга контактов (1 человек в разных сетях)">👥</button>
+          <button class="icon-btn" id="btnMute" title="Звук уведомлений">🔊</button>
+          <button class="icon-btn mobile-only" id="btnToggleInspectorMobile" title="Инспектор движка">⚙️</button>
+        </div>
+      </header>
+
+      <section class="country-strip">
+        <label class="country-label" for="countrySelect">Страна маршрутов</label>
+        <div class="country-row">
+          <select id="countrySelect" class="select-input"></select>
+          <span class="phase-pill" id="phasePill" title="Фаза 3-фазного движка времени">ACTIVE</span>
+        </div>
+        <p class="country-note" id="countryNote"></p>
+      </section>
+
+      <!-- Папки чатов -->
+      <section class="folder-strip">
+        <div class="folder-tabs" id="folderTabs"></div>
+        <button class="icon-btn icon-btn-xs" id="btnCreateFolder" title="Создать пользовательскую папку">+</button>
+      </section>
+
+      <section class="sidebar-controls">
+        <input type="search" id="chatSearchInput" class="text-input" placeholder="Фильтр чатов… (Ctrl+K для поиска по текстам)" autocomplete="off">
+        <div class="network-chips" id="networkFilterChips"></div>
+        <button class="btn btn-primary btn-full" id="btnNewChat">+ Новый чат в любой сети</button>
+      </section>
+
+      <nav class="chat-list" id="chatList" aria-label="Список чатов"></nav>
+
+      <footer class="sidebar-footer">
+        <div class="mini-stat">
+          <span>Мосты ОЗУ:</span>
+          <strong id="sidebarRamMb">0 МБ</strong>
+        </div>
+        <div class="mini-stat">
+          <span>Индекс:</span>
+          <strong id="sidebarIndexDocs">0</strong>
+        </div>
+        <div class="mini-stat">
+          <span>Outbox:</span>
+          <strong id="sidebarOutbox">0</strong>
+        </div>
+      </footer>
+    </aside>
+
+    <!-- Центральная колонка: активный чат, закрепы, Markdown, голос, файлы -->
+    <main class="chat-stage" id="chatStage">
+      <header class="chat-header" id="chatHeader">
+        <div class="chat-header-left">
+          <button class="icon-btn mobile-only" id="btnBackChats" title="К списку чатов">←</button>
+          <span class="net-avatar" id="activeChatBadge">RM</span>
+          <div class="chat-header-meta">
+            <h2 id="activeChatTitle">Выбери чат</h2>
+            <div class="chat-subbadges">
+              <span class="pill" id="activeRoutePill">—</span>
+              <span class="pill" id="activeTrustPill">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="btn btn-ghost btn-sm" id="btnCloudSync" title="Синхронизировать с Supabase (games-cloud-save)">☁ Облако</button>
+          <button class="btn btn-ghost btn-sm" id="btnPinChat" title="Закрепить чат наверху списка">📌</button>
+          <button class="btn btn-ghost btn-sm" id="btnSimIncoming" title="Смоделировать входящее сообщение">+ Входящее</button>
+          <button class="btn btn-ghost btn-sm" id="btnQuickBindVpn" hidden>Подключить VPN</button>
+          <button class="btn btn-ghost btn-sm" id="btnToggleInspector" title="Открыть/скрыть Инспектор ядра">Инспектор</button>
+        </div>
+      </header>
+
+      <div class="trust-banner" id="trustWarningBanner" hidden></div>
+      <div class="pinned-banner" id="pinnedBanner" hidden>
+        <span class="pinned-label">📌 Закреплено:</span>
+        <button type="button" class="pinned-jump" id="btnJumpPinned"></button>
+      </div>
+
+      <section class="messages-feed" id="messagesFeed" aria-live="polite"></section>
+
+      <div class="reply-bar" id="replyBar" hidden>
+        <span id="replyBarText"></span>
+        <button class="icon-btn" id="btnCancelReply" title="Отменить ответ / правку">✕</button>
+      </div>
+
+      <div class="voice-record-bar" id="voiceRecordBar" hidden>
+        <span class="rec-dot"></span>
+        <span id="voiceRecTimer">0:00</span>
+        <canvas id="voiceRecCanvas" width="220" height="30"></canvas>
+        <button type="button" class="btn btn-sm btn-primary" id="btnStopSendVoice">Отправить голос</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="btnCancelVoice">Отмена</button>
+      </div>
+
+      <div class="attachment-bar" id="attachmentBar" hidden>
+        <div class="attachment-info">
+          <strong id="attachmentName"></strong>
+          <span id="attachmentMeta"></span>
+        </div>
+        <label class="checkbox-inline">
+          <input type="checkbox" id="chkSimVpnDrop">
+          <span>Тест обрыва VPN на середине (RM-302 + докачка)</span>
+        </label>
+        <button class="icon-btn" id="btnClearAttachment" title="Убрать файл">✕</button>
+      </div>
+
+      <form class="composer" id="composerForm">
+        <label class="icon-btn file-trigger" title="Прикрепить файл (pack.media + vault.storeMedia + streamChunk)">
+          📎
+          <input type="file" id="fileInput" hidden>
+        </label>
+        <button type="button" class="icon-btn" id="btnRecordVoice" title="Записать голосовую заметку (или создать тестовый WAV)">🎙️</button>
+        <textarea id="messageInput" class="composer-input" rows="1" placeholder="Сообщение (поддерживается **жирный**, `код`, ```блоки```, ↑ правка последнего, Ctrl+K поиск)…"></textarea>
+        <button type="submit" class="btn btn-primary" id="btnSend">Отправить</button>
+      </form>
+      <div class="composer-hint" id="composerStatus">
+        Конвейер: <code>pack → validate → vault.append → transfer.enqueue → transfer.dispatch</code>
+      </div>
+    </main>
+
+    <!-- Правая колонка: живой инспектор RatMes Engine (6 вкладок) -->
+    <aside class="inspector" id="inspectorPanel">
+      <header class="inspector-header">
+        <div>
+          <h3>Инспектор RatMes Engine</h3>
+          <span class="inspector-proto" id="inspectorProto">ratcore-bridge/1 · 15 веток · 9 облаков</span>
+        </div>
+        <button class="icon-btn mobile-only" id="btnCloseInspector">✕</button>
+      </header>
+
+      <nav class="inspector-tabs" role="tablist">
+        <button class="tab-btn active" data-tab="cloud">Облака</button>
+        <button class="tab-btn" data-tab="networks">Сети</button>
+        <button class="tab-btn" data-tab="chrono">Хроно</button>
+        <button class="tab-btn" data-tab="vault">Файлы</button>
+        <button class="tab-btn" data-tab="guard">Защита</button>
+        <button class="tab-btn" data-tab="console">Консоль</button>
+      </nav>
+
+      <!-- Вкладка 0: Подключённые облака Games (9 сервисов + живая синхронизация Supabase) -->
+      <section class="tab-pane active" id="tab-cloud">
+        <div class="card">
+          <div class="card-title-row">
+            <span>Supabase · games-cloud-save</span>
+            <span class="pill accent" id="cloudSyncPill">Подключение…</span>
+          </div>
+          <p class="muted-text">Игровые комнаты Games («Общий чат», «Кооператив», «Разработчики») синхронизируются через publishable key и RLS даже на статическом сайте, сохраняя локальный резерв в RatMes-Vault/.</p>
+          <div class="inline-form">
+            <input type="text" id="cloudDisplayNameInput" class="text-input" placeholder="Твой ник в Games (например: Игрок)" maxlength="48">
+            <button type="button" class="btn btn-sm btn-primary" id="btnSaveCloudName">Ник</button>
+          </div>
+          <div class="action-row">
+            <button type="button" class="btn btn-sm btn-primary" id="btnManualCloudSync">↻ Синхронизировать сейчас</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="btnExportCloudManifest">Манифест бэкапа</button>
+          </div>
+          <div id="cloudSupabaseStats" class="kv-grid"></div>
+          <div id="cloudOnlinePeers" class="stack-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title-row">
+            <span>Подключённые сервисы</span>
+            <span class="pill good" id="cloudCountPill">9 / 9</span>
+          </div>
+          <div id="cloudServicesList" class="stack-list"></div>
+        </div>
+      </section>
+
+      <!-- Вкладка 1: Сети, живые мосты и P2P LAN Mesh -->
+      <section class="tab-pane" id="tab-networks">
+        <div class="card">
+          <div class="card-title-row">
+            <span>Прямой LAN / P2P Mesh (E2EE)</span>
+            <button type="button" class="btn btn-sm btn-ghost" id="btnRefreshP2p">Обновить</button>
+          </div>
+          <div class="inline-form">
+            <input type="url" id="p2pEndpointInput" class="text-input" placeholder="http://192.168.1.25:8788">
+            <button type="button" class="btn btn-sm btn-primary" id="btnConnectP2p">Связать</button>
+          </div>
+          <div id="p2pPeersList" class="stack-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Матрица сетей (<span id="matrixCountryCode">RU</span>) и живые мосты</div>
+          <p class="muted-text">Каждый мост изолирован (Let it crash), спит в 64 Б и может работать в песочнице или как живой API-мост (токен хранится только в SecretVault).</p>
+          <div id="networksList" class="stack-list"></div>
+        </div>
+      </section>
+
+      <!-- Вкладка 2: Хроно, S3-FIFO, Circuit Breaker, AIMD и график телеметрии -->
+      <section class="tab-pane" id="tab-chrono">
+        <div class="card">
+          <div class="card-title">Живая телеметрия (ОЗУ мостов / задержка)</div>
+          <canvas id="telemetryCanvas" class="telemetry-canvas" width="316" height="92"></canvas>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Фаза сна (Chrono Engine)</div>
+          <div class="phase-buttons" id="phaseButtons">
+            <button class="btn btn-sm" data-phase="ACTIVE">ACTIVE</button>
+            <button class="btn btn-sm" data-phase="COOLING">COOLING</button>
+            <button class="btn btn-sm" data-phase="HOUSEKEEPING">УБОРКА</button>
+            <button class="btn btn-sm" data-phase="DEEP_SLEEP">СОН</button>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-sm btn-primary" id="btnRunHousekeeping">DAG-уборка</button>
+            <button class="btn btn-sm btn-ghost" id="btnWarmUpFuture">Прогреть Будущее</button>
+            <button class="btn btn-sm btn-ghost" id="btnPumpOutbox">Насос Outbox</button>
+          </div>
+          <div id="chronoStats" class="kv-grid"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Предсказание «Будущего» (Марков)</div>
+          <div id="futurePredictions" class="stack-list"></div>
+          <div class="backpressure-box">
+            <label class="checkbox-inline">
+              <input type="checkbox" id="chkLowBattery">
+              <span>Симулировать батарею 15% (Backpressure RM-501)</span>
+            </label>
+            <label class="checkbox-inline">
+              <input type="checkbox" id="chkSaveData">
+              <span>Экономия трафика (Save-Data)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Память S3-FIFO + Планировщик приоритетов</div>
+          <div id="cacheStats" class="kv-grid"></div>
+          <div id="schedulerCircuits" class="stack-list"></div>
+          <button class="btn btn-sm btn-ghost" id="btnEvictTick">Прогнать вытеснение (≤2 мс)</button>
+        </div>
+      </section>
+
+      <!-- Вкладка 3: Настоящие файлы RatMes-Vault/ + Экспорт/Импорт пакета -->
+      <section class="tab-pane" id="tab-vault">
+        <div class="card">
+          <div class="card-title">Папка RatMes-Vault/</div>
+          <p class="muted-text" id="vaultRootLabel"></p>
+          <div class="action-row">
+            <button class="btn btn-sm btn-ghost" id="btnHealTail">Лечить хвост</button>
+            <button class="btn btn-sm btn-ghost" id="btnRebuildIndex">Пересобрать индекс</button>
+            <button class="btn btn-sm btn-primary" id="btnExportBundle">Экспорт архива</button>
+            <label class="btn btn-sm btn-ghost">
+              Импорт JSON
+              <input type="file" id="importBundleInput" accept=".json" hidden>
+            </label>
+          </div>
+          <div id="vaultFilesList" class="file-tree"></div>
+        </div>
+
+        <div class="card" id="vaultPreviewCard" hidden>
+          <div class="card-title-row">
+            <span id="vaultPreviewTitle">Файл</span>
+            <a id="vaultDownloadLink" class="btn btn-sm btn-primary" download>Скачать</a>
+          </div>
+          <pre class="code-viewer" id="vaultPreviewContent"></pre>
+        </div>
+      </section>
+
+      <!-- Вкладка 4: TransferGuard, Outbox + Карта чанков, Симуляторы, Трасса -->
+      <section class="tab-pane" id="tab-guard">
+        <div class="card">
+          <div class="card-title">TransferGuard (5 барьеров)</div>
+          <div class="action-row">
+            <button class="btn btn-sm btn-primary" id="btnAuditCode">Аудит кода (RM-107)</button>
+            <button class="btn btn-sm btn-ghost" id="btnInspectTransfer">Почему не дошло?</button>
+          </div>
+          <div id="guardAuditResult" class="callout" hidden></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Симулятор стресс-сбоев (в песочнице)</div>
+          <div class="stack-list">
+            <button class="btn btn-sm btn-ghost" data-sim="vpn-drop">⚡ Обрыв VPN + докачка чанков (RM-302)</button>
+            <button class="btn btn-sm btn-ghost" data-sim="sleep-12h">🌙 Сон 12 часов + лимит maxSteps</button>
+            <button class="btn btn-sm btn-ghost" data-sim="bridge-crash">💥 Падение моста Discord (Let it crash)</button>
+          </div>
+          <div id="simResultBox" class="callout" hidden></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Очередь Outbox, приоритеты и карта чанков</div>
+          <div id="transfersList" class="stack-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Трасса RatMes.tools.*</div>
+          <div id="traceList" class="trace-list"></div>
+        </div>
+      </section>
+
+      <!-- Вкладка 5: Интерактивная консоль RatMes.tools.* -->
+      <section class="tab-pane" id="tab-console">
+        <div class="card">
+          <div class="card-title">Консоль инструментов RatMes.tools.*</div>
+          <p class="muted-text">Вызови любой из 15 модулей ядра напрямую и посмотри живой ответ контракта <code>{ ok, tool, data, error, tick, costMs, traceId }</code>.</p>
+          <div class="console-pickers">
+            <select id="consoleGroupSelect" class="select-input"></select>
+            <select id="consoleMethodSelect" class="select-input"></select>
+          </div>
+          <label class="field-label">
+            Аргументы JSON (или массив шагов при режиме pipeline)
+            <textarea id="consoleArgsInput" class="code-input" rows="5">{}</textarea>
+          </label>
+          <div class="action-row">
+            <button type="button" class="btn btn-sm btn-primary" id="btnRunConsoleTool">Выполнить tool</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="btnConsolePresetPipeline">Пример pipeline</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="btnRunConsolePipeline">Запустить pipeline</button>
+          </div>
+          <pre class="code-viewer" id="consoleOutput">Нажми «Выполнить tool» для запуска инструмента…</pre>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- Командная палитра и глобальный поиск BM25 (Ctrl+K) -->
+  <dialog class="modal modal-wide" id="paletteModal">
+    <div class="modal-card">
+      <div class="palette-head">
+        <input type="search" id="paletteInput" class="text-input" placeholder="Ищи по всем сообщениям (net:telegram, has:file, has:voice, pinned:true) или введи команду…">
+      </div>
+      <div id="paletteResults" class="palette-results"></div>
+    </div>
+  </dialog>
+
+  <!-- Модальное окно создания нового чата -->
+  <dialog class="modal" id="newChatModal">
+    <form method="dialog" class="modal-card" id="newChatForm">
+      <h3>Новый чат</h3>
+      <label class="field-label">
+        Мессенджер
+        <select id="newChatNetwork" class="select-input"></select>
+      </label>
+      <label class="field-label">
+        Название чата
+        <input type="text" id="newChatTitle" class="text-input" placeholder="Например: WhatsApp · Семья" required>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="btnCancelNewChat">Отмена</button>
+        <button type="submit" class="btn btn-primary">Создать</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модальное окно пересылки сообщения в любую сеть -->
+  <dialog class="modal" id="forwardModal">
+    <form method="dialog" class="modal-card" id="forwardForm">
+      <h3>Переслать сообщение</h3>
+      <p class="muted-text" id="forwardPreviewText"></p>
+      <label class="field-label">
+        Целевой чат (в любом мессенджере)
+        <select id="forwardTargetChat" class="select-input"></select>
+      </label>
+      <label class="checkbox-inline">
+        <input type="checkbox" id="chkForwardHideAuthor">
+        <span>Скрыть имя исходного автора</span>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="btnCancelForward">Отмена</button>
+        <button type="submit" class="btn btn-primary">Переслать через pack.forward</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модальное окно привязки VPN/прокси -->
+  <dialog class="modal" id="proxyModal">
+    <form method="dialog" class="modal-card" id="proxyForm">
+      <h3 id="proxyModalTitle">Маршрут VPN / прокси</h3>
+      <input type="hidden" id="proxyNetworkInput">
+      <label class="field-label">
+        Основной маршрут (VPN / прокси)
+        <input type="text" id="proxyPrimaryInput" class="text-input" placeholder="vpn-eu-01 (WireGuard)" required>
+      </label>
+      <label class="field-label">
+        План Б (резервный маршрут)
+        <input type="text" id="proxyBackupInput" class="text-input" placeholder="vpn-nl-backup-02 (VLESS)">
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="btnCancelProxy">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить маршрут</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модальное окно подключения живого внешнего моста (Telegram / Discord / Matrix / VK / Hook) -->
+  <dialog class="modal" id="liveBridgeModal">
+    <form method="dialog" class="modal-card" id="liveBridgeForm">
+      <h3 id="liveBridgeTitle">Живой мост (токен -> SecretVault)</h3>
+      <input type="hidden" id="liveBridgeNetwork">
+      <label class="field-label">
+        Тип драйвера
+        <select id="liveBridgeKind" class="select-input">
+          <option value="telegram">Telegram Bot API</option>
+          <option value="discord">Discord Webhook</option>
+          <option value="matrix">Matrix Client-Server API</option>
+          <option value="vk">VK Messages API</option>
+          <option value="webhook">Универсальный HTTP Webhook</option>
+        </select>
+      </label>
+      <label class="field-label">
+        Endpoint / URL (или Webhook URL)
+        <input type="url" id="liveBridgeEndpoint" class="text-input" placeholder="https://api.telegram.org">
+      </label>
+      <label class="field-label">
+        Target ID (chat_id / roomId / peer_id)
+        <input type="text" id="liveBridgeTargetId" class="text-input" placeholder="Например: 123456789 или !room:matrix.org">
+      </label>
+      <label class="field-label">
+        Секретный токен (кладётся в закрытый SecretVault, наружу не выдаётся)
+        <input type="password" id="liveBridgeToken" class="text-input" placeholder="Токен бота / access_token" autocomplete="off">
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-danger" id="btnDisableLiveBridge">В песочницу</button>
+        <button type="button" class="btn btn-ghost" id="btnCancelLiveBridge">Отмена</button>
+        <button type="submit" class="btn btn-primary">Включить живой мост</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Модальное окно единой книги контактов -->
+  <dialog class="modal modal-wide" id="contactsModal">
+    <div class="modal-card">
+      <div class="card-title-row">
+        <h3>👥 Единые контакты (один человек во всех сетях)</h3>
+        <button type="button" class="icon-btn" id="btnCloseContacts">✕</button>
+      </div>
+      <div id="contactsList" class="stack-list"></div>
+      <form id="addContactForm" class="inline-contact-form">
+        <input type="text" id="contactNameInput" class="text-input" placeholder="Имя контакта" required>
+        <input type="text" id="contactHandleInput" class="text-input" placeholder="Ник/ID (напр. @ivan)">
+        <select id="contactNetSelect" class="select-input"></select>
+        <button type="submit" class="btn btn-primary">Добавить</button>
+      </form>
+    </div>
+  </dialog>
+
+  <div class="toast-host" id="toastHost" aria-live="polite"></div>
+  <script type="module" src="./src/web/app.js"></script>
+</body>
+</html>
