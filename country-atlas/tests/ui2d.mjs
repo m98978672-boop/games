@@ -335,4 +335,31 @@ const visible = html
   ok(!/§/.test(page.slice(page.indexOf('id="world-terrain"') - 200, page.indexOf('id="world-regions"'))), 'у кнопки техники нет номеров параграфов');
 }
 
-console.log('OK: 10 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§99 (F-222…F-224, F-279…F-286, F-301…F-334, проверок ' + checks + ')');
+/* §100: тумблер «области» — границы областей по кнопке, а не всегда */
+{
+  const page = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const script = readFileSync(new URL('../src/main2d.js', import.meta.url), 'utf8');
+  const view = readFileSync(new URL('../src/worldview.js', import.meta.url), 'utf8');
+  ok(/<button id="world-regions-border"[^>]*>области: выкл<\/button>/.test(page), 'у карты есть тумблер «области»');
+  ok(/id="world-regions-border"[^>]*title="[^"]*"/.test(page), 'у тумблера «области» есть подсказка');
+  ok(page.indexOf('id="world-satellite"') < page.indexOf('id="world-regions-border"'), 'тумблер стоит в общем ряду кнопок карты');
+  ok(page.indexOf('id="world-regions-border"') < page.indexOf('id="world-terrain"'), 'тумблер «области» рядом с «техникой»');
+  ok(/getElementById\('world-regions-border'\)/.test(script), 'тумблер подключён в main2d');
+  ok(/worldView\.showRegions = !worldView\.showRegions/.test(script), 'тумблер переключает, а не включает один раз');
+  ok(/области: ' \+ \(worldView\.showRegions \? 'вкл' : 'выкл'\)/.test(script), 'подпись тумблера говорит, что включено');
+  ok(/this\.showRegions = false/.test(view), 'границы областей по умолчанию выключены');
+  ok(/if \(this\.showRegions\) drawRegionBorders/.test(view), 'пунктир областей рисуется только по тумблеру');
+  ok(/showRegions: this\.showRegions/.test(view), 'легенда знает про тумблер');
+  ok(/e\[0\] !== 'region' \|\| opts\.showRegions !== false/.test(view), 'строка легенды об областях скрыта вместе с ними');
+  // упрощение карты
+  ok(/localRoadScale: 0\.05/.test(view), 'мелкие дороги — только при приближении');
+  ok(/markScale: 0\.05/.test(view), 'отметки рельефа — только при приближении');
+  ok(/ruinScale: 0\.05/.test(view), 'кресты разрушенного — только при приближении');
+  ok(/const showLocal = cam\.scale >= WV\.localRoadScale/.test(view), 'мелкие дороги проверяют масштаб');
+  ok(/if \(showLocal\) \{/.test(view), 'на обзоре мелкие дороги не рисуются');
+  ok(/if \(cam\.scale >= WV\.markScale\) paintMarksScreen/.test(view), 'на обзоре нет серых отметок поверх покрова');
+  ok(/if \(ruins\.length && cam\.scale >= WV\.ruinScale\)/.test(view), 'на обзоре нет крестов разрушенного');
+  ok(!/§/.test(page.slice(page.indexOf('id="world-regions-border"') - 200, page.indexOf('id="world-terrain"'))), 'у тумблера нет номеров параграфов');
+}
+
+console.log('OK: 11 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§100 (F-222…F-224, F-279…F-286, F-301…F-334, проверок ' + checks + ')');
