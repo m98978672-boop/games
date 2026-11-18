@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1169,
-    "totalBytes": 35727536,
+    "files": 1172,
+    "totalBytes": 35799926,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -19,11 +19,11 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "e001d77426a2897cf56d6361e7c8813c3662ddaf0a7e176f9b3f0bd4d12af8e2",
-      "totalSize": 1707040,
+      "infoHash": "a4ac1df8b3cfb81d884e638c769f1627bc01fe3fd5917e97ea8386568ecb1eae",
+      "totalSize": 1769181,
       "chunkSize": 262144,
       "chunkCount": 7,
-      "fileCount": 79,
+      "fileCount": 80,
       "files": [
         {
           "path": ".gitignore",
@@ -47,8 +47,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 274401,
-          "sha256": "bb7b670e57e85a298bae1c634962b42ecf5a5ecacefc313a8057e4c46dd09e3b"
+          "size": 293220,
+          "sha256": "45cb051e9bf917511a9d37337953be5b06061006aeb1345433d00ed1b891a399"
         },
         {
           "path": "cover.svg",
@@ -57,8 +57,8 @@
         },
         {
           "path": "index.html",
-          "size": 23313,
-          "sha256": "431c3390a0d3f82130cf58a7b5cf5e677d0974ec8706215237bf5da5090c7e48"
+          "size": 22527,
+          "sha256": "0ed91e3ee722d054a837957f3fc98ad179f5cb3fca532201fa2295364f241599"
         },
         {
           "path": "map-worker.min.js",
@@ -67,8 +67,8 @@
         },
         {
           "path": "package.json",
-          "size": 1219,
-          "sha256": "2b1bb9051a417a42e553352982eca5f23d92ae1b2db11df90922c7869a1f43ed"
+          "size": 1247,
+          "sha256": "d012d711dd53951f02525de4c74d1bb967b3de77cda62602ae5a74b068adba96"
         },
         {
           "path": "site/app.js",
@@ -112,8 +112,8 @@
         },
         {
           "path": "src/autonomy2d.js",
-          "size": 13206,
-          "sha256": "ac7cf0c7deaff968003110d20511c6930a00b3014fb0652816cf2ccd1f9c56f5"
+          "size": 13863,
+          "sha256": "1a9c82be59a7cb1c2775c2fa1ee02eea932efc2c565bd897fa09e605685e503c"
         },
         {
           "path": "src/borders2d.js",
@@ -187,8 +187,8 @@
         },
         {
           "path": "src/main2d.js",
-          "size": 35230,
-          "sha256": "c0ba32226c68ab7a0a5feeb510e9ce4c296206ccb6ec838ed835e9c76becfe0c"
+          "size": 37072,
+          "sha256": "80fb8de55a770795dc861a0025fca87568ca1370381d4c89c5f53b59bf58576a"
         },
         {
           "path": "src/map-worker.js",
@@ -237,13 +237,18 @@
         },
         {
           "path": "src/planet2d.js",
-          "size": 14610,
-          "sha256": "57d6e342b525650a307fbc301cf153dbef9bcf847d2b6a008e3e14ba380cd436"
+          "size": 15238,
+          "sha256": "5c08890c5bbc8291dac2db8cf985b27135230cf3b0deedef9500e5e513386269"
         },
         {
           "path": "src/play2d.js",
           "size": 6510,
           "sha256": "a18adc8578fc697d334ff416c5a529787bf4bc75a1a0b10f72f7d4ac18b7a5ba"
+        },
+        {
+          "path": "src/regions2d.js",
+          "size": 18102,
+          "sha256": "d7c74aed68cbaacbc38b5c65967ff4d93421ab48170eefb57ee4d9f8c7478071"
         },
         {
           "path": "src/rivers2d.js",
@@ -262,8 +267,8 @@
         },
         {
           "path": "src/tech2d.js",
-          "size": 20404,
-          "sha256": "045c2e2ac667af4f60fe9515679376f474842a8f727f77f148e959fed56bfd72"
+          "size": 24553,
+          "sha256": "87a5359d74fd6318e927762dc10ec36954cefcc45d72055151baa85fcc1f445f"
         },
         {
           "path": "src/terrain-worker.js",
@@ -307,13 +312,13 @@
         },
         {
           "path": "src/worldmap2d.js",
-          "size": 55804,
-          "sha256": "5802016de147291f4b5b0e00c041e9655a6e2c339d3915abaf548bb5abbc392c"
+          "size": 63380,
+          "sha256": "4aaa0230fc58fef69ca2c22d42543f641c0c23563fa67e03646e4c908b60b485"
         },
         {
           "path": "src/worldview.js",
-          "size": 54523,
-          "sha256": "9831d7334ed7291b0adbd74da77306de76cb7f0a1742e9b9146af9cd83e81a13"
+          "size": 65649,
+          "sha256": "c133937cfca55d4ecd2ea64ebaf31d7f43e8c2dbffa7ed4b676424ed8a2e1f4a"
         },
         {
           "path": "terrain-worker.min.js",
@@ -2068,11 +2073,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "c7671773f547ef33c272caba20d673c0ff59b6eda5cbaa7ac1701eebe648b286",
-      "totalSize": 9730081,
+      "infoHash": "682d1568fbecf730a22b21dd264f5b29b9a98eeaee6370695ae5b4f640644bd0",
+      "totalSize": 9740330,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 527,
+      "fileCount": 529,
       "files": [
         {
           "path": ".gitattributes",
@@ -3706,13 +3711,18 @@
         },
         {
           "path": "src/ui/menus.js",
-          "size": 20894,
-          "sha256": "46a5ae5f815c4d3919092300b232f43b7927bf26f18578cae12d8abfe360ec00"
+          "size": 21882,
+          "sha256": "47be42020af467bac92840cef8393ec2692002a2fc19cc44e5d7fdc1ff9e7932"
+        },
+        {
+          "path": "src/ui/model_import.js",
+          "size": 3812,
+          "sha256": "046ea4018777d8b3d16496a3671f97f15cfe507bd8eaae176feb9245d68a67c1"
         },
         {
           "path": "src/ui/model_storage.js",
-          "size": 6580,
-          "sha256": "f72cb13d0b41b15d3fb5f0d3f4c24e9232f2296f717a5d366c5990af40965d96"
+          "size": 8007,
+          "sha256": "69e0b53403552594a102ab761b64e50946f731076993bd20009dbb69c5b8d495"
         },
         {
           "path": "src/vendor/EASYSTAR-LICENSE.txt",
@@ -4423,6 +4433,11 @@
           "path": "tools/opposing-columns.mjs",
           "size": 8735,
           "sha256": "1ddfc08647daa6a57f3e9ba038a65f33934009f7f34187959152e09f1d80ee80"
+        },
+        {
+          "path": "tools/package-qwen-model.py",
+          "size": 4022,
+          "sha256": "c9d7e7258ff07998edd70514070aa5069545c713825cac45073157d6a30e1817"
         },
         {
           "path": "tools/remaining-group-failures.mjs",
