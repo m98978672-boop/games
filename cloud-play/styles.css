@@ -1,4 +1,4 @@
-@import url("../shared/theme.css");
+@import url("../shared/tokens.css");
 :root {
   color-scheme: dark;
   --bg: #090d12;

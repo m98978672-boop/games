@@ -1,4 +1,4 @@
-@import url("../shared/theme.css");
+@import url("../shared/tokens.css");
 :root {
   --bg-0: #0b0e14;
   --bg-1: #121721;
