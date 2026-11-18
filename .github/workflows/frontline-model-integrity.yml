@@ -45,9 +45,8 @@ jobs:
           print('Dropbox hash matches release; ZIP and 18 model files verified')
           PY
       - name: Test real archive import in Chromium
-        working-directory: frontline-command
         env:
           MODEL_ZIP: ${{ runner.temp }}/Qwen3.5-0.8B-q4f16_1-MLC.zip
         run: |
-          npm ci --no-audit --no-fund
-          node tests/model-import-browser.mjs
+          npm ci --prefix frontline-command --no-audit --no-fund
+          node frontline-command/tests/model-import-browser.mjs
