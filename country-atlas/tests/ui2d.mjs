@@ -278,6 +278,19 @@ const visible = html
   ok(/id="world-tech"[\s\S]*id="world-legend"/.test(html), 'технологии стоят между контактами и легендой — ничего не наезжает');
   // К30: числа подсказки и явный статус науки — на экране мира
   ok(/id="world-hint"/.test(html), 'у карты мира есть строка подсказки с числами');
+  // К31: подсказка ушла вниз панели — блоки, которые стояли на своих местах, не сдвинулись
+  ok(html.indexOf('id="world-stats"') < html.indexOf('id="world-hint"'), 'подсказка стоит ниже состояния мира');
+  ok(html.indexOf('id="world-tech"') < html.indexOf('id="world-hint"'), 'подсказка не сдвигает технологии');
+  ok(/id="world-self"/.test(html), 'есть блок «страна живёт сама»');
+  ok(/<div class="cap">страна живёт сама<\/div>[\s\S]*id="world-self"/.test(html), 'блок страны подписан по-человечески');
+  ok(main.includes('world-self') && main.includes('autonomyStats'), 'блок страны заполняется из сводки страны');
+  ok(/городов ' \+ self\.cities/.test(main), 'в блоке страны — число городов');
+  ok(/армий ' \+ self\.armies/.test(main), 'в блоке страны — число армий');
+  ok(/казна ' \+ nf\(self\.treasury\)/.test(main), 'в блоке страны — казна');
+  ok(/последнее: ' \+ self\.last/.test(main), 'в блоке страны — последнее решение');
+  ok(/нужна наука · космос ' \+ spaceTier/.test(main), 'кнопка спутника объясняет, чего не хватает');
+  ok(/import \{ autonomyStats \}/.test(main) || /autonomyStats/.test(main), 'автономия подключена к интерфейсу');
+  ok(!/§/.test(html.slice(html.indexOf('id="world-self"'), html.indexOf('id="world-legend"'))), 'в блоке страны нет номеров параграфов');
   ok(/<div class="cap">подсказка<\/div>[\s\S]*id="world-hint"/.test(html), 'подсказка подписана по-человечески');
   ok(main.includes('world-hint'), 'подсказка заполняется из main2d');
   ok(/стран ' \+ st\.countries \+[\s\S]{0,200}войн ' \+ st\.wars/.test(main), 'в подсказке — число стран, войн и боёв');

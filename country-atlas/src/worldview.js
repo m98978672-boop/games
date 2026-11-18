@@ -4,7 +4,7 @@
    картинки и живой слой поверх (дороги, города, армии, взрывы, разрушения, оккупация).
    Загрузка идёт в два прохода прямо во время анимации перехода: сначала страны и границы,
    потом отметки. Пока не готово — карта честно показывает то, что уже есть. */
-import { MARK, countryAt, canSeeArmies, pointInPolygon } from './worldmap2d.js';
+import { MARK, countryAt, canSeeArmies, visibleArmiesFor, pointInPolygon } from './worldmap2d.js';
 
 export const WV = {
   baseSize: 1400,          // сторона базового слоя, px
@@ -50,6 +50,28 @@ export function landBox(world) {
     if (y < y0) y0 = y; if (y > y1) y1 = y;
   }
   return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
+}
+
+/* F-391: камера смотрит на свою страну. В К30 камера встала в середину рамки суши,
+   и карта «уехала»: наша страна оказалась слева от центра, хотя не должна была
+   двигаться. Теперь центр кадра — своя столица, а масштаб вписывает континент
+   в кадр с полем: кадр остаётся честным, страна — в середине. */
+export function ownOverview(world, view, padPx = WV.fitPad) {
+  const center = world && world.own && world.own.capital ? world.own.capital : { x: 0, y: 0 };
+  const coast = world && world.coast;
+  if (!coast || !coast.length) return { x: center.x, y: center.y, scale: overviewScale(view) };
+  let mx = 0, my = 0;
+  for (const [x, y] of coast) {
+    mx = Math.max(mx, Math.abs(x - center.x));
+    my = Math.max(my, Math.abs(y - center.y));
+  }
+  const halfW = Math.max(1, mx), halfH = Math.max(1, my);
+  const w = Math.max(1, view.w) - padPx * 2, h = Math.max(1, view.h) - padPx * 2;
+  return {
+    x: center.x,
+    y: center.y,
+    scale: Math.min(w / (2 * halfW), h / (2 * halfH))
+  };
 }
 
 export function fitLandScale(world, view, padPx = WV.fitPad) {
@@ -163,12 +185,8 @@ export class WorldView {
   /* F-303: переход. Камера летит из игрового кадра в обзор мира, а базовый слой
      в это же время дорисовывается по проходам — анимация и есть загрузка. */
   open(fromCam = null, ms = WV.transitionMs) {
-    const box = landBox(this.world);
-    const to = {
-      x: box ? box.x : 0,
-      y: box ? box.y : 0,
-      scale: fitLandScale(this.world, this.view)
-    };
+    // F-391: в кадре — своя страна в середине и весь континент вокруг неё
+    const to = ownOverview(this.world, this.view);
     this.transition = fromCam
       ? { from: { x: fromCam.x, y: fromCam.y, scale: clampViewScale(fromCam.scale) }, to, t: 0, ms }
       : null;
@@ -225,6 +243,13 @@ export class WorldView {
       coast.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
       ctx.closePath();
     };
+    const polyPath = (pts) => {
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
+      ctx.closePath();
+    };
+    const islands = this.world.islands || [];
+    const caps = this.world.caps || [];
     if (pass === 0) {
       // F-357: море — глубина растёт к краю: у берега светлее, в океане темнее
       const g = ctx.createRadialGradient(size / 2, size / 2, size * 0.16, size / 2, size / 2, size * 0.66);
@@ -242,6 +267,78 @@ export class WorldView {
       }
       for (let y = 0; y <= size + 0.5; y += step) {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+      }
+      // F-374: полярные льды — по ним видно, что мир круглый, а карта не обрезана
+      for (const cap of caps) {
+        // край льда тает к воде: у кромки почти прозрачно, у полюса — плотный лёд
+        const capYs = cap.poly.map((q) => q[1]);
+        const capInner = cap.id === 'north' ? Math.max(...capYs) : Math.min(...capYs);
+        const capOuter = cap.id === 'north' ? -this.world.sizeKm / 2 : this.world.sizeKm / 2;
+        const ice = ctx.createLinearGradient(0, toPx(capInner), 0, toPx(capOuter));
+        ice.addColorStop(0, 'rgba(206,228,236,0.10)');
+        ice.addColorStop(0.45, 'rgba(214,232,238,0.55)');
+        ice.addColorStop(1, 'rgba(238,248,252,0.95)');
+        polyPath(cap.poly);
+        ctx.fillStyle = ice;
+        ctx.fill();
+        // F-396: трещины на льду — без них полоса читалась как серая плашка интерфейса
+        ctx.save();
+        polyPath(cap.poly);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(146,186,210,0.85)';
+        ctx.lineWidth = 1.3;
+        const halfKm = this.world.sizeKm / 2;
+        const hs = (a) => {
+          const v = Math.sin(a * 12.9898 + 78.233) * 43758.5453;
+          return v - Math.floor(v);
+        };
+        const ys = cap.poly.map((q) => q[1]);
+        const innerY = cap.id === 'north' ? Math.max(...ys) : Math.min(...ys);
+        const dir = cap.id === 'north' ? -1 : 1;
+        for (let i = 0; i < 40; i++) {
+          const h = hs(this.world.seed * 0.001 + i * 1.37);
+          const h2 = hs(this.world.seed * 0.001 + i * 2.11);
+          const x1 = -halfKm + (i / 40) * this.world.sizeKm + h * 760;
+          const y1 = innerY + dir * (60 + h2 * 1500);
+          ctx.beginPath();
+          ctx.moveTo(toPx(x1), toPx(y1));
+          ctx.lineTo(toPx(x1 + 300 + h2 * 620), toPx(y1 + dir * (80 + h * 260)));
+          ctx.stroke();
+        }
+        ctx.restore();
+        polyPath(cap.poly);
+        ctx.strokeStyle = 'rgba(246,252,255,0.9)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+      }
+      // F-373: острова — земля, отмель и берег, как у континента, но без стран
+      for (const isl of islands) {
+        ctx.save();
+        ctx.translate(size * 0.004, size * 0.006);
+        polyPath(isl.poly);
+        ctx.fillStyle = 'rgba(3,9,13,0.5)';
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, size, size);
+        isl.poly.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
+        ctx.closePath();
+        ctx.clip('evenodd');
+        for (const [w, a] of [[22, 0.06], [12, 0.09], [5, 0.14]]) {
+          polyPath(isl.poly);
+          ctx.strokeStyle = 'rgba(126,196,220,' + a + ')';
+          ctx.lineWidth = w;
+          ctx.stroke();
+        }
+        ctx.restore();
+        polyPath(isl.poly);
+        ctx.fillStyle = WV.land;
+        ctx.fill();
+        polyPath(isl.poly);
+        ctx.strokeStyle = 'rgba(232,240,224,0.5)';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
       }
       if (coast.length) {
         // тень под континентом — суша читается как суша, а не как пятно
@@ -348,8 +445,17 @@ export class WorldView {
     const world = this.world;
     ctx.save();
     ctx.globalAlpha = this.alpha;
-    // F-367: за краем базового квадрата — тот же океан, а не чёрная полоса
-    ctx.fillStyle = WV.ocean[0];
+    // F-367: за краем базового квадрата — тот же океан, а не чёрная полоса.
+    // F-395: и тот же градиент глубины, иначе видно шов по краю базового слоя.
+    const seaCam = this.cam;
+    const seaSpan = world ? world.sizeKm * seaCam.scale : Math.max(view.w, view.h);
+    const cx = view.w / 2 - seaCam.x * seaCam.scale;
+    const cy = view.h / 2 - seaCam.y * seaCam.scale;
+    const sea = ctx.createRadialGradient(cx, cy, seaSpan * 0.16, cx, cy, seaSpan * 0.66);
+    sea.addColorStop(0, WV.ocean[2]);
+    sea.addColorStop(0.5, WV.ocean[1]);
+    sea.addColorStop(1, WV.ocean[0]);
+    ctx.fillStyle = sea;
     ctx.fillRect(0, 0, view.w, view.h);
     if (!world) { ctx.restore(); return this; }
 
@@ -364,7 +470,8 @@ export class WorldView {
 
     const cam = this.cam;
     const p = (x, y) => ({ x: view.w / 2 + (x - cam.x) * cam.scale, y: view.h / 2 + (y - cam.y) * cam.scale });
-    const visibleArmies = this.showArmies && canSeeArmies(world, 'own');
+    // F-392: своя армия видна всегда, чужая — только спутнику
+    const shownArmies = this.showArmies ? visibleArmiesFor(world, 'own') : [];
 
     // F-302: дороги, города и их подписи живут в отдельном слое с полями по краям.
     // Пока камера стоит (а смотрят карту мира именно так), слой просто копируется.
@@ -405,14 +512,14 @@ export class WorldView {
     }
 
     // армии — только если спутник видит
-    if (visibleArmies) {
+    if (shownArmies.length) {
       // метка армии растёт вместе с масштабом: на обзоре мира это искра, вблизи — флажок
       const size = Math.max(4, Math.min(10, 70 * cam.scale + 3));
       const wMark = size * 1.7, hMark = size;
       // F-331: у каждой видимой армии — полоска боеготовности; своя выделена цветом и длиной
       const barW = Math.max(12, Math.min(22, 130 * cam.scale + 8));
       const barH = Math.max(2, Math.min(3.4, 10 * cam.scale + 1.6));
-      for (const a of world.armies) {
+      for (const a of shownArmies) {
         const s1 = p(a.x, a.y);
         if (s1.x < -20 || s1.y < -20 || s1.x > view.w + 20 || s1.y > view.h + 20) continue;
         ctx.fillStyle = 'rgba(6,12,17,0.55)';
@@ -435,6 +542,18 @@ export class WorldView {
           ctx.strokeRect(s1.x - barW / 2 - 0.5, by - 0.5, barW + 1, barH + 1);
         }
       }
+    }
+
+    // F-393: океан подписан словами — карта читается как карта, а не как фон
+    if (this.labels && view.w >= 380) {
+      ctx.font = '600 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(150,196,214,0.5)';
+      ctx.fillText('О К Е А Н', view.w * 0.16, view.h * 0.78);
+      ctx.fillText('О К Е А Н', view.w * 0.84, view.h * 0.2);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
     }
 
     // F-356: подписи стран. Раньше на обзоре карта была немой: подписи включались
@@ -479,6 +598,7 @@ export class WorldView {
 
     // F-358: линейка масштаба и числа мира — по ним видно, что это карта, а не картинка
     drawScaleBar(ctx, view, cam);
+    drawMapLegend(ctx, view);
     ctx.restore();
     this.frames++;
     this.lastDrawMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
@@ -630,6 +750,73 @@ export class WorldView {
 
 /* Значок рельефа: лес — ёлочки, болото — чёрточки, горы — галочки, пустыня — точки,
    тундра — крестики, степь — короткие штрихи. Как на настоящих топокартах. */
+/* F-394: обозначения прямо на карте. Владелец сказал «не понятные значки»:
+   легенда лежала ниже в панели, и её не видели. Теперь шесть значков с подписями
+   словами стоят в углу кадра, где не мешают ни панели, ни подписям стран. */
+export function drawMapLegend(ctx, view, opts = {}) {
+  const entries = opts.entries || [
+    ['city', 'город'], ['capital', 'столица'], ['own', 'наша столица'],
+    ['army', 'наша армия'], ['battle', 'бой и взрыв'], ['ruin', 'разрушено']
+  ];
+  const narrow = view.w < 560;
+  const rows = narrow ? entries.slice(0, 3) : entries;
+  const rowH = narrow ? 14 : 15;
+  const wBox = narrow ? 132 : 158;
+  const hBox = rows.length * rowH + 14;
+  const x = narrow ? 10 : view.w - wBox - 12;
+  const y = narrow ? 56 : view.h - hBox - 12;
+  ctx.save();
+  ctx.fillStyle = 'rgba(6,14,20,0.62)';
+  ctx.fillRect(x, y, wBox, hBox);
+  ctx.strokeStyle = 'rgba(150,196,214,0.25)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, wBox - 1, hBox - 1);
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  rows.forEach(([kind, label], i) => {
+    const cy = y + 7 + i * rowH + rowH / 2 - 3;
+    const cx = x + 12;
+    if (kind === 'city') {
+      ctx.beginPath(); ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(232,238,244,0.85)'; ctx.fill();
+    } else if (kind === 'capital') {
+      ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#f4f6f8'; ctx.fill();
+      ctx.strokeStyle = 'rgba(6,14,20,0.7)'; ctx.lineWidth = 0.8; ctx.stroke();
+    } else if (kind === 'own') {
+      ctx.strokeStyle = 'rgba(248,252,240,0.95)'; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx - 3.5, cy); ctx.lineTo(cx + 3.5, cy);
+      ctx.moveTo(cx, cy - 3.5); ctx.lineTo(cx, cy + 3.5);
+      ctx.stroke();
+    } else if (kind === 'army') {
+      ctx.fillStyle = 'rgba(6,12,17,0.6)';
+      ctx.fillRect(cx - 4, cy - 3, 8, 6);
+      ctx.fillStyle = 'rgba(120,200,255,0.98)';
+      ctx.fillRect(cx - 3.4, cy - 2.4, 6.8, 4.8);
+      ctx.fillStyle = 'rgba(146,236,178,0.95)';
+      ctx.fillRect(cx - 3.4, cy + 3.4, 6.8, 1.8);
+    } else if (kind === 'battle') {
+      ctx.beginPath(); ctx.arc(cx, cy, 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,150,80,0.5)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,190,120,0.95)'; ctx.fill();
+    } else if (kind === 'ruin') {
+      ctx.strokeStyle = '#d64030'; ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx - 3, cy - 3); ctx.lineTo(cx + 3, cy + 3);
+      ctx.moveTo(cx + 3, cy - 3); ctx.lineTo(cx - 3, cy + 3);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(214,226,234,0.92)';
+    ctx.fillText(label, x + 22, cy);
+  });
+  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+  return { x, y, w: wBox, h: hBox, rows: rows.length };
+}
+
 export function drawMark(ctx, x, y, type, k = 1) {
   const s = WV.markPx * k;
   ctx.strokeStyle = MARK[type] ? MARK[type].tone : '#4a5a46';

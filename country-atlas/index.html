@@ -128,7 +128,8 @@
   #world-panel .row i{ width:12px; height:8px; display:inline-block; border:1px solid rgba(0,0,0,.35); }
   #world-stats{ line-height:1.5; }
   #world-tech{ line-height:1.45; color:#dfe6ea; }
-  #world-hint{ line-height:1.4; color:#b9c8d2; }
+  #world-self{ line-height:1.45; color:#e6efd9; }
+  #world-hint{ line-height:1.4; color:#b9c8d2; margin-top:4px; }
   #world-hint b{ color:#eef4f8; font-weight:600; }
   /* полоска изучения: видно, что технология реально изучается, а не «висит» */
   .techbar{ height:5px; border-radius:3px; background:rgba(255,255,255,.14); overflow:hidden; margin:1px 0 5px; }
@@ -178,10 +179,10 @@
     </div>
   </div>
   <div id="world-panel">
-    <div class="cap">подсказка</div>
-    <div id="world-hint">—</div>
     <div class="cap">что происходит</div>
     <div id="world-stats">—</div>
+    <div class="cap">страна живёт сама</div>
+    <div id="world-self">—</div>
     <div class="cap">контакты</div>
     <div id="world-contacts">—</div>
     <div class="cap">технологии</div>
@@ -198,6 +199,8 @@
       <div class="row"><i style="background:#78c8ff"></i> армии (если видит спутник)</div>
       <div class="row"><i style="background:#92ecb2"></i> боеготовность армии — полоска</div>
     </div>
+    <div class="cap">подсказка</div>
+    <div id="world-hint">—</div>
   </div>
 </section>
 
