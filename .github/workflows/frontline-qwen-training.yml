@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [arena/1f0ec4dc-games]
-    paths: [.github/workflows/frontline-qwen-training.yml]
+    paths: [.github/workflows/frontline-qwen-training.yml, frontline-command/tools/training/train-qwen.py, frontline-command/tools/training/collect-commander.mjs]
 permissions:
   contents: write
 jobs:

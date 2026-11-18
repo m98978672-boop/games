@@ -48,13 +48,18 @@ def read_data(folder):
 
 def encode(tokenizer, prompt, row):
     messages = [{'role':'system','content':prompt}, {'role':'user','content':json.dumps(row['input'], ensure_ascii=False, separators=(',', ':'))}]
-    prefix = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True, enable_thinking=False)
-    full = tokenizer.apply_chat_template(messages + [{'role':'assistant','content':row['response']}], tokenize=True, add_generation_prompt=False, enable_thinking=False)
-    if full[:len(prefix)] != prefix or len(full) <= len(prefix):
+    prefix_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+    full_text = tokenizer.apply_chat_template(messages + [{'role':'assistant','content':row['response']}], tokenize=False, add_generation_prompt=False, enable_thinking=False)
+    if not full_text.startswith(prefix_text) or len(full_text) <= len(prefix_text):
         raise ValueError('chat template does not match generation prefix')
-    if len(full) > 1024:
-        raise ValueError(f'example exceeds WebLLM 1024 token context: {len(full)}')
-    return prefix, full[len(prefix):]
+    # The BPE tokenizer may merge across the prompt/answer boundary if the
+    # whole conversation is tokenized at once. Generation starts with the
+    # separately tokenized prefix, so train on that exact prefix and suffix.
+    prefix = tokenizer.encode(prefix_text, add_special_tokens=False)
+    target = tokenizer.encode(full_text[len(prefix_text):], add_special_tokens=False)
+    if len(prefix) + len(target) > 1024:
+        raise ValueError(f'example exceeds WebLLM 1024 token context: {len(prefix)+len(target)}')
+    return prefix, target
 
 def example_loss(model, encoded):
     prefix, target = encoded
