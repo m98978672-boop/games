@@ -5,7 +5,7 @@
   "stats": {
     "games": 16,
     "files": 1179,
-    "totalBytes": 35878301,
+    "totalBytes": 35880410,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -2088,8 +2088,8 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "19a7e6ecce3243913589948f631281e021a77f64fb51f139d08c08b9f4cb092a",
-      "totalSize": 9759758,
+      "infoHash": "e8ffe705d57b2f38ca2a3f2a07b3cee5b961ee8811cf3316287be7f2c3c47573",
+      "totalSize": 9761867,
       "chunkSize": 262144,
       "chunkCount": 38,
       "fileCount": 533,
@@ -3486,13 +3486,13 @@
         },
         {
           "path": "src/ai/commander-worker-entry.js",
-          "size": 2435,
-          "sha256": "4297ecb877d1f3c812b2c99356e312cf36368c445adcbdd0462be86bf10c4c21"
+          "size": 3202,
+          "sha256": "d6bf2e1cd44616b88a97bbb7165e23d6a39371937c0ed69829f633bba2ce5a86"
         },
         {
           "path": "src/ai/commander-worker.bundle.js",
-          "size": 6131991,
-          "sha256": "0779e0b6fb46e38f55ad3e1f2d32d5eed013e546e2b5c69249abf375e91f4f6d"
+          "size": 6132534,
+          "sha256": "fc42778ef5e6fde82f926f28f309dac3e7e04cbd40d742873c3d3cbbf73c3530"
         },
         {
           "path": "src/ai/licenses/LOGLEVEL-MIT.txt",
@@ -3516,8 +3516,8 @@
         },
         {
           "path": "src/core/build-info.js",
-          "size": 844,
-          "sha256": "8f6108a285a5da63f4e319af7b846d42545f2bb926530512e9b9e38418ecf232"
+          "size": 849,
+          "sha256": "1f94a2c1a7416649f4da58ad6b6b4f54d8522da46af62a50191a8b4cb6857a84"
         },
         {
           "path": "src/core/config.js",
@@ -3566,8 +3566,8 @@
         },
         {
           "path": "src/main.js",
-          "size": 30555,
-          "sha256": "e24bb4701137ace60b626b38222cecc464ebf88868ddc2474478af3d55c6dc2a"
+          "size": 30817,
+          "sha256": "5007afe96bc784a797b920409164873015be1d31409572cd27d912c6978e1996"
         },
         {
           "path": "src/render/renderer.js",
@@ -3661,8 +3661,8 @@
         },
         {
           "path": "src/sim/neutral_commander_client.js",
-          "size": 3585,
-          "sha256": "4d6c9e3deca8d0c3d49a059dfc54a938585a0c1980d11e7470b5c951ee9a20ee"
+          "size": 3677,
+          "sha256": "5c71822007587f722fad10dc9c262eb190b903c820432730ac1e9d8999973565"
         },
         {
           "path": "src/sim/rest_positions.js",
@@ -3726,8 +3726,8 @@
         },
         {
           "path": "src/ui/menus.js",
-          "size": 23323,
-          "sha256": "623eb273dae088dfdd9c1acd0361094103a0525dd742d48bd0b853402530f343"
+          "size": 23763,
+          "sha256": "6fbcd642a3ba0c96fdc95149f680ec842d85dee429d80e0119036a644ea6f415"
         },
         {
           "path": "src/ui/model_import.js",
