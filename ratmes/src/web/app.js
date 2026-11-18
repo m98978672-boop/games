@@ -2801,7 +2801,7 @@ async function bootstrap() {
   }));
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('./sw.js?v=17').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=18').then((reg) => {
       reg.update().catch(() => {});
     }).catch(() => {});
     navigator.serviceWorker.addEventListener('controllerchange', () => {

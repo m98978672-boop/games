@@ -65,7 +65,18 @@ function makeEl(tag, id = '') {
 }
 
 const cssSrc = fs.readFileSync(path.join(rootDir, 'styles.css'), 'utf8');
-assert.match(cssSrc, /\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, 'styles.css обязан содержать [hidden] { display: none !important; }, чтобы скрытые панели не перебивались display: flex');
+/* Раньше здесь проверялась подстрока «[hidden] { display: none !important; }» — и её
+   случайно удовлетворяли точечные правила вида .inspector[hidden], хотя общий закон
+   отсутствовал: полоса ответа, вложение и «закреплено» висели в чате, а их ✕
+   выглядели мёртвыми. Теперь требуем именно САМОСТОЯТЕЛЬНОЕ правило для [hidden]. */
+const cssWithoutComments = cssSrc.replace(/\/\*[\s\S]*?\*\//g, '');
+const globalHiddenRule = cssWithoutComments
+  .split('}')
+  .map((chunk) => chunk.split('{'))
+  .some(([selector, body]) => selector && body
+    && selector.split(',').some((part) => part.trim() === '[hidden]')
+    && /display\s*:\s*none/i.test(body));
+assert.ok(globalHiddenRule, 'styles.css обязан содержать самостоятельное правило [hidden] { display: none !important; } — иначе панели с display: flex не скрываются и их ✕ кажутся мёртвыми');
 
 const byId = new Map();
 for (const id of idMatches) byId.set(id, makeEl('div', id));
