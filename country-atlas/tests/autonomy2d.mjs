@@ -6,6 +6,7 @@ import {
   AUTONOMY, buildAutonomy, incomePerDay, decideOnce, advanceAutonomy, autonomyStats,
   cityName, citySpot
 } from '../src/autonomy2d.js';
+import { regionIncome } from '../src/regions2d.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {
@@ -30,8 +31,10 @@ ok('на старте казна не пустая', w.gov.treasury >= AUTONOMY.
 ok('на старте казна не золотая', w.gov.treasury <= AUTONOMY.treasuryStart + 600, w.gov.treasury);
 ok('решений на старте ноль', w.gov.decisions === 0);
 ok('журнал на старте пуст', w.gov.log.length === 0);
-ok('доход считается по городам и технологиям', incomePerDay(w) ===
-  AUTONOMY.cityIncome * w.own.cities.length + AUTONOMY.techIncome * w.own.tech.count);
+// §96: к городам и науке прибавился доход с областей — у каждой свой ресурс
+ok('доход считается по городам, технологиям и землям', incomePerDay(w) ===
+  AUTONOMY.cityIncome * w.own.cities.length + AUTONOMY.techIncome * w.own.tech.count
+  + regionIncome(w.regions, 'own'), incomePerDay(w));
 ok('доход — целое неотрицательное число', Number.isFinite(incomePerDay(w)) && incomePerDay(w) >= 0, incomePerDay(w));
 ok('доход растёт с городами', (() => {
   const a = incomePerDay(w);

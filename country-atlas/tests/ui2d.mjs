@@ -242,7 +242,9 @@ const visible = html
   ok(/id="world-back"/.test(html), 'с карты мира можно вернуться');
   ok(/id="world-satellite"/.test(html), 'есть тумблер «спутник»');
   ok(/id="world-stats"/.test(html), 'есть строка состояния мира');
-  ok(/id="world-legend"/.test(html), 'у карты мира своя легенда');
+  // §96: обозначения живут на самой карте (canvas-легенда), в панели — области и захваты
+  ok(/id="world-regions"/.test(html), 'в панели мира есть блок областей и захватов');
+  ok(/<div class="cap">области и захваты<\/div>/.test(html), 'блок областей подписан по-человечески');
   ok(/id="world-contacts"/.test(html), 'в панели мира есть блок контактов');
   ok(/<div class="cap">контакты<\/div>/.test(html), 'блок контактов подписан по-человечески');
   ok(main.includes('diplomacyStats'), 'контакты считаются из отношений, а не рисуются наугад');
@@ -271,11 +273,13 @@ const visible = html
   ok(/<div class="cap">технологии<\/div>/.test(html), 'блок технологий подписан по-человечески');
   ok(main.includes('techStats'), 'технологии считаются из науки, а не рисуются наугад');
   ok(main.includes('world-tech'), 'панель технологий заполняется из main2d');
-  ok(/боеготовность армии/.test(html), 'в легенде объяснена полоска боеготовности');
+  // §96: легенда переехала на карту — полоска боеготовности объяснена там
+  ok(/armybar/.test(readFileSync(new URL('../src/worldview.js', import.meta.url), 'utf8')),
+    'в легенде на карте объяснена полоска боеготовности');
   ok(/id="intro-point"/.test(html), 'у пролёта есть строка «над страной»');
   ok(main.includes('intro-point') && main.includes('onPoint'), 'подпись точки пролёта идёт из кадра');
-  ok(!/§/.test(html.slice(html.indexOf('id="world-tech"'), html.indexOf('id="world-legend"'))), 'в блоке технологий нет номеров параграфов');
-  ok(/id="world-tech"[\s\S]*id="world-legend"/.test(html), 'технологии стоят между контактами и легендой — ничего не наезжает');
+  ok(!/§/.test(html.slice(html.indexOf('id="world-tech"'), html.indexOf('id="world-regions"'))), 'в блоке технологий нет номеров параграфов');
+  ok(/id="world-tech"[\s\S]*id="world-regions"/.test(html), 'технологии стоят между контактами и областями — ничего не наезжает');
   // К30: числа подсказки и явный статус науки — на экране мира
   ok(/id="world-hint"/.test(html), 'у карты мира есть строка подсказки с числами');
   // К31: подсказка ушла вниз панели — блоки, которые стояли на своих местах, не сдвинулись
@@ -290,7 +294,7 @@ const visible = html
   ok(/последнее: ' \+ self\.last/.test(main), 'в блоке страны — последнее решение');
   ok(/нужна наука · космос ' \+ spaceTier/.test(main), 'кнопка спутника объясняет, чего не хватает');
   ok(/import \{ autonomyStats \}/.test(main) || /autonomyStats/.test(main), 'автономия подключена к интерфейсу');
-  ok(!/§/.test(html.slice(html.indexOf('id="world-self"'), html.indexOf('id="world-legend"'))), 'в блоке страны нет номеров параграфов');
+  ok(!/§/.test(html.slice(html.indexOf('id="world-self"'), html.indexOf('id="world-regions"'))), 'в блоке страны нет номеров параграфов');
   ok(/<div class="cap">подсказка<\/div>[\s\S]*id="world-hint"/.test(html), 'подсказка подписана по-человечески');
   ok(main.includes('world-hint'), 'подсказка заполняется из main2d');
   ok(/стран ' \+ st\.countries \+[\s\S]{0,200}войн ' \+ st\.wars/.test(main), 'в подсказке — число стран, войн и боёв');
@@ -303,7 +307,7 @@ const visible = html
   ok(/eta\(tech\.etaMin\)/.test(main), 'панель показывает, сколько ждать до открытия');
   ok(/в очереди: ' \+ tech\.queue/.test(main), 'панель перечисляет очередь разработок');
   ok(/наука стоит: всё открыто/.test(main), 'когда всё открыто — панель говорит прямо');
-  ok(!/§/.test(html.slice(html.indexOf('id="world-hint"'), html.indexOf('id="world-legend"'))), 'в подсказке нет номеров параграфов');
+  ok(!/§/.test(html.slice(html.indexOf('id="world-hint"'), html.indexOf('id="world-regions"'))), 'в подсказке нет номеров параграфов');
 }
 
 console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§88 (F-222…F-224, F-279…F-286, F-301…F-334, проверок ' + checks + ')');
