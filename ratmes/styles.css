@@ -1440,6 +1440,35 @@ body {
 .modal::backdrop { background: rgba(0, 0, 0, 0.68); }
 .modal-card { padding: 15px; display: flex; flex-direction: column; gap: 11px; }
 .modal-card h3 { margin: 0; font-size: 15px; }
+
+/* Крестик закрытия всегда под рукой: заголовок с ✕ прилипает к верху прокрутки */
+.modal-card > .card-title-row {
+  position: sticky;
+  top: -15px;
+  z-index: 3;
+  margin: -15px -15px 0;
+  padding: 11px 15px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+}
+.write-card > .card-title-row {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: 0 0 2px;
+  padding: 2px 0 10px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+}
+.palette-head { display: flex; align-items: center; gap: 8px; }
+.palette-head .text-input { flex: 1 1 auto; min-width: 0; }
+/* Видимый крестик в любом модальном окне: не меньше 38px по площади нажатия на телефоне */
+.modal .icon-btn,
+.modal-close-btn {
+  min-width: 34px;
+  min-height: 34px;
+}
+.modal::backdrop { backdrop-filter: blur(2px); }
 .field-label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-1); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 
@@ -1610,6 +1639,7 @@ body.embed-games .brand-bar {
 .chat-more-bar[hidden] { display: none; }
 .chat-more-bar::-webkit-scrollbar { display: none; }
 .chat-more-bar .btn { white-space: nowrap; flex-shrink: 0; }
+.chat-more-close { margin-left: auto; }
 
 /* --- Фирменные векторные бейджи сервисов и живые индикаторы --- */
 .net-avatar-wrap {

@@ -2208,6 +2208,7 @@ function bindEvents() {
     const bar = el('chatMoreBar');
     if (bar) bar.hidden = !bar.hidden;
   });
+  el('btnCloseChatMore')?.addEventListener('click', () => closeChatMoreBar());
   el('btnOpenSearchMobile')?.addEventListener('click', () => { closeChatMoreBar(); el('btnCommandPalette')?.click(); });
   el('btnOpenSettingsMobile')?.addEventListener('click', () => { closeChatMoreBar(); setInspectorOpen(true); });
 
@@ -2335,6 +2336,8 @@ function bindEvents() {
 
   // Пересылка
   el('btnCancelForward')?.addEventListener('click', () => el('forwardModal')?.close());
+  el('btnCloseForward')?.addEventListener('click', () => el('forwardModal')?.close());
+  el('btnCloseProxy')?.addEventListener('click', () => el('proxyModal')?.close());
   el('forwardForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!state.forwardingMessage) return;
@@ -2551,6 +2554,88 @@ function bindEvents() {
     ],
   });
   el('btnCommandPalette')?.addEventListener('click', () => palette.open());
+  el('btnClosePalette')?.addEventListener('click', () => palette.close());
+
+  bindUniversalCloseHandlers();
+}
+
+// ---------------- Универсальное закрытие: каждый ✕, клик по фону и Esc работают всегда ----------------
+function closeModalElement(node) {
+  if (!node) return false;
+  // Неподключённый внешний мост: крестик не должен «запирать» чат — просто закрываем окно.
+  try {
+    if (typeof node.close === 'function' && node.tagName === 'DIALOG') {
+      if (node.open) node.close();
+      else node.removeAttribute('open');
+    } else {
+      node.hidden = true;
+    }
+  } catch { /* ignore */ }
+  node.classList?.remove('open');
+  return true;
+}
+
+function closeTopmostOverlay() {
+  // 1. Открытые <dialog> — закрываем по одному, самый верхний первым.
+  const dialogs = [...document.querySelectorAll('dialog[open]')];
+  if (dialogs.length > 0) {
+    closeModalElement(dialogs[dialogs.length - 1]);
+    return true;
+  }
+  // 2. Полоса меню чата ⋯
+  const moreBar = el('chatMoreBar');
+  if (moreBar && !moreBar.hidden) {
+    moreBar.hidden = true;
+    return true;
+  }
+  // 3. Панель настроек
+  if (state.inspectorOpen) {
+    setInspectorOpen(false);
+    return true;
+  }
+  // 4. Ответ / редактирование
+  if (state.replyTo || state.editingMessage) {
+    state.replyTo = null;
+    state.editingMessage = null;
+    updateReplyBar();
+    return true;
+  }
+  return false;
+}
+
+function bindUniversalCloseHandlers() {
+  // Единый обработчик: любой ✕/×, кнопка с aria-label «Закрыть» или [data-close] внутри модалки
+  // закрывает свою модалку, даже если у неё забыли отдельный обработчик.
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!target || typeof target.closest !== 'function') return;
+    const btn = target.closest('button, [role="button"], .icon-btn, .modal-close-btn, [data-close]');
+    if (btn) {
+      const ownText = String(btn.textContent || '').trim();
+      const ownLabel = `${btn.getAttribute('aria-label') || ''} ${btn.getAttribute('title') || ''}`;
+      const isCross = ownText.length <= 3 && /[✕✖✗×╳]/.test(ownText);
+      const isClose = isCross || /закры|отмен/i.test(ownLabel) || btn.hasAttribute('data-close');
+      const owner = btn.closest('dialog[open], .modal-root:not([hidden])');
+      if (isClose && owner) {
+        // Собственный обработчик кнопки тоже выполнится — повторное закрытие безопасно.
+        closeModalElement(owner);
+        return;
+      }
+    }
+    // Клик по фону модалки (вне карточки) — закрываем.
+    if (target.tagName === 'DIALOG' && !target.hidden) {
+      const rect = target.getBoundingClientRect?.();
+      if (rect) {
+        const outside = e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom;
+        if (outside) closeModalElement(target);
+      }
+    }
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (closeTopmostOverlay()) e.stopPropagation();
+  });
 }
 
 let cloudBannerHideTimer = null;
@@ -2716,13 +2801,13 @@ async function bootstrap() {
   }));
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('./sw.js?v=15').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=16').then((reg) => {
       reg.update().catch(() => {});
     }).catch(() => {});
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       try {
-        if (!sessionStorage.getItem('ratmes-sw-reloaded-v15')) {
-          sessionStorage.setItem('ratmes-sw-reloaded-v15', '1');
+        if (!sessionStorage.getItem('ratmes-sw-reloaded-v16')) {
+          sessionStorage.setItem('ratmes-sw-reloaded-v16', '1');
           location.reload();
         }
       } catch { /* ignore */ }
