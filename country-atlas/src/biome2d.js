@@ -12,18 +12,21 @@
    Модуль не знает ни канвы, ни камеры: только числа, клетки и детерминированный сид. */
 
 import { hash01 } from './accidents2d.js';
+import { MAP_TONES, hexToCss } from './palette.js';
 
 export const BIOMES = {
   cellKm: 100,               // сторона клетки покрова, км (400 × 400 клеток на карту)
   // проходимость: доля скорости техники вне дорог
   base: 0.85,
+  // §101: цвета покрова — из общей палитры карты (MAP_TONES), той же, что у карты страны:
+  // лес — лесной зелёный, горы — камень, пустыня — песок, тундра — снег
   kinds: {
-    forest: { name: 'лес', pass: 0.55, tint: 'rgba(44,92,50,0.66)' },
-    swamp: { name: 'болото', pass: 0.25, tint: 'rgba(36,74,72,0.78)' },
-    mountain: { name: 'горы', pass: 0.30, tint: 'rgba(146,138,122,0.66)' },
-    steppe: { name: 'степь', pass: 0.90, tint: 'rgba(194,176,104,0.44)' },
-    desert: { name: 'пустыня', pass: 0.70, tint: 'rgba(216,188,124,0.62)' },
-    tundra: { name: 'тундра', pass: 0.50, tint: 'rgba(156,172,172,0.52)' }
+    forest: { name: 'лес', pass: 0.55, tint: hexToCss(MAP_TONES.forest, 0.62) },
+    swamp: { name: 'болото', pass: 0.25, tint: 'rgba(56,88,82,0.80)' },
+    mountain: { name: 'горы', pass: 0.30, tint: hexToCss(MAP_TONES.rock, 0.70) },
+    steppe: { name: 'степь', pass: 0.90, tint: hexToCss(MAP_TONES.meadow, 0.34) },
+    desert: { name: 'пустыня', pass: 0.70, tint: hexToCss(MAP_TONES.sand, 0.58) },
+    tundra: { name: 'тундра', pass: 0.50, tint: hexToCss(MAP_TONES.snow, 0.46) }
   },
   // ниже bad — технике плохо (болота, горы); ниже slow — медленно (лес, тундра, пустыня)
   bad: 0.4,

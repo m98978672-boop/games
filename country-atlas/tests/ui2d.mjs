@@ -352,11 +352,13 @@ const visible = html
   ok(/showRegions: this\.showRegions/.test(view), 'легенда знает про тумблер');
   ok(/e\[0\] !== 'region' \|\| opts\.showRegions !== false/.test(view), 'строка легенды об областях скрыта вместе с ними');
   // упрощение карты
-  ok(/localRoadScale: 0\.05/.test(view), 'мелкие дороги — только при приближении');
+  ok(/roadScale: 0\.12/.test(view), 'дороги — только при очень большом зуме');
+  ok(/localRoadScale: 0\.25/.test(view), 'мелкие дороги — ещё позже');
   ok(/markScale: 0\.05/.test(view), 'отметки рельефа — только при приближении');
   ok(/ruinScale: 0\.05/.test(view), 'кресты разрушенного — только при приближении');
+  ok(/const showRoads = cam\.scale >= WV\.roadScale/.test(view), 'дороги проверяют масштаб');
   ok(/const showLocal = cam\.scale >= WV\.localRoadScale/.test(view), 'мелкие дороги проверяют масштаб');
-  ok(/if \(showLocal\) \{/.test(view), 'на обзоре мелкие дороги не рисуются');
+  ok(/if \(showLocal\) \{/.test(view) && /if \(showRoads\) \{/.test(view), 'на обзоре дороги не рисуются');
   ok(/if \(cam\.scale >= WV\.markScale\) paintMarksScreen/.test(view), 'на обзоре нет серых отметок поверх покрова');
   ok(/if \(ruins\.length && cam\.scale >= WV\.ruinScale\)/.test(view), 'на обзоре нет крестов разрушенного');
   ok(!/§/.test(page.slice(page.indexOf('id="world-regions-border"') - 200, page.indexOf('id="world-terrain"'))), 'у тумблера нет номеров параграфов');

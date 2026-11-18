@@ -1,5 +1,6 @@
-/* §93–§95: вид карты мира — планета из материков, вписывание, кадр, подписи и цена.
-   Группы: планета, вписывание, кадр, подписи и линейка, цена кадра, мир вокруг.
+/* §93–§101: вид карты мира — планета из материков, вписывание, кадр, подписи и цена.
+   Группы: планета, вписывание, кадр, подписи и линейка, цена кадра, мир вокруг,
+   простая карта и тумблер областей, одна палитра и дороги на зуме.
    Каждая группа — не меньше двадцати проверяемых значений. */
 import { createCanvas } from '@napi-rs/canvas';
 import {
@@ -10,6 +11,8 @@ import {
   clampViewScale, planetBox, detailOffset, drawGraticule, drawCompass
 } from '../src/worldview.js';
 import { geoOf as geoDeg, formatLat, formatLon } from '../src/planet2d.js';
+import { MAP_TONES } from '../src/palette.js';
+import { BIOMES } from '../src/biome2d.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {
@@ -595,7 +598,8 @@ group('простая карта и тумблер областей');
   ok('легенда помещается в кадр при тумблере', onLegend.x + onLegend.w <= 900 && onLegend.y + onLegend.h <= 600);
 
   // мелкие дороги и кресты — только при приближении
-  ok('мелкие дороги не рисуются на обзоре', WV.localRoadScale > 0.021, WV.localRoadScale);
+  ok('на обзоре дорог нет вовсе', WV.roadScale > 0.021, WV.roadScale);
+  ok('мелкие дороги — только при очень большом зуме', WV.localRoadScale >= 0.2, WV.localRoadScale);
   ok('отметки рельефа не рисуются на обзоре', WV.markScale > 0.021, WV.markScale);
   ok('кресты разрушенного не рисуются на обзоре', WV.ruinScale > 0.021, WV.ruinScale);
 
@@ -610,8 +614,60 @@ group('простая карта и тумблер областей');
   const dRoads = diff(overviewRoads.cv, plain.cv);
   WV.localRoadScale = savedLocal;
   ok('мелкие дороги возвращаются при приближении', dRoads > 500, dRoads);
-  ok('после проверки порог дорог на месте', WV.localRoadScale === 0.05, WV.localRoadScale);
+  ok('после проверки порог дорог на месте', WV.localRoadScale === 0.25, WV.localRoadScale);
 }
 
-console.log(`\nOK: 7 групп · ${pass} проверок`);
+/* ——— 8. §101: одна палитра на две карты, дороги только на зуме ——— */
+group('одна палитра и дороги на зуме');
+{
+  const lum = (hex) => {
+    const n = parseInt(hex.slice(1), 16);
+    return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
+  };
+  ok('море карты мира взято из общей палитры', WV.ocean[0] === MAP_TONES.seaDeep && WV.ocean[2] === MAP_TONES.seaShelf, WV.ocean.join(' '));
+  ok('суша карты мира — из общей палитры', WV.land === MAP_TONES.land, WV.land);
+  ok('своя страна светлее общей суши', lum(WV.landOwn) > lum(WV.land), WV.landOwn + ' / ' + WV.land);
+  ok('море не почти-чёрное, как до §101', WV.ocean.every((c) => lum(c) > 45), WV.ocean.map((c) => lum(c).toFixed(0)).join(' '));
+  ok('море светлеет к берегу', lum(WV.ocean[2]) > lum(WV.ocean[0]), lum(WV.ocean[0]).toFixed(0) + ' → ' + lum(WV.ocean[2]).toFixed(0));
+  const rgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  ok('суша — зелёная, море — синее', rgb(WV.land)[1] > rgb(WV.land)[2] && rgb(WV.ocean[1])[2] > rgb(WV.ocean[1])[1],
+    WV.land + ' / ' + WV.ocean[1]);
+  ok('тона стран — из зелёно-песочной гаммы', WV.tones.every((c) => lum(c) > 80 && lum(c) < 160), WV.tones.map((c) => lum(c).toFixed(0)).join(' '));
+  const tint = (k) => BIOMES.kinds[k].tint.match(/\d+/g).slice(0, 3).map(Number);
+  const hex = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  ok('лес покрова — лесной зелёный общей палитры', tint('forest').join() === hex(MAP_TONES.forest).join(), tint('forest').join());
+  ok('горы покрова — камень общей палитры', tint('mountain').join() === hex(MAP_TONES.rock).join());
+  ok('пустыня покрова — песок общей палитры', tint('desert').join() === hex(MAP_TONES.sand).join());
+  ok('болото темнее леса — его видно', lum(MAP_TONES.forest) > 0 && tint('swamp').reduce((a, b) => a + b, 0) < tint('forest').reduce((a, b) => a + b, 0) + 40);
+  ok('у покрова и у страны одна палитра в модулях', typeof MAP_TONES.snow === 'string' && MAP_TONES.snow.startsWith('#'));
+
+  // дороги: до порога их нет
+  // force — временный порог дорог: 0 разрешает их на любом масштабе, 0.9 запрещает совсем
+  const shot = (scale, force) => {
+    const cv = makeCanvas(900, 600);
+    const saved = WV.roadScale;
+    if (force !== undefined) WV.roadScale = force;
+    const v = new WorldView(cv, { createCanvas: (a, b) => createCanvas(a, b) });
+    v.resize(); v.setWorld(world); v.step(0.02); v.step(0.02); v.open();
+    v.transition = null; v.alpha = 1;
+    v.cam.scale = scale; v.cam.x = 0; v.cam.y = 0;
+    v.draw();
+    WV.roadScale = saved;
+    return cv;
+  };
+  const diff = (a, b) => {
+    const da = a.getContext('2d').getImageData(0, 0, a.width, a.height).data;
+    const db = b.getContext('2d').getImageData(0, 0, b.width, b.height).data;
+    let n = 0;
+    for (let i = 0; i < da.length; i += 4) {
+      if (Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2]) > 12) n++;
+    }
+    return n;
+  };
+  ok('порог дорог — очень большой зум', WV.roadScale >= 0.1, WV.roadScale);
+  ok('на обзоре дороги не рисуются', diff(shot(0.021, 0), shot(0.021)) > 500, 'разница между «нет дорог» и «есть»');
+  ok('на зуме шоссе видны', diff(shot(0.3, 0.9), shot(0.3)) > 200);
+}
+
+console.log(`\nOK: 8 групп · ${pass} проверок`);
 if (fail) { console.log(`FAIL: ${fail}`); process.exit(1); }
