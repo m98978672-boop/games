@@ -187,5 +187,25 @@ await new Promise((r) => setTimeout(r, 250));
 assert.ok(createdRooms.some((r) => String(r.room_id).startsWith('dm-self-')), 'Должен открыться личный чат «⭐ Избранное» (dm-self-...)');
 assert.equal(unhandled.length, 0, `Необработанные ошибки в сценарии личных чатов: ${unhandled.join('; ')}`);
 console.log('  ✓ Личные чаты 1-на-1 (dm-...) и «⭐ Избранное» (dm-self-...) работают');
+
+// Каждый крестик ✕ в модальных окнах обязан реально закрывать своё окно
+for (const [openId, closeId] of [
+  ['profileModal', 'btnCloseProfile'],
+  ['dmActionModal', 'btnCloseDmAction'],
+  ['roomActionModal', 'btnCloseRoomAction'],
+  ['paletteModal', 'btnClosePalette'],
+  ['forwardModal', 'btnCloseForward'],
+  ['proxyModal', 'btnCloseProxy'],
+]) {
+  const dialog = byId.get(openId);
+  const closeBtn = byId.get(closeId);
+  assert.ok(dialog, `В index.html должно быть окно #${openId}`);
+  assert.ok(closeBtn, `В index.html должна быть кнопка ✕ #${closeId}`);
+  dialog.open = true;
+  closeBtn.click();
+  assert.equal(dialog.open, false, `Кнопка ✕ #${closeId} обязана закрывать #${openId}`);
+}
+console.log('  ✓ Все крестики ✕ закрывают свои окна (профиль, личные чаты, комнаты, поиск, пересылка, VPN)');
+assert.equal(unhandled.length, 0, `Необработанные ошибки в сценарии крестиков: ${unhandled.join('; ')}`);
 console.log('\n✅ Веб-клиент RatMes проверен полностью!');
 process.exit(0);

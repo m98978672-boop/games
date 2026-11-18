@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#131720">
   <title>RatMes</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=15">
+  <link rel="stylesheet" href="./styles.css?v=16">
 </head>
 <body>
   <!-- Полоса подключения к облаку: видна только во время загрузки или при ошибке, после подключения полностью скрывается -->
@@ -127,6 +127,7 @@
         <button class="btn btn-sm btn-ghost" id="btnPinChatMobile" type="button">📌 Закрепить</button>
         <button class="btn btn-sm btn-ghost" id="btnOpenSearchMobile" type="button">🔎 Поиск</button>
         <button class="btn btn-sm btn-ghost" id="btnOpenSettingsMobile" type="button">⚙️ Ещё</button>
+        <button class="icon-btn chat-more-close" id="btnCloseChatMore" type="button" aria-label="Закрыть меню чата" title="Закрыть">✕</button>
       </div>
 
       <div class="trust-banner" id="trustWarningBanner" hidden></div>
@@ -139,7 +140,7 @@
 
       <div class="reply-bar" id="replyBar" hidden>
         <span id="replyBarText"></span>
-        <button class="icon-btn" id="btnCancelReply" type="button" title="Отмена">✕</button>
+        <button class="icon-btn" id="btnCancelReply" type="button" title="Отменить ответ" aria-label="Отменить ответ или редактирование">✕</button>
       </div>
 
       <div class="voice-record-bar" id="voiceRecordBar" hidden>
@@ -147,7 +148,7 @@
         <span id="voiceRecTimer">0:00</span>
         <canvas id="voiceRecCanvas" width="160" height="28"></canvas>
         <button type="button" class="btn btn-sm btn-primary" id="btnStopSendVoice">Отправить</button>
-        <button type="button" class="btn btn-sm btn-ghost" id="btnCancelVoice">✕</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="btnCancelVoice" aria-label="Отменить запись">✕</button>
       </div>
 
       <div class="attachment-bar" id="attachmentBar" hidden>
@@ -155,7 +156,7 @@
           <strong id="attachmentName"></strong>
           <span id="attachmentMeta"></span>
         </div>
-        <button class="icon-btn" id="btnClearAttachment" type="button" title="Убрать файл">✕</button>
+        <button class="icon-btn" id="btnClearAttachment" type="button" title="Убрать файл" aria-label="Убрать вложение">✕</button>
       </div>
 
       <!-- Показывается ТОЛЬКО для неподключённых внешних мостов (скрыта в обычных и личных чатах) -->
@@ -636,6 +637,7 @@
     <div class="modal-card">
       <div class="palette-head">
         <input type="search" id="paletteInput" class="text-input" placeholder="Поиск по всем сообщениям (has:file, has:voice, pinned:true)…">
+        <button type="button" class="icon-btn" id="btnClosePalette" aria-label="Закрыть поиск">✕</button>
       </div>
       <div id="paletteResults" class="palette-results"></div>
     </div>
@@ -644,7 +646,10 @@
   <!-- Модальное окно пересылки сообщения -->
   <dialog class="modal" id="forwardModal">
     <form method="dialog" class="modal-card" id="forwardForm">
-      <h3>Переслать сообщение</h3>
+      <div class="card-title-row">
+        <h3>Переслать сообщение</h3>
+        <button type="button" class="icon-btn" id="btnCloseForward" aria-label="Закрыть окно пересылки">✕</button>
+      </div>
       <p class="muted-text" id="forwardPreviewText"></p>
       <label class="field-label">
         Целевой чат
@@ -664,7 +669,10 @@
   <!-- Модальное окно привязки VPN/прокси -->
   <dialog class="modal" id="proxyModal">
     <form method="dialog" class="modal-card" id="proxyForm">
-      <h3 id="proxyModalTitle">Маршрут VPN / прокси</h3>
+      <div class="card-title-row">
+        <h3 id="proxyModalTitle">Маршрут VPN / прокси</h3>
+        <button type="button" class="icon-btn" id="btnCloseProxy" aria-label="Закрыть окно маршрута">✕</button>
+      </div>
       <input type="hidden" id="proxyNetworkInput">
       <label class="field-label">
         Основной маршрут (VPN / прокси)
@@ -682,6 +690,6 @@
   </dialog>
 
   <div class="toast-host" id="toastHost" aria-live="polite"></div>
-  <script type="module" src="./src/web/app.js?v=15"></script>
+  <script type="module" src="./src/web/app.js?v=16"></script>
 </body>
 </html>
