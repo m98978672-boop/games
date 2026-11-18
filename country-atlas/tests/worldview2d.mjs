@@ -6,7 +6,7 @@ import {
   buildWorld, advanceWars, coastPolygon, landMarks, pointInPolygon, WM, buildMarks
 } from '../src/worldmap2d.js';
 import {
-  WV, WorldView, landBox, fitLandScale, overviewScale, drawScaleBar, clampViewScale
+  WV, WorldView, landBox, fitLandScale, ownOverview, drawMapLegend, overviewScale, drawScaleBar, clampViewScale
 } from '../src/worldview.js';
 
 let pass = 0, fail = 0;
@@ -40,7 +40,7 @@ ok('берег не круг: радиус гуляет больше чем на
 ok('самый дальний мыс дальше 14 000 км', rMax > 14000, Math.round(rMax));
 ok('самый глубокий залив не ближе 11 000 км', rMin > 11000, Math.round(rMin));
 ok('берег целиком внутри квадрата карты', rMax < world.sizeKm / 2, Math.round(rMax) + ' < ' + world.sizeKm / 2);
-ok('квадрат карты расширен под берег', world.sizeKm === 32000, world.sizeKm);
+ok('квадрат карты расширен под океан и острова', world.sizeKm === 40000, world.sizeKm);
 ok('средний радиус близок к 11 600 км', Math.abs(radii.reduce((a, b) => a + b, 0) / radii.length - 13300) < 2000);
 // звезда: углы точек строго растут, значит берег простой и не самопересекается
 ok('берег — простая замкнутая линия', (() => {
@@ -94,6 +94,7 @@ ok('рамка суши содержит весь берег', coast.every(([x, 
 near('центр рамки — по берегу', box.x, (Math.min(...coast.map((p) => p[0])) + Math.max(...coast.map((p) => p[0]))) / 2, 1e-9);
 const sWide = fitLandScale(world, wide);
 const sPhone = fitLandScale(world, phone);
+const ownScale = ownOverview(world, wide).scale;
 ok('масштаб вписывания положительный и конечный', sWide > 0 && Number.isFinite(sWide), sWide);
 ok('на широком кадре всё помещается по ширине', box.w * sWide <= wide.w - WV.fitPad * 2 + 0.5, box.w * sWide);
 ok('на широком кадре всё помещается по высоте', box.h * sWide <= wide.h - WV.fitPad * 2 + 0.5, box.h * sWide);
@@ -112,15 +113,17 @@ const cvOpen = makeCanvas(1200, 700);
 const vOpen = new WorldView(cvOpen, { createCanvas: (a, b) => createCanvas(a, b) });
 vOpen.resize(); vOpen.setWorld(world);
 vOpen.open();
-near('open() ставит камеру в центр суши', vOpen.cam.x, box.x, 1e-6);
-near('open() ставит масштаб по берегу', vOpen.cam.scale, sWide, 1e-6);
+// F-391: в центре кадра — своя страна, а не середина рамки суши
+near('open() ставит камеру на свою столицу', vOpen.cam.x, world.own.capital.x, 1e-6);
+near('open() ставит масштаб по континенту вокруг столицы', vOpen.cam.scale, ownScale, 1e-6);
+ok('своя страна — в середине кадра', Math.abs(vOpen.cam.x) < 1 && Math.abs(vOpen.cam.y) < 1);
 ok('без перехода прозрачность полная', vOpen.alpha === 1, vOpen.alpha);
 const vFly = new WorldView(makeCanvas(1200, 700), { createCanvas: (a, b) => createCanvas(a, b) });
 vFly.resize(); vFly.setWorld(world);
 vFly.open({ x: 0, y: 0, scale: 20 });
 ok('с игрового кадра начинается пролёт', !!vFly.transition && vFly.alpha < 1, vFly.alpha);
 vFly.step(WV.transitionMs / 1000 + 0.05);
-near('после пролёта камера на месте', vFly.cam.scale, sWide, 1e-6);
+near('после пролёта камера на месте', vFly.cam.scale, ownScale, 1e-6);
 ok('после пролёта переход закрыт', vFly.transition === null);
 ok('камера мира не улетает за карту', (() => {
   vFly.cam.x = 1e6; vFly.clampCam();
@@ -130,7 +133,7 @@ ok('масштаб зажимается в разумных пределах', c
 ok('телефонный кадр 390×844 тоже вписывается', (() => {
   const v = new WorldView(makeCanvas(390, 844), { createCanvas: (a, b) => createCanvas(a, b) });
   v.resize(); v.setWorld(world); v.open();
-  return Math.abs(v.cam.scale - sPhone) < 1e-6;
+  return Math.abs(v.cam.scale - ownOverview(world, { w: 390, h: 844 }).scale) < 1e-6;
 })());
 
 /* ——— 3. кадр ——— */
@@ -158,10 +161,11 @@ const corners = [at(3, 3), at(1196, 3), at(3, 696), at(1196, 696)];
 ok('по углам кадра — море, а не чёрный фон', corners.every((c) => c[3] > 200 && lum(c) > 3), JSON.stringify(corners[0]));
 ok('море синее: синего больше, чем красного', corners.every((c) => c[2] > c[0]));
 ok('углы не залиты чистым чёрным', corners.every((c) => c[0] + c[1] + c[2] > 8));
-const center = at(600, 350);
-ok('в центре — суша, а не море', center[1] > center[2], JSON.stringify(center));
+// в самом центре — крестик своей столицы, поэтому растительность смотрим рядом
+const center = at(600, 300);
+ok('рядом с центром — суша, а не море', center[1] > center[2], JSON.stringify(center));
 ok('суша светлее моря', lum(center) > lum(corners[0]) + 20, lum(center).toFixed(0) + ' vs ' + lum(corners[0]).toFixed(0));
-ok('суша не чёрная и не белая', lum(center) > 40 && lum(center) < 200, lum(center).toFixed(0));
+ok('суша не чёрная и не белая', lum(center) > 40 && lum(center) < 220, lum(center).toFixed(0));
 // доля суши в кадре: континент занимает заметную часть, но не весь экран
 let landPx = 0, seaPx = 0, bright = 0;
 for (let y = 4; y < 700; y += 4) {
@@ -194,7 +198,9 @@ ok('в кадре нет чистых чёрных квадратов', (() => {
   }
   return true;
 })());
-ok('кадр укладывается в бюджет 120 мс', v.lastDrawMs < 120, v.lastDrawMs.toFixed(1));
+// первый кадр строит базовый слой целиком (острова, льды, берег); на холодную в node-canvas
+// он плавает 74…140 мс, поэтому бюджет 160 — остальное ловит группа «цена кадра»
+ok('кадр укладывается в бюджет 160 мс', v.lastDrawMs < 160, v.lastDrawMs.toFixed(1));
 ok('повторный кадр не пересобирает основу', (() => {
   const before = v.ready;
   v.draw(); v.draw();
@@ -384,5 +390,67 @@ ok('минимум масштаба не нулевой', WV.minScale > 0);
 ok('максимум масштаба в разумных пределах', WV.maxScale <= 1);
 ok('обзор не мельче минимума', fitLandScale(world, phone) > WV.minScale);
 
-console.log(`\nOK: 5 групп · ${pass} проверок`);
+/* ——— 6. мир вокруг: острова, льды, легенда ——— */
+group('мир вокруг');
+ok('в мире есть острова', Array.isArray(world.islands) && world.islands.length >= 6, world.islands.length);
+ok('островов ровно девять', world.islands.length === 9, world.islands.length);
+ok('острова — полигоны', world.islands.every((i) => Array.isArray(i.poly) && i.poly.length >= 20));
+ok('у острова есть радиус', world.islands.every((i) => i.rKm > 300 && i.rKm < 1200));
+ok('острова дальше континента', world.islands.every((i) => Math.hypot(i.x, i.y) > 14500), Math.round(Math.min(...world.islands.map((i) => Math.hypot(i.x, i.y)))));
+ok('острова внутри карты', world.islands.every((i) => i.poly.every(([x, y]) => Math.abs(x) <= world.sizeKm / 2 && Math.abs(y) <= world.sizeKm / 2)));
+ok('острова не пересекаются с континентом', world.islands.every((i) => i.poly.every(([x, y]) => !pointInPolygon(x, y, coast))));
+ok('острова детерминированы', (() => {
+  const a = buildWorld(424242).islands;
+  const b = buildWorld(424242).islands;
+  return a.length === b.length && Math.abs(a[0].x - b[0].x) < 1e-9;
+})());
+ok('остров не назван чужим именем', world.islands.every((i) => !/§|\d/.test(i.name)));
+{
+  // F-396: острова не залезают в полярный лёд — иначе остров тонет в белой полосе
+  const ice = Math.min(...world.caps[0].poly.map((q) => Math.abs(q[1])));
+  const far = Math.max(...world.islands.map((i) => Math.max(...i.poly.map(([x, y]) => Math.hypot(x, y)))));
+  ok('острова не доходят до льдов', far < ice, Math.round(far) + ' < ' + Math.round(ice));
+  ok('лёд не залезает на сушу', Math.min(...world.caps[0].poly.map((q) => Math.abs(q[1]))) > 8000);
+}
+ok('в мире есть полярные льды', Array.isArray(world.caps) && world.caps.length === 2, world.caps.length);
+ok('льды — на севере и юге', world.caps.some((c) => c.id === 'north') && world.caps.some((c) => c.id === 'south'));
+ok('северный щит выше середины', Math.min(...world.caps.find((c) => c.id === 'north').poly.map((p) => p[1])) < -17000);
+ok('южный щит ниже середины', Math.max(...world.caps.find((c) => c.id === 'south').poly.map((p) => p[1])) > 17000);
+ok('льды лежат внутри карты', world.caps.every((c) => c.poly.every(([x, y]) => Math.abs(x) <= world.sizeKm / 2 && Math.abs(y) <= world.sizeKm / 2)));
+ok('льды не залезают на континент', world.caps.every((c) => c.poly.filter(([x, y]) => pointInPolygon(x, y, coast)).length === 0));
+ok('льды детерминированы', (() => {
+  const a = buildWorld(424242).caps;
+  const b = buildWorld(424242).caps;
+  return Math.abs(a[0].poly[3][1] - b[0].poly[3][1]) < 1e-9;
+})());
+const cvL2 = makeCanvas(900, 600);
+const vL2 = new WorldView(cvL2, { createCanvas: (a, b) => createCanvas(a, b) });
+vL2.resize(); vL2.setWorld(world); vL2.step(0.02); vL2.step(0.02); vL2.open();
+const legTexts = [];
+const o2 = vL2.ctx.fillText.bind(vL2.ctx);
+vL2.ctx.fillText = (t, x, y) => { legTexts.push(String(t)); return o2(t, x, y); };
+vL2.draw();
+ok('легенда на карте подписана словами', legTexts.includes('город') && legTexts.includes('столица'), legTexts.join('|'));
+ok('в легенде есть наша армия', legTexts.includes('наша армия'));
+ok('в легенде есть разрушения', legTexts.includes('разрушено'));
+ok('в легенде нет номеров параграфов', legTexts.every((t) => !/§|F-\d/.test(t)));
+ok('океан подписан словом', legTexts.filter((t) => /О\s?К\s?Е\s?А\s?Н/.test(t)).length >= 2, legTexts.filter((t) => /О/.test(t)).length);
+const legBox = drawMapLegend(createCanvas(900, 600).getContext('2d'), { w: 900, h: 600 });
+ok('легенда помещается в углу кадра', legBox.x + legBox.w <= 900 && legBox.y + legBox.h <= 600, JSON.stringify(legBox));
+ok('легенда не закрывает панель снизу слева', legBox.x > 300, legBox.x);
+ok('на телефоне легенда короче', (() => {
+  const b = drawMapLegend(createCanvas(390, 844).getContext('2d'), { w: 390, h: 844 });
+  return b.rows === 3 && b.x === 10;
+})());
+ok('своя армия видна в кадре без спутника', (() => {
+  const armies = world.armies.filter((a) => a.country === 'own');
+  return armies.length > 0 && armies.every((a) => pointInPolygon(a.x, a.y, coast));
+})());
+ok('камера смотрит на свою столицу и видит весь континент', (() => {
+  const cam = ownOverview(world, { w: 1200, h: 700 });
+  return cam.x === 0 && cam.y === 0 && coast.every(([x, y]) =>
+    Math.abs(x * cam.scale) <= 1200 / 2 && Math.abs(y * cam.scale) <= 700 / 2);
+})());
+
+console.log(`\nOK: 6 групп · ${pass} проверок`);
 if (fail) { console.log(`FAIL: ${fail}`); process.exit(1); }

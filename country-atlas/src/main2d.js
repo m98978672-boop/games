@@ -3,7 +3,8 @@ import { Map2D } from './map2d.js';
 import { isPhone, startCenter, FIT } from './fit2d.js';
 import { WorldView, overviewScale } from './worldview.js';
 import { buildWorld, advanceWars, worldStats, hottestWar, diplomacyStats, WM } from './worldmap2d.js';
-import { techStats } from './tech2d.js';
+import { techStats, TECH } from './tech2d.js';
+import { autonomyStats } from './autonomy2d.js';
 import { START, overlayPhase, startSceneView } from './startscene2d.js';
 import { Intro } from './intro.js';
 import { WORLD2D } from './world2d.js';
@@ -269,6 +270,7 @@ function setupWorld() {
   const techEl = document.getElementById('world-tech');
   const techBarEl = document.getElementById('world-techbar');
   const hintEl = document.getElementById('world-hint');
+  const selfEl = document.getElementById('world-self');
   const loadEl = document.getElementById('world-load');
   if (!worldScreen || !canvas || !openBtn) return;
 
@@ -303,6 +305,7 @@ function setupWorld() {
       st.ownAtWar ? 'наша страна воюет' : 'наша страна не воюет'
     ];
     const tech = techStats(world);
+    const self = autonomyStats(world);
     lines.push('технологии: ' + tech.count + ' из ' + tech.catalog.toLocaleString('ru-RU') + ' · наука +' + tech.perDay.toLocaleString('ru-RU') + ' в сутки');
     lines.push('спутник: ' + (tech.satellite ? 'видит армии · точность ' + tech.accuracy.toFixed(2) : 'ещё не готов'));
     const dip = diplomacyStats(world);
@@ -339,6 +342,15 @@ function setupWorld() {
       ].filter(Boolean).join('\n');
       techEl.style.whiteSpace = 'pre-line';
     }
+    if (selfEl) {
+      // F-390: видно, что страна делает сама — без игрока
+      selfEl.textContent = [
+        'городов ' + self.cities + ' из ' + self.cityCap + ' · армий ' + self.armies + ' из ' + self.armyCap,
+        'казна ' + nf(self.treasury) + ' · доход ' + nf(self.income) + ' в сутки · решений ' + nf(self.decisions),
+        self.last ? 'последнее: ' + self.last : 'правительство пока копит'
+      ].join('\n');
+      selfEl.style.whiteSpace = 'pre-line';
+    }
     if (techBarEl) {
       const fill = techBarEl.querySelector ? techBarEl.querySelector('i') : null;
       if (fill) fill.style.width = Math.max(0, Math.min(100, tech.bar)) + '%';
@@ -346,7 +358,7 @@ function setupWorld() {
     }
     if (hintEl) {
       // F-371: числа подсказки вернулись: сколько чего на карте прямо сейчас
-      hintEl.textContent = 'тяните — сдвиг · щипок и колесо — зум · стран ' + st.countries +
+      hintEl.textContent = 'тяните — сдвиг · щипок и колесо — зум · городов ' + self.cities + ' · армий ' + self.armies + ' · стран ' + st.countries +
         ' · войн ' + st.wars + ' · боёв ' + nf(st.battles) + ' · взрывов ' + nf(st.explosionsTotal) +
         ' · технологий ' + nf(tech.count) + ' из ' + nf(tech.catalog);
       hintEl.style.whiteSpace = 'pre-line';
@@ -415,7 +427,9 @@ function setupWorld() {
   if (sat) sat.addEventListener('click', () => {
     worldView.showArmies = !worldView.showArmies;
     const ready = !!(world && world.own && world.own.tech && world.own.tech.eff.satellite);
-    sat.textContent = 'спутник: ' + (worldView.showArmies ? (ready ? 'вкл' : 'нужна наука') : 'выкл');
+    const spaceTier = world && world.own && world.own.tech ? (world.own.tech.tiers.space || 0) : 0;
+    sat.textContent = 'спутник: ' + (ready ? (worldView.showArmies ? 'вкл' : 'выкл')
+      : 'нужна наука · космос ' + spaceTier + ' из ' + TECH.satelliteFrom);
     drawStats();
     worldView.draw();
   });

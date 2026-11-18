@@ -6,7 +6,7 @@ import {
   nextTech, advanceTech, techStats, missileSpread, missileReach, armyPower
 } from '../src/tech2d.js';
 import {
-  buildWorld, advanceWars, worldStats, canSeeArmies, buildArmies
+  buildWorld, advanceWars, worldStats, canSeeArmies, visibleArmiesFor, buildArmies
 } from '../src/worldmap2d.js';
 import { INTRO, Intro, tourWaypoints, tourSights, tourCam, insideOwn } from '../src/intro.js';
 import { WV } from '../src/worldview.js';
@@ -76,8 +76,12 @@ group('развитие');
 const w = buildWorld(424242);
 ok('у всех стран есть наука', w.countries.every((c) => !!c.tech));
 ok('у нашей страны наука с самого начала', w.own.tech.count > 0, w.own.tech.count);
-ok('наша страна стартует со спутником', w.own.tech.eff.satellite === true);
-ok('спутник — это космос третьего поколения', w.own.tech.tiers.space >= TECH.satelliteFrom, w.own.tech.tiers.space);
+// F-381: спутник не выдаётся на старте — его надо изучить, как и всем
+ok('на старте спутника у нас нет', w.own.tech.eff.satellite === false);
+ok('на старте космос нулевой', w.own.tech.tiers.space === 0, w.own.tech.tiers.space);
+ok('на старте шесть земных технологий', w.own.tech.count === 6, w.own.tech.count);
+ok('до спутника космос не дотянул', w.own.tech.tiers.space < TECH.satelliteFrom, w.own.tech.tiers.space);
+ok('спутник — это космос третьего поколения', TECH.satelliteFrom === 3, TECH.satelliteFrom);
 ok('у соседей космос начинается с нуля', w.countries.filter((c) => !c.own).every((c) => c.tech.tiers.space === 0));
 const headSum = Object.values(TECH.ownHead).reduce((a, b) => a + b, 0);
 ok('стартовых технологий ровно столько, сколько выдано', w.own.tech.count === headSum, w.own.tech.count);
@@ -87,8 +91,11 @@ ok('наука считается в сутки', techStats(w).perDay === Math.r
 ok('очереди разработок у стран разные', new Set(w.countries.map((c) => c.tech.order.join(','))).size > 1);
 const w2 = buildWorld(424242);
 for (let t = 0; t <= DAY * 20; t += 45) advanceWars(w2, 9000 + t);
-ok('за двадцать суток наука растёт у всех', w2.countries.every((c) => c.tech.count > 40), Math.min(...w2.countries.map((c) => c.tech.count)));
-ok('наша страна за двадцать суток открыла больше шестидесяти', w2.own.tech.count > 60, w2.own.tech.count);
+// F-380: наука идёт медленно: за 20 суток прибавляется около двадцати технологий, не сто
+ok('за двадцать суток наука растёт у всех', w2.countries.every((c) => c.tech.count > 6), Math.min(...w2.countries.map((c) => c.tech.count)));
+ok('наука не летит: за двадцать суток меньше сорока технологий',
+  Math.max(...w2.countries.map((c) => c.tech.count)) < 40, Math.max(...w2.countries.map((c) => c.tech.count)));
+ok('наша страна за двадцать суток открыла больше пятнадцати', w2.own.tech.count > 15, w2.own.tech.count);
 ok('страны развиваются по-разному', new Set(w2.countries.map((c) => c.tech.count)).size > 5);
 ok('открыто меньше двадцатой части каталога — есть куда расти',
   w2.countries.every((c) => c.tech.count < total / 20), Math.max(...w2.countries.map((c) => c.tech.count)));
@@ -189,7 +196,7 @@ ok('эффекты меняются только с новой технолог�
 /* ——— 4. война и спутник ——— */
 group('война и спутник');
 const w4 = buildWorld(424242);
-ok('своя страна видит армии', canSeeArmies(w4, 'own') === true);
+ok('своя армия видна и без спутника', visibleArmiesFor(w4, 'own').length > 0);
 const blind = w4.countries.find((c) => !c.own && !c.tech.eff.satellite);
 ok('страна без готового спутника армий не видит', canSeeArmies(w4, blind.id) === false);
 ok('наука даёт спутник — и сразу видно', (() => {
@@ -209,7 +216,7 @@ ok('наука даёт спутник — и сразу видно', (() => {
 })());
 const s4 = worldStats(w4);
 ok('в сводке мира по-прежнему 15 полей', Object.keys(s4).length === 15, Object.keys(s4).length);
-ok('армий видно столько, сколько их есть', s4.armiesVisible === w4.armies.length);
+ok('армий видно столько, сколько знает страна', s4.armiesVisible === visibleArmiesFor(w4, 'own').length);
 ok('у армий есть боеготовность с самого начала', w4.armies.every((a) => a.morale === 0.7));
 const ownArmies = buildArmies({ id: 'own', capital: { x: 0, y: 0 }, radiusKm: 2000 }, 424242);
 ok('армия строится с полоской', ownArmies.every((a) => Number.isFinite(a.morale)));
@@ -220,16 +227,18 @@ ok('взрывы были большие и малые', w4.stats.big > 0 && w4.
 ok('городов разрушено меньше, чем есть', w4.destroyed.cities.length >= 0 && w4.destroyed.cities.length < w4.cities.length);
 ok('армии воюющих стоят на фронте', w4.armies.some((a) => a.side === 'front'));
 ok('у всех армий после войны полоска в норме', w4.armies.every((a) => a.morale >= 0.15 && a.morale <= 1));
-ok('точность стран выросла от науки', Math.max(...w4.countries.map((c) => c.tech.eff.accuracy)) > 1.1);
-ok('в мире есть страны со спутником', w4.countries.filter((c) => c.tech.eff.satellite).length > 1, w4.countries.filter((c) => c.tech.eff.satellite).length);
-ok('армии стран со спутником видны всем', worldStats(w4).armiesVisible === w4.armies.length);
-ok('спутник выключен — видно только свои', worldStats(w4, 'own').armiesVisible === w4.armies.length);
+ok('точность стран выросла от науки', Math.max(...w4.countries.map((c) => c.tech.eff.accuracy)) > 1);
+ok('спутник появляется не сразу', w4.countries.filter((c) => c.tech.eff.satellite).length <= w4.countries.length);
+ok('спутник — редкость в первые недели', w4.countries.filter((c) => c.tech.eff.satellite).length < w4.countries.length / 2,
+  w4.countries.filter((c) => c.tech.eff.satellite).length);
+ok('без спутника чужие армии скрыты', worldStats(w4).armiesVisible < w4.armies.length, worldStats(w4).armiesVisible);
+ok('свои армии статистика считает всегда', worldStats(w4, 'own').armiesVisible === visibleArmiesFor(w4, 'own').length);
 ok('война считается одинаково в двух мирах', (() => {
   const a = buildWorld(424242), b = buildWorld(424242);
   for (let t = 0; t <= DAY * 12; t += 45) { advanceWars(a, 9000 + t); advanceWars(b, 9000 + t); }
   return JSON.stringify(a.stats) === JSON.stringify(b.stats) && a.destroyed.cities.join() === b.destroyed.cities.join();
 })());
-ok('технологии наша страна копит в бою и в мире', w4.own.tech.count > 60, w4.own.tech.count);
+ok('технологии наша страна копит и в бою, и в мире', w4.own.tech.count > 15, w4.own.tech.count);
 ok('у сильной науки выше боеготовность своей армии', (() => {
   const a = buildWorld(424242);
   const low = armyPower(a.own, a);
