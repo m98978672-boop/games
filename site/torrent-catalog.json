@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1181,
-    "totalBytes": 35911314,
+    "files": 1182,
+    "totalBytes": 35915606,
     "chunks": 147,
     "blockedFiles": 1
   },
@@ -2098,11 +2098,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "19a7e6ecce3243913589948f631281e021a77f64fb51f139d08c08b9f4cb092a",
-      "totalSize": 9759758,
+      "infoHash": "71c00be092d31f31b68b772c397ab02cf6bd9537183c3a6c4c18c9a4f3466b12",
+      "totalSize": 9764050,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 533,
+      "fileCount": 534,
       "files": [
         {
           "path": ".gitattributes",
@@ -3495,14 +3495,19 @@
           "sha256": "9c83995c031bbe190b88280439e08b42fc6b56fe83eb5a695aa6f739bb975f23"
         },
         {
+          "path": "src/ai/commander-prompts.js",
+          "size": 1823,
+          "sha256": "b29ad40b91cd5f2f29a599f96065043f71fe1565e4a41ca539deb4658003b1e2"
+        },
+        {
           "path": "src/ai/commander-worker-entry.js",
-          "size": 2435,
-          "sha256": "4297ecb877d1f3c812b2c99356e312cf36368c445adcbdd0462be86bf10c4c21"
+          "size": 2091,
+          "sha256": "aefcabd35dab77f2515f793243538edbecbce0bfdc156323672329466097e951"
         },
         {
           "path": "src/ai/commander-worker.bundle.js",
-          "size": 6131991,
-          "sha256": "0779e0b6fb46e38f55ad3e1f2d32d5eed013e546e2b5c69249abf375e91f4f6d"
+          "size": 6133018,
+          "sha256": "ad0ec8e0f8e3c858306fb907185c139f965a56ae27954364792f425cc5a7dff5"
         },
         {
           "path": "src/ai/licenses/LOGLEVEL-MIT.txt",
@@ -3526,8 +3531,8 @@
         },
         {
           "path": "src/core/build-info.js",
-          "size": 844,
-          "sha256": "8f6108a285a5da63f4e319af7b846d42545f2bb926530512e9b9e38418ecf232"
+          "size": 849,
+          "sha256": "d5d2a098e19e5f8bdf75640f60c6f373804b1f1d7ec173b6b1543cffbf1bd55f"
         },
         {
           "path": "src/core/config.js",
@@ -3576,8 +3581,8 @@
         },
         {
           "path": "src/main.js",
-          "size": 30555,
-          "sha256": "e24bb4701137ace60b626b38222cecc464ebf88868ddc2474478af3d55c6dc2a"
+          "size": 30817,
+          "sha256": "5007afe96bc784a797b920409164873015be1d31409572cd27d912c6978e1996"
         },
         {
           "path": "src/render/renderer.js",
@@ -3671,8 +3676,8 @@
         },
         {
           "path": "src/sim/neutral_commander_client.js",
-          "size": 3585,
-          "sha256": "4d6c9e3deca8d0c3d49a059dfc54a938585a0c1980d11e7470b5c951ee9a20ee"
+          "size": 3677,
+          "sha256": "5c71822007587f722fad10dc9c262eb190b903c820432730ac1e9d8999973565"
         },
         {
           "path": "src/sim/rest_positions.js",
@@ -3736,8 +3741,8 @@
         },
         {
           "path": "src/ui/menus.js",
-          "size": 23323,
-          "sha256": "623eb273dae088dfdd9c1acd0361094103a0525dd742d48bd0b853402530f343"
+          "size": 23814,
+          "sha256": "749a89e2f6e5436f2cf71c0535f68310f61fc0a32cb8528ab46e19fb5e6f5857"
         },
         {
           "path": "src/ui/model_import.js",
@@ -4551,13 +4556,13 @@
         },
         {
           "path": "tools/training/collect-commander.mjs",
-          "size": 4388,
-          "sha256": "a99cfc49dd806e2367dc64254a0aaaea1a796d28cf8248afa4b6e800ec72ea21"
+          "size": 4337,
+          "sha256": "8456545dd248cbf1ce3e56ab9e3365f9fa415182a974ec7de3728ca331312647"
         },
         {
           "path": "tools/training/eval-qwen.py",
-          "size": 3546,
-          "sha256": "09bebbb02c4dd8d442c9b38af7c0cdad37954d2075b15879d9a4dde24ba03b8b"
+          "size": 3932,
+          "sha256": "ea37e7e63c8e5f516e832066a01e472fa9634f0d80a2c190eb67a1f8e62a6126"
         },
         {
           "path": "tools/training/score-generated.mjs",
@@ -4566,8 +4571,8 @@
         },
         {
           "path": "tools/training/train-qwen.py",
-          "size": 8978,
-          "sha256": "c0cd2a44179a60a6ff3076b6047a1118dbafeb4bb918ef8a047a825ab1507839"
+          "size": 9579,
+          "sha256": "bab2ef46fd2c1212c2635404a395f8e67f40d29e3706b621a2ddf6e79e63f630"
         },
         {
           "path": "tools/truck-assist-wars.mjs",

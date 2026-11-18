@@ -72,7 +72,7 @@ function bindingsFor(mode) {
 }
 
 // ---------- создание игры ----------
-function newGame({ mode = 'soldier', aiVsAi = false, difficulty = state.difficulty, seed = state.seed, loadSave = false, neutralAI = false } = {}) {
+function newGame({ mode = 'soldier', aiVsAi = false, difficulty = state.difficulty, seed = state.seed, loadSave = false, neutralAI = false, neutralKnowledge = false } = {}) {
   stopNeutralCommander();
   neutralAI = !!neutralAI && !!aiVsAi && !loadSave;
   // The experimental demo uses the same baseline persona for both factions.
@@ -137,7 +137,7 @@ function newGame({ mode = 'soldier', aiVsAi = false, difficulty = state.difficul
     neutralStatus.className = 'neutral-ai-status'; neutralStatus.setAttribute('role', 'status');
     document.body.appendChild(neutralStatus);
     const status = neutralStatus;
-    neutralCommander = new NeutralCommanderClient(game, { onStatus: text => { status.textContent = text; } });
+    neutralCommander = new NeutralCommanderClient(game, { knowledge: neutralKnowledge, onStatus: text => { status.textContent = text; } });
     neutralCommander.start();
   }
   return game;
@@ -250,6 +250,7 @@ function onMenuAction(act, opts = {}) {
     case 'continue': newGame({ mode: 'soldier', loadSave: true }); break;
     case 'ai-vs-ai': newGame({ mode: 'commander', aiVsAi: true, seed: opts.seed || state.seed }); break;
     case 'neutral-ai-demo': newGame({ mode: 'commander', aiVsAi: true, neutralAI: true, difficulty: opts.difficulty || state.difficulty, seed: opts.seed || state.seed }); break;
+    case 'neutral-ai-knowledge': newGame({ mode: 'commander', aiVsAi: true, neutralAI: true, neutralKnowledge: true, difficulty: opts.difficulty || state.difficulty, seed: opts.seed || state.seed }); break;
     case 'model-storage': state.screen = 'model-storage'; menus.modelStorage(); break;
     case 'storage-back': showMainMenu(); break;
     case 'skills':
