@@ -266,6 +266,16 @@ const visible = html
   ok(main.includes("advanceWars(world, target)"), 'война идёт вместе с часами игры');
   ok(main.includes('showArmies'), 'тумблер спутника связан с армиями');
   ok(!/§/.test(html.slice(html.indexOf('id="loading"'), html.indexOf('id="left-rail"'))), 'в заставке нет номеров параграфов');
+  // §89: технологии, полоска боеготовности, длинный пролёт
+  ok(/id="world-tech"/.test(html), 'в панели мира есть блок технологий');
+  ok(/<div class="cap">технологии<\/div>/.test(html), 'блок технологий подписан по-человечески');
+  ok(main.includes('techStats'), 'технологии считаются из науки, а не рисуются наугад');
+  ok(main.includes('world-tech'), 'панель технологий заполняется из main2d');
+  ok(/боеготовность армии/.test(html), 'в легенде объяснена полоска боеготовности');
+  ok(/id="intro-point"/.test(html), 'у пролёта есть строка «над страной»');
+  ok(main.includes('intro-point') && main.includes('onPoint'), 'подпись точки пролёта идёт из кадра');
+  ok(!/§/.test(html.slice(html.indexOf('id="world-tech"'), html.indexOf('id="world-legend"'))), 'в блоке технологий нет номеров параграфов');
+  ok(/id="world-tech"[\s\S]*id="world-legend"/.test(html), 'технологии стоят между контактами и легендой — ничего не наезжает');
 }
 
-console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§88 (F-222…F-224, F-279…F-286, F-301…F-318, проверок ' + checks + ')');
+console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§88 (F-222…F-224, F-279…F-286, F-301…F-334, проверок ' + checks + ')');

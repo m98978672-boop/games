@@ -11,7 +11,7 @@ export const WV = {
   minScale: 0.004,         // px на км: дальше уже некуда
   maxScale: 0.9,
   overviewScale: 0.045,    // «вся планета» в кадре 900 px
-  transitionMs: 900,
+  transitionMs: 1500,      // §89: переход на карту мира длиннее — видно, как камера улетает
   loadPasses: 2,
   markPx: 3.2,
   cityPx: 2.4,
@@ -230,25 +230,7 @@ export class WorldView {
       ctx.setLineDash([]);
     }
 
-    // армии — только если спутник видит
-    if (visibleArmies) {
-      // метка армии растёт вместе с масштабом: на обзоре мира это искра, вблизи — флажок
-      const size = Math.max(4, Math.min(10, 70 * cam.scale + 3));
-      const wMark = size * 1.7, hMark = size;
-      for (const a of world.armies) {
-        const s1 = p(a.x, a.y);
-        if (s1.x < -20 || s1.y < -20 || s1.x > view.w + 20 || s1.y > view.h + 20) continue;
-        ctx.fillStyle = 'rgba(6,12,17,0.55)';
-        ctx.fillRect(s1.x - wMark / 2 - 1, s1.y - hMark / 2 - 1, wMark + 2, hMark + 2);
-        ctx.fillStyle = a.country === 'own' ? 'rgba(120,200,255,0.98)' : 'rgba(255,170,90,0.95)';
-        ctx.fillRect(s1.x - wMark / 2, s1.y - hMark / 2, wMark, hMark);
-        // штрих посередине — армия не путается с городом
-        ctx.fillStyle = 'rgba(6,12,17,0.8)';
-        ctx.fillRect(s1.x - wMark / 4, s1.y - 0.6, wMark / 2, 1.2);
-      }
-    }
-
-    // взрывы: большое кольцо и малое, гаснут со временем
+    // взрывы рисуются до армий: вспышка не закрывает метки и полоски боеготовности
     for (const e of world.explosions) {
       const age = Math.max(0, world.minutes - e.at) / 40;
       const fade = Math.max(0, 1 - age);
@@ -263,6 +245,39 @@ export class WorldView {
       ctx.strokeStyle = 'rgba(255,150,80,' + (0.35 * fade) + ')';
       ctx.lineWidth = 1.2;
       ctx.stroke();
+    }
+
+    // армии — только если спутник видит
+    if (visibleArmies) {
+      // метка армии растёт вместе с масштабом: на обзоре мира это искра, вблизи — флажок
+      const size = Math.max(4, Math.min(10, 70 * cam.scale + 3));
+      const wMark = size * 1.7, hMark = size;
+      // F-331: у каждой видимой армии — полоска боеготовности; своя выделена цветом и длиной
+      const barW = Math.max(12, Math.min(22, 130 * cam.scale + 8));
+      const barH = Math.max(2, Math.min(3.4, 10 * cam.scale + 1.6));
+      for (const a of world.armies) {
+        const s1 = p(a.x, a.y);
+        if (s1.x < -20 || s1.y < -20 || s1.x > view.w + 20 || s1.y > view.h + 20) continue;
+        ctx.fillStyle = 'rgba(6,12,17,0.55)';
+        ctx.fillRect(s1.x - wMark / 2 - 1, s1.y - hMark / 2 - 1, wMark + 2, hMark + 2);
+        ctx.fillStyle = a.country === 'own' ? 'rgba(120,200,255,0.98)' : 'rgba(255,170,90,0.95)';
+        ctx.fillRect(s1.x - wMark / 2, s1.y - hMark / 2, wMark, hMark);
+        // штрих посередине — армия не путается с городом
+        ctx.fillStyle = 'rgba(6,12,17,0.8)';
+        ctx.fillRect(s1.x - wMark / 4, s1.y - 0.6, wMark / 2, 1.2);
+        // полоска: сколько армия ещё может — от технологий и от того, как долго идёт война
+        const val = Number.isFinite(a.morale) ? a.morale : 0.7;
+        const by = s1.y + hMark / 2 + 2;
+        ctx.fillStyle = 'rgba(6,12,17,0.72)';
+        ctx.fillRect(s1.x - barW / 2, by, barW, barH);
+        ctx.fillStyle = a.country === 'own' ? 'rgba(146,236,178,0.96)' : 'rgba(255,198,120,0.9)';
+        ctx.fillRect(s1.x - barW / 2, by, Math.max(1.2, barW * val), barH);
+        if (a.country === 'own') {
+          ctx.strokeStyle = 'rgba(146,236,178,0.55)';
+          ctx.lineWidth = 0.8;
+          ctx.strokeRect(s1.x - barW / 2 - 0.5, by - 0.5, barW + 1, barH + 1);
+        }
+      }
     }
 
     // подпись своей страны: контур и имя, чтобы не потерялась

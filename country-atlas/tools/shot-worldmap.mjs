@@ -3,6 +3,7 @@
 import { createCanvas } from '@napi-rs/canvas';
 import { writeFileSync } from 'node:fs';
 import { buildWorld, advanceWars, worldStats, hottestWar, nearestCity, diplomacyStats, WM } from '../src/worldmap2d.js';
+import { techStats, armyPower } from '../src/tech2d.js';
 import { WorldView, overviewScale } from '../src/worldview.js';
 import { Intro, INTRO, tourCam } from '../src/intro.js';
 
@@ -42,9 +43,9 @@ function overviewPanel() {
   const st = worldStats(world);
   const hot = hottestWar(world);
   const g = cv.getContext('2d');
-  const y = H - 112;
+  const y = H - 132;
   g.fillStyle = 'rgba(8,19,28,0.82)';
-  g.fillRect(0, y, W, 112);
+  g.fillRect(0, y, W, 132);
   caption(g, 16, y + 24, 'карта мира · вся планета', `${WM.countries} стран · войн сейчас ${st.wars} · боёв ${st.battles}`);
   g.font = '13px sans-serif';
   g.fillStyle = 'rgba(220,230,236,0.95)';
@@ -53,6 +54,9 @@ function overviewPanel() {
   g.fillText(`разрушено городов ${st.destroyedCities} · дорог ${st.destroyedRoads} · мостов ${st.destroyedBridges} · оккупация ${st.occupiedZones} зон`, 16, y + 78);
   g.fillStyle = 'rgba(190,206,215,0.95)';
   g.fillText(`контакты: союз ${dip.union} · дружба ${dip.friend} · вражда ${dip.enmity} · посольств ${dip.embassies} · помощь ${dip.aidTotal}`, 16, y + 94);
+  const tech = techStats(world);
+  g.fillStyle = 'rgba(200,242,216,0.95)';
+  g.fillText(`технологии: ${tech.count} из ${tech.catalog.toLocaleString('ru-RU')} · наука +${tech.perDay.toLocaleString('ru-RU')} в сутки · впереди по науке ${tech.leaders[0] ? tech.leaders[0].name + ' ' + tech.leaders[0].count : '—'}`, 16, y + 112);
   return cv;
 }
 
@@ -95,7 +99,7 @@ function frontPanel() {
   g.font = '12px sans-serif';
   g.fillStyle = 'rgba(200,214,222,0.95)';
   g.fillText('оранжевые вспышки — взрывы, крестики — разрушенные города,', 16, y + 62);
-  g.fillText('красная штриховка — оккупация, голубые метки — армии', 16, y + 82);
+  g.fillText('красная штриховка — оккупация, голубые метки — армии, полоска — боеготовность', 16, y + 82);
   return cv;
 }
 
@@ -106,7 +110,9 @@ function introPanel() {
   intro.resize();
   intro.buildBackground();
   intro.buildLayer();
-  intro.t = 7.6;
+  // встаём на достопримечательность: в кадре видно и её, и подпись пролёта
+  const sightAt = Math.max(0, intro.points.findIndex((p) => p.sight));
+  intro.t = INTRO.hopSec * (sightAt + 0.5);
   intro.draw();
   const cam = tourCam(intro.points, intro.t);
   const g = cv.getContext('2d');
@@ -117,13 +123,13 @@ function introPanel() {
   g.fillText('РАТГРАД', 18, 34);
   g.font = '12.5px sans-serif';
   g.fillStyle = 'rgba(190,206,215,0.95)';
-  g.fillText(`пролёт над страной · ${cam.name} · подложка — размытая карта мира`, 18, 56);
+  g.fillText(`пролёт над страной и достопримечательностями · ${cam.name} · подложка — размытая карта мира`, 18, 56);
   const y = H - 54;
   g.fillStyle = 'rgba(8,19,28,0.72)';
   g.fillRect(0, y, W, 54);
   g.fillStyle = 'rgba(240,244,246,0.95)';
   g.font = '13px sans-serif';
-  g.fillText(`масштаб ${cam.scale.toFixed(2)} px/км · ${intro.points.length} точек пролёта · размытие ${INTRO.blurPx} px`, 18, y + 32);
+  g.fillText(`масштаб ${cam.scale.toFixed(2)} px/км · ${intro.points.length} точек · ${INTRO.hopSec} с на точку · размытие ${INTRO.blurPx} px`, 18, y + 32);
   return cv;
 }
 
@@ -150,7 +156,7 @@ for (const cv of panels) {
   ctx.fillText(labels[i], x, y + H + 20);
   i++;
 }
-// четвёртая клетка: что видно при выключенном спутнике — армии пропадают
+// четвёртая клетка: панель мира — что происходит, технологии и контакты, как в игре
 {
   const cv = frameCanvas(W, H);
   const v = new WorldView(cv, { createCanvas });
@@ -159,19 +165,68 @@ for (const cv of panels) {
   v.step(0.02); v.step(0.02);
   v.cam = { x: 0, y: 0, scale: overviewScale(v.view) };
   v.alpha = 1;
-  v.showArmies = false;
   v.draw();
   const g = cv.getContext('2d');
-  g.fillStyle = 'rgba(8,19,28,0.78)';
-  g.fillRect(0, H - 54, W, 54);
-  g.fillStyle = 'rgba(240,244,246,0.95)';
-  g.font = '12.5px sans-serif';
-  g.fillText('спутник выключен — армий на карте нет; войны и разрушения остаются', 16, H - 22);
+  const st4 = worldStats(world);
+  const tech = techStats(world);
+  // верхняя строка, как в #world-top
+  g.fillStyle = 'rgba(240,244,246,0.96)';
+  g.font = 'bold 12px sans-serif';
+  g.fillText('КАРТА МИРА', 14, 24);
+  g.font = '11px sans-serif';
+  g.fillStyle = 'rgba(157,176,189,0.95)';
+  g.fillText(`мир: ${WM.countries} стран · ${tech.count} технологий`, 14, 40);
+  const bw = 86;
+  g.fillStyle = 'rgba(18,28,34,0.85)';
+  g.fillRect(W - 10 - bw * 2 - 6, 12, bw, 26);
+  g.fillRect(W - 10 - bw, 12, bw - 6, 26);
+  g.strokeStyle = 'rgba(233,238,242,0.35)';
+  g.strokeRect(W - 10 - bw * 2 - 6 + 0.5, 12.5, bw, 26);
+  g.strokeRect(W - 10 - bw + 0.5, 12.5, bw - 6, 26);
+  g.fillStyle = 'rgba(233,238,242,0.95)';
+  g.font = '10.5px sans-serif';
+  g.fillText('спутник: вкл', W - 10 - bw * 2 - 1, 29);
+  g.fillText('назад', W - 10 - bw + 8, 29);
+
+  // панель, как #world-panel: слева внизу, до 44 % высоты
+  const pw = 340, ph = 184, px0 = 10, py0 = H - ph - 10;
+  g.fillStyle = 'rgba(12,20,26,0.88)';
+  g.fillRect(px0, py0, pw, ph);
+  g.strokeStyle = 'rgba(233,238,242,0.22)';
+  g.strokeRect(px0 + 0.5, py0 + 0.5, pw - 1, ph - 1);
+  const cap = (t, y) => {
+    g.fillStyle = 'rgba(147,165,177,0.95)';
+    g.font = '9px sans-serif';
+    g.fillText(t.toUpperCase(), px0 + 10, y);
+  };
+  const line = (t, y, tone) => {
+    g.fillStyle = tone || 'rgba(223,230,234,0.95)';
+    g.font = '10.5px sans-serif';
+    g.fillText(t, px0 + 10, y);
+  };
+  let yy = py0 + 18;
+  cap('что происходит', yy);
+  line(`стран ${st4.countries} · войн ${st4.wars} · боёв ${st4.battles}`, yy += 15);
+  line(`разрушено: городов ${st4.destroyedCities} · мостов ${st4.destroyedBridges}`, yy += 14);
+  cap('технологии', yy += 17);
+  line(`открыто ${tech.count} из ${tech.catalog.toLocaleString('ru-RU')} · наука +${tech.perDay.toLocaleString('ru-RU')} в сутки`, yy += 15);
+  if (tech.last.length) line('последние: ' + tech.last[tech.last.length - 1], yy += 14, 'rgba(200,242,216,0.95)');
+  cap('контакты', yy += 17);
+  line(`союз 3 · дружба 1 · вражда 0 · посольств 4 · помощь 1`, yy += 15);
+  cap('обозначения', yy += 17);
+  const legend = [['#78c8ff', 'армии, если видит спутник'], ['#92ecb2', 'боеготовность армии — полоска']];
+  legend.forEach(([c, name], i) => {
+    g.fillStyle = c;
+    g.fillRect(px0 + 10, yy + 6 + i * 15, 12, 8);
+    g.fillStyle = 'rgba(223,230,234,0.92)';
+    g.font = '10.5px sans-serif';
+    g.fillText(name, px0 + 28, yy + 14 + i * 15);
+  });
   const x = PAD + (W + GAP), y = PAD + (H + 34 + GAP);
   ctx.drawImage(cv, x, y);
   ctx.fillStyle = 'rgba(200,214,222,0.95)';
   ctx.font = '12px sans-serif';
-  ctx.fillText('тумблер «спутник»: армии видны только когда страна может смотреть', x, y + H + 20);
+  ctx.fillText('панель мира: технологии, контакты и легенда — каждый блок в своей зоне', x, y + H + 20);
 }
 
 ctx.fillStyle = 'rgba(150,168,180,0.9)';

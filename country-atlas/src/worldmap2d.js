@@ -7,6 +7,10 @@
    Модуль не знает про канву: считает мир, фронты, взрывы, разрушения и оккупацию.
    Всё детерминировано: один и тот же сид всегда даёт ту же планету и ту же войну. */
 import { hash01, idToInt } from './accidents2d.js';
+import {
+  TECH, buildTech, advanceTech, techRate, nextTech, techEffects, techStats,
+  armyPower, missileSpread, missileReach
+} from './tech2d.js';
 
 export const WM = {
   sizeKm: 24000,             // сторона карты мира
@@ -331,7 +335,8 @@ export function buildArmies(country, seed) {
       y: country.capital.y + Math.sin(a) * country.radiusKm * 0.86,
       size: 600 + Math.floor(hash01(seed + i * 37 + idToInt(country.id), 89) * 1400),   // человек
       side: 'home',                                                                    // дома или на фронте
-      at: 0
+      at: 0,
+      morale: 0.7                          // боеготовность — длина полоски у метки (§89)
     });
   }
   return out;
@@ -340,7 +345,9 @@ export function buildArmies(country, seed) {
 /* F-295: видно ли армии чужой страны. Спутник есть у сильной страны — тогда видно всех. */
 export function canSeeArmies(world, observerId = 'own') {
   const obs = world.countries.find((c) => c.id === observerId);
-  return !!(obs && obs.satellite);
+  if (!obs || !obs.satellite) return false;
+  // F-327: спутник не рисуется сам по себе — его нужно доработать до третьего поколения
+  return obs.tech && obs.tech.eff ? obs.tech.eff.satellite === true : true;
 }
 
 /* F-312: ключ пары — порядок стран не важен, отношения всегда взаимные. */
@@ -417,30 +424,45 @@ export function contactsOf(world, id = 'own') {
   return out.sort((x, y) => y.score - x.score);
 }
 
+/* F-330: соседи по стране. Считается лениво и один раз — для шага дипломатии. */
+function neighboursOf(world) {
+  if (world.neighbours) return world.neighbours;
+  const nb = new Map(world.countries.map((c) => [c.id, []]));
+  for (const p of world.pairs) {
+    if (!nb.has(p.a) || !nb.has(p.b)) continue;
+    nb.get(p.a).push(p.b);
+    nb.get(p.b).push(p.a);
+  }
+  try { Object.defineProperty(world, 'neighbours', { value: nb, enumerable: false }); } catch (err) { /* мир может быть заморожен — тогда просто посчитаем снова */ }
+  return nb;
+}
+
 /* F-317: шаг дипломатии. Война обрушивает отношения, союзник посылает помощь,
    в остальное время отношения медленно возвращаются к своим. */
 export function advanceDiplomacy(world, minutes = world.minutes) {
   if (!world.relations) return null;
+  // F-330: война помечает сами записи отношений, а не их ключи: на каждом шаге экономится
+  // сотня склеек строк, а числа остаются ровно те же
   const warring = new Set();
   for (const w of world.wars) {
     if (w.to !== null) continue;
-    warring.add(relationKey(w.a, w.b));
     const r = world.relations.get(relationKey(w.a, w.b));
-    if (r) r.score = Math.min(r.score - 2, -DIPLO.warHit);
-    // соседям воюющих тоже неуютно
-    for (const p of world.pairs) {
-      let other = null;
-      if (p.a === w.a || p.a === w.b) other = p.b;
-      else if (p.b === w.a || p.b === w.b) other = p.a;
-      if (!other) continue;
-      const side = p.a === w.a || p.b === w.a ? w.a : w.b;
-      if (other === w.a || other === w.b) continue;
-      const rr = world.relations.get(relationKey(side, other));
-      if (rr) rr.score = Math.max(-DIPLO.cap, rr.score - 0.4);
+    if (!r) continue;
+    warring.add(r);
+    r.score = Math.min(r.score - 2, -DIPLO.warHit);
+    // соседям воюющих тоже неуютно — обходим только соседей, а не все 153 пары мира
+    const nb = world.neighbours || neighboursOf(world);
+    for (const side of [w.a, w.b]) {
+      const list = nb.get(side) || [];
+      for (const other of list) {
+        if (other === w.a || other === w.b) continue;
+        const rr = world.relations.get(relationKey(side, other));
+        if (rr) rr.score = Math.max(-DIPLO.cap, rr.score - 0.4);
+      }
     }
   }
   for (const [, r] of world.relations) {
-    if (warring.has(relationKey(r.a, r.b))) continue;
+    if (warring.has(r)) continue;
     r.score += (r.base - r.score) * DIPLO.drift;
     r.score = Math.max(-DIPLO.cap, Math.min(DIPLO.cap, r.score));
   }
@@ -459,7 +481,7 @@ export function advanceDiplomacy(world, minutes = world.minutes) {
           const other = r.a === side ? r.b : r.b === side ? r.a : null;
           if (!other || other === war.a || other === war.b) continue;
           if (r.score < DIPLO.aidFrom) continue;
-          const c = world.countries.find((k) => k.id === other);
+          const c = world.byId ? world.byId.get(other) : world.countries.find((k) => k.id === other);
           if (!c) continue;
           const km = Math.hypot(c.capital.x - front.x, c.capital.y - front.y);
           if (km > DIPLO.aidKm) continue;
@@ -570,6 +592,11 @@ export function buildWorld(seed = 424242) {
   }
   // каждый город помнит свою страну — так проще и проверять, и рисовать
   for (const c of countries) for (const city of c.cities) city.country = c.id;
+  // §89: у каждой страны своя наука; наша начинает со спутника и пары готовых сфер
+  for (const c of countries) {
+    c.tech = buildTech(c, seed);
+    c.tech.rate = techRate(c);
+  }
   const armies = [];
   for (const c of countries) armies.push(...buildArmies(c, seed));
 
@@ -591,11 +618,23 @@ export function buildWorld(seed = 424242) {
     relations: null,        // заполняется ниже: до стран нужен adjacency
     aid: [],
     lastAidAt: 0,
-    stats: { battles: 0, explosions: 0, killed: 0, big: 0, aid: 0 },
+    stats: { battles: 0, explosions: 0, killed: 0, big: 0, aid: 0, tech: 0 },
     rev: 0,                 // сколько раз мир менялся — по нему перерисовывается слой подробностей
-    firstWarAt: null
+    firstWarAt: null,
+    techAt: 0               // до какой минуты наука уже досчитана
   };
   w.relations = buildRelations(countries, seed, w.pairs);
+  // быстрые индексы: страны по коду и соседи по стране. Не попадают в перебор и в JSON —
+  // это ускорители шага войны (F-330), а не новые данные мира.
+  Object.defineProperty(w, 'byId', {
+    value: new Map(countries.map((c) => [c.id, c])), enumerable: false
+  });
+  const nb = new Map(countries.map((c) => [c.id, []]));
+  for (const p of w.pairs) {
+    nb.get(p.a).push(p.b);
+    nb.get(p.b).push(p.a);
+  }
+  Object.defineProperty(w, 'neighbours', { value: nb, enumerable: false });
   // сводные числа читаются из stats: одно место правды, никаких рассинхронов
   Object.defineProperties(w, {
     battles: { get() { return this.stats.battles; }, enumerable: true },
@@ -723,19 +762,29 @@ export function advanceWars(world, minutes) {
   world.minutes = minutes;
   const started = maybeStartWar(world, minutes);
   let fresh = started ? 1 : 0;
+  const by = world.byId;
   for (const war of world.wars) {
     if (war.to !== null) continue;
-    const a = world.countries.find((c) => c.id === war.a);
-    const b = world.countries.find((c) => c.id === war.b);
+    const a = by ? by.get(war.a) : world.countries.find((c) => c.id === war.a);
+    const b = by ? by.get(war.b) : world.countries.find((c) => c.id === war.b);
     if (!a || !b) { war.to = minutes; continue; }
     const k = Math.floor((minutes - war.from) / WM.war.battleMin);
     if (k <= war.lastStep) { continue; }
     war.lastStep = k;
+    // §89: технологии стран идут в бой — броня, связь и выучка сильнее голой численности
+    const ea = a.tech && a.tech.eff ? a.tech.eff : null;
+    const eb = b.tech && b.tech.eff ? b.tech.eff : null;
+    const sa = a.strength * (ea ? ea.army : 1);
+    const sb = b.strength * (eb ? eb.army : 1);
     // F-297: перевес — из силы стран и хеша: война идёт рывками
-    const balance = (a.strength - b.strength) + (hash01(world.seed + k * 13 + idToInt(war.id), 113) * 2 - 1) * 0.8;
+    const balance = (sa - sb) + (hash01(world.seed + k * 13 + idToInt(war.id), 113) * 2 - 1) * 0.8;
     war.sway += balance * WM.war.frontSpeedKm * 0.35;
     // сильная страна теснит слабую: фронт не топчется на месте, а ползёт вглубь
-    war.drift += (a.strength - b.strength) * 9;
+    war.drift += (sa - sb) * 9;
+    // F-328: точность ракет — общая на пару воюющих: выше точность, кучнее взрывы и дальше цель
+    const acc = ((ea ? ea.accuracy : 1) + (eb ? eb.accuracy : 1)) / 2;
+    const spread = missileSpread(acc);
+    const reach = missileReach(acc);
     war.x = war.baseX + (war.ax || 1) * (war.sway + war.drift);
     war.y = war.baseY + (war.ay || 0) * (war.sway + war.drift);
     war.battles++;
@@ -744,8 +793,8 @@ export function advanceWars(world, minutes) {
     const big = k % WM.war.bigEvery === 0;
     const ex = {
       id: war.id + '-e' + k,
-      x: war.x + (hash01(world.seed + k, 127) * 2 - 1) * 260,
-      y: war.y + (hash01(world.seed + k, 131) * 2 - 1) * 260,
+      x: war.x + (hash01(world.seed + k, 127) * 2 - 1) * spread,
+      y: war.y + (hash01(world.seed + k, 131) * 2 - 1) * spread,
       at: minutes,
       big,
       rKm: big ? 26 : 9
@@ -756,9 +805,9 @@ export function advanceWars(world, minutes) {
     world.stats.killed += big ? 40 + Math.floor(hash01(world.seed + k, 137) * 60) : 3 + Math.floor(hash01(world.seed + k, 139) * 8);
     // разрушения: город рядом с фронтом — раз в несколько шагов; дорога — тоже
     if (k % 3 === 0) {
-      const victim = nearestCity(world, ex.x, ex.y, 800);
+      const victim = nearestCity(world, ex.x, ex.y, reach);
       if (victim && !world.destroyed.cities.includes(victim.id)) { world.destroyed.cities.push(victim.id); world.rev++; }
-      const road = nearestRoad(world, ex.x, ex.y, 600);
+      const road = nearestRoad(world, ex.x, ex.y, Math.round(reach * 0.75));
       if (road && !world.destroyed.roads.includes(road.id)) {
         world.destroyed.roads.push(road.id);
         // дорога с мостом, разорванная войной, — это ещё и разрушенный мост
@@ -799,6 +848,9 @@ export function advanceWars(world, minutes) {
   }
   for (const army of world.armies) {
     const wars = byCountry.get(army.country);
+    const home = by ? by.get(army.country) : world.countries.find((c) => c.id === army.country);
+    // F-329: боеготовность считается от технологий и затянутости войны — не от кадров экрана
+    army.morale = armyPower(home, world);
     if (!wars || !wars.length) {
       army.side = 'home';
       continue;
@@ -815,6 +867,8 @@ export function advanceWars(world, minutes) {
   world.explosions = world.explosions.filter((e) => minutes - e.at <= WM.war.explosionMin);
   // §88: отношения живут тем же шагом, что и война
   advanceDiplomacy(world, minutes);
+  // §89: наука стран идёт тем же шагом — баллы копятся по игровым минутам
+  advanceTech(world, minutes);
   return fresh;
 }
 
@@ -854,6 +908,7 @@ export function countryAt(world, x, y) {
 export function worldStats(world, observerId = 'own') {
   const active = world.wars.filter((w) => w.to === null);
   const occupiedKm2 = world.occupied.reduce((a, o) => a + Math.PI * o.rKm * o.rKm * 0.5, 0);
+  const see = canSeeArmies(world, observerId);       // F-330: один раз, а не два
   return {
     countries: world.countries.length,
     wars: active.length,
@@ -867,8 +922,8 @@ export function worldStats(world, observerId = 'own') {
     occupiedZones: world.occupied.length,
     occupiedKm2: Math.round(occupiedKm2),
     killed: world.stats.killed,
-    satellite: canSeeArmies(world, observerId),
-    armiesVisible: canSeeArmies(world, observerId) ? world.armies.length : world.armies.filter((a) => a.country === observerId).length,
+    satellite: see,
+    armiesVisible: see ? world.armies.length : world.armies.filter((a) => a.country === observerId).length,
     ownAtWar: active.some((w) => w.a === 'own' || w.b === 'own')
   };
 }

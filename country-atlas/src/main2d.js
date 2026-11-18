@@ -3,6 +3,7 @@ import { Map2D } from './map2d.js';
 import { isPhone, startCenter, FIT } from './fit2d.js';
 import { WorldView, overviewScale } from './worldview.js';
 import { buildWorld, advanceWars, worldStats, hottestWar, diplomacyStats, WM } from './worldmap2d.js';
+import { techStats } from './tech2d.js';
 import { Intro } from './intro.js';
 import { WORLD2D } from './world2d.js';
 import { loadFrom, saveTo, elapsedMinutes, formatReport, OFFLINE } from './offline2d.js';
@@ -177,7 +178,13 @@ function setupIntro() {
   // мир для пролёта тот же, что откроется по кнопке «карта мира» — второго не строим
   try {
     sharedWorld = buildWorld(424242);
-    intro = new Intro(canvas, sharedWorld, {});
+    intro = new Intro(canvas, sharedWorld, {
+      // F-306: подпись точки пролёта видна и в заставке — над чем летим
+      onPoint: (pt, i, n) => {
+        const line = document.getElementById('intro-point');
+        if (line && !intro.ready) line.textContent = 'над страной: ' + pt.name + ' · точка ' + i + ' из ' + n;
+      }
+    });
     intro.start();
   } catch (err) {
     // без пролёта игра открывается как раньше — заставка просто гаснет
@@ -215,6 +222,7 @@ function setupWorld() {
   const openBtn = document.getElementById('world-open');
   const statsEl = document.getElementById('world-stats');
   const contactsEl = document.getElementById('world-contacts');
+  const techEl = document.getElementById('world-tech');
   const loadEl = document.getElementById('world-load');
   if (!worldScreen || !canvas || !openBtn) return;
 
@@ -248,6 +256,9 @@ function setupWorld() {
       hot ? 'бои: ' + hot.a + ' — ' + hot.b + ' · ' + hot.battles + ' боёв' : 'сейчас тихо',
       st.ownAtWar ? 'наша страна воюет' : 'наша страна не воюет'
     ];
+    const tech = techStats(world);
+    lines.push('технологии: ' + tech.count + ' из ' + tech.catalog.toLocaleString('ru-RU') + ' · наука +' + tech.perDay.toLocaleString('ru-RU') + ' в сутки');
+    lines.push('спутник: ' + (tech.satellite ? 'видит армии · точность ' + tech.accuracy.toFixed(2) : 'ещё не готов'));
     const dip = diplomacyStats(world);
     lines.push('контакты: союз ' + dip.union + ' · дружба ' + dip.friend + ' · вражда ' + dip.enmity + ' · посольств ' + dip.embassies);
     lines.push('помощь: ' + dip.aidTotal + (dip.aidLast ? ' · последняя ' + dip.aidLast : ''));
@@ -260,7 +271,18 @@ function setupWorld() {
         c.name + ' — ' + c.level + (c.war ? ' · война' : '') + (c.embassy ? ' · посольство' : '')).join('\n');
       contactsEl.style.whiteSpace = 'pre-line';
     }
-    if (loadEl) loadEl.textContent = worldView.loading ? 'рисуем мир…' : 'мир: ' + WM.countries + ' стран';
+    if (techEl) {
+      // в панели — свои последние разработки и кто из соседей впереди по науке
+      const mine = tech.last.slice(-3).reverse();
+      const leaders = tech.leaders.map((c) => c.name + ' ' + c.count).join(' · ');
+      techEl.textContent = [
+        'открыто ' + tech.count + ' · следующая: ' + (tech.next || 'всё открыто') + ' (' + Math.round(tech.progress * 100) + '%)',
+        mine.length ? 'последние: ' + mine.join('; ') : 'пока ничего не открыто',
+        leaders ? 'впереди по науке: ' + leaders : ''
+      ].filter(Boolean).join('\n');
+      techEl.style.whiteSpace = 'pre-line';
+    }
+    if (loadEl) loadEl.textContent = worldView.loading ? 'рисуем мир…' : 'мир: ' + WM.countries + ' стран · ' + world.own.tech.count + ' технологий';
     return st;
   };
 
@@ -317,7 +339,8 @@ function setupWorld() {
   if (back) back.addEventListener('click', closeWorld);
   if (sat) sat.addEventListener('click', () => {
     worldView.showArmies = !worldView.showArmies;
-    sat.textContent = 'спутник: ' + (worldView.showArmies ? 'вкл' : 'выкл');
+    const ready = !!(world && world.own && world.own.tech && world.own.tech.eff.satellite);
+    sat.textContent = 'спутник: ' + (worldView.showArmies ? (ready ? 'вкл' : 'нужна наука') : 'выкл');
     drawStats();
     worldView.draw();
   });
