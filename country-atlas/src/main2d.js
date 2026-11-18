@@ -47,7 +47,7 @@ map.scale = 0.16;
 
 /* §90: заставка живёт по своему состоянию, а не по «карта готова — гасим всё».
    Пролёт должен быть виден и после загрузки, иначе анимации просто нет. */
-const startState = { hasIntro: false, loaded: false, started: false, failed: false, point: '', index: 0, total: 0, hidden: false };
+const startState = { hasIntro: false, loaded: false, started: false, failed: false, point: '', index: 0, total: 0, hidden: false, progress: '' };
 
 function applyStartScene() {
   const view = startSceneView(overlayPhase(startState), {
@@ -62,7 +62,11 @@ function applyStartScene() {
   }
   const btn = document.getElementById('intro-start');
   if (btn) btn.disabled = view.buttonDisabled;
-  if (hud.loadingText) hud.loadingText.textContent = view.text;
+  // пока мир рисуется — показываем, сколько уже готово, а не только «загружается»
+  const text = view.phase === 'loading' && startState.progress
+    ? 'пролёт над страной · мир ' + startState.progress
+    : view.text;
+  if (hud.loadingText) hud.loadingText.textContent = text;
   const pointEl = document.getElementById('intro-point');
   if (pointEl && view.point) pointEl.textContent = view.point;
   return view;
@@ -153,7 +157,8 @@ for (const [id, when] of times) {
 }
 
 map.init((done, total) => {
-    if (hud.loadingText) hud.loadingText.textContent = 'рисую мир ' + WORLD2D.sizeKm + ' × ' + WORLD2D.sizeKm + ' км… ' + done + '/' + total;
+    startState.progress = done + '/' + total;
+    if (hud.loadingText) hud.loadingText.textContent = 'пролёт над страной · мир ' + done + '/' + total;
   }).then(() => {
     map.draw();
     // §90: карта готова — но заставку не гасим: пролёт идёт, кнопка ждёт игрока

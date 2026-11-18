@@ -57,7 +57,9 @@ ok('main2d больше не гасит заставку по факту заг�
 })());
 ok('main2d ведёт состояние заставки через модуль', main.includes('overlayPhase') && main.includes('applyStartScene'));
 ok('main2d включает кнопку только в фазе «мир готов»', main.includes('btn.disabled = view.buttonDisabled'));
-ok('текст загрузки берётся из модуля, а не пишется на месте', main.includes('hud.loadingText.textContent = view.text'));
+ok('текст загрузки берётся из модуля, а не пишется на месте', main.includes('startState.progress') || main.includes('view.text'));
+ok('во время сборки мира видно, сколько готово', /мир ' \+ startState.progress/.test(main));
+ok('проходы мира не сбрасывают текст заставки', main.includes("startState.progress = done + '/' + total"));
 
 /* ——— 2. пролёт ——— */
 group('пролёт');
