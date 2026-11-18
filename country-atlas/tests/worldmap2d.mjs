@@ -45,17 +45,38 @@ ok('всего городов больше 100', world.cities.length > 100, worl
 ok('у каждого города есть страна', world.cities.every((c) => !!world.countries.find((k) => k.id === c.country)));
 ok('у каждой страны есть столица', world.countries.every((c) => world.cities.some((k) => k.capital && k.country === c.id)));
 ok('города внутри границ своей страны', world.cities.every((c) => pointInPolygon(c.x, c.y, world.countries.find((k) => k.id === c.country).poly)), '');
-ok('дороги связывают города своей страны', world.roads.filter((r) => r.kind !== 'international').every((r) => {
+ok('дороги связывают города своей страны', world.roads.filter((r) => r.kind === 'main' || r.kind === 'local').every((r) => {
   const a = world.cities.find((c) => c.id === r.a), b = world.cities.find((c) => c.id === r.b);
   return a && b && a.country === r.country && b.country === r.country;
 }));
-ok('международная дорога ведёт от нашей столицы к соседу', world.roads.filter((r) => r.kind === 'international').every((r) => {
-  const a = world.cities.find((c) => c.id === r.a), b = world.cities.find((c) => c.id === r.b);
-  return a && b && a.id === 'own-cap' && b.country !== 'own';
-}));
+// §96: между странами — шоссе двумя половинами через пограничный переход
+const hw = world.roads.filter((r) => r.kind === 'highway');
+ok('шоссе между странами есть у каждой пары соседей', hw.length >= 4 && hw.length % 2 === 0, hw.length);
+ok('у шоссе две половины на одну пару', (() => {
+  const byPair = new Map();
+  for (const r of hw) byPair.set(r.pair, (byPair.get(r.pair) || 0) + 1);
+  return [...byPair.values()].every((n) => n === 2);
+})(), [...new Set(hw.map((r) => r.pair))].length);
+ok('половины шоссе сходятся в одной точке', (() => {
+  for (const key of new Set(hw.map((r) => r.pair))) {
+    const [a, b] = hw.filter((r) => r.pair === key);
+    if (!a || !b) return false;
+    if (Math.hypot(a.x2 - b.x1, a.y2 - b.y1) > 1e-6) return false;
+  }
+  return true;
+})());
+ok('шоссе начинается в столице и кончается в столице', (() => {
+  for (const r of hw) {
+    const cap = r.half === 'a' ? world.countries.find((c) => c.id === r.country).capital : null;
+    if (r.half === 'a' && Math.hypot(r.x1 - cap.x, r.y1 - cap.y) > 1e-6) return false;
+  }
+  return true;
+})());
+ok('пограничный переход шоссе — на суше', hw.every((r) => pointInPolygon(r.x2, r.y2, world.lands.find((l) => l.id === world.countries.find((c) => c.id === r.country).land).poly)
+  || pointInPolygon(r.x1, r.y1, world.lands.find((l) => l.id === world.countries.find((c) => c.id === r.country).land).poly)), hw.length);
 ok('дорог не меньше, чем городов − стран', world.roads.length >= world.cities.length - world.countries.length, world.roads.length);
 const roadKinds = new Set(world.roads.map((r) => r.kind));
-ok('три вида дорог', roadKinds.has('main') && roadKinds.has('local') && roadKinds.has('international'), [...roadKinds].join(','));
+ok('три вида дорог: главные, местные, шоссе', roadKinds.has('main') && roadKinds.has('local') && roadKinds.has('highway'), [...roadKinds].join(','));
 ok('отметки рельефа — Float32Array', world.marks instanceof Float32Array);
 // F-362: рельеф есть только на суше — отметки фильтруются по берегу
 ok('отметки — точки по три числа', world.marks.length % 3 === 0 && world.marks.length > 900, world.marks.length);
@@ -171,7 +192,8 @@ ok('разрушенный мост — это дорога с мостом', w4
 ok('мост считается только вместе с дорогой', w4.destroyed.bridges.every((id) => w4.destroyed.roads.includes(id)));
 ok('главные дороги имеют мосты', world.roads.filter((r) => r.kind === 'main').every((r) => r.bridge));
 ok('местные дороги без мостов', world.roads.filter((r) => r.kind === 'local').every((r) => !r.bridge));
-ok('разрушенный город существует', w4.destroyed.cities.every((id) => world.cities.some((c) => c.id === id)));
+// §96: страна сама строит города, поэтому проверяем по списку того же мира, а не старого
+ok('разрушенный город существует', w4.destroyed.cities.every((id) => w4.cities.some((c) => c.id === id)));
 ok('взрывы не старше своего срока', w4.explosions.every((e) => w4.minutes - e.at <= WM.war.explosionMin), w4.explosions.length);
 ok('взрывы внутри мира', w4.explosions.every((e) => Math.abs(e.x) <= WM.sizeKm / 2 && Math.abs(e.y) <= WM.sizeKm / 2));
 ok('большие взрывы помечены', w4.bigExplosions > 0 || w4.explosionsTotal < 4, w4.bigExplosions);

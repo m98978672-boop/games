@@ -16,6 +16,10 @@ import {
   PLANET, buildLands, sitesInLand, splitCountries, landAt, inAnyLand, oceanSpots,
   geoOf, formatLat, formatLon, insidePoly
 } from './planet2d.js';
+import {
+  REGIONS, buildRegions, regionAt as findRegion, nearestRegion, regionsOf,
+  regionIncome, pressRegion, regionsStats
+} from './regions2d.js';
 
 export const WM = {
   // F-372: сторона карты мира. В квадрате 24 000 суша срезалась его же краем —
@@ -281,7 +285,7 @@ export function countryCities(country, seed) {
     }
     cities.push({
       id: country.id + '-' + i,
-      name: country.capitalName.slice(0, -2) + 'ск' + (i > 1 ? ' ' + i : ''),
+      name: townName(seed + idToInt(country.id) * 7, i),
       x, y,
       capital: false,
       pop: 80 + Math.floor(hash01(seed + i * 31 + idToInt(country.id), 59) * 320)
@@ -316,12 +320,46 @@ export function borderTowns(country, seed, n = 2) {
     if (!pointInPolygon(x, y, poly)) continue;
     out.push({
       id: country.id + '-b' + i,
-      name: country.capitalName.slice(0, -2) + 'ец' + (i ? ' ' + (i + 1) : ''),
+      name: townName(seed + idToInt(country.id) * 13, 40 + i),
       x, y, capital: false, border: true,
       pop: 40 + Math.floor(hash01(seed + i * 23 + idToInt(country.id), 67) * 90)
     });
   }
   return out;
+}
+
+
+/* §96: имена городков. Раньше все города страны звались «Оствск 2», «Оствск 3» —
+   цифры в названии на карте читаются как недоделка. Теперь основа и окончание
+   берутся из своих списков, а повторы разводятся приставкой. */
+export const TOWN = {
+  stems: ['Валг', 'Оств', 'Камд', 'Мирн', 'Сольв', 'Тарх', 'Вельд', 'Норск', 'Ирбен', 'Ярг',
+    'Дорн', 'Липен', 'Ратн', 'Зарн', 'Горн', 'Плес', 'Свет', 'Тихв', 'Вышн', 'Усть',
+    'Красн', 'Бел', 'Мст', 'Креч', 'Лад', 'Русс', 'Сузд', 'Твер'],
+  ends: ['град', 'ск', 'ец', 'ов', 'ин', 'ель', 'ань', 'ица', 'овск', 'инск', 'город',
+    'поль', 'ино', 'яна', 'овец', 'уша'],
+  prefixes: ['Верхний', 'Нижний', 'Старый', 'Новый', 'Большой', 'Малый', 'Красный', 'Тёмный']
+};
+
+export function townName(seed, k) {
+  const st = TOWN.stems[Math.floor(hash01(seed + k * 97, 701) * TOWN.stems.length) % TOWN.stems.length];
+  const en = TOWN.ends[Math.floor(hash01(seed + k * 131, 703) * TOWN.ends.length) % TOWN.ends.length];
+  return st + en;
+}
+
+/* Свободное имя городка: сначала основа с окончанием, потом с приставкой. */
+export function freeTownName(seed, k, used) {
+  for (let attempt = 0; attempt < 80; attempt++) {
+    const name = townName(seed + attempt * 17, k + attempt);
+    if (!used.has(name)) return name;
+  }
+  for (const pre of TOWN.prefixes) {
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const name = pre + ' ' + townName(seed + attempt * 29, k + pre.length + attempt);
+      if (!used.has(name)) return name;
+    }
+  }
+  return townName(seed, k) + ' Полевой';
 }
 
 /* F-292: дороги — цепочка между городами страны плюс два международных коридора. */
@@ -690,7 +728,8 @@ export function buildWorld(seed = 424242) {
         radiusKm: Math.max(90, cellRadius(poly, capital) * 0.95),
         poly,
         satellite: own ? true : hash01(seed + countries.length * 211, 97) < 0.25,
-        strength: own ? 1.0 : 0.5 + hash01(seed + countries.length * 311, 101) * 1.4
+        // §96: своя страна сильна по уставу — иначе войны только проигрываются и захватов не видно
+        strength: own ? 1.45 : 0.5 + hash01(seed + countries.length * 311, 101) * 1.4
       };
       countries.push(ctry);
       land.countries.push(ctry.id);
@@ -720,17 +759,43 @@ export function buildWorld(seed = 424242) {
     allCities.push(...c.cities);
     allRoads.push(...c.roads);
   }
-  // международные коридоры: только с соседями по своему материку — через океан дороги не ходят
-  const near = countries.filter((c) => !c.own && c.land === own.land)
-    .sort((a, b) => Math.hypot(a.capital.x, a.capital.y) - Math.hypot(b.capital.x, b.capital.y))
-    .slice(0, 2);
-  for (const c of near) {
-    allRoads.push({
-      id: 'int-' + c.id, country: 'own', a: 'own-cap', b: c.cities[0].id, x1: 0, y1: 0, x2: c.cities[0].x, y2: c.cities[0].y, kind: 'international', bridge: true
+  // §96: шоссе между странами идут не «по прямой через всё», а через пограничный переход:
+  // столица — перекрёсток на границе — столица соседа. Две половины одного шоссе,
+  // поэтому на карте видно, где именно дорога пересекает границу.
+  const highways = [];
+  const seenPairs = new Set();
+  for (const pair of adjacency(countries)) {
+    const a = countries.find((c) => c.id === pair.a);
+    const b = countries.find((c) => c.id === pair.b);
+    if (!a || !b) continue;
+    const key = pair.a + '|' + pair.b;
+    if (seenPairs.has(key)) continue;
+    seenPairs.add(key);
+    const gate = snapGate(borderPoint(a, b), a, b, lands);
+    if (!gate) continue;
+    const id = 'hw-' + key;
+    highways.push({
+      id: id + '-a', country: a.id, a: a.cities[0].id, b: b.cities[0].id,
+      x1: a.capital.x, y1: a.capital.y, x2: gate.x, y2: gate.y,
+      kind: 'highway', bridge: false, pair: key, half: 'a'
+    });
+    highways.push({
+      id: id + '-b', country: b.id, a: b.cities[0].id, b: a.cities[0].id,
+      x1: gate.x, y1: gate.y, x2: b.capital.x, y2: b.capital.y,
+      kind: 'highway', bridge: true, pair: key, half: 'b'
     });
   }
+  allRoads.push(...highways);
   // каждый город помнит свою страну — так проще и проверять, и рисовать
   for (const c of countries) for (const city of c.cities) city.country = c.id;
+  // §96: имена городов не повторяются на карте — повторы разводим свободным именем
+  const usedNames = new Set();
+  for (const city of allCities) {
+    if (usedNames.has(city.name)) {
+      city.name = freeTownName(seed + idToInt(city.country || 'c'), allCities.indexOf(city), usedNames);
+    }
+    usedNames.add(city.name);
+  }
   // §89: у каждой страны своя наука; наша начинает со спутника и пары готовых сфер
   for (const c of countries) {
     c.tech = buildTech(c, seed);
@@ -739,10 +804,39 @@ export function buildWorld(seed = 424242) {
   const armies = [];
   for (const c of countries) armies.push(...buildArmies(c, seed));
 
+  // §96: страна делится на области и республики — у каждой свой центр, ресурс и доход
+  const byCountry = new Map();
+  for (const c of allCities) {
+    if (!byCountry.has(c.country)) byCountry.set(c.country, []);
+    byCountry.get(c.country).push(c);
+  }
+  const regions = buildRegions(countries, seed);
+  const usedCities = new Set();
+  // §96: центр области — свой город страны, и у двух областей он не повторяется:
+  // сначала берём ближайший свободный, потом уже любой ближайший
+  for (const pass of [0, 1]) {
+    for (const r of regions) {
+      if (pass === 0 && r.cityId) continue;
+      let best = null, bestD = Infinity;
+      for (const c of (byCountry.get(r.country) || [])) {
+        if (pass === 0 && usedCities.has(c.id)) continue;
+        const d = Math.hypot(c.x - r.capital.x, c.y - r.capital.y);
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      if (best) {
+        r.cityId = best.id;
+        r.cityName = best.name;
+        r.capital = { x: best.x, y: best.y };
+        usedCities.add(best.id);
+      }
+    }
+  }
   const w = {
     seed,
     sizeKm: WM.sizeKm,
     lands,                   // F-397: материки планеты — у каждого свой берег и свои страны
+    regions,                 // §96: области и республики стран
+    captures: [],            // §96: журнал захватов и отбитых областей
     coast: lands[0].poly,    // §95: наш материк — самый большой, он же в центре мира
     minutes: 0,
     countries,
@@ -833,6 +927,25 @@ export function adjacency(countries, maxKm = 130) {
 
 /* F-296: где проходит граница между двумя странами — пара ближайших вершин
    полигонов. Фронт ставится там, а не между столицами: иначе бои шли бы в пустом поле. */
+
+/* §96: пограничный переход должен стоять на суше: страны разделяет пролив,
+   и середина между границами попадает в море. Если точка в воде — идём по линии
+   к столице, пока не окажемся внутри своей или соседней страны; не нашли — пары нет. */
+export function snapGate(gate, a, b, lands) {
+  if (!gate || !Number.isFinite(gate.x) || !Number.isFinite(gate.y)) return null;
+  const inLand = (x, y) => (lands || []).some((l) => pointInPolygon(x, y, l.poly));
+  const onCountry = (x, y) => pointInPolygon(x, y, a.poly) || pointInPolygon(x, y, b.poly);
+  if (inLand(gate.x, gate.y) && onCountry(gate.x, gate.y)) return gate;
+  for (const cap of [a.capital, b.capital]) {
+    for (let t = 0.05; t <= 1.001; t += 0.05) {
+      const x = gate.x + (cap.x - gate.x) * t;
+      const y = gate.y + (cap.y - gate.y) * t;
+      if (inLand(x, y) && onCountry(x, y)) return { x, y };
+    }
+  }
+  return null;
+}
+
 export function borderPoint(a, b) {
   const closestOnSegment = (px, py, x1, y1, x2, y2) => {
     const dx = x2 - x1, dy = y2 - y1;
@@ -977,6 +1090,28 @@ export function advanceWars(world, minutes) {
         world.rev++;
       }
     }
+    // §96: война забирает области. Фронт давит на ближайшую область проигрывающей
+    // стороны; когда давление перевесит — область переходит победителю вместе с ресурсом,
+    // а если хозяин оттеснит фронт обратно, он её отобьёт.
+    {
+      // ближайшая область одной из воюющих стран: фронт давит на неё, даже если ушёл вглубь.
+      // Дальняя область давится медленнее — фронт теряет силу на расстоянии.
+      const near = nearestRegion(world.regions, war.x, war.y, (r) => r.owner === war.a || r.owner === war.b);
+      if (near) {
+        const winner = balance > 0 ? war.a : war.b;
+        const close = near.km < 700 ? 1 : Math.max(0.35, 1 - (near.km - 700) / 3200);
+        const ev = pressRegion(near.region, winner, balance * close, minutes);
+        if (ev) {
+          world.captures.push({
+            id: ev.kind + '-' + ev.region.id + '-' + minutes,
+            kind: ev.kind, region: ev.region.id, name: ev.region.name,
+            from: ev.from, to: ev.to, at: minutes
+          });
+          if (world.captures.length > 30) world.captures.shift();
+          world.rev++;
+        }
+      }
+    }
     // оккупация: полоса вокруг сместившегося фронта
     if (Math.abs(war.sway + war.drift) > WM.war.occupationKm) {
       const by = war.sway + war.drift > 0 ? war.a : war.b;
@@ -1035,6 +1170,12 @@ export function advanceWars(world, minutes) {
   // в том числе когда окно не в фокусе (часы тикают без отрисовки)
   advanceAutonomy(world, minutes);
   return fresh;
+}
+
+/* §96: какая область накрывает мировую точку. */
+export function regionAt(world, x, y) {
+  if (!world || !world.regions) return null;
+  return findRegion(world.regions, x, y);
 }
 
 export function nearestCity(world, x, y, maxKm = Infinity) {

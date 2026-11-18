@@ -5,6 +5,7 @@
    отремонтировать мост. Всё считается числами от игровых минут и сида, поэтому
    жизнь идёт и когда окно не в фокусе: часы игры тикают сами.
    Ни DOM, ни камеры модуль не знает. */
+import { regionIncome } from './regions2d.js';
 import { hash01, idToInt } from './accidents2d.js';
 import { pointInPolygon, cellRadius } from './worldmap2d.js';
 
@@ -48,7 +49,10 @@ export function incomePerDay(world) {
   const cities = own.cities ? own.cities.length : 0;
   const tech = own.tech ? own.tech.count : 0;
   const wars = world.wars ? world.wars.filter((w) => !w.to && (w.a === 'own' || w.b === 'own')).length : 0;
-  const gross = AUTONOMY.cityIncome * cities + AUTONOMY.techIncome * tech;
+  // §96: каждая своя область приносит свой ресурс — зерно, лес, руду, нефть, уголь, рыбу.
+  // Захваченная чужая область тоже платит, пока её не отбили; потерянная — нет.
+  const land = world.regions ? regionIncome(world.regions, 'own') : 0;
+  const gross = AUTONOMY.cityIncome * cities + AUTONOMY.techIncome * tech + land;
   return Math.max(0, gross - AUTONOMY.warDrain * wars);
 }
 
@@ -100,7 +104,9 @@ export function decideOnce(world, minutes) {
     const road = (world.roads || []).find((r) => r.id === brokenBridge);
     gov.treasury -= AUTONOMY.bridgeCost;
     world.rev++;
-    return { at: minutes, kind: 'bridge', text: 'отремонтирован мост' + (road ? ' у ' + road.a.split('-')[0] : '') };
+    // §96: в журнале — название страны, а не её код в данных («у c7» — это баг)
+    const where = road ? ((world.countries || []).find((c) => c.id === road.country) || {}).name : '';
+    return { at: minutes, kind: 'bridge', text: 'отремонтирован мост' + (where ? ' в стране ' + where : '') };
   }
   const brokenRoad = (world.destroyed.roads || [])[0];
   if (brokenRoad && gov.treasury >= AUTONOMY.roadCost) {
