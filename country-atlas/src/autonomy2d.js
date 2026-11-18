@@ -111,6 +111,10 @@ export function decideOnce(world, minutes) {
   const brokenRoad = (world.destroyed.roads || [])[0];
   if (brokenRoad && gov.treasury >= AUTONOMY.roadCost) {
     world.destroyed.roads.shift();
+    // §103: дорога с мостом чинится целиком. Раньше отремонтированная дорога
+    // оставалась в списке разрушенных мостов — и «мост» висел без дороги.
+    const bi = (world.destroyed.bridges || []).indexOf(brokenRoad);
+    if (bi >= 0) world.destroyed.bridges.splice(bi, 1);
     gov.treasury -= AUTONOMY.roadCost;
     world.rev++;
     return { at: minutes, kind: 'road', text: 'отремонтирована дорога' };

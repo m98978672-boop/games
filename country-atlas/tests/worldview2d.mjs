@@ -40,7 +40,11 @@ const lands = world.lands;
 const onAnyLand = (x, y) => lands.some((l) => pointInPolygon(x, y, l.poly));
 ok('материков пять, а не один', Array.isArray(lands) && lands.length === 5, lands && lands.length);
 ok('у каждого материка есть имя и берег', lands.every((l) => typeof l.name === 'string' && l.name.length > 2 && Array.isArray(l.poly)));
-ok('берег каждого материка — 240 точек', lands.every((l) => l.poly.length === 240), lands.map((l) => l.poly.length).join(','));
+// §103: у нашего материка берег подробнее — в него вставлен трафарет берега
+// своей страны (120 точек береговой линии с карты страны)
+ok('берег каждого материка не короче 200 точек', lands.every((l) => l.poly.length >= 200), lands.map((l) => l.poly.length).join(','));
+ok('берег нашего материка помнит свой трафарет', !!lands[0].shore && lands[0].poly.length > 240 &&
+  lands[0].shore.coast.every(([x, y]) => lands[0].poly.some(([px, py]) => Math.hypot(px - x, py - y) < 1)));
 ok('берег из пар чисел', lands.every((l) => l.poly.every((q) => Array.isArray(q) && q.length === 2 && Number.isFinite(q[0]) && Number.isFinite(q[1]))));
 ok('берег не круг: радиус гуляет больше чем на 10 %', lands.every((l) => {
   const r = l.poly.map(radiusOf);
@@ -130,7 +134,8 @@ vOpen.open();
 // F-391: в центре кадра — своя страна, а не середина рамки суши
 near('open() ставит камеру на свою столицу', vOpen.cam.x, world.own.capital.x, 1e-6);
 near('open() ставит масштаб по планете вокруг столицы', vOpen.cam.scale, ownScale, 1e-6);
-ok('своя страна — в середине кадра', Math.abs(vOpen.cam.x) < 1 && Math.abs(vOpen.cam.y) < 1);
+ok('своя страна — в середине кадра', Math.abs(vOpen.cam.x - world.own.capital.x) < 1 &&
+  Math.abs(vOpen.cam.y - world.own.capital.y) < 1);
 ok('без перехода прозрачность полная', vOpen.alpha === 1, vOpen.alpha);
 const vFly = new WorldView(makeCanvas(1200, 700), { createCanvas: (a, b) => createCanvas(a, b) });
 vFly.resize(); vFly.setWorld(world);
@@ -175,9 +180,12 @@ const corners = [at(3, 3), at(1196, 3), at(3, 696), at(1196, 696)];
 ok('по углам кадра — море, а не чёрный фон', corners.every((c) => c[3] > 200 && lum(c) > 3), JSON.stringify(corners[0]));
 ok('море синее: синего больше, чем красного', corners.every((c) => c[2] > c[0]));
 ok('углы не залиты чистым чёрным', corners.every((c) => c[0] + c[1] + c[2] > 8));
-// в самом центре — крестик своей столицы, поэтому растительность смотрим рядом
-const center = at(600, 300);
-ok('рядом с центром — суша, а не море', center[1] > center[2], JSON.stringify(center));
+// §103: своя страна стоит на берегу, и в самом центре кадра — её столица,
+// а рядом — и суша, и своё море. Проверяем, что у столицы есть суша вокруг.
+const around = [at(560, 300), at(640, 300), at(600, 260), at(600, 340)];
+ok('рядом с центром — суша, а не море', around.some((c) => c[1] > c[2]), JSON.stringify(around));
+// берём самый «сухой» пиксель из окрестностей столицы — дальше проверяем уже его
+const center = around.reduce((best, c) => (c[1] - c[2] > best[1] - best[2] ? c : best), around[0]);
 ok('суша светлее моря', lum(center) > lum(corners[0]) + 20, lum(center).toFixed(0) + ' vs ' + lum(corners[0]).toFixed(0));
 ok('суша не чёрная и не белая', lum(center) > 40 && lum(center) < 220, lum(center).toFixed(0));
 // доля суши в кадре: континент занимает заметную часть, но не весь экран
@@ -549,8 +557,8 @@ ok('своя армия видна в кадре без спутника', (() =
 })());
 ok('камера смотрит на свою столицу и видит весь континент', (() => {
   const cam = ownOverview(world, { w: 1200, h: 700 });
-  return cam.x === 0 && cam.y === 0 && coast.every(([x, y]) =>
-    Math.abs(x * cam.scale) <= 1200 / 2 && Math.abs(y * cam.scale) <= 700 / 2);
+  return cam.x === world.own.capital.x && cam.y === world.own.capital.y && coast.every(([x, y]) =>
+    Math.abs((x - cam.x) * cam.scale) <= 1200 / 2 && Math.abs((y - cam.y) * cam.scale) <= 700 / 2);
 })());
 
 /* ——— 7. §100: простая карта и тумблер «области» ——— */

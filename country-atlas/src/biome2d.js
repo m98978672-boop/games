@@ -13,6 +13,7 @@
 
 import { hash01 } from './accidents2d.js';
 import { MAP_TONES, hexToCss } from './palette.js';
+import { insidePoly } from './planet2d.js';
 
 export const BIOMES = {
   cellKm: 100,               // сторона клетки покрова, км (400 × 400 клеток на карту)
@@ -121,6 +122,41 @@ export function buildBiomes(lands, seed = 424242, sizeKm = 40000) {
     }
   }
   return { size: n, cellKm, sizeKm, code, land: null };
+}
+
+/* §103: перекрасить покров внутри области. Нужно, чтобы внутри своей страны на карте
+   мира стоял её собственный рельеф — тот же, что на карте страны: где там горы, там и
+   здесь горы. kindFn(x, y) возвращает вид покрова; вода не перекрашивает клетку
+   (иначе прибрежная клетка прожгла бы дыру в суше). */
+export function paintArea(biomes, poly, kindFn) {
+  if (!biomes || !poly || poly.length < 3 || typeof kindFn !== 'function') return 0;
+  const cellKm = biomes.cellKm;
+  const half = biomes.sizeKm / 2;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of poly) {
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  }
+  const i0 = Math.max(0, Math.floor((x0 + half) / cellKm));
+  const i1 = Math.min(biomes.size - 1, Math.ceil((x1 + half) / cellKm));
+  const j0 = Math.max(0, Math.floor((y0 + half) / cellKm));
+  const j1 = Math.min(biomes.size - 1, Math.ceil((y1 + half) / cellKm));
+  let painted = 0;
+  for (let j = j0; j <= j1; j++) {
+    const y = -half + (j + 0.5) * cellKm;
+    for (let i = i0; i <= i1; i++) {
+      const x = -half + (i + 0.5) * cellKm;
+      if (!insidePoly(x, y, poly)) continue;
+      const kind = kindFn(x, y);
+      const code = CODE[kind];
+      if (!code) continue;
+      biomes.code[j * biomes.size + i] = code;
+      painted++;
+    }
+  }
+  return painted;
 }
 
 /* Код покрова в точке мира — по клетке, в которую попала точка. */

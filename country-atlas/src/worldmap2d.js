@@ -20,7 +20,8 @@ import {
   REGIONS, buildRegions, regionAt as findRegion, nearestRegion, regionsOf,
   regionIncome, pressRegion, regionsStats
 } from './regions2d.js';
-import { buildBiomes, passabilityAt, biomeAt, BIOMES } from './biome2d.js';
+import { buildBiomes, paintArea, passabilityAt, biomeAt, BIOMES } from './biome2d.js';
+import { STENCIL, countryShore, graftShore, countryKindAt } from './stencil2d.js';
 
 export const WM = {
   // F-372: сторона карты мира. В квадрате 24 000 суша срезалась его же краем —
@@ -701,6 +702,15 @@ export function diplomacyStats(world, observerId = 'own') {
    на нашем материке наша страна и его соседи, на остальных — свои страны и свои войны. */
 export function buildWorld(seed = 424242) {
   const lands = buildLands(seed);
+  // §103: берег нашей страны — трафарет с карты страны, один к одному. Трафарет
+  // садится на ближний к нам берег своего материка: концы его встают ровно в две
+  // вершины берега, а между ними — настоящая береговая линия с карты страны.
+  // Дальше своя страна живёт уже на этом берегу, и её берег видно на карте мира.
+  const shore = countryShore();
+  if (lands[0]) {
+    const graft = graftShore(lands[0], shore, { x: 0, y: 0 });
+    if (graft) lands[0].ownSite = graft.site;
+  }
   const counts = splitCountries(lands, WM.countries);
   const countries = [];
   let serial = 0;
@@ -716,9 +726,10 @@ export function buildWorld(seed = 424242) {
       if (poly.length < 3) continue;
       const pole = poleOfInaccessibility(poly);
       const own = site.id === 'own';
-      const capital = own
-        ? { x: 0, y: 0 }
-        : { x: Number.isFinite(pole.x) ? pole.x : site.x, y: Number.isFinite(pole.y) ? pole.y : site.y };
+      // §103: столица — в самой просторной точке страны и у своей, и у чужой.
+      // Раньше своя столица стояла ровно в центре мира; теперь страна стоит на
+      // берегу, и центр её страны — не центр мира: столицу ставим по месту.
+      const capital = { x: Number.isFinite(pole.x) ? pole.x : site.x, y: Number.isFinite(pole.y) ? pole.y : site.y };
       const ctry = {
         id: site.id,
         name: own ? 'Ратград' : countryName(seed, countries.length),
@@ -739,7 +750,7 @@ export function buildWorld(seed = 424242) {
   const own = countries.find((c) => c.own) || countries[0];
   // свои города — та же столица плюс крупные поселения игры
   own.cities = [{
-    id: 'own-cap', name: own.capitalName, x: 0, y: 0, capital: true, pop: 1800
+    id: 'own-cap', name: own.capitalName, x: own.capital.x, y: own.capital.y, capital: true, pop: 1800
   }];
   const ownTownNames = ['Оствей', 'Камдор', 'Мирн', 'Сольв', 'Тарх', 'Вельд', 'Норск', 'Ирбен', 'Ярга', 'Дорн'];
   const ownReach = cellRadius(own.poly, own.capital) * 0.78;
@@ -747,8 +758,18 @@ export function buildWorld(seed = 424242) {
     const a = (i / 10) * Math.PI * 2 + 0.3;
     // §95: свои города — внутри своей страны: мир стал больше, и старый круг
     // радиусом 2 300 км выносил половину городов за границу
-    const r = ownReach * (0.35 + 0.16 * (i % 4));
-    own.cities.push({ id: 'own-' + i, name: ownTownNames[i], x: Math.cos(a) * r, y: Math.sin(a) * r, capital: false, pop: 220 + i * 40 });
+    let r = ownReach * (0.35 + 0.16 * (i % 4));
+    let x = own.capital.x + Math.cos(a) * r;
+    let y = own.capital.y + Math.sin(a) * r;
+    // §103: страна теперь стоит на берегу и вытянута вдоль него — круг вокруг
+    // столицы выносил города за берег. Подтягиваем их к столице, пока не окажутся
+    // внутри своей страны.
+    for (let guard = 0; guard < 10 && !pointInPolygon(x, y, own.poly); guard++) {
+      r *= 0.8;
+      x = own.capital.x + Math.cos(a) * r;
+      y = own.capital.y + Math.sin(a) * r;
+    }
+    own.cities.push({ id: 'own-' + i, name: ownTownNames[i], x, y, capital: false, pop: 220 + i * 40 });
   }
   own.cities.push(...borderTowns(own, seed));
   const allCities = [...own.cities];
@@ -835,6 +856,29 @@ export function buildWorld(seed = 424242) {
   // §99: покров земли — леса, болота, горы, степи, пустыни и тундра. По нему видно,
   // где технике тяжело, а где она проходит ходом.
   const biomes = buildBiomes(lands, seed);
+  // §103: внутри своей страны — её собственный рельеф с карты страны. Берег уже
+  // трафаретный; теперь и покров за берегом тот же: где на карте страны горы,
+  // лес или болото, там и на карте мира. За границей страны рельеф обычный,
+  // мировой, поэтому за краем страны он продолжается как ни в чём не бывало.
+  const shoreMap = lands[0] && lands[0].shore && lands[0].shore.toCountry;
+  if (shoreMap && own && own.poly) {
+    paintArea(biomes, own.poly, (x, y) => {
+      const [cx, cy] = shoreMap(x, y);
+      return countryKindAt(cx, cy);
+    });
+  }
+  // §103: мировой рельеф внутри своей страны заменяем своим — иначе в стране стояли
+  // бы отметки чужой погоды, а не её собственной
+  const ownMarks = (() => {
+    const base = marksOnLands(buildMarks(seed), lands);
+    if (!own || !own.poly || !shoreMap) return base;
+    const keep = [];
+    for (let i = 0; i < base.length; i += 3) {
+      if (pointInPolygon(base[i], base[i + 1], own.poly)) continue;
+      keep.push(base[i], base[i + 1], base[i + 2]);
+    }
+    return Float32Array.from(keep);
+  })();
   const w = {
     seed,
     sizeKm: WM.sizeKm,
@@ -848,7 +892,7 @@ export function buildWorld(seed = 424242) {
     own,
     cities: allCities,
     roads: allRoads,
-    marks: marksOnLands(buildMarks(seed), lands), // F-362: отметки рельефа только на суше
+    marks: ownMarks, // F-362: отметки рельефа только на суше
     islands: buildIslands(seed, WM.islands, lands), // F-373: острова в океане, мимо материков
     oceans: oceanSpots(lands, WM.sizeKm),         // F-400: где подписывать океан
     caps: buildIceCaps(),                        // F-374: полярные льды
