@@ -5,6 +5,7 @@ import { WorldView, overviewScale } from './worldview.js';
 import { buildWorld, advanceWars, worldStats, hottestWar, diplomacyStats, WM } from './worldmap2d.js';
 import { techStats, TECH } from './tech2d.js';
 import { autonomyStats } from './autonomy2d.js';
+import { geoOf, formatLat, formatLon } from './planet2d.js';
 import { START, overlayPhase, startSceneView } from './startscene2d.js';
 import { Intro } from './intro.js';
 import { WORLD2D } from './world2d.js';
@@ -358,12 +359,20 @@ function setupWorld() {
     }
     if (hintEl) {
       // F-371: числа подсказки вернулись: сколько чего на карте прямо сейчас
-      hintEl.textContent = 'тяните — сдвиг · щипок и колесо — зум · городов ' + self.cities + ' · армий ' + self.armies + ' · стран ' + st.countries +
+      hintEl.textContent = 'тяните — сдвиг · щипок и колесо — зум · сетка через 15° (подписана через 45°) · городов ' + self.cities + ' · армий ' + self.armies + ' · стран ' + st.countries +
         ' · войн ' + st.wars + ' · боёв ' + nf(st.battles) + ' · взрывов ' + nf(st.explosionsTotal) +
         ' · технологий ' + nf(tech.count) + ' из ' + nf(tech.catalog);
       hintEl.style.whiteSpace = 'pre-line';
     }
-    if (loadEl) loadEl.textContent = worldView.loading ? 'рисуем мир…' : 'мир: ' + WM.countries + ' стран · ' + world.own.tech.count + ' технологий';
+    if (loadEl) {
+      // §95: на карте видно, что это планета: материки, страны, широта и долгота столицы
+      const lands = world.lands || [];
+      const geo = typeof geoOf === 'function' ? geoOf(world, world.own.capital.x, world.own.capital.y) : null;
+      const where = geo ? ' · столица ' + formatLat(geo.lat) + ', ' + formatLon(geo.lon) : '';
+      loadEl.textContent = worldView.loading
+        ? 'рисуем мир…'
+        : 'мир: ' + lands.length + ' материков · ' + WM.countries + ' стран · ' + world.own.tech.count + ' технологий' + where;
+    }
     return st;
   };
 
