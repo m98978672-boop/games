@@ -8,6 +8,7 @@ import { buildWorld } from '../src/worldmap2d.js';
 import { drawLayerCrop, INTRO } from '../src/intro.js';
 import { buildWater, createWaterBuilder } from '../src/rivers2d.js';
 import { buildRoads } from '../src/roads2d.js';
+import { Map2D } from '../src/map2d.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {
@@ -148,6 +149,30 @@ ok('buildWater остался для тестов и 3D', riversSrc.includes('ex
 ok('карта умеет строить воду по частям', mapSrc.includes('buildWaterDeferred') && mapSrc.includes('createWaterBuilder'));
 ok('главный поток разгружен: задача за кадр', /requestAnimationFrame\s*\n?\s*: \(fn\) => setTimeout\(fn, 0\)/.test(mapSrc));
 ok('ошибка одной части не оставляет карту без воды навсегда', /catch \(err\) \{ this\.waterBuilder = null;/.test(mapSrc));
+
+// вода реально доезжает по кадрам и зовёт продолжение
+{
+  const cv = createCanvas(16, 16);
+  cv.getBoundingClientRect = () => ({ left: 0, top: 0, width: 16, height: 16 });
+  const savedWindow = globalThis.window;
+  globalThis.window = { devicePixelRatio: 1 };
+  const map = new Map2D(cv, {});
+  map.roads = roads;
+  const done = await new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), 30000);
+    map.buildWaterDeferred(() => { clearTimeout(timer); resolve(true); });
+  });
+  globalThis.window = savedWindow;
+  ok('вода доезжает до конца по кадрам', done === true);
+  ok('вода собралась не пустой', !!map.water && Math.round(map.water.totalKm) === Math.round(sync.totalKm),
+    map.water ? Math.round(map.water.totalKm) : 'нет воды');
+  ok('мосты посчитаны так же', !!map.water && map.water.bridges.count === sync.bridges.count);
+  ok('повторный вызов не пересобирает воду', (() => {
+    let called = false;
+    map.buildWaterDeferred(() => { called = true; });
+    return called === true && map.waterBuilder === null;
+  })());
+}
 
 /* ——— 3. циклы отрисовки ——— */
 group('циклы отрисовки');

@@ -454,7 +454,7 @@ node tests/ui2d.mjs           # интерфейс, раскладка и кар
 node tests/worldmap2d.mjs     # карта мира, войны и контакты §86–§88: 7 групп, F-287…F-320 (191 проверка)
 node tests/tech2d.mjs         # технологии, спутник и пролёт §89: 5 групп, F-321…F-334 (127 проверок)
 node tests/start2d.mjs        # заставка, пролёт и движок §90: 4 группы, F-335…F-346 (103 проверки)
-node tests/speed2d.mjs        # скорость и карта мира §91: 4 группы, F-347…F-354 (53 проверки)
+node tests/speed2d.mjs        # скорость и карта мира §91: 4 группы, F-347…F-354 (57 проверок)
 node tools/check-start.mjs    # живая страница: заставка не гаснет, пролёт идёт (нужен bundle.js)
 node tools/perf-intro.mjs     # замер пролёта: кэш подписи, пиксели до/после
 node tools/shot-intro.mjs     # кадры пролёта → docs/intro-frames.png и docs/intro-flyover.gif
