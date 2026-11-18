@@ -2,7 +2,7 @@
    Запуск: node tools/perf-world.mjs */
 import { createCanvas } from '@napi-rs/canvas';
 import { buildWorld, advanceWars } from '../src/worldmap2d.js';
-import { WorldView, overviewScale } from '../src/worldview.js';
+import { WorldView, WV, overviewScale } from '../src/worldview.js';
 
 const cv = () => {
   const c = createCanvas(1280, 720);
@@ -53,8 +53,9 @@ const v2 = new WorldView(cv(), { createCanvas });
 v2.resize(); v2.setWorld(world); v2.step(1 / 60); v2.step(1 / 60);
 v2.open({ x: 0, y: 0, scale: 26 });
 const tr = [];
-for (let i = 0; i < 60; i++) { v2.step(1 / 60); v2.draw(); tr.push(v2.lastDrawMs); }
-console.log('переход 900 мс (60 кадров) медиана', median(tr), 'мс · всего', tr.reduce((a, b) => a + b, 0).toFixed(1), 'мс');
+const frames = Math.round(WV.transitionMs / 1000 * 60);
+for (let i = 0; i < frames; i++) { v2.step(1 / 60); v2.draw(); tr.push(v2.lastDrawMs); }
+console.log('переход', WV.transitionMs, 'мс (' + frames + ' кадров) медиана', median(tr), 'мс · всего', tr.reduce((a, b) => a + b, 0).toFixed(1), 'мс');
 
 console.log('\nитог: кэш слоя подробностей ускоряет стоящий кадр в', (noCache / staticNow).toFixed(1), 'раз');
 console.log('город вблизи:', deep.toFixed(3), 'мс — прежний порядок 1.2–1.7 мс у карты страны');

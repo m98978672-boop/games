@@ -243,6 +243,10 @@ const visible = html
   ok(/id="world-satellite"/.test(html), 'есть тумблер «спутник»');
   ok(/id="world-stats"/.test(html), 'есть строка состояния мира');
   ok(/id="world-legend"/.test(html), 'у карты мира своя легенда');
+  ok(/id="world-contacts"/.test(html), 'в панели мира есть блок контактов');
+  ok(/<div class="cap">контакты<\/div>/.test(html), 'блок контактов подписан по-человечески');
+  ok(main.includes('diplomacyStats'), 'контакты считаются из отношений, а не рисуются наугад');
+  ok(main.includes('world-contacts'), 'панель контактов заполняется из main2d');
   const worldHtml = html.slice(html.indexOf('id="world-screen"'), html.indexOf('<div id="loading">'));
   ok(worldHtml.length > 200, 'экран карты мира описан разметкой');
   ok(!/§/.test(worldHtml), 'на карте мира нет номеров параграфов');
@@ -262,6 +266,16 @@ const visible = html
   ok(main.includes("advanceWars(world, target)"), 'война идёт вместе с часами игры');
   ok(main.includes('showArmies'), 'тумблер спутника связан с армиями');
   ok(!/§/.test(html.slice(html.indexOf('id="loading"'), html.indexOf('id="left-rail"'))), 'в заставке нет номеров параграфов');
+  // §89: технологии, полоска боеготовности, длинный пролёт
+  ok(/id="world-tech"/.test(html), 'в панели мира есть блок технологий');
+  ok(/<div class="cap">технологии<\/div>/.test(html), 'блок технологий подписан по-человечески');
+  ok(main.includes('techStats'), 'технологии считаются из науки, а не рисуются наугад');
+  ok(main.includes('world-tech'), 'панель технологий заполняется из main2d');
+  ok(/боеготовность армии/.test(html), 'в легенде объяснена полоска боеготовности');
+  ok(/id="intro-point"/.test(html), 'у пролёта есть строка «над страной»');
+  ok(main.includes('intro-point') && main.includes('onPoint'), 'подпись точки пролёта идёт из кадра');
+  ok(!/§/.test(html.slice(html.indexOf('id="world-tech"'), html.indexOf('id="world-legend"'))), 'в блоке технологий нет номеров параграфов');
+  ok(/id="world-tech"[\s\S]*id="world-legend"/.test(html), 'технологии стоят между контактами и легендой — ничего не наезжает');
 }
 
-console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83 и карты мира §86–§87 (F-222…F-224, F-279…F-286, F-301…F-306, проверок ' + checks + ')');
+console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§88 (F-222…F-224, F-279…F-286, F-301…F-334, проверок ' + checks + ')');

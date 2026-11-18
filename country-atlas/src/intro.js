@@ -6,21 +6,59 @@
 import { WorldView, WV } from './worldview.js';
 import { MARK, pointInPolygon } from './worldmap2d.js';
 import { drawMark } from './worldview.js';
+import { hash01 } from './accidents2d.js';
 
 export const INTRO = {
-  hopSec: 4.2,          // сколько камера идёт от точки к точке
-  scaleMin: 0.16,       // px на км: ближе всего к земле
-  scaleMax: 0.26,       // px на км: дальше всего
+  hopSec: 9.2,          // сколько камера идёт от точки к точке — пролёт видно, а не «пять секунд»
+  scaleMin: 0.15,       // px на км: ближе всего к земле
+  scaleMax: 0.25,       // px на км: дальше всего
   layerPx: 2200,        // сторона резкого слоя своей страны
   blurPx: 4,            // размытие подложки
   vignette: 0.55,       // насколько темнеют края
-  fadeMs: 420
+  fadeMs: 420,
+  sightKm: 0.55,        // достопримечательности стоят в этом поясе от столицы (доля радиуса)
+  sights: ['Старая крепость', 'Северный мост', 'Соляные шахты', 'Обсерватория на холме',
+    'Старая мельница', 'Каменный круг', 'Портовый маяк', 'Курган предков'],
+  sightsPerTour: 4,     // сколько достопримечательностей вплетается в маршрут
+  caption: true
 };
 
-/* F-305: маршрут пролёта — столица, затем города по кругу; ровный обход без рывков. */
-export function tourWaypoints(own) {
-  const cities = own.cities.slice().sort((a, b) => Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x));
-  return cities.map((c) => ({ x: c.x, y: c.y, name: c.name }));
+/* F-305: достопримечательности страны. Места детерминированы сидом: те же холмы,
+   тот же мост и та же крепость при каждом запуске. */
+export function tourSights(own, seed = 424242) {
+  const out = [];
+  const names = INTRO.sights.slice();
+  const n = Math.min(INTRO.sightsPerTour, names.length);
+  const start = Math.floor(hash01(seed + 4711, 181) * names.length) % names.length;
+  for (let i = 0; i < n; i++) {
+    const a = hash01(seed + i * 53, 183) * Math.PI * 2;
+    let r = own.radiusKm * INTRO.sightKm * (0.55 + hash01(seed + i * 71, 187) * 0.55);
+    let x = Math.cos(a) * r, y = Math.sin(a) * r;
+    // место должно быть в своей стране: если вылетели за границу — подходим ближе к столице
+    for (let k = 0; k < 5 && !pointInPolygon(x, y, own.poly); k++) {
+      r *= 0.6; x = Math.cos(a) * r; y = Math.sin(a) * r;
+    }
+    out.push({ x, y, name: names[(start + i) % names.length], sight: true });
+  }
+  return out;
+}
+
+/* F-305: маршрут пролёта — города по кругу и достопримечательности между ними;
+   ровный обход без рывков, чтобы страну можно было рассмотреть. */
+export function tourWaypoints(own, seed = 424242) {
+  const cities = own.cities.slice()
+    .sort((a, b) => Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x))
+    .map((c) => ({ x: c.x, y: c.y, name: c.name, sight: false }));
+  const sights = tourSights(own, seed);
+  const out = [];
+  const step = Math.max(1, Math.round(cities.length / (sights.length + 1)));
+  let si = 0;
+  cities.forEach((c, i) => {
+    out.push(c);
+    if (si < sights.length && (i + 1) % step === 0) out.push(sights[si++]);
+  });
+  while (si < sights.length) out.push(sights[si++]);
+  return out;
 }
 
 /* F-306: камера пролёта в момент t (секунды). Идёт по кругу, между точками — плавно. */
@@ -39,7 +77,7 @@ export function tourCam(points, t, scaleMin = INTRO.scaleMin, scaleMax = INTRO.s
     x: a.x + (b.x - a.x) * e,
     y: a.y + (b.y - a.y) * e,
     // масштаб гуляет по синусу: то ближе к земле, то выше
-    scale: scaleMin + (scaleMax - scaleMin) * (0.5 + 0.5 * Math.sin(t * 0.6)),
+    scale: scaleMin + (scaleMax - scaleMin) * (0.5 + 0.5 * Math.sin(safeT * 0.6)),
     i: i % points.length,
     name: b.name
   };
@@ -61,7 +99,7 @@ export class Intro {
     this.raf = 0;
     this.running = false;
     this.ready = false;
-    this.points = tourWaypoints(world.own);
+    this.points = tourWaypoints(world.own, world.seed);
     this.bg = null;          // размытая подложка: карта мира
     this.layer = null;       // резкий слой своей страны
     this.edge = null;        // подложка по краям: размытая карта мира
@@ -126,6 +164,19 @@ export class Intro {
       ctx.strokeStyle = r.kind === 'international' ? 'rgba(255,214,110,0.85)' : 'rgba(232,238,244,0.45)';
       ctx.lineWidth = r.kind === 'international' ? 3 : 1.6;
       ctx.stroke();
+    }
+    // достопримечательности: ромбик и имя — их и видно в пролёте
+    ctx.font = '14px sans-serif';
+    for (const s of this.points) {
+      if (!s.sight) continue;
+      const x = toPx(s.x), y = toPx(s.y);
+      ctx.beginPath();
+      ctx.moveTo(x, y - 6); ctx.lineTo(x + 6, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 6, y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255,214,110,0.95)';
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,236,178,0.92)';
+      ctx.fillText(s.name, x + 10, y + 5);
     }
     // города
     ctx.font = '15px sans-serif';
@@ -246,6 +297,23 @@ export class Intro {
     gb.addColorStop(1, 'rgba(6,14,20,0.9)');
     ctx.fillStyle = gb;
     ctx.fillRect(0, view.h * 0.55, view.w, view.h * 0.45);
+
+    // F-306: подпись точки пролёта — видно, над чем именно летит камера
+    if (INTRO.caption !== false && this.points.length) {
+      const i = Math.max(0, Math.min(this.points.length - 1, cam.i));
+      const pt = this.points[i] || { name: '' };
+      if (this.shownPoint !== pt.name && typeof this.opts.onPoint === 'function') {
+        this.shownPoint = pt.name;
+        try { this.opts.onPoint(pt, i + 1, this.points.length); } catch (err) { /* подпись — украшение */ }
+      }
+      const text = 'пролёт над страной · ' + (i + 1) + ' из ' + this.points.length + ' · ' + pt.name;
+      ctx.font = '12px sans-serif';
+      const tw = ctx.measureText ? ctx.measureText(text).width : text.length * 6;
+      ctx.fillStyle = 'rgba(6,14,20,0.62)';
+      ctx.fillRect(12, view.h - 36, tw + 18, 23);
+      ctx.fillStyle = 'rgba(226,234,240,0.92)';
+      ctx.fillText(text, 21, view.h - 20);
+    }
     ctx.restore();
     this.frames++;
     this.lastDrawMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;

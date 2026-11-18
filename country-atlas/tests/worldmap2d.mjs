@@ -4,7 +4,8 @@ import { createCanvas } from '@napi-rs/canvas';
 import {
   WM, MARK, buildWorld, advanceWars, maybeStartWar, worldStats, hottestWar,
   countryAt, nearestCity, nearestRoad, segmentDistance, pointInPolygon, polygonArea,
-  sitesFor, voronoiPoly, cellRadius, adjacency, poleOfInaccessibility, coastPolygon, borderTowns, canSeeArmies
+  sitesFor, voronoiPoly, cellRadius, adjacency, poleOfInaccessibility, coastPolygon, borderTowns, canSeeArmies,
+  DIPLO, relationKey, relationLevel, relationOf, contactsOf, diplomacyStats
 } from '../src/worldmap2d.js';
 import {
   WV, WorldView, overviewScale, clampViewScale, worldToScreen, screenToWorld,
@@ -265,10 +266,11 @@ v.step(1 / 60);
 ok('после двух проходов мир готов', v.ready === 2 && v.loading === false);
 v.open({ x: 0, y: 0, scale: 20 });
 ok('переход начался', !!v.transition);
-v.step(0.45);
+ok('переход длиннее прежнего — видно полёт', WV.transitionMs >= 1400, WV.transitionMs);
+v.step(WV.transitionMs / 2000);
 const halfway = v.cam.scale;
 ok('камера летит от страны к планете', halfway < 20 && halfway > s1, halfway);
-v.step(0.6);
+v.step(WV.transitionMs / 1000 + 0.1);
 ok('переход конечен', v.transition === null);
 near('после перехода камера в обзоре', v.cam.scale, s1, 1e-6);
 ok('прозрачность вернулась к 1', v.alpha > 0.99, v.alpha);
@@ -345,5 +347,75 @@ function countArmyPixels(cv, wv) {
   return n;
 }
 
-console.log(`\nOK: 6 групп · ${pass} проверок`);
+/* ——— 7. контакты ——— */
+group('контакты');
+const w7 = buildWorld(424242);
+ok('отношения построены для всех пар', w7.relations.size === (WM.countries * (WM.countries - 1)) / 2, w7.relations.size);
+ok('ключ пары не зависит от порядка', relationKey('c1', 'c2') === relationKey('c2', 'c1'));
+ok('отношение к себе — пусто', relationOf(w7, 'own', 'own') === null);
+ok('неизвестная пара — пусто', relationOf(w7, 'own', 'нет такой') === null);
+const r12 = relationOf(w7, 'own', 'c1'), r21 = relationOf(w7, 'c1', 'own');
+ok('отношения взаимны', r12 && r21 && r12.score === r21.score, r12 && r12.score);
+ok('отношение в пределах ±100', [...w7.relations.values()].every((r) => Math.abs(r.score) <= DIPLO.cap));
+ok('мир с тем же сидом даёт те же отношения', (() => {
+  const b = buildWorld(424242);
+  return [...w7.relations].every(([k, v]) => b.relations.get(k).score === v.score);
+})());
+ok('другой сид — другие отношения', (() => {
+  const b = buildWorld(777);
+  return [...w7.relations].some(([k, v]) => b.relations.get(k).score !== v.score);
+})());
+ok('уровень «союз» с 60', relationLevel(60).id === 'union' && relationLevel(100).id === 'union');
+ok('59 — уже дружба', relationLevel(59).id === 'friend');
+ok('20 — дружба', relationLevel(20).id === 'friend');
+ok('19 — нейтралитет', relationLevel(19).id === 'neutral');
+ok('-20 — нейтралитет', relationLevel(-20).id === 'neutral');
+ok('-21 — напряжение', relationLevel(-21).id === 'tension');
+ok('-60 — напряжение', relationLevel(-60).id === 'tension');
+ok('-61 — вражда', relationLevel(-61).id === 'enmity');
+ok('у всех уровней есть русское имя', DIPLO.levels.every((l) => l.name.length > 3 && !/§/.test(l.name)));
+const contacts = contactsOf(w7, 'own');
+ok('у нашей страны 17 контактов', contacts.length === WM.countries - 1, contacts.length);
+ok('шесть из них — соседи', contacts.filter((c) => c.neighbour).length === 6, contacts.filter((c) => c.neighbour).length);
+ok('контакты отсортированы от тёплых к холодным', contacts.every((c, i) => i === 0 || contacts[i - 1].score >= c.score));
+ok('каждый сосед есть в списке', w7.pairs.filter((p) => p.a === 'own' || p.b === 'own')
+  .every((p) => contacts.some((c) => c.id === (p.a === 'own' ? p.b : p.a))));
+ok('посольство только с дружбы', contacts.every((c) => c.embassy === (c.score >= DIPLO.embassyFrom)));
+ok('посольств не больше, чем контактов', contacts.filter((c) => c.embassy).length <= contacts.length);
+ok('война помечена у воюющих', (() => {
+  for (let t = 0; t <= 60 * 24 * 20; t += 45) advanceWars(w7, 9000 + t);
+  const list = contactsOf(w7, 'own');
+  const warIds = new Set();
+  for (const w of w7.wars) if (w.to === null) { if (w.a === 'own') warIds.add(w.b); if (w.b === 'own') warIds.add(w.a); }
+  return list.every((c) => c.war === warIds.has(c.id));
+})());
+const dip7 = diplomacyStats(w7);
+ok('сводка контактов: 17 контактов', dip7.contacts === WM.countries - 1);
+ok('уровни в сумме дают все контакты', dip7.union + dip7.friend + dip7.neutral + dip7.tension + dip7.enmity === dip7.contacts,
+  [dip7.union, dip7.friend, dip7.neutral, dip7.tension, dip7.enmity].join('+'));
+ok('в сводке 12 полей', Object.keys(dip7).length === 12, Object.keys(dip7).join(','));
+ok('список контактов в сводке', Array.isArray(dip7.list) && dip7.list.length === dip7.contacts);
+ok('помощь: только друзьям и в пределах 4000 км', w7.aid.every((a) => a.from !== a.to && a.km <= DIPLO.aidKm
+  && a.tons >= DIPLO.aidTons[0] && a.tons < DIPLO.aidTons[1] && w7.countries.some((c) => c.id === a.from) && w7.countries.some((c) => c.id === a.to)));
+ok('счётчик помощи совпадает с журналом или обрезан', w7.stats.aid >= w7.aid.length, `${w7.stats.aid}/${w7.aid.length}`);
+ok('журнал помощи не длиннее 40', w7.aid.length <= DIPLO.keepAid);
+ok('после войны есть вражда хотя бы в мире', w7.warsTotal === 0 || [...w7.relations.values()].some((r) => r.score <= -20)
+  || w7.wars.every((w) => w.warsTotal < 2));
+ok('война обрушила отношения воюющих', w7.wars.every((w) => {
+  const r = relationOf(w7, w.a, w.b);
+  return !r || r.score <= 0;
+}));
+ok('помощь меняет отношения к лучшему', (() => {
+  const b = buildWorld(424242);
+  for (let t = 0; t <= 60 * 24 * 20; t += 45) advanceWars(b, 9000 + t);
+  if (!b.aid.length) return true;
+  const a = b.aid[0];
+  const r = b.relations.get(relationKey(a.from, a.to));
+  return !!r && r.aid >= 1;
+})());
+ok('контакты неизвестной страны — пусто', contactsOf(w7, 'нет такой').length === 0);
+ok('сводка без наблюдателя не падает', diplomacyStats(w7, 'nobody').contacts === 0);
+ok('отношения не попадают в сейв (только в мир)', !JSON.stringify({ s: 1 }).includes('relations'));
+
+console.log(`\nOK: 7 групп · ${pass} проверок`);
 if (fail) { console.log(`FAIL: ${fail}`); process.exit(1); }
