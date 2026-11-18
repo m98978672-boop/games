@@ -538,7 +538,7 @@ ok('легенда помещается в углу кадра', legBox.x + legB
 ok('легенда не закрывает панель снизу слева', legBox.x > 300, legBox.x);
 ok('на телефоне легенда короче', (() => {
   const b = drawMapLegend(createCanvas(390, 844).getContext('2d'), { w: 390, h: 844 });
-  return b.rows === 4 && b.x === 10;
+  return b.rows === 7 && b.x === 10;
 })());
 ok('своя армия видна в кадре без спутника', (() => {
   const armies = world.armies.filter((a) => a.country === 'own');

@@ -23,6 +23,8 @@ view.resize(); view.setWorld(world);
 view.step(0.02); view.step(0.02);      // два прохода базового слоя — как в игре
 view.open();
 view.alpha = 1;
+// третий аргумент «terrain» включает слой «где технике тяжело»
+if (process.argv[4] === 'terrain') view.showTerrain = true;
 view.draw();
 writeFileSync(out, cv.toBuffer('image/png'));
 console.log('ok ' + w + '×' + h + ' · масштаб ' + view.cam.scale.toFixed(4) + ' · ' + view.lastDrawMs.toFixed(1) + ' мс → ' + out);

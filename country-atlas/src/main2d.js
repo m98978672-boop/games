@@ -266,6 +266,8 @@ function setupWorld() {
   const canvas = document.getElementById('world-map');
   const back = document.getElementById('world-back');
   const sat = document.getElementById('world-satellite');
+  const terrainBtn = document.getElementById('world-terrain');
+  let hover = null;                         // §99: что под курсором — покров, область, страна
   const openBtn = document.getElementById('world-open');
   const statsEl = document.getElementById('world-stats');
   const contactsEl = document.getElementById('world-contacts');
@@ -384,7 +386,14 @@ function setupWorld() {
     }
     if (hintEl) {
       // F-371: числа подсказки вернулись: сколько чего на карте прямо сейчас
-      hintEl.textContent = 'тяните — сдвиг · щипок и колесо — зум · сетка через 15° (подписана через 45°) · городов ' + self.cities + ' · армий ' + self.armies + ' · стран ' + st.countries +
+      const under = hover
+        ? 'под курсором: ' + hover.biome
+          + (hover.hard ? ' · технике тяжело' : (hover.slow ? ' · технике медленно' : ''))
+          + (hover.region ? ' · ' + hover.region : '')
+          + (hover.country ? ', ' + hover.country : '')
+        : '';
+      hintEl.textContent = (under ? under + '\n' : '') +
+        'тяните — сдвиг · щипок и колесо — зум · сетка через 15° (подписана через 45°) · городов ' + self.cities + ' · армий ' + self.armies + ' · стран ' + st.countries +
         ' · войн ' + st.wars + ' · боёв ' + nf(st.battles) + ' · взрывов ' + nf(st.explosionsTotal) +
         ' · технологий ' + nf(tech.count) + ' из ' + nf(tech.catalog);
       hintEl.style.whiteSpace = 'pre-line';
@@ -468,6 +477,13 @@ function setupWorld() {
     worldView.draw();
   });
 
+  // §99: режим «где технике тяжело» — болота и горы штрихуются, лес и тундра помечаются
+  if (terrainBtn) terrainBtn.addEventListener('click', () => {
+    worldView.showTerrain = !worldView.showTerrain;
+    terrainBtn.textContent = 'техника: ' + (worldView.showTerrain ? 'где тяжело' : 'обычно');
+    worldView.draw();
+  });
+
   /* указатели: панорама одним пальцем, щипок и колесо — масштаб */
   const touches = new Map();
   let drag = null, pinch = null;
@@ -486,10 +502,15 @@ function setupWorld() {
     }
     canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
   });
+  // §99: под курсором видно, что это за земля и пройдёт ли здесь техника
   canvas.addEventListener('pointermove', (e) => {
     if (!worldView) return;
     const p = local(e);
-    if (!touches.has(e.pointerId)) return;
+    if (!touches.has(e.pointerId)) {
+      hover = worldView.infoAtScreen(p.x, p.y);
+      drawStats();
+      return;
+    }
     touches.set(e.pointerId, p);
     if (touches.size >= 2 && pinch) {
       const [a, b] = [...touches.values()];
