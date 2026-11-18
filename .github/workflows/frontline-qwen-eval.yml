@@ -26,7 +26,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download frontline-qwen35-lora-research-44361283962 --pattern 'frontline-qwen35-lora-research.tar.gz' --dir "$RUNNER_TEMP"
+          gh release download frontline-qwen35-lora-research-44366582436 --pattern 'frontline-qwen35-lora-research.tar.gz' --dir "$RUNNER_TEMP"
           mkdir "$RUNNER_TEMP/evaluation"
           tar -xzf "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz" -C "$RUNNER_TEMP/evaluation"
       - name: Install CPU inference dependencies
