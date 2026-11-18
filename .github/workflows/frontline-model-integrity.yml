@@ -2,7 +2,7 @@ name: Verify Frontline model archive
 on:
   push:
     branches: [arena/618960d4-games]
-    paths: [.github/workflows/frontline-model-integrity.yml]
+    paths: [.github/workflows/frontline-model-integrity.yml, frontline-command/src/ui/model_import.js, frontline-command/tests/model-import-browser.mjs]
 permissions:
   contents: read
 jobs:
@@ -11,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontline-command/package-lock.json
       - name: Verify release bytes against Dropbox content hash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -38,3 +44,10 @@ jobs:
                   raise SystemExit('Archive is missing required model files')
           print('Dropbox hash matches release; ZIP and 18 model files verified')
           PY
+      - name: Test real archive import in Chromium
+        working-directory: frontline-command
+        env:
+          MODEL_ZIP: ${{ runner.temp }}/Qwen3.5-0.8B-q4f16_1-MLC.zip
+        run: |
+          npm ci --no-audit --no-fund
+          node tests/model-import-browser.mjs
