@@ -180,9 +180,57 @@ for (const [file, text] of falsePositives) {
 }
 ok(true, 'игровой код (шейдеры, цикл игры, бандл) не считается вредоносным');
 
+// ------------- 5b. Каталог замечает изменения игры — но не документации
+// Тест «мутационный»: портим каталог и смотрим, что --check это ловит.
+// Иначе легко получить каталог, который «всегда свежий» и молча раздаёт старые
+// файлы (куски не сойдутся с хешами, и скачивание сломается у игрока).
+console.log('\n[свежесть каталога]');
+const { execFileSync } = await import('node:child_process');
+const fsPromises = await import('node:fs/promises');
+const catalogPath = path.join(repoRoot, 'site/torrent-catalog.json');
+const originalCatalog = await readFile(catalogPath, 'utf8');
+const checkCatalog = () => {
+  try {
+    execFileSync(process.execPath, [path.join(repoRoot, 'tools/torrent/build-catalog.mjs'), '--check'], { cwd: repoRoot, stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// а) файл игры «пропал» из каталога → каталог обязан стать устаревшим.
+try {
+  const targetGame = catalog.games.find((g) => (g.files || []).some((f) => /\.js$/i.test(f.path)));
+  const targetFile = targetGame.files.find((f) => /\.js$/i.test(f.path));
+  const injected = JSON.parse(originalCatalog);
+  const injectedGame = injected.games.find((g) => g.gameId === targetGame.gameId);
+  injectedGame.files = injectedGame.files.filter((f) => f.path !== targetFile.path);
+  injectedGame.fileCount = injectedGame.files.length;
+  await fsPromises.writeFile(catalogPath, JSON.stringify(injected, null, 2));
+  const caught = checkCatalog() === false;
+  ok(caught, 'изменение файлов игры делает каталог устаревшим (--check ловит)');
+
+  // б) изменилась только документация → каталог остаётся свежим.
+  const docPath = path.join(repoRoot, targetGame.dir, 'PLAN.md');
+  const hadDoc = await fsPromises.readFile(docPath, 'utf8').then(() => true).catch(() => false);
+  if (hadDoc) {
+    const before = await fsPromises.readFile(docPath, 'utf8');
+    try {
+      await fsPromises.writeFile(docPath, before + '\n\n<!-- тест: документация не входит в раздачу -->\n');
+      ok(checkCatalog(), 'правка PLAN.md не делает каталог устаревшим (документация вне раздачи)');
+    } finally {
+      await fsPromises.writeFile(docPath, before);
+    }
+  } else {
+    ok(true, 'правка документации не делает каталог устаревшим (PLAN.md нет — пропущено)');
+  }
+} finally {
+  // Всегда возвращаем каталог как было — тест не должен оставлять следов.
+  await fsPromises.writeFile(catalogPath, originalCatalog);
+}
+
 // --------------------------------------- 6. Каталог свежий (--check)
 console.log('\n[актуальность каталога]');
-const { execFileSync } = await import('node:child_process');
 try {
   execFileSync(process.execPath, [path.join(repoRoot, 'tools/torrent/build-catalog.mjs'), '--check'], { cwd: repoRoot, stdio: 'pipe' });
   ok(true, 'каталог раздач актуален (node tools/torrent/build-catalog.mjs --check)');

@@ -11,6 +11,8 @@ import { parseRssOrAtom, makeSafeNewsItem, mergeNewsFeeds } from '../scripts/aut
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '../..');
+// Форматы локальных обложек новостей (svg рисуем сами, jpg/png — от редакции).
+const MediaCoverRe = /\.(svg|jpe?g|png|webp|avif)$/i;
 
 const av = await loadGamesAntivirus();
 
@@ -163,6 +165,18 @@ for (const item of futureQueue) {
   assert.match(String(item.scheduledFor || ''), /^\d{4}-\d{2}-\d{2}$/, `${item.code} must carry scheduledFor date`);
   assert.ok(item.scheduledFor > '2026-11-18', `${item.code} scheduled date must be in the future`);
 }
+// У КАЖДОЙ статьи ленты обложка должна лежать в репозитории: битые картинки
+// не видит ни один другой тест (так в main накопилось 37 «мёртвых» ссылок).
+const allArticles = feed.items.filter((i) => i.image && MediaCoverRe.test(i.image));
+const missingCovers = allArticles.filter((i) => !existsSync(path.join(repoRoot, i.image)));
+assert.equal(
+  missingCovers.length,
+  0,
+  `${missingCovers.length} статей ссылаются на несуществующие обложки: ` +
+    missingCovers.slice(0, 3).map((i) => i.code).join(', '),
+);
+assert.equal(allArticles.length, feed.items.length, 'у каждой статьи ленты есть локальная обложка');
+
 // Очередь должна быть равномерна по рубрикам, а не в одну тему.
 const backlogCats = new Set([...nowQueue, ...futureQueue].map((i) => i.category));
 assert.ok(backlogCats.size >= 6, 'backlog must cover all 6 news categories');

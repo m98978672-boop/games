@@ -4,9 +4,9 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1134,
-    "totalBytes": 29426387,
-    "chunks": 122,
+    "files": 1169,
+    "totalBytes": 35727536,
+    "chunks": 146,
     "blockedFiles": 1
   },
   "games": [
@@ -19,11 +19,11 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "7855b16cece02baf024eea79de26a7cfc07a9a04928eca031f5ac197cb700e36",
-      "totalSize": 1664039,
+      "infoHash": "e001d77426a2897cf56d6361e7c8813c3662ddaf0a7e176f9b3f0bd4d12af8e2",
+      "totalSize": 1707040,
       "chunkSize": 262144,
       "chunkCount": 7,
-      "fileCount": 78,
+      "fileCount": 79,
       "files": [
         {
           "path": ".gitignore",
@@ -47,8 +47,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 263877,
-          "sha256": "8ee983c9f50c1c4a713350d4fb721bba6056f135a015c39458176c219e526589"
+          "size": 274401,
+          "sha256": "bb7b670e57e85a298bae1c634962b42ecf5a5ecacefc313a8057e4c46dd09e3b"
         },
         {
           "path": "cover.svg",
@@ -112,8 +112,8 @@
         },
         {
           "path": "src/autonomy2d.js",
-          "size": 12312,
-          "sha256": "0a69442b544c7e9a8aba6e8f99e7db416859d0430f5d7f20f67448d61f03ffc7"
+          "size": 13206,
+          "sha256": "ac7cf0c7deaff968003110d20511c6930a00b3014fb0652816cf2ccd1f9c56f5"
         },
         {
           "path": "src/borders2d.js",
@@ -187,8 +187,8 @@
         },
         {
           "path": "src/main2d.js",
-          "size": 34617,
-          "sha256": "0f1d1c902909cbf5de433f337de0fe01012fab9f206bf91e52ccfc0d076bc37d"
+          "size": 35230,
+          "sha256": "c0ba32226c68ab7a0a5feeb510e9ce4c296206ccb6ec838ed835e9c76becfe0c"
         },
         {
           "path": "src/map-worker.js",
@@ -234,6 +234,11 @@
           "path": "src/pedsoc2d.js",
           "size": 10587,
           "sha256": "590d920fde6265f1557c37367a0aae3393afb52af5640bbc82287fc4c35b6bca"
+        },
+        {
+          "path": "src/planet2d.js",
+          "size": 14610,
+          "sha256": "57d6e342b525650a307fbc301cf153dbef9bcf847d2b6a008e3e14ba380cd436"
         },
         {
           "path": "src/play2d.js",
@@ -302,13 +307,13 @@
         },
         {
           "path": "src/worldmap2d.js",
-          "size": 52061,
-          "sha256": "ace7df71169332e9c4d43bd01ae86e1dfbf57903f22f2281f62d96f016a910bf"
+          "size": 55804,
+          "sha256": "5802016de147291f4b5b0e00c041e9655a6e2c339d3915abaf548bb5abbc392c"
         },
         {
           "path": "src/worldview.js",
-          "size": 41906,
-          "sha256": "c54cf3160e2a91dc45562cd9acfa75df39dd9052ef482dbf13bd289c324d76f1"
+          "size": 54523,
+          "sha256": "9831d7334ed7291b0adbd74da77306de76cb7f0a1742e9b9146af9cd83e81a13"
         },
         {
           "path": "terrain-worker.min.js",
@@ -2063,21 +2068,21 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "e3f727e1bf000455c3f54e21b8f653d328483a84aa58427c71d0fbac7e10573d",
-      "totalSize": 3471933,
+      "infoHash": "c7671773f547ef33c272caba20d673c0ff59b6eda5cbaa7ac1701eebe648b286",
+      "totalSize": 9730081,
       "chunkSize": 262144,
-      "chunkCount": 14,
-      "fileCount": 493,
+      "chunkCount": 38,
+      "fileCount": 527,
       "files": [
         {
           "path": ".gitattributes",
-          "size": 96,
-          "sha256": "ba7c6e3ade10cf97b98f7629223fcf186bd35b38372fefaa13742d1f175c9248"
+          "size": 232,
+          "sha256": "aeec83d2b7aa9bf211bb7a99b453692c4c1e5c10520e7f4fe49c2c6d3b29b6c0"
         },
         {
           "path": ".gitignore",
-          "size": 14,
-          "sha256": "4d56952b0fb13bf8f9b6c13a6d4c34a075bac3af447636a1df4335d7576e2f97"
+          "size": 40,
+          "sha256": "e57610f9f0d0972aa8e702cc29479025cc95756d805a2939a6b82d8fb6ac9ff9"
         },
         {
           "path": "assets/README.md",
@@ -3326,8 +3331,8 @@
         },
         {
           "path": "data/feature_flags.json",
-          "size": 15765,
-          "sha256": "bc6b5b8934c5b1ab2221149c99b106b064fbc3d8646e49c6c600c257ce2514c1"
+          "size": 15803,
+          "sha256": "fcb2e8205816b287ea6b9fdf4d1c1e7ebe11a2cb57dabf23534137f7791fd5f7"
         },
         {
           "path": "data/game_audit_contract.json",
@@ -3456,8 +3461,33 @@
         },
         {
           "path": "package.json",
-          "size": 13035,
-          "sha256": "7b39ea2d809efad304287673cac762578fbe04c8b3f6f0f2e0d32534499b5f28"
+          "size": 14379,
+          "sha256": "9c83995c031bbe190b88280439e08b42fc6b56fe83eb5a695aa6f739bb975f23"
+        },
+        {
+          "path": "src/ai/commander-worker-entry.js",
+          "size": 2435,
+          "sha256": "4297ecb877d1f3c812b2c99356e312cf36368c445adcbdd0462be86bf10c4c21"
+        },
+        {
+          "path": "src/ai/commander-worker.bundle.js",
+          "size": 6131991,
+          "sha256": "0779e0b6fb46e38f55ad3e1f2d32d5eed013e546e2b5c69249abf375e91f4f6d"
+        },
+        {
+          "path": "src/ai/licenses/LOGLEVEL-MIT.txt",
+          "size": 1075,
+          "sha256": "18e8cf5f0dbaf13d9562e93b9bef79aff2acff18fab698c2d589d2159375a1f9"
+        },
+        {
+          "path": "src/ai/licenses/NOTICES.txt",
+          "size": 1005,
+          "sha256": "9f47fcb844a77bf4f7149eb624a4aec6a5cf6b10e6dc23bb300b08d5f0d3187d"
+        },
+        {
+          "path": "src/ai/licenses/WEB-LLM-APACHE-2.0.txt",
+          "size": 11726,
+          "sha256": "87935f332472db09253871326ef23d5d6a45f4fd2e6c96772f72052866dfab0d"
         },
         {
           "path": "src/core/audio.js",
@@ -3466,8 +3496,8 @@
         },
         {
           "path": "src/core/build-info.js",
-          "size": 836,
-          "sha256": "dc6c42437e9944db56cf60179e7c010aaded6a164d50cd37e8eacc87b2e63558"
+          "size": 840,
+          "sha256": "ec7d0d303b10be6f45c469064db72522d3327ab291b3313c566e5503ec2c3fbc"
         },
         {
           "path": "src/core/config.js",
@@ -3516,8 +3546,8 @@
         },
         {
           "path": "src/main.js",
-          "size": 29081,
-          "sha256": "846fe25250830816955e7704a098d75d37c6f54c4fd99ff11de175bdb78003ce"
+          "size": 30555,
+          "sha256": "e24bb4701137ace60b626b38222cecc464ebf88868ddc2474478af3d55c6dc2a"
         },
         {
           "path": "src/render/renderer.js",
@@ -3526,8 +3556,8 @@
         },
         {
           "path": "src/sim/ai_soldier.js",
-          "size": 27807,
-          "sha256": "bd098f20c1272214e718ffef6228968bfa41f9cba29ea708c4a1640e1ed47aa1"
+          "size": 27838,
+          "sha256": "cc3365aeebcce51c7787bcc40ac7582458ca48f880270b28ce0d98990c842949"
         },
         {
           "path": "src/sim/ai_squad.js",
@@ -3546,13 +3576,13 @@
         },
         {
           "path": "src/sim/build.js",
-          "size": 37187,
-          "sha256": "2163561aa39148212bdef64907f815cb09cdd2db9af97b10bc4c4a209415d9bd"
+          "size": 37708,
+          "sha256": "c6cfe2308c704904a920281d87e16198c4b071ab44ef76dfbf5d3c0c80b69086"
         },
         {
           "path": "src/sim/command_api.js",
-          "size": 6672,
-          "sha256": "86f4447bf1afc2d49450709a4d02e8c5e4eed0c6e47c2d910c8db8d3ffb0ad79"
+          "size": 6722,
+          "sha256": "c76706ad87763dc3acb6ceb13f11a48a1aa9a18d6913636da963d6dbea4ed3ff"
         },
         {
           "path": "src/sim/crowd_nav.js",
@@ -3561,8 +3591,8 @@
         },
         {
           "path": "src/sim/door_courtesy.js",
-          "size": 2268,
-          "sha256": "0c1a8f44c189f6cd157fcd0532c5ba5578cd930a275771f3c4aaa2e642fb5436"
+          "size": 2329,
+          "sha256": "af0888674f0585d0e683fcebda9b39d1439f64e588b6244161c03e4d3ac3d464"
         },
         {
           "path": "src/sim/door_pair.js",
@@ -3576,8 +3606,8 @@
         },
         {
           "path": "src/sim/game.js",
-          "size": 49744,
-          "sha256": "8878a4ec9b39ac7b891ffbb19e47e2362365c9aa919a10acd8c2a8b33d04d80f"
+          "size": 49739,
+          "sha256": "56f8a92575e3f643216a545667bc9358ce6c19d098cd35673ad930944bb1ebc5"
         },
         {
           "path": "src/sim/incremental_route.js",
@@ -3603,6 +3633,16 @@
           "path": "src/sim/nav.js",
           "size": 9780,
           "sha256": "5eac67964134e466d6df92226d7ed07e05f0d2b6693245b7143445cecb834f09"
+        },
+        {
+          "path": "src/sim/neutral_commander.js",
+          "size": 5216,
+          "sha256": "9c861e341c33f06432d328814acc7028abd3de5d42b5c7b0c633686780140cdb"
+        },
+        {
+          "path": "src/sim/neutral_commander_client.js",
+          "size": 3585,
+          "sha256": "4d6c9e3deca8d0c3d49a059dfc54a938585a0c1980d11e7470b5c951ee9a20ee"
         },
         {
           "path": "src/sim/rest_positions.js",
@@ -3636,8 +3676,8 @@
         },
         {
           "path": "src/sim/units.js",
-          "size": 44609,
-          "sha256": "0f16a61d724c05c4ca10fc975398ae67a657b60a45847f0e8914e61cc0acadb1"
+          "size": 45049,
+          "sha256": "3e775be50662be445b45dd7895e995c0d74505a0918ed7d62edd6eb52801ee4d"
         },
         {
           "path": "src/sim/vision_nav_policy.js",
@@ -3651,8 +3691,8 @@
         },
         {
           "path": "src/sim/walls.js",
-          "size": 45798,
-          "sha256": "cdfa2749b80215d446ce7d265c10b085c3c89673fea7d04678da5204ad16623f"
+          "size": 46154,
+          "sha256": "dadf84e7251bf6bfac382774a5aa834b628885f8ccda2243f80bf10df15baceb"
         },
         {
           "path": "src/sim/world.js",
@@ -3666,8 +3706,13 @@
         },
         {
           "path": "src/ui/menus.js",
-          "size": 16915,
-          "sha256": "eda8f51fef59549e59b111303117f890acef83ad6780a3c7dd295f75cfa55a46"
+          "size": 20894,
+          "sha256": "46a5ae5f815c4d3919092300b232f43b7927bf26f18578cae12d8abfe360ec00"
+        },
+        {
+          "path": "src/ui/model_storage.js",
+          "size": 6580,
+          "sha256": "f72cb13d0b41b15d3fb5f0d3f4c24e9232f2296f717a5d366c5990af40965d96"
         },
         {
           "path": "src/vendor/EASYSTAR-LICENSE.txt",
@@ -3686,8 +3731,8 @@
         },
         {
           "path": "style.css",
-          "size": 15441,
-          "sha256": "5c467cc156fb0095cb0a60d4e15898462a29efad5357cb7a99c91572f6c91357"
+          "size": 16746,
+          "sha256": "f1b74b2e2c49703f3f2025efb08005b10c0b0b69213f2cefab3a5c1e29379219"
         },
         {
           "path": "tools/ai-war.mjs",
@@ -3975,6 +4020,26 @@
           "sha256": "4986e1db1231370a63c374339b89bcfa55a18adb1acf8a8ff9f3cb2ca4d44146"
         },
         {
+          "path": "tools/column-algorithm-matrix.mjs",
+          "size": 3119,
+          "sha256": "7577353e31715db71a42d6c11a84843c4aa19f39ae0dde3cd05bd38fe113d90f"
+        },
+        {
+          "path": "tools/column-algorithm-wars.mjs",
+          "size": 2503,
+          "sha256": "d5d53665141c55cee085e812e81153e48441aa65bb576dc6c56b455a4bec25d4"
+        },
+        {
+          "path": "tools/cooperative-bridge-scenes.mjs",
+          "size": 2415,
+          "sha256": "a69a232a67488b5b60e0a3a09b1c32e3790747db3f4e6855c9faeebb97db76b0"
+        },
+        {
+          "path": "tools/cooperative-bridge-war.mjs",
+          "size": 2240,
+          "sha256": "48c71239a390037c141d4783b84d0b31762a18ff60714ccd608c235dfae00e54"
+        },
+        {
           "path": "tools/courtesy-combat.mjs",
           "size": 3917,
           "sha256": "fd2828a301c326031df30aa3692403f5fd978b0a3ef2ae5cc935527026d6e0e1"
@@ -4060,6 +4125,31 @@
           "sha256": "06aa64144f07407bb9412d98baefb5d5713527c716c716b2cc484ce7c7830c14"
         },
         {
+          "path": "tools/escape-bundle-base64.mjs",
+          "size": 666,
+          "sha256": "96c7f1682dee39e9602a9179ded8441a6b5f2580e0b305f353c5b9736bbce40a"
+        },
+        {
+          "path": "tools/experiments/cooperative-bridge.mjs",
+          "size": 2978,
+          "sha256": "406def249f331f03eb7642b2e6b33f26dde590b85ec2ace9902cbc434a235e09"
+        },
+        {
+          "path": "tools/experiments/expanded-map.mjs",
+          "size": 746,
+          "sha256": "aa34ad40f58c6e1a91bb156fd12d1aab4e8f5a8c5861b3898d943c90f6a70531"
+        },
+        {
+          "path": "tools/experiments/external-crowd.mjs",
+          "size": 5927,
+          "sha256": "4ea0e5ee8520644adb6567b250fe2c0ceecbe2b30ae6b5471ab5fc0678bf3ca1"
+        },
+        {
+          "path": "tools/experiments/four-bot-arena.mjs",
+          "size": 4830,
+          "sha256": "9a9b1173ae7c8bbf9819b17d7454f6bed8ecf85b438daf65c029298a3c168dd4"
+        },
+        {
           "path": "tools/experiments/incremental-audit.mjs",
           "size": 4008,
           "sha256": "fd75055e0ed925f45144cec4ebf317edd7111f5ceb12d80b1f8ecc7180d3f8ca"
@@ -4068,6 +4158,21 @@
           "path": "tools/experiments/incremental-planner.mjs",
           "size": 215,
           "sha256": "7966618d8cc35416e749cfc3682defc4cd53e03495d40b4534efce82bdae6d77"
+        },
+        {
+          "path": "tools/experiments/pibt-adapter.mjs",
+          "size": 2350,
+          "sha256": "143b8ff02d0c373fc9a8c6799dd6c745121605f253b7a2e8a7a4d4e1b8d925af"
+        },
+        {
+          "path": "tools/experiments/pibt-plan.py",
+          "size": 1293,
+          "sha256": "04731af0772d2b19b993b5073cb4ec31efea2a2f50e7f554bca150e65c20b92e"
+        },
+        {
+          "path": "tools/experiments/recast-adapter.mjs",
+          "size": 2460,
+          "sha256": "bb9e99c7273ddb87cb334eb78dcaaefeb5322f39c7cc00efabff1c5e923ee2de"
         },
         {
           "path": "tools/experiments/train-movement.mjs",
@@ -4085,6 +4190,26 @@
           "sha256": "3e8cd9f30e2d7bbc7cbe5df4a1a19eae1dfde6f639ad6dd350ba3337c4f327d2"
         },
         {
+          "path": "tools/external-adaptive-experiment.mjs",
+          "size": 2047,
+          "sha256": "7b5704c00e2a092ecaeaba07c0bbbd0950cc4ca5a0320aa15b5e60666d8a24ae"
+        },
+        {
+          "path": "tools/external-crowd-holdout.mjs",
+          "size": 2311,
+          "sha256": "e55d2151b427f8cc7e851d27908ab0ef913951ec8bff9d407757044e54b48388"
+        },
+        {
+          "path": "tools/external-crowd-matrix.mjs",
+          "size": 3759,
+          "sha256": "193c89ec80bb73ea94dc2f15603b9eff57eb3232e05de9d1c06beadce052742f"
+        },
+        {
+          "path": "tools/external-crowd-war.mjs",
+          "size": 2620,
+          "sha256": "8bc5c2c3059623887f5b5bd478250e3a65f638b7ed59c4dd52057158a329f740"
+        },
+        {
           "path": "tools/five-fixes-combat.mjs",
           "size": 4398,
           "sha256": "57a70286478b476f207533988c11bbc8bb73e8a98376f9156050c8359c482a37"
@@ -4093,6 +4218,11 @@
           "path": "tools/five-fixes-load.mjs",
           "size": 2753,
           "sha256": "885fd2eb9c080f7fc67b01b08215ba032a075ae157272d3ec7a5c13e5691a1ef"
+        },
+        {
+          "path": "tools/four-bot-arena.mjs",
+          "size": 2515,
+          "sha256": "517159462c5f82190140cd39ea22b58929bb6edb8e231e34bc7ff04f6cfe2c8a"
         },
         {
           "path": "tools/game-auditor.mjs",
@@ -4215,6 +4345,11 @@
           "sha256": "f93da82847d2f47d43eb5aee2a84cef8d627bbb6cba0e982ef2b77248d969a5d"
         },
         {
+          "path": "tools/model-inbox-server.py",
+          "size": 9277,
+          "sha256": "122f4504bfef2384d722d8f1bc759d12caf1118d33cfcbeb5c3b14978a436745"
+        },
+        {
           "path": "tools/motion-safety-probe.mjs",
           "size": 1438,
           "sha256": "e3da31867e8bbd5aafea73251e3dde88fbfb0d4b719f818c3f4d1dc3c06b69b3"
@@ -4270,6 +4405,11 @@
           "sha256": "be373d86ac59b3b383f45678fad849f670c167f0f290d40581fc4dd09590d736"
         },
         {
+          "path": "tools/neutral-commander-scripted-war.mjs",
+          "size": 2105,
+          "sha256": "478fcdcc1cf2ae1b4834e61468c1e67d7ddf57ed1ccc32e328dfe4f98f9cd9c0"
+        },
+        {
           "path": "tools/occupancy-long-war-probe.mjs",
           "size": 2870,
           "sha256": "66509ea6919698ce9e9173c6d4bcb3a8097e5c802e82a0080c14b8da32531a6b"
@@ -4281,8 +4421,8 @@
         },
         {
           "path": "tools/opposing-columns.mjs",
-          "size": 2505,
-          "sha256": "20847ecad22f5f4f037aa991645f5145c4a8df0809de6eb402436f474fa690c6"
+          "size": 8735,
+          "sha256": "1ddfc08647daa6a57f3e9ba038a65f33934009f7f34187959152e09f1d80ee80"
         },
         {
           "path": "tools/remaining-group-failures.mjs",
@@ -4420,6 +4560,36 @@
           "sha256": "52950ebaeb996a0ec33ba55c196df169b78fe8bf7dbc533c4b4e4f347df4853d"
         },
         {
+          "path": "tools/vendor/pypibt/LICENSE.txt",
+          "size": 1055,
+          "sha256": "8a217ae671a3c07b3628c4f94904400071cdaf8eb07faa9dee1d54723f0c74bc"
+        },
+        {
+          "path": "tools/vendor/pypibt/README.txt",
+          "size": 180,
+          "sha256": "55f9ef5364075e6a1f2ab0f700e4bf117f7e14372e14b7ccc91e89aabc78a275"
+        },
+        {
+          "path": "tools/vendor/pypibt/__init__.py",
+          "size": 272,
+          "sha256": "d695fa28a5aad8a7a82231a6180c8b1cd32541f46bada65a4d3185375d2882a3"
+        },
+        {
+          "path": "tools/vendor/pypibt/dist_table.py",
+          "size": 2201,
+          "sha256": "512624fced2b778502ad90e7807fe5d66a2f92bd4bd151e88c8550c2332a847f"
+        },
+        {
+          "path": "tools/vendor/pypibt/mapf_utils.py",
+          "size": 7737,
+          "sha256": "79ff17f83926ed6e5cf16d2974f64d64b58e4e2e93ac7f2c0359ed582295b68a"
+        },
+        {
+          "path": "tools/vendor/pypibt/pibt.py",
+          "size": 7845,
+          "sha256": "b0ee3993147a12ec714217734dc0f27543b75521e60ed92d4d0b2b492e9de774"
+        },
+        {
           "path": "tools/vision-fast-column.mjs",
           "size": 4037,
           "sha256": "d6cb8b7c41ab4d40635954258ff11cc7065166dc06ae471ad78056d7edf586a1"
@@ -4533,6 +4703,11 @@
           "path": "tools/wall-sweep-mixed.mjs",
           "size": 4274,
           "sha256": "80e36d4ac7dfb5b195c97217bc3a7f3c4fb49d05570c1eed56c758b9e9c2b32c"
+        },
+        {
+          "path": "tools/yuka-columns-experiment.mjs",
+          "size": 3094,
+          "sha256": "66936c6557f2fe2bb32d7a4b12ad5b5b76b43774de9c935f693fc1877144f310"
         }
       ],
       "blocked": [],
