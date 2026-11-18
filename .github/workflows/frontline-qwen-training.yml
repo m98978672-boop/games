@@ -1,0 +1,52 @@
+name: Frontline Qwen LoRA research
+on:
+  workflow_dispatch:
+  push:
+    branches: [arena/1f0ec4dc-games]
+    paths: [.github/workflows/frontline-qwen-training.yml]
+permissions:
+  contents: write
+jobs:
+  train:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Collect simulation snapshots and validate dataset
+        run: |
+          node frontline-command/tests/commander-training-data.mjs
+          node frontline-command/tools/training/collect-commander.mjs "$RUNNER_TEMP/commander-data"
+      - name: Install CPU training dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Run experimental LoRA fine-tuning and held-out loss check
+        run: |
+          set +e
+          python frontline-command/tools/training/train-qwen.py --data "$RUNNER_TEMP/commander-data" --output "$RUNNER_TEMP/commander-output" --steps 8 --eval-count 4 > "$RUNNER_TEMP/training.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/training.log"
+          if [ "$status" -ne 0 ]; then
+            python -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"training.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit "$status"
+      - name: Save experimental adapter and reproducibility report
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          cp -r "$RUNNER_TEMP/commander-data" "$RUNNER_TEMP/commander-output/dataset"
+          tar -C "$RUNNER_TEMP/commander-output" -czf "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz" adapter dataset report.json
+          tag="frontline-qwen35-lora-research-$GITHUB_RUN_ID"
+          gh release create "$tag" --target "$GITHUB_SHA" --title 'Frontline Qwen3.5 experimental LoRA' --notes 'Exploratory CPU LoRA run imitating a simple hand-written teacher on simulation snapshots, not proof of strategic strength. This PEFT adapter is NOT a WebLLM model and is not installed in the published game. The archive contains the training/evaluation dataset and loss report. Base model Qwen/Qwen3.5-0.8B, Apache-2.0, revision 2fc06364715b967f1860aea9cf38778875588b17.' "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz"
