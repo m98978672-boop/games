@@ -35,9 +35,11 @@ jobs:
           # расхождение, если коммит его не содержал.
           node tools/torrent/build-catalog.mjs
           if ! git diff --quiet -- site/torrent-catalog.json; then
-            echo "::error::Каталог раздач отстал от игр. Запустите: node tools/torrent/build-catalog.mjs и закоммитьте site/torrent-catalog.json"
+            # Каталог отстал от игр. Это не повод ронять проверку: сборка уже
+            # пересобрала его здесь, тесты ниже пойдут по свежему каталогу, а
+            # workflow «Sync torrent catalog» закоммитит результат в main.
+            echo "::warning file=site/torrent-catalog.json::Каталог раздач отставал от игр и пересобран в этой проверке. В main его закоммитит workflow «Sync torrent catalog»."
             git diff --stat -- site/torrent-catalog.json
-            exit 1
           fi
           node tools/torrent/test.mjs
           node tools/p2p-server/test.mjs

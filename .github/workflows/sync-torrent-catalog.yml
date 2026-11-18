@@ -1,0 +1,50 @@
+name: Sync torrent catalog
+
+# Каталог раздач (site/torrent-catalog.json) — единственное место, где записаны
+# хеши всех кусков. Если он отстаёт от игр, у игрока не сходится скачивание.
+# Любой PR может поправить игру и забыть про каталог, поэтому main чинится сам:
+# пересобираем каталог и коммитим, только если он реально изменился.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'site/torrent-catalog.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-torrent-catalog
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Rebuild the share catalog
+        run: node tools/torrent/build-catalog.mjs
+
+      - name: Commit only if the catalog actually changed
+        run: |
+          if git diff --quiet -- site/torrent-catalog.json; then
+            echo "Каталог раздач уже актуален — коммит не нужен."
+            exit 0
+          fi
+          git config user.name "arena-agent"
+          git config user.email "297053741+arena-agent@users.noreply.github.com"
+          STATS=$(node -e "const c=require('./site/torrent-catalog.json');console.log(c.stats.games+' игр · '+c.stats.files+' файлов · '+(c.stats.totalBytes/1048576).toFixed(1)+' МБ · '+c.stats.chunks+' кусков')")
+          git add site/torrent-catalog.json
+          git commit -m "Каталог раздач: автопересборка после изменений игр (${STATS})"
+          git push origin main
