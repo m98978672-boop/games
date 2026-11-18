@@ -48,7 +48,7 @@ export class Menus {
         </div>
         <button type="button" class="menu-card" data-act="model-storage">
           <b>Хранилище модели ИИ</b>
-          <small>Передать файлы через Dropbox или сервер предпросмотра.</small>
+          <small>Передать файлы через Dropbox или подключить ZIP к этому браузеру.</small>
         </button>
         <div class="menu-card" data-act="skills">
           <b>Дерево навыков</b>
@@ -99,6 +99,12 @@ export class Menus {
       <input id="dropbox-request-url" type="url" placeholder="https://www.dropbox.com/request/…" autocomplete="off">
       <div class="btn-row"><a id="dropbox-request-open" class="btn primary" target="_blank" rel="noopener noreferrer" hidden>Открыть загрузку в Dropbox</a></div>
       <div id="dropbox-request-status" role="status" aria-live="polite">Вставьте ссылку созданного запроса.</div>
+      <h2>Подключить ZIP к игре</h2>
+      <p>Выберите скачанный оригинальный ZIP Qwen3.5-0.8B-q4f16_1-MLC. Игра проверит архив и сохранит файлы модели в кэше этого браузера. Нужны свободное место и WebGPU с поддержкой shader-f16; библиотека модели также загружается из сети. Кэш может быть удалён браузером.</p>
+      <input id="model-import-file" type="file" accept=".zip">
+      <div class="btn-row"><button type="button" class="btn primary" id="model-import">Подключить архив</button></div>
+      <progress id="model-import-progress" max="100" value="0" aria-label="Ход подключения модели"></progress>
+      <div id="model-import-status" role="status" aria-live="polite">Архив не подключён в этом сеансе.</div>
       <h2>Временный сервер предпросмотра</h2>
       <p>Можно выбрать несколько файлов; они загружаются по очереди небольшими блоками. Один файл — до 600 МиБ, всего — до 1 ГиБ. Не закрывайте страницу во время загрузки.</p>
       <p class="model-storage-note">Временное хранилище предпросмотра может не сохраниться между сеансами и недоступно на статическом сайте.</p>

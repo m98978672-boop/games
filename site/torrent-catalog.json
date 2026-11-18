@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1170,
-    "totalBytes": 35789677,
+    "files": 1173,
+    "totalBytes": 35844067,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -19,11 +19,11 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "a4ac1df8b3cfb81d884e638c769f1627bc01fe3fd5917e97ea8386568ecb1eae",
-      "totalSize": 1769181,
+      "infoHash": "c08528c9bf18c1364f19308441d5c2bc25c6e409b4601c5c1fce0263e74ef547",
+      "totalSize": 1813322,
       "chunkSize": 262144,
       "chunkCount": 7,
-      "fileCount": 80,
+      "fileCount": 81,
       "files": [
         {
           "path": ".gitignore",
@@ -47,8 +47,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 293220,
-          "sha256": "45cb051e9bf917511a9d37337953be5b06061006aeb1345433d00ed1b891a399"
+          "size": 304174,
+          "sha256": "ef55b3db7398314ab810945dd6db7058402f1748e282067318d29375d05942b0"
         },
         {
           "path": "cover.svg",
@@ -57,8 +57,8 @@
         },
         {
           "path": "index.html",
-          "size": 22527,
-          "sha256": "0ed91e3ee722d054a837957f3fc98ad179f5cb3fca532201fa2295364f241599"
+          "size": 22685,
+          "sha256": "10bd9cb8b5e86ebdd13d63046845f54745b9baaef51498c2f40b3135d64c39f8"
         },
         {
           "path": "map-worker.min.js",
@@ -67,8 +67,8 @@
         },
         {
           "path": "package.json",
-          "size": 1247,
-          "sha256": "d012d711dd53951f02525de4c74d1bb967b3de77cda62602ae5a74b068adba96"
+          "size": 1273,
+          "sha256": "8e423acee060149ab19087fe79a24d5db6224714d41e7a77cb874d078d93a451"
         },
         {
           "path": "site/app.js",
@@ -114,6 +114,11 @@
           "path": "src/autonomy2d.js",
           "size": 13863,
           "sha256": "1a9c82be59a7cb1c2775c2fa1ee02eea932efc2c565bd897fa09e605685e503c"
+        },
+        {
+          "path": "src/biome2d.js",
+          "size": 9094,
+          "sha256": "d2ae09ccbfcbc31990a63bbc671d4fb04b021c9f92e7e5707b312eff4234432e"
         },
         {
           "path": "src/borders2d.js",
@@ -187,8 +192,8 @@
         },
         {
           "path": "src/main2d.js",
-          "size": 37072,
-          "sha256": "80fb8de55a770795dc861a0025fca87568ca1370381d4c89c5f53b59bf58576a"
+          "size": 38252,
+          "sha256": "d59cc858f060630a35f0edbf83facf78e17d8f7117c4fe045f5848600a5d28b4"
         },
         {
           "path": "src/map-worker.js",
@@ -312,13 +317,13 @@
         },
         {
           "path": "src/worldmap2d.js",
-          "size": 63380,
-          "sha256": "4aaa0230fc58fef69ca2c22d42543f641c0c23563fa67e03646e4c908b60b485"
+          "size": 64841,
+          "sha256": "19693bdae1b25e9817f23320a56c83fe163281f9333dace6449d318e0b234763"
         },
         {
           "path": "src/worldview.js",
-          "size": 65649,
-          "sha256": "c133937cfca55d4ecd2ea64ebaf31d7f43e8c2dbffa7ed4b676424ed8a2e1f4a"
+          "size": 86747,
+          "sha256": "bba4640fd9ea8caf72e6ce4b97c243773d2bdd0d5891d4e80031a71e14506617"
         },
         {
           "path": "terrain-worker.min.js",
@@ -352,8 +357,8 @@
         },
         {
           "path": "tools/look-world.mjs",
-          "size": 1509,
-          "sha256": "3a83cd259b28a58788b9dd55c71e84756a7c47b96d2a80ba268f1fd300dfd310"
+          "size": 1679,
+          "sha256": "86a92e85b66f21d6ade869fa43dc3b8f39263cb84724d45c315b0a8f6dee2609"
         },
         {
           "path": "tools/perf-dormant.mjs",
@@ -2073,11 +2078,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "c7671773f547ef33c272caba20d673c0ff59b6eda5cbaa7ac1701eebe648b286",
-      "totalSize": 9730081,
+      "infoHash": "682d1568fbecf730a22b21dd264f5b29b9a98eeaee6370695ae5b4f640644bd0",
+      "totalSize": 9740330,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 527,
+      "fileCount": 529,
       "files": [
         {
           "path": ".gitattributes",
@@ -3711,13 +3716,18 @@
         },
         {
           "path": "src/ui/menus.js",
-          "size": 20894,
-          "sha256": "46a5ae5f815c4d3919092300b232f43b7927bf26f18578cae12d8abfe360ec00"
+          "size": 21882,
+          "sha256": "47be42020af467bac92840cef8393ec2692002a2fc19cc44e5d7fdc1ff9e7932"
+        },
+        {
+          "path": "src/ui/model_import.js",
+          "size": 3812,
+          "sha256": "046ea4018777d8b3d16496a3671f97f15cfe507bd8eaae176feb9245d68a67c1"
         },
         {
           "path": "src/ui/model_storage.js",
-          "size": 6580,
-          "sha256": "f72cb13d0b41b15d3fb5f0d3f4c24e9232f2296f717a5d366c5990af40965d96"
+          "size": 8007,
+          "sha256": "69e0b53403552594a102ab761b64e50946f731076993bd20009dbb69c5b8d495"
         },
         {
           "path": "src/vendor/EASYSTAR-LICENSE.txt",
@@ -4428,6 +4438,11 @@
           "path": "tools/opposing-columns.mjs",
           "size": 8735,
           "sha256": "1ddfc08647daa6a57f3e9ba038a65f33934009f7f34187959152e09f1d80ee80"
+        },
+        {
+          "path": "tools/package-qwen-model.py",
+          "size": 4022,
+          "sha256": "c9d7e7258ff07998edd70514070aa5069545c713825cac45073157d6a30e1817"
         },
         {
           "path": "tools/remaining-group-failures.mjs",
