@@ -11,7 +11,8 @@ try{
  await page.route('**/*',route=>{const u=new URL(route.request().url());return u.hostname==='127.0.0.1'?route.continue():route.abort();});
  await page.goto(`http://127.0.0.1:${server.address().port}/frontline-command/index.html`,{waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
  assert.equal(await page.locator('.neutral-ai-status').count(),0,'default menu never loads model');
- await page.locator('[data-act="neutral-ai-demo"]').click();
+ assert.equal(await page.locator('[data-act="neutral-ai-demo"], [data-act="neutral-ai-knowledge"]').count(),0,'research modes are not in the player menu');
+ await page.evaluate(()=>window.__frontline.newGame({mode:'commander',aiVsAi:true,neutralAI:true}));
  await page.waitForFunction(()=>document.querySelector('.neutral-ai-status')?.textContent.includes('Обе стороны'),null,{timeout:40000});
  assert.equal(await page.evaluate(()=>window.__frontline.game.aiVsAi),true);
  assert.deepEqual(await page.evaluate(()=>window.__frontline.game.cfg.factions.map(f=>f.persona)),['balanced','balanced']);
@@ -23,7 +24,7 @@ try{
  const mock=page,mockErrors=errors;await mock.evaluate(()=>{window.__frontline.game.paused=true;});
  await mock.addInitScript(()=>{window.Worker=class {constructor(){window.__fakeWorker=this;this.sent=[];}postMessage(m){this.sent.push(m);if(m.type==='pair')setTimeout(()=>this.onmessage({data:{type:'result',id:m.id,texts:['{"action":"hold","squad":0,"point":0}','{"action":"hold","squad":0,"point":0}']}}),0);}terminate(){this.terminated=true;}};});
  await mock.goto(`http://127.0.0.1:${server.address().port}/frontline-command/index.html`,{waitUntil:'load'});await mock.waitForFunction(()=>!!window.__frontline);
- await mock.locator('[data-act="neutral-ai-demo"]').click();
+ await mock.evaluate(()=>window.__frontline.newGame({mode:'commander',aiVsAi:true,neutralAI:true}));
  await mock.evaluate(()=>{const g=window.__frontline.game;g.api.orders=[];for(const s of g.strategic)s.update=()=>{};window.__fakeWorker.onmessage({data:{type:'ready'}});});
  await mock.waitForFunction(()=>window.__frontline.game.api.orders.filter(o=>o.source==='neutralAI').length===2,null,{timeout:10000});
  const issued=await mock.evaluate(()=>window.__frontline.game.api.orders.filter(o=>o.source==='neutralAI').map(o=>({faction:o.faction,type:o.type})));
@@ -33,10 +34,10 @@ try{
  // Reuse the mocked page to avoid running several game simulations at once.
  const knowledge=mock;await knowledge.evaluate(()=>{window.__frontline.game.paused=true;});
  await knowledge.goto(`http://127.0.0.1:${server.address().port}/frontline-command/index.html`,{waitUntil:'load'});await knowledge.waitForFunction(()=>!!window.__frontline);
- await knowledge.locator('[data-act="neutral-ai-knowledge"]').click();
+ await knowledge.evaluate(()=>window.__frontline.newGame({mode:'commander',aiVsAi:true,neutralAI:true,neutralKnowledge:true}));
  assert.deepEqual(await knowledge.evaluate(()=>window.__fakeWorker.sent[0]),{type:'init',knowledge:true});
  await knowledge.evaluate(()=>{const g=window.__frontline.game;g.api.orders=[];for(const s of g.strategic)s.update=()=>{};window.__fakeWorker.onmessage({data:{type:'ready'}});});
  await knowledge.waitForFunction(()=>window.__frontline.game.api.orders.filter(o=>o.source==='neutralAI'&&o.status==='accepted').length===2,null,{timeout:15000});
  assert.deepEqual((await knowledge.evaluate(()=>window.__frontline.game.api.orders.filter(o=>o.source==='neutralAI').map(o=>o.faction))).sort(),[0,1]);await knowledge.close();
- console.log('Chromium neutral commander: both opt-in modes, worker fallback and teardown; simulated model sent paired orders through radio. Qwen inference not tested.');
+ console.log('Chromium: research modes absent from player menu; internal worker fallback, teardown and simulated paired orders checked. Qwen inference not tested.');
 }finally{if(browser)await browser.close();if(server.listening)await new Promise(r=>server.close(r));}
