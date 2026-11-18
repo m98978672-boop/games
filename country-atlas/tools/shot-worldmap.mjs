@@ -113,6 +113,7 @@ function introPanel() {
   // встаём на достопримечательность: в кадре видно и её, и подпись пролёта
   const sightAt = Math.max(0, intro.points.findIndex((p) => p.sight));
   intro.t = INTRO.hopSec * (sightAt + 0.5);
+  intro.fade = 1;               // §90: снимок — уже проявившийся кадр, не «темнота»
   intro.draw();
   const cam = tourCam(intro.points, intro.t);
   const g = cv.getContext('2d');
@@ -129,7 +130,7 @@ function introPanel() {
   g.fillRect(0, y, W, 54);
   g.fillStyle = 'rgba(240,244,246,0.95)';
   g.font = '13px sans-serif';
-  g.fillText(`масштаб ${cam.scale.toFixed(2)} px/км · ${intro.points.length} точек · ${INTRO.hopSec} с на точку · размытие ${INTRO.blurPx} px`, 18, y + 32);
+  g.fillText(`масштаб ${cam.scale.toFixed(2)} px/км · ${intro.points.length} точек · ${INTRO.hopSec} с на точку · круг ${(INTRO.hopSec * intro.points.length).toFixed(0)} с`, 18, y + 32);
   return cv;
 }
 

@@ -4,6 +4,7 @@ import { isPhone, startCenter, FIT } from './fit2d.js';
 import { WorldView, overviewScale } from './worldview.js';
 import { buildWorld, advanceWars, worldStats, hottestWar, diplomacyStats, WM } from './worldmap2d.js';
 import { techStats } from './tech2d.js';
+import { START, overlayPhase, startSceneView } from './startscene2d.js';
 import { Intro } from './intro.js';
 import { WORLD2D } from './world2d.js';
 import { loadFrom, saveTo, elapsedMinutes, formatReport, OFFLINE } from './offline2d.js';
@@ -43,6 +44,29 @@ const hud = {
 const map = new Map2D(canvas, hud);
 map.center = { x: 0, y: 0 };
 map.scale = 0.16;
+
+/* §90: заставка живёт по своему состоянию, а не по «карта готова — гасим всё».
+   Пролёт должен быть виден и после загрузки, иначе анимации просто нет. */
+const startState = { hasIntro: false, loaded: false, started: false, failed: false, point: '', index: 0, total: 0, hidden: false };
+
+function applyStartScene() {
+  const view = startSceneView(overlayPhase(startState), {
+    point: startState.point, index: startState.index, total: startState.total
+  });
+  if (hud.loading) {
+    hud.loading.classList.toggle('done', !view.overlayVisible);
+    if (!view.overlayVisible && !startState.hidden) {
+      startState.hidden = true;
+      setTimeout(() => { if (hud.loading) hud.loading.style.display = 'none'; }, START.fadeMs);
+    }
+  }
+  const btn = document.getElementById('intro-start');
+  if (btn) btn.disabled = view.buttonDisabled;
+  if (hud.loadingText) hud.loadingText.textContent = view.text;
+  const pointEl = document.getElementById('intro-point');
+  if (pointEl && view.point) pointEl.textContent = view.point;
+  return view;
+}
 
 function boot() {
   map.resize();
@@ -132,7 +156,9 @@ map.init((done, total) => {
     if (hud.loadingText) hud.loadingText.textContent = 'рисую мир ' + WORLD2D.sizeKm + ' × ' + WORLD2D.sizeKm + ' км… ' + done + '/' + total;
   }).then(() => {
     map.draw();
-    if (hud.loading) hud.loading.classList.add('done');
+    // §90: карта готова — но заставку не гасим: пролёт идёт, кнопка ждёт игрока
+    startState.loaded = true;
+    applyStartScene();
     window.__ratgrad = { map };
     // границы §7 и экономика §31.33 считаются следом, чтобы карта появилась сразу
     setTimeout(() => {
@@ -147,12 +173,11 @@ map.init((done, total) => {
         map.draw();
         restoreOffline();
         setupWorld();
-        // карта страны готова — пролёт можно заканчивать
+        // карта страны готова — кнопка «начать игру» оживает, пролёт идёт дальше
         if (intro) {
           intro.ready = true;
-          const btn = document.getElementById('intro-start');
-          if (btn) btn.disabled = false;
-          if (hud.loadingText) hud.loadingText.textContent = 'мир ' + WM.countries + ' стран · можно начинать';
+          startState.loaded = true;
+          applyStartScene();
         }
       } catch (err) {
         if (hud.status) hud.status.textContent = 'границы не собрались: ' + err.message;
@@ -173,22 +198,28 @@ let sharedWorld = null, intro = null;
 function setupIntro() {
   const canvas = document.getElementById('intro-map');
   const startBtn = document.getElementById('intro-start');
-  const overlay = hud.loading;
-  if (!canvas) return;
+  if (!canvas) { startState.failed = true; applyStartScene(); return; }
   // мир для пролёта тот же, что откроется по кнопке «карта мира» — второго не строим
   try {
     sharedWorld = buildWorld(424242);
     intro = new Intro(canvas, sharedWorld, {
       // F-306: подпись точки пролёта видна и в заставке — над чем летим
       onPoint: (pt, i, n) => {
-        const line = document.getElementById('intro-point');
-        if (line && !intro.ready) line.textContent = 'над страной: ' + pt.name + ' · точка ' + i + ' из ' + n;
+        startState.point = pt.name;
+        startState.index = i;
+        startState.total = n;
+        applyStartScene();
       }
     });
     intro.start();
+    startState.hasIntro = true;
   } catch (err) {
     // без пролёта игра открывается как раньше — заставка просто гаснет
-    if (hud.loading) hud.loading.classList.add('done');
+    startState.hasIntro = false;
+    startState.failed = true;
+    if (intro) intro.stop();
+    intro = null;
+    applyStartScene();
     if (hud.status) hud.status.textContent = 'пролёт не собрался: ' + err.message;
     return;
   }
@@ -196,8 +227,8 @@ function setupIntro() {
   const begin = () => {
     if (!intro || !intro.ready) return;
     intro.stop();
-    if (overlay) overlay.classList.add('done');
-    if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 500);
+    startState.started = true;
+    applyStartScene();
     map.draw();
   };
   if (startBtn) {
@@ -209,8 +240,10 @@ function setupIntro() {
   setTimeout(() => {
     if (!intro || intro.ready) return;
     intro.ready = true;
-    if (startBtn) startBtn.disabled = false;
+    startState.loaded = true;
+    applyStartScene();
   }, 15000);
+  applyStartScene();
   return { intro, begin };
 }
 
