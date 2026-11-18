@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1175,
-    "totalBytes": 35858255,
+    "files": 1179,
+    "totalBytes": 35877683,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -2088,11 +2088,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "682d1568fbecf730a22b21dd264f5b29b9a98eeaee6370695ae5b4f640644bd0",
-      "totalSize": 9740330,
+      "infoHash": "19a7e6ecce3243913589948f631281e021a77f64fb51f139d08c08b9f4cb092a",
+      "totalSize": 9759758,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 529,
+      "fileCount": 533,
       "files": [
         {
           "path": ".gitattributes",
@@ -3516,8 +3516,8 @@
         },
         {
           "path": "src/core/build-info.js",
-          "size": 840,
-          "sha256": "ec7d0d303b10be6f45c469064db72522d3327ab291b3313c566e5503ec2c3fbc"
+          "size": 844,
+          "sha256": "8f6108a285a5da63f4e319af7b846d42545f2bb926530512e9b9e38418ecf232"
         },
         {
           "path": "src/core/config.js",
@@ -3726,8 +3726,8 @@
         },
         {
           "path": "src/ui/menus.js",
-          "size": 21882,
-          "sha256": "47be42020af467bac92840cef8393ec2692002a2fc19cc44e5d7fdc1ff9e7932"
+          "size": 23323,
+          "sha256": "623eb273dae088dfdd9c1acd0361094103a0525dd742d48bd0b853402530f343"
         },
         {
           "path": "src/ui/model_import.js",
@@ -4538,6 +4538,26 @@
           "path": "tools/tank-detour-wars.mjs",
           "size": 2149,
           "sha256": "782e9d504db6d51a6babb4ace75b9a3bd0d3b356a3279447c5f0290033640784"
+        },
+        {
+          "path": "tools/training/collect-commander.mjs",
+          "size": 4388,
+          "sha256": "a99cfc49dd806e2367dc64254a0aaaea1a796d28cf8248afa4b6e800ec72ea21"
+        },
+        {
+          "path": "tools/training/eval-qwen.py",
+          "size": 3546,
+          "sha256": "09bebbb02c4dd8d442c9b38af7c0cdad37954d2075b15879d9a4dde24ba03b8b"
+        },
+        {
+          "path": "tools/training/score-generated.mjs",
+          "size": 1071,
+          "sha256": "421e0640e7f1f29e4553113390f02496fc1131b4e278499f763ca5c91fbfa933"
+        },
+        {
+          "path": "tools/training/train-qwen.py",
+          "size": 8978,
+          "sha256": "c0cd2a44179a60a6ff3076b6047a1118dbafeb4bb918ef8a047a825ab1507839"
         },
         {
           "path": "tools/truck-assist-wars.mjs",

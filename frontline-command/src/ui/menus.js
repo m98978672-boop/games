@@ -91,7 +91,13 @@ export class Menus {
   modelStorage() {
     this.show(`
       <h1>Хранилище <span>модели</span></h1>
-      <div class="subtitle">Передайте файлы модели через Dropbox или через временный сервер предпросмотра. Модель не подключается автоматически.</div>
+      <div class="subtitle">Подключите исходную модель к этому браузеру или передайте файлы в Dropbox.</div>
+      <h2>Модель для игры</h2>
+      <p>Эксперимент в игре использует исходную Qwen3.5, не дообученный адаптер. Скачайте оригинальный ZIP (около 426 МиБ), затем выберите его ниже в разделе «Подключить ZIP к игре».</p>
+      <div class="btn-row"><a id="model-original-download" class="btn primary" href="https://github.com/m98978672-boop/games/releases/download/frontline-qwen35-0.8b-0ec1389/Qwen3.5-0.8B-q4f16_1-MLC.zip" target="_blank" rel="noopener noreferrer">Скачать исходную модель</a></div>
+      <h2>Обучение: исследовательский результат</h2>
+      <p id="training-model-note">Пробный обученный LoRA-адаптер пока не подключён к игре и не подходит для импорта ZIP ниже. Его ещё нужно преобразовать и проверить в браузере и боях; улучшение игры не доказано.</p>
+      <p><a href="https://github.com/m98978672-boop/games/releases/tag/frontline-qwen35-lora-research-44366582436" target="_blank" rel="noopener noreferrer">Адаптер и данные исследования</a> · <a href="https://github.com/m98978672-boop/games/releases/tag/frontline-qwen35-eval-44368033484" target="_blank" rel="noopener noreferrer">Результаты пробной проверки</a></p>
       <h2>Постоянное хранилище Dropbox</h2>
       <p>Создайте <a href="https://www.dropbox.com/requests" target="_blank" rel="noopener noreferrer">запрос файлов в Dropbox</a> для папки Frontline-Model-Inbox, вставьте ссылку запроса ниже и откройте её. Загрузка проходит на сайте Dropbox, а не в памяти браузера игры.</p>
       <p class="model-storage-note">Любой, кто получит ссылку запроса, сможет отправлять файлы и занимать место в вашем Dropbox. Не публикуйте её и не отправляйте пароли или личные данные.</p>
