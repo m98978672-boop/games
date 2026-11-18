@@ -89,16 +89,3 @@ export function renderChunkMapElement(chunkMap = []) {
   }
   return wrap;
 }
-
-export function renderWaveformBarsElement(peaks = []) {
-  const wrap = document.createElement('div');
-  wrap.className = 'voice-waveform';
-  const list = peaks.length ? peaks : Array.from({ length: 28 }, (_, i) => 24 + ((i * 23) % 62));
-  for (const p of list.slice(0, 32)) {
-    const bar = document.createElement('span');
-    bar.className = 'voice-bar';
-    bar.style.height = `${Math.max(18, Math.min(100, Number(p) || 25))}%`;
-    wrap.appendChild(bar);
-  }
-  return wrap;
-}

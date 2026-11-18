@@ -47,6 +47,8 @@ function makeEl(tag, id = '') {
     setAttribute(k, v) { attrs.set(k, String(v)); },
     getAttribute(k) { return attrs.get(k) || null; },
     addEventListener(ev, fn) { if (!listeners.has(ev)) listeners.set(ev, []); listeners.get(ev).push(fn); },
+    __emit(ev, arg) { for (const fn of (listeners.get(ev) || [])) fn(arg); },
+    __listeners(ev) { return listeners.get(ev) || []; },
     classList: {
       add(...cs) { cs.forEach((c) => classes.add(c)); },
       remove(...cs) { cs.forEach((c) => classes.delete(c)); },
@@ -63,7 +65,18 @@ function makeEl(tag, id = '') {
 }
 
 const cssSrc = fs.readFileSync(path.join(rootDir, 'styles.css'), 'utf8');
-assert.match(cssSrc, /\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, 'styles.css обязан содержать [hidden] { display: none !important; }, чтобы скрытые панели не перебивались display: flex');
+/* Раньше здесь проверялась подстрока «[hidden] { display: none !important; }» — и её
+   случайно удовлетворяли точечные правила вида .inspector[hidden], хотя общий закон
+   отсутствовал: полоса ответа, вложение и «закреплено» висели в чате, а их ✕
+   выглядели мёртвыми. Теперь требуем именно САМОСТОЯТЕЛЬНОЕ правило для [hidden]. */
+const cssWithoutComments = cssSrc.replace(/\/\*[\s\S]*?\*\//g, '');
+const globalHiddenRule = cssWithoutComments
+  .split('}')
+  .map((chunk) => chunk.split('{'))
+  .some(([selector, body]) => selector && body
+    && selector.split(',').some((part) => part.trim() === '[hidden]')
+    && /display\s*:\s*none/i.test(body));
+assert.ok(globalHiddenRule, 'styles.css обязан содержать самостоятельное правило [hidden] { display: none !important; } — иначе панели с display: flex не скрываются и их ✕ кажутся мёртвыми');
 
 const byId = new Map();
 for (const id of idMatches) byId.set(id, makeEl('div', id));
@@ -101,6 +114,8 @@ globalThis.document = {
 
 let pushedMessages = 0;
 let createdRooms = [];
+let storageUploads = 0;
+let postedRows = [];
 globalThis.fetch = async (url, opts = {}) => {
   const s = String(url);
   if (s.includes('/api/health')) return { ok: false, status: 404, json: async () => ({}) };
@@ -123,9 +138,14 @@ globalThis.fetch = async (url, opts = {}) => {
       json: async () => [{ room_id: 'games-lobby', network: 'ratmes', title: '🎮 Общий чат Games', room_type: 'public', participants: [] }],
     };
   }
+  if (s.includes('/storage/v1/object/ratmes-media/')) {
+    storageUploads += 1;
+    return { ok: true, status: 200, json: async () => ({ Key: s }) };
+  }
   if (s.includes('/ratmes_messages')) {
     if (opts.method === 'POST') {
       pushedMessages += 1;
+      postedRows.push(JSON.parse(opts.body));
       return { ok: true, status: 201, json: async () => ({}) };
     }
     return {
@@ -140,6 +160,12 @@ globalThis.fetch = async (url, opts = {}) => {
 const unhandled = [];
 process.on('unhandledRejection', (e) => unhandled.push(String(e?.stack || e)));
 process.on('uncaughtException', (e) => unhandled.push(String(e?.stack || e)));
+// Страховка: не даём упавшей проверке подвесить процесс навсегда.
+const watchdog = setTimeout(() => {
+  console.error('✗ Тест не завершился за 20 сек. Незавершённые проверки:');
+  console.error(unhandled.join('\n') || '(нет)');
+  process.exit(1);
+}, 20000);
 
 console.log('=== RatMes Web Client Boot, Bubbles & Private Chats Tests ===');
 await import('../src/web/app.js');
@@ -151,7 +177,7 @@ assert.ok(byId.get('cloudProgressBanner').classList.contains('is-ready'), 'Ба�
 assert.ok(byId.get('chatList').children.length >= 3, 'Список реальных чатов должен отрендериться');
 assert.ok(byId.get('peopleDirectoryList').children.length >= 2, 'Каталог людей должен отрендериться');
 assert.ok(byId.get('sidebarLinksList').children.length >= 12, 'Ссылки подключений должны отрендериться');
-for (const hiddenId of ['pinnedBanner', 'replyBar', 'voiceRecordBar', 'attachmentBar', 'chatCanWriteBar', 'btnQuickBindVpn', 'btnHeaderConnect', 'chatMoreBar']) {
+for (const hiddenId of ['pinnedBanner', 'replyBar', 'attachmentBar', 'chatCanWriteBar', 'btnQuickBindVpn', 'btnHeaderConnect', 'chatMoreBar']) {
   assert.equal(byId.get(hiddenId).hidden, true, `Элемент #${hiddenId} должен оставаться скрытым в обычном чате`);
 }
 console.log('  ✓ app.js загрузился без ошибок импорта, полоса облака дошла до 100%, скрытые панели не вылезают');
@@ -170,6 +196,50 @@ assert.equal(inRows.length, 1, 'Сообщение собеседника дол
 assert.equal(outRows.length, 1, 'Моё сообщение должно иметь класс msg-row is-out (справа)');
 assert.ok(inRows[0].children.some((c) => c.classList?.contains('msg-peer-avatar')), 'У сообщения собеседника слева должен быть аватар');
 console.log('  ✓ Чёткое разделение сообщений: собеседник слева (.is-in + аватар) и моё справа (.is-out)');
+
+// Реальная передача файла: FileReader -> Supabase Storage -> строка сообщения с attachment
+globalThis.FileReader = class {
+  readAsDataURL(file) {
+    this.result = `data:${file.type};base64,${Buffer.from(String(file.__content || 'file-bytes')).toString('base64')}`;
+    setTimeout(() => this.onload && this.onload(), 0);
+  }
+};
+const fileInputEl = byId.get('fileInput');
+fileInputEl.files = [{ name: 'Смета на ремонт.pdf', type: 'application/pdf', size: 26, __content: 'смета-ремонт-2026' }];
+fileInputEl.__emit('change', { target: fileInputEl });
+await new Promise((r) => setTimeout(r, 60));
+assert.equal(byId.get('attachmentBar').hidden, false, 'Панель вложения должна показаться после выбора файла');
+assert.equal(byId.get('attachmentName').textContent, 'Смета на ремонт.pdf');
+
+byId.get('messageInput').value = '';
+byId.get('composerForm').requestSubmit();
+await new Promise((r) => setTimeout(r, 400));
+
+assert.equal(unhandled.length, 0, `Ошибки при отправке файла: ${unhandled.join('; ')}`);
+assert.equal(storageUploads, 1, 'Файл должен загрузиться в Supabase Storage (bucket ratmes-media)');
+const fileRow = postedRows.find((r) => r.attachment && r.attachment.storagePath);
+assert.ok(fileRow, 'Строка сообщения должна содержать attachment со storagePath');
+assert.equal(fileRow.kind, 'file');
+assert.equal(fileRow.attachment.filename, 'Смета на ремонт.pdf');
+assert.ok(fileRow.attachment.storagePath.startsWith('games-lobby/'), 'Файл должен лежать в папке комнаты');
+assert.ok(fileRow.attachment.sha256 && fileRow.attachment.sha256.length === 64, 'SHA-256 файла сохраняется в метаданных');
+
+function collectText(node, out = []) {
+  if (!node || typeof node !== 'object') return out;
+  if (node.textContent) out.push(String(node.textContent));
+  if (node.href) out.push(String(node.href));
+  if (typeof node.getAttribute === 'function' && node.getAttribute('href')) out.push(String(node.getAttribute('href')));
+  for (const ch of node.children || []) collectText(ch, out);
+  return out;
+}
+const ownFileBubble = byId.get('messagesFeed').children
+  .filter((n) => n.classList?.contains('is-out'))
+  .pop();
+const bubbleTexts = collectText(ownFileBubble).join(' | ');
+assert.ok(bubbleTexts.includes('Смета на ремонт.pdf'), 'В облаке сообщение с файлом должно отрисоваться с именем файла');
+assert.ok(bubbleTexts.includes('storage/v1/object/public/ratmes-media/'), 'У файла должна быть рабочая ссылка на скачивание');
+assert.equal((bubbleTexts.match(/Смета на ремонт\.pdf/g) || []).length, 1, 'Имя файла не должно дублироваться текстом и плашкой');
+console.log('  ✓ Файл реально уходит в облако: Storage + attachment в сообщении + ссылка на скачивание');
 
 // Открытие окна «Новый личный чат», создание 1-на-1 DM по ID и «⭐ Избранное»
 byId.get('btnNewDmQuick').click();

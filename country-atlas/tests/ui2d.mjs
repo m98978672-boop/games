@@ -276,6 +276,34 @@ const visible = html
   ok(main.includes('intro-point') && main.includes('onPoint'), 'подпись точки пролёта идёт из кадра');
   ok(!/§/.test(html.slice(html.indexOf('id="world-tech"'), html.indexOf('id="world-legend"'))), 'в блоке технологий нет номеров параграфов');
   ok(/id="world-tech"[\s\S]*id="world-legend"/.test(html), 'технологии стоят между контактами и легендой — ничего не наезжает');
+  // К30: числа подсказки и явный статус науки — на экране мира
+  ok(/id="world-hint"/.test(html), 'у карты мира есть строка подсказки с числами');
+  // К31: подсказка ушла вниз панели — блоки, которые стояли на своих местах, не сдвинулись
+  ok(html.indexOf('id="world-stats"') < html.indexOf('id="world-hint"'), 'подсказка стоит ниже состояния мира');
+  ok(html.indexOf('id="world-tech"') < html.indexOf('id="world-hint"'), 'подсказка не сдвигает технологии');
+  ok(/id="world-self"/.test(html), 'есть блок «страна живёт сама»');
+  ok(/<div class="cap">страна живёт сама<\/div>[\s\S]*id="world-self"/.test(html), 'блок страны подписан по-человечески');
+  ok(main.includes('world-self') && main.includes('autonomyStats'), 'блок страны заполняется из сводки страны');
+  ok(/городов ' \+ self\.cities/.test(main), 'в блоке страны — число городов');
+  ok(/армий ' \+ self\.armies/.test(main), 'в блоке страны — число армий');
+  ok(/казна ' \+ nf\(self\.treasury\)/.test(main), 'в блоке страны — казна');
+  ok(/последнее: ' \+ self\.last/.test(main), 'в блоке страны — последнее решение');
+  ok(/нужна наука · космос ' \+ spaceTier/.test(main), 'кнопка спутника объясняет, чего не хватает');
+  ok(/import \{ autonomyStats \}/.test(main) || /autonomyStats/.test(main), 'автономия подключена к интерфейсу');
+  ok(!/§/.test(html.slice(html.indexOf('id="world-self"'), html.indexOf('id="world-legend"'))), 'в блоке страны нет номеров параграфов');
+  ok(/<div class="cap">подсказка<\/div>[\s\S]*id="world-hint"/.test(html), 'подсказка подписана по-человечески');
+  ok(main.includes('world-hint'), 'подсказка заполняется из main2d');
+  ok(/стран ' \+ st\.countries \+[\s\S]{0,200}войн ' \+ st\.wars/.test(main), 'в подсказке — число стран, войн и боёв');
+  ok(/технологий ' \+ nf\(tech\.count\)/.test(main), 'в подсказке — число технологий из каталога');
+  ok(/id="world-techbar"/.test(html), 'у технологий есть полоска изучения');
+  ok(/\.techbar\{[^}]*height:5px/.test(html), 'полоска изучения тонкая и не мешает тексту');
+  ok(main.includes('world-techbar'), 'полоска изучения двигается из main2d');
+  ok(/изучается: ' \+ tech\.next/.test(main), 'панель говорит «изучается» и называет технологию');
+  ok(/осталось ' \+ nf\(tech\.left\)/.test(main), 'панель показывает, сколько очков осталось');
+  ok(/eta\(tech\.etaMin\)/.test(main), 'панель показывает, сколько ждать до открытия');
+  ok(/в очереди: ' \+ tech\.queue/.test(main), 'панель перечисляет очередь разработок');
+  ok(/наука стоит: всё открыто/.test(main), 'когда всё открыто — панель говорит прямо');
+  ok(!/§/.test(html.slice(html.indexOf('id="world-hint"'), html.indexOf('id="world-legend"'))), 'в подсказке нет номеров параграфов');
 }
 
 console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§88 (F-222…F-224, F-279…F-286, F-301…F-334, проверок ' + checks + ')');

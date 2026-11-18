@@ -11,13 +11,21 @@ import {
   TECH, buildTech, advanceTech, techRate, nextTech, techEffects, techStats,
   armyPower, missileSpread, missileReach
 } from './tech2d.js';
+import { AUTONOMY, buildAutonomy, advanceAutonomy, incomePerDay } from './autonomy2d.js';
 
 export const WM = {
-  sizeKm: 24000,             // сторона карты мира
+  // F-372: сторона карты мира. В квадрате 24 000 суша срезалась его же краем —
+  // города у мыса висели на воде. 40 000 даёт место вокруг континента: океан,
+  // острова и полярные льды, то есть мир, а не один блин на чёрном фоне.
+  sizeKm: 40000,
   ownKm: 7000,               // наша страна — квадрат в центре
   countries: 18,             // всего стран, включая нашу
   citiesPer: [7, 13],        // городов в стране, включая два пограничных
-  marksPer: 900,             // отметок рельефа на карту (лес, болото, горы…)
+  marksPer: 1800,            // отметок рельефа на карту (лес, болото, горы…) — мир стал вдвое больше
+  islands: 9,                // островов в океане вокруг континента
+  islandKm: [380, 900],       // радиус острова в км
+  islandRing: [15800, 16400], // на каком удалении от центра лежат острова: за берегом, но до льдов
+  capKm: 18200,              // с этой широты начинаются полярные льды
   roadKm: [420, 1300],       // длина дороги между городами
   satellite: { minimal: 0 },
   war: {
@@ -101,11 +109,34 @@ export function sitesFor(count, seed = 424242) {
 }
 
 /* Побережье: континент — правильный многоугольник, за его край страны не выходят. */
-export function coastPolygon(radiusKm = 11600, sides = 72) {
-  const pts = [];
+/* F-355: берег континента — не циркуль. Несколько волн разной длины дают заливы,
+   мысы и полуострова; многоугольник остаётся простым, поэтому ячейки стран режутся
+   по нему как раньше. Радиус средней линии тот же 11 600 км. */
+export function coastPolygon(radiusKm = 11600, sides = 180) {
+  const wave = (a) => 0.10 * Math.sin(a * 2 - 1.2)     // длинная волна: континент вытянут, а не круг
+    + 0.10 * Math.sin(a * 3 + 0.7)
+    + 0.06 * Math.sin(a * 5 - 1.9)
+    + 0.04 * Math.sin(a * 7 + 0.3)
+    + 0.03 * Math.sin(a * 11 + 2.6)
+    + 0.02 * Math.sin(a * 17 - 0.4);
+  // F-361: считаем волну на всех углах и растягиваем её в коридор [0.965R … 1.33R].
+  // Иначе в «заливах» берег подходил к центру ближе кольца стран, крайняя страна
+  // оказывалась в море, и её границы рисовались по воде (а карта выглядела дырявой).
+  let lo = Infinity, hi = -Infinity;
+  const raw = [];
   for (let i = 0; i < sides; i++) {
     const a = (i / sides) * Math.PI * 2;
-    pts.push([Math.cos(a) * radiusKm, Math.sin(a) * radiusKm]);
+    const k = 1 + wave(a);
+    raw.push([a, k]);
+    if (k < lo) lo = k;
+    if (k > hi) hi = k;
+  }
+  const span = hi - lo || 1;
+  const rMin = radiusKm * 0.965, rMax = radiusKm * 1.33;
+  const pts = [];
+  for (const [a, k] of raw) {
+    const r = rMin + ((k - lo) / span) * (rMax - rMin);
+    pts.push([Math.cos(a) * r, Math.sin(a) * r]);
   }
   return pts;
 }
@@ -321,6 +352,61 @@ export function buildMarks(seed, sizeKm = WM.sizeKm, count = WM.marksPer) {
   return marks;
 }
 
+/* F-373: острова. Раньше весь мир был одним континентом на пустом океане, и карта
+   читалась как «блин». Острова лежат кольцом за берегом, стран на них нет — только
+   земля, отмель и берег. Генерируются от сида: тот же сид — те же острова. */
+export function buildIslands(seed = 424242, count = WM.islands) {
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2 + hash01(seed + i * 311, 251) * 0.5;
+    const r = WM.islandRing[0] + hash01(seed + i * 613, 257) * (WM.islandRing[1] - WM.islandRing[0]);
+    const size = WM.islandKm[0] + hash01(seed + i * 877, 263) * (WM.islandKm[1] - WM.islandKm[0]);
+    const cx = Math.cos(a) * r, cy = Math.sin(a) * r;
+    const sides = 42 + (i % 3) * 6;
+    const poly = [];
+    for (let k = 0; k < sides; k++) {
+      const b = (k / sides) * Math.PI * 2;
+      const w = 1
+        + 0.20 * Math.sin(b * 2 + i * 1.7)
+        + 0.12 * Math.sin(b * 3 - i * 0.9)
+        + 0.07 * Math.sin(b * 5 + i * 2.3);
+      poly.push([cx + Math.cos(b) * size * w, cy + Math.sin(b) * size * w]);
+    }
+    out.push({ id: 'i' + i, name: 'остров', x: cx, y: cy, rKm: size, poly });
+  }
+  return out;
+}
+
+/* F-374: полярные льды. Две волнистые полосы у краёв карты — по ним видно, что мир
+   круглый, а не обрезан рамкой. */
+export function buildIceCaps(sizeKm = WM.sizeKm, edgeKm = WM.capKm) {
+  const half = sizeKm / 2;
+  const make = (sign) => {
+    const poly = [];
+    const n = 48;
+    for (let i = 0; i <= n; i++) {
+      const x = -half + (i / n) * sizeKm;
+      const wobble = Math.sin((i / n) * Math.PI * 4) * 420 + Math.sin((i / n) * Math.PI * 9 + 1.1) * 180;
+      poly.push([x, sign * (edgeKm + wobble)]);
+    }
+    poly.push([half, sign * half], [-half, sign * half]);
+    return poly;
+  };
+  return [{ id: 'north', poly: make(-1) }, { id: 'south', poly: make(1) }];
+}
+
+/* F-362: рельеф бывает только на суше. Отметки рождаются на квадрате карты,
+   поэтому часть попадала в океан и читалась там как мусор. Фильтр детерминирован
+   (тот же seed — те же отметки) и заодно разрежает массив: рисовать дешевле. */
+export function landMarks(marks, clip) {
+  if (!marks || !clip || !clip.length) return marks;
+  const keep = [];
+  for (let i = 0; i < marks.length; i += 3) {
+    if (pointInPolygon(marks[i], marks[i + 1], clip)) keep.push(marks[i], marks[i + 1], marks[i + 2]);
+  }
+  return Float32Array.from(keep);
+}
+
 /* F-294: армии. У каждой страны одна-две группы у границы; видны, только если
    у наблюдателя есть спутник (R-86.4), иначе — только свои. */
 export function buildArmies(country, seed) {
@@ -348,6 +434,15 @@ export function canSeeArmies(world, observerId = 'own') {
   if (!obs || !obs.satellite) return false;
   // F-327: спутник не рисуется сам по себе — его нужно доработать до третьего поколения
   return obs.tech && obs.tech.eff ? obs.tech.eff.satellite === true : true;
+}
+
+/* F-392: чьи армии видит наблюдатель. Свои — всегда: страна знает, где стоят её
+   полки. Чужие — только если космос дошёл до спутника. Раньше без спутника не было
+   видно вообще ничего, и на карте мира нельзя было увидеть собственную армию. */
+export function visibleArmiesFor(world, observerId = 'own') {
+  if (!world || !world.armies) return [];
+  const all = canSeeArmies(world, observerId);
+  return all ? world.armies.slice() : world.armies.filter((a) => a.country === observerId);
 }
 
 /* F-312: ключ пары — порядок стран не важен, отношения всегда взаимные. */
@@ -603,12 +698,15 @@ export function buildWorld(seed = 424242) {
   const w = {
     seed,
     sizeKm: WM.sizeKm,
+    coast: clip,             // F-355: берег континента — по нему рисуется суша и море
     minutes: 0,
     countries,
     own,
     cities: allCities,
     roads: allRoads,
-    marks: buildMarks(seed),
+    marks: landMarks(buildMarks(seed), clip),   // F-362: отметки рельефа только на суше
+    islands: buildIslands(seed),                 // F-373: острова в океане
+    caps: buildIceCaps(),                        // F-374: полярные льды
     armies,
     wars: [],
     pairs: adjacency(countries),
@@ -624,6 +722,7 @@ export function buildWorld(seed = 424242) {
     techAt: 0               // до какой минуты наука уже досчитана
   };
   w.relations = buildRelations(countries, seed, w.pairs);
+  buildAutonomy(w);                        // F-384: казна и правительство страны
   // быстрые индексы: страны по коду и соседи по стране. Не попадают в перебор и в JSON —
   // это ускорители шага войны (F-330), а не новые данные мира.
   Object.defineProperty(w, 'byId', {
@@ -869,6 +968,9 @@ export function advanceWars(world, minutes) {
   advanceDiplomacy(world, minutes);
   // §89: наука стран идёт тем же шагом — баллы копятся по игровым минутам
   advanceTech(world, minutes);
+  // F-389: страна живёт сама — казна, города, армии и ремонт идут вместе с часами игры,
+  // в том числе когда окно не в фокусе (часы тикают без отрисовки)
+  advanceAutonomy(world, minutes);
   return fresh;
 }
 

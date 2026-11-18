@@ -6,7 +6,7 @@
   "description": "RatMes — ультрабыстрый мессенджер с вечным файловым резервом RatMes-Vault/, 3-фазным движком времени и конвейером передачи через инструменты поверх RatCore-App",
   "scripts": {
     "start": "node src/agent/server.mjs",
-    "test": "node tests/engine.mjs && node tests/server.mjs && node tests/p2p.mjs && node tests/stress.mjs && node tests/web-boot.mjs",
+    "test": "node tests/engine.mjs && node tests/server.mjs && node tests/p2p.mjs && node tests/stress.mjs && node tests/web-boot.mjs && node tests/close-buttons.mjs",
     "test:web": "node tests/web-boot.mjs",
     "test:engine": "node tests/engine.mjs",
     "test:server": "node tests/server.mjs",

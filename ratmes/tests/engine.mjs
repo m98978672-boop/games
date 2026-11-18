@@ -72,6 +72,66 @@ await test('Все 15 веток RatMes.tools.* и 5 корневых метод
   assert.equal(manifest.data.targets.googleDriveFolderId, '1tQi82o2fHBMpBDq-0Zg5hSM4DkLOANxB');
 });
 
+await test('Файл из другого устройства: вложение из Supabase восстанавливается в Vault с рабочей ссылкой', async () => {
+  const engine = createRatMesEngine({ seed: 1003, country: 'RU', seedDemoChats: false });
+  const ing = await engine.tools.cloud.ingestRemote({
+    messages: [
+      {
+        msg_id: 'sb-file-1',
+        room_id: 'games-lobby',
+        network: 'ratmes',
+        sender_id: 'u-peer-file',
+        sender_name: 'Игрок с телефона',
+        body_text: '',
+        kind: 'file',
+        attachment: {
+          filename: 'смета на ремонт.pdf',
+          mimeType: 'application/pdf',
+          sizeBytes: 48213,
+          mediaKind: 'binary',
+          sha256: 'a'.repeat(64),
+          storagePath: 'games-lobby/abcdef0123456789_smeta-na-remont.pdf',
+        },
+      },
+    ],
+  });
+  assert.equal(ing.ok, true);
+  assert.equal(ing.data.ingested, 1);
+
+  const page = await engine.tools.vault.readPage({ chatId: 'games-lobby', limit: 20 });
+  assert.equal(page.ok, true);
+  const withFile = page.data.messages.find((m) => m.msgId === 'sb-file-1');
+  assert.ok(withFile, 'Сообщение с файлом должно попасть в Vault');
+  assert.equal(withFile.attachment.filename, 'смета на ремонт.pdf');
+  assert.ok(withFile.attachment.publicUrl.includes('/storage/v1/object/public/ratmes-media/games-lobby/'));
+  assert.ok(withFile.attachment.storagePath.includes('_smeta-na-remont.pdf'));
+  assert.deepEqual(withFile.text, '📎 смета на ремонт.pdf');
+
+  // Поиск по вложениям находит облачный файл
+  const q = await engine.tools.search.query({ q: 'has:file' });
+  assert.equal(q.ok, true);
+  assert.equal(q.data.totalMatches, 1);
+  assert.equal(q.data.hits[0].msgId, 'sb-file-1');
+
+  // Дедупликация не теряет файл: повторный ingest дописывает вложение уже сохранённому сообщению
+  const again = await engine.tools.cloud.ingestRemote({
+    messages: [{
+      msg_id: 'sb-file-1',
+      room_id: 'games-lobby',
+      sender_id: 'u-peer-file',
+      sender_name: 'Игрок с телефона',
+      body_text: '',
+      kind: 'file',
+      attachment: { filename: 'смета на ремонт.pdf', mimeType: 'application/pdf', sizeBytes: 48213, storagePath: 'games-lobby/abcdef0123456789_smeta-na-remont.pdf' },
+    }],
+  });
+  assert.equal(again.data.deduplicated, 1);
+  const page2 = await engine.tools.vault.readPage({ chatId: 'games-lobby', limit: 20 });
+  const same = page2.data.messages.filter((m) => m.msgId === 'sb-file-1');
+  assert.equal(same.length, 1, 'Дубля сообщения быть не должно');
+  assert.ok(same[0].attachment.storagePath, 'Вложение обязано остаться у сообщения после дедупликации');
+});
+
 await test('TransferGuard: 5 барьеров блокируют обход инструментов (RM-101, RM-103, RM-105, RM-106, RC-603)', async () => {
   const engine = createRatMesEngine({ seed: 1002, country: 'RU' });
 

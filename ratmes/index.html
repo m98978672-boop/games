@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#131720">
   <title>RatMes</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=16">
+  <link rel="stylesheet" href="./styles.css?v=18">
 </head>
 <body>
   <!-- Полоса подключения к облаку: видна только во время загрузки или при ошибке, после подключения полностью скрывается -->
@@ -144,14 +144,6 @@
         <button class="icon-btn" id="btnCancelReply" type="button" title="Отменить ответ" aria-label="Отменить ответ или редактирование">✕</button>
       </div>
 
-      <div class="voice-record-bar" id="voiceRecordBar" hidden>
-        <span class="rec-dot"></span>
-        <span id="voiceRecTimer">0:00</span>
-        <canvas id="voiceRecCanvas" width="160" height="28"></canvas>
-        <button type="button" class="btn btn-sm btn-primary" id="btnStopSendVoice">Отправить</button>
-        <button type="button" class="btn btn-sm btn-ghost" id="btnCancelVoice" aria-label="Отменить запись">✕</button>
-      </div>
-
       <div class="attachment-bar" id="attachmentBar" hidden>
         <div class="attachment-info">
           <strong id="attachmentName"></strong>
@@ -172,7 +164,6 @@
           <input type="file" id="fileInput" hidden>
         </label>
         <textarea id="messageInput" class="composer-input" rows="1" placeholder="Сообщение…"></textarea>
-        <button type="button" class="icon-btn" id="btnRecordVoice" title="Голосовое">🎙️</button>
         <button type="submit" class="btn btn-primary btn-send" id="btnSend" aria-label="Отправить">
           <span class="send-label">Отправить</span>
           <span class="send-ico" aria-hidden="true">➤</span>
@@ -637,7 +628,7 @@
   <dialog class="modal modal-wide" id="paletteModal">
     <div class="modal-card">
       <div class="palette-head">
-        <input type="search" id="paletteInput" class="text-input" placeholder="Поиск по всем сообщениям (has:file, has:voice, pinned:true)…">
+        <input type="search" id="paletteInput" class="text-input" placeholder="Поиск по всем сообщениям (has:file, from:, pinned:true)…">
         <button type="button" class="icon-btn" id="btnClosePalette" aria-label="Закрыть поиск">✕</button>
       </div>
       <div id="paletteResults" class="palette-results"></div>
@@ -693,6 +684,6 @@
   <div class="toast-host" id="toastHost" aria-live="polite"></div>
   <script src="../shared/engine.js"></script>
   <script src="../shared/engine-bootstrap.js" defer></script>
-  <script type="module" src="./src/web/app.js?v=16"></script>
+  <script type="module" src="./src/web/app.js?v=18"></script>
 </body>
 </html>

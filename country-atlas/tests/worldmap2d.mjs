@@ -4,11 +4,11 @@ import { createCanvas } from '@napi-rs/canvas';
 import {
   WM, MARK, buildWorld, advanceWars, maybeStartWar, worldStats, hottestWar,
   countryAt, nearestCity, nearestRoad, segmentDistance, pointInPolygon, polygonArea,
-  sitesFor, voronoiPoly, cellRadius, adjacency, poleOfInaccessibility, coastPolygon, borderTowns, canSeeArmies,
+  sitesFor, voronoiPoly, cellRadius, adjacency, poleOfInaccessibility, coastPolygon, borderTowns, canSeeArmies, visibleArmiesFor,
   DIPLO, relationKey, relationLevel, relationOf, contactsOf, diplomacyStats
 } from '../src/worldmap2d.js';
 import {
-  WV, WorldView, overviewScale, clampViewScale, worldToScreen, screenToWorld,
+  WV, WorldView, overviewScale, fitLandScale, ownOverview, landBox, clampViewScale, worldToScreen, screenToWorld,
   visibleRect, lerpCam, drawMark
 } from '../src/worldview.js';
 
@@ -52,7 +52,14 @@ ok('дорог не меньше, чем городов − стран', world.r
 const roadKinds = new Set(world.roads.map((r) => r.kind));
 ok('три вида дорог', roadKinds.has('main') && roadKinds.has('local') && roadKinds.has('international'), [...roadKinds].join(','));
 ok('отметки рельефа — Float32Array', world.marks instanceof Float32Array);
-ok('отметок 900 точек × 3 числа', world.marks.length === WM.marksPer * 3, world.marks.length);
+// F-362: рельеф есть только на суше — отметки фильтруются по берегу
+ok('отметки — точки по три числа', world.marks.length % 3 === 0 && world.marks.length > 900, world.marks.length);
+ok('отметок не больше, чем сеяли (часть ушла в море)', world.marks.length <= WM.marksPer * 3, world.marks.length);
+ok('все отметки на суше', (() => {
+  const coast = world.coast;
+  for (let i = 0; i < world.marks.length; i += 3) if (!pointInPolygon(world.marks[i], world.marks[i + 1], coast)) return false;
+  return true;
+})());
 const markTypes = new Set();
 for (let i = 2; i < world.marks.length; i += 3) markTypes.add(world.marks[i]);
 ok('все шесть видов отметок встречаются', markTypes.size === 6, [...markTypes].join(','));
@@ -173,7 +180,11 @@ ok('повторный шаг назад ничего не ломает', (() =>
 
 /* ——— 4. спутник ——— */
 group('спутник');
-ok('наша страна видит армии', canSeeArmies(world, 'own') === true);
+// F-381/F-392: спутника на старте нет, но свои полки страна знает всегда
+ok('без спутника чужих армий не видно', canSeeArmies(world, 'own') === false);
+ok('свои армии видны и без спутника', visibleArmiesFor(world, 'own').length ===
+  world.armies.filter((a) => a.country === 'own').length);
+ok('свои армии — не пустой список', visibleArmiesFor(world, 'own').length > 0);
 ok('чужая страна без спутника не видит', canSeeArmies(world, world.countries[1].id) === false);
 const st0 = worldStats(world);
 ok('статистика знает страны', st0.countries === WM.countries);
@@ -183,7 +194,7 @@ ok('статистика знает разрушения', st0.destroyedCities =
 ok('статистика знает мосты', st0.destroyedBridges === world.destroyed.bridges.length);
 ok('статистика знает оккупацию', st0.occupiedZones === world.occupied.length);
 ok('статистика знает потери', st0.killed === world.killed);
-ok('статистика знает армии', st0.armiesVisible === world.armies.length);
+ok('статистика знает армии', st0.armiesVisible === world.armies.filter((a) => a.country === 'own').length);
 ok('статистика знает про свою войну', st0.ownAtWar === world.wars.some((w) => w.a === 'own' || w.b === 'own'));
 ok('в статистике 15 полей', Object.keys(st0).length === 15, Object.keys(st0).join(','));
 ok('без войн hottestWar пуст', hottestWar(world) === null);
@@ -208,7 +219,7 @@ const makeCanvas = (w, h) => {
 const view = { w: 900, h: 600 };
 const s1 = overviewScale(view);
 ok('обзор мира считается по меньшей стороне', s1 > 0 && s1 < 0.1, s1);
-near('обзор вписывает континент 23200 км в кадр', 23200 * s1, 600 - 80, 1);
+near('обзор вписывает 21 400 км в кадр', 21400 * s1, 600 - 2 * WV.overviewPad, 1);
 ok('обзор оставляет поля по краям', 23200 * s1 < 600 && 23200 * s1 > 480, 23200 * s1);
 ok('масштаб обзора внутри границ', clampViewScale(s1) === s1);
 ok('нижняя граница масштаба', clampViewScale(0) === WV.minScale);
@@ -272,7 +283,11 @@ const halfway = v.cam.scale;
 ok('камера летит от страны к планете', halfway < 20 && halfway > s1, halfway);
 v.step(WV.transitionMs / 1000 + 0.1);
 ok('переход конечен', v.transition === null);
-near('после перехода камера в обзоре', v.cam.scale, s1, 1e-6);
+// К30: камера встаёт по берегу континента, а не по стороне квадрата карты
+// F-391: камера стоит на своей стране и вписывает континент вокруг неё
+near('после перехода камера в обзоре', v.cam.scale, ownOverview(world, v.view).scale, 1e-9);
+near('после перехода камера смотрит на свою столицу', v.cam.x, world.own.capital.x, 1e-9);
+ok('обзор видит весь континент по берегу', v.cam.scale > 0 && v.cam.scale < s1, v.cam.scale + ' < ' + s1);
 ok('прозрачность вернулась к 1', v.alpha > 0.99, v.alpha);
 v.draw();
 const px = canvas.getContext('2d').getImageData(0, 0, 900, 600).data;
@@ -307,8 +322,10 @@ const withArmies = countArmyPixels(canvas, v);
 v.showArmies = false;
 v.draw();
 const withoutArmies = countArmyPixels(canvas, v);
-ok('армии рисуются при спутнике', withArmies > 0, withArmies);
-ok('без спутника армий на карте нет', withoutArmies === 0, withoutArmies);
+ok('своя армия рисуется всегда', withArmies > 0, withArmies);
+// F-392: тумблер «спутник» гасит метки, но свои полки страна видит и с выключенным
+ok('с выключенным спутником свои армии на месте', withoutArmies > 0, withoutArmies);
+ok('включённый спутник показывает больше армий', withArmies > withoutArmies, withArmies + ' > ' + withoutArmies);
 // крупный зум: подписи столиц
 v.showArmies = true;
 v.cam.scale = 0.4; v.cam.x = world.cities[0].x; v.cam.y = world.cities[0].y;

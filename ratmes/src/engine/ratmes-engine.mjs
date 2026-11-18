@@ -20,11 +20,9 @@ import { BridgeSupervisor } from './connectors.mjs';
 import { FullTextSearchIndex } from './search-index.mjs';
 import { PriorityTransferScheduler } from './net-scheduler.mjs';
 import { WorkspaceFeaturesStore, QUICK_REACTIONS } from './chat-features.mjs';
-import { createCloudHub, GAMES_CHAT_ROOMS } from './cloud-hub.mjs';
+import { createCloudHub, GAMES_CHAT_ROOMS, SUPABASE_PUBLIC_CONFIG } from './cloud-hub.mjs';
 import {
   classifyMedia,
-  synthesizeDemoVoiceWav,
-  extractWaveformPeaks,
   buildChunkMap,
 } from './media-pipeline.mjs';
 
@@ -38,7 +36,7 @@ const ROLE_ALLOWLIST = Object.freeze({
 });
 
 const TOOL_GROUPS_DOC = Object.freeze({
-  pack: 'Упаковка и запечатывание конвертов (text, reply, forward, media, voice, control, bundle, validate)',
+  pack: 'Упаковка и запечатывание конвертов (text, reply, forward, media, control, bundle, validate)',
   transfer: 'Главная труба передачи + приоритеты и Outbox-насос (preflight, enqueue, dispatch, streamChunk, receive, ack, retry, reroute, pause, resume, cancel, inspect, pumpOutbox, schedulerStatus)',
   relay: 'Межпроцессная, междвижковая и LAN-передача поверх ratcore-bridge/1 (handshake, pushDelta, syncHash, offload, lanDiscover, lanSend)',
   gap: 'Непрерывность потока и закрытие дыр seq/pts (check, repair, merge, checkpoint)',
@@ -61,6 +59,25 @@ function bytesFromBase64(b64) {
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
   return out;
+}
+
+// Вложение из облачной строки Supabase: приводим JSONB к единому виду с локальным attachment.
+function normalizeCloudAttachment(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const storagePath = String(raw.storagePath || raw.storage_path || '').trim();
+  if (!storagePath) return null;
+  const filename = String(raw.filename || raw.name || 'file.bin').slice(0, 160);
+  const mimeType = String(raw.mimeType || raw.mime_type || 'application/octet-stream').slice(0, 120);
+  return {
+    source: 'cloud',
+    filename,
+    mimeType,
+    mediaKind: String(raw.mediaKind || raw.media_kind || classifyMedia(filename, mimeType)),
+    sizeBytes: Number(raw.sizeBytes || raw.size_bytes) || 0,
+    sha256: raw.sha256 ? String(raw.sha256) : null,
+    storagePath,
+    publicUrl: `${SUPABASE_PUBLIC_CONFIG.storage.publicBase}/${storagePath.split('/').map(encodeURIComponent).join('/')}`,
+  };
 }
 
 export function createRatMesEngine({
@@ -399,9 +416,6 @@ export function createRatMesEngine({
               filename,
               mimeType,
               mediaKind,
-              isVoice: Boolean(args.isVoice),
-              durationSec: args.durationSec || null,
-              waveform: args.waveform || null,
               sizeBytes: attHandle.sizeBytes,
               sha256,
               totalChunks: attHandle.totalChunks,
@@ -414,58 +428,6 @@ export function createRatMesEngine({
         });
         envelopeById.set(envHandle.handleId, envHandle);
         return { ok: true, data: { attachment: attHandle, envelope: envHandle, msgId, sha256 } };
-      },
-
-      // Упаковка голосовой заметки (настоящий PCM WAV / WebM + массив амплитуд waveform)
-      async voice(args, ctx) {
-        const {
-          chatId,
-          network = 'ratmes',
-          base64 = null,
-          bytes = null,
-          mimeType = 'audio/wav',
-          durationSec = 2.4,
-          waveform = null,
-          caption = '',
-          chatTitle,
-        } = args || {};
-        if (!chatId) return { ok: false, error: makeError('RM-105', 'Для pack.voice требуется chatId') };
-
-        let finalBytes;
-        let finalDur = Number(durationSec) || 2.4;
-        let finalPeaks = Array.isArray(waveform) && waveform.length ? waveform : null;
-        let finalMime = mimeType;
-
-        if (bytes instanceof Uint8Array) {
-          finalBytes = bytes;
-        } else if (base64) {
-          finalBytes = bytesFromBase64(base64);
-        } else {
-          const synth = synthesizeDemoVoiceWav({ durationSec: finalDur, seedFreq: 280 + Math.floor(core.rand() * 140) });
-          finalBytes = synth.wavBytes;
-          finalDur = synth.durationSec;
-          finalPeaks = synth.peaks;
-          finalMime = 'audio/wav';
-        }
-        if (!finalPeaks) finalPeaks = extractWaveformPeaks(finalBytes, 32);
-
-        const ext = finalMime.includes('webm') ? 'webm' : (finalMime.includes('ogg') ? 'ogg' : 'wav');
-        const filename = `voice-${Date.now().toString(36)}.${ext}`;
-        return rawTools.pack.media({
-          chatId,
-          network,
-          chatTitle,
-          senderId: args.senderId || null,
-          senderName: args.senderName || 'Я',
-          filename,
-          mimeType: finalMime,
-          bytes: finalBytes,
-          caption: caption || `Голосовое сообщение (${finalDur.toFixed(1)} сек)`,
-          isVoice: true,
-          durationSec: finalDur,
-          waveform: finalPeaks,
-          chunkSize: 16384,
-        }, ctx);
       },
 
       async control(args, ctx) {
@@ -2169,6 +2131,32 @@ export function createRatMesEngine({
       async getGamesRooms() {
         return { ok: true, data: { rooms: cloudHub.getGamesRooms() } };
       },
+      // Прикрепляем к уже сохранённому локальному сообщению метаданные облачного файла
+      // (после успешной загрузки в Supabase Storage), чтобы «Скачать» работало сразу.
+      async attachLocalMedia(args) {
+        const chatId = String(args?.chatId || '').trim();
+        const msgId = String(args?.msgId || '').trim();
+        const raw = args?.attachment;
+        if (!chatId || !msgId || !raw || !raw.storagePath) {
+          return { ok: false, error: makeError('RM-105', 'Нужны chatId, msgId и attachment.storagePath') };
+        }
+        const page = vaultStore.readPage(chatId, { limit: 400 });
+        const found = [...page.messages].reverse().find((m) => m.msgId === msgId);
+        if (!found) return { ok: false, error: makeError('RM-104', `Сообщение ${msgId} не найдено в Vault`) };
+        const patched = {
+          ...(found.attachment || {}),
+          storagePath: String(raw.storagePath),
+          publicUrl: raw.publicUrl || `${SUPABASE_PUBLIC_CONFIG.storage.publicBase}/${String(raw.storagePath).split('/').map(encodeURIComponent).join('/')}`,
+          mimeType: raw.mimeType || found.attachment?.mimeType || 'application/octet-stream',
+          filename: raw.filename || found.attachment?.filename || 'file.bin',
+          sizeBytes: Number(raw.sizeBytes) || found.attachment?.sizeBytes || 0,
+          mediaKind: raw.mediaKind || found.attachment?.mediaKind || 'binary',
+          sha256: raw.sha256 || found.attachment?.sha256 || null,
+        };
+        vaultStore.patchMessage(found.network, chatId, msgId, { attachment: patched });
+        searchIndex.indexMessage({ ...found, attachment: patched });
+        return { ok: true, data: { msgId, attachment: patched } };
+      },
       async recordSync(args) {
         const st = cloudHub.recordSync(args || {});
         core.watch.emit('cloud.sync', {
@@ -2252,7 +2240,9 @@ export function createRatMesEngine({
         let ingested = 0;
         let deduplicated = 0;
         for (const row of rows) {
-          if (!row || !row.room_id || !row.body_text) continue;
+          const rowAttachment = normalizeCloudAttachment(row?.attachment);
+          if (!row || !row.room_id) continue;
+          if (!row.body_text && !rowAttachment) continue;
           const roomMeta = GAMES_CHAT_ROOMS.find((r) => r.chatId === row.room_id);
           const extra = chatMetaExtra.get(row.room_id);
           const isMine = Boolean(myPeerId && row.sender_id && String(row.sender_id) === myPeerId);
@@ -2264,13 +2254,25 @@ export function createRatMesEngine({
             senderName: row.sender_name || 'Участник',
             senderId: row.sender_id || null,
             direction: isMine ? 'out' : 'in',
-            text: row.body_text,
+            text: row.body_text || (rowAttachment ? `📎 ${rowAttachment.filename}` : ''),
+            attachment: rowAttachment,
             msgId: row.msg_id || null,
             ts: row.created_at || null,
           }, ctx);
           if (rec.ok) {
             if (rec.data?.deduplicated) deduplicated += 1;
             else ingested += 1;
+            // Сообщение уже было в Vault (например, отправлено с этого устройства):
+            // дописываем облачное вложение, чтобы файл открывался и после перезагрузки.
+            if (rec.data?.deduplicated && rowAttachment && row.msg_id) {
+              const local = vaultStore.readPage(row.room_id, { limit: 400 }).messages
+                .find((m) => m.msgId === row.msg_id);
+              if (local && !local.attachment?.storagePath) {
+                vaultStore.patchMessage(local.network || row.network || 'ratmes', row.room_id, row.msg_id, {
+                  attachment: { ...(local.attachment || {}), ...rowAttachment },
+                });
+              }
+            }
           }
         }
         cloudHub.recordSync({

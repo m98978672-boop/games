@@ -14,16 +14,21 @@ export const TECH = {
   costBase: 42,            // баллов за первую технологию сферы
   costGrow: 1.17,          // во сколько раз дороже каждое следующее поколение
   costVariant: 0.02,       // наценка за номер проекта — чтобы проекты отличались
-  rateBase: 0.25,          // наука страны в игровую минуту, до городов
-  rateCity: 0.05,          // и добавка за каждый город
+  // F-380: наука идёт медленно и по-настоящему. Раньше 0.25 + 0.05·города давали
+  // 1 296 очков в сутки — сто технологий за 11 дней. Теперь 0.01 + 0.002·города:
+  // около 43 очков в сутки, первая технология — за сутки, десятое поколение — за недели.
+  rateBase: 0.01,
+  rateCity: 0.002,
   keepLast: 5,             // сколько последних технологий помнит страна
   unlockPerStep: 96,       // предохранитель от зависания на догоне времени
   spreadBase: 260,         // км разброса ракет при точности 1.0 — столько было и до наук
   hitBase: 800,            // км радиуса поиска цели при точности 1.0
   armyBase: 0.55,          // боеготовность армии без технологий
   armyPerTech: 1.8,        // и насколько её поднимает усиленная армия
-  // наша страна начинает не с нуля: спутник уже есть (иначе смотреть было бы не на что)
-  ownHead: { space: 4, comms: 2, compute: 2, military: 2, farm: 2, build: 1 },
+  // F-381: спутника на старте нет. Раньше у нашей страны стоял космос 4 — и в интерфейсе
+  // висело «спутник: вкл», хотя страна его не изучала. Теперь старт — шесть технологий
+  // в земных сферах, а космос нужно исследовать, как и всем.
+  ownHead: { space: 0, comms: 1, compute: 1, military: 1, farm: 2, build: 1 },
   mods: ['Волга', 'Ладога', 'Север', 'Пламя', 'Кристалл', 'Резонанс', 'Гармония', 'Вектор',
     'Орбита', 'Кедр', 'Луч', 'Гранит', 'Лавина', 'Заря', 'Комета', 'Меридиан', 'Атлас',
     'Циклон', 'Факел', 'Аметист', 'Бастион', 'Тайфун', 'Спектр', 'Кварц', 'Пионер'],
@@ -155,12 +160,48 @@ export function nextTech(state) {
   return null;
 }
 
+/* F-369: очередь разработок — что страна возьмёт после текущей цели.
+   Считаем на копии счётчиков: сама наука не двигается, панель просто показывает
+   три ближайших проекта. Без этой функции в интерфейсе было видно только
+   «следующая», и было непонятно, изучается ли что-то вообще. */
+export function techQueue(state, n = 3) {
+  if (!state || !state.order || !state.order.length || !state.next) return [];
+  const total = state.order.length;
+  const tiers = { ...state.tiers };
+  let count = state.count;
+  let ptr = state.ptr;
+  // первым делом «закрываем» текущую цель: иначе очередь начиналась бы с неё же
+  const cur = state.next;
+  tiers[cur.branch] = cur.tier;
+  count++;
+  const bi = TECH.branches.findIndex((b) => b.id === cur.branch);
+  ptr = (Math.max(0, bi) + 1) % total;
+  const out = [];
+  for (let k = 0; k < total * TECH.tiers && out.length < n; k++) {
+    const bIdx = state.order[(ptr + k) % total];
+    const branch = TECH.branches[bIdx];
+    if (!branch) continue;
+    const tier = (tiers[branch.id] || 0) + 1;
+    if (tier > TECH.tiers) continue;
+    const variant = Math.floor(hash01(state.seed + (count + 1) * 37 + bIdx * 101, 173) * TECH.variants) % TECH.variants;
+    const t = techAt(techIndex(bIdx, tier, variant));
+    out.push({ name: t.name, branch: branch.name, tier, cost: t.cost });
+    tiers[branch.id] = tier;
+    count++;
+  }
+  return out;
+}
+
 /* F-326: шаг науки. Баллы копятся вместе с игровыми минутами; сколько накопилось —
    столько технологий и открылось. Один и тот же отрезок времени даёт одно и то же. */
 export function advanceTech(world, minutes) {
   if (!world || !world.countries) return 0;
   const prev = Number.isFinite(world.techAt) ? world.techAt : 0;
   const now = Number.isFinite(minutes) ? minutes : prev;
+  // F-383: первый шаг — это точка отсчёта, а не прожитое время. Раньше мир рождался
+  // с techAt = 0, и первый же шаг в 9 000 минут (шестой день) выдавал стране
+  // сотню очков сразу: «изучения идут так быстро».
+  if (!(prev > 0)) { world.techAt = now; return 0; }
   const dt = now - prev;
   if (!(dt > 0)) return 0;
   world.techAt = now;
@@ -178,8 +219,12 @@ export function advanceTech(world, minutes) {
       st.count++;
       st.last.push(t.name);
       if (st.last.length > TECH.keepLast) st.last.shift();
+      // F-382: указатель двигался по номеру сферы, а очередь — это перемешанный список
+      // тех же номеров. Из-за этого наука залипала на первых сферах: земледелие 11
+      // поколений, а металлургия и энергетика — ноль. Теперь ищем место сферы в очереди.
       const bi = TECH.branches.findIndex((b) => b.id === t.branch);
-      st.ptr = (Math.max(0, bi) + 1) % st.order.length;
+      const pos = st.order.indexOf(bi);
+      st.ptr = ((pos >= 0 ? pos : 0) + 1) % st.order.length;
       st.eff = techEffects(st);
       st.next = nextTech(st);
       unlocked++;
@@ -199,7 +244,18 @@ export function techStats(world, observerId = 'own') {
     .filter((c) => c.id !== observerId && c.tech)
     .map((c) => ({ id: c.id, name: c.name, count: c.tech.count }))
     .sort((a, b) => b.count - a.count);
+  const left = st && st.next ? Math.max(0, st.next.cost - st.points) : 0;
+  const ratePerMin = st ? (st.rate || 0) * (st.eff ? st.eff.science : 1) : 0;
+  const etaMin = st && st.next && ratePerMin > 0 ? Math.ceil(left / ratePerMin) : 0;
   return {
+    // F-370: видно, изучается ли что-то прямо сейчас и сколько ждать
+    research: !!(st && st.next),
+    left,
+    ratePerMin: Math.round(ratePerMin * 1e6) / 1e6,
+    etaMin,
+    etaDays: etaMin > 0 ? Math.ceil(etaMin / 1440) : 0,
+    bar: st && st.next ? Math.round(st.next.progress * 100) : 100,
+    queue: st ? techQueue(st, 3) : [],
     count: st ? st.count : 0,
     catalog: techCount(),
     points: st ? Math.round(st.points) : 0,

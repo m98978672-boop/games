@@ -4,6 +4,8 @@
 // а при отсутствии агента автоматически работает автономно в браузере (PWA + Supabase + браузерные мосты).
 
 import { createRatMesEngine } from '../engine/ratmes-engine.mjs';
+import { classifyMedia } from '../engine/media-pipeline.mjs';
+import { sha256Hex } from '../engine/crypto-layer.mjs';
 import { createMemoryVault } from '../engine/vault-store.mjs';
 import { SUPABASE_PUBLIC_CONFIG } from '../engine/cloud-hub.mjs';
 import { getServiceGuide, sanitizeBridgeInput } from '../engine/service-guides.mjs';
@@ -16,6 +18,43 @@ function isCloudRoomId(chatId) {
   const id = String(chatId || '').trim();
   if (!id) return false;
   return PUBLIC_CLOUD_ROOMS.has(id) || id.startsWith('dm-') || id.startsWith('room-');
+}
+
+// ---------- Файлы в Supabase Storage (bucket ratmes-media) ----------
+// Путь: <roomId>/<sha256-prefix>_<safe-name>, файл публично читается по URL.
+function sanitizeStorageName(rawName) {
+  const base = String(rawName || 'file.bin').split(/[\\/]/).pop() || 'file.bin';
+  const ext = (base.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
+  const stem = base.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+  const safeStem = stem || 'file';
+  return ext ? `${safeStem}.${ext}` : safeStem;
+}
+
+function storageSafeSegment(raw, fallback = 'room') {
+  const clean = String(raw || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+  return clean || fallback;
+}
+
+export function buildMediaStoragePath({ roomId, sha256 = '', filename = 'file.bin' }) {
+  const hash = String(sha256 || '').toLowerCase().replace(/[^a-f0-9]/g, '').slice(0, 16) || randomHex(8);
+  return `${storageSafeSegment(roomId)}/${hash}_${sanitizeStorageName(filename)}`;
+}
+
+export function mediaPublicUrl(storagePath) {
+  if (!storagePath) return null;
+  return `${SUPABASE_PUBLIC_CONFIG.storage.publicBase}/${String(storagePath).split('/').map(encodeURIComponent).join('/')}`;
+}
+
+function base64ToBytes(b64) {
+  if (typeof b64 !== 'string' || !b64) return null;
+  try {
+    const bin = typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('binary');
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) out[i] = bin.charCodeAt(i);
+    return out;
+  } catch {
+    return null;
+  }
 }
 
 function randomHex(byteLen = 4) {
@@ -694,6 +733,11 @@ export async function createBridgeClient() {
       return `${apiPath('/api/vault/media')}?path=${encodeURIComponent(relPath)}`;
     },
 
+    // Публичная ссылка на файл в Supabase Storage (работает на любом устройстве и после перезагрузки).
+    getCloudMediaUrl(storagePath) {
+      return mediaPublicUrl(storagePath);
+    },
+
     async listLiveBridges() {
       if (mode === 'agent') {
         const res = await fetch(apiPath('/api/bridges'), { cache: 'no-store' });
@@ -1125,8 +1169,13 @@ export async function createBridgeClient() {
         const roomIds = Array.from(new Set([...PUBLIC_CLOUD_ROOMS, ...roomMap.keys()]));
 
         reportProgress('messages', 82, 'Загрузка сообщений…');
-        const msgUrl = `${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?room_id=in.(${roomIds.map((id) => encodeURIComponent(id)).join(',')})&select=msg_id,room_id,network,sender_id,sender_name,body_text,created_at&order=created_at.desc&limit=160`;
-        const msgRes = await fetchWithTimeout(msgUrl, { headers }, 10000);
+        const roomFilter = roomIds.map((id) => encodeURIComponent(id)).join(',');
+        const baseSelect = 'msg_id,room_id,network,sender_id,sender_name,body_text,created_at';
+        let msgRes = await fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?room_id=in.(${roomFilter})&select=${baseSelect},attachment,kind&order=created_at.desc&limit=160`, { headers }, 10000);
+        if (!msgRes.ok && msgRes.status === 400) {
+          // Колонки attachment/kind ещё нет в базе — работаем как раньше, без вложений.
+          msgRes = await fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?room_id=in.(${roomFilter})&select=${baseSelect}&order=created_at.desc&limit=160`, { headers }, 10000);
+        }
 
         if (!msgRes.ok) {
           const errText = `HTTP ${msgRes.status}`;
@@ -1163,8 +1212,55 @@ export async function createBridgeClient() {
       }
     },
 
-    async pushSupabaseMessage({ msgId, roomId, network = 'ratmes', senderName = 'Участник', text = '' } = {}) {
-      if (!cloudEnabled || !isCloudRoomId(roomId) || !text.trim()) {
+    // Загрузка файла в публичный bucket ratmes-media. Возвращает путь внутри bucket.
+    async uploadMediaBlob({ roomId, filename = 'file.bin', mimeType = 'application/octet-stream', base64 = '' } = {}) {
+      const bytes = base64ToBytes(base64);
+      if (!bytes || !bytes.length) return { ok: false, error: 'Файл пустой или повреждён' };
+      if (bytes.length > SUPABASE_PUBLIC_CONFIG.storage.maxBytes) {
+        return { ok: false, error: `Файл больше ${Math.round(SUPABASE_PUBLIC_CONFIG.storage.maxBytes / 1024 / 1024)} МБ` };
+      }
+      const sha256 = await sha256Hex(bytes);
+      const storagePath = buildMediaStoragePath({ roomId, sha256, filename });
+      const uploadUrl = `${SUPABASE_PUBLIC_CONFIG.storage.uploadBase}/${storagePath.split('/').map(encodeURIComponent).join('/')}`;
+      try {
+        const res = await fetchWithTimeout(uploadUrl, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
+            Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
+            'Content-Type': mimeType || 'application/octet-stream',
+            'cache-control': 'public, max-age=31536000',
+          },
+          body: bytes,
+        }, 20000);
+        // 409 = файл с тем же sha256 уже лежит в bucket'е: это не ошибка, ссылка та же самая.
+        const alreadyStored = res.status === 409;
+        if (!res.ok && !alreadyStored) return { ok: false, error: `Storage HTTP ${res.status}` };
+        return {
+          ok: true,
+          data: {
+            storagePath,
+            sha256,
+            sizeBytes: bytes.length,
+            mediaKind: classifyMedia(filename, mimeType),
+            publicUrl: mediaPublicUrl(storagePath),
+          },
+        };
+      } catch (err) {
+        return { ok: false, error: err?.message || 'Storage недоступен' };
+      }
+    },
+
+    async pushSupabaseMessage({
+      msgId,
+      roomId,
+      network = 'ratmes',
+      senderName = 'Участник',
+      text = '',
+      attachment = null,
+    } = {}) {
+      const hasAttachment = Boolean(attachment && attachment.storagePath);
+      if (!cloudEnabled || !isCloudRoomId(roomId) || (!text.trim() && !hasAttachment)) {
         return { ok: true, skipped: true };
       }
       const headers = {
@@ -1173,6 +1269,16 @@ export async function createBridgeClient() {
         'Content-Type': 'application/json',
         Prefer: 'resolution=ignore-duplicates,return=minimal',
       };
+      const attachmentPayload = hasAttachment
+        ? {
+          filename: String(attachment.filename || 'file.bin').slice(0, 160),
+          mimeType: String(attachment.mimeType || 'application/octet-stream').slice(0, 120),
+          sizeBytes: Number(attachment.sizeBytes) || 0,
+          mediaKind: String(attachment.mediaKind || 'binary'),
+          sha256: attachment.sha256 || null,
+          storagePath: String(attachment.storagePath),
+        }
+        : null;
       try {
         const res = await fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}`, {
           method: 'POST',
@@ -1183,8 +1289,9 @@ export async function createBridgeClient() {
             network,
             sender_id: peerId,
             sender_name: String(senderName || 'Участник').slice(0, 48),
-            body_text: String(text).slice(0, 4000),
-            kind: 'text',
+            body_text: String(text || '').slice(0, 4000),
+            kind: attachmentPayload ? 'file' : 'text',
+            attachment: attachmentPayload,
           }),
         });
         if (!res.ok) {

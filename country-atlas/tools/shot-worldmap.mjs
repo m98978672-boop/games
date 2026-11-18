@@ -113,6 +113,7 @@ function introPanel() {
   // встаём на достопримечательность: в кадре видно и её, и подпись пролёта
   const sightAt = Math.max(0, intro.points.findIndex((p) => p.sight));
   intro.t = INTRO.hopSec * (sightAt + 0.5);
+  intro.fade = 1;               // §90: снимок — уже проявившийся кадр, не «темнота»
   intro.draw();
   const cam = tourCam(intro.points, intro.t);
   const g = cv.getContext('2d');
@@ -129,7 +130,7 @@ function introPanel() {
   g.fillRect(0, y, W, 54);
   g.fillStyle = 'rgba(240,244,246,0.95)';
   g.font = '13px sans-serif';
-  g.fillText(`масштаб ${cam.scale.toFixed(2)} px/км · ${intro.points.length} точек · ${INTRO.hopSec} с на точку · размытие ${INTRO.blurPx} px`, 18, y + 32);
+  g.fillText(`масштаб ${cam.scale.toFixed(2)} px/км · ${intro.points.length} точек · ${INTRO.hopSec} с на точку · круг ${(INTRO.hopSec * intro.points.length).toFixed(0)} с`, 18, y + 32);
   return cv;
 }
 
@@ -189,7 +190,7 @@ for (const cv of panels) {
   g.fillText('назад', W - 10 - bw + 8, 29);
 
   // панель, как #world-panel: слева внизу, до 44 % высоты
-  const pw = 340, ph = 184, px0 = 10, py0 = H - ph - 10;
+  const pw = 340, ph = 196, px0 = 10, py0 = H - ph - 10;
   g.fillStyle = 'rgba(12,20,26,0.88)';
   g.fillRect(px0, py0, pw, ph);
   g.strokeStyle = 'rgba(233,238,242,0.22)';
@@ -205,16 +206,26 @@ for (const cv of panels) {
     g.fillText(t, px0 + 10, y);
   };
   let yy = py0 + 18;
-  cap('что происходит', yy);
+  cap('подсказка', yy);
+  line(`стран ${st4.countries} · войн ${st4.wars} · боёв ${st4.battles} · технологий ${tech.count}`, yy += 15, 'rgba(185,200,210,0.95)');
+  cap('что происходит', yy += 17);
   line(`стран ${st4.countries} · войн ${st4.wars} · боёв ${st4.battles}`, yy += 15);
-  line(`разрушено: городов ${st4.destroyedCities} · мостов ${st4.destroyedBridges}`, yy += 14);
+  line(`разрушено: городов ${st4.destroyedCities} · мостов ${st4.destroyedBridges} · взрывов ${st4.explosionsTotal}`, yy += 14);
   cap('технологии', yy += 17);
-  line(`открыто ${tech.count} из ${tech.catalog.toLocaleString('ru-RU')} · наука +${tech.perDay.toLocaleString('ru-RU')} в сутки`, yy += 15);
-  if (tech.last.length) line('последние: ' + tech.last[tech.last.length - 1], yy += 14, 'rgba(200,242,216,0.95)');
+  // К30: сначала состояние изучения, потом каталог
+  g.fillStyle = 'rgba(255,255,255,0.14)';
+  g.fillRect(px0 + 10, yy + 3, pw - 20, 5);
+  g.fillStyle = '#92ecb2';
+  g.fillRect(px0 + 10, yy + 3, ((pw - 20) * tech.bar) / 100, 5);
+  yy += 14;
+  line(tech.research
+    ? `изучается: ${tech.next} · ${tech.bar}% · осталось ${tech.left.toLocaleString('ru-RU')} очков`
+    : 'наука стоит: всё открыто', yy += 13, 'rgba(200,242,216,0.95)');
+  line(`открыто ${tech.count} из ${tech.catalog.toLocaleString('ru-RU')} · +${tech.perDay.toLocaleString('ru-RU')} в сутки`, yy += 14);
   cap('контакты', yy += 17);
   line(`союз 3 · дружба 1 · вражда 0 · посольств 4 · помощь 1`, yy += 15);
   cap('обозначения', yy += 17);
-  const legend = [['#78c8ff', 'армии, если видит спутник'], ['#92ecb2', 'боеготовность армии — полоска']];
+  const legend = [['#92ecb2', 'боеготовность армии — полоска']];
   legend.forEach(([c, name], i) => {
     g.fillStyle = c;
     g.fillRect(px0 + 10, yy + 6 + i * 15, 12, 8);

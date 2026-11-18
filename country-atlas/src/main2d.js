@@ -3,7 +3,9 @@ import { Map2D } from './map2d.js';
 import { isPhone, startCenter, FIT } from './fit2d.js';
 import { WorldView, overviewScale } from './worldview.js';
 import { buildWorld, advanceWars, worldStats, hottestWar, diplomacyStats, WM } from './worldmap2d.js';
-import { techStats } from './tech2d.js';
+import { techStats, TECH } from './tech2d.js';
+import { autonomyStats } from './autonomy2d.js';
+import { START, overlayPhase, startSceneView } from './startscene2d.js';
 import { Intro } from './intro.js';
 import { WORLD2D } from './world2d.js';
 import { loadFrom, saveTo, elapsedMinutes, formatReport, OFFLINE } from './offline2d.js';
@@ -43,6 +45,33 @@ const hud = {
 const map = new Map2D(canvas, hud);
 map.center = { x: 0, y: 0 };
 map.scale = 0.16;
+
+/* §90: заставка живёт по своему состоянию, а не по «карта готова — гасим всё».
+   Пролёт должен быть виден и после загрузки, иначе анимации просто нет. */
+const startState = { hasIntro: false, loaded: false, started: false, failed: false, point: '', index: 0, total: 0, hidden: false, progress: '' };
+
+function applyStartScene() {
+  const view = startSceneView(overlayPhase(startState), {
+    point: startState.point, index: startState.index, total: startState.total
+  });
+  if (hud.loading) {
+    hud.loading.classList.toggle('done', !view.overlayVisible);
+    if (!view.overlayVisible && !startState.hidden) {
+      startState.hidden = true;
+      setTimeout(() => { if (hud.loading) hud.loading.style.display = 'none'; }, START.fadeMs);
+    }
+  }
+  const btn = document.getElementById('intro-start');
+  if (btn) btn.disabled = view.buttonDisabled;
+  // пока мир рисуется — показываем, сколько уже готово, а не только «загружается»
+  const text = view.phase === 'loading' && startState.progress
+    ? 'пролёт над страной · мир ' + startState.progress
+    : view.text;
+  if (hud.loadingText) hud.loadingText.textContent = text;
+  const pointEl = document.getElementById('intro-point');
+  if (pointEl && view.point) pointEl.textContent = view.point;
+  return view;
+}
 
 function boot() {
   map.resize();
@@ -129,34 +158,41 @@ for (const [id, when] of times) {
 }
 
 map.init((done, total) => {
-    if (hud.loadingText) hud.loadingText.textContent = 'рисую мир ' + WORLD2D.sizeKm + ' × ' + WORLD2D.sizeKm + ' км… ' + done + '/' + total;
+    startState.progress = done + '/' + total;
+    if (hud.loadingText) hud.loadingText.textContent = 'пролёт над страной · мир ' + done + '/' + total;
   }).then(() => {
     map.draw();
-    if (hud.loading) hud.loading.classList.add('done');
+    // §90: карта готова — но заставку не гасим: пролёт идёт, кнопка ждёт игрока
+    startState.loaded = true;
+    applyStartScene();
     window.__ratgrad = { map };
-    // границы §7 и экономика §31.33 считаются следом, чтобы карта появилась сразу
+    // границы §7 и экономика §31.33 считаются следом, чтобы карта появилась сразу.
+    // F-352: каждый слой собирается отдельно: раньше одна ошибка (например, моря)
+    // обрывала весь блок — и кнопка «карта мира» оставалась без обработчика.
     setTimeout(() => {
-      try {
-        map.buildBorders();
-        map.buildWater();
-        map.buildEconomy();
-        map.updateEconomyPanel();
-        map.buildRailLayer();
-        map.buildAirLayer();
-        if (map.water) map.buildSeaLayer();
-        map.draw();
-        restoreOffline();
-        setupWorld();
-        // карта страны готова — пролёт можно заканчивать
+      const step = (name, fn) => {
+        try { fn(); } catch (err) {
+          if (hud.status) hud.status.textContent = name + ' не собрались: ' + err.message;
+        }
+      };
+      step('границы', () => map.buildBorders());
+      // F-354: вода считается по одной задаче за кадр — вместо 1.3 с подряд
+      const afterWater = () => {
+        step('экономика', () => { map.buildEconomy(); map.updateEconomyPanel(); });
+        step('железная дорога', () => map.buildRailLayer());
+        step('аэродромы', () => map.buildAirLayer());
+        step('морские пути', () => { if (map.water) map.buildSeaLayer(); });
+        step('рисунок', () => map.draw());
+        step('сейв', () => restoreOffline());
+        step('карта мира', () => setupWorld());
+        // карта страны готова — кнопка «начать игру» оживает, пролёт идёт дальше
         if (intro) {
           intro.ready = true;
-          const btn = document.getElementById('intro-start');
-          if (btn) btn.disabled = false;
-          if (hud.loadingText) hud.loadingText.textContent = 'мир ' + WM.countries + ' стран · можно начинать';
+          startState.loaded = true;
+          applyStartScene();
         }
-      } catch (err) {
-        if (hud.status) hud.status.textContent = 'границы не собрались: ' + err.message;
-      }
+      };
+      step('вода', () => map.buildWaterDeferred(afterWater));
     }, 30);
   });
 }
@@ -173,22 +209,28 @@ let sharedWorld = null, intro = null;
 function setupIntro() {
   const canvas = document.getElementById('intro-map');
   const startBtn = document.getElementById('intro-start');
-  const overlay = hud.loading;
-  if (!canvas) return;
+  if (!canvas) { startState.failed = true; applyStartScene(); return; }
   // мир для пролёта тот же, что откроется по кнопке «карта мира» — второго не строим
   try {
     sharedWorld = buildWorld(424242);
     intro = new Intro(canvas, sharedWorld, {
       // F-306: подпись точки пролёта видна и в заставке — над чем летим
       onPoint: (pt, i, n) => {
-        const line = document.getElementById('intro-point');
-        if (line && !intro.ready) line.textContent = 'над страной: ' + pt.name + ' · точка ' + i + ' из ' + n;
+        startState.point = pt.name;
+        startState.index = i;
+        startState.total = n;
+        applyStartScene();
       }
     });
     intro.start();
+    startState.hasIntro = true;
   } catch (err) {
     // без пролёта игра открывается как раньше — заставка просто гаснет
-    if (hud.loading) hud.loading.classList.add('done');
+    startState.hasIntro = false;
+    startState.failed = true;
+    if (intro) intro.stop();
+    intro = null;
+    applyStartScene();
     if (hud.status) hud.status.textContent = 'пролёт не собрался: ' + err.message;
     return;
   }
@@ -196,8 +238,8 @@ function setupIntro() {
   const begin = () => {
     if (!intro || !intro.ready) return;
     intro.stop();
-    if (overlay) overlay.classList.add('done');
-    if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 500);
+    startState.started = true;
+    applyStartScene();
     map.draw();
   };
   if (startBtn) {
@@ -209,12 +251,15 @@ function setupIntro() {
   setTimeout(() => {
     if (!intro || intro.ready) return;
     intro.ready = true;
-    if (startBtn) startBtn.disabled = false;
+    startState.loaded = true;
+    applyStartScene();
   }, 15000);
+  applyStartScene();
   return { intro, begin };
 }
 
 function setupWorld() {
+  if (worldView) return;                     // уже подключено — второй раз не нужно
   worldScreen = document.getElementById('world-screen');
   const canvas = document.getElementById('world-map');
   const back = document.getElementById('world-back');
@@ -223,11 +268,13 @@ function setupWorld() {
   const statsEl = document.getElementById('world-stats');
   const contactsEl = document.getElementById('world-contacts');
   const techEl = document.getElementById('world-tech');
+  const techBarEl = document.getElementById('world-techbar');
+  const hintEl = document.getElementById('world-hint');
+  const selfEl = document.getElementById('world-self');
   const loadEl = document.getElementById('world-load');
   if (!worldScreen || !canvas || !openBtn) return;
 
   worldView = new WorldView(canvas, {});
-  if (window.__ratgrad) { window.__ratgrad.worldView = worldView; window.__ratgrad.getWorld = ensureWorld; }
   worldView.onStats = (text) => { if (statsEl) statsEl.textContent = text; };
 
   /* мир считается один раз и дальше идёт вместе с часами игры */
@@ -239,6 +286,7 @@ function setupWorld() {
     while (world.minutes + 45 <= target) advanceWars(world, world.minutes + 45);
     if (target > world.minutes) advanceWars(world, target);
     worldView.setWorld(world);
+    if (window.__ratgrad) { window.__ratgrad.worldView = worldView; window.__ratgrad.getWorld = ensureWorld; }
     return world;
   };
 
@@ -257,6 +305,7 @@ function setupWorld() {
       st.ownAtWar ? 'наша страна воюет' : 'наша страна не воюет'
     ];
     const tech = techStats(world);
+    const self = autonomyStats(world);
     lines.push('технологии: ' + tech.count + ' из ' + tech.catalog.toLocaleString('ru-RU') + ' · наука +' + tech.perDay.toLocaleString('ru-RU') + ' в сутки');
     lines.push('спутник: ' + (tech.satellite ? 'видит армии · точность ' + tech.accuracy.toFixed(2) : 'ещё не готов'));
     const dip = diplomacyStats(world);
@@ -272,15 +321,47 @@ function setupWorld() {
       contactsEl.style.whiteSpace = 'pre-line';
     }
     if (techEl) {
-      // в панели — свои последние разработки и кто из соседей впереди по науке
+      // F-370: в панели видно состояние науки словами и числами — изучается или нет,
+      // сколько очков осталось и сколько это по времени, что дальше в очереди.
       const mine = tech.last.slice(-3).reverse();
       const leaders = tech.leaders.map((c) => c.name + ' ' + c.count).join(' · ');
+      const eta = (min) => (min <= 0 ? 'меньше минуты'
+        : min < 120 ? Math.max(1, Math.round(min)) + ' мин'
+        : min < 2880 ? Math.round(min / 60) + ' ч'
+        : Math.round(min / 1440) + ' дн');
       techEl.textContent = [
-        'открыто ' + tech.count + ' · следующая: ' + (tech.next || 'всё открыто') + ' (' + Math.round(tech.progress * 100) + '%)',
+        tech.research
+          ? 'изучается: ' + tech.next + ' · ' + tech.bar + '% · осталось ' + nf(tech.left) + ' очков ≈ ' + eta(tech.etaMin)
+          : 'наука стоит: всё открыто',
+        tech.queue.length
+          ? 'в очереди: ' + tech.queue.map((q) => q.name + ' (' + q.branch + ', уровень ' + q.tier + ')').join(' · ')
+          : 'очередь пуста',
+        'открыто ' + nf(tech.count) + ' из ' + nf(tech.catalog) + ' · +' + nf(tech.perDay) + ' очков в сутки',
         mine.length ? 'последние: ' + mine.join('; ') : 'пока ничего не открыто',
         leaders ? 'впереди по науке: ' + leaders : ''
       ].filter(Boolean).join('\n');
       techEl.style.whiteSpace = 'pre-line';
+    }
+    if (selfEl) {
+      // F-390: видно, что страна делает сама — без игрока
+      selfEl.textContent = [
+        'городов ' + self.cities + ' из ' + self.cityCap + ' · армий ' + self.armies + ' из ' + self.armyCap,
+        'казна ' + nf(self.treasury) + ' · доход ' + nf(self.income) + ' в сутки · решений ' + nf(self.decisions),
+        self.last ? 'последнее: ' + self.last : 'правительство пока копит'
+      ].join('\n');
+      selfEl.style.whiteSpace = 'pre-line';
+    }
+    if (techBarEl) {
+      const fill = techBarEl.querySelector ? techBarEl.querySelector('i') : null;
+      if (fill) fill.style.width = Math.max(0, Math.min(100, tech.bar)) + '%';
+      if (techBarEl.classList) techBarEl.classList.toggle('done', !tech.research);
+    }
+    if (hintEl) {
+      // F-371: числа подсказки вернулись: сколько чего на карте прямо сейчас
+      hintEl.textContent = 'тяните — сдвиг · щипок и колесо — зум · городов ' + self.cities + ' · армий ' + self.armies + ' · стран ' + st.countries +
+        ' · войн ' + st.wars + ' · боёв ' + nf(st.battles) + ' · взрывов ' + nf(st.explosionsTotal) +
+        ' · технологий ' + nf(tech.count) + ' из ' + nf(tech.catalog);
+      hintEl.style.whiteSpace = 'pre-line';
     }
     if (loadEl) loadEl.textContent = worldView.loading ? 'рисуем мир…' : 'мир: ' + WM.countries + ' стран · ' + world.own.tech.count + ' технологий';
     return st;
@@ -292,12 +373,18 @@ function setupWorld() {
     worldRaf = requestAnimationFrame(loop);
     const dt = Math.min(0.1, (now - worldLast) / 1000 || 0.016);
     worldLast = now;
-    // часы игры продолжают идти: война живёт и пока мы смотрим
+    // часы игры продолжают идти: война живёт и пока мы смотрим.
+    // F-351: шагаем только когда игра прожила новую минуту, а не каждый кадр.
     const target = map.transport ? map.transport.minutes : 0;
-    if (target > world.minutes) advanceWars(world, target);
+    if (world && target - world.minutes >= 1) advanceWars(world, target);
     try {
       worldView.step(dt);
-      worldView.draw();
+      // F-351: если кадр мира дороже бюджета — рисуем реже, но время идёт так же
+      const budget = worldView.lastDrawMs > 12 ? 33 : 16;
+      if (now - (worldView.drawnAt || 0) >= budget - 3 || !worldView.drawnAt) {
+        worldView.drawnAt = now;
+        worldView.draw();
+      }
     } catch (err) {
       if (hud.status) hud.status.textContent = 'карта мира не нарисовалась: ' + err.message;
       worldRaf = 0;
@@ -340,7 +427,9 @@ function setupWorld() {
   if (sat) sat.addEventListener('click', () => {
     worldView.showArmies = !worldView.showArmies;
     const ready = !!(world && world.own && world.own.tech && world.own.tech.eff.satellite);
-    sat.textContent = 'спутник: ' + (worldView.showArmies ? (ready ? 'вкл' : 'нужна наука') : 'выкл');
+    const spaceTier = world && world.own && world.own.tech ? (world.own.tech.tiers.space || 0) : 0;
+    sat.textContent = 'спутник: ' + (ready ? (worldView.showArmies ? 'вкл' : 'выкл')
+      : 'нужна наука · космос ' + spaceTier + ' из ' + TECH.satelliteFrom);
     drawStats();
     worldView.draw();
   });
@@ -600,15 +689,25 @@ window.addEventListener('keydown', (e) => {
    Кадр рисуется не чаще 20 раз в секунду, в скрытой вкладке — ни одного. */
 let lastTick = 0;
 let lastDraw = 0;
+let drawCost = 16;                  // сколько стоит кадр страны — мерим, а не гадаем
 function liveLoop(now) {
   requestAnimationFrame(liveLoop);
   if (document.hidden || !map.transport || !map.showVehicles) { lastTick = now; return; }
   const dt = Math.min(0.5, (now - lastTick) / 1000);
   lastTick = now;
-  map.tick(dt);
-  if (now - lastDraw < 50) return;
+  map.tick(dt);                     // мир живёт всегда: числа не зависят от отрисовки
+  // F-350: не рисуем то, что не видно. Раньше карта страны перерисовывалась 20 раз
+  // в секунду даже под заставкой и под открытой картой мира — на телефоне это и был
+  // «лагает»: два отрисовщика работали одновременно.
+  if (worldScreen && worldScreen.classList.contains && worldScreen.classList.contains('open')) return;
+  if (overlayPhase(startState) !== 'closed') return;
+  // F-350: и не чаще, чем успеваем: кадр в 30 мс не должен идти 20 раз в секунду
+  const interval = Math.max(50, Math.min(200, drawCost * 2.5));
+  if (now - lastDraw < interval) return;
   lastDraw = now;
-  map.draw();
+  const t0 = performance.now();
+  try { map.draw(); } catch (err) { /* кадр не должен убивать цикл */ }
+  drawCost = drawCost * 0.8 + (performance.now() - t0) * 0.2;
 }
 if (typeof requestAnimationFrame === 'function') {
   lastTick = performance.now();
@@ -617,4 +716,7 @@ if (typeof requestAnimationFrame === 'function') {
 
 if (hud.loadingText) hud.loadingText.textContent = 'мир ' + WORLD2D.sizeKm + ' × ' + WORLD2D.sizeKm + ' км…';
 setupIntro();
+// F-353: «карта мира» подключается сразу, а не после сборки страны: даже если
+// сборка где-то упадёт, кнопка обязана открывать карту мира
+setupWorld();
 boot();
