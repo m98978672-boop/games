@@ -267,6 +267,7 @@ function setupWorld() {
   const back = document.getElementById('world-back');
   const sat = document.getElementById('world-satellite');
   const terrainBtn = document.getElementById('world-terrain');
+  const regionBtn = document.getElementById('world-regions-border');
   let hover = null;                         // §99: что под курсором — покров, область, страна
   const openBtn = document.getElementById('world-open');
   const statsEl = document.getElementById('world-stats');
@@ -474,6 +475,15 @@ function setupWorld() {
     sat.textContent = 'спутник: ' + (ready ? (worldView.showArmies ? 'вкл' : 'выкл')
       : 'нужна наука · космос ' + spaceTier + ' из ' + TECH.satelliteFrom);
     drawStats();
+    worldView.draw();
+  });
+
+  // §100: границы областей — по тумблеру. По умолчанию выключены: на общей карте
+  // пунктир областей давал паутину поверх стран, и карта читалась хуже, а не лучше.
+  if (regionBtn) regionBtn.addEventListener('click', () => {
+    worldView.showRegions = !worldView.showRegions;
+    regionBtn.textContent = 'области: ' + (worldView.showRegions ? 'вкл' : 'выкл');
+    // слой подробностей не зависит от границ, но кадр перерисовать нужно
     worldView.draw();
   });
 
