@@ -164,6 +164,27 @@ async function readPackedChunk(entry, index) {
   return buffer;
 }
 
+// Быстрая проверка «каталог не отстал от игр». Нужна и серверу (чтобы не
+// раздавать битые куски), и CI: молчаливое устаревание ломает скачивание.
+async function catalogDrift(maxFiles) {
+  const limit = Number(maxFiles) || 4000;
+  const drift = [];
+  let checked = 0;
+  for (const game of state.catalog.games) {
+    for (const file of game.files || []) {
+      if (checked >= limit) return { ok: true, drift, checked, truncated: true };
+      checked += 1;
+      try {
+        const stat = await fsp.stat(path.join(repoRoot, game.dir, file.path));
+        if (stat.size !== file.size) drift.push({ gameId: game.gameId, path: file.path, expected: file.size, actual: stat.size });
+      } catch {
+        drift.push({ gameId: game.gameId, path: file.path, expected: file.size, actual: null });
+      }
+    }
+  }
+  return { ok: drift.length === 0, drift, checked, truncated: false };
+}
+
 async function buildTorrentFor(gameId) {
   const entry = state.torrents.get(gameId);
   if (!entry) return null;
@@ -421,6 +442,10 @@ const server = http.createServer(async (req, res) => {
       if (action === 'leave') {
         state.peers.delete(peerId);
         return json(res, 200, { ok: true });
+      }
+      if (action === 'drift') {
+        const report = await catalogDrift(body.limit);
+        return json(res, 200, { ok: true, ...report, hint: report.ok ? 'каталог актуален' : 'пересоберите: node tools/torrent/build-catalog.mjs' });
       }
       if (action === 'catalog') {
         return json(res, 200, { ok: true, catalog: state.catalog });
