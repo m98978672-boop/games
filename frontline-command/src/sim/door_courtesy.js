@@ -25,5 +25,6 @@ export function courtesyYield(game,u,visibleIds=null) {
     !walls.buildingAtPoint(v.x,v.y)&&along(v)>=0&&along(v)<200&&Math.abs(lateral(v))<80).sort((a,c)=>a.id-c.id);
   const rank=Math.max(0,entering.indexOf(u));
   const side=rank%2===0?1:-1, offset=42, distance=90+Math.floor(rank/2)*24;
+  if (game._courtesyMetrics) game._courtesyMetrics.yields++;
   return {x:px+nx*distance-ny*offset*side,y:py+ny*distance+nx*offset*side};
 }

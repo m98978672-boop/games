@@ -760,8 +760,8 @@ export class Game {
     }
     this.trackArmies();
     if (this.warOver) return;
-    // Измор: после долгой войны побеждает тот, кто держит больше ключевых городов.
-    if (this.cfg.flag('sudden_death', true)) {
+    // Необязательный экспериментальный лимит; по умолчанию война без таймера.
+    if (this.cfg.flag('sudden_death', false)) {
       const limit = this.cfg.ai.capture?.suddenDeathSeconds;
       if (limit && this.time > limit) return this.resolveByPoints();
     }

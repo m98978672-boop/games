@@ -1,0 +1,13 @@
+// Exercise the real worker entry with a mock WebLLM runtime; no model inference.
+import assert from 'node:assert/strict';import {build} from 'esbuild';import vm from 'node:vm';import {fileURLToPath} from 'node:url';
+const source=fileURLToPath(new URL('../src/ai/commander-worker-entry.js',import.meta.url));
+const result=await build({entryPoints:[source],bundle:true,format:'iife',write:false,plugins:[{name:'mock-runtime',setup(b){b.onResolve({filter:/^@mlc-ai\/web-llm$/},()=>({path:'runtime',namespace:'mock'}));b.onLoad({filter:/.*/,namespace:'mock'},()=>({contents:`export const prebuiltAppConfig={model_list:[{model_id:'Qwen3.5-0.8B-q4f16_1-MLC'}]};export async function CreateMLCEngine(id,opts){globalThis.__model=id;globalThis.__config=opts.appConfig;return {async resetChat(){globalThis.__resets++},chat:{completions:{async create(req){globalThis.__requests.push(req);if(globalThis.__fail===globalThis.__requests.length)throw Error('mock');return {choices:[{message:{content:'{"action":"none"}'}}]}}}}}}`,loader:'js'}));}}]});
+const sent=[],ctx={__resets:0,__requests:[],__fail:0,navigator:{gpu:{}},self:{postMessage:m=>sent.push(m)}};vm.runInNewContext(result.outputFiles[0].text,ctx);
+await ctx.self.onmessage({data:{type:'init'}});assert.equal(sent.at(-1).type,'ready');assert.equal(ctx.__model,'Qwen3.5-0.8B-q4f16_1-MLC');assert.match(ctx.__config.model_list[0].model,/resolve\/0ec1389/);
+await ctx.self.onmessage({data:{type:'pair',id:7,first:1,inputs:[{secret:'only-side-0'},{secret:'only-side-1'}]}});
+assert.equal(ctx.__resets,4);assert.equal(ctx.__requests.length,2);
+const [first,second]=ctx.__requests;assert.equal(first.messages[0].content,second.messages[0].content);assert.match(first.messages[1].content,/only-side-1/);assert.doesNotMatch(first.messages[1].content,/only-side-0/);assert.match(second.messages[1].content,/only-side-0/);assert.doesNotMatch(second.messages[1].content,/only-side-1/);
+for(const r of [first,second]){assert.equal(r.messages.length,2);assert.equal(r.seed,42);assert.equal(r.temperature,0);assert.equal(r.extra_body.enable_thinking,false);}
+assert.equal(sent.at(-1).type,'result');assert.equal(sent.at(-1).id,7);assert.deepEqual(JSON.parse(JSON.stringify(sent.at(-1).texts)),['{"action":"none"}','{"action":"none"}']);
+ctx.__fail=4;await ctx.self.onmessage({data:{type:'pair',id:8,first:0,inputs:[{a:1},{b:2}]}});assert.equal(sent.at(-1).type,'error');assert.ok(!sent.some(m=>m.type==='result'&&m.id===8),'no partial result on failure');
+console.log('worker contract with mock runtime: context reset, identical request settings, isolated inputs, no partial pair');

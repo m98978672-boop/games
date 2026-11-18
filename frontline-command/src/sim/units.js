@@ -544,6 +544,16 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
       if(length>1){dx/=length;dy/=length;}
     }
   }
+  // Diagnostic hook only: absent in normal play. It adjusts direction before
+  // the existing terrain, wall and occupancy safety checks, never position.
+  if (game._experimentalSteering) {
+    const v = game._experimentalSteering(u, dx, dy, dt);
+    if (v && Number.isFinite(v.x) && Number.isFinite(v.y)) {
+      dx = v.x; dy = v.y;
+      const length = Math.hypot(dx, dy);
+      if (length > 1) { dx /= length; dy /= length; }
+    }
+  }
   let step = speed * dt;
   if (yieldPoint) step=Math.min(step, Math.hypot(u.x-yieldPoint.x,u.y-yieldPoint.y));
   if (u._crowdActive && u._crowdPoint) step=Math.min(step, Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y));

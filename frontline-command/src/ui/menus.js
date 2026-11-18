@@ -1,5 +1,6 @@
 // Экраны меню: главное меню, пауза, настройки, дерево навыков, справка, итоги войны, смерть.
 // Экраны ничего не решают сами — только вызывают обработчики из main.js.
+import { bindModelStorage } from './model_storage.js';
 export class Menus {
   constructor(overlay, game) {
     this.overlay = overlay;
@@ -41,6 +42,14 @@ export class Menus {
           <b>Демонстрация: ИИ против ИИ</b>
           <small>Симметричный прогон без игрока: проверка, что правила не дают преимущества ни одной стороне.</small>
         </div>
+        <div class="menu-card" data-act="neutral-ai-demo">
+          <b>Эксперимент: общий помощник ИИ</b>
+          <small>Один локальный помощник для обеих сторон, отдельно и по одинаковым правилам. Требует WebGPU и загрузки около 400 МБ из сети; без модели работает штатный ИИ.</small>
+        </div>
+        <button type="button" class="menu-card" data-act="model-storage">
+          <b>Хранилище модели ИИ</b>
+          <small>Передать файлы модели в рабочую среду через этот предпросмотр.</small>
+        </button>
         <div class="menu-card" data-act="skills">
           <b>Дерево навыков</b>
           <small>Мета-прокачка между войнами. Опыт: ${Math.floor(meta.xp)} XP, изучено ${meta.learned.length} навыков, войн ${meta.warCount}.</small>
@@ -76,6 +85,24 @@ export class Menus {
       const s = this.overlay.querySelector('#menu-seed');
       this.handlers.onMenuAction?.(act, { difficulty: d?.value || difficulty, seed: Number(s?.value) || seed });
     };
+  }
+
+  // ---------- временное хранилище моделей в локальном предпросмотре ----------
+  modelStorage() {
+    this.show(`
+      <h1>Хранилище <span>модели</span></h1>
+      <div class="subtitle">Передайте архив ZIP или отдельные файлы модели в рабочую среду. Модель не запускается автоматически.</div>
+      <p>Можно выбрать несколько файлов; они загружаются по очереди небольшими блоками. Один файл — до 600 МиБ, всего — до 1 ГиБ. Не закрывайте страницу во время загрузки.</p>
+      <p class="model-storage-note">Это временное хранилище предпросмотра. Не передавайте пароли или личные данные. Большие файлы могут не сохраниться между сеансами.</p>
+      <label for="model-file">Выберите файл или файлы модели</label>
+      <input id="model-file" type="file" multiple accept=".zip,.bin,.json,.txt,.model,.wasm,.gguf,.safetensors">
+      <div class="btn-row"><button type="button" class="btn primary" id="model-send" disabled>Загрузить</button><button type="button" class="btn" id="model-back">Назад</button></div>
+      <progress id="model-progress" max="100" value="0" aria-label="Ход загрузки"></progress>
+      <div id="model-status" role="status" aria-live="polite">Проверка хранилища…</div>
+      <h2>Загруженные файлы</h2><ul id="model-files"></ul>
+    `);
+    this.overlay.onclick = null;
+    bindModelStorage(this.overlay, () => this.handlers.onMenuAction?.('storage-back'));
   }
 
   // ---------- пауза ----------

@@ -540,7 +540,7 @@ export function playerInteract(game, u) {
   const downed = game.unitsNear(u.x, u.y, 44).find((o) => o.faction === u.faction && o.downed && o.alive);
   if (downed) { reviveUnit(game, downed); return; }
   // построить/починить ближайший чертёж
-  const bp = game.build.nearestWork(u, 70);
+  const bp = u.role === 'engineer' ? game.build.nearestWork(u, 70) : null;
   if (bp) { game.build.work(bp, 1.2, u); return; }
   // пополниться на складе
   const p = game.world.pointAt(u.x, u.y, 60);

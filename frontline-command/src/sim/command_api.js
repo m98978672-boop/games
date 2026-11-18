@@ -4,7 +4,7 @@ import { orderLabel } from './squads.js';
 
 export const SOURCE_LABEL = {
   player: 'игрок', autopilot: 'автопилот', enemyAI: 'ИИ врага',
-  rules: 'правило', system: 'система',
+  rules: 'правило', system: 'система', neutralAI: 'локальный помощник',
 };
 
 export class CommandAPI {
