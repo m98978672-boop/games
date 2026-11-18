@@ -19,6 +19,10 @@ try{
    assert.ok(validateProposal(row.response,fake),'teacher output passes actual validator');
   }
  }
- const again=await collect(opts);assert.equal(again.data.train.length,manifest.files.train.count);assert.equal(again.data.eval.length,manifest.files.eval.count);
+ const again=await collect(opts);
+ for(const split of ['train','eval']){
+  const contents=again.data[split].map(row=>JSON.stringify(row)).join('\n')+'\n';
+  assert.equal(createHash('sha256').update(contents).digest('hex'),manifest.files[split].sha256,'dataset must be reproducible');
+ }
 }finally{await rm(dir,{recursive:true,force:true});}
 console.log('Training dataset: isolated snapshots, valid heuristic labels, disjoint seeds, exact-deduplication and reproducible hashes. No neural training in this test.');
