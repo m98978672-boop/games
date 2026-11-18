@@ -46,6 +46,7 @@
 </style>
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
 <canvas id="canvas"></canvas>
 <div id="damageFlash"></div>
 <div id="crosshair"></div>
@@ -79,6 +80,7 @@
   <div class="small">Собственные低поли-модели • 15 анимаций × 4 варианта на модель • оптимизация без потери видимой графики</div>
   <button class="btn" id="startBtn">НАЧАТЬ ИГРУ</button>
 </div>
+<script src="../shared/engine.js"></script>
 <script src="three.min.js"></script>
 <script>
 /* ================================================================
@@ -1305,5 +1307,6 @@ window.addEventListener('mouseup', e => { if (e.button === 0) keys['MouseDown'] 
 
 initThree();
 </script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

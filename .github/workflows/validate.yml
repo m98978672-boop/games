@@ -24,6 +24,15 @@ jobs:
           node site/tests/portal.mjs
           node site/tests/news-and-antivirus.mjs
           node site/scripts/scan-submission-antivirus.mjs
+      - name: Check that the RatCore browser bundle is up to date (engine is wired into every section)
+        run: |
+          node ratcore/tools/build-browser-bundle.mjs --check
+          node game-base/tests/engine.mjs
+      - name: Test bridges between RatCore and other engines (route-engine, «Переплёт»)
+        run: |
+          (cd route-engine && npm test)
+          node route-engine/tests/ratcore-bridge.mjs
+          node pereplet-prototype/tests/ratcore-bridge.mjs
       - name: Test RatCore v1.0.0 Stage 1-5 + Demo Game (All 10 Standard Modules + All 14 Opt-In Packs + RatStudio + ToolGuard)
         run: |
           node ratcore/tests/tool-contract.mjs

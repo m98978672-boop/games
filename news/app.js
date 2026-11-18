@@ -154,7 +154,8 @@
   }
 
   function getItemComments(item) {
-    const seeded = Array.isArray(item?.comments) ? item.comments : [];
+    // Только реальные комментарии читателей из localStorage: заготовленных/симулированных нет.
+    const seeded = [];
     const byId = state.userComments[item?.id];
     const byCode = item?.code ? state.userComments[item.code] : null;
     const local = [
@@ -638,11 +639,14 @@
     const cHead = el('div', 'comments-head');
     cHead.append(
       el('h3', '', `💬 Комментарии (${comments.length})`),
-      el('span', 'comments-note', 'Синхронизация с облачными инструментами · GamesAntivirus v1.1')
+      el('span', 'comments-note', 'Пишут только читатели · проверка GamesAntivirus v1.1')
     );
     cSec.appendChild(cHead);
 
     const cList = el('div', 'comments-list');
+    if (!comments.length) {
+      cList.appendChild(el('p', 'comments-empty', 'Пока никто не комментировал. Будьте первым — комментарий появится сразу после антивирусной проверки.'));
+    }
     comments.forEach((c) => {
       const card = el('div', 'comment-card');
       const top = el('div', 'comment-top');

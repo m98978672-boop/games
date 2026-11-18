@@ -9,12 +9,15 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
   <div id="app">
     <canvas id="game"></canvas>
     <div id="hud" class="hidden"></div>
     <div id="overlay"></div>
   </div>
   <noscript>Для игры нужен JavaScript.</noscript>
-  <script type="module" src="src/main.js"></script>
+<script src="../shared/engine.js"></script>
+<script type="module" src="src/main.js"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

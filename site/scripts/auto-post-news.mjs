@@ -216,7 +216,9 @@ export function makeSafeNewsItem(raw, source) {
   const readMin = Math.max(1, Math.min(8, Math.round(words / 130) || 1));
 
   const idHash = crypto.createHash('sha1').update(`${source.id}|${raw.link}`).digest('hex').slice(0, 10);
-  const codeNum = 700 + (parseInt(idHash.slice(0, 4), 16) % 299);
+  // Короткий код: префикс рубрики + 3 цифры. Чтобы коды не повторялись между
+  // источниками, в номер подмешивается стабильный хеш самой рубрики.
+  const codeNum = 700 + (parseInt(crypto.createHash('sha1').update(`${source.category}|${idHash}`).digest('hex').slice(0, 4), 16) % 299);
   const catPrefix = { games: 'G', tech: 'T', science: 'S', world: 'W', security: 'C', facts: 'F' }[source.category] || 'A';
   const tags = (Array.isArray(raw.tags) && raw.tags.length ? raw.tags : [source.name])
     .map((t) => t.slice(0, 26))
@@ -237,19 +239,14 @@ export function makeSafeNewsItem(raw, source) {
     icon: source.icon,
     accent: source.accent,
     proofs: [{ label: `Первоисточник (${source.name})`, url: raw.link }],
-    // Каждая авто-новость обязана нести фактчек и комментарий редакции —
-    // ровно так же, как ручные статьи, иначе витрина и CI-валидатор её отклоняют.
+    // Каждая авто-новость несёт фактчек, но НЕ несёт заготовленных комментариев:
+    // комментарии пишут только реальные читатели (проверено CI).
     factCheck: {
       verified: true,
       checkedAt: publishedAt.slice(0, 10),
       method: `Сверка заголовка и ссылки с первоисточником «${source.name}»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus.`,
     },
-    comments: [{
-      author: 'Редакция Games News',
-      tool: 'AutoPost RSS',
-      text: `Материал автоматически сверен с первоисточником «${source.name}» и проверен антивирусом перед публикацией.`,
-      publishedAt,
-    }],
+    comments: [],
     pinned: false,
     autoPosted: true,
   };
@@ -320,11 +317,7 @@ async function buildCommunityAutoPosts() {
           checkedAt: '2026-11-15',
           method: 'Игра прошла 10-проходную антивирусную проверку каталога Games и запускается в изолированном sandbox.',
         },
-        comments: [{
-          author: 'Редакция Games News',
-          tool: 'Каталог Games',
-          text: 'Карточка игры проверена антивирусом каталога и добавлена в витрину сообщества.',
-        }],
+        comments: [],
         image: 'site/assets/news/g101-gta6.jpg',
         imageCaption: 'Витрина игр сообщества Games',
         imageCredit: 'Games',

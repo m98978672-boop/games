@@ -14,9 +14,11 @@
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="styles.css">
+  <script src="../shared/engine.js"></script>
   <script src="app.js" defer></script>
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#top" aria-label="PLAYBRIDGE — наверх">
@@ -162,5 +164,6 @@
     </main>
   </div>
   <noscript><div class="noscript">Для подключения к backend и загрузки библиотеки нужен включённый JavaScript.</div></noscript>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

@@ -3,8 +3,15 @@
 
   var DD = global.DD = global.DD || {};
 
-  // Детерминированный PRNG mulberry32 (единое зерно для мира, лута и ИИ)
+  // Детерминированный PRNG: числа берутся из ЯДРА движка RatCore (тот же mulberry32),
+  // поэтому единое зерно мира, лута и ИИ даёт прежние значения бит-в-бит.
   function mulberry32(seed) {
+    var scope = (typeof global !== 'undefined' && global) || (typeof window !== 'undefined' ? window : null);
+    var make = scope && scope.RatCore && scope.RatCore.createRng;
+    if (typeof make === 'function') {
+      var coreRng = make((seed >>> 0) || 20261110);
+      return function () { return coreRng.next(); };
+    }
     var a = (seed >>> 0) || 20261110;
     return function () {
       a |= 0;

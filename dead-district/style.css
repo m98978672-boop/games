@@ -1,3 +1,4 @@
+@import url("../shared/theme.css");
 @font-face {
   font-family: "PixelifySansLocal";
   src: url("assets/fonts/font_pixelify_sans.ttf") format("truetype");

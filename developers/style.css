@@ -1,3 +1,4 @@
+@import url("../shared/theme.css");
 :root {
   color-scheme: dark;
   --bg: #080d11;
@@ -111,3 +112,7 @@ footer a { color: var(--cyan); }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: .01ms !important; }
 }
+
+/* --- плашка движка Games в шапке (единый HUD-стиль shared/theme.css) --- */
+.site-header .engine-hud-slot { display: flex; align-items: center; margin-left: auto; }
+@media (max-width: 720px) { .site-header .engine-hud-slot { display: none; } }

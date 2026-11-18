@@ -118,6 +118,12 @@
     return h >>> 0;
   };
   A.mulberry32 = function (seed) {
+    // Ядро движка RatCore даёт тот же mulberry32 — числа и сиды совпадают бит-в-бит.
+    var make = (typeof window !== 'undefined' && window.RatCore && window.RatCore.createRng) || null;
+    if (typeof make === 'function') {
+      var coreRng = make(seed >>> 0);
+      return function () { return coreRng.next(); };
+    }
     var t = seed >>> 0;
     return function () {
       t = (t + 0x6D2B79F5) >>> 0;

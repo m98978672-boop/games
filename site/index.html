@@ -103,6 +103,8 @@
 <script src="user-games.js" defer></script>
 <script src="portal.js" defer></script>
 <script src="games-tabs.js" defer></script>
+<script src="../shared/engine.js" defer></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 <script src="../site/community-games.js" defer></script>
 </head>
 <body data-root="../">
@@ -170,6 +172,7 @@
       <button class="ribbon-link is-highlight" type="button" data-quick-cat="user">От игроков <span class="ribbon-pill" data-user-games-count>0</span></button>
       <button class="ribbon-link is-news" type="button" data-open-news="true">📰 Новости <span class="ribbon-pill">8 облаков</span></button>
       <button class="ribbon-link is-antivirus" type="button" data-open-antivirus="file">🛡️ Антивирус <span class="ribbon-pill">10×</span></button>
+      <a class="ribbon-link is-engine" href="../ratcore/README.md" target="_blank" rel="noopener">⚙️ Движок <span class="ribbon-pill" data-engine-version>RatCore v1.0.0</span></a>
       <button class="ribbon-link is-chat" type="button" data-open-chat="games-lobby">💬 Общение <span class="ribbon-pill">9 облаков</span></button>
     </div>
 
@@ -260,7 +263,7 @@
   </div>
 
   <div id="portalNewsCloudsStrip" class="portal-clouds-strip" hidden>
-    <a class="cloud-chip-link" href="https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda" target="_blank" rel="noopener noreferrer"><strong>Supabase · games_news_comments</strong><span>19 комментариев владельца с RLS</span></a>
+    <a class="cloud-chip-link" href="https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda" target="_blank" rel="noopener noreferrer"><strong>Supabase · games_news_comments</strong><span>Таблица комментариев с RLS</span></a>
     <a class="cloud-chip-link" href="https://app.notion.com/p/Games-2026-41b5c62035e48124a33cc11b2cfb725b" target="_blank" rel="noopener noreferrer"><strong>Notion · Сводка новостей 2026</strong><span>Коды, доказательства и комментарий</span></a>
     <a class="cloud-chip-link" href="https://linear.app/gamebobli/issue/GAM-7/vkladka-obshenie-v-portale-games-s-vstroennym-ratmes-i-igrovymi#comment-fa01ccaf" target="_blank" rel="noopener noreferrer"><strong>Linear · Gamebobli (GAM-7)</strong><span>Комментарий и статус отдела новостей</span></a>
     <a class="cloud-chip-link" href="https://docs.google.com/spreadsheets/d/16vFasgolSX0RDGNvJ2bLF-JEgOAXwWZOuHcOfPFLn58/edit" target="_blank" rel="noopener noreferrer"><strong>Google Sheets · Реестр 19 кодов</strong><span>Таблица новостей и комментариев</span></a>
@@ -893,6 +896,7 @@
     · Исходники и планы:
     <a href="https://github.com/m98978672-boop/games" target="_blank" rel="noopener">github.com/m98978672-boop/games</a></p>
   <p>Подсказка: <code>/</code> — поиск · <code>R</code> — случайная игра · <code>Esc</code> — закрыть окно.</p>
+  <p class="footer-engine" id="footer-engine-slot" data-engine-badge-href="../ratcore/README.md">Движок всех разделов: <a href="../ratcore/README.md" target="_blank" rel="noopener" data-engine-version>RatCore v1.0.0</a> · один движок для витрины, новостей, мессенджера и каждой игры.</p>
 </footer>
 
 </body>

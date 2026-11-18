@@ -37,6 +37,7 @@
           </span>
         </button>
         <div class="brand-actions">
+          <div class="engine-hud-slot" data-engine-badge aria-label="Движок"></div>
           <button class="icon-btn icon-btn-accent" id="btnNewDmQuick" type="button" title="Новый личный чат">✉️</button>
           <button class="icon-btn" id="btnCreateRoomQuick" type="button" title="Новая комната или вход по ссылке">➕</button>
           <button class="icon-btn hide-mobile" id="btnCommandPalette" type="button" title="Поиск (Ctrl+K)">🔎</button>
@@ -690,6 +691,8 @@
   </dialog>
 
   <div class="toast-host" id="toastHost" aria-live="polite"></div>
+  <script src="../shared/engine.js"></script>
+  <script src="../shared/engine-bootstrap.js" defer></script>
   <script type="module" src="./src/web/app.js?v=16"></script>
 </body>
 </html>

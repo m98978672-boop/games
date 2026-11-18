@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#121721">
   <title>Games News — Отдельный новостной отдел портала Games</title>
-  <meta name="description" content="Отдельный новостной отдел Games News: 19 проверенных новостей 2026 года по 6 категориям с короткими кодами поиска (G-101..F-603), реальными фото, доказательствами и комментариями.">
+  <meta name="description" content="Отдельный новостной отдел Games News: 19 проверенных новостей 2026 года по 6 категориям с короткими кодами поиска (G-101..F-603), реальными фото, доказательствами и живыми комментариями читателей.">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Games News — Отдельный новостной отдел">
   <meta property="og:description" content="Проверенные новости игр, технологий, космоса, мира и кибербезопасности с кодами поиска, фото и доказательствами.">
@@ -15,7 +15,9 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23121721'/%3E%3Ctext x='16' y='21' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='14' fill='%2338bdf8'%3EGN%3C/text%3E%3C/svg%3E">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
-  <script src="../site/game-antivirus.js" defer></script>
+  <script src="../shared/engine.js" defer></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
+<script src="../site/game-antivirus.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -90,7 +92,7 @@
           <span>☁ 8 ОБЛАКОВ НОВОСТЕЙ</span>
         </div>
         <div class="sidebar-cloud-links">
-          <a href="https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda" target="_blank" rel="noopener noreferrer">Supabase · 19 комм.</a>
+          <a href="https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda" target="_blank" rel="noopener noreferrer">Supabase · таблица</a>
           <a href="https://app.notion.com/p/Games-2026-41b5c62035e48124a33cc11b2cfb725b" target="_blank" rel="noopener noreferrer">Notion · Сводка</a>
           <a href="https://linear.app/gamebobli/issue/GAM-7/vkladka-obshenie-v-portale-games-s-vstroennym-ratmes-i-igrovymi#comment-fa01ccaf" target="_blank" rel="noopener noreferrer">Linear · GAM-7</a>
           <a href="https://docs.google.com/spreadsheets/d/16vFasgolSX0RDGNvJ2bLF-JEgOAXwWZOuHcOfPFLn58/edit" target="_blank" rel="noopener noreferrer">Sheets · Реестр</a>
@@ -117,6 +119,7 @@
             <option value="fresh">Сначала свежие</option>
             <option value="popular">Обсуждаемое и интересное</option>
           </select>
+          <div class="engine-hud-slot" data-engine-badge aria-label="Движок отдела"></div>
           <button type="button" class="btn-compose-main" id="btnComposeMain">✍ Написать пост</button>
         </div>
       </header>

@@ -119,8 +119,15 @@ for (const reqCat of ['games', 'tech', 'science', 'world', 'security', 'facts'])
   assert.ok(presentCats.has(reqCat), `news-feed.json must cover category "${reqCat}"`);
 }
 const seenCodes = new Set();
-const commentTools = new Set();
-for (const item of feed.items) {
+const verifiedArticles = feed.items.filter((item) => item.factCheck && item.factCheck.verified);
+const autoArticles = feed.items.filter((item) => !item.factCheck || !item.factCheck.verified);
+assert.ok(verifiedArticles.length >= 19, 'news-feed.json must keep at least 19 verified coded articles');
+for (const item of autoArticles) {
+  assert.match(String(item.code || ''), /^[A-Z]-\d{3}$/, `Auto-posted ${item.id} must have short code like W-805`);
+  assert.equal(seenCodes.has(item.code), false, `Duplicate news code: ${item.code}`);
+  seenCodes.add(item.code);
+}
+for (const item of verifiedArticles) {
   assert.match(String(item.code || ''), /^[A-Z]-\d{3}$/, `Article ${item.id} must have short code like G-101`);
   assert.equal(seenCodes.has(item.code), false, `Duplicate news code: ${item.code}`);
   seenCodes.add(item.code);
@@ -134,13 +141,16 @@ for (const item of feed.items) {
     assert.match(String(proof.url || ''), /^https:\/\//, `Proof URL for ${item.code} must be HTTPS`);
   }
 
-  assert.ok(Array.isArray(item.comments) && item.comments.length >= 1, `Article ${item.code} must have at least 1 owner comment`);
-  for (const c of item.comments) {
-    assert.ok(c.author && c.text && c.tool, `Comment on ${item.code} must specify author, tool, and text`);
-    commentTools.add(c.tool);
-  }
+  // Комментарии пишут только реальные читатели: заранее заготовленных (симулированных) нет.
+  assert.ok(Array.isArray(item.comments), `Article ${item.code} must declare comments array`);
+  assert.equal(item.comments.length, 0, `Article ${item.code} must NOT ship simulated/pre-written comments`);
 }
-assert.ok(commentTools.size >= 6, `Owner comments must span at least 6 connected tools (found ${commentTools.size})`);
+const shippedComments = feed.items.reduce((sum, item) => sum + (Array.isArray(item.comments) ? item.comments.length : 0), 0);
+assert.equal(shippedComments, 0, 'news-feed.json must not contain any pre-written comments (only live reader comments)');
+
+const newsAppLive = await readFile(path.join(repoRoot, 'news/app.js'), 'utf8');
+assert.ok(newsAppLive.includes('Только реальные комментарии читателей'), 'news/app.js must render only live reader comments');
+assert.equal(/const seeded = Array\.isArray\(item\?\.comments\)/.test(newsAppLive), false, 'news/app.js must not merge shipped comments into the reader');
 
 const newsAppSrc = await readFile(path.join(repoRoot, 'news/app.js'), 'utf8');
 for (const token of ['../site/news-feed.json', 'findArticleByIdOrCode', 'code-pill', 'reader-figure', 'proofs-box', 'addComment', 'comments-section', 'news:selectCategory', 'news:unreadCount']) {
@@ -198,8 +208,11 @@ for (const [label, html] of [['site/index.html', siteHtml], ['index.html', rootH
   }
   assert.equal(html.includes('news-teaser-strip'), false, `${label} must NOT mix news teaser into games storefront`);
   assert.equal(html.includes('portal-main-tabs'), false, `${label} must NOT add extra tab bar above store ribbon`);
-  const forbiddenEngineRe = new RegExp(['rat', 'core'].join(''), 'i');
-  assert.equal(forbiddenEngineRe.test(html), false, `${label} must stay strictly isolated from internal engine`);
+  // Движок теперь подключён официально (shared/engine.js + собранный бандл),
+  // но внутренние модули движка (ratcore/src/**) витрине по-прежнему недоступны напрямую.
+  assert.equal(/ratcore\/src\//.test(html), false, `${label} must not import internal engine modules directly`);
+  assert.equal(/ratcore\/(playground|demos|tests|comms|reports)\//.test(html), false, `${label} must not link engine internals from the storefront`);
+  assert.ok(html.includes('shared/engine.js'), `${label} must load the engine bridge`);
 }
 assert.ok(siteHtml.includes('data-src="../news/index.html?embed=games"'), 'site/index.html must embed ../news/index.html?embed=games');
 assert.ok(rootHtml.includes('data-src="news/index.html?embed=games"'), 'root index.html must embed news/index.html?embed=games');

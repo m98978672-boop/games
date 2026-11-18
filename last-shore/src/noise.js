@@ -59,8 +59,15 @@ export const smoothstep = (a, b, v) => {
   return t * t * (3 - 2 * t);
 };
 
-/** Детерминированный ГПСЧ (mulberry32) — для расстановки объектов */
+/** Детерминированный ГПСЧ — для расстановки объектов.
+ *  Числа берёт ЯДРО движка RatCore (тот же mulberry32): сиды дают прежние значения. */
 export function makeRng(seed) {
+  const glob = typeof globalThis !== 'undefined' ? globalThis : null;
+  const make = glob && glob.RatCore && typeof glob.RatCore.createRng === 'function' ? glob.RatCore.createRng : null;
+  if (make) {
+    const core = make(seed >>> 0);
+    return function rng() { return core.next(); };
+  }
   let a = seed >>> 0;
   return function rng() {
     a |= 0;

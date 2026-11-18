@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
 
 <!-- Hand-drawn vector icon sprite (no emoji, no generated raster icons) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -253,6 +254,8 @@ window.addEventListener('error', function(e){
   if (x) { x.hidden = false; x.textContent = 'Ошибка запуска: ' + (e.message || 'неизвестная ошибка') + '. Обнови страницу (Ctrl+R).'; }
 });
 </script>
+<script src="../shared/engine.js"></script>
 <script src="game.js"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

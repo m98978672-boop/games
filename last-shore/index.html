@@ -8,6 +8,7 @@
 <!-- стили подгружает загрузчик в конце страницы, с меткой версии против кэша -->
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
 <div id="app">
   <canvas id="scene"></canvas>
 
@@ -280,6 +281,7 @@
   </div>
 </div>
 
+<script src="../shared/engine.js"></script>
 <script>
 // Ловим ошибки ещё до загрузки игры: они сразу появятся в строке статуса.
 window.__errors = [];
@@ -314,5 +316,6 @@ window.addEventListener('error', function (e) {
   document.body.appendChild(js);
 })();
 </script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

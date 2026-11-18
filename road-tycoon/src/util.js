@@ -31,8 +31,20 @@
     return many;
   };
 
-  /* Детерминированный ГПСЧ */
+  /* Детерминированный ГПСЧ.
+     Числа берутся из ЯДРА движка RatCore (createRng), когда он загружен:
+     алгоритм тот же mulberry32, поэтому сиды и сохранения совместимы бит-в-бит.
+     Резервный путь ниже оставлен только на случай, если движок ещё грузится. */
+  U.engineCreateRng = function () {
+    const rc = (typeof window !== 'undefined' && window.RatCore) || null;
+    return rc && typeof rc.createRng === 'function' ? rc.createRng : null;
+  };
   U.mulberry32 = function (seed) {
+    const make = U.engineCreateRng();
+    if (make) {
+      const rngCore = make(seed >>> 0);
+      return function () { return rngCore.next(); };
+    }
     let a = seed >>> 0;
     return function () {
       a = (a + 0x6d2b79f5) >>> 0;

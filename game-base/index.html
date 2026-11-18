@@ -53,6 +53,7 @@
   </div>
 
   <div class="top-actions">
+  <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
     <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза">⏸</button>
     <button id="btn-restart" class="icon-btn" title="Новый раунд (R)" aria-label="Новый раунд">↻</button>
     <button id="btn-sound" class="icon-btn" title="Звук (M)" aria-label="Звук">🔊</button>
@@ -77,6 +78,7 @@
 <noscript><p style="color:#f2ecdf;padding:24px">Для игры нужен JavaScript.</p></noscript>
 
 <!-- Обычные скрипты без сборки: порядок важен, каждый добавляет своё в window.GB -->
+<script src="../shared/engine.js"></script>
 <script src="src/config.js"></script>
 <script src="src/util.js"></script>
 <script src="src/save.js"></script>
@@ -85,5 +87,6 @@
 <script src="src/render.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/main.js"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

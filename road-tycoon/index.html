@@ -51,6 +51,7 @@
     <button id="btn-zoom-fit" class="icon-btn" title="Вся карта (F)" aria-label="Вся карта">⛶</button>
   </div>
   <div class="top-actions">
+  <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
     <div id="speed-badge" class="speed-badge">1×</div>
     <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза">⏸</button>
     <div class="speed-group" id="speed-group" aria-label="Скорость игры">
@@ -106,6 +107,7 @@
 
 <noscript><p style="color:#fff;padding:24px">Для игры нужен JavaScript.</p></noscript>
 
+<script src="../shared/engine.js"></script>
 <script src="src/config.js?v=169"></script>
 <script src="src/util.js?v=169"></script>
 <script src="src/world.js?v=169"></script>
@@ -117,5 +119,6 @@
 <script src="src/audio.js?v=169"></script>
 <script src="src/ui.js?v=169"></script>
 <script src="src/main.js?v=169"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>
