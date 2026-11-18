@@ -2262,6 +2262,17 @@ export function createRatMesEngine({
           if (rec.ok) {
             if (rec.data?.deduplicated) deduplicated += 1;
             else ingested += 1;
+            // Сообщение уже было в Vault (например, отправлено с этого устройства):
+            // дописываем облачное вложение, чтобы файл открывался и после перезагрузки.
+            if (rec.data?.deduplicated && rowAttachment && row.msg_id) {
+              const local = vaultStore.readPage(row.room_id, { limit: 400 }).messages
+                .find((m) => m.msgId === row.msg_id);
+              if (local && !local.attachment?.storagePath) {
+                vaultStore.patchMessage(local.network || row.network || 'ratmes', row.room_id, row.msg_id, {
+                  attachment: { ...(local.attachment || {}), ...rowAttachment },
+                });
+              }
+            }
           }
         }
         cloudHub.recordSync({

@@ -112,6 +112,24 @@ await test('Файл из другого устройства: вложение 
   assert.equal(q.ok, true);
   assert.equal(q.data.totalMatches, 1);
   assert.equal(q.data.hits[0].msgId, 'sb-file-1');
+
+  // Дедупликация не теряет файл: повторный ingest дописывает вложение уже сохранённому сообщению
+  const again = await engine.tools.cloud.ingestRemote({
+    messages: [{
+      msg_id: 'sb-file-1',
+      room_id: 'games-lobby',
+      sender_id: 'u-peer-file',
+      sender_name: 'Игрок с телефона',
+      body_text: '',
+      kind: 'file',
+      attachment: { filename: 'смета на ремонт.pdf', mimeType: 'application/pdf', sizeBytes: 48213, storagePath: 'games-lobby/abcdef0123456789_smeta-na-remont.pdf' },
+    }],
+  });
+  assert.equal(again.data.deduplicated, 1);
+  const page2 = await engine.tools.vault.readPage({ chatId: 'games-lobby', limit: 20 });
+  const same = page2.data.messages.filter((m) => m.msgId === 'sb-file-1');
+  assert.equal(same.length, 1, 'Дубля сообщения быть не должно');
+  assert.ok(same[0].attachment.storagePath, 'Вложение обязано остаться у сообщения после дедупликации');
 });
 
 await test('TransferGuard: 5 барьеров блокируют обход инструментов (RM-101, RM-103, RM-105, RM-106, RC-603)', async () => {
