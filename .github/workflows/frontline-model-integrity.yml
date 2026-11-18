@@ -1,7 +1,7 @@
 name: Verify Frontline model archive
 on:
+  workflow_dispatch:
   push:
-    branches: [arena/618960d4-games]
     paths: [.github/workflows/frontline-model-integrity.yml, frontline-command/src/ui/model_import.js, frontline-command/tests/model-import-browser.mjs]
 permissions:
   contents: read
