@@ -35,11 +35,14 @@ export const WV = {
   landOwn: MAP_TONES.own,
   tones: ['#6e8557', '#7d7a53', '#5f7a58', '#87794f', '#67805f', '#7d7450', '#708049', '#637652'],
   capitalLabelScale: 0.05,   // с этого масштаба подписываем столицы
-  // §101: дороги на карте мира — только при очень большом зуме. Владелец: «почему дороги
-  // такие большие, если на карте мира я их должен видеть только при очень большом зуме».
-  // До 0,12 px/км дорог нет вовсе: на обзоре это были жёлтые толстые линии поверх стран.
-  roadScale: 0.12,
-  localRoadScale: 0.25,
+  // §102: дороги на карте мира почти не видны — и это правильно. Владелец: «не бывает
+  // таких видных дорог на карте мира да и вообще». На планете 40 000 км дорога — волосок:
+  // она нужна только когда страна занимает весь экран. До 0,35 px/км дорог нет вовсе,
+  // дальше — тонкая бледная нитка без жёлтого и без толстого корпуса.
+  roadScale: 0.35,
+  localRoadScale: 0.55,
+  // когда дорога уже «настоящая» — глубокий зум, там можно чуть контраста
+  roadCasingScale: 0.7,
   ruinScale: 0.05,
   // §100: отметки рельефа — тоже подробность: на обзоре планеты это серая пыль
   // поверх покрова, поэтому они появляются вместе с мелкими дорогами
@@ -1419,34 +1422,37 @@ export class WorldView {
     // До WV.roadScale дорог нет совсем; местные — от WV.localRoadScale.
     const showRoads = cam.scale >= WV.roadScale;
     const showLocal = cam.scale >= WV.localRoadScale;
-    // §99: дорога — это корпус и сердцевина, как на настоящих картах: тёмный контур
-    // отделяет её от леса и болота, светлая середина показывает, что ехать можно.
-    // §99: на глубоком зуме дорога толще — в масштабе она должна оставаться дорогой
-    // §101: толщина растёт с масштабом плавно — на пороге дорога тонкая, на зуме толстая
-    const zk = cam.scale >= 0.4 ? 1.9 : (cam.scale >= 0.25 ? 1.45 : 0.8);
+    // §102: дорога на карте мира — тонкая бледная нитка, а не жёлтая магистраль.
+    // Настоящая карта мира рисует дороги только на масштабе страны, и там они выглядят
+    // волоском. Корпус и яркая середина остались только для глубокого зума (0,7+),
+    // где дорога занимает уже сотни пикселей и её видно как дорогу.
+    const deep = cam.scale >= WV.roadCasingScale;
     if (showLocal) {
-      ctx.strokeStyle = 'rgba(24,30,26,0.55)';
-      ctx.lineWidth = 2.6 * zk;
+      ctx.strokeStyle = deep ? 'rgba(28,34,28,0.35)' : 'rgba(28,34,28,0.22)';
+      ctx.lineWidth = deep ? 1.8 : 1;
       traceRoads(roadPaths.local, []);
-      ctx.strokeStyle = 'rgba(226,232,224,0.66)';
-      ctx.lineWidth = 1.1 * zk;
+      ctx.strokeStyle = deep ? 'rgba(240,240,230,0.62)' : 'rgba(238,238,226,0.34)';
+      ctx.lineWidth = deep ? 1 : 0.7;
       traceRoads(roadPaths.local, []);
     }
     if (showRoads) {
-      ctx.strokeStyle = 'rgba(38,28,10,0.6)';
-      ctx.lineWidth = 3.8 * zk;
+      if (deep) {
+        ctx.strokeStyle = 'rgba(38,30,14,0.45)';
+        ctx.lineWidth = 2.6;
+        traceRoads(roadPaths.highway, []);
+      }
+      // §96: шоссе между странами — тёплая линия. На мелком масштабе она бледная,
+      // на глубоком зуме становится заметной, но без «толстой трубы»
+      ctx.strokeStyle = deep ? 'rgba(255,222,140,0.85)' : 'rgba(250,240,214,0.5)';
+      ctx.lineWidth = deep ? 1.7 : 1;
       traceRoads(roadPaths.highway, []);
-      // §96: шоссе между странами — тёплая линия с пунктирной осевой
-      ctx.strokeStyle = 'rgba(255,214,110,0.95)';
-      ctx.lineWidth = 2.2 * zk;
-      traceRoads(roadPaths.highway, []);
-      ctx.strokeStyle = 'rgba(214,64,48,0.62)';
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(190,80,60,0.5)';
+      ctx.lineWidth = 1;
       traceRoads(roadPaths.broken, [3, 4]);
-      if (roadPaths.highway.length && cam.scale >= 0.25) {
-        ctx.strokeStyle = 'rgba(40,32,16,0.5)';
-        ctx.lineWidth = 1;
-        traceRoads(roadPaths.highway, [5, 5]);
+      if (roadPaths.highway.length && deep) {
+        ctx.strokeStyle = 'rgba(60,48,20,0.35)';
+        ctx.lineWidth = 0.8;
+        traceRoads(roadPaths.highway, [4, 5]);
       }
     }
     ctx.setLineDash([]);
@@ -1703,13 +1709,15 @@ export function drawMapLegend(ctx, view, opts = {}) {
       ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,190,120,0.95)'; ctx.fill();
     } else if (kind === 'road' || kind === 'highway') {
-      // §99: дорога показана так же, как на карте — корпус и светлая середина
-      ctx.strokeStyle = 'rgba(24,30,26,0.7)';
-      ctx.lineWidth = kind === 'highway' ? 3.6 : 2.6;
+      // §102: дорога и в легенде — тонкая нитка, как на карте, а не толстая магистраль
+      ctx.strokeStyle = kind === 'highway' ? 'rgba(250,240,214,0.75)' : 'rgba(238,238,226,0.55)';
+      ctx.lineWidth = kind === 'highway' ? 1.6 : 1;
       ctx.beginPath(); ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy); ctx.stroke();
-      ctx.strokeStyle = kind === 'highway' ? 'rgba(255,214,110,0.95)' : 'rgba(226,232,224,0.7)';
-      ctx.lineWidth = kind === 'highway' ? 2 : 1.1;
-      ctx.beginPath(); ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy); ctx.stroke();
+      if (kind === 'highway') {
+        ctx.strokeStyle = 'rgba(38,30,14,0.35)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(cx - 7, cy + 1.6); ctx.lineTo(cx + 7, cy + 1.6); ctx.stroke();
+      }
     } else if (kind === 'region') {
       // §99: граница области — светлая линия в тёмной обводке
       ctx.strokeStyle = 'rgba(8,12,16,0.5)'; ctx.lineWidth = 2.2;
