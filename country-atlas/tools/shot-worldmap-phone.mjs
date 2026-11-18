@@ -3,13 +3,14 @@
    Запуск: node tools/shot-worldmap-phone.mjs → docs/world-map-phone.png */
 import { createCanvas } from '@napi-rs/canvas';
 import { writeFileSync } from 'node:fs';
-import { buildWorld, advanceWars, worldStats, hottestWar, WM } from '../src/worldmap2d.js';
+import { buildWorld, advanceWars, worldStats, hottestWar, diplomacyStats, WM } from '../src/worldmap2d.js';
 import { WorldView, overviewScale } from '../src/worldview.js';
 
 const world = buildWorld(424242);
 for (let t = 0; t <= 60 * 24 * 11; t += 45) advanceWars(world, 9000 + t);
 const st = worldStats(world);
 const hot = hottestWar(world);
+const dip = diplomacyStats(world);
 
 const frames = [
   { label: 'телефон · обзор мира', w: 390, h: 844, cam: { x: 0, y: 0, scale: 0 }, mode: 'world' },
@@ -72,7 +73,8 @@ const shots = frames.map((f) => {
     `разрушено: городов ${st.destroyedCities}, дорог ${st.destroyedRoads}, мостов ${st.destroyedBridges}`,
     `оккупация: ${st.occupiedZones} зон`,
     `потери ${st.killed.toLocaleString('ru-RU')} · армий ${st.armiesVisible}`,
-    hot ? `бои: ${hot.a} — ${hot.b}` : 'сейчас тихо'
+    hot ? `бои: ${hot.a} — ${hot.b}` : 'сейчас тихо',
+    `контакты: союз ${dip.union} · вражда ${dip.enmity} · посольств ${dip.embassies}`
   ];
   lines.forEach((l, i) => g.fillText(l, 20, f.h - panelH + 24 + i * 15));
   g.fillStyle = 'rgba(147,165,177,0.95)';

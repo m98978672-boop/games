@@ -31,6 +31,28 @@ export const WM = {
   syllables: ['ра', 'вел', 'дор', 'кам', 'мир', 'сол', 'тар', 'нор', 'ир', 'яр', 'ска', 'ар', 'тур', 'кер', 'лад', 'мор', 'гар', 'тин', 'бург', 'поль']
 };
 
+/* §88: отношения стран. Игрок и здесь только смотрит: посольства открываются сами,
+   помощь союзнику уходит сама, вражда после войны держится сама. */
+export const DIPLO = {
+  levels: [
+    { id: 'union', name: 'союз', from: 60 },
+    { id: 'friend', name: 'дружба', from: 20 },
+    { id: 'neutral', name: 'нейтралитет', from: -20 },
+    { id: 'tension', name: 'напряжение', from: -60 },
+    { id: 'enmity', name: 'вражда', from: -101 }
+  ],
+  embassyFrom: 20,          // с дружбы открывается посольство
+  aidFrom: 20,              // помощь шлёт друг: с уровня дружбы
+  aidKm: 4000,              // и только если может дотянуться
+  aidEveryMin: 60 * 24 * 3, // окно поставок — раз в три игровых дня
+  aidTons: [400, 2400],
+  warHit: 80,               // война обрушивает отношения до вражды
+  neighbourBonus: 15,       // соседи и без войны ближе друг к другу
+  drift: 0.02,              // насколько быстро отношения возвращаются к своим
+  cap: 100,
+  keepAid: 40
+};
+
 export const MARK = {
   forest: { id: 'forest', name: 'лес', tone: '#2f4f36' },
   swamp: { id: 'swamp', name: 'болото', tone: '#3d4a3a' },
@@ -321,6 +343,166 @@ export function canSeeArmies(world, observerId = 'own') {
   return !!(obs && obs.satellite);
 }
 
+/* F-312: ключ пары — порядок стран не важен, отношения всегда взаимные. */
+export function relationKey(a, b) {
+  return a < b ? a + '|' + b : b + '|' + a;
+}
+
+/* F-313: уровень отношений по числу −100…100. */
+export function relationLevel(score) {
+  for (const l of DIPLO.levels) if (score >= l.from) return l;
+  return DIPLO.levels[DIPLO.levels.length - 1];
+}
+
+/* F-314: стартовые отношения. Детерминированы сидом: та же планета — те же друзья. */
+export function buildRelations(countries, seed, pairs = []) {
+  const rel = new Map();
+  for (let i = 0; i < countries.length; i++) {
+    for (let j = i + 1; j < countries.length; j++) {
+      const a = countries[i].id, b = countries[j].id;
+      const base = Math.round((hash01(seed + i * 91 + j * 37, 71) * 2 - 1) * 70);
+      rel.set(relationKey(a, b), { a: a < b ? a : b, b: a < b ? b : a, base, score: base, aid: 0, aidAt: null });
+    }
+  }
+  // соседи начинают теплее: у них общая граница и общая торговля
+  for (const p of pairs) {
+    const r = rel.get(relationKey(p.a, p.b));
+    if (!r) continue;
+    const boost = Math.max(-DIPLO.cap, Math.min(DIPLO.cap, r.base + DIPLO.neighbourBonus));
+    r.base = boost;
+    r.score = boost;
+  }
+  return rel;
+}
+
+/* F-315: отношения двух стран в любой момент. */
+export function relationOf(world, a, b) {
+  if (!world.relations || a === b) return null;
+  const r = world.relations.get(relationKey(a, b));
+  if (!r) return null;
+  return { score: Math.round(r.score), level: relationLevel(r.score), aid: r.aid, aidAt: r.aidAt };
+}
+
+/* F-316: контакты одной страны — с кем дружим, с кем воюем, где посольства. */
+export function contactsOf(world, id = 'own') {
+  if (!world.relations) return [];
+  const out = [];
+  const atWar = new Set();
+  for (const w of world.wars) {
+    if (w.to !== null) continue;
+    if (w.a === id) atWar.add(w.b);
+    if (w.b === id) atWar.add(w.a);
+  }
+  for (const [key, r] of world.relations) {
+    void key;
+    if (r.a !== id && r.b !== id) continue;
+    const otherId = r.a === id ? r.b : r.a;
+    const country = world.countries.find((c) => c.id === otherId);
+    if (!country) continue;
+    const level = relationLevel(r.score);
+    out.push({
+      id: otherId,
+      name: country.name,
+      score: Math.round(r.score),
+      level: level.name,
+      levelId: level.id,
+      embassy: r.score >= DIPLO.embassyFrom,
+      war: atWar.has(otherId),
+      aid: r.aid,
+      neighbour: world.pairs.some((p) => (p.a === id && p.b === otherId) || (p.b === id && p.a === otherId)),
+      km: Math.round(Math.hypot(country.capital.x - (world.countries.find((c) => c.id === id) || { capital: { x: 0, y: 0 } }).capital.x,
+        country.capital.y - (world.countries.find((c) => c.id === id) || { capital: { x: 0, y: 0 } }).capital.y))
+    });
+  }
+  return out.sort((x, y) => y.score - x.score);
+}
+
+/* F-317: шаг дипломатии. Война обрушивает отношения, союзник посылает помощь,
+   в остальное время отношения медленно возвращаются к своим. */
+export function advanceDiplomacy(world, minutes = world.minutes) {
+  if (!world.relations) return null;
+  const warring = new Set();
+  for (const w of world.wars) {
+    if (w.to !== null) continue;
+    warring.add(relationKey(w.a, w.b));
+    const r = world.relations.get(relationKey(w.a, w.b));
+    if (r) r.score = Math.min(r.score - 2, -DIPLO.warHit);
+    // соседям воюющих тоже неуютно
+    for (const p of world.pairs) {
+      let other = null;
+      if (p.a === w.a || p.a === w.b) other = p.b;
+      else if (p.b === w.a || p.b === w.b) other = p.a;
+      if (!other) continue;
+      const side = p.a === w.a || p.b === w.a ? w.a : w.b;
+      if (other === w.a || other === w.b) continue;
+      const rr = world.relations.get(relationKey(side, other));
+      if (rr) rr.score = Math.max(-DIPLO.cap, rr.score - 0.4);
+    }
+  }
+  for (const [, r] of world.relations) {
+    if (warring.has(relationKey(r.a, r.b))) continue;
+    r.score += (r.base - r.score) * DIPLO.drift;
+    r.score = Math.max(-DIPLO.cap, Math.min(DIPLO.cap, r.score));
+  }
+  // поставка помощи: пока идёт война, раз в три дня один друг помогает воюющей стороне
+  const sinceAid = minutes - (world.lastAidAt || 0);
+  const wars = world.wars.filter((w) => w.to === null);
+  if (wars.length && sinceAid >= DIPLO.aidEveryMin) {
+    const n = world.stats.aid + 1;
+    const u = hash01(world.seed + n * 733, 149);
+    if (u < 0.85) {
+      const war = wars[Math.floor(hash01(world.seed + n * 17, 151) * wars.length) % wars.length];
+      const front = { x: war.x, y: war.y };
+      let best = null;
+      for (const [, r] of world.relations) {
+        for (const side of [war.a, war.b]) {
+          const other = r.a === side ? r.b : r.b === side ? r.a : null;
+          if (!other || other === war.a || other === war.b) continue;
+          if (r.score < DIPLO.aidFrom) continue;
+          const c = world.countries.find((k) => k.id === other);
+          if (!c) continue;
+          const km = Math.hypot(c.capital.x - front.x, c.capital.y - front.y);
+          if (km > DIPLO.aidKm) continue;
+          if (!best || km < best.km) best = { from: other, to: side, km };
+        }
+      }
+      if (best) {
+        const tons = DIPLO.aidTons[0] + Math.floor(hash01(world.seed + n * 29, 157) * (DIPLO.aidTons[1] - DIPLO.aidTons[0]));
+        const ev = { kind: 'aid', from: best.from, to: best.to, at: minutes, tons, km: Math.round(best.km) };
+        world.aid.push(ev);
+        if (world.aid.length > DIPLO.keepAid) world.aid.shift();
+        world.stats.aid++;
+        const r = world.relations.get(relationKey(best.from, best.to));
+        if (r) { r.aid++; r.aidAt = minutes; r.score = Math.min(DIPLO.cap, r.score + 4); }
+      }
+    }
+    world.lastAidAt = minutes;
+  }
+  return world.aid;
+}
+
+/* F-318: сводка контактов для панели. */
+export function diplomacyStats(world, observerId = 'own') {
+  const list = contactsOf(world, observerId);
+  const count = (id2) => list.filter((c) => c.levelId === id2).length;
+  const lastAid = world.aid.length ? world.aid[world.aid.length - 1] : null;
+  const fromName = (id2) => (world.countries.find((c) => c.id === id2) || { name: id2 }).name;
+  return {
+    contacts: list.length,
+    union: count('union'),
+    friend: count('friend'),
+    neutral: count('neutral'),
+    tension: count('tension'),
+    enmity: count('enmity'),
+    embassies: list.filter((c) => c.embassy).length,
+    warring: list.filter((c) => c.war).length,
+    aidTotal: world.stats.aid,
+    aidLast: lastAid ? fromName(lastAid.from) + ' → ' + fromName(lastAid.to) : null,
+    aidLastTons: lastAid ? lastAid.tons : 0,
+    list
+  };
+}
+
 /* Сборка мира: наша страна + соседи + города + дороги + отметки + армии. */
 export function buildWorld(seed = 424242) {
   const sites = sitesFor(WM.countries, seed);
@@ -406,10 +588,14 @@ export function buildWorld(seed = 424242) {
     explosions: [],
     destroyed: { cities: [], roads: [], bridges: [] },
     occupied: [],
-    stats: { battles: 0, explosions: 0, killed: 0, big: 0 },
+    relations: null,        // заполняется ниже: до стран нужен adjacency
+    aid: [],
+    lastAidAt: 0,
+    stats: { battles: 0, explosions: 0, killed: 0, big: 0, aid: 0 },
     rev: 0,                 // сколько раз мир менялся — по нему перерисовывается слой подробностей
     firstWarAt: null
   };
+  w.relations = buildRelations(countries, seed, w.pairs);
   // сводные числа читаются из stats: одно место правды, никаких рассинхронов
   Object.defineProperties(w, {
     battles: { get() { return this.stats.battles; }, enumerable: true },
@@ -627,6 +813,8 @@ export function advanceWars(world, minutes) {
   }
   // взрывы гаснут
   world.explosions = world.explosions.filter((e) => minutes - e.at <= WM.war.explosionMin);
+  // §88: отношения живут тем же шагом, что и война
+  advanceDiplomacy(world, minutes);
   return fresh;
 }
 

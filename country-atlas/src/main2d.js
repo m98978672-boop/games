@@ -2,7 +2,7 @@
 import { Map2D } from './map2d.js';
 import { isPhone, startCenter, FIT } from './fit2d.js';
 import { WorldView, overviewScale } from './worldview.js';
-import { buildWorld, advanceWars, worldStats, hottestWar, WM } from './worldmap2d.js';
+import { buildWorld, advanceWars, worldStats, hottestWar, diplomacyStats, WM } from './worldmap2d.js';
 import { Intro } from './intro.js';
 import { WORLD2D } from './world2d.js';
 import { loadFrom, saveTo, elapsedMinutes, formatReport, OFFLINE } from './offline2d.js';
@@ -214,6 +214,7 @@ function setupWorld() {
   const sat = document.getElementById('world-satellite');
   const openBtn = document.getElementById('world-open');
   const statsEl = document.getElementById('world-stats');
+  const contactsEl = document.getElementById('world-contacts');
   const loadEl = document.getElementById('world-load');
   if (!worldScreen || !canvas || !openBtn) return;
 
@@ -247,8 +248,18 @@ function setupWorld() {
       hot ? 'бои: ' + hot.a + ' — ' + hot.b + ' · ' + hot.battles + ' боёв' : 'сейчас тихо',
       st.ownAtWar ? 'наша страна воюет' : 'наша страна не воюет'
     ];
+    const dip = diplomacyStats(world);
+    lines.push('контакты: союз ' + dip.union + ' · дружба ' + dip.friend + ' · вражда ' + dip.enmity + ' · посольств ' + dip.embassies);
+    lines.push('помощь: ' + dip.aidTotal + (dip.aidLast ? ' · последняя ' + dip.aidLast : ''));
     if (statsEl) statsEl.textContent = lines.join('\n');
     if (statsEl) statsEl.style.whiteSpace = 'pre-line';
+    if (contactsEl) {
+      // в панели — только близкие контакты: дальше список не нужен и мешает
+      const near = dip.list.filter((c) => c.neighbour).slice(0, 6);
+      contactsEl.textContent = near.map((c) =>
+        c.name + ' — ' + c.level + (c.war ? ' · война' : '') + (c.embassy ? ' · посольство' : '')).join('\n');
+      contactsEl.style.whiteSpace = 'pre-line';
+    }
     if (loadEl) loadEl.textContent = worldView.loading ? 'рисуем мир…' : 'мир: ' + WM.countries + ' стран';
     return st;
   };

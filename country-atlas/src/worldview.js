@@ -16,6 +16,7 @@ export const WV = {
   markPx: 3.2,
   cityPx: 2.4,
   labelScale: 0.16,
+  countryLabelScale: 0.085,  // с этого масштаба подписываем страны
   armyScale: 0.1
 };
 
@@ -299,6 +300,8 @@ export class WorldView {
   }
 
   paintDetail() {
+    // подписи стран появляются, когда мир приблизили: на обзоре они бы слиплись
+    const countryLabels = this.cam.scale >= WV.countryLabelScale;
     const world = this.world;
     const pad = this.detailPad;
     const w = Math.ceil(this.view.w + pad * 2), h = Math.ceil(this.view.h + pad * 2);
@@ -366,6 +369,16 @@ export class WorldView {
       if (showLabels && city.capital) {
         ctx.fillStyle = 'rgba(240,244,246,0.9)';
         ctx.fillText(city.name, sx + 6, sy + 4);
+      }
+    }
+    if (countryLabels) {
+      ctx.font = '10px sans-serif';
+      for (const ctry of world.countries) {
+        if (ctry.own) continue;
+        const sx = ctry.capital.x * k + ox, sy = ctry.capital.y * k + oy;
+        if (sx < -60 || sy < -20 || sx > view.w + 60 || sy > view.h + 20) continue;
+        ctx.fillStyle = 'rgba(232,238,244,0.55)';
+        ctx.fillText(ctry.name.toUpperCase(), sx + 4, sy - 8);
       }
     }
     this.detailCam = { x: cam.x, y: cam.y, scale: cam.scale };

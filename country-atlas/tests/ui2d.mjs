@@ -243,6 +243,10 @@ const visible = html
   ok(/id="world-satellite"/.test(html), 'есть тумблер «спутник»');
   ok(/id="world-stats"/.test(html), 'есть строка состояния мира');
   ok(/id="world-legend"/.test(html), 'у карты мира своя легенда');
+  ok(/id="world-contacts"/.test(html), 'в панели мира есть блок контактов');
+  ok(/<div class="cap">контакты<\/div>/.test(html), 'блок контактов подписан по-человечески');
+  ok(main.includes('diplomacyStats'), 'контакты считаются из отношений, а не рисуются наугад');
+  ok(main.includes('world-contacts'), 'панель контактов заполняется из main2d');
   const worldHtml = html.slice(html.indexOf('id="world-screen"'), html.indexOf('<div id="loading">'));
   ok(worldHtml.length > 200, 'экран карты мира описан разметкой');
   ok(!/§/.test(worldHtml), 'на карте мира нет номеров параграфов');
@@ -264,4 +268,4 @@ const visible = html
   ok(!/§/.test(html.slice(html.indexOf('id="loading"'), html.indexOf('id="left-rail"'))), 'в заставке нет номеров параграфов');
 }
 
-console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83 и карты мира §86–§87 (F-222…F-224, F-279…F-286, F-301…F-306, проверок ' + checks + ')');
+console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§88 (F-222…F-224, F-279…F-286, F-301…F-318, проверок ' + checks + ')');

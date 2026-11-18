@@ -2,7 +2,7 @@
    Запуск: node tools/shot-worldmap.mjs → docs/world-map.png */
 import { createCanvas } from '@napi-rs/canvas';
 import { writeFileSync } from 'node:fs';
-import { buildWorld, advanceWars, worldStats, hottestWar, nearestCity, WM } from '../src/worldmap2d.js';
+import { buildWorld, advanceWars, worldStats, hottestWar, nearestCity, diplomacyStats, WM } from '../src/worldmap2d.js';
 import { WorldView, overviewScale } from '../src/worldview.js';
 import { Intro, INTRO, tourCam } from '../src/intro.js';
 
@@ -42,14 +42,17 @@ function overviewPanel() {
   const st = worldStats(world);
   const hot = hottestWar(world);
   const g = cv.getContext('2d');
-  const y = H - 96;
+  const y = H - 112;
   g.fillStyle = 'rgba(8,19,28,0.82)';
-  g.fillRect(0, y, W, 96);
+  g.fillRect(0, y, W, 112);
   caption(g, 16, y + 24, 'карта мира · вся планета', `${WM.countries} стран · войн сейчас ${st.wars} · боёв ${st.battles}`);
   g.font = '13px sans-serif';
   g.fillStyle = 'rgba(220,230,236,0.95)';
   g.fillText(hot ? `бои: ${hot.a} — ${hot.b} · фронт ${hot.swayKm} км` : 'сейчас тихо', 16, y + 58);
-  g.fillText(`разрушено городов ${st.destroyedCities} · дорог ${st.destroyedRoads} · мостов ${st.destroyedBridges} · оккупация ${st.occupiedZones} зон`, 16, y + 80);
+  const dip = diplomacyStats(world);
+  g.fillText(`разрушено городов ${st.destroyedCities} · дорог ${st.destroyedRoads} · мостов ${st.destroyedBridges} · оккупация ${st.occupiedZones} зон`, 16, y + 78);
+  g.fillStyle = 'rgba(190,206,215,0.95)';
+  g.fillText(`контакты: союз ${dip.union} · дружба ${dip.friend} · вражда ${dip.enmity} · посольств ${dip.embassies} · помощь ${dip.aidTotal}`, 16, y + 94);
   return cv;
 }
 
