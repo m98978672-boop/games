@@ -34,9 +34,9 @@ jobs:
       - name: Run experimental LoRA fine-tuning and held-out loss check
         run: |
           set +e
-          python frontline-command/tools/training/train-qwen.py --data "$RUNNER_TEMP/commander-data" --output "$RUNNER_TEMP/commander-output" --steps 8 --eval-count 4 > "$RUNNER_TEMP/training.log" 2>&1
+          set -o pipefail
+          python -u frontline-command/tools/training/train-qwen.py --data "$RUNNER_TEMP/commander-data" --output "$RUNNER_TEMP/commander-output" --steps 1 --eval-count 1 2>&1 | tee "$RUNNER_TEMP/training.log"
           status=$?
-          cat "$RUNNER_TEMP/training.log"
           if [ "$status" -ne 0 ]; then
             python -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"training.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
           fi
@@ -46,6 +46,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
+          python -c 'import json,os; p=os.path.join(os.environ["RUNNER_TEMP"],"commander-output","report.json"); r=json.load(open(p)); print("::notice::Research run: " + json.dumps({"training":r["training"], "evaluation":r["evaluation"]}))'
           cp -r "$RUNNER_TEMP/commander-data" "$RUNNER_TEMP/commander-output/dataset"
           tar -C "$RUNNER_TEMP/commander-output" -czf "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz" adapter dataset report.json
           tag="frontline-qwen35-lora-research-$GITHUB_RUN_ID"
