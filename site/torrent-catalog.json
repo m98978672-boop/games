@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1173,
-    "totalBytes": 35848753,
+    "files": 1175,
+    "totalBytes": 35858255,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -19,11 +19,11 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "ae83e80f07d788e60ed01d2b09d40cead9c5f733d927ad7ef04f2e4c4984b4e9",
-      "totalSize": 1818008,
+      "infoHash": "878820722ad50a0953b29664c6fa64adb22ac2adb4c879f004059beb3310217b",
+      "totalSize": 1827510,
       "chunkSize": 262144,
       "chunkCount": 7,
-      "fileCount": 81,
+      "fileCount": 83,
       "files": [
         {
           "path": ".gitignore",
@@ -47,8 +47,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 304678,
-          "sha256": "6dfb1232800aad53cbcb031c2ce52d93a8e9405e8f27d9fe38c9854d11350f5e"
+          "size": 305066,
+          "sha256": "84b8b73849991349b4615097b48496380b509e641e8943d079a794ce19c8f3a5"
         },
         {
           "path": "cover.svg",
@@ -117,8 +117,8 @@
         },
         {
           "path": "src/biome2d.js",
-          "size": 9094,
-          "sha256": "d2ae09ccbfcbc31990a63bbc671d4fb04b021c9f92e7e5707b312eff4234432e"
+          "size": 9457,
+          "sha256": "d38e90b84b79e2b9790f1015e59770daf5d7591065006e746a859d2e4545bf5b"
         },
         {
           "path": "src/borders2d.js",
@@ -227,8 +227,8 @@
         },
         {
           "path": "src/palette.js",
-          "size": 1867,
-          "sha256": "6fb73087544aaafc2c7372ce69c43858637abe5085ebb99e907a28b98e936654"
+          "size": 3486,
+          "sha256": "3f7782c02d53839843d2e669ae4a4595b83ae90286576a7585a1674cfb97ce10"
         },
         {
           "path": "src/ped2d.js",
@@ -322,8 +322,8 @@
         },
         {
           "path": "src/worldview.js",
-          "size": 89204,
-          "sha256": "c385b0b54ca2978540a457390b2f515f70de9b023b3247833b004bcc7f95638d"
+          "size": 90157,
+          "sha256": "125a6600d8c52e79d59d1486a7846274993aa7794203e6cb6db37755641db2ec"
         },
         {
           "path": "terrain-worker.min.js",
@@ -354,6 +354,16 @@
           "path": "tools/fig-tide.mjs",
           "size": 5873,
           "sha256": "499aca8f53bd26d1e55a91678ad085ee5a88d82081f519113d980dfeea4e1717"
+        },
+        {
+          "path": "tools/look-country.mjs",
+          "size": 2670,
+          "sha256": "aed3ca63ac4e7e9f64f2a170ff820a1c617f97e02433568a07d1b5af0d0fa952"
+        },
+        {
+          "path": "tools/look-two-maps.mjs",
+          "size": 3509,
+          "sha256": "dd2fa8f86d294bd15b44870c6ece68db9b4825a77edd86f8504f2642eb2f02c1"
         },
         {
           "path": "tools/look-world.mjs",
