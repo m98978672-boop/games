@@ -38,18 +38,44 @@ console.log(`\nРаздачи: ${catalog.games.length} игр, ${catalog.stats.f
 
 // ------------------------------------------------- 1. Манифест = диск
 console.log('[манифест ↔ диск]');
+// Каталог мог отстать от игр (кто-то поправил игру и не пересобрал раздачи).
+// Молча падать здесь невежливо: сначала собираем список, печатаем его и
+// ПРЕДЛАГАЕМ команду. Если каталог отстал — дальше проверять нечего.
 let sizeMismatch = 0;
 let hashMismatch = 0;
+const staleExamples = [];
+let staleCount = 0;
 for (const game of catalog.games) {
   for (const file of game.files || []) {
-    const bytes = await readFile(path.join(repoRoot, game.dir, file.path));
-    if (bytes.length !== file.size) sizeMismatch += 1;
+    let bytes;
+    try {
+      bytes = await readFile(path.join(repoRoot, game.dir, file.path));
+    } catch {
+      staleCount += 1;
+      if (staleExamples.length < 5) staleExamples.push(`${game.dir}/${file.path} — файла нет`);
+      continue;
+    }
+    if (bytes.length !== file.size) {
+      sizeMismatch += 1;
+      staleCount += 1;
+      if (staleExamples.length < 5) staleExamples.push(`${game.dir}/${file.path} — ${file.size} → ${bytes.length} Б`);
+      continue;
+    }
     const sha = crypto.createHash('sha256').update(bytes).digest('hex');
-    if (sha !== file.sha256) hashMismatch += 1;
+    if (sha !== file.sha256) {
+      hashMismatch += 1;
+      staleCount += 1;
+      if (staleExamples.length < 5) staleExamples.push(`${game.dir}/${file.path} — содержимое изменилось`);
+    }
   }
 }
-ok(sizeMismatch === 0, 'размер каждого файла в манифесте совпадает с диском');
-ok(hashMismatch === 0, 'sha256 каждого файла в манифесте совпадает с диском');
+if (staleCount > 0) {
+  console.error(`\n✗ Каталог раздач отстал от игр: ${staleCount} файл(ов) не совпадают.`);
+  for (const line of staleExamples) console.error('   • ' + line);
+  console.error('\n  Пересоберите раздачи:  node tools/torrent/build-catalog.mjs\n');
+  process.exit(1);
+}
+ok(true, 'размер и sha256 каждого файла в манифесте совпадают с диском');
 
 // ------------------------------------- 2. Куски читаются и совпадают
 console.log('\n[куски]');

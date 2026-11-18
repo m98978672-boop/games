@@ -243,6 +243,20 @@ try {
   const publicList = JSON.parse(await readFile(new URL('../../site/p2p-endpoints.json', import.meta.url), 'utf8'));
   ok(Array.isArray(publicList.endpoints), 'site/p2p-endpoints.json — валидный список адресов');
 
+  // ------------------------------------------------ каталог не отстал от игр
+  // Любой PR, изменивший файлы игры, обязан пересобрать раздачи — иначе у
+  // игрока не сойдутся куски, а сервер молча раздаст битую раздачу. Проверка
+  // живёт в CI и говорит, что именно делать.
+  console.log('\n[каталог ↔ игры]');
+  const drift = await post('drift', { peerId: 'test-drift-0001' });
+  assert.ok(drift.data && drift.data.ok !== false, 'отчёт о расхождениях получен');
+  if (Array.isArray(drift.data.drift) && drift.data.drift.length) {
+    console.error(`  ✗ каталог отстал от игр: ${drift.data.drift.length} файл(ов)`);
+    for (const d of drift.data.drift.slice(0, 5)) console.error(`     • ${d.gameId}/${d.path} — ${d.expected} → ${d.actual} Б`);
+    console.error('  Пересоберите: node tools/torrent/build-catalog.mjs');
+  }
+  ok((drift.data.drift || []).length === 0, `каталог актуален (сверено ${drift.data.checked} файлов)`);
+
   console.log(`\n✓ Сервер прошёл все проверки: ${passed}`);
 } finally {
   server.close();

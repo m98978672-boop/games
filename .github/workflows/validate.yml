@@ -28,8 +28,17 @@ jobs:
         run: |
           node ratcore/tools/build-browser-bundle.mjs --check
           node game-base/tests/engine.mjs
-      - name: Test the P2P torrent (share catalog, pieces, auto-removal of bad files) and its own server
+      - name: Keep the P2P share catalog in sync with the games, then test torrent and its server
         run: |
+          # Любая правка файлов игры обязана обновить каталог раздач: иначе у
+          # игрока не сойдутся хеши кусков. Пересобираем здесь и фиксируем
+          # расхождение, если коммит его не содержал.
+          node tools/torrent/build-catalog.mjs
+          if ! git diff --quiet -- site/torrent-catalog.json; then
+            echo "::error::Каталог раздач отстал от игр. Запустите: node tools/torrent/build-catalog.mjs и закоммитьте site/torrent-catalog.json"
+            git diff --stat -- site/torrent-catalog.json
+            exit 1
+          fi
           node tools/torrent/test.mjs
           node tools/p2p-server/test.mjs
       - name: Test bridges between RatCore and other engines (route-engine, «Переплёт»)
