@@ -1,6 +1,6 @@
 // Service Worker для RatMes — Network-First с немедленным обновлением кэша без устаревших стилей.
 
-const CACHE_NAME = 'ratmes-shell-v17';
+const CACHE_NAME = 'ratmes-shell-v18';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

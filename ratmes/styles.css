@@ -45,6 +45,12 @@ body {
   flex-direction: column;
 }
 
+/* Единый закон для скрытых блоков: атрибут hidden сильнее любого display:flex/grid
+   у панелей. Без этого правила полоса ответа, вложение, «закреплено», подсказки
+   Центра подключений и бейджи оставались в разметке и висели в чате — а их ✕
+   выглядели «мёртвыми», потому что скрывать было уже нечего. */
+[hidden] { display: none !important; }
+
 /* --- Живая полоса подключения к облаку --- */
 .cloud-progress-banner {
   flex-shrink: 0;
@@ -169,7 +175,6 @@ body {
 .app-shell.inspector-visible {
   grid-template-columns: clamp(276px, 24vw, 330px) minmax(320px, 1fr) clamp(320px, 26vw, 380px);
 }
-.inspector[hidden] { display: none !important; }
 
 /* --- Sidebar --- */
 .sidebar {
@@ -1579,7 +1584,6 @@ body.embed-games .brand-bar {
   overflow-x: auto;
   scrollbar-width: none;
 }
-.chat-more-bar[hidden] { display: none; }
 .chat-more-bar::-webkit-scrollbar { display: none; }
 .chat-more-bar .btn { white-space: nowrap; flex-shrink: 0; }
 .chat-more-close { margin-left: auto; }
@@ -2708,7 +2712,6 @@ body.mobile-chat-open .mobile-bottom-nav { display: none !important; }
   flex-direction: column;
   overflow: hidden;
 }
-.sidebar-pane[hidden] { display: none !important; }
 
 .chat-filter-pills {
   display: flex;
@@ -2983,7 +2986,6 @@ body.mobile-chat-open .mobile-bottom-nav { display: none !important; }
   padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
-.msg-actions-drawer[hidden] { display: none !important; }
 .act-btn {
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.05);

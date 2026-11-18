@@ -57,6 +57,10 @@ body { overflow-y: auto; }
 .screen { display: block; }
 .screen[hidden] { display: none; }
 
+/* Единый закон: атрибут hidden сильнее любого display у кнопок и полей.
+   Без него скрытый «Год рождения» и «Продолжить жизнь» оставались на экране. */
+[hidden] { display: none !important; }
+
 /* ============================== СТАРТ ============================== */
 
 .start-head {
