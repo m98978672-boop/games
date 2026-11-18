@@ -12,6 +12,7 @@ import { clamp } from './core/mathx.js';
 import { zoomCamera, fitCamera } from './core/map_coordinates.js';
 import { InspectorPanel } from './inspector.js';
 import { BUILD_VERSION, mountBuildVersion } from './core/build-info.js';
+import { NeutralCommanderClient } from './sim/neutral_commander_client.js';
 
 const canvas = document.getElementById('game');
 const hudRoot = document.getElementById('hud');
@@ -36,6 +37,12 @@ let game = null;
 let renderer = null;
 let hud = null;
 let menus = null;
+let neutralCommander = null;
+let neutralStatus = null;
+function stopNeutralCommander() {
+  neutralCommander?.stop(); neutralCommander = null;
+  neutralStatus?.remove(); neutralStatus = null;
+}
 let last = performance.now();
 let acc = 0;
 let autosaveTimer = 0;
@@ -65,10 +72,16 @@ function bindingsFor(mode) {
 }
 
 // ---------- создание игры ----------
-function newGame({ mode = 'soldier', aiVsAi = false, difficulty = state.difficulty, seed = state.seed, loadSave = false } = {}) {
+function newGame({ mode = 'soldier', aiVsAi = false, difficulty = state.difficulty, seed = state.seed, loadSave = false, neutralAI = false } = {}) {
+  stopNeutralCommander();
+  neutralAI = !!neutralAI && !!aiVsAi && !loadSave;
+  // The experimental demo uses the same baseline persona for both factions.
+  // Do not mutate the normal game's shared configuration.
+  const gameCfg = neutralAI ? { ...cfg, factions: cfg.factions.map(f => ({ ...f, persona: 'balanced' })) } : cfg;
+  if (neutralAI) gameCfg.faction = id => gameCfg.factions[id] || gameCfg.factions[0];
   const saved = loadSave ? Save.loadWar() : null;
   game = new Game({
-    cfg,
+    cfg: gameCfg,
     seed: saved ? saved.seed : seed,
     difficulty: saved ? saved.difficultyId : difficulty,
     meta: Save.meta,
@@ -119,6 +132,14 @@ function newGame({ mode = 'soldier', aiVsAi = false, difficulty = state.difficul
     ? 'Вы — солдат. WASD — движение, мышь — прицел, ЛКМ — огонь, Tab — командование.'
     : 'Вы — командир. ЛКМ — выделение отрядов, ПКМ — приказ, B — стройка, T — директива.', 9);
   audio.music('combat');
+  if (neutralAI) {
+    neutralStatus = document.createElement('div');
+    neutralStatus.className = 'neutral-ai-status'; neutralStatus.setAttribute('role', 'status');
+    document.body.appendChild(neutralStatus);
+    const status = neutralStatus;
+    neutralCommander = new NeutralCommanderClient(game, { onStatus: text => { status.textContent = text; } });
+    neutralCommander.start();
+  }
   return game;
 }
 
@@ -228,6 +249,9 @@ function onMenuAction(act, opts = {}) {
       break;
     case 'continue': newGame({ mode: 'soldier', loadSave: true }); break;
     case 'ai-vs-ai': newGame({ mode: 'commander', aiVsAi: true, seed: opts.seed || state.seed }); break;
+    case 'neutral-ai-demo': newGame({ mode: 'commander', aiVsAi: true, neutralAI: true, difficulty: opts.difficulty || state.difficulty, seed: opts.seed || state.seed }); break;
+    case 'model-storage': state.screen = 'model-storage'; menus.modelStorage(); break;
+    case 'storage-back': showMainMenu(); break;
     case 'skills':
       if (game) { state.screen = 'skills'; menus.skills(game); } else showSkillsFromMeta();
       break;
@@ -280,6 +304,7 @@ function showSkillsFromMeta() {
 }
 
 function showMainMenu() {
+  stopNeutralCommander();
   state.screen = 'menu';
   hudRoot.classList.add('hidden');
   if (!menusReady) { menus = new Menus(overlay, { cfg }); bindMenus(); }
@@ -624,6 +649,7 @@ function loop(now) {
           acc -= step;
         }
       }
+      neutralCommander?.tick();
       for (const s of game.drainSounds()) audio.play(s.name, s.x, s.y, s.muffle ?? 1);
       audio.listener.x = renderer.camera.x;
       audio.listener.y = renderer.camera.y;

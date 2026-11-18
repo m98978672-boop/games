@@ -1,0 +1,173 @@
+{
+  "description": "Scripted synthetic provider; no Qwen inference, no training. No latency. Same seeds but RNG diverges. Not an AI-strength or fairness test.",
+  "runs": [
+    {
+      "seed": 7,
+      "on": false,
+      "seconds": 180,
+      "outcome": null,
+      "kills": [
+        34,
+        26
+      ],
+      "captures": [
+        6,
+        5
+      ],
+      "deliveries": [
+        1,
+        0
+      ],
+      "stats": {
+        "attempts": 0,
+        "paired": 0,
+        "skips": {},
+        "actions": {
+          "hold": 0,
+          "supply": 0,
+          "none": 0
+        }
+      },
+      "issued": [
+        0,
+        0
+      ],
+      "accepted": [
+        0,
+        0
+      ],
+      "refused": [
+        0,
+        0
+      ]
+    },
+    {
+      "seed": 7,
+      "on": true,
+      "seconds": 180,
+      "outcome": null,
+      "kills": [
+        31,
+        35
+      ],
+      "captures": [
+        4,
+        3
+      ],
+      "deliveries": [
+        2,
+        0
+      ],
+      "stats": {
+        "attempts": 8,
+        "paired": 4,
+        "skips": {
+          "changed": 4
+        },
+        "actions": {
+          "hold": 5,
+          "supply": 3,
+          "none": 0
+        }
+      },
+      "issued": [
+        4,
+        4
+      ],
+      "accepted": [
+        4,
+        4
+      ],
+      "refused": [
+        0,
+        0
+      ]
+    },
+    {
+      "seed": 11,
+      "on": false,
+      "seconds": 180,
+      "outcome": null,
+      "kills": [
+        36,
+        13
+      ],
+      "captures": [
+        5,
+        4
+      ],
+      "deliveries": [
+        0,
+        0
+      ],
+      "stats": {
+        "attempts": 0,
+        "paired": 0,
+        "skips": {},
+        "actions": {
+          "hold": 0,
+          "supply": 0,
+          "none": 0
+        }
+      },
+      "issued": [
+        0,
+        0
+      ],
+      "accepted": [
+        0,
+        0
+      ],
+      "refused": [
+        0,
+        0
+      ]
+    },
+    {
+      "seed": 11,
+      "on": true,
+      "seconds": 111.1,
+      "outcome": {
+        "winner": 1,
+        "reason": "Штаб Альянс захвачен",
+        "t": 111.09999999999796
+      },
+      "kills": [
+        19,
+        1
+      ],
+      "captures": [
+        4,
+        6
+      ],
+      "deliveries": [
+        0,
+        0
+      ],
+      "stats": {
+        "attempts": 5,
+        "paired": 3,
+        "skips": {
+          "changed": 2
+        },
+        "actions": {
+          "hold": 5,
+          "supply": 1,
+          "none": 0
+        }
+      },
+      "issued": [
+        3,
+        3
+      ],
+      "accepted": [
+        3,
+        3
+      ],
+      "refused": [
+        0,
+        0
+      ]
+    }
+  ]
+}

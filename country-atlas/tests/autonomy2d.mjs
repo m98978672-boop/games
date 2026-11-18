@@ -82,9 +82,13 @@ ok('казна не зависит от отрисовки', (() => {
   return a.gov.treasury === b.gov.treasury && a.gov.decisions === b.gov.decisions;
 })());
 
+const w90 = run(buildWorld(424242), 90);
+
 /* ——— 2. решения ——— */
 group('решения');
-ok('города растут сами', w30.own.cities.length > buildWorld(424242).own.cities.length, w30.own.cities.length);
+// §95: страна стала меньше (12 млн км²), и место под города кончается — рост идёт,
+// но медленнее, чем на прежнем огромном материке
+ok('города растут сами', w90.own.cities.length > buildWorld(424242).own.cities.length, w90.own.cities.length);
 ok('город не появляется без границ страны', w30.own.cities.every((c) => pointInPolygon(c.x, c.y, w30.own.poly)));
 ok('новые города не ближе 60 км друг к другу', (() => {
   const own = w30.own;
@@ -149,7 +153,6 @@ ok('решения считаются', w30.gov.decisions >= w30.gov.log.length)
 
 /* ——— 3. армии ——— */
 group('армии');
-const w90 = run(buildWorld(424242), 90);
 ok('армия появляется сама', w90.armies.filter((a) => a.country === 'own').length > 1, w90.armies.filter((a) => a.country === 'own').length);
 ok('армий не больше предела', w90.armies.filter((a) => a.country === 'own').length <= AUTONOMY.armyCap);
 ok('предел армий записан в стране', w90.gov.armyCap === AUTONOMY.armyCap);
@@ -157,7 +160,14 @@ ok('новая армия — своя', w90.armies.filter((a) => a.country === 
 ok('у армии есть номер', new Set(w90.armies.map((a) => a.id)).size === w90.armies.length);
 ok('армия не пустая', w90.armies.filter((a) => a.country === 'own').every((a) => a.size > 0));
 ok('у армии есть боеготовность', w90.armies.filter((a) => a.country === 'own').every((a) => a.morale > 0 && a.morale <= 1));
-ok('армия стоит в стране', w90.armies.filter((a) => a.country === 'own').every((a) => pointInPolygon(a.x, a.y, w90.own.poly)));
+// §95: армии уходят на фронт, поэтому «стоит в стране» проверяем на свежей армии
+ok('новая армия появляется в своей стране', (() => {
+  const x = buildWorld(424242);
+  x.gov.treasury = 5000;
+  for (let i = 0; i < 6; i++) decideOnce(x, 1000 + i * 720);
+  const fresh = x.armies.filter((a) => a.id && a.id.startsWith('own-x'));
+  return fresh.length > 0 && fresh.every((a) => pointInPolygon(a.x, a.y, x.own.poly));
+})());
 ok('армия знает игровую минуту', w90.armies.filter((a) => a.country === 'own').every((a) => Number.isFinite(a.at)));
 ok('в мирное время армия появляется медленнее, чем в военное', (() => {
   const peace = run(buildWorld(424242), 120).armies.filter((a) => a.country === 'own').length;
@@ -173,7 +183,14 @@ ok('армии не рисуются чужим без спутника', w90.ow
 ok('армия не двигает чужие страны', w90.countries.filter((c) => !c.own).every((c) => c.cities.length > 0));
 ok('размер новой армии в людях', w90.armies.filter((a) => /^own-x/.test(a.id)).length === 0 ||
   w90.armies.filter((a) => /^own-x/.test(a.id)).every((a) => a.size >= 500 && a.size <= 1500));
-ok('армия появляется внутри своей страны', w90.armies.filter((a) => a.country === 'own').every((a) => Math.hypot(a.x, a.y) < w90.own.radiusKm));
+// §95: полки уходят на фронт, поэтому «не дальше своей страны» — только про свежие
+ok('свежая армия рядом со своей страной', (() => {
+  const x = buildWorld(424242);
+  x.gov.treasury = 5000;
+  for (let i = 0; i < 8; i++) decideOnce(x, 2000 + i * 720);
+  const fresh = x.armies.filter((a) => a.id && a.id.startsWith('own-x'));
+  return fresh.length > 0 && fresh.every((a) => Math.hypot(a.x - x.own.capital.x, a.y - x.own.capital.y) < x.own.radiusKm * 1.05);
+})());
 ok('армий у соседей не стало меньше', w90.armies.filter((a) => a.country !== 'own').length >= 18);
 ok('чужие армии тоже на карте', new Set(w90.armies.map((a) => a.country)).size > 5);
 ok('за месяц армий не больше, чем за три', (() => {
@@ -189,7 +206,8 @@ group('догон и детерминизм');
 const stepA = run(buildWorld(424242), 10, 45);
 const stepB = run(buildWorld(424242), 10, 720);
 near('крупный шаг даёт те же города', stepB.own.cities.length, stepA.own.cities.length, 1);
-near('крупный шаг даёт ту же казну (в пределах шага)', stepB.gov.treasury, stepA.gov.treasury, AUTONOMY.cityCost * 0.5);
+// за один крупный шаг страна успевает принять не больше двух решений — в этом и разница
+near('крупный шаг даёт ту же казну (в пределах двух решений)', stepB.gov.treasury, stepA.gov.treasury, AUTONOMY.cityCost * 2 + AUTONOMY.armyCost);
 ok('один и тот же мир считается одинаково', (() => {
   const a = run(buildWorld(777), 7), b = run(buildWorld(777), 7);
   return a.own.cities.length === b.own.cities.length && a.gov.treasury === b.gov.treasury;

@@ -272,12 +272,17 @@ export class Walls {
     if (!this.enabled()) return false;
     this.stats.calls.move++;
     const grid = this.grid;
-    const rc = Math.ceil((radius + 26) / CELL) + 1;
-    const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+    // Each ref is already indexed over its full thickness-expanded bounds.
+    // Therefore any wall within radius + half thickness must share a cell
+    // with the query's radius-expanded box; scanning a fixed 5x5 area is
+    // unnecessary for the common small-radius movement checks.
+    const r = Math.max(0, radius);
+    const x0 = Math.floor((x - r) / CELL), x1 = Math.floor((x + r) / CELL);
+    const y0 = Math.floor((y - r) / CELL), y1 = Math.floor((y + r) / CELL);
     const isVeh = !!(mover && mover.isVehicle);
-    for (let i = -rc; i <= rc; i++) {
-      for (let j = -rc; j <= rc; j++) {
-        const list = grid.get(cellKey(cx + i, cy + j));
+    for (let cx = x0; cx <= x1; cx++) {
+      for (let cy = y0; cy <= y1; cy++) {
+        const list = grid.get(cellKey(cx, cy));
         if (!list) continue;
         for (let k = 0; k < list.length; k++) {
           const ref = list[k];

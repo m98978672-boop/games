@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';import {runArena} from '../tools/experiments/four-bot-arena.mjs';
+const a=await runArena({seed:1,rotation:0,seconds:90}),b=await runArena({seed:1,rotation:0,seconds:90});
+assert.deepEqual(a,b,'repeatable same seed');
+assert.deepEqual(Object.values(a.controllers).sort(),['hybrid','orca','original','yuka']);
+assert.deepEqual(a.hostility,[[1,2,3],[0,2,3],[0,1,3],[0,1,2]],'every faction has three enemies');
+assert.ok(a.firing.every(n=>n>0),'each faction fires');
+assert.ok(a.botMetrics.yuka.yukaNonzero>0&&a.botMetrics.orca.orcaAdjusted>0&&a.botMetrics.hybrid.hybridBlends>0,'external code and new hybrid actually active');
+assert.equal(a.badFriendly,0);assert.equal(a.friendlyTargetSamples,0);assert.ok(a.downBy.every((row,i)=>row[i]===0),'no same-faction takedowns');
+assert.equal(a.swept,0);assert.equal(a.overlap.overlapFrames,0);
+const rotated=await runArena({seed:1,rotation:1,seconds:90});
+assert.notDeepEqual(rotated.controllers,a.controllers,'seat assignment rotates');
+assert.ok(rotated.firing.every(n=>n>0));
+console.log('four-bot research arena: four factions, independent fire, activation, repeatability and smoke checks passed');

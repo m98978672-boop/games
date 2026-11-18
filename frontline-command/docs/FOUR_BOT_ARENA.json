@@ -1,0 +1,4096 @@
+{
+  "method": "Four mutually hostile factions, six identical infantry each, actual Game.step and soldier combat. Four controller variants assigned to rotating slots. One equal scripted central objective per group. Original strategic, economic and two-faction victory systems disabled; arena eliminates at 0 standing agents. Exact sweep enabled. Fixed map at (1200,1200), 90 s max; no respawns or reinforcement.",
+  "seeds": 8,
+  "seconds": 90,
+  "games": 32,
+  "summary": {
+    "original": {
+      "wins": 9,
+      "active": 29,
+      "downsInflicted": 175,
+      "downsTaken": 163,
+      "shots": 1168,
+      "pathFailures": 0,
+      "calls": 3340,
+      "yukaNonzero": 0,
+      "orcaAdjusted": 0,
+      "hybridBlends": 0
+    },
+    "yuka": {
+      "wins": 8,
+      "active": 32,
+      "downsInflicted": 161,
+      "downsTaken": 160,
+      "shots": 1107,
+      "pathFailures": 0,
+      "calls": 3182,
+      "yukaNonzero": 2564,
+      "orcaAdjusted": 0,
+      "hybridBlends": 0
+    },
+    "orca": {
+      "wins": 7,
+      "active": 21,
+      "downsInflicted": 148,
+      "downsTaken": 171,
+      "shots": 1046,
+      "pathFailures": 0,
+      "calls": 4368,
+      "yukaNonzero": 0,
+      "orcaAdjusted": 3749,
+      "hybridBlends": 0
+    },
+    "hybrid": {
+      "wins": 8,
+      "active": 30,
+      "downsInflicted": 172,
+      "downsTaken": 162,
+      "shots": 1157,
+      "pathFailures": 0,
+      "calls": 4412,
+      "yukaNonzero": 3156,
+      "orcaAdjusted": 3584,
+      "hybridBlends": 4412
+    }
+  },
+  "timeout": 0,
+  "draw": 0,
+  "swept": 0,
+  "overlapSamples": 0,
+  "badFriendly": 0,
+  "friendlyTargetSamples": 0,
+  "matches": [
+    {
+      "seed": 1,
+      "rotation": 0,
+      "seconds": 12.1,
+      "controllers": {
+        "0": "original",
+        "1": "yuka",
+        "2": "orca",
+        "3": "hybrid"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        3,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        19,
+        47,
+        41,
+        26
+      ],
+      "downBy": [
+        [
+          0,
+          2,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "yuka",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 36,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 174,
+          "yukaNonzero": 132,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 198,
+          "yukaNonzero": 0,
+          "orcaCalls": 198,
+          "orcaAdjusted": 178,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 87,
+          "yukaNonzero": 69,
+          "orcaCalls": 87,
+          "orcaAdjusted": 60,
+          "hybridBlends": 87
+        }
+      },
+      "swept": 0,
+      "moves": 494,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 1,
+      "rotation": 1,
+      "seconds": 11.8,
+      "controllers": {
+        "0": "yuka",
+        "1": "orca",
+        "2": "hybrid",
+        "3": "original"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        0,
+        4
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        25,
+        42,
+        24,
+        54
+      ],
+      "downBy": [
+        [
+          0,
+          2,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          4,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 261,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 48,
+          "yukaNonzero": 48,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 135,
+          "yukaNonzero": 0,
+          "orcaCalls": 135,
+          "orcaAdjusted": 115,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 82,
+          "yukaNonzero": 58,
+          "orcaCalls": 82,
+          "orcaAdjusted": 68,
+          "hybridBlends": 82
+        }
+      },
+      "swept": 0,
+      "moves": 518,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 1,
+      "rotation": 2,
+      "seconds": 11.1,
+      "controllers": {
+        "0": "orca",
+        "1": "hybrid",
+        "2": "original",
+        "3": "yuka"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        5,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        22,
+        56,
+        24,
+        43
+      ],
+      "downBy": [
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          6,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          0,
+          1,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "hybrid",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 54,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 141,
+          "yukaNonzero": 112,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 69,
+          "yukaNonzero": 0,
+          "orcaCalls": 69,
+          "orcaAdjusted": 67,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 343,
+          "yukaNonzero": 323,
+          "orcaCalls": 343,
+          "orcaAdjusted": 315,
+          "hybridBlends": 343
+        }
+      },
+      "swept": 0,
+      "moves": 604,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 1,
+      "rotation": 3,
+      "seconds": 12,
+      "controllers": {
+        "0": "hybrid",
+        "1": "original",
+        "2": "yuka",
+        "3": "orca"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        3,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        29,
+        43,
+        32,
+        34
+      ],
+      "downBy": [
+        [
+          0,
+          3,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 165,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 69,
+          "yukaNonzero": 64,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 90,
+          "yukaNonzero": 0,
+          "orcaCalls": 90,
+          "orcaAdjusted": 59,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 78,
+          "yukaNonzero": 58,
+          "orcaCalls": 78,
+          "orcaAdjusted": 64,
+          "hybridBlends": 78
+        }
+      },
+      "swept": 0,
+      "moves": 396,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 2,
+      "rotation": 0,
+      "seconds": 9.9,
+      "controllers": {
+        "0": "original",
+        "1": "yuka",
+        "2": "orca",
+        "3": "hybrid"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        4,
+        0,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        47,
+        22,
+        27,
+        37
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          1,
+          4
+        ],
+        [
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          5,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 252,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 60,
+          "yukaNonzero": 49,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 102,
+          "yukaNonzero": 0,
+          "orcaCalls": 102,
+          "orcaAdjusted": 96,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 117,
+          "yukaNonzero": 100,
+          "orcaCalls": 117,
+          "orcaAdjusted": 92,
+          "hybridBlends": 117
+        }
+      },
+      "swept": 0,
+      "moves": 529,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 2,
+      "rotation": 1,
+      "seconds": 20.8,
+      "controllers": {
+        "0": "yuka",
+        "1": "orca",
+        "2": "hybrid",
+        "3": "original"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        1,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        29,
+        50,
+        44,
+        22
+      ],
+      "downBy": [
+        [
+          0,
+          3,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          2,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "orca",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 81,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 54,
+          "yukaNonzero": 47,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 108,
+          "yukaNonzero": 0,
+          "orcaCalls": 108,
+          "orcaAdjusted": 83,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 254,
+          "yukaNonzero": 129,
+          "orcaCalls": 254,
+          "orcaAdjusted": 204,
+          "hybridBlends": 254
+        }
+      },
+      "swept": 0,
+      "moves": 495,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 2,
+      "rotation": 2,
+      "seconds": 13,
+      "controllers": {
+        "0": "orca",
+        "1": "hybrid",
+        "2": "original",
+        "3": "yuka"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        4,
+        0,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        55,
+        20,
+        48,
+        23
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          4,
+          1
+        ],
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          5
+        ],
+        [
+          0,
+          0,
+          2,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "orca",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 171,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 63,
+          "yukaNonzero": 44,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 324,
+          "yukaNonzero": 0,
+          "orcaCalls": 324,
+          "orcaAdjusted": 304,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 78,
+          "yukaNonzero": 45,
+          "orcaCalls": 78,
+          "orcaAdjusted": 56,
+          "hybridBlends": 78
+        }
+      },
+      "swept": 0,
+      "moves": 620,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 2,
+      "rotation": 3,
+      "seconds": 12.1,
+      "controllers": {
+        "0": "hybrid",
+        "1": "original",
+        "2": "yuka",
+        "3": "orca"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        3,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        29,
+        44,
+        37,
+        24
+      ],
+      "downBy": [
+        [
+          0,
+          3,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          3,
+          0
+        ],
+        [
+          1,
+          0,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 125,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 129,
+          "yukaNonzero": 84,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 105,
+          "yukaNonzero": 0,
+          "orcaCalls": 105,
+          "orcaAdjusted": 82,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 87,
+          "yukaNonzero": 83,
+          "orcaCalls": 87,
+          "orcaAdjusted": 73,
+          "hybridBlends": 87
+        }
+      },
+      "swept": 0,
+      "moves": 446,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 3,
+      "rotation": 0,
+      "seconds": 9.4,
+      "controllers": {
+        "0": "original",
+        "1": "yuka",
+        "2": "orca",
+        "3": "hybrid"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        0,
+        5
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        30,
+        28,
+        19,
+        42
+      ],
+      "downBy": [
+        [
+          0,
+          5,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          3,
+          1,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "hybrid",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 57,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 69,
+          "yukaNonzero": 58,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 108,
+          "yukaNonzero": 0,
+          "orcaCalls": 108,
+          "orcaAdjusted": 95,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 199,
+          "yukaNonzero": 80,
+          "orcaCalls": 199,
+          "orcaAdjusted": 152,
+          "hybridBlends": 199
+        }
+      },
+      "swept": 0,
+      "moves": 433,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 3,
+      "rotation": 1,
+      "seconds": 11.7,
+      "controllers": {
+        "0": "yuka",
+        "1": "orca",
+        "2": "hybrid",
+        "3": "original"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        0,
+        3
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        32,
+        34,
+        21,
+        39
+      ],
+      "downBy": [
+        [
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3
+        ],
+        [
+          1,
+          2,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 149,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 63,
+          "yukaNonzero": 59,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 108,
+          "yukaNonzero": 0,
+          "orcaCalls": 108,
+          "orcaAdjusted": 81,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 84,
+          "yukaNonzero": 79,
+          "orcaCalls": 84,
+          "orcaAdjusted": 72,
+          "hybridBlends": 84
+        }
+      },
+      "swept": 0,
+      "moves": 403,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 3,
+      "rotation": 2,
+      "seconds": 15.7,
+      "controllers": {
+        "0": "orca",
+        "1": "hybrid",
+        "2": "original",
+        "3": "yuka"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        2,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        30,
+        42,
+        39,
+        29
+      ],
+      "downBy": [
+        [
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          4,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 104,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 68,
+          "yukaNonzero": 53,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 99,
+          "yukaNonzero": 0,
+          "orcaCalls": 99,
+          "orcaAdjusted": 82,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 120,
+          "yukaNonzero": 70,
+          "orcaCalls": 120,
+          "orcaAdjusted": 81,
+          "hybridBlends": 120
+        }
+      },
+      "swept": 0,
+      "moves": 390,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 3,
+      "rotation": 3,
+      "seconds": 13.9,
+      "controllers": {
+        "0": "hybrid",
+        "1": "original",
+        "2": "yuka",
+        "3": "orca"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        4,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        29,
+        37,
+        46,
+        25
+      ],
+      "downBy": [
+        [
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          2,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "yuka",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 75,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 185,
+          "yukaNonzero": 143,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 78,
+          "yukaNonzero": 0,
+          "orcaCalls": 78,
+          "orcaAdjusted": 69,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 66,
+          "yukaNonzero": 63,
+          "orcaCalls": 66,
+          "orcaAdjusted": 56,
+          "hybridBlends": 66
+        }
+      },
+      "swept": 0,
+      "moves": 402,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 4,
+      "rotation": 0,
+      "seconds": 12.4,
+      "controllers": {
+        "0": "original",
+        "1": "yuka",
+        "2": "orca",
+        "3": "hybrid"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        3,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        31,
+        37,
+        41,
+        23
+      ],
+      "downBy": [
+        [
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          2,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "orca",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 111,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 81,
+          "yukaNonzero": 69,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 261,
+          "yukaNonzero": 0,
+          "orcaCalls": 261,
+          "orcaAdjusted": 228,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 90,
+          "yukaNonzero": 73,
+          "orcaCalls": 90,
+          "orcaAdjusted": 72,
+          "hybridBlends": 90
+        }
+      },
+      "swept": 0,
+      "moves": 527,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 4,
+      "rotation": 1,
+      "seconds": 11,
+      "controllers": {
+        "0": "yuka",
+        "1": "orca",
+        "2": "hybrid",
+        "3": "original"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        5,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        39,
+        28,
+        46,
+        24
+      ],
+      "downBy": [
+        [
+          0,
+          5,
+          0,
+          1
+        ],
+        [
+          4,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          1,
+          0,
+          5
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "hybrid",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 60,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 90,
+          "yukaNonzero": 89,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 92,
+          "yukaNonzero": 0,
+          "orcaCalls": 92,
+          "orcaAdjusted": 82,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 271,
+          "yukaNonzero": 209,
+          "orcaCalls": 271,
+          "orcaAdjusted": 245,
+          "hybridBlends": 271
+        }
+      },
+      "swept": 0,
+      "moves": 511,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 4,
+      "rotation": 2,
+      "seconds": 15,
+      "controllers": {
+        "0": "orca",
+        "1": "hybrid",
+        "2": "original",
+        "3": "yuka"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        2,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        29,
+        53,
+        47,
+        34
+      ],
+      "downBy": [
+        [
+          0,
+          2,
+          0,
+          1
+        ],
+        [
+          6,
+          0,
+          3,
+          1
+        ],
+        [
+          0,
+          2,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "hybrid",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 84,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 78,
+          "yukaNonzero": 63,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 90,
+          "yukaNonzero": 0,
+          "orcaCalls": 90,
+          "orcaAdjusted": 81,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 249,
+          "yukaNonzero": 118,
+          "orcaCalls": 249,
+          "orcaAdjusted": 175,
+          "hybridBlends": 249
+        }
+      },
+      "swept": 0,
+      "moves": 500,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 4,
+      "rotation": 3,
+      "seconds": 12.5,
+      "controllers": {
+        "0": "hybrid",
+        "1": "original",
+        "2": "yuka",
+        "3": "orca"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        3,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        27,
+        47,
+        52,
+        27
+      ],
+      "downBy": [
+        [
+          0,
+          3,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          1,
+          0
+        ],
+        [
+          1,
+          3,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          2,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "yuka",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 189,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 171,
+          "yukaNonzero": 119,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 84,
+          "yukaNonzero": 0,
+          "orcaCalls": 84,
+          "orcaAdjusted": 73,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 90,
+          "yukaNonzero": 61,
+          "orcaCalls": 90,
+          "orcaAdjusted": 71,
+          "hybridBlends": 90
+        }
+      },
+      "swept": 0,
+      "moves": 526,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 5,
+      "rotation": 0,
+      "seconds": 11.7,
+      "controllers": {
+        "0": "original",
+        "1": "yuka",
+        "2": "orca",
+        "3": "hybrid"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        3,
+        0,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        42,
+        23,
+        38,
+        33
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          2,
+          1
+        ],
+        [
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          5
+        ],
+        [
+          0,
+          0,
+          4,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 142,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 51,
+          "yukaNonzero": 51,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 138,
+          "yukaNonzero": 0,
+          "orcaCalls": 138,
+          "orcaAdjusted": 125,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 94,
+          "yukaNonzero": 77,
+          "orcaCalls": 94,
+          "orcaAdjusted": 80,
+          "hybridBlends": 94
+        }
+      },
+      "swept": 0,
+      "moves": 421,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 5,
+      "rotation": 1,
+      "seconds": 9.3,
+      "controllers": {
+        "0": "yuka",
+        "1": "orca",
+        "2": "hybrid",
+        "3": "original"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        5,
+        0,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        45,
+        18,
+        26,
+        34
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          0,
+          4
+        ],
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "yuka",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 99,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 162,
+          "yukaNonzero": 148,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 87,
+          "yukaNonzero": 0,
+          "orcaCalls": 87,
+          "orcaAdjusted": 78,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 69,
+          "yukaNonzero": 64,
+          "orcaCalls": 69,
+          "orcaAdjusted": 52,
+          "hybridBlends": 69
+        }
+      },
+      "swept": 0,
+      "moves": 405,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 5,
+      "rotation": 2,
+      "seconds": 11.5,
+      "controllers": {
+        "0": "orca",
+        "1": "hybrid",
+        "2": "original",
+        "3": "yuka"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        4,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        24,
+        38,
+        28,
+        36
+      ],
+      "downBy": [
+        [
+          0,
+          2,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          1,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          5,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "hybrid",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 81,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 69,
+          "yukaNonzero": 69,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 102,
+          "yukaNonzero": 0,
+          "orcaCalls": 102,
+          "orcaAdjusted": 92,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 266,
+          "yukaNonzero": 205,
+          "orcaCalls": 266,
+          "orcaAdjusted": 234,
+          "hybridBlends": 266
+        }
+      },
+      "swept": 0,
+      "moves": 510,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 5,
+      "rotation": 3,
+      "seconds": 12.7,
+      "controllers": {
+        "0": "hybrid",
+        "1": "original",
+        "2": "yuka",
+        "3": "orca"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        3,
+        0,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        49,
+        28,
+        37,
+        34
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          1,
+          1
+        ],
+        [
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          5
+        ],
+        [
+          0,
+          0,
+          5,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "hybrid",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 78,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 80,
+          "yukaNonzero": 73,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 90,
+          "yukaNonzero": 0,
+          "orcaCalls": 90,
+          "orcaAdjusted": 74,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 170,
+          "yukaNonzero": 107,
+          "orcaCalls": 170,
+          "orcaAdjusted": 129,
+          "hybridBlends": 170
+        }
+      },
+      "swept": 0,
+      "moves": 391,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 6,
+      "rotation": 0,
+      "seconds": 11.1,
+      "controllers": {
+        "0": "original",
+        "1": "yuka",
+        "2": "orca",
+        "3": "hybrid"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        4,
+        0,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        46,
+        23,
+        37,
+        30
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          3,
+          2
+        ],
+        [
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 142,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 51,
+          "yukaNonzero": 46,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 114,
+          "yukaNonzero": 0,
+          "orcaCalls": 114,
+          "orcaAdjusted": 93,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 132,
+          "yukaNonzero": 80,
+          "orcaCalls": 132,
+          "orcaAdjusted": 104,
+          "hybridBlends": 132
+        }
+      },
+      "swept": 0,
+      "moves": 437,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 6,
+      "rotation": 1,
+      "seconds": 10.8,
+      "controllers": {
+        "0": "yuka",
+        "1": "orca",
+        "2": "hybrid",
+        "3": "original"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        4,
+        0,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        45,
+        24,
+        32,
+        36
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          0,
+          2
+        ],
+        [
+          2,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "yuka",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 81,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 123,
+          "yukaNonzero": 85,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 87,
+          "yukaNonzero": 0,
+          "orcaCalls": 87,
+          "orcaAdjusted": 58,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 77,
+          "yukaNonzero": 54,
+          "orcaCalls": 77,
+          "orcaAdjusted": 61,
+          "hybridBlends": 77
+        }
+      },
+      "swept": 0,
+      "moves": 366,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 6,
+      "rotation": 2,
+      "seconds": 10.3,
+      "controllers": {
+        "0": "orca",
+        "1": "hybrid",
+        "2": "original",
+        "3": "yuka"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        0,
+        5
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        31,
+        35,
+        26,
+        48
+      ],
+      "downBy": [
+        [
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1
+        ],
+        [
+          1,
+          2,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "yuka",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 51,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 222,
+          "yukaNonzero": 163,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 97,
+          "yukaNonzero": 0,
+          "orcaCalls": 97,
+          "orcaAdjusted": 75,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 90,
+          "yukaNonzero": 62,
+          "orcaCalls": 90,
+          "orcaAdjusted": 73,
+          "hybridBlends": 90
+        }
+      },
+      "swept": 0,
+      "moves": 451,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 6,
+      "rotation": 3,
+      "seconds": 12.1,
+      "controllers": {
+        "0": "hybrid",
+        "1": "original",
+        "2": "yuka",
+        "3": "orca"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        36,
+        27,
+        29,
+        40
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          1,
+          1
+        ],
+        [
+          4,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          2,
+          0,
+          5,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "orca",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 63,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 81,
+          "yukaNonzero": 73,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 165,
+          "yukaNonzero": 0,
+          "orcaCalls": 165,
+          "orcaAdjusted": 159,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 105,
+          "yukaNonzero": 56,
+          "orcaCalls": 105,
+          "orcaAdjusted": 75,
+          "hybridBlends": 105
+        }
+      },
+      "swept": 0,
+      "moves": 412,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 7,
+      "rotation": 0,
+      "seconds": 17.5,
+      "controllers": {
+        "0": "original",
+        "1": "yuka",
+        "2": "orca",
+        "3": "hybrid"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        3,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        35,
+        49,
+        37,
+        27
+      ],
+      "downBy": [
+        [
+          0,
+          2,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          2,
+          1
+        ],
+        [
+          0,
+          1,
+          0,
+          5
+        ],
+        [
+          0,
+          0,
+          4,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "yuka",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 72,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 201,
+          "yukaNonzero": 123,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 99,
+          "yukaNonzero": 0,
+          "orcaCalls": 99,
+          "orcaAdjusted": 80,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 102,
+          "yukaNonzero": 53,
+          "orcaCalls": 102,
+          "orcaAdjusted": 78,
+          "hybridBlends": 102
+        }
+      },
+      "swept": 0,
+      "moves": 473,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 7,
+      "rotation": 1,
+      "seconds": 12.3,
+      "controllers": {
+        "0": "yuka",
+        "1": "orca",
+        "2": "hybrid",
+        "3": "original"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        4,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        23,
+        46,
+        33,
+        35
+      ],
+      "downBy": [
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          1,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          1,
+          5,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "orca",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 81,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 51,
+          "yukaNonzero": 40,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 367,
+          "yukaNonzero": 0,
+          "orcaCalls": 367,
+          "orcaAdjusted": 320,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 69,
+          "yukaNonzero": 65,
+          "orcaCalls": 69,
+          "orcaAdjusted": 59,
+          "hybridBlends": 69
+        }
+      },
+      "swept": 0,
+      "moves": 568,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 7,
+      "rotation": 2,
+      "seconds": 12.7,
+      "controllers": {
+        "0": "orca",
+        "1": "hybrid",
+        "2": "original",
+        "3": "yuka"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        2,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        27,
+        51,
+        31,
+        41
+      ],
+      "downBy": [
+        [
+          0,
+          3,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          0,
+          2
+        ],
+        [
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          1,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "hybrid",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 63,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 102,
+          "yukaNonzero": 85,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 93,
+          "yukaNonzero": 0,
+          "orcaCalls": 93,
+          "orcaAdjusted": 77,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 177,
+          "yukaNonzero": 96,
+          "orcaCalls": 177,
+          "orcaAdjusted": 144,
+          "hybridBlends": 177
+        }
+      },
+      "swept": 0,
+      "moves": 434,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 7,
+      "rotation": 3,
+      "seconds": 13,
+      "controllers": {
+        "0": "hybrid",
+        "1": "original",
+        "2": "yuka",
+        "3": "orca"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        0,
+        3
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        49,
+        41,
+        31,
+        46
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          3
+        ],
+        [
+          3,
+          0,
+          6,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "orca",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 57,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 66,
+          "yukaNonzero": 59,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 176,
+          "yukaNonzero": 0,
+          "orcaCalls": 176,
+          "orcaAdjusted": 134,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 93,
+          "yukaNonzero": 63,
+          "orcaCalls": 93,
+          "orcaAdjusted": 67,
+          "hybridBlends": 93
+        }
+      },
+      "swept": 0,
+      "moves": 375,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 8,
+      "rotation": 0,
+      "seconds": 13.8,
+      "controllers": {
+        "0": "original",
+        "1": "yuka",
+        "2": "orca",
+        "3": "hybrid"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        3,
+        0,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        49,
+        33,
+        35,
+        40
+      ],
+      "downBy": [
+        [
+          0,
+          6,
+          1,
+          2
+        ],
+        [
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          4
+        ],
+        [
+          0,
+          0,
+          5,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "original",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 119,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 54,
+          "yukaNonzero": 41,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 126,
+          "yukaNonzero": 0,
+          "orcaCalls": 126,
+          "orcaAdjusted": 117,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 97,
+          "yukaNonzero": 82,
+          "orcaCalls": 97,
+          "orcaAdjusted": 74,
+          "hybridBlends": 97
+        }
+      },
+      "swept": 0,
+      "moves": 395,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 8,
+      "rotation": 1,
+      "seconds": 12.7,
+      "controllers": {
+        "0": "yuka",
+        "1": "orca",
+        "2": "hybrid",
+        "3": "original"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        5,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        20,
+        48,
+        46,
+        31
+      ],
+      "downBy": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "orca",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 75,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 63,
+          "yukaNonzero": 50,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 408,
+          "yukaNonzero": 0,
+          "orcaCalls": 408,
+          "orcaAdjusted": 338,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 129,
+          "yukaNonzero": 120,
+          "orcaCalls": 129,
+          "orcaAdjusted": 111,
+          "hybridBlends": 129
+        }
+      },
+      "swept": 0,
+      "moves": 672,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 8,
+      "rotation": 2,
+      "seconds": 13.3,
+      "controllers": {
+        "0": "orca",
+        "1": "hybrid",
+        "2": "original",
+        "3": "yuka"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        4,
+        0,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        17,
+        56,
+        47,
+        21
+      ],
+      "downBy": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          6,
+          0,
+          4,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          2,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "hybrid",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 87,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 57,
+          "yukaNonzero": 54,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 99,
+          "yukaNonzero": 0,
+          "orcaCalls": 99,
+          "orcaAdjusted": 93,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 366,
+          "yukaNonzero": 295,
+          "orcaCalls": 366,
+          "orcaAdjusted": 320,
+          "hybridBlends": 366
+        }
+      },
+      "swept": 0,
+      "moves": 609,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    },
+    {
+      "seed": 8,
+      "rotation": 3,
+      "seconds": 10,
+      "controllers": {
+        "0": "hybrid",
+        "1": "original",
+        "2": "yuka",
+        "3": "orca"
+      },
+      "hostility": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          2,
+          3
+        ],
+        [
+          0,
+          1,
+          3
+        ],
+        [
+          0,
+          1,
+          2
+        ]
+      ],
+      "active": [
+        0,
+        0,
+        5,
+        0
+      ],
+      "alive": [
+        6,
+        6,
+        6,
+        6
+      ],
+      "firing": [
+        28,
+        37,
+        48,
+        16
+      ],
+      "downBy": [
+        [
+          0,
+          4,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          2,
+          0,
+          6
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "pathFailures": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "winner": "yuka",
+      "timeout": false,
+      "botMetrics": {
+        "original": {
+          "calls": 75,
+          "yukaNonzero": 0,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "yuka": {
+          "calls": 206,
+          "yukaNonzero": 171,
+          "orcaCalls": 0,
+          "orcaAdjusted": 0,
+          "hybridBlends": 0
+        },
+        "orca": {
+          "calls": 69,
+          "yukaNonzero": 0,
+          "orcaCalls": 69,
+          "orcaAdjusted": 61,
+          "hybridBlends": 0
+        },
+        "hybrid": {
+          "calls": 81,
+          "yukaNonzero": 59,
+          "orcaCalls": 81,
+          "orcaAdjusted": 67,
+          "hybridBlends": 81
+        }
+      },
+      "swept": 0,
+      "moves": 431,
+      "overlap": {
+        "overlapFrames": 0,
+        "overlapPairFrames": 0,
+        "overlapFrames70": 0,
+        "overlapPairFrames70": 0,
+        "maxOverlap": 0
+      },
+      "badFriendly": 0,
+      "friendlyTargetSamples": 0
+    }
+  ]
+}

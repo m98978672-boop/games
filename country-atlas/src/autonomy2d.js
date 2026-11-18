@@ -12,9 +12,9 @@ export const AUTONOMY = {
   dayMin: 1440,            // игровых минут в сутках
   decisionMin: 720,        // раз в полдня правительство что-то решает
   treasuryStart: 1500,     // казна на старте, монет
-  cityIncome: 16,          // монет в сутки с города
-  techIncome: 4,           // и за каждую открытую технологию
-  warDrain: 120,           // война съедает казну в сутки
+  cityIncome: 22,          // монет в сутки с города
+  techIncome: 5,           // и за каждую открытую технологию
+  warDrain: 90,            // война съедает казну в сутки
   cityCost: 1400,          // новый город
   armyCost: 900,           // новая армия
   roadCost: 260,           // ремонт дороги
@@ -109,8 +109,11 @@ export function decideOnce(world, minutes) {
     world.rev++;
     return { at: minutes, kind: 'road', text: 'отремонтирована дорога' };
   }
-  // 2. мирное время: сначала город — он дешевле и кормит казну
-  if (!atWar && cities < AUTONOMY.cityCap && gov.treasury >= AUTONOMY.cityCost) {
+  // 2. мирное время: сначала город — он дешевле и кормит казну. Но если городов
+  // уже много, а полков мало, страна держит в казне запас и на армию (§95)
+  const thinArmy = armies * 4 < cities;
+  const cityNeed = AUTONOMY.cityCost + (thinArmy ? AUTONOMY.armyCost : 0);
+  if (!atWar && cities < AUTONOMY.cityCap && gov.treasury >= cityNeed) {
     const p = spot();
     if (p) {
       const id = 'own-' + minutes;
@@ -142,17 +145,25 @@ export function decideOnce(world, minutes) {
     }
   }
   // 3. армия: в войну — сразу, в мир — когда казна с запасом
+  // §95: страна держит армию соразмерно числу городов — одна на четыре города,
+  // а в войну поднимает полки сразу, как только есть деньги
   const wantArmy = atWar
     ? armies < AUTONOMY.armyCap && gov.treasury >= AUTONOMY.armyCost
-    : armies < AUTONOMY.armyCap && gov.treasury >= AUTONOMY.armyCost * 2.5;
+    : armies < AUTONOMY.armyCap && thinArmy && gov.treasury >= AUTONOMY.armyCost;
   if (wantArmy) {
     const a = (hash01(world.seed + minutes, 433) * 2 - 1) * Math.PI;
-    const r = own.radiusKm * 0.8;
+    // полк стоит в своей стране: перебираем радиусы, пока точка не окажется внутри границы
+    let ax = own.capital.x, ay = own.capital.y;
+    for (const k of [0.8, 0.62, 0.45, 0.3, 0.15]) {
+      const tx = own.capital.x + Math.cos(a) * own.radiusKm * k;
+      const ty = own.capital.y + Math.sin(a) * own.radiusKm * k;
+      if (pointInPolygon(tx, ty, own.poly)) { ax = tx; ay = ty; break; }
+    }
     const army = {
       id: 'own-x' + (world.armies.length + 1),
       country: 'own',
-      x: own.capital.x + Math.cos(a) * r,
-      y: own.capital.y + Math.sin(a) * r,
+      x: ax,
+      y: ay,
       size: 500 + Math.round(hash01(world.seed + minutes, 439) * 900),
       side: 'home',
       at: minutes,

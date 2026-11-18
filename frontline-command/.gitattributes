@@ -1,2 +1,5 @@
-# Preserve the upstream EasyStar distribution byte-for-byte.
+# Preserve upstream distributions and generated bundles byte-for-byte.
 src/vendor/easystar.js -whitespace
+src/ai/commander-worker.bundle.js -whitespace
+src/ai/licenses/LOGLEVEL-MIT.txt -whitespace
+tools/vendor/pypibt/** -whitespace

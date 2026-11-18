@@ -1,0 +1,188 @@
+{
+  "seeds": 2,
+  "seconds": 180,
+  "caveats": [
+    "Experiment only, no deployment. Same seeds; RNG diverges.",
+    "Exact sweep enabled in both. Overlaps sampled once per second, not continuous.",
+    "Deliveries can still be automatic, not physical helper work.",
+    "One fixed horizon does not prove balance, victory or browser performance."
+  ],
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "original": {
+        "seconds": 180,
+        "ms": 11102,
+        "outcome": null,
+        "alive": [
+          23,
+          29
+        ],
+        "kills": [
+          24,
+          35
+        ],
+        "captures": [
+          6,
+          7
+        ],
+        "deliveries": [
+          0,
+          3
+        ],
+        "pathFailures": [
+          18,
+          42
+        ],
+        "moves": 52054,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        },
+        "bridge": null
+      },
+      "bridge": {
+        "seconds": 180,
+        "ms": 13398,
+        "outcome": null,
+        "alive": [
+          33,
+          32
+        ],
+        "kills": [
+          21,
+          14
+        ],
+        "captures": [
+          7,
+          7
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "pathFailures": [
+          41,
+          67
+        ],
+        "moves": 38747,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        },
+        "bridge": {
+          "calls": 89553,
+          "skipped": 9699,
+          "proposals": 319416,
+          "yukaNonzero": 63634,
+          "orcaCalls": 159708,
+          "orcaAdjusted": 121118,
+          "selected": {
+            "original": 11267,
+            "yuka": 1492,
+            "orca": 3269,
+            "hybrid": 987,
+            "wait": 62839
+          }
+        }
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "bridge": {
+        "seconds": 180,
+        "ms": 14139,
+        "outcome": null,
+        "alive": [
+          32,
+          39
+        ],
+        "kills": [
+          3,
+          10
+        ],
+        "captures": [
+          3,
+          6
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "pathFailures": [
+          42,
+          64
+        ],
+        "moves": 34066,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        },
+        "bridge": {
+          "calls": 100026,
+          "skipped": 7788,
+          "proposals": 368952,
+          "yukaNonzero": 76110,
+          "orcaCalls": 184476,
+          "orcaAdjusted": 140025,
+          "selected": {
+            "original": 8953,
+            "yuka": 1176,
+            "orca": 8122,
+            "hybrid": 870,
+            "wait": 73117
+          }
+        }
+      },
+      "original": {
+        "seconds": 180,
+        "ms": 8567,
+        "outcome": null,
+        "alive": [
+          18,
+          40
+        ],
+        "kills": [
+          13,
+          35
+        ],
+        "captures": [
+          4,
+          8
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "pathFailures": [
+          27,
+          88
+        ],
+        "moves": 51692,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        },
+        "bridge": null
+      }
+    }
+  ]
+}

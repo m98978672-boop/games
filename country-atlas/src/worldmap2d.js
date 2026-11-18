@@ -12,6 +12,10 @@ import {
   armyPower, missileSpread, missileReach
 } from './tech2d.js';
 import { AUTONOMY, buildAutonomy, advanceAutonomy, incomePerDay } from './autonomy2d.js';
+import {
+  PLANET, buildLands, sitesInLand, splitCountries, landAt, inAnyLand, oceanSpots,
+  geoOf, formatLat, formatLon, insidePoly
+} from './planet2d.js';
 
 export const WM = {
   // F-372: сторона карты мира. В квадрате 24 000 суша срезалась его же краем —
@@ -21,7 +25,7 @@ export const WM = {
   ownKm: 7000,               // наша страна — квадрат в центре
   countries: 18,             // всего стран, включая нашу
   citiesPer: [7, 13],        // городов в стране, включая два пограничных
-  marksPer: 1800,            // отметок рельефа на карту (лес, болото, горы…) — мир стал вдвое больше
+  marksPer: 5200,            // отметок рельефа на карту (лес, болото, горы…); на суше остаётся около 720
   islands: 9,                // островов в океане вокруг континента
   islandKm: [380, 900],       // радиус острова в км
   islandRing: [15800, 16400], // на каком удалении от центра лежат острова: за берегом, но до льдов
@@ -355,14 +359,20 @@ export function buildMarks(seed, sizeKm = WM.sizeKm, count = WM.marksPer) {
 /* F-373: острова. Раньше весь мир был одним континентом на пустом океане, и карта
    читалась как «блин». Острова лежат кольцом за берегом, стран на них нет — только
    земля, отмель и берег. Генерируются от сида: тот же сид — те же острова. */
-export function buildIslands(seed = 424242, count = WM.islands) {
+export function buildIslands(seed = 424242, count = WM.islands, lands = null) {
+  const list = lands || [];
+  // §95: материки вытянуты и повёрнуты, поэтому остров проверяем по самому берегу,
+  // а не по кругу вокруг центра — иначе он садился на мыс материка
+  const near = (x, y, size) => list.some((l) => l.poly.some(([px, py]) => Math.hypot(px - x, py - y) < size * 1.5 + 260));
   const out = [];
-  for (let i = 0; i < count; i++) {
-    const a = (i / count) * Math.PI * 2 + hash01(seed + i * 311, 251) * 0.5;
+  for (let i = 0; i < count * 6 && out.length < count; i++) {
+    const a = ((out.length + i) / count) * Math.PI * 2 + hash01(seed + i * 311, 251) * 0.62;
     const r = WM.islandRing[0] + hash01(seed + i * 613, 257) * (WM.islandRing[1] - WM.islandRing[0]);
     const size = WM.islandKm[0] + hash01(seed + i * 877, 263) * (WM.islandKm[1] - WM.islandKm[0]);
     const cx = Math.cos(a) * r, cy = Math.sin(a) * r;
-    const sides = 42 + (i % 3) * 6;
+    // остров не садится на материк и не уходит в лёд
+    if (near(cx, cy, size) || Math.hypot(cx, cy) + size * 1.4 > WM.capKm - 200) continue;
+    const sides = 42 + (out.length % 3) * 6;
     const poly = [];
     for (let k = 0; k < sides; k++) {
       const b = (k / sides) * Math.PI * 2;
@@ -372,7 +382,7 @@ export function buildIslands(seed = 424242, count = WM.islands) {
         + 0.07 * Math.sin(b * 5 + i * 2.3);
       poly.push([cx + Math.cos(b) * size * w, cy + Math.sin(b) * size * w]);
     }
-    out.push({ id: 'i' + i, name: 'остров', x: cx, y: cy, rKm: size, poly });
+    out.push({ id: 'i' + out.length, name: 'остров', x: cx, y: cy, rKm: size, poly });
   }
   return out;
 }
@@ -403,6 +413,33 @@ export function landMarks(marks, clip) {
   const keep = [];
   for (let i = 0; i < marks.length; i += 3) {
     if (pointInPolygon(marks[i], marks[i + 1], clip)) keep.push(marks[i], marks[i + 1], marks[i + 2]);
+  }
+  return Float32Array.from(keep);
+}
+
+/* §95: отметки рельефа — только на суше, а суши теперь несколько материков.
+   Отметка остаётся, если попала на любой из них. */
+export function marksOnLands(marks, lands) {
+  if (!marks || !lands || !lands.length) return marks;
+  // рамки материков: отметка сначала проверяется по рамке, и только потом по берегу
+  const boxes = lands.map((l) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of l.poly) {
+      if (x < x0) x0 = x;
+      if (y < y0) y0 = y;
+      if (x > x1) x1 = x;
+      if (y > y1) y1 = y;
+    }
+    return [x0, y0, x1, y1];
+  });
+  const keep = [];
+  for (let i = 0; i < marks.length; i += 3) {
+    const x = marks[i], y = marks[i + 1];
+    for (let k = 0; k < lands.length; k++) {
+      const b = boxes[k];
+      if (x < b[0] || y < b[1] || x > b[2] || y > b[3]) continue;
+      if (insidePoly(x, y, lands[k].poly)) { keep.push(x, y, marks[i + 2]); break; }
+    }
   }
   return Float32Array.from(keep);
 }
@@ -620,50 +657,57 @@ export function diplomacyStats(world, observerId = 'own') {
   };
 }
 
-/* Сборка мира: наша страна + соседи + города + дороги + отметки + армии. */
+/* Сборка мира: материки + страны + города + дороги + отметки + армии.
+   §95: мир — не один континент. Материки собирает planet2d, страны живут на них:
+   на нашем материке наша страна и его соседи, на остальных — свои страны и свои войны. */
 export function buildWorld(seed = 424242) {
-  const sites = sitesFor(WM.countries, seed);
-  const clip = coastPolygon();
-  const ownSite = sites[0];
-  const ownPoly = voronoiPoly(ownSite, sites, clip);
-  const own = {
-    id: 'own',
-    name: 'Ратград',
-    own: true,
-    capitalName: 'Валград',
-    capital: { x: 0, y: 0 },
-    radiusKm: cellRadius(ownPoly, ownSite) * 0.95,
-    poly: ownPoly,
-    satellite: true,           // у нашей страны спутник есть — иначе смотреть было бы не на что
-    strength: 1.0
-  };
-  const countries = [own];
-  for (let i = 1; i < sites.length; i++) {
-    const site = sites[i];
-    const poly = voronoiPoly(site, sites, clip);
-    // столица — в самом просторном месте страны, а не там, где легла точка-семя
-    const pole = poleOfInaccessibility(poly);
-    const capital = { x: Number.isFinite(pole.x) ? pole.x : site.x, y: Number.isFinite(pole.y) ? pole.y : site.y };
-    countries.push({
-      id: site.id,
-      name: countryName(seed, i),
-      own: false,
-      capitalName: WM.capitalNames[i % WM.capitalNames.length],
-      capital,
-      radiusKm: Math.max(120, cellRadius(poly, capital) * 0.95),
-      poly,
-      satellite: hash01(seed + i * 211, 97) < 0.25,
-      strength: 0.5 + hash01(seed + i * 311, 101) * 1.4
+  const lands = buildLands(seed);
+  const counts = splitCountries(lands, WM.countries);
+  const countries = [];
+  let serial = 0;
+  lands.forEach((land, li) => {
+    const sites = sitesInLand(land, counts[li], seed, li === 0);
+    land.countries = [];
+    const local = sites.map((site) => {
+      const id = li === 0 && site.ring === 0 ? 'own' : 'c' + (++serial);
+      return Object.assign({}, site, { id });
     });
-  }
-  // свои города — та же столица плюс крупные поселения игры, приведённые к центру
+    for (const site of local) {
+      const poly = voronoiPoly(site, local, land.poly);
+      if (poly.length < 3) continue;
+      const pole = poleOfInaccessibility(poly);
+      const own = site.id === 'own';
+      const capital = own
+        ? { x: 0, y: 0 }
+        : { x: Number.isFinite(pole.x) ? pole.x : site.x, y: Number.isFinite(pole.y) ? pole.y : site.y };
+      const ctry = {
+        id: site.id,
+        name: own ? 'Ратград' : countryName(seed, countries.length),
+        own,
+        land: land.id,
+        capitalName: own ? 'Валград' : WM.capitalNames[countries.length % WM.capitalNames.length],
+        capital,
+        radiusKm: Math.max(90, cellRadius(poly, capital) * 0.95),
+        poly,
+        satellite: own ? true : hash01(seed + countries.length * 211, 97) < 0.25,
+        strength: own ? 1.0 : 0.5 + hash01(seed + countries.length * 311, 101) * 1.4
+      };
+      countries.push(ctry);
+      land.countries.push(ctry.id);
+    }
+  });
+  const own = countries.find((c) => c.own) || countries[0];
+  // свои города — та же столица плюс крупные поселения игры
   own.cities = [{
     id: 'own-cap', name: own.capitalName, x: 0, y: 0, capital: true, pop: 1800
   }];
   const ownTownNames = ['Оствей', 'Камдор', 'Мирн', 'Сольв', 'Тарх', 'Вельд', 'Норск', 'Ирбен', 'Ярга', 'Дорн'];
+  const ownReach = cellRadius(own.poly, own.capital) * 0.78;
   for (let i = 0; i < 10; i++) {
     const a = (i / 10) * Math.PI * 2 + 0.3;
-    const r = 900 + (i % 3) * 700;
+    // §95: свои города — внутри своей страны: мир стал больше, и старый круг
+    // радиусом 2 300 км выносил половину городов за границу
+    const r = ownReach * (0.35 + 0.16 * (i % 4));
     own.cities.push({ id: 'own-' + i, name: ownTownNames[i], x: Math.cos(a) * r, y: Math.sin(a) * r, capital: false, pop: 220 + i * 40 });
   }
   own.cities.push(...borderTowns(own, seed));
@@ -676,8 +720,8 @@ export function buildWorld(seed = 424242) {
     allCities.push(...c.cities);
     allRoads.push(...c.roads);
   }
-  // два международных коридора: наша страна связана с двумя соседями
-  const near = countries.filter((c) => !c.own)
+  // международные коридоры: только с соседями по своему материку — через океан дороги не ходят
+  const near = countries.filter((c) => !c.own && c.land === own.land)
     .sort((a, b) => Math.hypot(a.capital.x, a.capital.y) - Math.hypot(b.capital.x, b.capital.y))
     .slice(0, 2);
   for (const c of near) {
@@ -698,14 +742,16 @@ export function buildWorld(seed = 424242) {
   const w = {
     seed,
     sizeKm: WM.sizeKm,
-    coast: clip,             // F-355: берег континента — по нему рисуется суша и море
+    lands,                   // F-397: материки планеты — у каждого свой берег и свои страны
+    coast: lands[0].poly,    // §95: наш материк — самый большой, он же в центре мира
     minutes: 0,
     countries,
     own,
     cities: allCities,
     roads: allRoads,
-    marks: landMarks(buildMarks(seed), clip),   // F-362: отметки рельефа только на суше
-    islands: buildIslands(seed),                 // F-373: острова в океане
+    marks: marksOnLands(buildMarks(seed), lands), // F-362: отметки рельефа только на суше
+    islands: buildIslands(seed, WM.islands, lands), // F-373: острова в океане, мимо материков
+    oceans: oceanSpots(lands, WM.sizeKm),         // F-400: где подписывать океан
     caps: buildIceCaps(),                        // F-374: полярные льды
     armies,
     wars: [],
@@ -749,9 +795,26 @@ export function buildWorld(seed = 424242) {
    соседа армия не ходит. Соседство считается по расстоянию между границами. */
 export function adjacency(countries, maxKm = 130) {
   const pairs = [];
+  // §95: страны на разных материках соседями быть не могут — их разделяет океан.
+  // Заодно это главная экономия времени сборки мира.
+  const box = (c) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of c.poly) {
+      if (x < x0) x0 = x;
+      if (y < y0) y0 = y;
+      if (x > x1) x1 = x;
+      if (y > y1) y1 = y;
+    }
+    return [x0, y0, x1, y1];
+  };
+  const boxes = countries.map(box);
   for (let i = 0; i < countries.length; i++) {
     for (let j = i + 1; j < countries.length; j++) {
       const a = countries[i], b = countries[j];
+      if (a.land && b.land && a.land !== b.land) continue;
+      const ba = boxes[i], bb = boxes[j];
+      if (ba[0] > bb[2] + maxKm || bb[0] > ba[2] + maxKm
+        || ba[1] > bb[3] + maxKm || bb[1] > ba[3] + maxKm) continue;
       let best = Infinity;
       for (const [ax, ay] of a.poly) {
         for (let k = 0; k < b.poly.length; k++) {

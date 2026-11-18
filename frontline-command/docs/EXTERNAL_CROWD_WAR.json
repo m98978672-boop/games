@@ -1,0 +1,336 @@
+{
+  "seeds": 4,
+  "seconds": 90,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 90,
+        "wallClockMs": 5295,
+        "warOver": false,
+        "failures": [
+          18,
+          21
+        ],
+        "kills": [
+          2,
+          7
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          34,
+          45
+        ],
+        "experiment": null,
+        "moves": 31631,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        }
+      },
+      "on": {
+        "on": true,
+        "seconds": 90,
+        "wallClockMs": 5852,
+        "warOver": false,
+        "failures": [
+          6,
+          6
+        ],
+        "kills": [
+          8,
+          15
+        ],
+        "captures": [
+          4,
+          4
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          47,
+          39
+        ],
+        "experiment": {
+          "calls": 20255,
+          "yukaAdjusted": 7772,
+          "orcaCalls": 20255,
+          "orcaAdjusted": 11833
+        },
+        "moves": 36545,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        }
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 90,
+        "wallClockMs": 4403,
+        "warOver": false,
+        "failures": [
+          21,
+          18
+        ],
+        "kills": [
+          7,
+          4
+        ],
+        "captures": [
+          3,
+          5
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "alive": [
+          47,
+          40
+        ],
+        "experiment": null,
+        "moves": 30810,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        }
+      },
+      "on": {
+        "on": true,
+        "seconds": 90,
+        "wallClockMs": 4963,
+        "warOver": false,
+        "failures": [
+          10,
+          16
+        ],
+        "kills": [
+          3,
+          9
+        ],
+        "captures": [
+          3,
+          4
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          42,
+          55
+        ],
+        "experiment": {
+          "calls": 17811,
+          "yukaAdjusted": 6552,
+          "orcaCalls": 17811,
+          "orcaAdjusted": 9317
+        },
+        "moves": 34851,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        }
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 90,
+        "wallClockMs": 4292,
+        "warOver": false,
+        "failures": [
+          32,
+          20
+        ],
+        "kills": [
+          4,
+          1
+        ],
+        "captures": [
+          4,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          40,
+          37
+        ],
+        "experiment": null,
+        "moves": 31154,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        }
+      },
+      "on": {
+        "on": true,
+        "seconds": 90,
+        "wallClockMs": 4929,
+        "warOver": false,
+        "failures": [
+          4,
+          15
+        ],
+        "kills": [
+          2,
+          11
+        ],
+        "captures": [
+          4,
+          6
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          51,
+          45
+        ],
+        "experiment": {
+          "calls": 19057,
+          "yukaAdjusted": 6330,
+          "orcaCalls": 19057,
+          "orcaAdjusted": 9606
+        },
+        "moves": 39639,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        }
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 90,
+        "wallClockMs": 5629,
+        "warOver": false,
+        "failures": [
+          33,
+          26
+        ],
+        "kills": [
+          11,
+          2
+        ],
+        "captures": [
+          4,
+          4
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          45,
+          48
+        ],
+        "experiment": null,
+        "moves": 33651,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        }
+      },
+      "on": {
+        "on": true,
+        "seconds": 90,
+        "wallClockMs": 6246,
+        "warOver": false,
+        "failures": [
+          14,
+          8
+        ],
+        "kills": [
+          10,
+          1
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "alive": [
+          45,
+          42
+        ],
+        "experiment": {
+          "calls": 19785,
+          "yukaAdjusted": 8604,
+          "orcaCalls": 19785,
+          "orcaAdjusted": 11993
+        },
+        "moves": 38034,
+        "sweep": 0,
+        "overlap": {
+          "overlapFrames": 0,
+          "overlapPairFrames": 0,
+          "overlapFrames70": 0,
+          "overlapPairFrames70": 0,
+          "maxOverlap": 0
+        }
+      }
+    }
+  ],
+  "caveats": [
+    "Only Yuka+ORCA enabled in on, for non-player infantry with a goal and no contact; all live units included as neighbors.",
+    "Experimental exact wall sweep enabled in both; does not cover every movement path.",
+    "Real Game.step and AI, fixed horizon, no victory or balance conclusion. RNG diverges; outcomes not causal estimates.",
+    "overlap sampled every 1 simulated second; may include spawning or existing overlap. Delivery count may be virtual. Timing includes probe and is not browser FPS."
+  ]
+}
