@@ -35,7 +35,24 @@ ok('наша страна — большая, но не весь мир', (() =>
   const a = polygonArea(own.poly) / 1e6;
   return a > 4 && a < 30;
 })(), Math.round(polygonArea(own.poly) / 1e6) + ' млн км²');
-ok('наша страна — шестиугольная ячейка, а не остров', own.poly.length >= 5 && own.poly.length <= 12, own.poly.length);
+// §103: своя страна стоит на берегу — её форма идёт по берегу материка,
+// а не по шестиугольной ячейке. Вершин много: береговая линия подробная.
+ok('наша страна — не остров, а область материка', own.poly.length >= 5, own.poly.length);
+const ownShore = (() => {
+  // рёбра своей страны, которые лежат на трафарете берега (§103)
+  const coast = (world.lands[0] && world.lands[0].shore && world.lands[0].shore.coast) || [];
+  let len = 0;
+  for (let i = 0; i < own.poly.length; i++) {
+    const a = own.poly[i], b = own.poly[(i + 1) % own.poly.length];
+    const onA = coast.some((c) => Math.hypot(c[0] - a[0], c[1] - a[1]) < 1);
+    const onB = coast.some((c) => Math.hypot(c[0] - b[0], c[1] - b[1]) < 1);
+    if (onA && onB) len += Math.hypot(b[0] - a[0], b[1] - a[1]);
+  }
+  return len;
+})();
+ok('у нашей страны есть свой берег', ownShore > 1500, Math.round(ownShore) + ' км берега');
+ok('берег нашей страны — трафарет с карты страны', !!world.lands[0].shore && world.lands[0].shore.chordKm > 2600,
+  world.lands[0].shore ? Math.round(world.lands[0].shore.chordKm) + ' км' : 'нет трафарета');
 ok('сторона мира 24000 км', world.sizeKm === WM.sizeKm);
 ok('городов 7…15 на страну (включая пограничные)', world.countries.every((c) => (c.cities || []).length >= WM.citiesPer[0] && (c.cities || []).length <= WM.citiesPer[1] + 2),
   world.countries.map((c) => (c.cities || []).length).join(','));
@@ -103,10 +120,22 @@ ok('другой сид даёт другой мир', JSON.stringify(buildWorld
 
 /* ——— 2. геометрия ——— */
 group('геометрия');
-ok('центр своей страны внутри', pointInPolygon(0, 0, own.poly));
+// §103: страна стоит на своём берегу, поэтому центр мира — уже не она.
+// Проверяем то, что важно: столица внутри страны, а страна — на берегу.
+ok('столица внутри своей страны', pointInPolygon(own.capital.x, own.capital.y, own.poly));
 ok('далеко за границей — снаружи', !pointInPolygon(11000, 11000, own.poly));
 ok('далеко за границей — не наша страна', (countryAt(world, 11000, 11000) || {}).own !== true);
-ok('в центре — наша страна', countryAt(world, 0, 0).own === true);
+ok('столица — наша страна', countryAt(world, own.capital.x, own.capital.y).own === true);
+ok('своя страна стоит на берегу своего материка', ownShore > 1500);
+ok('столица стоит вглубь от своего берега', (() => {
+  const coast = world.lands[0].shore.coast;
+  const d = Math.min(...coast.map((c) => Math.hypot(c[0] - own.capital.x, c[1] - own.capital.y)));
+  return d > 200 && d < 3000;
+})(), (() => {
+  const coast = world.lands[0].shore.coast;
+  return Math.round(Math.min(...coast.map((c) => Math.hypot(c[0] - own.capital.x, c[1] - own.capital.y)))) + ' км';
+})());
+ok('все свои города внутри своей страны', own.cities.every((c) => pointInPolygon(c.x, c.y, own.poly)));
 ok('площадь нашей страны разумна', polygonArea(own.poly) > 4e6 && polygonArea(own.poly) < 30e6, Math.round(polygonArea(own.poly) / 1e6) + ' млн км²');
 ok('площадь положительная у всех стран', world.countries.every((c) => polygonArea(c.poly) > 1e6));
 const sl = sitesFor(WM.countries, 424242);
@@ -290,7 +319,8 @@ ok('панорама двигает камеру в обратную сторо�
   return wv.cam.x < 500;
 })());
 ok('countryAtScreen находит нашу страну в центре', (() => {
-  const wv = new WorldView(makeCanvas(900, 600), {}); wv.resize(); wv.setWorld(world); wv.cam = { x: 0, y: 0, scale: s1 };
+  const wv = new WorldView(makeCanvas(900, 600), {}); wv.resize(); wv.setWorld(world);
+  wv.cam = { x: own.capital.x, y: own.capital.y, scale: s1 };
   const k = wv.countryAtScreen(450, 300);
   return k && k.own === true;
 })());

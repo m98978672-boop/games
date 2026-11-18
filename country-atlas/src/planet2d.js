@@ -190,7 +190,12 @@ export function buildLands(seed = 424242) {
 export function sitesInLand(land, count, seed = 424242, centerFirst = false) {
   const out = [];
   const minDist = land.rKm * (count > 6 ? 0.62 : 0.72);
-  if (centerFirst) out.push({ id: 'own', x: land.x, y: land.y, ring: 0, land: land.id });
+  // §103: своя страна стоит на своём берегу — трафарет с карты страны садится на
+  // берег материка, и столица встаёт в километрах вглубь от него (land.ownSite).
+  if (centerFirst) {
+    const site = land.ownSite && insidePoly(land.ownSite.x, land.ownSite.y, land.poly) ? land.ownSite : land;
+    out.push({ id: 'own', x: site.x, y: site.y, ring: 0, land: land.id });
+  }
   let guard = 0;
   while (out.length < count && guard < 900) {
     guard++;
@@ -207,14 +212,22 @@ export function sitesInLand(land, count, seed = 424242, centerFirst = false) {
     if (!ok) continue;
     out.push({ id: 'c' + (out.length + 1), x, y, ring: 1, land: land.id });
   }
-  // если места не хватило — добираем без отталкивания, лишь бы внутри берега
-  const fallback = count - out.length;
-  for (let k = 0; k < fallback * 40 && out.length < count; k++) {
-    const a = pick(seed + 7 + k * 13, 83) * Math.PI * 2;
-    const rr = land.rKm * 0.5 * Math.sqrt(pick(seed + 11 + k * 19, 89));
-    const x = land.x + Math.cos(a) * rr, y = land.y + Math.sin(a) * rr;
-    if (!insidePoly(x, y, land.poly)) continue;
-    out.push({ id: 'c' + (out.length + 1), x, y, ring: 1, land: land.id });
+  // §103: если места не хватило — не ставим страну вплотную к соседу, а выбираем
+  // из многих вариантов самый просторный. Раньше здесь точки брались подряд, и на
+  // новом берегу одна страна садилась в 2 000 км от нашей, срезав нам полстраны.
+  while (out.length < count) {
+    let best = null;
+    for (let k = 0; k < 64; k++) {
+      const a = pick(seed + 7 + k * 13 + out.length * 101, 83) * Math.PI * 2;
+      const rr = land.rKm * (0.35 + 0.5 * Math.sqrt(pick(seed + 11 + k * 19 + out.length * 37, 89)));
+      const x = land.x + Math.cos(a) * rr, y = land.y + Math.sin(a) * rr;
+      if (!insidePoly(x, y, land.poly)) continue;
+      let gap = Infinity;
+      for (const other of out) gap = Math.min(gap, Math.hypot(other.x - x, other.y - y));
+      if (!best || gap > best.gap) best = { x, y, gap };
+    }
+    if (!best) break;
+    out.push({ id: 'c' + (out.length + 1), x: best.x, y: best.y, ring: 1, land: land.id });
   }
   return out;
 }

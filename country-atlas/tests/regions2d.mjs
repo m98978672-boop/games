@@ -120,10 +120,17 @@ ok('у имени есть тип — земля, область, губерни
 ok('у каждого типа есть прилагательные', Object.keys(REGIONS.adjs).length >= 4);
 ok('имена во всём мире не повторяются', new Set(regions.map((r) => r.name)).size === regions.length,
   new Set(regions.map((r) => r.name)).size + ' из ' + regions.length);
-ok('внутри страны не повторяется вид области', (() => {
+// §103: своя страна стала крупной и набрала больше шести областей, а видов области
+// всего шесть. Требуем прежнее — без повторов, — пока областей не больше, чем видов,
+// а дальше виды должны делиться поровну, а не сбиваться в «окраины».
+ok('внутри страны виды областей не толпятся', (() => {
   for (const c of world.countries) {
     const kinds = regions.filter((r) => r.country === c.id).map((r) => r.name.split(' ').pop());
-    if (new Set(kinds).size !== kinds.length) return false;
+    const tally = new Map();
+    for (const k of kinds) tally.set(k, (tally.get(k) || 0) + 1);
+    const cap = Math.ceil(kinds.length / REGIONS.kinds.length);
+    for (const v of tally.values()) if (v > cap) return false;
+    if (kinds.length <= REGIONS.kinds.length && new Set(kinds).size !== kinds.length) return false;
   }
   return true;
 })(), own.map((r) => r.name.split(' ').pop()).join(','));

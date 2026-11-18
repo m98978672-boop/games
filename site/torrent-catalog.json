@@ -4,9 +4,9 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1179,
-    "totalBytes": 35878301,
-    "chunks": 146,
+    "files": 1181,
+    "totalBytes": 35911314,
+    "chunks": 147,
     "blockedFiles": 1
   },
   "games": [
@@ -19,11 +19,11 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "e890e5f2095641932454ec78c1b4dbdedf41a43da03431b8cd5d8b8417b3b635",
-      "totalSize": 1828128,
+      "infoHash": "fd62959ac541af37a487af99fe184c5add9ec4cb4ec0eef1fe9758c2f224ddc2",
+      "totalSize": 1861141,
       "chunkSize": 262144,
-      "chunkCount": 7,
-      "fileCount": 83,
+      "chunkCount": 8,
+      "fileCount": 85,
       "files": [
         {
           "path": ".gitignore",
@@ -47,8 +47,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 305157,
-          "sha256": "bb95d5ebdbf5a93ff3eafa7eadbf272a5fc238c2a41b4ed83f03dbc57f689d4f"
+          "size": 311019,
+          "sha256": "5ee2d3d83916332931f69b58da7efd06a1113fc022e295b2f5da16594b41b0fc"
         },
         {
           "path": "cover.svg",
@@ -67,8 +67,8 @@
         },
         {
           "path": "package.json",
-          "size": 1273,
-          "sha256": "8e423acee060149ab19087fe79a24d5db6224714d41e7a77cb874d078d93a451"
+          "size": 1301,
+          "sha256": "51c5f512a8957c83a0892eba10c6e2f3a5cc2cc90fd22936ccc8b97f7f3b946d"
         },
         {
           "path": "site/app.js",
@@ -112,13 +112,13 @@
         },
         {
           "path": "src/autonomy2d.js",
-          "size": 13863,
-          "sha256": "1a9c82be59a7cb1c2775c2fa1ee02eea932efc2c565bd897fa09e605685e503c"
+          "size": 14254,
+          "sha256": "75b1ce6dc6cc0f77ccaca3f3270f41fe838aaf67849635161cab2eef3f2e38ff"
         },
         {
           "path": "src/biome2d.js",
-          "size": 9457,
-          "sha256": "d38e90b84b79e2b9790f1015e59770daf5d7591065006e746a859d2e4545bf5b"
+          "size": 11108,
+          "sha256": "aa5b27392ca47cea90ca71d60158bb64789a8bb01a9324e9c41bf424a46bb377"
         },
         {
           "path": "src/borders2d.js",
@@ -177,8 +177,8 @@
         },
         {
           "path": "src/intro.js",
-          "size": 23491,
-          "sha256": "6fcb42eb48aaf83a6b68ccf75b3252afe5ec13639404bf7f6ecd1021a16af566"
+          "size": 24181,
+          "sha256": "ede13cfd7a8733c01182b7589f0d88676161267eabfaa0c6a70b32f0a0da4705"
         },
         {
           "path": "src/light2d.js",
@@ -242,8 +242,8 @@
         },
         {
           "path": "src/planet2d.js",
-          "size": 15238,
-          "sha256": "5c08890c5bbc8291dac2db8cf985b27135230cf3b0deedef9500e5e513386269"
+          "size": 16173,
+          "sha256": "7340d304f4cec00c24b66b36021da8cc134efc03661a3135d5185c5771ae9d5f"
         },
         {
           "path": "src/play2d.js",
@@ -252,8 +252,8 @@
         },
         {
           "path": "src/regions2d.js",
-          "size": 18102,
-          "sha256": "d7c74aed68cbaacbc38b5c65967ff4d93421ab48170eefb57ee4d9f8c7478071"
+          "size": 18628,
+          "sha256": "b549c5944cfdbd67edd37c7c630cd05a8c0cd044cad7eeee9c5edba59f75b673"
         },
         {
           "path": "src/rivers2d.js",
@@ -269,6 +269,11 @@
           "path": "src/startscene2d.js",
           "size": 3524,
           "sha256": "8bb8bb0a370caef8cb788f4615b770d537f551a0b9bafa9959241c9b38e39c34"
+        },
+        {
+          "path": "src/stencil2d.js",
+          "size": 15091,
+          "sha256": "a255afade642f7f86cb5cbceb2e8554f62222dfcb094062f950e0bade2006b3a"
         },
         {
           "path": "src/tech2d.js",
@@ -317,8 +322,8 @@
         },
         {
           "path": "src/worldmap2d.js",
-          "size": 64841,
-          "sha256": "19693bdae1b25e9817f23320a56c83fe163281f9333dace6449d318e0b234763"
+          "size": 67983,
+          "sha256": "2f6c45b4d751d9eb6979e37dbd80418bf014a528a350717f448ab1ea287bb15a"
         },
         {
           "path": "src/worldview.js",
@@ -359,6 +364,11 @@
           "path": "tools/look-country.mjs",
           "size": 2670,
           "sha256": "aed3ca63ac4e7e9f64f2a170ff820a1c617f97e02433568a07d1b5af0d0fa952"
+        },
+        {
+          "path": "tools/look-stencil.mjs",
+          "size": 4697,
+          "sha256": "0a336c9c742d4d6df7b86a80aa3041be790248a9d5135b93aa94b9500d271eba"
         },
         {
           "path": "tools/look-two-maps.mjs",

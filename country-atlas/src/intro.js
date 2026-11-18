@@ -37,14 +37,19 @@ export function tourSights(own, seed = 424242) {
   const names = INTRO.sights.slice();
   const n = Math.min(INTRO.sightsPerTour, names.length);
   const start = Math.floor(hash01(seed + 4711, 181) * names.length) % names.length;
+  // §103: своя страна стоит на своём берегу, а не в центре мира: достопримечательности
+  // отсчитываются от столицы, иначе пролёт уводил камеру в чужое море
+  const cx = own.capital ? own.capital.x : 0;
+  const cy = own.capital ? own.capital.y : 0;
   for (let i = 0; i < n; i++) {
     const a = hash01(seed + i * 53, 183) * Math.PI * 2;
     let r = own.radiusKm * INTRO.sightKm * (0.55 + hash01(seed + i * 71, 187) * 0.55);
-    let x = Math.cos(a) * r, y = Math.sin(a) * r;
+    let x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
     // место должно быть в своей стране: если вылетели за границу — подходим ближе к столице
-    for (let k = 0; k < 5 && !pointInPolygon(x, y, own.poly); k++) {
-      r *= 0.6; x = Math.cos(a) * r; y = Math.sin(a) * r;
+    for (let k = 0; k < 8 && !pointInPolygon(x, y, own.poly); k++) {
+      r *= 0.6; x = cx + Math.cos(a) * r; y = cy + Math.sin(a) * r;
     }
+    if (!pointInPolygon(x, y, own.poly)) { x = cx; y = cy; }
     out.push({ x, y, name: names[(start + i) % names.length], sight: true });
   }
   return out;
@@ -53,8 +58,11 @@ export function tourSights(own, seed = 424242) {
 /* F-305: маршрут пролёта — города по кругу и достопримечательности между ними;
    ровный обход без рывков, чтобы страну можно было рассмотреть. */
 export function tourWaypoints(own, seed = 424242) {
+  // §103: обход городов — кругом вокруг столицы, а не вокруг центра мира
+  const cx = own.capital ? own.capital.x : 0;
+  const cy = own.capital ? own.capital.y : 0;
   const cities = own.cities.slice()
-    .sort((a, b) => Math.atan2(a.y, a.x) - Math.atan2(b.y, b.x))
+    .sort((a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx))
     .map((c) => ({ x: c.x, y: c.y, name: c.name, sight: false }));
   const sights = tourSights(own, seed);
   const out = [];
