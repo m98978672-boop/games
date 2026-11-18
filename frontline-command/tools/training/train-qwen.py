@@ -100,7 +100,20 @@ def main():
     print('Pinned base model weights verified',flush=True)
     tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
     train = [encode(tokenizer, manifest['prompt'], row) for row in data['train']]
-    validation = [encode(tokenizer, manifest['prompt'], row) for row in data['eval'][:args.eval_count]]
+    # Cover labels and seeds before repeating either; still a very small audit.
+    pools={a:[r for r in data['eval'] if json.loads(r['response'])['action']==a] for a in ('hold','build','supply','none')}
+    selected=[]
+    while len(selected)<min(args.eval_count,len(data['eval'])):
+        added=False
+        for action in pools:
+            candidates=pools[action]
+            if not candidates: continue
+            used={r['seed'] for r in selected}
+            index=next((i for i,r in enumerate(candidates) if r['seed'] not in used),0)
+            selected.append(candidates.pop(index)); added=True
+            if len(selected)>=min(args.eval_count,len(data['eval'])): break
+        if not added: break
+    validation = [encode(tokenizer, manifest['prompt'], row) for row in selected]
     if not train or not validation: raise ValueError('empty dataset')
     print(f'Dataset: {len(train)} train, {len(data["eval"])} held out, validating {len(validation)}; token lengths {min(len(p)+len(t) for p,t in train)}–{max(len(p)+len(t) for p,t in train)}', flush=True)
     model = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
@@ -112,6 +125,7 @@ def main():
     optimizer = torch.optim.AdamW((p for p in model.parameters() if p.requires_grad), lr=2e-4)
     before = evaluate(model, validation); print(f'Held-out teacher-forced loss before: {before:.6f}', flush=True)
     model.train();indices=list(range(len(train)));random.shuffle(indices);losses=[]
+    args.output.mkdir(parents=True,exist_ok=True)
     started=time.monotonic()
     for step in range(args.steps):
         optimizer.zero_grad(set_to_none=True)
@@ -119,10 +133,14 @@ def main():
         if not torch.isfinite(loss): raise ValueError('non-finite training loss')
         loss.backward(); torch.nn.utils.clip_grad_norm_((p for p in model.parameters() if p.requires_grad),1.0); optimizer.step()
         losses.append(float(loss.detach())); print(f'step {step+1}/{args.steps}: loss={losses[-1]:.6f} elapsed={time.monotonic()-started:.1f}s',flush=True)
+        # Preserve progress for artifact upload after an ordinary later failure.
+        # This does not include optimizer state and is not a resumable checkpoint.
+        model.save_pretrained(args.output / 'adapter',safe_serialization=True)
+        (args.output / 'progress.json').write_text(json.dumps({'completed_steps':step+1,'requested_steps':args.steps,'losses':losses})+'\n')
     after=evaluate(model,validation);print(f'Held-out teacher-forced loss after: {after:.6f}', flush=True)
     args.output.mkdir(parents=True,exist_ok=True)
     model.save_pretrained(args.output / 'adapter',safe_serialization=True)
-    report={'purpose':'Exploratory imitation of a rule-based teacher, not a trained strategic commander; PEFT adapter not usable in the game without conversion and evaluation.', 'base_model':MODEL,'revision':REVISION,'dataset_manifest':manifest,'training':{'seed':args.seed,'steps':args.steps,'lr':2e-4,'lora_rank':8,'trainable_parameters':trainable,'train_losses':losses},'evaluation':{'method':'teacher-forced mean token cross-entropy on first held-out examples; not generated-action quality or game win rate','count':len(validation),'loss_before':before,'loss_after':after}}
+    report={'purpose':'Exploratory imitation of a rule-based teacher, not a trained strategic commander; PEFT adapter not usable in the game without conversion and evaluation.', 'base_model':MODEL,'revision':REVISION,'dataset_manifest':manifest,'training':{'seed':args.seed,'steps':args.steps,'lr':2e-4,'lora_rank':8,'trainable_parameters':trainable,'train_losses':losses},'evaluation':{'method':'teacher-forced mean token cross-entropy on a small action-stratified held-out sample; not generated-action quality or game win rate','count':len(validation),'samples':[{'seed':r['seed'],'swapSides':r['swapSides'],'teacher_action':json.loads(r['response'])['action']} for r in selected],'loss_before':before,'loss_after':after}}
     (args.output / 'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(report['evaluation']),flush=True)
 

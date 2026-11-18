@@ -5,12 +5,12 @@ on:
     branches: [arena/1f0ec4dc-games]
     paths: [.github/workflows/frontline-qwen-training.yml, frontline-command/tools/training/train-qwen.py, frontline-command/tools/training/collect-commander.mjs]
 permissions:
-  contents: write
+  contents: read
 jobs:
   train:
     if: github.repository == 'm98978672-boop/games'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 110
     env:
       OMP_NUM_THREADS: '2'
       HF_HUB_DISABLE_XET: '1'
@@ -32,22 +32,54 @@ jobs:
           python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
           python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
       - name: Run experimental LoRA fine-tuning and held-out loss check
+        timeout-minutes: 95
         run: |
           set +e
           set -o pipefail
-          python -u frontline-command/tools/training/train-qwen.py --data "$RUNNER_TEMP/commander-data" --output "$RUNNER_TEMP/commander-output" --steps 1 --eval-count 1 2>&1 | tee "$RUNNER_TEMP/training.log"
+          python -u frontline-command/tools/training/train-qwen.py --data "$RUNNER_TEMP/commander-data" --output "$RUNNER_TEMP/commander-output" --steps 8 --eval-count 4 2>&1 | tee "$RUNNER_TEMP/training.log"
           status=$?
           if [ "$status" -ne 0 ]; then
             python -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"training.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
           fi
           exit "$status"
-      - name: Save experimental adapter and reproducibility report
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Preserve training output and data before release
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: commander-research-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/commander-data/
+            ${{ runner.temp }}/commander-output/
+            ${{ runner.temp }}/training.log
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Prepare completed adapter for publishing
         run: |
           set -eu
           python -c 'import json,os; p=os.path.join(os.environ["RUNNER_TEMP"],"commander-output","report.json"); r=json.load(open(p)); print("::notice::Research run: " + json.dumps({"training":r["training"], "evaluation":r["evaluation"]}))'
           cp -r "$RUNNER_TEMP/commander-data" "$RUNNER_TEMP/commander-output/dataset"
-          tar -C "$RUNNER_TEMP/commander-output" -czf "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz" adapter dataset report.json
+          tar -C "$RUNNER_TEMP/commander-output" -czf "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz" adapter dataset report.json progress.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: commander-complete-${{ github.run_id }}
+          path: ${{ runner.temp }}/frontline-qwen35-lora-research.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+  publish:
+    needs: train
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: commander-complete-${{ github.run_id }}
+          path: ${{ runner.temp }}
+      - name: Publish experimental adapter from a fresh job
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eu
           tag="frontline-qwen35-lora-research-$GITHUB_RUN_ID"
           gh release create "$tag" --target "$GITHUB_SHA" --title 'Frontline Qwen3.5 experimental LoRA' --notes 'Exploratory CPU LoRA run imitating a simple hand-written teacher on simulation snapshots, not proof of strategic strength. This PEFT adapter is NOT a WebLLM model and is not installed in the published game. The archive contains the training/evaluation dataset and loss report. Base model Qwen/Qwen3.5-0.8B, Apache-2.0, revision 2fc06364715b967f1860aea9cf38778875588b17.' "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz"
