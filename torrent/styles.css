@@ -1,0 +1,413 @@
+/* ==========================================================================
+   Games Torrent — вкладка P2P-раздачи игр (torrent/styles.css)
+   Своя вёрстка на общих токенах репозитория (shared/tokens.css).
+   Полный shared/theme.css сюда НЕ подключается — он ломает чужой HUD.
+   ========================================================================== */
+@import url("../shared/tokens.css");
+
+:root {
+  --bg-0: var(--bg, #0b0d0c);
+  --bg-1: var(--bg-soft, #101413);
+  --bg-2: var(--panel-2, #131817);
+  --border: var(--line, rgba(242, 236, 223, 0.12));
+  --border-strong: var(--line-strong, rgba(242, 236, 223, 0.22));
+  --text-0: var(--ink, #f2ecdf);
+  --text-1: var(--ink-dim, #a9a294);
+  --text-2: var(--ink-faint, #6f6a5f);
+  --accent-strong: var(--accent, #e8b45a);
+  --accent-dim: rgba(232, 180, 90, 0.16);
+  --good: var(--green, #6fbf8b);
+  --good-dim: rgba(111, 191, 139, 0.18);
+  --warn: #fbbf24;
+  --danger: var(--red, #e2604f);
+  --radius: var(--radius, 13px);
+  --radius-sm: var(--radius-sm, 9px);
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-family: var(--font);
+  font-size: 14.5px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: var(--accent-strong); }
+button { font-family: inherit; }
+
+.torrent-shell {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 18px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ------------------------------------------------------------------ шапка */
+.torrent-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, rgba(232, 180, 90, 0.10), rgba(19, 24, 23, 0.92));
+  border: 1px solid var(--border-strong);
+}
+.torrent-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.torrent-logo {
+  width: 44px; height: 44px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 13px;
+  background: linear-gradient(140deg, var(--accent-strong), #b0762a);
+  color: #1a1204;
+  font-size: 22px;
+  box-shadow: 0 8px 22px rgba(232, 180, 90, 0.24);
+}
+.torrent-brand h1 { margin: 0; font-size: 19px; letter-spacing: 0.02em; }
+.torrent-brand p { margin: 2px 0 0; color: var(--text-1); font-size: 12.5px; }
+.torrent-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.btn {
+  appearance: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: rgba(22, 28, 27, 0.86);
+  color: var(--text-0);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 140ms ease, background 140ms ease, transform 120ms ease;
+}
+.btn:hover { border-color: var(--border-strong); background: rgba(30, 38, 36, 0.95); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary {
+  background: linear-gradient(140deg, var(--accent-strong), #c9913b);
+  border-color: transparent;
+  color: #201607;
+  font-weight: 800;
+}
+.btn-primary:hover { background: linear-gradient(140deg, #f0c479, #d29b45); }
+.btn-ghost { background: transparent; }
+.btn-danger { border-color: rgba(226, 96, 79, 0.5); color: #ff9c8f; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(14, 19, 18, 0.8);
+  color: var(--text-1);
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.pill-good { color: var(--good); border-color: rgba(111, 191, 139, 0.4); background: var(--good-dim); }
+.pill-warn { color: var(--warn); border-color: rgba(251, 191, 36, 0.4); background: rgba(251, 191, 36, 0.12); }
+.pill-bad { color: var(--danger); border-color: rgba(226, 96, 79, 0.45); background: rgba(226, 96, 79, 0.14); }
+
+/* --------------------------------------------------------------- метрики */
+.torrent-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.stat-card {
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: rgba(17, 22, 21, 0.92);
+  border: 1px solid var(--border);
+}
+.stat-card span { display: block; color: var(--text-2); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; }
+.stat-card b { display: block; margin-top: 4px; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat-card.is-accent b { color: var(--accent-strong); }
+.stat-card.is-good b { color: var(--good); }
+
+/* ---------------------------------------------------------- панель поиска */
+.torrent-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: rgba(17, 22, 21, 0.92);
+  border: 1px solid var(--border);
+}
+.torrent-search {
+  flex: 1 1 240px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(9, 13, 12, 0.9);
+  border: 1px solid var(--border);
+}
+.torrent-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-0);
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+}
+.torrent-search input::placeholder { color: var(--text-2); }
+.sort-select {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(9, 13, 12, 0.9);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  font: inherit;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------ список игр */
+.torrent-list { display: grid; gap: 10px; }
+
+.torrent-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: rgba(17, 22, 21, 0.92);
+  border: 1px solid var(--border);
+  transition: border-color 140ms ease, background 140ms ease;
+}
+.torrent-card:hover { border-color: var(--border-strong); background: rgba(22, 28, 27, 0.96); }
+.torrent-cover {
+  width: 84px; height: 56px;
+  border-radius: 9px;
+  object-fit: cover;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+}
+.torrent-info { min-width: 0; }
+.torrent-info h3 {
+  margin: 0 0 3px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.torrent-info h3 small { color: var(--text-2); font-weight: 500; font-size: 11.5px; }
+.torrent-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--text-1);
+  font-size: 12px;
+}
+.torrent-meta b { color: var(--text-0); font-weight: 600; }
+.torrent-hash {
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.torrent-side { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.torrent-health { display: flex; gap: 5px; align-items: center; }
+
+/* --------------------------------------------------------------- прогресс */
+.progress-wrap {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+.progress-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(242, 236, 223, 0.09);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-strong), #f0c479);
+  transition: width 220ms ease;
+}
+.progress-fill.is-done { background: linear-gradient(90deg, var(--good), #8fd8a9); }
+.progress-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-1);
+}
+
+/* ---------------------------------------------------------------- журнал */
+.panel {
+  border-radius: var(--radius);
+  background: rgba(17, 22, 21, 0.92);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10, 14, 13, 0.6);
+}
+.panel-head h2 { margin: 0; font-size: 14px; letter-spacing: 0.02em; }
+.panel-body { padding: 12px 14px; max-height: 320px; overflow: auto; }
+
+.log-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.log-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12.5px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(9, 13, 12, 0.7);
+  border: 1px solid var(--border);
+}
+.log-list li code { font-family: var(--mono); font-size: 11px; color: var(--text-2); }
+.log-removed { border-left: 3px solid var(--danger); }
+.log-sanitized { border-left: 3px solid var(--warn); }
+.log-kept { border-left: 3px solid var(--good); }
+.log-muted { color: var(--text-1); font-size: 12.5px; }
+
+/* ------------------------------------------------------------ сеть/сервер */
+.net-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.net-card { display: grid; gap: 8px; }
+.net-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-1); }
+.net-row b { color: var(--text-0); font-weight: 600; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-2); display: inline-block; }
+.dot.on { background: var(--good); box-shadow: 0 0 8px rgba(111, 191, 139, 0.7); }
+.dot.warn { background: var(--warn); }
+.dot.off { background: var(--danger); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(9, 13, 12, 0.8);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-1);
+}
+.chip b { color: var(--text-0); }
+
+.empty-state {
+  padding: 34px 18px;
+  text-align: center;
+  color: var(--text-1);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+.empty-state strong { display: block; color: var(--text-0); margin-bottom: 4px; }
+
+footer.torrent-foot {
+  color: var(--text-2);
+  font-size: 11.5px;
+  text-align: center;
+  padding-top: 6px;
+}
+footer.torrent-foot a { color: var(--text-1); }
+
+.engine-hud-slot { display: inline-flex; }
+
+@media (max-width: 720px) {
+  .torrent-shell { padding: 12px 12px 32px; }
+  .torrent-card { grid-template-columns: 60px minmax(0, 1fr); }
+  .torrent-cover { width: 60px; height: 44px; }
+  .torrent-side { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+  .torrent-brand h1 { font-size: 16.5px; }
+}
+
+/* ---------------------------------------------------- свой сервер P2P
+   Поле ввода адреса: игрок может подключить сервер на своём компьютере
+   или в локальной сети. Без сервера вкладка работает через HTTPS-сид. */
+.warn-text { color: var(--warn); }
+
+.server-setup {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.server-setup label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-1);
+  font-weight: 700;
+}
+
+.server-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.server-row input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-0);
+  font: 13px var(--mono);
+}
+
+.server-row input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.server-setup code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--accent-strong);
+}

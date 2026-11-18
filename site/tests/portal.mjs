@@ -206,6 +206,44 @@ assert.equal(impRes.ok, true);
 assert.equal(impRes.added, 1);
 assert.equal(hub.getAll().length, 1);
 
+// 4b. Вкладка «Торрент»: отдельный отдел с P2P-клиентом, .torrent и magnet
+assert.ok(/data-portal-tab="torrent"/.test(siteHtml), 'портал must expose the Torrent tab');
+assert.ok(siteHtml.includes('id="portal-torrent-panel"'), 'portal must contain #portal-torrent-panel');
+assert.ok(siteHtml.includes('id="torrentEmbedFrame"'), 'portal must embed the Torrent app in an iframe');
+assert.ok(
+  siteHtml.includes('data-src="../torrent/index.html?embed=games"'),
+  'Torrent frame must lazy-load ../torrent/index.html',
+);
+assert.ok(/class="nav-link-torrent"[^>]*data-portal-tab="torrent"/.test(siteHtml), 'Torrent must be reachable from the header nav');
+
+const torrentHtml = await readFile(path.join(repositoryRoot, 'torrent/index.html'), 'utf8');
+const torrentApp = await readFile(path.join(repositoryRoot, 'torrent/app.js'), 'utf8');
+const torrentScripts = [...torrentHtml.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
+assert.equal(torrentScripts[0], '../shared/engine.js', 'Torrent page must load the engine before its own scripts');
+for (const mod of ['manifest.js', 'torrentfile.js', 'sanitize.js', 'client.js', 'config.js', 'fetch.js']) {
+  assert.ok(
+    torrentScripts.some((src) => src.endsWith(`/shared/p2p/${mod}`)),
+    `Torrent page must load shared/p2p/${mod}`,
+  );
+}
+assert.ok(torrentHtml.includes('data-engine-badge'), 'Torrent page must mount the engine badge');
+for (const action of ['downloadGame', 'toggleHold', 'downloadTorrentFile', 'copyMagnet']) {
+  assert.ok(torrentApp.includes(action), `torrent/app.js must expose ${action}`);
+}
+assert.ok(/sha256/.test(torrentApp) && /judgeFile/.test(torrentApp), 'Torrent app must verify pieces and sanitize files');
+
+// Каталог раздач: у каждой игры есть info_hash, куски и файлы.
+const torrentCatalog = JSON.parse(await readFile(path.join(repositoryRoot, 'site/torrent-catalog.json'), 'utf8'));
+assert.ok(Array.isArray(torrentCatalog.games) && torrentCatalog.games.length >= 16, 'torrent catalog must list all games');
+for (const game of torrentCatalog.games) {
+  assert.match(game.infoHash, /^[a-f0-9]{64}$/, `torrent ${game.gameId}: info_hash must be sha256 hex`);
+  assert.ok(game.files.length > 0, `torrent ${game.gameId}: must have files`);
+  assert.ok(game.chunkCount > 0, `torrent ${game.gameId}: must have pieces`);
+  assert.ok(game.files.some((f) => /(^|\/)index\.html$/.test(f.path)), `torrent ${game.gameId}: must include entry point`);
+  assert.ok(!game.files.some((f) => /\.(exe|bat|cmd|ps1|dll|apk)$/i.test(f.path)), `torrent ${game.gameId}: must not ship executables`);
+}
+assert.ok(torrentCatalog.stats.totalBytes < 60 * 1024 * 1024, 'torrent catalog must not ship docs/screenshots (size budget)');
+
 // Проверка безопасного sandbox-плеера (строго БЕЗ allow-same-origin)
 assert.ok(siteHtml.includes('sandbox="allow-scripts allow-pointer-lock"'), 'sandbox iframe must isolate scripts without allow-same-origin');
 

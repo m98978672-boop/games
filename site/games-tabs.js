@@ -5,6 +5,7 @@
   const TAB_GAMES = 'games';
   const TAB_NEWS = 'news';
   const TAB_CHAT = 'chat';
+  const TAB_TORRENT = 'torrent';
 
   const navButtons = Array.from(document.querySelectorAll('[data-portal-tab]'));
   const storeNavLinks = Array.from(document.querySelectorAll('[data-store-nav]'));
@@ -20,6 +21,12 @@
   const connectBtn = document.getElementById('btnPortalConnectServices');
   const fullscreenBtn = document.getElementById('btnChatFullscreen');
 
+  const torrentView = document.getElementById('portal-torrent-panel');
+  const torrentFrame = document.getElementById('torrentEmbedFrame');
+  const torrentQuickButtons = Array.from(document.querySelectorAll('[data-torrent-quick]'));
+  const torrentOpenBtn = document.getElementById('btnTorrentOpen');
+  const torrentFullscreenBtn = document.getElementById('btnTorrentFullscreen');
+
   const newsView = document.getElementById('portal-news-panel');
   const newsFrame = document.getElementById('newsEmbedFrame');
   const newsCatButtons = Array.from(document.querySelectorAll('[data-news-cat-btn]'));
@@ -32,6 +39,7 @@
 
   const baseChatSrc = frame.getAttribute('data-src') || 'ratmes/index.html?embed=games';
   const baseNewsSrc = newsFrame?.getAttribute('data-src') || 'news/index.html?embed=games';
+  const baseTorrentSrc = torrentFrame?.getAttribute('data-src') || 'torrent/index.html?embed=games';
 
   let chatLoaded = false;
   let chatReady = false;
@@ -40,6 +48,10 @@
   let newsLoaded = false;
   let newsReady = false;
   let pendingNewsMsg = null;
+
+  let torrentLoaded = false;
+  let torrentReady = false;
+  let pendingTorrentMsg = null;
 
   function safePostMessage(win, msg) {
     try {
@@ -67,6 +79,14 @@
     }
   });
 
+  torrentFrame?.addEventListener('load', () => {
+    torrentReady = true;
+    if (pendingTorrentMsg) {
+      safePostMessage(torrentFrame.contentWindow, pendingTorrentMsg);
+      pendingTorrentMsg = null;
+    }
+  });
+
   newsFrame?.addEventListener('load', () => {
     newsReady = true;
     if (pendingNewsMsg) {
@@ -81,6 +101,29 @@
     } else {
       pendingChatMsg = msg;
     }
+  }
+
+  function postToTorrentFrame(msg) {
+    if (!torrentFrame) return;
+    if (torrentReady && torrentFrame.contentWindow) {
+      safePostMessage(torrentFrame.contentWindow, msg);
+    } else {
+      pendingTorrentMsg = msg;
+    }
+  }
+
+  function loadTorrentFrame(opts) {
+    if (!torrentFrame) return;
+    const o = opts || {};
+    const query = o.query ? `&q=${encodeURIComponent(o.query)}` : '';
+    const url = `${baseTorrentSrc}${query}`;
+    if (!torrentLoaded) {
+      torrentFrame.setAttribute('src', url);
+      torrentLoaded = true;
+      if (o.query) pendingTorrentMsg = { type: 'torrent:search', query: o.query };
+      return;
+    }
+    if (o.query) postToTorrentFrame({ type: 'torrent:search', query: o.query });
   }
 
   function postToNewsFrame(msg) {
@@ -158,17 +201,24 @@
 
   function setTab(tab, opts) {
     const options = opts || {};
-    const normalized = tab === TAB_CHAT ? TAB_CHAT : (tab === TAB_NEWS && newsView ? TAB_NEWS : TAB_GAMES);
+    const normalized = tab === TAB_CHAT
+      ? TAB_CHAT
+      : tab === TAB_TORRENT && torrentView
+        ? TAB_TORRENT
+        : (tab === TAB_NEWS && newsView ? TAB_NEWS : TAB_GAMES);
     const isChat = normalized === TAB_CHAT;
     const isNews = normalized === TAB_NEWS;
+    const isTorrent = normalized === TAB_TORRENT;
     const isGames = normalized === TAB_GAMES;
 
     for (const sec of storeSections) sec.hidden = !isGames;
     chatView.hidden = !isChat;
     if (newsView) newsView.hidden = !isNews;
+    if (torrentView) torrentView.hidden = !isTorrent;
 
     document.body.classList.toggle('portal-chat-active', isChat);
     document.body.classList.toggle('portal-news-active', isNews);
+    document.body.classList.toggle('portal-torrent-active', isTorrent);
     if (!isChat) {
       document.body.classList.remove('chat-fullscreen');
       if (fullscreenBtn) {
@@ -181,6 +231,13 @@
       if (newsFullscreenBtn) {
         newsFullscreenBtn.setAttribute('aria-pressed', 'false');
         newsFullscreenBtn.textContent = '⛶';
+      }
+    }
+    if (!isTorrent) {
+      document.body.classList.remove('torrent-fullscreen');
+      if (torrentFullscreenBtn) {
+        torrentFullscreenBtn.setAttribute('aria-pressed', 'false');
+        torrentFullscreenBtn.textContent = '⛶';
       }
     }
 
@@ -208,9 +265,15 @@
         const targetHash = options.articleId ? `#news=${encodeURIComponent(options.articleId)}` : '#news';
         if (window.location.hash !== targetHash) safeReplaceHash(targetHash);
       }
+    } else if (isTorrent) {
+      loadTorrentFrame({ query: options.query || null });
+      if (!options.keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
+      if (options.updateHash !== false && window.location.hash !== '#torrent') {
+        safeReplaceHash('#torrent');
+      }
     } else if (options.updateHash !== false) {
       const cur = (window.location.hash || '').toLowerCase();
-      if (cur === '#chat' || cur === '#obshchenie' || cur === '#ratmes' || cur.startsWith('#news') || cur === '#novosti') {
+      if (cur === '#chat' || cur === '#obshchenie' || cur === '#ratmes' || cur.startsWith('#news') || cur === '#novosti' || cur === '#torrent') {
         safeReplaceHash('#top');
       }
     }
@@ -225,7 +288,7 @@
 
   for (const link of storeNavLinks) {
     link.addEventListener('click', () => {
-      if (document.body.classList.contains('portal-chat-active') || document.body.classList.contains('portal-news-active')) {
+      if (document.body.classList.contains('portal-chat-active') || document.body.classList.contains('portal-news-active') || document.body.classList.contains('portal-torrent-active')) {
         setTab(TAB_GAMES, { updateHash: false });
       }
     });
@@ -291,6 +354,29 @@
     });
   }
 
+  if (torrentFullscreenBtn) {
+    torrentFullscreenBtn.addEventListener('click', () => {
+      const active = document.body.classList.toggle('torrent-fullscreen');
+      torrentFullscreenBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      torrentFullscreenBtn.textContent = active ? '✕' : '⛶';
+    });
+  }
+
+  for (const qBtn of torrentQuickButtons) {
+    qBtn.addEventListener('click', () => {
+      const quick = qBtn.getAttribute('data-torrent-quick');
+      for (const b of torrentQuickButtons) b.classList.toggle('is-active', b === qBtn);
+      setTab(TAB_TORRENT, { keepScroll: true, query: quick === 'all' ? null : quick });
+    });
+  }
+
+  if (torrentOpenBtn) {
+    torrentOpenBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      setTab(TAB_TORRENT, { keepScroll: true });
+    });
+  }
+
   if (cloudsToggle && cloudsStrip) {
     cloudsToggle.addEventListener('click', () => {
       const willOpen = cloudsStrip.hidden;
@@ -324,7 +410,9 @@
     const qTab = (params.get('tab') || '').toLowerCase();
     const qNews = params.get('news') || params.get('code') || '';
 
-    if (h === '#chat' || h === '#obshchenie' || h === '#ratmes' || h === '#connect' || qTab === 'chat') {
+    if (h === '#torrent' || h === '#торрент' || qTab === 'torrent') {
+      setTab(TAB_TORRENT, { updateHash: false });
+    } else if (h === '#chat' || h === '#obshchenie' || h === '#ratmes' || h === '#connect' || qTab === 'chat') {
       setTab(TAB_CHAT, { updateHash: false, connect: h === '#connect' ? 'max' : null });
     } else if (h === '#news' || h === '#novosti' || h.startsWith('#news=') || qTab === 'news' || Boolean(qNews)) {
       const articleId = h.startsWith('#news=') ? decodeURIComponent(raw.slice(6)) : (qNews || null);

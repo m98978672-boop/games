@@ -16,31 +16,176 @@
     "Движок работает и с file://: это классический скрипт, без type=module."
   ],
   "sections": [
-    { "id": "storefront", "path": "index.html", "kind": "portal", "engine": "shared/engine.js", "badge": "footer", "note": "Витрина Games: пункт «⚙️ Движок» в ленте + версия в футере" },
-    { "id": "news", "path": "news/index.html", "kind": "department", "engine": "../shared/engine.js", "badge": "auto", "note": "Отдел новостей Games News" },
-    { "id": "ratmes", "path": "ratmes/index.html", "kind": "messenger", "engine": "../shared/engine.js", "badge": "auto", "note": "Мессенджер RatMes" },
-    { "id": "developers", "path": "developers/index.html", "kind": "portal", "engine": "../shared/engine.js", "badge": "auto", "note": "Портал разработчиков" },
-    { "id": "game-base", "path": "game-base/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar", "note": "Шаблон всех игр: здесь движок обязателен по умолчанию" },
-    { "id": "1in8b", "path": "1in8b/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "cascade-hydro", "path": "cascade-hydro/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "cloud-play", "path": "cloud-play/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "country-atlas", "path": "country-atlas/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "dead-district", "path": "dead-district/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "euro-haul", "path": "euro-haul/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "folder-os", "path": "folder-os/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "frontline-command", "path": "frontline-command/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "frontline-steel-and-drones", "path": "frontline-steel-and-drones/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "last-shore", "path": "last-shore/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "night-taxi", "path": "night-taxi/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "road-tycoon", "path": "road-tycoon/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "shooter", "path": "shooter/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "shooter-2", "path": "shooter-2/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "truck-haul", "path": "truck-haul/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" },
-    { "id": "truck-showroom", "path": "truck-showroom/index.html", "kind": "game", "engine": "../shared/engine.js", "badge": "topbar" }
+    {
+      "id": "storefront",
+      "path": "index.html",
+      "kind": "portal",
+      "engine": "shared/engine.js",
+      "badge": "footer",
+      "note": "Витрина Games: пункт «⚙️ Движок» в ленте + версия в футере"
+    },
+    {
+      "id": "news",
+      "path": "news/index.html",
+      "kind": "department",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Отдел новостей Games News"
+    },
+    {
+      "id": "ratmes",
+      "path": "ratmes/index.html",
+      "kind": "messenger",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Мессенджер RatMes"
+    },
+    {
+      "id": "developers",
+      "path": "developers/index.html",
+      "kind": "portal",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Портал разработчиков"
+    },
+    {
+      "id": "game-base",
+      "path": "game-base/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar",
+      "note": "Шаблон всех игр: здесь движок обязателен по умолчанию"
+    },
+    {
+      "id": "1in8b",
+      "path": "1in8b/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "cascade-hydro",
+      "path": "cascade-hydro/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "cloud-play",
+      "path": "cloud-play/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "country-atlas",
+      "path": "country-atlas/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "dead-district",
+      "path": "dead-district/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "euro-haul",
+      "path": "euro-haul/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "folder-os",
+      "path": "folder-os/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "frontline-command",
+      "path": "frontline-command/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "frontline-steel-and-drones",
+      "path": "frontline-steel-and-drones/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "last-shore",
+      "path": "last-shore/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "night-taxi",
+      "path": "night-taxi/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "road-tycoon",
+      "path": "road-tycoon/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "shooter",
+      "path": "shooter/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "shooter-2",
+      "path": "shooter-2/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "truck-haul",
+      "path": "truck-haul/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "truck-showroom",
+      "path": "truck-showroom/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "topbar"
+    },
+    {
+      "id": "torrent",
+      "path": "torrent/index.html",
+      "kind": "department",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Вкладка «Торрент» — P2P-раздача игр (трекер, сигналинг, автоудаление плохих файлов)"
+    }
   ],
   "excluded": [
-    { "path": "ratcore/playground/index.html", "reason": "Это сам движок: он подключает ES-модули напрямую" },
-    { "path": "ratcore/demos/citadel-watch/index.html", "reason": "Демо движка, грузит ES-модули напрямую" }
+    {
+      "path": "ratcore/playground/index.html",
+      "reason": "Это сам движок: он подключает ES-модули напрямую"
+    },
+    {
+      "path": "ratcore/demos/citadel-watch/index.html",
+      "reason": "Демо движка, грузит ES-модули напрямую"
+    }
   ],
   "engineCore": [
     "road-tycoon/src/util.js",
