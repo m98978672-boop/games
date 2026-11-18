@@ -10,4 +10,10 @@ const [first,second]=ctx.__requests;assert.equal(first.messages[0].content,secon
 for(const r of [first,second]){assert.equal(r.messages.length,2);assert.equal(r.seed,42);assert.equal(r.temperature,0);assert.equal(r.extra_body.enable_thinking,false);}
 assert.equal(sent.at(-1).type,'result');assert.equal(sent.at(-1).id,7);assert.deepEqual(JSON.parse(JSON.stringify(sent.at(-1).texts)),['{"action":"none"}','{"action":"none"}']);
 ctx.__fail=4;await ctx.self.onmessage({data:{type:'pair',id:8,first:0,inputs:[{a:1},{b:2}]}});assert.equal(sent.at(-1).type,'error');assert.ok(!sent.some(m=>m.type==='result'&&m.id===8),'no partial result on failure');
-console.log('worker contract with mock runtime: context reset, identical request settings, isolated inputs, no partial pair');
+const sentKnowledge=[],k={__resets:0,__requests:[],__fail:0,navigator:{gpu:{}},self:{postMessage:m=>sentKnowledge.push(m)}};vm.runInNewContext(result.outputFiles[0].text,k);
+await k.self.onmessage({data:{type:'init',knowledge:true}});await k.self.onmessage({data:{type:'pair',id:9,first:0,inputs:[{marker:'only-side-0'},{marker:'only-side-1'}]}});
+assert.equal(k.__resets,4);assert.equal(k.__requests.length,2);const [ka,kb]=k.__requests;
+assert.equal(ka.messages[0].content,kb.messages[0].content,'same facts for both sides');assert.ok(ka.messages[0].content.startsWith(first.messages[0].content),'base prompt unchanged');
+for(const word of ['Soldiers','Walls','tank','engineer','Resupply','cannot see positions'])assert.ok(ka.messages[0].content.includes(word),`missing fact: ${word}`);
+assert.match(ka.messages[1].content,/only-side-0/);assert.doesNotMatch(ka.messages[1].content,/only-side-1/);assert.match(kb.messages[1].content,/only-side-1/);assert.equal(sentKnowledge.at(-1).type,'result');
+console.log('worker contract with mock runtime: optional shared facts, context reset, identical request settings, isolated inputs, no partial pair');

@@ -1,14 +1,14 @@
 import {commanderSnapshot,applyCommanderPair} from './neutral_commander.js';
 // Runs outside Game.step. Failure, stale results and timeouts affect both sides equally.
 export class NeutralCommanderClient {
- constructor(game,{workerFactory=()=>new Worker(new URL('../ai/commander-worker.bundle.js',import.meta.url),{type:'module'}),onStatus=()=>{},interval=25,inferenceTimeout=120000,loadTimeout=300000}={}){
+ constructor(game,{workerFactory=()=>new Worker(new URL('../ai/commander-worker.bundle.js',import.meta.url),{type:'module'}),onStatus=()=>{},knowledge=false,interval=25,inferenceTimeout=120000,loadTimeout=300000}={}){
   if(!game.aiVsAi)throw Error('AI demonstration only');
-  this.game=game;this.workerFactory=workerFactory;this.onStatus=onStatus;this.interval=interval;this.inferenceTimeout=inferenceTimeout;this.loadTimeout=loadTimeout;
+  this.game=game;this.workerFactory=workerFactory;this.onStatus=onStatus;this.knowledge=knowledge===true;this.interval=interval;this.inferenceTimeout=inferenceTimeout;this.loadTimeout=loadTimeout;
   this.state='new';this.pending=null;this.nextAt=0;this.round=0;this.timer=null;
  }
  start(){
   if(this.state!=='new')return;
-  try{this.worker=this.workerFactory();this.worker.onmessage=e=>this.message(e.data);this.worker.onerror=()=>this.fail('Ошибка запуска модели');this.worker.onmessageerror=()=>this.fail('Ошибка обмена с моделью');this.state='loading';this.status('Загрузка модели…');this.timer=setTimeout(()=>this.fail('Превышено время загрузки модели'),this.loadTimeout);this.worker.postMessage({type:'init'});}
+  try{this.worker=this.workerFactory();this.worker.onmessage=e=>this.message(e.data);this.worker.onerror=()=>this.fail('Ошибка запуска модели');this.worker.onmessageerror=()=>this.fail('Ошибка обмена с моделью');this.state='loading';this.status('Загрузка модели…');this.timer=setTimeout(()=>this.fail('Превышено время загрузки модели'),this.loadTimeout);this.worker.postMessage(this.knowledge?{type:'init',knowledge:true}:{type:'init'});}
   catch{this.fail('WebGPU или запуск модели недоступен');}
  }
  status(s){this.onStatus(s);}
