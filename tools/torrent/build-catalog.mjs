@@ -37,7 +37,21 @@ const EXCLUDE_FILE_RE = /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.
 // тесты и служебные файлы репозитория игре для запуска не нужны. Это не
 // «плохие файлы» (их автоочистка не трогает), а просто лишний вес — поэтому
 // они не попадают в манифест. Логика чистки от вредоносного отдельная.
-const NOT_FOR_PLAY_RE = /(^|\/)(docs?|screenshots?|shots|assets\/shots|tests?)(\/|$)|(^|\/)(CHANGELOG|LICENSE|CONTRIBUTING|AGENTS)\.md$/i;
+// Что игре не нужно для запуска (и не должно раздувать раздачу):
+//   • папки документации, скриншотов и тестов;
+//   • ЛЮБАЯ документация (.md/.markdown/.rst): README, SPEC, PLAN, ALGORITHMS.
+//     Это самый подвижный слой репозитория — в `main` он меняется каждый день,
+//     и раздача «устаревала» бы после каждого коммита документации, хотя игра
+//     не изменилась ни на байт. Проверено: игры не загружают .md в рантайме.
+//   • Исключение — README/LICENSE внутри `assets/`: там лежат лицензии на
+//     сторонние ресурсы (Kenney и т.п.).
+const DOCS_ONLY_RE = /(?:^|\/)README\.md$|(?:^|\/)LICENSE(?:\.[a-z]+)?$/i;
+const NOT_FOR_PLAY_RE = /(^|\/)(docs?|screenshots?|shots|assets\/shots|tests?)(\/|$)/i;
+function notForPlay(relPath) {
+  if (NOT_FOR_PLAY_RE.test(relPath)) return true;
+  if (/\.(md|markdown|rst)$/i.test(relPath) && !(/(^|\/)assets\//i.test(relPath) && DOCS_ONLY_RE.test(relPath))) return true;
+  return false;
+}
 
 // Не читаем в память тяжёлые бинарники — только размер и sha256 потоком.
 const BINARY_EXT = new Set([
@@ -68,7 +82,7 @@ async function walk(dir, base, acc) {
       if (EXCLUDE_FILE_RE.test(rel)) continue;
       // Скриншоты и документация не нужны для запуска игры — но НЕ удаляем
       // их из репозитория, просто не включаем в раздачу.
-      if (NOT_FOR_PLAY_RE.test(rel)) continue;
+      if (notForPlay(rel)) continue;
       // Крупные картинки вне игровых папок (docs, превью) — тоже мимо.
       if (/\.(png|jpe?g|webp|gif)$/i.test(rel) && /(^|\/)(docs|preview|previews|shots)(\/|$)/i.test(rel)) continue;
       acc.push(rel);

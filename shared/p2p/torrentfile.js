@@ -22,6 +22,16 @@
      GamesP2P.buildMagnet(torrent)        // magnet:?xt=urn:btih:…
    ============================================================ */
 (function (root, factory) {
+  // В Node манифест не подключён глобально (в браузере он идёт отдельным
+  // <script> до этого файла), поэтому подтягиваем его явно: info_hash и
+  // sha256 должны считаться ТОЙ ЖЕ функцией, что и при сборке каталога.
+  if (typeof module === 'object' && module.exports && typeof require === 'function') {
+    try {
+      root.GamesP2P = Object.assign(root.GamesP2P || {}, require('./manifest.js'));
+    } catch (err) {
+      /* браузерный бандл без Node-модулей — работаем на глобальном GamesP2P */
+    }
+  }
   const api = factory(root);
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.GamesP2P = Object.assign(root.GamesP2P || {}, api);
@@ -154,7 +164,12 @@
       })),
     };
 
-    const infoHash = await sha256(`${SCHEME}|${manifest.gameId}|${info.version}|${chunk}`);
+    // Отпечаток раздачи берём из манифеста (он считается по составу файлов),
+    // а не отдельной формулой. Раньше их было ДВЕ: каталог писал один info_hash,
+    // серверный .torrent — другой, и трекер/клиент не узнавали одну раздачу.
+    const infoHash = P2P.computeInfoHash
+      ? await P2P.computeInfoHash(manifest.gameId, info.version, layoutOf(manifest))
+      : await sha256(`${SCHEME}|${manifest.gameId}|${info.version}|${chunk}`);
     return {
       schema: SCHEME,
       gameId: manifest.gameId,

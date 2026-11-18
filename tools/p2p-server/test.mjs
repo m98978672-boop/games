@@ -98,6 +98,11 @@ try {
   const torrent = await torrentRes.json();
   ok(torrent.schema === TOUR.TORRENT_SCHEME, 'схема торрент-файла верная');
   ok(torrent.pieces.length === TOUR.pieceCountOf(game), `кусков в .torrent: ${torrent.pieces.length}`);
+  // Главное: раздача, которую отдаёт сервер, — ТА ЖЕ, что в каталоге витрины.
+  // Иначе трекер и клиент видят две разные раздачи (регрессия была: формула
+  // info_hash в каталоге и в .torrent считалась по-разному).
+  assert.equal(torrent.infoHash, game.infoHash, 'info_hash серверного .torrent совпадает с каталогом');
+  ok(true, 'info_hash серверного .torrent совпадает с каталогом витрины');
   ok(TOUR.validateTorrent(torrent).ok, 'торрент-файл проходит собственную валидацию');
   const magnetRes = await (await fetch(`${base}/magnet/${game.gameId}`)).json();
   const parsed = TOUR.parseMagnet(magnetRes.magnet);

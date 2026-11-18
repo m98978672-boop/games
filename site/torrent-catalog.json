@@ -4,9 +4,9 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1160,
-    "totalBytes": 30769132,
-    "chunks": 127,
+    "files": 1134,
+    "totalBytes": 29426387,
+    "chunks": 122,
     "blockedFiles": 1
   },
   "games": [
@@ -19,11 +19,11 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "b29fc74559ed4e717b6c7d4c209d94b7667ce9e52d2535a6f0fe49b394ab4152",
-      "totalSize": 2458510,
+      "infoHash": "7855b16cece02baf024eea79de26a7cfc07a9a04928eca031f5ac197cb700e36",
+      "totalSize": 1664039,
       "chunkSize": 262144,
-      "chunkCount": 10,
-      "fileCount": 76,
+      "chunkCount": 7,
+      "fileCount": 78,
       "files": [
         {
           "path": ".gitignore",
@@ -34,26 +34,6 @@
           "path": "3d.html",
           "size": 3931,
           "sha256": "f6fbc2a4373add37267d393d82c9dc798ed057af0a013e19be40c948d999de1c"
-        },
-        {
-          "path": "AI.md",
-          "size": 80741,
-          "sha256": "716a75cd5600181704d5db34669bad86a568b2fbb86c9edac40fba4912284bcd"
-        },
-        {
-          "path": "ALGORITHMS.md",
-          "size": 192282,
-          "sha256": "9a17624991ec97e29fb86d49f8471be17525138717300c6a55f1eec058d7051b"
-        },
-        {
-          "path": "README.md",
-          "size": 51468,
-          "sha256": "acea335b1275479e16e8d7be6c02228f5bfeae021939db6b393ecf6236d8d514"
-        },
-        {
-          "path": "SPEC.md",
-          "size": 574025,
-          "sha256": "974fcfa0ce6ffaae88a77c291c5b9b11835bdf6bb2137799d48be77eea6d23e5"
         },
         {
           "path": "build.mjs",
@@ -67,8 +47,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 239153,
-          "sha256": "97a0a5ba5e6797365910a7e4fc1e6b2c662f6e19652d1a8605c11977bcec6a9a"
+          "size": 263877,
+          "sha256": "8ee983c9f50c1c4a713350d4fb721bba6056f135a015c39458176c219e526589"
         },
         {
           "path": "cover.svg",
@@ -77,8 +57,8 @@
         },
         {
           "path": "index.html",
-          "size": 22218,
-          "sha256": "224188aa2141e573c82bc28d7b45a1ce71b8d9aa69897f7d51d3c6f2e44e86ab"
+          "size": 23313,
+          "sha256": "431c3390a0d3f82130cf58a7b5cf5e677d0974ec8706215237bf5da5090c7e48"
         },
         {
           "path": "map-worker.min.js",
@@ -87,13 +67,8 @@
         },
         {
           "path": "package.json",
-          "size": 1078,
-          "sha256": "49206bfc13c515d9ae706cc0ca54eb6ef58793a6409e992c95c0b834cdd2a5aa"
-        },
-        {
-          "path": "site/README.md",
-          "size": 3873,
-          "sha256": "3501260b7047515bedc1edee31d6e7a238f5a79517fb9f573c0a14f30a4ac708"
+          "size": 1219,
+          "sha256": "2b1bb9051a417a42e553352982eca5f23d92ae1b2db11df90922c7869a1f43ed"
         },
         {
           "path": "site/app.js",
@@ -136,6 +111,11 @@
           "sha256": "584cbf7a0297a03e45867d1a1d7a15b34c5c1374ea20b503baea6880412cae6b"
         },
         {
+          "path": "src/autonomy2d.js",
+          "size": 12312,
+          "sha256": "0a69442b544c7e9a8aba6e8f99e7db416859d0430f5d7f20f67448d61f03ffc7"
+        },
+        {
           "path": "src/borders2d.js",
           "size": 9920,
           "sha256": "1ca0f79e8e508522e81db4a67de2150ca7963958916c7f9d9f90203f6ecbea3e"
@@ -166,6 +146,11 @@
           "sha256": "cad2bc8a8877a20495ddc6eb32056d2a525c69ac62b634d4f49c18df2c79edc0"
         },
         {
+          "path": "src/engine2d.js",
+          "size": 4765,
+          "sha256": "e340ed4b1542ea88ddd8c0171211ceef529cf48d8b77ae609914d5e5d7aab028"
+        },
+        {
           "path": "src/fit2d.js",
           "size": 5340,
           "sha256": "68d5bdd97b67839fa6fb725a1ffbf8ba6b69d90e34446dcc678f6ae8504d5d96"
@@ -187,8 +172,8 @@
         },
         {
           "path": "src/intro.js",
-          "size": 15580,
-          "sha256": "34edac78c4e5ed3dabd76fbc45f5922a9c38cd67032f657a08a2479c457e21a2"
+          "size": 23491,
+          "sha256": "6fcb42eb48aaf83a6b68ccf75b3252afe5ec13639404bf7f6ecd1021a16af566"
         },
         {
           "path": "src/light2d.js",
@@ -202,8 +187,8 @@
         },
         {
           "path": "src/main2d.js",
-          "size": 27577,
-          "sha256": "a8b09231c3df7049414e4814139f4031c408cb7cddfc309212a6cc0dab802238"
+          "size": 34617,
+          "sha256": "0f1d1c902909cbf5de433f337de0fe01012fab9f206bf91e52ccfc0d076bc37d"
         },
         {
           "path": "src/map-worker.js",
@@ -212,8 +197,8 @@
         },
         {
           "path": "src/map2d.js",
-          "size": 136959,
-          "sha256": "c7da3e1b2f384c30822e94d43f4eaba3e9a6c60f8f4ac5911f67684555b29ff2"
+          "size": 137930,
+          "sha256": "132d2db85c0706e2ace90de24791db91b5ed88831e2387846eb00a3242c551aa"
         },
         {
           "path": "src/markings2d.js",
@@ -257,8 +242,8 @@
         },
         {
           "path": "src/rivers2d.js",
-          "size": 26329,
-          "sha256": "d54b8abe073f7639c05d64b03275e85f643ee7203ffb2274ee9542ef3c873d58"
+          "size": 27260,
+          "sha256": "fdedd564c2a6ad40504e3167c62367419c489c7e62d612a48d57640a8812c720"
         },
         {
           "path": "src/roads2d.js",
@@ -266,9 +251,14 @@
           "sha256": "9352b95c5e960f558a6d7327e80b6b98be4afb51ccb4ca2a226f071053d19a70"
         },
         {
+          "path": "src/startscene2d.js",
+          "size": 3524,
+          "sha256": "8bb8bb0a370caef8cb788f4615b770d537f551a0b9bafa9959241c9b38e39c34"
+        },
+        {
           "path": "src/tech2d.js",
-          "size": 16687,
-          "sha256": "660a27f3cb9d1b22300389428e2ead13408d41c0ab4a3d52be768ee86ef77552"
+          "size": 20404,
+          "sha256": "045c2e2ac667af4f60fe9515679376f474842a8f727f77f148e959fed56bfd72"
         },
         {
           "path": "src/terrain-worker.js",
@@ -312,18 +302,23 @@
         },
         {
           "path": "src/worldmap2d.js",
-          "size": 45398,
-          "sha256": "b4d20148c686ae6791a1d96012bb3beddacab68b3b08a80279954dabc545bba6"
+          "size": 52061,
+          "sha256": "ace7df71169332e9c4d43bd01ae86e1dfbf57903f22f2281f62d96f016a910bf"
         },
         {
           "path": "src/worldview.js",
-          "size": 22200,
-          "sha256": "c71211a9b4c3ecd764ba1a2ef85963bcebbbe8c5730ca79fe52a2242c2262248"
+          "size": 41906,
+          "sha256": "c54cf3160e2a91dc45562cd9acfa75df39dd9052ef482dbf13bd289c324d76f1"
         },
         {
           "path": "terrain-worker.min.js",
           "size": 1978,
           "sha256": "184e9c8b9f7446a55d2980fb811677fd9e4516cb872431c2781977039812b278"
+        },
+        {
+          "path": "tools/check-start.mjs",
+          "size": 5772,
+          "sha256": "a38d66143024c8679685e6f72e1065d14c3b38367bb71d1c6b2381fe6f565ff0"
         },
         {
           "path": "tools/fig-ai.mjs",
@@ -346,9 +341,19 @@
           "sha256": "499aca8f53bd26d1e55a91678ad085ee5a88d82081f519113d980dfeea4e1717"
         },
         {
+          "path": "tools/look-world.mjs",
+          "size": 1509,
+          "sha256": "3a83cd259b28a58788b9dd55c71e84756a7c47b96d2a80ba268f1fd300dfd310"
+        },
+        {
           "path": "tools/perf-dormant.mjs",
           "size": 4979,
           "sha256": "09c9ae8eb06e1d1da426320c4e7318827a914772b573a1e9df95bc36d673e77a"
+        },
+        {
+          "path": "tools/perf-intro.mjs",
+          "size": 2755,
+          "sha256": "0b9b1a63d33c643e37f55d9ccd2af4fc237f165149a3161dd68bf10470c1f166"
         },
         {
           "path": "tools/perf-night.mjs",
@@ -374,6 +379,11 @@
           "path": "tools/shot-accidents.mjs",
           "size": 6035,
           "sha256": "d1e91451864222de39a24bc8f1a76d425a6a1919decbf46e6dc9a463e2ae2651"
+        },
+        {
+          "path": "tools/shot-intro.mjs",
+          "size": 3669,
+          "sha256": "9a354df3087ab5aa6ac2cf713e8f03b88a3a2b1d75e7a6acf02076a84d5eebd4"
         },
         {
           "path": "tools/shot-mobile.mjs",
@@ -402,8 +412,8 @@
         },
         {
           "path": "tools/shot-worldmap.mjs",
-          "size": 11701,
-          "sha256": "bad46c9845d07c4d8147af7bebc3a9c2460383990e0209ed961821311bcd257a"
+          "size": 12414,
+          "sha256": "a0aaf271950d861768b737f2fa9a1bb41d198fd5917dbb5d8f06f216f8cd2174"
         }
       ],
       "blocked": [],
@@ -420,11 +430,11 @@
       "play": "dead-district/index.html",
       "cover": "dead-district/cover.svg",
       "dir": "dead-district",
-      "infoHash": "440e5117b1b8b95684d58ba51e073c8b91b463a7881b1de283357f258cc7fe9e",
-      "totalSize": 1386627,
+      "infoHash": "3185f3b6f0dd8e17a719cbb5762190d0adfc9e69e250460da725c6f8dff57f94",
+      "totalSize": 1370270,
       "chunkSize": 262144,
       "chunkCount": 6,
-      "fileCount": 256,
+      "fileCount": 255,
       "files": [
         {
           "path": ".gitignore",
@@ -435,11 +445,6 @@
           "path": "LICENSE",
           "size": 1190,
           "sha256": "a0780d5d138abb90a75385776fddfd2efe2c7d87642d2cd692d6e228e4c00e51"
-        },
-        {
-          "path": "README.md",
-          "size": 16357,
-          "sha256": "6247d42b0f7b3afbae2add64b078b1791ac5946255800f45d654969b3ca1c2d2"
         },
         {
           "path": "assets/assets_manifest.json",
@@ -1721,17 +1726,12 @@
       "play": "shooter-2/index.html",
       "cover": "shooter-2/cover.svg",
       "dir": "shooter-2",
-      "infoHash": "c35759ec21c275d774caeb765a3b8f893faf9eac83806ad79c89f0c90fdda11a",
-      "totalSize": 1865086,
+      "infoHash": "31ee851a710cd2a727fdc3332644aa22e361d3594d79cdcd4db0dcfaede731b7",
+      "totalSize": 1814523,
       "chunkSize": 262144,
-      "chunkCount": 8,
-      "fileCount": 36,
+      "chunkCount": 7,
+      "fileCount": 35,
       "files": [
-        {
-          "path": "README.md",
-          "size": 50563,
-          "sha256": "308fe035d5dd260e1d8dd08b37bc0a81ec5800faad05d542d2bfad0f23108360"
-        },
         {
           "path": "cover.svg",
           "size": 12537,
@@ -1922,22 +1922,12 @@
       "play": "1in8b/index.html",
       "cover": "1in8b/cover.svg",
       "dir": "1in8b",
-      "infoHash": "87a16705510978a8493553c789ca7bc0f59203f2b5ed0eb3c139142e77a2502d",
-      "totalSize": 1271251,
+      "infoHash": "d09c2f32874b3678ef394b0ad878f28615110c17040e054c1043b3e1932a1b1d",
+      "totalSize": 1173528,
       "chunkSize": 262144,
       "chunkCount": 5,
-      "fileCount": 26,
+      "fileCount": 24,
       "files": [
-        {
-          "path": "PLAN.md",
-          "size": 19090,
-          "sha256": "3f392ae9e87c84d9e3686d23c34ef457dba806c380031b4f4ba95378638097fa"
-        },
-        {
-          "path": "README.md",
-          "size": 78934,
-          "sha256": "1565864941c071f1f5e75428fd2ad66d7111f94b066d2e5ae9aea204bf8af2f4"
-        },
         {
           "path": "cover.svg",
           "size": 11832,
@@ -2055,8 +2045,8 @@
         },
         {
           "path": "style.css",
-          "size": 40058,
-          "sha256": "7c31a05ec5c01c75f6dff64947f0d8ac0781c6d42d47ebf6dbcb61b96f14ec26"
+          "size": 40359,
+          "sha256": "c8b37e34026bc055e0ff8c15478a1faad1f04c3229bcc98f387fb6982125ae1d"
         }
       ],
       "blocked": [],
@@ -2073,11 +2063,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "e5dea544a700aaa52b676906ae11af17550653f1db4aa720b19116996f5d2fb9",
-      "totalSize": 3598804,
+      "infoHash": "e3f727e1bf000455c3f54e21b8f653d328483a84aa58427c71d0fbac7e10573d",
+      "totalSize": 3471933,
       "chunkSize": 262144,
       "chunkCount": 14,
-      "fileCount": 500,
+      "fileCount": 493,
       "files": [
         {
           "path": ".gitattributes",
@@ -2088,41 +2078,6 @@
           "path": ".gitignore",
           "size": 14,
           "sha256": "4d56952b0fb13bf8f9b6c13a6d4c34a075bac3af447636a1df4335d7576e2f97"
-        },
-        {
-          "path": "ALGORITHMS_SPEC.md",
-          "size": 32162,
-          "sha256": "970580ada64ce445be2483a5fa6058a8ed7a7f76f2ee9a4d6942e548617c49fb"
-        },
-        {
-          "path": "ARCHITECTURE.md",
-          "size": 16617,
-          "sha256": "dcd8d4a4cfba15f5e5722e764bd1158246beb689477cb4a548632485dc4edcdc"
-        },
-        {
-          "path": "FOXHOLE_MAPPING.md",
-          "size": 3075,
-          "sha256": "be07514908a6b70359a3edd83a3061e35eda610a9e34197bd5716cf5749f2014"
-        },
-        {
-          "path": "PLAN.md",
-          "size": 8107,
-          "sha256": "8bdac067c15d496b76b67c36f8e5495a478971cd87d3db50f71cffaeef82e1f6"
-        },
-        {
-          "path": "README.md",
-          "size": 12930,
-          "sha256": "a6c523e313dc2d5ba8285e68a7261714ae525dcf8b770cbb9307e93d3bcc007e"
-        },
-        {
-          "path": "TESTS.md",
-          "size": 35787,
-          "sha256": "931e1ad0e01e8f5f6fbbc18cccc3076f1f03ca081393ef74e885f3adce2e6728"
-        },
-        {
-          "path": "TRIAGE.md",
-          "size": 18193,
-          "sha256": "b0481453fb0a97d782bd67db9d4f92ae691e0d8dbd23bc0ef71ebc58c2b48a80"
         },
         {
           "path": "assets/README.md",
@@ -4594,31 +4549,16 @@
       "play": "cascade-hydro/index.html",
       "cover": "site/assets/cascade-hydro.webp",
       "dir": "cascade-hydro",
-      "infoHash": "c6205116f5e23a8937debf7b8571ab10add4fd5e5f18d16964eacaae1c0b0fd0",
-      "totalSize": 1930334,
+      "infoHash": "0811b1a7635f37de6a56cab9610a8538f44e36003096b29f020f07ad4ac8589b",
+      "totalSize": 1907407,
       "chunkSize": 262144,
       "chunkCount": 8,
-      "fileCount": 33,
+      "fileCount": 30,
       "files": [
         {
           "path": ".gitignore",
           "size": 27,
           "sha256": "22410642019d4e48bdf82fd6240f306d37c2188ff769b6257460c1772aace7f7"
-        },
-        {
-          "path": "KNOWLEDGE_BASE.md",
-          "size": 13214,
-          "sha256": "8b9406bd28a08029bd45cd9526f0b74c2ffd36a4029e571ee6ba2c10b67ef6e9"
-        },
-        {
-          "path": "PLAN.md",
-          "size": 8017,
-          "sha256": "0334abf751d092677b6fa46b1ab21e1fb7af2b3ce0b223eddd9040ee5a26758f"
-        },
-        {
-          "path": "README.md",
-          "size": 1696,
-          "sha256": "62c081cb006e547e94b8b080f5546f64a4addc33eaa6d1c85ed39d2ad218c390"
         },
         {
           "path": "bundle.js",
@@ -4780,21 +4720,16 @@
       "play": "truck-showroom/index.html",
       "cover": "site/assets/truck-showroom.webp",
       "dir": "truck-showroom",
-      "infoHash": "7f77816f77e295535c927ebd9897ed8b37ad0aea443d0f01b23051829893778f",
-      "totalSize": 5593430,
+      "infoHash": "8e251866127acba8dacf6dc92856853e2666ca47a8c5f89f56d3cd7d7672850c",
+      "totalSize": 5547956,
       "chunkSize": 262144,
       "chunkCount": 22,
-      "fileCount": 44,
+      "fileCount": 43,
       "files": [
         {
           "path": ".gitignore",
           "size": 14,
           "sha256": "4d56952b0fb13bf8f9b6c13a6d4c34a075bac3af447636a1df4335d7576e2f97"
-        },
-        {
-          "path": "README.md",
-          "size": 45474,
-          "sha256": "27aa35b26dc7408e601f37a03af15a0972d1def46fed7c013df04bd5d9e341df"
         },
         {
           "path": "cover.png",
@@ -5021,26 +4956,16 @@
       "play": "road-tycoon/index.html",
       "cover": "road-tycoon/cover.svg",
       "dir": "road-tycoon",
-      "infoHash": "705891a68f150e318f8983c476a004f623a0ec2bef4450c5d9b6457301fd2c3a",
-      "totalSize": 1180758,
+      "infoHash": "740fe4417f5827c58e6dc02c04227ac9d11dc52e3342e734e1c6271c4758c628",
+      "totalSize": 1153709,
       "chunkSize": 262144,
       "chunkCount": 5,
-      "fileCount": 20,
+      "fileCount": 18,
       "files": [
         {
           "path": ".gitignore",
           "size": 14,
           "sha256": "4d56952b0fb13bf8f9b6c13a6d4c34a075bac3af447636a1df4335d7576e2f97"
-        },
-        {
-          "path": "PLAN.md",
-          "size": 9998,
-          "sha256": "ced2987189e674a552b10c79226e8517d1b64d08c0d8d7f5aaa729f2b97bcb9a"
-        },
-        {
-          "path": "README.md",
-          "size": 17051,
-          "sha256": "21f58baeff32a269c1d0c88239cc9d32d1c0f90b05af6ad4c4baeec8cc3c9091"
         },
         {
           "path": "cover.svg",
@@ -5142,21 +5067,16 @@
       "play": "euro-haul/index.html",
       "cover": "euro-haul/cover.svg",
       "dir": "euro-haul",
-      "infoHash": "67a4f3af05d54d1929a23e41dfa9c0397299b104f909d3d0b7ce176a43ed7f16",
-      "totalSize": 2883921,
+      "infoHash": "94617e178ed846135b79bd942f8f82e5fbcf4fe5702fe7cc5d998484ddbff1dc",
+      "totalSize": 2868240,
       "chunkSize": 262144,
-      "chunkCount": 12,
-      "fileCount": 41,
+      "chunkCount": 11,
+      "fileCount": 40,
       "files": [
         {
           "path": ".gitignore",
           "size": 72,
           "sha256": "28b7cc567419df4f3b3ef1616809fec47b14030a38a95e24befee1338aa042de"
-        },
-        {
-          "path": "README.md",
-          "size": 15681,
-          "sha256": "c9137a32c3a9ccc569f1afd07253e14533f3344a9195a24fe99d115479038103"
         },
         {
           "path": "assets/README.md",
@@ -5368,21 +5288,16 @@
       "play": "last-shore/index.html",
       "cover": "site/assets/last-shore.webp",
       "dir": "last-shore",
-      "infoHash": "4632fa4ff761ed65e8b81355ba524149028e368cb7bbb50edd3bcb99302f87dd",
-      "totalSize": 2964105,
+      "infoHash": "a1c024a9ba996decff9e098492a70546bcd1f9b48a8097ed06c51929d18be84f",
+      "totalSize": 2895341,
       "chunkSize": 262144,
       "chunkCount": 12,
-      "fileCount": 44,
+      "fileCount": 43,
       "files": [
         {
           "path": ".gitignore",
           "size": 56,
           "sha256": "104df4b1b9f17eea6e36dc0b0bc0c7df974ce2685243a0cc235238d18d7c71db"
-        },
-        {
-          "path": "PLAN.md",
-          "size": 68764,
-          "sha256": "1aafd5c7d305181a2f3e7dbcc67fb4944345face83f75ba5b4c0a8f97f36da28"
         },
         {
           "path": "assets/menu.jpg",
@@ -5616,22 +5531,12 @@
       "play": "frontline-steel-and-drones/play.html",
       "cover": "site/assets/frontline.webp",
       "dir": "frontline-steel-and-drones",
-      "infoHash": "c41973f29b3164688d116e0912bdcc6b225ddf9966e562122abc97a4296b5ba6",
-      "totalSize": 458829,
+      "infoHash": "c41bceac5b634652646a31e8c06eb8c254cec9d4b99100efec85baefdf8933ae",
+      "totalSize": 435923,
       "chunkSize": 262144,
       "chunkCount": 2,
-      "fileCount": 7,
+      "fileCount": 5,
       "files": [
-        {
-          "path": "PLAN.md",
-          "size": 17666,
-          "sha256": "47cf76af150977bb3eeb3a734dca3374666a090d19b978f760ef5ad5d6b1a7d8"
-        },
-        {
-          "path": "README.md",
-          "size": 5240,
-          "sha256": "14a0bbe3b9bea7eae4cc6f20c5c2a384447429cfa94747e53ccd51c20df5f2c3"
-        },
         {
           "path": "build_standalone.py",
           "size": 1312,
@@ -5672,21 +5577,16 @@
       "play": "night-taxi/index.html",
       "cover": "site/assets/night-taxi.webp",
       "dir": "night-taxi",
-      "infoHash": "6e2f2dc52e2d1e21653a45e2969dd4d87f77cf4ea2825dfab7282d489c9c14db",
-      "totalSize": 4016168,
+      "infoHash": "47077f21e3ae869692b691ef9b8f6da37e2d1cdaa2b771766870c71349335672",
+      "totalSize": 4004187,
       "chunkSize": 262144,
       "chunkCount": 16,
-      "fileCount": 33,
+      "fileCount": 32,
       "files": [
         {
           "path": ".gitignore",
           "size": 14,
           "sha256": "4d56952b0fb13bf8f9b6c13a6d4c34a075bac3af447636a1df4335d7576e2f97"
-        },
-        {
-          "path": "README.md",
-          "size": 11981,
-          "sha256": "a8423020c83db20aadf86bcd77808c161ce8d0b068c453780aa72ab4a6716a5a"
         },
         {
           "path": "assets/audio/LICENSE-CC0.txt",
@@ -5858,17 +5758,12 @@
       "play": "folder-os/index.html",
       "cover": "site/assets/folder-os.webp",
       "dir": "folder-os",
-      "infoHash": "31c83e37a8b2c422bed75b96f4e1512b231453647303885b21223b0dade93b30",
-      "totalSize": 69946,
+      "infoHash": "60f361fc9ab2359d3e149d89dfbc6244f92696b039ffa1d1dd024e123e8943ee",
+      "totalSize": 67686,
       "chunkSize": 262144,
       "chunkCount": 1,
-      "fileCount": 2,
+      "fileCount": 1,
       "files": [
-        {
-          "path": "PLAN.md",
-          "size": 2260,
-          "sha256": "66cfcb629e8404e1d0c1b985c3d08d55d1b1031ea31aa460b972c40550465447"
-        },
         {
           "path": "index.html",
           "size": 67686,
@@ -5889,27 +5784,12 @@
       "play": "game-base/index.html",
       "cover": "game-base/cover.svg",
       "dir": "game-base",
-      "infoHash": "ab79c9e6b80c309a6ea883cbddcb09f032a7d63d35cb27453a1968e489244df3",
-      "totalSize": 69506,
+      "infoHash": "acfab60ccdd52dd2a5b909a051375768c9e7168b38e301c839a4283d7453a1c0",
+      "totalSize": 54950,
       "chunkSize": 262144,
       "chunkCount": 1,
-      "fileCount": 14,
+      "fileCount": 11,
       "files": [
-        {
-          "path": "PLAN.md",
-          "size": 3884,
-          "sha256": "5a1b07054b1116f503782d55891629fad54f7843f2322f27eddfa00127f12bd7"
-        },
-        {
-          "path": "README.md",
-          "size": 5058,
-          "sha256": "b25cb216a3b645273d75e3b73eb820c04bf846ee65b432a896d3032abbe910dc"
-        },
-        {
-          "path": "TEMPLATE.md",
-          "size": 5614,
-          "sha256": "7f9622ef427aa8507eeaa7a4ef434c062500f60b85bafa19dd27778fb880d006"
-        },
         {
           "path": "cover.svg",
           "size": 6007,
@@ -5980,11 +5860,11 @@
       "play": "cloud-play/index.html",
       "cover": "cloud-play/cover.svg",
       "dir": "cloud-play",
-      "infoHash": "35c15ba4cc871fd747acdcf09d69c062ac1d33c473a4b70cd7b78f60bc9b9da6",
-      "totalSize": 300006,
+      "infoHash": "253aea6a05938615a809d5a0990e0d873feb498631eadba1c07730e866042f5c",
+      "totalSize": 279238,
       "chunkSize": 262144,
       "chunkCount": 2,
-      "fileCount": 19,
+      "fileCount": 18,
       "files": [
         {
           "path": ".dockerignore",
@@ -6005,11 +5885,6 @@
           "path": "Dockerfile",
           "size": 231,
           "sha256": "29bad2c5f79040470932cccf76b8591dfbcdd8f45587c89091154bb2deda5d20"
-        },
-        {
-          "path": "README.md",
-          "size": 20768,
-          "sha256": "b6dcc386443a7a551280dae27e845a7e3099d7cc7be1cd67e885d05e54f0aa45"
         },
         {
           "path": "app.js",
@@ -6096,21 +5971,16 @@
       "play": "truck-haul/index.html",
       "cover": "truck-haul/cover.svg",
       "dir": "truck-haul",
-      "infoHash": "679f726e0a721c06d2f10257a6571454897ab0a2cfdf3736f7777d6b61cf8bcc",
-      "totalSize": 721851,
+      "infoHash": "67b32e372019e6a46fdb73ddd10c5480982143c6453def954459d74db07af310",
+      "totalSize": 717457,
       "chunkSize": 262144,
       "chunkCount": 3,
-      "fileCount": 9,
+      "fileCount": 8,
       "files": [
         {
           "path": ".gitignore",
           "size": 14,
           "sha256": "4d56952b0fb13bf8f9b6c13a6d4c34a075bac3af447636a1df4335d7576e2f97"
-        },
-        {
-          "path": "PLAN.md",
-          "size": 4394,
-          "sha256": "f91b8804310ff47345c83204ba402476a89ccec86a3dfce9ce6a5c54f5eeb0d8"
         },
         {
           "path": "cover.svg",

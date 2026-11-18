@@ -121,6 +121,38 @@ for (const game of catalog.games) {
 ok(removedNeeded === 0, 'ни один нужный игре файл не попадает под автоудаление (16 игр)');
 ok(playableMissing === 0, 'у каждой игры после очистки остаётся точка входа index.html');
 
+// ------------------- 4b. info_hash один и тот же и в каталоге, и в .torrent
+// Иначе трекер и клиент видят ДВЕ разные раздачи: .torrent с сервера не
+// совпадает с каталогом, magnet ведёт в пустоту, а пиры не находят друг друга.
+console.log('\n[info_hash]');
+let hashMismatchGames = 0;
+for (const game of catalog.games) {
+  const torrent = await TOUR.buildTorrent(game, {
+    version: game.version,
+    announce: ['/api/p2p'],
+    webSeeds: [`/seed/${game.gameId}`],
+    hasPiece: async (i) => crypto.createHash('sha256').update(buildPiece(game, i)).digest('hex'),
+  });
+  if (torrent.infoHash !== game.infoHash) {
+    hashMismatchGames += 1;
+    console.error(`  ✗ ${game.gameId}: .torrent ${torrent.infoHash.slice(0, 12)}… ≠ каталог ${game.infoHash.slice(0, 12)}…`);
+  }
+  assert.equal(torrent.info['piece length'], game.chunkSize, `${game.gameId}: размер куска в .torrent`);
+  assert.equal(torrent.info['piece count'], game.chunkCount, `${game.gameId}: число кусков в .torrent`);
+  assert.equal(torrent.pieces.length, game.chunkCount, `${game.gameId}: хешей кусков в .torrent`);
+  // Хеш каждого куска в .torrent должен совпасть с реальными байтами с диска.
+  for (let i = 0; i < game.chunkCount; i += 1) {
+    assert.equal(torrent.pieces[i].sha256, torrent.info.pieces[i], `${game.gameId}: pieces[${i}] согласован`);
+  }
+}
+ok(hashMismatchGames === 0, 'info_hash в каталоге и в .torrent совпадает у всех 16 игр');
+
+// Разные версии игры — разные раздачи (magnet не должен вести на старые куски).
+const sample = catalog.games[0];
+const v1 = await TOUR.buildTorrent({ ...sample, version: 'v1' }, { version: 'v1' });
+const v2 = await TOUR.buildTorrent({ ...sample, version: 'v2' }, { version: 'v2' });
+ok(v1.infoHash !== v2.infoHash, 'новая версия игры даёт новый info_hash');
+
 // ------------------------------------------- 5. Вредоносное ловится
 console.log('\n[контрольные образцы]');
 const malware = [

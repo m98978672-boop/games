@@ -89,6 +89,13 @@ node tools/p2p-server/server.mjs
 | [`tools/torrent/build-catalog.mjs`](../tools/torrent/build-catalog.mjs) | сборка каталога раздач из файлов репозитория |
 | [`site/torrent-catalog.json`](../site/torrent-catalog.json) | каталог: игры, файлы, `info_hash`, куски |
 
+Сейчас в раздаче: **16 игр · 1134 файла · 122 куска · 28.1 МБ**.
+
+Документация (`README/SPEC/PLAN/*.md`) в раздачу не попадает — игре она не нужна,
+а в `main` меняется каждый день: иначе каталог «устаревал» бы после каждого
+коммита текста, хотя игра не изменилась ни на байт. Исключение — `assets/README.md`
+и лицензии сторонних ресурсов (Kenney и т.п.).
+
 ## Тесты
 
 ```bash
