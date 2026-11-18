@@ -540,24 +540,40 @@ export function bridgesBetween(roads, rivers) {
 }
 
 /* Всё вместе — одна сборка для карты. */
+/* F-354: вода строится по частям. Раньше весь расчёт шёл одним куском — 1.28 с
+   на главном потоке, и на телефоне это выглядело как «игра зависла». Теперь тот же
+   расчёт разложен на семь шагов: каждая часть кладётся в отдельный кадр, результат
+   байт-в-байт тот же. */
+export function createWaterBuilder(roads) {
+  const st = { roads };
+  const tasks = [
+    () => { st.grid = flowGrid(); },
+    () => { st.filled = fillDepressions(st.grid); },
+    () => { const r = accumulate(st.grid, st.filled); st.dir = r.dir; st.area = r.area; },
+    () => { st.rivers = buildRivers(st.grid, st.filled, st.dir, st.area); },
+    () => { st.lakes = buildLakes(st.grid, st.filled); },
+    () => { st.inland = buildInlandSeas(st.grid); },
+    () => {
+      st.rivers.grid = st.grid;
+      st.bridges = st.roads ? bridgesBetween(st.roads, st.rivers) : { list: [], count: 0, longKm: 0 };
+    }
+  ];
+  const finish = () => ({
+    grid: st.grid.n, stepKm: st.grid.stepKm,
+    rivers: st.rivers, lakes: st.lakes, inland: st.inland, bridges: st.bridges,
+    totalKm: st.rivers.totalKm,
+    ms: st.ms || 0
+  });
+  return { tasks, finish };
+}
+
 export function buildWater(roads) {
   const t0 = Date.now();
-  const grid = flowGrid();
-  const filled = fillDepressions(grid);
-  const { dir, area } = accumulate(grid, filled);
-  const rivers = buildRivers(grid, filled, dir, area);
-  const lakes = buildLakes(grid, filled);
-  const inland = buildInlandSeas(grid);
-  rivers.grid = grid;
-  rivers.filled = filled;
-  const bridges = roads ? bridgesBetween(roads, rivers) : { list: [], count: 0, longKm: 0 };
-  delete rivers.filled;
-  return {
-    grid: grid.n, stepKm: grid.stepKm,
-    rivers, lakes, inland, bridges,
-    totalKm: rivers.totalKm,
-    ms: Date.now() - t0
-  };
+  const builder = createWaterBuilder(roads);
+  for (const task of builder.tasks) task();
+  const water = builder.finish();
+  water.ms = Date.now() - t0;
+  return water;
 }
 
 /* ---------- как река рисуется на карте (§5.5, R-52.4…R-52.6) ---------- */

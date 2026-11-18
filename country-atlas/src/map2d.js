@@ -6,7 +6,7 @@ import { buildTransport, advance as advanceTransport, vehiclePosition, screenLen
 import { buildCity, cityLod, cityPopulation, classFor, cityRadiusKm, ZONE, CITY_STREET_SCALE, CITY_BUILDING_SCALE, buildingOutlinePx } from './city2d.js';
 import { buildBorders, BORDER } from './borders2d.js';
 import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
-import { buildWater, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
+import { buildWater, createWaterBuilder, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
 import { buildDams, DAM } from './dams2d.js';
 import { iceState, lakeFreezes, riverFreezes, iceThicknessCm, north01, tideM, icebreakerAt, ICE } from './ice2d.js';
 import { buildTides, tidalBand, tidalQuads, flatsKm, TIDE2D } from './tide2d.js';
@@ -303,6 +303,29 @@ export class Map2D {
     if (this.water) return this.water;
     this.water = buildWater(this.roads);
     return this.water;
+  }
+
+  /* F-354: та же вода, но по одной задаче за кадр — карта остаётся живой, пока
+     реки считаются. Результат совпадает с buildWater() до последнего числа. */
+  buildWaterDeferred(done) {
+    if (this.water) { if (done) done(); return this.water; }
+    const builder = this.waterBuilder || (this.waterBuilder = createWaterBuilder(this.roads));
+    const stepOnce = () => {
+      const task = builder.tasks.shift();
+      if (!task) {
+        this.water = builder.finish();
+        this.waterBuilder = null;
+        if (done) done();
+        return;
+      }
+      try { task(); } catch (err) { this.waterBuilder = null; if (done) done(); return; }
+      const again = typeof requestAnimationFrame === 'function'
+        ? requestAnimationFrame
+        : (fn) => setTimeout(fn, 0);
+      again(stepOnce);
+    };
+    stepOnce();
+    return null;
   }
 
   /* Порты §5.10: строятся один раз — 4 порта в устьях больших рек у тёплого моря. */
