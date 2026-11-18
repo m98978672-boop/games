@@ -15,5 +15,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh run view 44352130567 --log > "$RUNNER_TEMP/previous.log"
-          python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"previous.log"); s="".join(open(p,errors="replace").readlines()[-80:]); print("::notice::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          gh run view 44352130567 --job 134970322746 --log > "$RUNNER_TEMP/previous.log"
+          python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"previous.log"); lines=open(p,errors="replace").readlines(); selected=[x for x in lines if any(y in x for y in ("step ","Held-out", "Error", "error", "failure", "Process completed", "status=", "elapsed=", "Publish", "Save experimental", "LoRA trainable", "loss_before"))]; s="".join(selected[-50:]); print("::notice::"+("lines="+str(len(lines))+"\n"+s).replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
