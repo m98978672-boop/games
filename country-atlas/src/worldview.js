@@ -145,6 +145,169 @@ export function lerpCam(from, to, t) {
 }
 
 /* F-358: масштабная линейка. Круглое число километров, которое влезает в ~140 px. */
+/* §96: политический окрас карты. Владелец просил «подсветку врагов и союзников»:
+   союзники и друзья подкрашиваются зелёным, враги и те, с кем идёт война, — красным,
+   захваченные области получают штриховку цвета захватчика. Считается по отношениям,
+   которые живут вместе с войной, поэтому слой рисуется каждый кадр, а не в базовый. */
+const POLITICS = {
+  ally: 'rgba(120,214,150,0.13)',
+  allyLine: 'rgba(120,214,150,0.5)',
+  enemy: 'rgba(226,86,64,0.13)',
+  enemyLine: 'rgba(226,86,64,0.55)',
+  taken: 'rgba(255,196,96,0.85)'
+};
+
+/* §96: штриховка захваченных областей — готовый узор, а не две сотни линий на кадр.
+   Узор собирается один раз на цвет и дальше только заливается в полигон. */
+const hatchCache = new Map();
+function hatchPattern(ctx, color) {
+  const key = color;
+  if (hatchCache.has(key)) return hatchCache.get(key);
+  const size = 8;
+  const cv = (typeof document !== 'undefined' && document.createElement)
+    ? document.createElement('canvas')
+    : null;
+  if (!cv) return null;
+  cv.width = size;
+  cv.height = size;
+  const c2 = cv.getContext('2d');
+  c2.strokeStyle = color;
+  c2.lineWidth = 1;
+  c2.beginPath();
+  c2.moveTo(-2, size + 2);
+  c2.lineTo(size + 2, -2);
+  c2.moveTo(size - 2, size + 2);
+  c2.lineTo(size + 2, size - 2);
+  c2.stroke();
+  const pat = ctx.createPattern ? ctx.createPattern(cv, 'repeat') : null;
+  hatchCache.set(key, pat);
+  return pat;
+}
+
+/* §96: политический окрас рисуется каждый кадр, поэтому здесь важна дешевизна:
+   страны проверяются по рамке, штриховка берётся из готового узора. */
+export function drawPolitics(ctx, view, cam, world, toScreen) {
+  if (!world || !world.countries) return { allies: 0, enemies: 0, taken: 0 };
+  const own = world.own;
+  if (!own) return { allies: 0, enemies: 0, taken: 0 };
+  const rel = world.relations;
+  const wars = world.wars || [];
+  const atWar = new Set();
+  for (const war of wars) {
+    if (war.to !== null) continue;
+    if (war.a === 'own') atWar.add(war.b);
+    if (war.b === 'own') atWar.add(war.a);
+  }
+  const level = (id) => {
+    if (!rel || !rel.get) return 0;
+    const k = 'own' < id ? 'own|' + id : id + '|own';
+    const rec = rel.get(k);
+    return rec ? rec.score : 0;
+  };
+  let allies = 0, enemies = 0;
+  const p = toScreen;
+  const halfW = view.w / (2 * cam.scale), halfH = view.h / (2 * cam.scale);
+  const vis = (poly) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of poly) {
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return !(x0 > cam.x + halfW || x1 < cam.x - halfW || y0 > cam.y + halfH || y1 < cam.y - halfH);
+  };
+  ctx.save();
+  // §97: оптимизация кадра — полигоны союзников и врагов копятся в два общих пути,
+  // а не рисуются по стране. Было до 18 пар fill/stroke за кадр, стало 2 + 2.
+  const allyPath = [], foePath = [];
+  for (const c of world.countries) {
+    if (c.own) continue;
+    if (!vis(c.poly)) continue;
+    const score = level(c.id);
+    const war = atWar.has(c.id);
+    const friend = !war && score >= 20;
+    const foe = war || score <= -20;
+    if (!friend && !foe) continue;
+    if (friend) allies++; else enemies++;
+    (friend ? allyPath : foePath).push(c.poly);
+  }
+  const traceAll = (polys) => {
+    ctx.beginPath();
+    for (const pts of polys) {
+      for (let i = 0; i < pts.length; i++) {
+        const s = p(pts[i][0], pts[i][1]);
+        if (i) ctx.lineTo(s.x, s.y); else ctx.moveTo(s.x, s.y);
+      }
+      ctx.closePath();
+    }
+  };
+  if (allyPath.length) {
+    traceAll(allyPath);
+    ctx.fillStyle = POLITICS.ally;
+    ctx.fill();
+    ctx.strokeStyle = POLITICS.allyLine;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  if (foePath.length) {
+    traceAll(foePath);
+    ctx.fillStyle = POLITICS.enemy;
+    ctx.fill();
+    ctx.strokeStyle = POLITICS.enemyLine;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }
+  // захваченные области: штриховка цвета того, кто их держит
+  let taken = 0;
+  const regions = world.regions || [];
+  const ownTaken = [], foeTaken = [];
+  for (const r of regions) {
+    if (r.owner === r.original) continue;
+    if (!vis(r.poly)) continue;
+    taken++;
+    (r.owner === 'own' ? ownTaken : foeTaken).push(r.poly);
+  }
+  for (const [polys, fill, hatch] of [
+    [ownTaken, 'rgba(255,206,110,0.16)', 'rgba(255,214,120,0.42)'],
+    [foeTaken, 'rgba(226,86,64,0.16)', 'rgba(236,110,84,0.42)']
+  ]) {
+    if (!polys.length) continue;
+    traceAll(polys);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    const pat = hatchPattern(ctx, hatch);
+    if (pat) { ctx.fillStyle = pat; ctx.fill(); }
+  }
+  // границы областей внутри своей страны: один общий путь вместо пути на область
+  const ownPolys = [];
+  for (const r of regions) {
+    if (r.owner !== 'own') continue;
+    if (!vis(r.poly)) continue;
+    ownPolys.push(r.poly);
+  }
+  if (ownPolys.length) {
+    traceAll(ownPolys);
+    ctx.strokeStyle = 'rgba(242,246,232,0.16)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+  // §96: на крупном масштабе у областей есть названия — видно, чем страна живёт
+  if (cam.scale > 0.05) {
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(250,244,224,0.72)';
+    for (const r of regions) {
+      if (r.owner !== 'own') continue;
+      if (!vis(r.poly)) continue;
+      const c0 = p(r.capital.x, r.capital.y);
+      if (c0.x < 20 || c0.y < 20 || c0.x > view.w - 20 || c0.y > view.h - 20) continue;
+      ctx.fillText(r.name, c0.x, c0.y + 12);
+    }
+    ctx.textAlign = 'left';
+  }
+  ctx.restore();
+  return { allies, enemies, taken };
+}
+
 /* F-401: градусная сетка с числами. Мир — равнопромежуточная карта: 40 000 км по
    долготе и 180° по широте, поэтому одна и та же сетка читается числами градусов.
    Сетка живёт в мире: линии и подписи едут вместе с картой. */
@@ -659,6 +822,8 @@ export class WorldView {
     const seaSpan = world ? world.sizeKm * seaCam.scale : Math.max(view.w, view.h);
     const cx = view.w / 2 - seaCam.x * seaCam.scale;
     const cy = view.h / 2 - seaCam.y * seaCam.scale;
+    // F-395: градиент глубины считается так же, как в базовом слое, иначе по краю
+    // базового квадрата видно шов: тайл-оптимизация давала расхождение оттенка.
     const sea = ctx.createRadialGradient(cx, cy, seaSpan * 0.16, cx, cy, seaSpan * 0.66);
     sea.addColorStop(0, WV.ocean[2]);
     sea.addColorStop(0.5, WV.ocean[1]);
@@ -710,6 +875,11 @@ export class WorldView {
       ctx.stroke();
       ctx.setLineDash([]);
     }
+
+    // §96: политический окрас — кто союзник, кто враг, чьи области захвачены.
+    // Рисуется каждый кадр поверх базового слоя: отношения живут вместе с войной,
+    // а базовый слой статичен.
+    drawPolitics(ctx, view, cam, world, p);
 
     // взрывы рисуются до армий: вспышка не закрывает метки и полоски боеготовности
     for (const e of world.explosions) {
@@ -890,18 +1060,43 @@ export class WorldView {
       ctx.clip();
       landClip = true;
     }
+    // §97: оптимизация. Раньше каждая дорога рисовалась своим путём: 300+ stroke на слой.
+    // Теперь дороги копятся в четыре общих пути (шоссе с осевой, местные, разрушенные)
+    // и заливаются один раз каждый — столько же линий на экране, вчетверо меньше вызовов.
+    const brokenRoads = world.destroyed.roads;
+    const brokenSet = brokenRoads.length ? new Set(brokenRoads) : null;
+    const roadPaths = { highway: [], local: [], broken: [] };
     for (const r of world.roads) {
       if (Math.max(r.x1, r.x2) < x0 || Math.min(r.x1, r.x2) > x1) continue;
       if (Math.max(r.y1, r.y2) < y0 || Math.min(r.y1, r.y2) > y1) continue;
-      const broken = world.destroyed.roads.includes(r.id);
+      const broken = !!(brokenSet && brokenSet.has(r.id));
+      const highway = r.kind === 'highway' || r.kind === 'international';
+      roadPaths[broken ? 'broken' : highway ? 'highway' : 'local'].push(r);
+    }
+    const traceRoads = (list, dash) => {
+      if (!list.length) return;
       ctx.beginPath();
-      ctx.moveTo(r.x1 * k + ox, r.y1 * k + oy);
-      ctx.lineTo(r.x2 * k + ox, r.y2 * k + oy);
-      ctx.strokeStyle = broken ? 'rgba(214,64,48,0.55)'
-        : r.kind === 'international' ? 'rgba(255,214,110,0.75)' : 'rgba(232,238,244,0.35)';
-      ctx.lineWidth = r.kind === 'international' ? 1.6 : 0.9;
-      ctx.setLineDash(broken ? [3, 4] : []);
+      for (const r of list) {
+        ctx.moveTo(r.x1 * k + ox, r.y1 * k + oy);
+        ctx.lineTo(r.x2 * k + ox, r.y2 * k + oy);
+      }
+      ctx.setLineDash(dash);
       ctx.stroke();
+    };
+    // §96: шоссе между странами — тёплая линия с пунктирной осевой, местные — тонкие
+    ctx.strokeStyle = 'rgba(255,214,110,0.8)';
+    ctx.lineWidth = 2;
+    traceRoads(roadPaths.highway, []);
+    ctx.strokeStyle = 'rgba(232,238,244,0.32)';
+    ctx.lineWidth = 0.9;
+    traceRoads(roadPaths.local, []);
+    ctx.strokeStyle = 'rgba(214,64,48,0.55)';
+    ctx.lineWidth = 1;
+    traceRoads(roadPaths.broken, [3, 4]);
+    if (roadPaths.highway.length) {
+      ctx.strokeStyle = 'rgba(40,32,16,0.45)';
+      ctx.lineWidth = 1;
+      traceRoads(roadPaths.highway, [5, 5]);
     }
     ctx.setLineDash([]);
     if (landClip) { ctx.restore(); landClip = false; }
@@ -918,26 +1113,48 @@ export class WorldView {
       ctx.moveTo(mx + 4, my - 3); ctx.lineTo(mx - 4, my + 3);
       ctx.stroke();
     }
+    // §97: города тоже копятся по группам — столицы, города, разрушенные. Раньше
+    // на 216 городов приходилось 216 fill и столько же arc-путей; теперь три заливки.
     const showLabels = this.labels && cam.scale >= WV.labelScale;
-    ctx.font = '11px sans-serif';
+    const deadCities = world.destroyed.cities;
+    const deadSet = deadCities.length ? new Set(deadCities) : null;
+    const caps = [], towns = [], ruins = [];
     for (const city of world.cities) {
       const sx = city.x * k + ox, sy = city.y * k + oy;
       if (sx < -24 || sy < -24 || sx > view.w + 24 || sy > view.h + 24) continue;
-      const dead = world.destroyed.cities.includes(city.id);
+      const dead = !!(deadSet && deadSet.has(city.id));
+      if (dead) ruins.push([sx, sy]);
+      else if (city.capital) caps.push([sx, sy]);
+      else towns.push([sx, sy]);
+    }
+    const dots = (list, rad, color) => {
+      if (!list.length) return;
       ctx.beginPath();
-      ctx.arc(sx, sy, city.capital ? 3 : 2, 0, Math.PI * 2);
-      ctx.fillStyle = dead ? '#d64030' : city.capital ? '#f4f6f8' : 'rgba(232,238,244,0.8)';
+      for (const [sx, sy] of list) { ctx.moveTo(sx + rad, sy); ctx.arc(sx, sy, rad, 0, Math.PI * 2); }
+      ctx.fillStyle = color;
       ctx.fill();
-      if (dead) {
-        ctx.strokeStyle = '#d64030';
-        ctx.lineWidth = 1.4;
-        ctx.beginPath();
+    };
+    dots(towns, 2, 'rgba(232,238,244,0.8)');
+    dots(caps, 3, '#f4f6f8');
+    dots(ruins, 2, '#d64030');
+    if (ruins.length) {
+      ctx.strokeStyle = '#d64030';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (const [sx, sy] of ruins) {
         ctx.moveTo(sx - 4, sy - 4); ctx.lineTo(sx + 4, sy + 4);
         ctx.moveTo(sx + 4, sy - 4); ctx.lineTo(sx - 4, sy + 4);
-        ctx.stroke();
       }
-      if (showLabels && city.capital) {
-        ctx.fillStyle = 'rgba(240,244,246,0.9)';
+      ctx.stroke();
+    }
+    if (showLabels) {
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = 'rgba(240,244,246,0.9)';
+      for (const city of world.cities) {
+        if (!city.capital) continue;
+        const sx = city.x * k + ox, sy = city.y * k + oy;
+        if (sx < -24 || sy < -24 || sx > view.w + 24 || sy > view.h + 24) continue;
+        if (deadSet && deadSet.has(city.id)) continue;
         ctx.fillText(city.name, sx + 6, sy + 4);
       }
     }
@@ -987,13 +1204,19 @@ export class WorldView {
    легенда лежала ниже в панели, и её не видели. Теперь шесть значков с подписями
    словами стоят в углу кадра, где не мешают ни панели, ни подписям стран. */
 export function drawMapLegend(ctx, view, opts = {}) {
+  // §96: в легенде появились союзники, враги и захваченные области — иначе
+  // красные и зелёные пятна на карте читаются как «просто так покрасили»
   const entries = opts.entries || [
     ['city', 'город'], ['capital', 'столица'], ['own', 'наша столица'],
-    ['army', 'наша армия'], ['battle', 'бой и взрыв'], ['ruin', 'разрушено']
+    ['army', 'наша армия'], ['armybar', 'боеготовность'], ['ally', 'союзник'],
+    ['enemy', 'враг'], ['taken', 'захвачено'], ['battle', 'бой и взрыв'], ['ruin', 'разрушено']
   ];
   const narrow = view.w < 560;
-  const rows = narrow ? entries.slice(0, 3) : entries;
-  const rowH = narrow ? 14 : 15;
+  // на телефоне места мало: оставляем то, без чего карта непонятна — своя страна,
+  // союзники, враги и захваченные области
+  const keep = ['own', 'ally', 'enemy', 'taken'];
+  const rows = narrow ? keep.map((k) => entries.find((e) => e[0] === k)).filter(Boolean) : entries;
+  const rowH = narrow ? 13 : 14;
   const wBox = narrow ? 132 : 158;
   const hBox = rows.length * rowH + 14;
   const x = narrow ? 10 : view.w - wBox - 12;
@@ -1023,6 +1246,12 @@ export function drawMapLegend(ctx, view, opts = {}) {
       ctx.moveTo(cx - 3.5, cy); ctx.lineTo(cx + 3.5, cy);
       ctx.moveTo(cx, cy - 3.5); ctx.lineTo(cx, cy + 3.5);
       ctx.stroke();
+    } else if (kind === 'armybar') {
+      // §96: полоска боеготовности — как у полка на карте
+      ctx.fillStyle = 'rgba(6,12,17,0.72)';
+      ctx.fillRect(cx - 5, cy - 2, 10, 4);
+      ctx.fillStyle = 'rgba(146,236,178,0.95)';
+      ctx.fillRect(cx - 5, cy - 2, 6.5, 4);
     } else if (kind === 'army') {
       ctx.fillStyle = 'rgba(6,12,17,0.6)';
       ctx.fillRect(cx - 4, cy - 3, 8, 6);
@@ -1035,6 +1264,23 @@ export function drawMapLegend(ctx, view, opts = {}) {
       ctx.fillStyle = 'rgba(255,150,80,0.5)'; ctx.fill();
       ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,190,120,0.95)'; ctx.fill();
+    } else if (kind === 'ally') {
+      ctx.fillStyle = POLITICS.ally;
+      ctx.fillRect(cx - 5, cy - 4, 10, 8);
+      ctx.strokeStyle = POLITICS.allyLine; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - 5, cy - 4, 10, 8);
+    } else if (kind === 'enemy') {
+      ctx.fillStyle = POLITICS.enemy;
+      ctx.fillRect(cx - 5, cy - 4, 10, 8);
+      ctx.strokeStyle = POLITICS.enemyLine; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - 5, cy - 4, 10, 8);
+    } else if (kind === 'taken') {
+      ctx.fillStyle = 'rgba(255,206,110,0.35)';
+      ctx.fillRect(cx - 5, cy - 4, 10, 8);
+      ctx.strokeStyle = 'rgba(255,206,110,0.8)'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, cy + 3); ctx.lineTo(cx + 3, cy - 4);
+      ctx.stroke();
     } else if (kind === 'ruin') {
       ctx.strokeStyle = '#d64030'; ctx.lineWidth = 1.4;
       ctx.beginPath();
