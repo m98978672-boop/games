@@ -310,4 +310,29 @@ const visible = html
   ok(!/§/.test(html.slice(html.indexOf('id="world-hint"'), html.indexOf('id="world-regions"'))), 'в подсказке нет номеров параграфов');
 }
 
-console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§88 (F-222…F-224, F-279…F-286, F-301…F-334, проверок ' + checks + ')');
+/* §99: режим «где технике тяжело» и подсказка под курсором */
+{
+  const page = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const script = readFileSync(new URL('../src/main2d.js', import.meta.url), 'utf8');
+  const view = readFileSync(new URL('../src/worldview.js', import.meta.url), 'utf8');
+  ok(/<button id="world-terrain"[^>]*>техника: обычно<\/button>/.test(page), 'у карты мира есть кнопка режима техники');
+  ok(/id="world-terrain"[^>]*title="[^"]*"/.test(page), 'у кнопки режима техники есть подсказка');
+  ok(/getElementById\('world-terrain'\)/.test(script), 'кнопка режима техники подключена в main2d');
+  ok(/showTerrain = !worldView\.showTerrain/.test(script), 'кнопка переключает режим, а не включает один раз');
+  ok(/техника: ' \+ \(worldView\.showTerrain \? 'где тяжело' : 'обычно'\)/.test(script), 'подпись кнопки говорит, что включено');
+  ok(/worldView\.showTerrain/.test(script) || /showTerrain/.test(view), 'режим уходит в отрисовку мира');
+  ok(/passabilityAt\(this\.world\.biomes/.test(view), 'карта знает проходимость точки');
+  ok(view.includes('ensureTerrainLayer'), 'слой «технике тяжело» кэшируется');
+  ok(/ctx\.drawImage\(layer/.test(view), 'кэш слоя выводится кадром, а не пересчитывается');
+  ok(view.includes('paintMarksScreen'), 'отметки рельефа рисуются в кадре');
+  ok(view.includes('drawRegionBorders'), 'границы областей рисуются в кадре');
+  ok(view.includes('drawCountryBorders'), 'границы стран рисуются в кадре');
+  ok(/\(5, ?5\)|\(6, ?4\)/.test(view) || /setLineDash\(\[/.test(view), 'границы областей — пунктир, их не спутать со странами');
+  ok(/граница области/.test(view), 'в легенде подписаны границы областей');
+  ok(/технике тяжело/.test(view), 'в легенде подписан тяжёлый для техники слой');
+  ok(/infoAtScreen/.test(script) && /под курсором/.test(script), 'подсказка говорит, что под курсором');
+  ok(/берег|болото|лес/.test(view), 'подсказка называет покров по-русски');
+  ok(!/§/.test(page.slice(page.indexOf('id="world-terrain"') - 200, page.indexOf('id="world-regions"'))), 'у кнопки техники нет номеров параграфов');
+}
+
+console.log('OK: 10 групп проверок интерфейса §72, раскладки §74, телефона §83, карты мира §86–§99 (F-222…F-224, F-279…F-286, F-301…F-334, проверок ' + checks + ')');
