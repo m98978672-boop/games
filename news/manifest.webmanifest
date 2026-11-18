@@ -1,0 +1,17 @@
+{
+  "name": "Games News — Отдельный отдел новостей",
+  "short_name": "Games News",
+  "description": "Отдельный новостной отдел портала Games: проверенные статьи 2026 года с короткими кодами поиска, реальными фото, доказательствами и комментариями.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0e14",
+  "theme_color": "#121721",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "../site/assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
