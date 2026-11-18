@@ -1,8 +1,25 @@
 // An opt-in inbox in the local preview server, not browser localStorage.
 // Files are sent in small pieces; no model is executed or unpacked here.
 const base=new URL('../../../__model_inbox/',import.meta.url);
+
+// Only accept Dropbox file-request links; never persist or publish their
+// bearer URLs. This is a handoff to Dropbox, not an in-page upload API.
+export function dropboxRequestUrl(value) {
+ try {
+  const url = new URL(value.trim());
+  if (url.protocol !== 'https:' || url.hostname !== 'www.dropbox.com' || url.port || url.username || url.password || !/^\/request\/[A-Za-z0-9_-]+\/?$/.test(url.pathname) || url.search || url.hash) return null;
+  return url.href;
+ } catch { return null; }
+}
 export function bindModelStorage(root,goBack){
  const input=root.querySelector('#model-file'),send=root.querySelector('#model-send'),back=root.querySelector('#model-back'),status=root.querySelector('#model-status'),files=root.querySelector('#model-files'),progress=root.querySelector('#model-progress');
+ const requestInput=root.querySelector('#dropbox-request-url'), requestOpen=root.querySelector('#dropbox-request-open'), requestStatus=root.querySelector('#dropbox-request-status');
+ requestInput.addEventListener('input',()=>{
+  const url=dropboxRequestUrl(requestInput.value);
+  requestOpen.hidden=!url;
+  if(url){requestOpen.href=url;requestStatus.textContent='Откройте Dropbox и загрузите файлы на его странице.';}
+  else {requestOpen.removeAttribute('href');requestStatus.textContent=requestInput.value.trim()?'Нужна ссылка вида https://www.dropbox.com/request/… без дополнительных параметров.':'Вставьте ссылку созданного запроса.';}
+ });
  let info=null,closed=false,busy=false,current=null,xhr=null;
  const explain=s=>({'file exists':'файл с таким именем уже загружен; переименуйте новый файл','storage full':'недостаточно места в хранилище','bad file name or size':'недопустимое имя или размер файла','invalid request':'недопустимый запрос','forbidden':'сервер отклонил запрос','wrong offset':'нарушен порядок блоков','upload not found':'сеанс загрузки потерян; начните заново','incomplete':'передан не весь файл','storage error':'ошибка записи в хранилище'}[s]||s);
  const say=s=>{if(!closed)status.textContent=s;};

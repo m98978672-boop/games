@@ -29,7 +29,15 @@ try{
  await page.locator('#model-back').click();assert.equal(await page.locator('[data-act="model-storage"]').count(),1);assert.deepEqual(errors,[]);
  await page.route('**/__model_inbox/status',route=>route.fulfill({status:404,body:'not available'}));await page.locator('[data-act="model-storage"]').click();
  await page.waitForFunction(()=>document.querySelector('#model-status')?.textContent.includes('недоступен'));assert.equal(await page.locator('#model-send').isDisabled(),true,'static hosting is not claimed to support uploads');
- console.log('model inbox: real Chromium uploaded and verified 10 MiB across chunks + second file; static fallback and token/origin, path traversal, duplicate, incomplete and size checks passed');
+ const request=page.locator('#dropbox-request-url'), link=page.locator('#dropbox-request-open');
+ assert.equal(await link.isVisible(),false);
+ for(const bad of ['https://www.dropbox.com.evil.test/request/example','http://www.dropbox.com/request/example','https://www.dropbox.com/request/example?redirect=bad','javascript:alert(1)','https://www.dropbox.com/home']){
+  await request.fill(bad);assert.equal(await link.isVisible(),false,`rejected ${bad}`);assert.equal(await link.getAttribute('href'),null);
+ }
+ await request.fill('https://www.dropbox.com/request/example123');assert.equal(await link.isVisible(),true);assert.equal(await link.getAttribute('href'),'https://www.dropbox.com/request/example123');
+ assert.equal(await link.getAttribute('rel'),'noopener noreferrer');
+ assert.deepEqual(errors,[]);
+ console.log('model inbox: real Chromium uploaded and verified 10 MiB across chunks + second file; static fallback, Dropbox handoff validation and token/origin, path traversal, duplicate, incomplete and size checks passed');
  if(process.argv.includes('--large')){
   // Synthetic 400 MiB file via the same chunked backend; not an actual model.
   const size=400*1024*1024,large=await (await post('start',JSON.stringify({name:'large-test.bin',size}),good)).json();let off=0;const block=Buffer.alloc(status.chunkSize,73),hash=createHash('sha256');
