@@ -57,8 +57,10 @@ def encode(tokenizer, prompt, row):
     # separately tokenized prefix, so train on that exact prefix and suffix.
     prefix = tokenizer.encode(prefix_text, add_special_tokens=False)
     target = tokenizer.encode(full_text[len(prefix_text):], add_special_tokens=False)
-    if len(prefix) + len(target) > 1024:
-        raise ValueError(f'example exceeds WebLLM 1024 token context: {len(prefix)+len(target)}')
+    # The browser requests up to 96 output tokens, so leave that much room.
+    # This uses the Transformers template; the WebLLM template can differ.
+    if len(prefix) + max(96, len(target)) > 1024:
+        raise ValueError(f'example exceeds 1024-token budget with output reserve: {len(prefix)}+{max(96,len(target))}')
     return prefix, target
 
 def example_loss(model, encoded):
@@ -100,6 +102,9 @@ def main():
     print('Pinned base model weights verified',flush=True)
     tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
     train = [encode(tokenizer, manifest['prompt'], row) for row in data['train']]
+    all_eval = [encode(tokenizer, manifest['prompt'], row) for row in data['eval']]
+    max_prefix = max(len(prefix) for prefix, _ in train + all_eval)
+    print(f'Max Transformers prefix across collected train and held-out snapshots: {max_prefix}; +96 output reserve = {max_prefix+96}/1024 (not a WebLLM template test)',flush=True)
     # Cover labels and seeds before repeating either; still a very small audit.
     pools={a:[r for r in data['eval'] if json.loads(r['response'])['action']==a] for a in ('hold','build','supply','none')}
     selected=[]
@@ -140,7 +145,7 @@ def main():
     after=evaluate(model,validation);print(f'Held-out teacher-forced loss after: {after:.6f}', flush=True)
     args.output.mkdir(parents=True,exist_ok=True)
     model.save_pretrained(args.output / 'adapter',safe_serialization=True)
-    report={'purpose':'Exploratory imitation of a rule-based teacher, not a trained strategic commander; PEFT adapter not usable in the game without conversion and evaluation.', 'base_model':MODEL,'revision':REVISION,'dataset_manifest':manifest,'training':{'seed':args.seed,'steps':args.steps,'lr':2e-4,'lora_rank':8,'trainable_parameters':trainable,'train_losses':losses},'evaluation':{'method':'teacher-forced mean token cross-entropy on a small action-stratified held-out sample; not generated-action quality or game win rate','count':len(validation),'samples':[{'seed':r['seed'],'swapSides':r['swapSides'],'teacher_action':json.loads(r['response'])['action']} for r in selected],'loss_before':before,'loss_after':after}}
+    report={'purpose':'Exploratory imitation of a rule-based teacher, not a trained strategic commander; PEFT adapter not usable in the game without conversion and evaluation.', 'base_model':MODEL,'revision':REVISION,'dataset_manifest':manifest,'training':{'seed':args.seed,'steps':args.steps,'lr':2e-4,'lora_rank':8,'trainable_parameters':trainable,'train_losses':losses},'evaluation':{'method':'teacher-forced mean token cross-entropy on a small action-stratified held-out sample; not generated-action quality or game win rate','max_transformers_prefix_tokens_across_dataset':max_prefix,'output_reserve_tokens':96,'count':len(validation),'samples':[{'seed':r['seed'],'swapSides':r['swapSides'],'teacher_action':json.loads(r['response'])['action']} for r in selected],'loss_before':before,'loss_after':after}}
     (args.output / 'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(report['evaluation']),flush=True)
 

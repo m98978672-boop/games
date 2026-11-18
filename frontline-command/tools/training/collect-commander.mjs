@@ -1,12 +1,13 @@
 // Research dataset only. Captures real game states, labels them with a simple
 // hand-written teacher (NOT expert play and NOT neural-network inference).
-import {mkdir,readFile,writeFile} from 'node:fs/promises';
-import {resolve,dirname} from 'node:path';
-import {fileURLToPath,pathToFileURL} from 'node:url';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import {loadConfig} from '../../src/core/config.js';
 import {Game} from '../../src/sim/game.js';
 import {commanderSnapshot,validateProposal} from '../../src/sim/neutral_commander.js';
+import {commanderPrompt} from '../../src/ai/commander-prompts.js';
 
 export function teacher(input){
  if(!input.squads.length)return {action:'none'};
@@ -18,12 +19,10 @@ export function teacher(input){
  return {action:'none'};
 }
 const hash=x=>createHash('sha256').update(x).digest('hex');
-export async function collect({trainSeeds=[101,102,103,104],evalSeeds=[201,202],seconds=120,interval=20}={}){
+export async function collect({trainSeeds=[101,102,103,104],evalSeeds=[201,202],seconds=120,interval=20,knowledge=false}={}){
  if(!trainSeeds.length||!evalSeeds.length||new Set([...trainSeeds,...evalSeeds]).size!==trainSeeds.length+evalSeeds.length)throw Error('Train and evaluation seeds must be nonempty and disjoint');
  if(!Number.isInteger(seconds)||seconds<1||!Number.isInteger(interval)||interval<1)throw Error('Invalid simulation duration');
- const src=await readFile(fileURLToPath(new URL('../../src/ai/commander-worker-entry.js',import.meta.url)),'utf8');
- const match=src.match(/^const prompt='([^'\n]+)';$/m);if(!match)throw Error('Worker prompt changed; review dataset formatting');
- const prompt=match[1],cfg=await loadConfig();cfg.factions=cfg.factions.map(f=>({...f,persona:'balanced'}));cfg.faction=id=>cfg.factions[id]||cfg.factions[0];
+ const prompt=commanderPrompt(knowledge===true),cfg=await loadConfig();cfg.factions=cfg.factions.map(f=>({...f,persona:'balanced'}));cfg.faction=id=>cfg.factions[id]||cfg.factions[0];
  const data={train:[],eval:[]},seen=new Set(),counts={train:{},eval:{}},duplicates={train:0,eval:0};
  for(const [split,seeds] of [['train',trainSeeds],['eval',evalSeeds]])for(const seed of seeds)for(const swapSides of [false,true]){
   const game=new Game({cfg,seed,aiVsAi:true,swapSides});let next=0;
@@ -57,6 +56,6 @@ export async function writeDataset(out,options){
  await writeFile(resolve(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');return manifest;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
- const out=process.argv[2];if(!out)throw Error('usage: node tools/training/collect-commander.mjs OUTPUT_DIRECTORY');
- console.log(JSON.stringify(await writeDataset(resolve(out)),null,2));
+ const out=process.argv[2],flags=process.argv.slice(3);if(!out||flags.some(x=>x!=='--knowledge'))throw Error('usage: node tools/training/collect-commander.mjs OUTPUT_DIRECTORY [--knowledge]');
+ console.log(JSON.stringify(await writeDataset(resolve(out),{knowledge:flags.includes('--knowledge')}),null,2));
 }
