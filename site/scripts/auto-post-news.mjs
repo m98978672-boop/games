@@ -330,6 +330,27 @@ async function buildCommunityAutoPosts() {
   }
 }
 
+// Очередь «на будущее»: статья лежит в фиде с датой вперёд (scheduledFor) и
+// «раскрывается» в день события — тогда её дата публикации становится сегодняшней,
+// и она попадает в ленту как свежая. Пропустить дату нельзя: если автопост не
+// запускался, статья выходит при следующем запуске (не теряется).
+export function promoteScheduledItems(items, now) {
+  const today = new Date(now || Date.now()).toISOString().slice(0, 10);
+  const promoted = [];
+  const out = (items || []).map((item) => {
+    if (!item || item.queue !== 'future' || !item.scheduledFor) return item;
+    if (String(item.scheduledFor) > today) return item; // ещё рано
+    promoted.push(item.id);
+    return {
+      ...item,
+      publishedAt: new Date(`${today}T09:00:00.000Z`).toISOString(),
+      queue: 'live',
+      releasedAt: `${today}T09:00:00.000Z`,
+    };
+  });
+  return { items: out, promoted };
+}
+
 export function mergeNewsFeeds(existingItems, incomingItems, av) {
   const byKey = new Map();
   const normalizeUrl = (u) => String(u || '').trim().replace(/\/+$/, '').toLowerCase();
@@ -363,8 +384,12 @@ export function mergeNewsFeeds(existingItems, incomingItems, av) {
     .filter((x) => !x.pinned)
     .sort((a, b) => Date.parse(b.publishedAt || 0) - Date.parse(a.publishedAt || 0));
 
-  const keptFresh = fresh.slice(0, Math.max(0, MAX_FEED_ITEMS - pinned.length));
-  const combined = [...pinned, ...keptFresh].sort(
+  // Очередь «на будущее» не вытесняется: это заготовки на месяцы вперёд.
+  // Свежая лента ограничена MAX_FEED_ITEMS, а расписание живёт отдельно.
+  const scheduled = all.filter((x) => !x.pinned && x.queue === 'future');
+  const live = fresh.filter((x) => x.queue !== 'future');
+  const keptFresh = live.slice(0, Math.max(0, MAX_FEED_ITEMS - pinned.length));
+  const combined = [...pinned, ...keptFresh, ...scheduled].sort(
     (a, b) => Date.parse(b.publishedAt || 0) - Date.parse(a.publishedAt || 0)
   );
 
@@ -403,7 +428,9 @@ async function main() {
   const communityPosts = await buildCommunityAutoPosts();
   incoming.push(...communityPosts);
 
-  const { items, added } = mergeNewsFeeds(existing, incoming, av);
+  const { items: withReleased, promoted } = promoteScheduledItems(existing, Date.now());
+  if (promoted.length) console.log(`Из очереди «на будущее» вышло статей: ${promoted.length}`);
+  const { items, added } = mergeNewsFeeds(withReleased, incoming, av);
   const nowIso = new Date().toISOString();
 
   feed.updatedAt = nowIso;

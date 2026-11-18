@@ -133,7 +133,7 @@ ok('огромный скачок времени не вешает игру', ((
   return Number.isFinite(n) && n <= w.countries.length * TECH.unlockPerStep;
 })());
 const st = techStats(w2);
-ok('в сводке науки 25 полей (К30 добавил состояние изучения)', Object.keys(st).length === 25, Object.keys(st).join(','));
+ok('в сводке науки 29 полей (К33 добавил смысл сферы и опоры)', Object.keys(st).length === 29, Object.keys(st).join(','));
 ok('сводка знает каталог', st.catalog === total);
 ok('сводка знает свою страну', st.count === w2.own.tech.count && st.rate === techRate(w2.own));
 ok('сводка называет трёх лидеров', st.leaders.length === 3 && st.leaders.every((l) => l.name && l.count > 0));

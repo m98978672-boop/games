@@ -5,6 +5,7 @@ import { WorldView, overviewScale } from './worldview.js';
 import { buildWorld, advanceWars, worldStats, hottestWar, diplomacyStats, WM } from './worldmap2d.js';
 import { techStats, TECH } from './tech2d.js';
 import { autonomyStats } from './autonomy2d.js';
+import { regionsStats, regionIncome } from './regions2d.js';
 import { geoOf, formatLat, formatLon } from './planet2d.js';
 import { START, overlayPhase, startSceneView } from './startscene2d.js';
 import { Intro } from './intro.js';
@@ -272,6 +273,7 @@ function setupWorld() {
   const techBarEl = document.getElementById('world-techbar');
   const hintEl = document.getElementById('world-hint');
   const selfEl = document.getElementById('world-self');
+  const regionsEl = document.getElementById('world-regions');
   const loadEl = document.getElementById('world-load');
   if (!worldScreen || !canvas || !openBtn) return;
 
@@ -314,6 +316,24 @@ function setupWorld() {
     lines.push('помощь: ' + dip.aidTotal + (dip.aidLast ? ' · последняя ' + dip.aidLast : ''));
     if (statsEl) statsEl.textContent = lines.join('\n');
     if (statsEl) statsEl.style.whiteSpace = 'pre-line';
+    if (regionsEl) {
+      // §96: области страны и захваты — кто чей и что это даёт
+      const rg = regionsStats(world);
+      const km = (r) => Math.round(r.km2 || 0).toLocaleString('ru-RU');
+      const mine = rg.list.slice(0, 6).map((r) =>
+        r.name + (r.original !== 'own' ? ' (отбита у ' + r.fromName + ')' : '') + ' · ' + r.resourceName + ' +' + r.yield);
+      const takenOut = rg.lostList.slice(0, 3).map((r) => r.name + ' — у ' + r.ownerName);
+      regionsEl.textContent = [
+        'областей у нас ' + rg.own + ' из ' + rg.total + ' · захвачено ' + rg.taken + ' · потеряно ' + rg.lost,
+        'доход с земель +' + regionIncome(world.regions, 'own') + ' в сутки',
+        mine.length ? mine.join('\n') : 'своих областей нет',
+        takenOut.length ? 'потеряно: ' + takenOut.join(' · ') : '',
+        rg.last ? (rg.last.kind === 'capture'
+          ? 'последний захват: ' + rg.last.name + ' — ' + rg.last.fromName + ' → ' + rg.last.toName
+          : 'отбили обратно: ' + rg.last.name) : 'захватов ещё не было'
+      ].filter(Boolean).join('\n');
+      regionsEl.style.whiteSpace = 'pre-line';
+    }
     if (contactsEl) {
       // в панели — только близкие контакты: дальше список не нужен и мешает
       const near = dip.list.filter((c) => c.neighbour).slice(0, 6);
@@ -334,10 +354,15 @@ function setupWorld() {
         tech.research
           ? 'изучается: ' + tech.next + ' · ' + tech.bar + '% · осталось ' + nf(tech.left) + ' очков ≈ ' + eta(tech.etaMin)
           : 'наука стоит: всё открыто',
+        // §97: у науки есть смысл — что даёт сфера и чем она опирается
+        tech.research && tech.nextRole ? 'даёт: ' + tech.nextRole : '',
         tech.queue.length
           ? 'в очереди: ' + tech.queue.map((q) => q.name + ' (' + q.branch + ', уровень ' + q.tier + ')').join(' · ')
           : 'очередь пуста',
         'открыто ' + nf(tech.count) + ' из ' + nf(tech.catalog) + ' · +' + nf(tech.perDay) + ' очков в сутки',
+        tech.blocked && tech.blocked.length
+          ? 'ждёт опоры: ' + tech.blocked.slice(0, 3).map((b) => b.name + ' ← ' + b.needs.join(', ')).join(' · ')
+          : 'все сферы тянутся ровно',
         mine.length ? 'последние: ' + mine.join('; ') : 'пока ничего не открыто',
         leaders ? 'впереди по науке: ' + leaders : ''
       ].filter(Boolean).join('\n');

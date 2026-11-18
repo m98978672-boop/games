@@ -33,6 +33,48 @@ export const TECH = {
     'Орбита', 'Кедр', 'Луч', 'Гранит', 'Лавина', 'Заря', 'Комета', 'Меридиан', 'Атлас',
     'Циклон', 'Факел', 'Аметист', 'Бастион', 'Тайфун', 'Спектр', 'Кварц', 'Пионер'],
   gens: ['первое', 'второе', 'третье', 'четвёртое'],
+  /* §97: у науки появилась логика. Раньше сферы шли по кругу, и страна могла открыть
+     космос третьего поколения, не зная ни вычислений, ни металлургии. Теперь у каждой
+     сферы есть чем она опирается: поколение N требует N−1 у своей опоры.
+     `gap` — на сколько поколений отстаёт опора. `base: true` — сфера-основание,
+     ей ничего не нужно. */
+  requires: {
+    farm: [],
+    build: [],
+    education: [],
+    metal: [{ id: 'build', gap: 1 }],
+    energy: [{ id: 'metal', gap: 1 }],
+    transport: [{ id: 'build', gap: 1 }, { id: 'energy', gap: 2 }],
+    comms: [{ id: 'compute', gap: 1 }],
+    compute: [{ id: 'education', gap: 1 }],
+    materials: [{ id: 'metal', gap: 1 }, { id: 'energy', gap: 1 }],
+    medicine: [{ id: 'bio', gap: 1 }],
+    bio: [{ id: 'farm', gap: 1 }],
+    eco: [{ id: 'farm', gap: 2 }, { id: 'materials', gap: 2 }],
+    logistics: [{ id: 'transport', gap: 1 }],
+    finance: [{ id: 'education', gap: 2 }],
+    military: [{ id: 'metal', gap: 1 }],
+    space: [{ id: 'compute', gap: 1 }, { id: 'military', gap: 1 }]
+  },
+  /* §97: что сфера даёт словами — панель объясняет, зачем это изучать */
+  roles: {
+    farm: 'еда и люди',
+    metal: 'промышленность и броня',
+    energy: 'промышленность и казна',
+    transport: 'логистика и деньги',
+    medicine: 'люди и выучка',
+    comms: 'связь и снабжение',
+    compute: 'разведка и точность',
+    space: 'спутник с третьего поколения',
+    military: 'армия и точность',
+    build: 'стройка и казна',
+    materials: 'промышленность и броня',
+    eco: 'люди и еда',
+    bio: 'люди и еда',
+    logistics: 'снабжение и казна',
+    education: 'наука и разведка',
+    finance: 'казна и наука'
+  },
   /* F-321: 16 сфер. В каждой восемь своих предметов — из них и складываются имена:
      «Севооборот «Волга» · второе поколение» читается как настоящая разработка. */
   branches: [
@@ -110,6 +152,33 @@ export function techEffects(state) {
   return out;
 }
 
+/* §97: открыта ли сфера до нужного поколения. Опора должна быть не старше, чем
+   на `gap` поколений: космос третьего поколения требует вычислений второго. */
+export function branchReady(state, branchId, tier) {
+  const reqs = TECH.requires[branchId] || [];
+  if (!reqs.length) return true;
+  const tiers = (state && state.tiers) || {};
+  for (const req of reqs) {
+    if ((tiers[req.id] || 0) < Math.max(1, tier - (req.gap || 1))) return false;
+  }
+  return true;
+}
+
+/* §97: чего не хватает для сферы — по-русски, для панели и подсказок. */
+export function branchNeeds(state, branchId, tier) {
+  const reqs = TECH.requires[branchId] || [];
+  const out = [];
+  const tiers = (state && state.tiers) || {};
+  for (const req of reqs) {
+    const need = Math.max(1, tier - (req.gap || 1));
+    if ((tiers[req.id] || 0) < need) {
+      const b = TECH.branches.find((x) => x.id === req.id);
+      out.push((b ? b.name : req.id) + ' ' + need);
+    }
+  }
+  return out;
+}
+
 /* F-324: сколько науки даёт страна в игровую минуту — города и есть двигатель. */
 export function techRate(country) {
   const cities = country && country.cities ? country.cities.length : 0;
@@ -152,9 +221,13 @@ export function nextTech(state) {
     const branch = TECH.branches[bIdx];
     const tier = (state.tiers[branch.id] || 0) + 1;
     if (tier > TECH.tiers) continue;
+    // §97: сфера не может уйти вперёд своей опоры
+    if (!branchReady(state, branch.id, tier)) continue;
     const variant = Math.floor(hash01(state.seed + (state.count + 1) * 37 + bIdx * 101, 173) * TECH.variants) % TECH.variants;
     const t = techAt(techIndex(bIdx, tier, variant));
     t.progress = Math.max(0, Math.min(1, state.points / t.cost));
+    t.role = TECH.roles[branch.id] || '';
+    t.satellite = branch.id === 'space' && tier >= TECH.satelliteFrom;
     return t;
   }
   return null;
@@ -183,6 +256,7 @@ export function techQueue(state, n = 3) {
     if (!branch) continue;
     const tier = (tiers[branch.id] || 0) + 1;
     if (tier > TECH.tiers) continue;
+    if (!branchReady({ tiers }, branch.id, tier)) continue;
     const variant = Math.floor(hash01(state.seed + (count + 1) * 37 + bIdx * 101, 173) * TECH.variants) % TECH.variants;
     const t = techAt(techIndex(bIdx, tier, variant));
     out.push({ name: t.name, branch: branch.name, tier, cost: t.cost });
@@ -262,6 +336,13 @@ export function techStats(world, observerId = 'own') {
     rate: obs ? techRate(obs) : 0,
     perDay: obs ? Math.round(techRate(obs) * 1440) : 0,
     next: st && st.next ? st.next.name : null,
+    // §97: зачем эта сфера стране и чего ей не хватает для следующего шага
+    nextRole: st && st.next ? (st.next.role || '') : '',
+    nextBranch: st && st.next ? st.next.branch : null,
+    nextTier: st && st.next ? st.next.tier : 0,
+    blocked: st ? TECH.branches
+      .map((b) => ({ id: b.id, name: b.name, tier: st.tiers[b.id] || 0, needs: branchNeeds(st, b.id, (st.tiers[b.id] || 0) + 1) }))
+      .filter((b) => b.needs.length) : [],
     nextCost: st && st.next ? st.next.cost : 0,
     progress: st && st.next ? st.next.progress : 0,
     last: st ? st.last.slice() : [],

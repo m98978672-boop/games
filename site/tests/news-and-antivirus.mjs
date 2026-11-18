@@ -11,6 +11,8 @@ import { parseRssOrAtom, makeSafeNewsItem, mergeNewsFeeds } from '../scripts/aut
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDir, '../..');
+// Форматы локальных обложек новостей (svg рисуем сами, jpg/png — от редакции).
+const MediaCoverRe = /\.(svg|jpe?g|png|webp|avif)$/i;
 
 const av = await loadGamesAntivirus();
 
@@ -145,6 +147,40 @@ for (const item of verifiedArticles) {
   assert.ok(Array.isArray(item.comments), `Article ${item.code} must declare comments array`);
   assert.equal(item.comments.length, 0, `Article ${item.code} must NOT ship simulated/pre-written comments`);
 }
+// Запас статей «на сейчас и на будущее»: 100 штук (40 сейчас + 60 в очередь),
+// каждые со своим фактчеком, локальной обложкой и БЕЗ заготовленных комментариев.
+const nowQueue = feed.items.filter((i) => i.queue === 'now');
+const futureQueue = feed.items.filter((i) => i.queue === 'future');
+assert.ok(nowQueue.length >= 40, `news backlog must keep >= 40 "now" articles (found ${nowQueue.length})`);
+assert.ok(futureQueue.length >= 60, `news backlog must keep >= 60 scheduled articles (found ${futureQueue.length})`);
+assert.ok(feed.autoPost?.backlog?.total >= 100, 'autoPost.backlog must account for >= 100 prepared articles');
+for (const item of [...nowQueue, ...futureQueue]) {
+  assert.equal(item.factCheck?.verified, true, `${item.code} from backlog must carry verified factCheck`);
+  assert.ok(Array.isArray(item.proofs) && item.proofs.length >= 1, `${item.code} must keep a proof link`);
+  assert.equal(item.comments.length, 0, `${item.code} must not ship pre-written comments`);
+  assert.ok(item.image && /^site\/assets\//.test(item.image), `${item.code} must declare a local cover`);
+  assert.equal(existsSync(path.join(repoRoot, item.image)), true, `${item.code} cover must exist: ${item.image}`);
+}
+for (const item of futureQueue) {
+  assert.match(String(item.scheduledFor || ''), /^\d{4}-\d{2}-\d{2}$/, `${item.code} must carry scheduledFor date`);
+  assert.ok(item.scheduledFor > '2026-11-18', `${item.code} scheduled date must be in the future`);
+}
+// У КАЖДОЙ статьи ленты обложка должна лежать в репозитории: битые картинки
+// не видит ни один другой тест (так в main накопилось 37 «мёртвых» ссылок).
+const allArticles = feed.items.filter((i) => i.image && MediaCoverRe.test(i.image));
+const missingCovers = allArticles.filter((i) => !existsSync(path.join(repoRoot, i.image)));
+assert.equal(
+  missingCovers.length,
+  0,
+  `${missingCovers.length} статей ссылаются на несуществующие обложки: ` +
+    missingCovers.slice(0, 3).map((i) => i.code).join(', '),
+);
+assert.equal(allArticles.length, feed.items.length, 'у каждой статьи ленты есть локальная обложка');
+
+// Очередь должна быть равномерна по рубрикам, а не в одну тему.
+const backlogCats = new Set([...nowQueue, ...futureQueue].map((i) => i.category));
+assert.ok(backlogCats.size >= 6, 'backlog must cover all 6 news categories');
+
 const shippedComments = feed.items.reduce((sum, item) => sum + (Array.isArray(item.comments) ? item.comments.length : 0), 0);
 assert.equal(shippedComments, 0, 'news-feed.json must not contain any pre-written comments (only live reader comments)');
 

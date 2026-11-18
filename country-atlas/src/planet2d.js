@@ -91,9 +91,11 @@ export function landPolygon(land, seed = 424242) {
       wide: 0.05 + pick(s + k * 61, 59) * 0.09
     });
   }
-  // §95: у каждого материка своя вытянутость и свой поворот — иначе все круглые
-  const aspect = 0.72 + pick(s, 71) * 0.56;      // 0.72…1.28
+  // §96: материки вытянуты, как настоящие: Африка, Чили, Индокитай — не круги.
+  // Вытянутость 0,52…0,9 и свой поворот; плюс перешеек, который делит материк на две части.
+  const aspect = 0.52 + pick(s, 71) * 0.38;      // 0.52…0.90
   const tilt = pick(s, 73) * Math.PI;
+  const neck = { at: pick(s, 79) * Math.PI * 2, deep: 0.10 + pick(s, 83) * 0.10, wide: 0.07 + pick(s, 89) * 0.05 };
   const ca = Math.cos(tilt), sa = Math.sin(tilt);
   const out = [];
   for (let i = 0; i < PLANET.sides; i++) {
@@ -102,6 +104,7 @@ export function landPolygon(land, seed = 424242) {
     for (const [freq, amp, ph] of waves) k += amp * Math.sin(a * freq + ph);
     for (const b of bays) k -= b.deep * Math.exp(-(angDiff(a, b.at) ** 2) / (2 * b.wide ** 2));
     for (const c of capes) k += c.high * Math.exp(-(angDiff(a, c.at) ** 2) / (2 * c.wide ** 2));
+    k -= neck.deep * Math.exp(-(angDiff(a, neck.at) ** 2) / (2 * neck.wide ** 2));
     k += 0.012 * Math.sin(a * 37 + phase[0]) + 0.007 * Math.sin(a * 61 - phase[1]);
     if (k < 0.6) k = 0.6;
     if (k > 1.34) k = 1.34;
@@ -164,13 +167,19 @@ export function buildLands(seed = 424242) {
     out[i].angle = Math.atan2(out[i].y, out[i].x);
     out[i].poly = landPolygon(out[i], seed);
   }
-  // финальная проверка: суша внутри карты и вне льдов — иначе подрезаем материк
-  for (let i = 1; i < out.length; i++) {
-    const far = Math.max(...out[i].poly.map(([x, y]) => Math.hypot(x, y)));
-    if (far > PLANET.edgeKm) {
-      out[i].rKm *= (PLANET.edgeKm / far) * 0.98;
-      out[i].poly = landPolygon(out[i], seed);
+  // финальная проверка: суша внутри карты и вне льдов — иначе подрезаем материк.
+  // Вытянутый материк вылетает дальше круглого, поэтому подрезка идёт в несколько проходов.
+  for (let pass = 0; pass < 4; pass++) {
+    let fixed = false;
+    for (const land of out) {
+      const far = Math.max(...land.poly.map(([x, y]) => Math.hypot(x, y)));
+      if (far > PLANET.edgeKm) {
+        land.rKm *= (PLANET.edgeKm / far) * 0.97;
+        land.poly = landPolygon(land, seed);
+        fixed = true;
+      }
     }
+    if (!fixed) break;
   }
   return out;
 }
