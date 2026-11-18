@@ -59,6 +59,6 @@ for(const swap of [false,true])for(const algSave of [false,true])for(const destr
  const g=await make(false);for(const p of g.world.points)if(p.type==='city'&&p.key&&p.home===0)p.owner=1;g.checkVictory();assert.equal(g.outcome.winner,1);assert.match(g.outcome.reason,/ключевые города/);
 }
 {
- const g=await make(false);g.time=(g.cfg.ai.capture?.suddenDeathSeconds??900)+1;g.checkVictory();assert.ok(g.warOver);assert.match(g.outcome.reason,/измор/);
+ const g=await make(false);g.cfg.flags.sudden_death=true;g.time=(g.cfg.ai.capture?.suddenDeathSeconds??900)+1;g.checkVictory();assert.ok(g.warOver);assert.match(g.outcome.reason,/измор/);
 }
 console.log('experimental HQ rules: capture, destruction, symmetric simultaneous losses, legacy save, parity/draw UI, no city/timer; commander remains unimplemented');

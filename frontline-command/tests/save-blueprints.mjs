@@ -73,6 +73,7 @@ assert.ok(b2.dead, 'отложенная отмена попала в верны
 assert.equal(loaded.logistics.stock[1].materials, stock[1].materials + Math.round(cfg.buildings.sandbags.cost.materials * 0.6));
 const engineer = [...loaded.units.values()].find((u) => u.faction === 0 && u.role === 'engineer');
 const beforeProgress = a2.progress, beforeMaterials = loaded.logistics.stock[0].materials;
+engineer.x = a2.x + 20; engineer.y = a2.y;
 loaded.build.work(a2, 0.5, engineer);
 assert.ok(a2.progress > beforeProgress, 'работа продолжается с сохранённого прогресса');
 assert.ok(loaded.logistics.stock[0].materials < beforeMaterials);

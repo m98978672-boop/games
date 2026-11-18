@@ -1,0 +1,4745 @@
+{
+  "attemptsPerFaction": 10,
+  "gameStep": true,
+  "sharedGoal": false,
+  "summaries": {
+    "baseline": {
+      "flags": [],
+      "scenes": 20,
+      "passed": 1,
+      "arrived": 101,
+      "crossed": 91,
+      "failed": 3,
+      "unfinished": 16,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 13,
+      "speedViolations": 0,
+      "changedGoalSamples": 43547,
+      "courtesyYields": 0,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 0,
+      "improvedScenes": 0,
+      "regressedScenes": 0
+    },
+    "courtesy": {
+      "flags": [
+        "door_courtesy_v1"
+      ],
+      "scenes": 20,
+      "passed": 0,
+      "arrived": 55,
+      "crossed": 60,
+      "failed": 6,
+      "unfinished": 59,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 5,
+      "speedViolations": 0,
+      "changedGoalSamples": 6108,
+      "courtesyYields": 68495,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 0,
+      "improvedScenes": 0,
+      "regressedScenes": 18
+    },
+    "pair": {
+      "flags": [
+        "door_pair_lanes_v1"
+      ],
+      "scenes": 20,
+      "passed": 1,
+      "arrived": 101,
+      "crossed": 91,
+      "failed": 3,
+      "unfinished": 16,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 13,
+      "speedViolations": 0,
+      "changedGoalSamples": 43547,
+      "courtesyYields": 0,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 0,
+      "improvedScenes": 0,
+      "regressedScenes": 0
+    },
+    "crowd": {
+      "flags": [
+        "crowd_nav_v2"
+      ],
+      "scenes": 20,
+      "passed": 1,
+      "arrived": 101,
+      "crossed": 91,
+      "failed": 3,
+      "unfinished": 16,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 13,
+      "speedViolations": 0,
+      "changedGoalSamples": 43547,
+      "courtesyYields": 0,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 0,
+      "improvedScenes": 0,
+      "regressedScenes": 0
+    },
+    "smart": {
+      "flags": [
+        "smart_route_v2"
+      ],
+      "scenes": 20,
+      "passed": 1,
+      "arrived": 102,
+      "crossed": 91,
+      "failed": 2,
+      "unfinished": 16,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 13,
+      "speedViolations": 0,
+      "changedGoalSamples": 42545,
+      "courtesyYields": 0,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 431,
+      "improvedScenes": 1,
+      "regressedScenes": 0
+    },
+    "obstacle": {
+      "flags": [
+        "bot_obstacle_vision_v1"
+      ],
+      "scenes": 20,
+      "passed": 1,
+      "arrived": 102,
+      "crossed": 91,
+      "failed": 2,
+      "unfinished": 16,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 13,
+      "speedViolations": 0,
+      "changedGoalSamples": 42545,
+      "courtesyYields": 0,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 431,
+      "improvedScenes": 1,
+      "regressedScenes": 0
+    },
+    "visionCourtesy": {
+      "flags": [
+        "vision_nav_policy_v1",
+        "door_courtesy_v1"
+      ],
+      "scenes": 20,
+      "passed": 0,
+      "arrived": 55,
+      "crossed": 60,
+      "failed": 6,
+      "unfinished": 59,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 5,
+      "speedViolations": 0,
+      "changedGoalSamples": 6108,
+      "courtesyYields": 68495,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 0,
+      "improvedScenes": 0,
+      "regressedScenes": 18
+    },
+    "visionGroup": {
+      "flags": [
+        "vision_nav_policy_v1",
+        "crowd_nav_v2",
+        "group_nav_3to5_v1",
+        "group_nav_pair_v1",
+        "door_courtesy_v1"
+      ],
+      "scenes": 20,
+      "passed": 0,
+      "arrived": 55,
+      "crossed": 60,
+      "failed": 6,
+      "unfinished": 59,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 5,
+      "speedViolations": 0,
+      "changedGoalSamples": 6108,
+      "courtesyYields": 136990,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 0,
+      "improvedScenes": 0,
+      "regressedScenes": 18
+    },
+    "courtesySmart": {
+      "flags": [
+        "door_courtesy_v1",
+        "smart_route_v2"
+      ],
+      "scenes": 20,
+      "passed": 0,
+      "arrived": 53,
+      "crossed": 60,
+      "failed": 8,
+      "unfinished": 59,
+      "overlapFrames": 0,
+      "wallEndpointViolations": 0,
+      "wallSweepViolations": 5,
+      "speedViolations": 0,
+      "changedGoalSamples": 6108,
+      "courtesyYields": 68495,
+      "crowdFrames": 0,
+      "pairFrames": 0,
+      "routeFrames": 6458,
+      "improvedScenes": 0,
+      "regressedScenes": 18
+    }
+  },
+  "runs": {
+    "baseline": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 1,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 482,
+              "id": 54,
+              "from": [
+                536.1619195377622,
+                3173.796515351901
+              ],
+              "to": [
+                538.4806550603558,
+                3168.8091848458826
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2492,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2431,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1086,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 39.75
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 196,
+              "id": 58,
+              "from": [
+                495.73566231028013,
+                3164.3779204262373
+              ],
+              "to": [
+                500.001951092484,
+                3167.849055691081
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3341,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 974,
+              "id": 54,
+              "from": [
+                535.0315353516208,
+                3178.961808560785
+              ],
+              "to": [
+                534.9980051051413,
+                3184.461706352796
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 990,
+              "id": 57,
+              "from": [
+                503.38144559558697,
+                3187.4353581819123
+              ],
+              "to": [
+                500.4890303488847,
+                3191.9188359810523
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3389,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 307,
+              "id": 55,
+              "from": [
+                537.8897289689539,
+                3189.5708093360636
+              ],
+              "to": [
+                535.3086979617815,
+                3184.7140327362995
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2644,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 2.9
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2212,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 46.95
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 236,
+              "id": 54,
+              "from": [
+                538.0109500884099,
+                3170.0643327482676
+              ],
+              "to": [
+                541.948250735292,
+                3166.2240640576597
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 693,
+              "id": 55,
+              "from": [
+                537.7699590611546,
+                3170.092393735988
+              ],
+              "to": [
+                541.4371403519567,
+                3166.6682721362095
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 275,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.35
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 5,
+          "failed": 1,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1227,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 50.8
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2088,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 5,
+          "failed": 1,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 728,
+              "id": 54,
+              "from": [
+                3593.7232315540255,
+                666.7312666627865
+              ],
+              "to": [
+                3596.9496788352712,
+                662.9840337930367
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 510,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.6
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 107,
+              "id": 58,
+              "from": [
+                3549.7813474224913,
+                659.9860164555192
+              ],
+              "to": [
+                3554.844264372382,
+                662.1347072100273
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 266,
+              "id": 57,
+              "from": [
+                3556.5583198923114,
+                687.5389390221054
+              ],
+              "to": [
+                3552.6660846828195,
+                690.7787687691819
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3095,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2494,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2240,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 51.6
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 164,
+              "id": 58,
+              "from": [
+                3551.6310629333398,
+                660.6604610332762
+              ],
+              "to": [
+                3556.0360401822877,
+                663.9538142539695
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3742,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1847,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 1016,
+              "id": 57,
+              "from": [
+                3556.2695787373145,
+                687.7798671761965
+              ],
+              "to": [
+                3552.6180254873366,
+                691.2054782445588
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3097,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 52.55
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 4,
+          "failed": 1,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 983,
+              "id": 57,
+              "from": [
+                3558.3720675331842,
+                685.1239437288693
+              ],
+              "to": [
+                3555.044256601064,
+                689.0137632567353
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2392,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2945,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    },
+    "courtesy": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [
+        "door_courtesy_v1"
+      ],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 0,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 2,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1646,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 15,
+              "id": 54,
+              "from": [
+                535.0851121657582,
+                3182.3390275765782
+              ],
+              "to": [
+                535.0851121657582,
+                3176.853805628807
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 670,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 114,
+          "overlapFrames": 0,
+          "seconds": 48.6
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3581,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 15,
+              "id": 54,
+              "from": [
+                535.1606108330247,
+                3182.368305711557
+              ],
+              "to": [
+                535.0855863769516,
+                3176.868817432545
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1896,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 2,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1896,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 1,
+          "failed": 2,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3214095899625,
+                680.0207688034894
+              ],
+              "to": [
+                3590.8342512530135,
+                674.5423861265728
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3780371548937,
+                680.2127424715629
+              ],
+              "to": [
+                3590.8919403026775,
+                674.7342655070895
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3939974354007,
+                680.0926049862002
+              ],
+              "to": [
+                3590.910431076853,
+                674.6139040838985
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    },
+    "pair": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [
+        "door_pair_lanes_v1"
+      ],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 1,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 482,
+              "id": 54,
+              "from": [
+                536.1619195377622,
+                3173.796515351901
+              ],
+              "to": [
+                538.4806550603558,
+                3168.8091848458826
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2492,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2431,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1086,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 39.75
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 196,
+              "id": 58,
+              "from": [
+                495.73566231028013,
+                3164.3779204262373
+              ],
+              "to": [
+                500.001951092484,
+                3167.849055691081
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3341,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 974,
+              "id": 54,
+              "from": [
+                535.0315353516208,
+                3178.961808560785
+              ],
+              "to": [
+                534.9980051051413,
+                3184.461706352796
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 990,
+              "id": 57,
+              "from": [
+                503.38144559558697,
+                3187.4353581819123
+              ],
+              "to": [
+                500.4890303488847,
+                3191.9188359810523
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3389,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 307,
+              "id": 55,
+              "from": [
+                537.8897289689539,
+                3189.5708093360636
+              ],
+              "to": [
+                535.3086979617815,
+                3184.7140327362995
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2644,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 2.9
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2212,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 46.95
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 236,
+              "id": 54,
+              "from": [
+                538.0109500884099,
+                3170.0643327482676
+              ],
+              "to": [
+                541.948250735292,
+                3166.2240640576597
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 693,
+              "id": 55,
+              "from": [
+                537.7699590611546,
+                3170.092393735988
+              ],
+              "to": [
+                541.4371403519567,
+                3166.6682721362095
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 275,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.35
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 5,
+          "failed": 1,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1227,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 50.8
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2088,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 5,
+          "failed": 1,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 728,
+              "id": 54,
+              "from": [
+                3593.7232315540255,
+                666.7312666627865
+              ],
+              "to": [
+                3596.9496788352712,
+                662.9840337930367
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 510,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.6
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 107,
+              "id": 58,
+              "from": [
+                3549.7813474224913,
+                659.9860164555192
+              ],
+              "to": [
+                3554.844264372382,
+                662.1347072100273
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 266,
+              "id": 57,
+              "from": [
+                3556.5583198923114,
+                687.5389390221054
+              ],
+              "to": [
+                3552.6660846828195,
+                690.7787687691819
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3095,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2494,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2240,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 51.6
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 164,
+              "id": 58,
+              "from": [
+                3551.6310629333398,
+                660.6604610332762
+              ],
+              "to": [
+                3556.0360401822877,
+                663.9538142539695
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3742,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1847,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 1016,
+              "id": 57,
+              "from": [
+                3556.2695787373145,
+                687.7798671761965
+              ],
+              "to": [
+                3552.6180254873366,
+                691.2054782445588
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3097,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 52.55
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 4,
+          "failed": 1,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 983,
+              "id": 57,
+              "from": [
+                3558.3720675331842,
+                685.1239437288693
+              ],
+              "to": [
+                3555.044256601064,
+                689.0137632567353
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2392,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2945,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    },
+    "crowd": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [
+        "crowd_nav_v2"
+      ],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 1,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 482,
+              "id": 54,
+              "from": [
+                536.1619195377622,
+                3173.796515351901
+              ],
+              "to": [
+                538.4806550603558,
+                3168.8091848458826
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2492,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2431,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1086,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 39.75
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 196,
+              "id": 58,
+              "from": [
+                495.73566231028013,
+                3164.3779204262373
+              ],
+              "to": [
+                500.001951092484,
+                3167.849055691081
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3341,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 974,
+              "id": 54,
+              "from": [
+                535.0315353516208,
+                3178.961808560785
+              ],
+              "to": [
+                534.9980051051413,
+                3184.461706352796
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 990,
+              "id": 57,
+              "from": [
+                503.38144559558697,
+                3187.4353581819123
+              ],
+              "to": [
+                500.4890303488847,
+                3191.9188359810523
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3389,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 307,
+              "id": 55,
+              "from": [
+                537.8897289689539,
+                3189.5708093360636
+              ],
+              "to": [
+                535.3086979617815,
+                3184.7140327362995
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2644,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 2.9
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2212,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 46.95
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 236,
+              "id": 54,
+              "from": [
+                538.0109500884099,
+                3170.0643327482676
+              ],
+              "to": [
+                541.948250735292,
+                3166.2240640576597
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 693,
+              "id": 55,
+              "from": [
+                537.7699590611546,
+                3170.092393735988
+              ],
+              "to": [
+                541.4371403519567,
+                3166.6682721362095
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 275,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.35
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 5,
+          "failed": 1,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1227,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 50.8
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2088,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 5,
+          "failed": 1,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 728,
+              "id": 54,
+              "from": [
+                3593.7232315540255,
+                666.7312666627865
+              ],
+              "to": [
+                3596.9496788352712,
+                662.9840337930367
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 510,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.6
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 107,
+              "id": 58,
+              "from": [
+                3549.7813474224913,
+                659.9860164555192
+              ],
+              "to": [
+                3554.844264372382,
+                662.1347072100273
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 266,
+              "id": 57,
+              "from": [
+                3556.5583198923114,
+                687.5389390221054
+              ],
+              "to": [
+                3552.6660846828195,
+                690.7787687691819
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3095,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2494,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2240,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 51.6
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 164,
+              "id": 58,
+              "from": [
+                3551.6310629333398,
+                660.6604610332762
+              ],
+              "to": [
+                3556.0360401822877,
+                663.9538142539695
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3742,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1847,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 1016,
+              "id": 57,
+              "from": [
+                3556.2695787373145,
+                687.7798671761965
+              ],
+              "to": [
+                3552.6180254873366,
+                691.2054782445588
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3097,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 52.55
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 4,
+          "failed": 1,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 983,
+              "id": 57,
+              "from": [
+                3558.3720675331842,
+                685.1239437288693
+              ],
+              "to": [
+                3555.044256601064,
+                689.0137632567353
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2392,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2945,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    },
+    "smart": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [
+        "smart_route_v2"
+      ],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 1,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 482,
+              "id": 54,
+              "from": [
+                536.1619195377622,
+                3173.796515351901
+              ],
+              "to": [
+                538.4806550603558,
+                3168.8091848458826
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2492,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2431,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1086,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 39.75
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 196,
+              "id": 58,
+              "from": [
+                495.73566231028013,
+                3164.3779204262373
+              ],
+              "to": [
+                500.001951092484,
+                3167.849055691081
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3341,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 974,
+              "id": 54,
+              "from": [
+                535.0315353516208,
+                3178.961808560785
+              ],
+              "to": [
+                534.9980051051413,
+                3184.461706352796
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 990,
+              "id": 57,
+              "from": [
+                503.38144559558697,
+                3187.4353581819123
+              ],
+              "to": [
+                500.4890303488847,
+                3191.9188359810523
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3389,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 307,
+              "id": 55,
+              "from": [
+                537.8897289689539,
+                3189.5708093360636
+              ],
+              "to": [
+                535.3086979617815,
+                3184.7140327362995
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2644,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 2.9
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2212,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 46.95
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 236,
+              "id": 54,
+              "from": [
+                538.0109500884099,
+                3170.0643327482676
+              ],
+              "to": [
+                541.948250735292,
+                3166.2240640576597
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 693,
+              "id": 55,
+              "from": [
+                537.7699590611546,
+                3170.092393735988
+              ],
+              "to": [
+                541.4371403519567,
+                3166.6682721362095
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 275,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.35
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 225,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 206,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 16.3
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2088,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 5,
+          "failed": 1,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 728,
+              "id": 54,
+              "from": [
+                3593.7232315540255,
+                666.7312666627865
+              ],
+              "to": [
+                3596.9496788352712,
+                662.9840337930367
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 510,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.6
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 107,
+              "id": 58,
+              "from": [
+                3549.7813474224913,
+                659.9860164555192
+              ],
+              "to": [
+                3554.844264372382,
+                662.1347072100273
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 266,
+              "id": 57,
+              "from": [
+                3556.5583198923114,
+                687.5389390221054
+              ],
+              "to": [
+                3552.6660846828195,
+                690.7787687691819
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3095,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2494,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2240,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 51.6
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 164,
+              "id": 58,
+              "from": [
+                3551.6310629333398,
+                660.6604610332762
+              ],
+              "to": [
+                3556.0360401822877,
+                663.9538142539695
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3742,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1847,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 1016,
+              "id": 57,
+              "from": [
+                3556.2695787373145,
+                687.7798671761965
+              ],
+              "to": [
+                3552.6180254873366,
+                691.2054782445588
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3097,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 52.55
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 4,
+          "failed": 1,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 983,
+              "id": 57,
+              "from": [
+                3558.3720675331842,
+                685.1239437288693
+              ],
+              "to": [
+                3555.044256601064,
+                689.0137632567353
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2392,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 225,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2945,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    },
+    "obstacle": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [
+        "bot_obstacle_vision_v1"
+      ],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 1,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 482,
+              "id": 54,
+              "from": [
+                536.1619195377622,
+                3173.796515351901
+              ],
+              "to": [
+                538.4806550603558,
+                3168.8091848458826
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2492,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2431,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1086,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 39.75
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 4,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 196,
+              "id": 58,
+              "from": [
+                495.73566231028013,
+                3164.3779204262373
+              ],
+              "to": [
+                500.001951092484,
+                3167.849055691081
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3341,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 974,
+              "id": 54,
+              "from": [
+                535.0315353516208,
+                3178.961808560785
+              ],
+              "to": [
+                534.9980051051413,
+                3184.461706352796
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 990,
+              "id": 57,
+              "from": [
+                503.38144559558697,
+                3187.4353581819123
+              ],
+              "to": [
+                500.4890303488847,
+                3191.9188359810523
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3389,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 307,
+              "id": 55,
+              "from": [
+                537.8897289689539,
+                3189.5708093360636
+              ],
+              "to": [
+                535.3086979617815,
+                3184.7140327362995
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2644,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 2.9
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2212,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 46.95
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 236,
+              "id": 54,
+              "from": [
+                538.0109500884099,
+                3170.0643327482676
+              ],
+              "to": [
+                541.948250735292,
+                3166.2240640576597
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 693,
+              "id": 55,
+              "from": [
+                537.7699590611546,
+                3170.092393735988
+              ],
+              "to": [
+                541.4371403519567,
+                3166.6682721362095
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 275,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.35
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 225,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 206,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 16.3
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2088,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 5,
+          "failed": 1,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 728,
+              "id": 54,
+              "from": [
+                3593.7232315540255,
+                666.7312666627865
+              ],
+              "to": [
+                3596.9496788352712,
+                662.9840337930367
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 510,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 36.6
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 2,
+          "sweptExamples": [
+            {
+              "tick": 107,
+              "id": 58,
+              "from": [
+                3549.7813474224913,
+                659.9860164555192
+              ],
+              "to": [
+                3554.844264372382,
+                662.1347072100273
+              ],
+              "door": "open"
+            },
+            {
+              "tick": 266,
+              "id": 57,
+              "from": [
+                3556.5583198923114,
+                687.5389390221054
+              ],
+              "to": [
+                3552.6660846828195,
+                690.7787687691819
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3095,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2494,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2240,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 51.6
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 164,
+              "id": 58,
+              "from": [
+                3551.6310629333398,
+                660.6604610332762
+              ],
+              "to": [
+                3556.0360401822877,
+                663.9538142539695
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3742,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1847,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 1016,
+              "id": 57,
+              "from": [
+                3556.2695787373145,
+                687.7798671761965
+              ],
+              "to": [
+                3552.6180254873366,
+                691.2054782445588
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 3097,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 52.55
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 4,
+          "failed": 1,
+          "crossed": 5,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 983,
+              "id": 57,
+              "from": [
+                3558.3720675331842,
+                685.1239437288693
+              ],
+              "to": [
+                3555.044256601064,
+                689.0137632567353
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 2392,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 225,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 5,
+          "failed": 0,
+          "crossed": 4,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 2945,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 0,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    },
+    "visionCourtesy": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [
+        "vision_nav_policy_v1",
+        "door_courtesy_v1"
+      ],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 0,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 2,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1646,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 15,
+              "id": 54,
+              "from": [
+                535.0851121657582,
+                3182.3390275765782
+              ],
+              "to": [
+                535.0851121657582,
+                3176.853805628807
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 670,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 114,
+          "overlapFrames": 0,
+          "seconds": 48.6
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3581,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 15,
+              "id": 54,
+              "from": [
+                535.1606108330247,
+                3182.368305711557
+              ],
+              "to": [
+                535.0855863769516,
+                3176.868817432545
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1896,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 2,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1896,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 1,
+          "failed": 2,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3214095899625,
+                680.0207688034894
+              ],
+              "to": [
+                3590.8342512530135,
+                674.5423861265728
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3780371548937,
+                680.2127424715629
+              ],
+              "to": [
+                3590.8919403026775,
+                674.7342655070895
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3939974354007,
+                680.0926049862002
+              ],
+              "to": [
+                3590.910431076853,
+                674.6139040838985
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    },
+    "visionGroup": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [
+        "vision_nav_policy_v1",
+        "crowd_nav_v2",
+        "group_nav_3to5_v1",
+        "group_nav_pair_v1",
+        "door_courtesy_v1"
+      ],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 0,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 2,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1646,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 15,
+              "id": 54,
+              "from": [
+                535.0851121657582,
+                3182.3390275765782
+              ],
+              "to": [
+                535.0851121657582,
+                3176.853805628807
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 670,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 228,
+          "overlapFrames": 0,
+          "seconds": 48.6
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7162,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 15,
+              "id": 54,
+              "from": [
+                535.1606108330247,
+                3182.368305711557
+              ],
+              "to": [
+                535.0855863769516,
+                3176.868817432545
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1896,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 2,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1896,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 1,
+          "failed": 2,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3214095899625,
+                680.0207688034894
+              ],
+              "to": [
+                3590.8342512530135,
+                674.5423861265728
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3780371548937,
+                680.2127424715629
+              ],
+              "to": [
+                3590.8919403026775,
+                674.7342655070895
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3939974354007,
+                680.0926049862002
+              ],
+              "to": [
+                3590.910431076853,
+                674.6139040838985
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 7200,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    },
+    "courtesySmart": {
+      "method": "two opposing 3-person infantry columns, separate HQ scene, Game.step with other systems disabled and thinking frozen, no combat",
+      "flags": [
+        "door_courtesy_v1",
+        "smart_route_v2"
+      ],
+      "sharedGoal": false,
+      "scenes": 20,
+      "passed": 0,
+      "coverageComplete": false,
+      "results": [
+        {
+          "faction": 0,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 150,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 2,
+          "arrived": 2,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1646,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 3,
+          "arrived": 6,
+          "failed": 0,
+          "crossed": 6,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 15,
+              "id": 54,
+              "from": [
+                535.0851121657582,
+                3182.3390275765782
+              ],
+              "to": [
+                535.0851121657582,
+                3176.853805628807
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 670,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 114,
+          "overlapFrames": 0,
+          "seconds": 48.6
+        },
+        {
+          "faction": 0,
+          "seed": 4,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 830,
+          "courtesyYields": 3581,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 5,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 830,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 6,
+          "arrived": 1,
+          "failed": 2,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 15,
+              "id": 54,
+              "from": [
+                535.1606108330247,
+                3182.368305711557
+              ],
+              "to": [
+                535.0855863769516,
+                3176.868817432545
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 1909,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 7,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1896,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 12,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 8,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 916,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 9,
+          "arrived": 2,
+          "failed": 0,
+          "crossed": 2,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 1896,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 0,
+          "seed": 10,
+          "arrived": 1,
+          "failed": 2,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 1793,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 1,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3214095899625,
+                680.0207688034894
+              ],
+              "to": [
+                3590.8342512530135,
+                674.5423861265728
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 2,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 3,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 4,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 5,
+          "arrived": 2,
+          "failed": 1,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 6,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 7,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 9,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 8,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3780371548937,
+                680.2127424715629
+              ],
+              "to": [
+                3590.8919403026775,
+                674.7342655070895
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 9,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 1,
+          "sweptExamples": [
+            {
+              "tick": 33,
+              "id": 55,
+              "from": [
+                3591.3939974354007,
+                680.0926049862002
+              ],
+              "to": [
+                3590.910431076853,
+                674.6139040838985
+              ],
+              "door": "open"
+            }
+          ],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 9,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        },
+        {
+          "faction": 1,
+          "seed": 10,
+          "arrived": 3,
+          "failed": 0,
+          "crossed": 3,
+          "walls": 0,
+          "sweptWalls": 0,
+          "sweptExamples": [],
+          "speed": 0,
+          "changedGoalSamples": 0,
+          "crowdFrames": 0,
+          "pairFrames": 0,
+          "routeFrames": 0,
+          "courtesyYields": 3600,
+          "overlapFrames": 0,
+          "seconds": 60
+        }
+      ]
+    }
+  },
+  "caveats": [
+    "Fixed 3 vs 3 infantry, one HQ door, either close distinct goals or a common goal per side; no combat, vehicles or docks",
+    "Game.step freezes thinking and disables other subsystems; manual mode advances movement in a fixed order",
+    "Safety is sampled after each full tick; sweep is checked retrospectively against the current door state",
+    "Goal changes are counted as samples, not events; courtesy counts returned yield decisions, not successful passage",
+    "Per-algorithm comparisons share initial seed, but RNG streams can diverge after decisions change"
+  ]
+}

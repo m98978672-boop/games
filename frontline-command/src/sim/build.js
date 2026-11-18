@@ -639,7 +639,13 @@ export class BuildSystem {
 
   work(b, dt, engineer) {
     const game = this.game;
-    if (!b || b.built || b.dead || !Number.isFinite(dt) || dt <= 0) return;
+    // Construction is physical work, not a timer or a remote command.
+    // Validate here as well as at the AI/player call sites so stale targets,
+    // other factions and incapacitated or removed units cannot advance it.
+    if (!b || b.built || b.dead || !Number.isFinite(dt) || dt <= 0 ||
+        !engineer || game.units.get(engineer.id) !== engineer || !engineer.alive || engineer.downed ||
+        engineer.role !== 'engineer' || engineer.faction !== b.faction ||
+        !Number.isFinite(engineer.x) || !Number.isFinite(engineer.y) || dist(engineer.x, engineer.y, b.x, b.y) > 70) return;
     const stock = game.logistics.supply(b.faction);
     const materialCost = 0.55 * dt;
     // Сохраняем прежний минимальный запас для начала работы, но учитываем
