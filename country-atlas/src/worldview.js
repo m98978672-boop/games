@@ -16,15 +16,46 @@ export const WV = {
   markPx: 3.2,
   cityPx: 2.4,
   labelScale: 0.16,
-  countryLabelScale: 0.085,  // с этого масштаба подписываем страны
-  armyScale: 0.1
+  overviewPad: 26,           // поля обзора, px
+  fitPad: 18,                // поля вписывания континента по берегу, px
+  // F-368: подписи стран видны и на обзоре, и на телефоне (масштаб там ~0.015).
+  // Раньше порог 0.085 держал подписи только при приближении — карта была немой.
+  countryLabelScale: 0.008,
+  armyScale: 0.1,
+  gridKm: 2000,              // шаг сетки меридианов и параллелей
+  // F-357: палитра карты — море, суша и тона стран. Раньше всё было почти чёрным
+  ocean: ['#07141d', '#0e3247', '#1d5f79'],
+  land: '#5e6c48',
+  landOwn: '#7d8b5c',
+  tones: ['#5f7047', '#6f6c46', '#556b4e', '#7a6f47', '#5c7058', '#736a44', '#647449', '#57684b'],
+  capitalLabelScale: 0.05    // с этого масштаба подписываем столицы
 };
 
 /* F-301: масштаб, при котором в кадр влезает континент.
    span — диаметр обитаемой части мира (по побережью), а не сторона квадрата карты. */
-export function overviewScale(view, padPx = 40, spanKm = 23200) {
+export function overviewScale(view, padPx = WV.overviewPad, spanKm = 21400) {
   const w = Math.max(1, view.w), h = Math.max(1, view.h);
   return Math.min(w - padPx * 2, h - padPx * 2) / spanKm;
+}
+
+/* F-359: масштаб «континент целиком» — по берегу, а не по стороне квадрата карты.
+   Раньше берег был кругом 11 600 км и вписывался в кадр; с изрезанным берегом
+   нужен настоящий прямоугольник суши, иначе подписи у края срезаются. */
+export function landBox(world) {
+  const coast = world && world.coast;
+  if (!coast || !coast.length) return null;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const [x, y] of coast) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
+}
+
+export function fitLandScale(world, view, padPx = WV.fitPad) {
+  const box = landBox(world);
+  if (!box) return overviewScale(view);
+  return Math.min((Math.max(1, view.w) - padPx * 2) / box.w, (Math.max(1, view.h) - padPx * 2) / box.h);
 }
 
 export function clampViewScale(s) {
@@ -55,6 +86,36 @@ export function lerpCam(from, to, t) {
     // масштаб интерполируем по логарифму: иначе середина пути «прыгает»
     scale: Math.exp(Math.log(from.scale) + (Math.log(to.scale) - Math.log(from.scale)) * k)
   };
+}
+
+/* F-358: масштабная линейка. Круглое число километров, которое влезает в ~140 px. */
+export function drawScaleBar(ctx, view, cam, opts = {}) {
+  const steps = [100, 250, 500, 1000, 2000, 4000, 8000, 16000];
+  const target = Math.max(80, Math.min(170, view.w * 0.2));
+  const kmPerPx = 1 / cam.scale;
+  let km = steps[0];
+  for (const step of steps) if (step / kmPerPx <= target) km = step;
+  const barPx = km / kmPerPx;
+  const x = opts.x != null ? opts.x : 18;
+  const y = opts.y != null ? opts.y : view.h - 26;
+  ctx.save();
+  ctx.fillStyle = 'rgba(6,14,20,0.55)';
+  ctx.fillRect(x - 7, y - 17, barPx + 14, 27);
+  ctx.strokeStyle = 'rgba(232,240,232,0.9)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(x, y - 6); ctx.lineTo(x, y); ctx.lineTo(x + barPx, y); ctx.lineTo(x + barPx, y - 6);
+  ctx.moveTo(x + barPx / 2, y); ctx.lineTo(x + barPx / 2, y - 3);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(240,246,238,0.95)';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(km.toLocaleString('ru-RU') + ' км', x, y - 9);
+  // сколько пикселей на километр — число, по которому видно масштаб
+  ctx.fillStyle = 'rgba(178,196,204,0.9)';
+  ctx.fillText(cam.scale.toFixed(3) + ' px/км', x + barPx + 12, y - 1);
+  ctx.restore();
+  return { km, barPx };
 }
 
 export class WorldView {
@@ -102,7 +163,12 @@ export class WorldView {
   /* F-303: переход. Камера летит из игрового кадра в обзор мира, а базовый слой
      в это же время дорисовывается по проходам — анимация и есть загрузка. */
   open(fromCam = null, ms = WV.transitionMs) {
-    const to = { x: 0, y: 0, scale: overviewScale(this.view) };
+    const box = landBox(this.world);
+    const to = {
+      x: box ? box.x : 0,
+      y: box ? box.y : 0,
+      scale: fitLandScale(this.world, this.view)
+    };
     this.transition = fromCam
       ? { from: { x: fromCam.x, y: fromCam.y, scale: clampViewScale(fromCam.scale) }, to, t: 0, ms }
       : null;
@@ -144,7 +210,8 @@ export class WorldView {
     return c;
   }
 
-  /* Один проход базового слоя. Пасс 0: океан, страны, границы. Пасс 1: отметки рельефа. */
+  /* Один проход базового слоя. Пасс 0: море, суша, страны и берег.
+     Пасс 1: отметки рельефа и границы — как на бумажной карте. */
   paintBasePass(pass) {
     if (!this.world) return;
     const size = WV.baseSize;
@@ -152,38 +219,127 @@ export class WorldView {
     const ctx = this.baseCtx;
     const k = size / this.world.sizeKm;
     const toPx = (x) => (x + this.world.sizeKm / 2) * k;
+    const coast = this.world.coast || [];
+    const coastPath = () => {
+      ctx.beginPath();
+      coast.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
+      ctx.closePath();
+    };
     if (pass === 0) {
-      ctx.fillStyle = '#0b1a26';
+      // F-357: море — глубина растёт к краю: у берега светлее, в океане темнее
+      const g = ctx.createRadialGradient(size / 2, size / 2, size * 0.16, size / 2, size / 2, size * 0.66);
+      g.addColorStop(0, WV.ocean[2]);
+      g.addColorStop(0.5, WV.ocean[1]);
+      g.addColorStop(1, WV.ocean[0]);
+      ctx.fillStyle = g;
       ctx.fillRect(0, 0, size, size);
-      // суша: страны заливаются своим тоном, наша — светлее
+      // сетка: меридианы и параллели через 2000 км, экватор чуть светлее
+      const step = WV.gridKm * k;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(150,200,220,0.07)';
+      for (let x = 0; x <= size + 0.5; x += step) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
+      }
+      for (let y = 0; y <= size + 0.5; y += step) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+      }
+      if (coast.length) {
+        // тень под континентом — суша читается как суша, а не как пятно
+        ctx.save();
+        ctx.translate(size * 0.004, size * 0.006);
+        coastPath();
+        ctx.fillStyle = 'rgba(3,9,13,0.55)';
+        ctx.fill();
+        ctx.restore();
+        // отмель: три кольца вокруг берега, снаружи суши
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, size, size);
+        coast.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
+        ctx.closePath();
+        ctx.clip('evenodd');
+        for (const [w, a] of [[34, 0.06], [20, 0.09], [9, 0.14]]) {
+          coastPath();
+          ctx.strokeStyle = 'rgba(126,196,220,' + a + ')';
+          ctx.lineWidth = w;
+          ctx.stroke();
+        }
+        ctx.restore();
+        // сама суша
+        coastPath();
+        ctx.fillStyle = WV.land;
+        ctx.fill();
+      }
+      // страны: приглушённый политический тон поверх суши, своя — светлее.
+      // F-363: тон и границы режем по берегу — даже если ячейка страны вышла
+      // за контур континента, на воде не остаётся ни пятна, ни линии.
+      if (coast.length) { ctx.save(); coastPath(); ctx.clip(); }
       for (const ctry of this.world.countries) {
         ctx.beginPath();
         ctry.poly.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
         ctx.closePath();
-        ctx.fillStyle = ctry.own ? '#55633f' : shadeFor(ctry);
+        ctx.fillStyle = ctry.own ? 'rgba(158,172,112,0.75)' : hexToRgba(shadeFor(ctry), 0.5);
         ctx.fill();
-        ctx.strokeStyle = ctry.own ? 'rgba(240,244,246,0.9)' : 'rgba(20,30,36,0.55)';
-        ctx.lineWidth = ctry.own ? 2.2 : 1.1;
+      }
+      if (coast.length) ctx.restore();
+      if (coast.length) {
+        // F-366: климат по широте — у полюсов суша холоднее (тундра), у экватора
+        // суше (степь и пустыня). Один градиент поверх суши, но континент перестаёт
+        // быть одноцветным блином.
+        ctx.save();
+        coastPath();
+        ctx.clip();
+        const half = this.world.sizeKm / 2;
+        const clim = ctx.createLinearGradient(0, toPx(-half), 0, toPx(half));
+        clim.addColorStop(0, 'rgba(126,148,152,0.34)');
+        clim.addColorStop(0.22, 'rgba(120,136,120,0.12)');
+        clim.addColorStop(0.5, 'rgba(198,176,116,0.2)');
+        clim.addColorStop(0.78, 'rgba(120,136,120,0.12)');
+        clim.addColorStop(1, 'rgba(126,148,152,0.34)');
+        ctx.fillStyle = clim;
+        ctx.fillRect(0, 0, size, size);
+        // мягкая тень у самого берега: суша «встаёт» над водой
+        coastPath();
+        ctx.strokeStyle = 'rgba(8,16,20,0.22)';
+        ctx.lineWidth = 16;
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (coast.length) {
+        // берег: светлая линия и мягкая «пена» внутри
+        coastPath();
+        ctx.strokeStyle = 'rgba(232,240,224,0.55)';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        coastPath();
+        ctx.strokeStyle = 'rgba(214,228,196,0.12)';
+        ctx.lineWidth = 7;
         ctx.stroke();
       }
       return;
     }
     // пасс 1: отметки рельефа значками, как на настоящих картах
     const marks = this.world.marks;
+    // F-360: отметок много, а базовый слой уменьшается до кадра — значки выходят
+    // «пылью». Берём каждую вторую и рисуем крупнее: читается как рельеф.
     for (let i = 0; i < marks.length; i += 3) {
+      if (((i / 3) | 0) % 2) continue;
       const x = toPx(marks[i]), y = toPx(marks[i + 1]);
       const type = ['forest', 'swamp', 'mountain', 'steppe', 'desert', 'tundra'][marks[i + 2]] || 'forest';
-      drawMark(ctx, x, y, type, 0.9);
+      drawMark(ctx, x, y, type, 2.1);
     }
-    // границы поверх отметок, чтобы линии читались
+    // границы поверх отметок, чтобы линии читались; тоже только по суше
+    const clipToLand = coast.length > 0;
+    if (clipToLand) { ctx.save(); coastPath(); ctx.clip(); }
     for (const ctry of this.world.countries) {
       ctx.beginPath();
       ctry.poly.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
       ctx.closePath();
-      ctx.strokeStyle = ctry.own ? 'rgba(240,244,246,0.9)' : 'rgba(12,18,24,0.5)';
-      ctx.lineWidth = ctry.own ? 2.2 : 1;
+      ctx.strokeStyle = ctry.own ? 'rgba(246,250,240,0.9)' : 'rgba(14,20,24,0.5)';
+      ctx.lineWidth = ctry.own ? 2 : 1;
       ctx.stroke();
     }
+    if (clipToLand) ctx.restore();
   }
 
   draw() {
@@ -192,7 +348,8 @@ export class WorldView {
     const world = this.world;
     ctx.save();
     ctx.globalAlpha = this.alpha;
-    ctx.fillStyle = '#08131c';
+    // F-367: за краем базового квадрата — тот же океан, а не чёрная полоса
+    ctx.fillStyle = WV.ocean[0];
     ctx.fillRect(0, 0, view.w, view.h);
     if (!world) { ctx.restore(); return this; }
 
@@ -280,17 +437,48 @@ export class WorldView {
       }
     }
 
-    // подпись своей страны: контур и имя, чтобы не потерялась
+    // F-356: подписи стран. Раньше на обзоре карта была немой: подписи включались
+    // только при приближении и висели в слое подробностей.
+    if (this.labels && cam.scale >= WV.countryLabelScale) {
+      const px = Math.max(9, Math.min(13, 9 + (cam.scale - WV.countryLabelScale) * 30));
+      ctx.font = '600 ' + px.toFixed(1) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // F-356: подписи не наезжают друг на друга — ставим по одной, своя страна первой
+      const placed = [];
+      const order = [world.own, ...world.countries.filter((c) => !c.own)];
+      for (const ctry of order) {
+        if (!ctry) continue;
+        const s3 = p(ctry.capital.x, ctry.capital.y);
+        if (s3.x < -60 || s3.y < -20 || s3.x > view.w + 60 || s3.y > view.h + 20) continue;
+        const name = ctry.name.toUpperCase();
+        const wide = ctx.measureText ? ctx.measureText(name).width : name.length * px * 0.6;
+        const box = { x: s3.x - wide / 2, y: s3.y - px * 1.6 - px * 0.7, w: wide, h: px * 1.4 };
+        if (placed.some((r) => Math.abs(r.y - box.y) < px * 1.5 && Math.abs(r.x + r.w / 2 - (box.x + box.w / 2)) < (r.w + box.w) / 2 + 8)) continue;
+        placed.push(box);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(6,14,20,0.72)';
+        ctx.strokeText(name, s3.x, box.y + box.h / 2);
+        ctx.fillStyle = ctry.own ? 'rgba(248,252,240,0.98)' : 'rgba(226,236,222,0.85)';
+        ctx.fillText(name, s3.x, box.y + box.h / 2);
+      }
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+    }
+    // своя страна: маленький крестик-столица, чтобы не терялась среди подписей
     const own = world.own;
     if (own && cam.scale < WV.labelScale * 2) {
       const s3 = p(0, 0);
-      ctx.strokeStyle = 'rgba(240,244,246,0.55)';
+      ctx.strokeStyle = 'rgba(240,244,246,0.75)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(s3.x - 4, s3.y - 4, 8, 8);
-      ctx.fillStyle = 'rgba(240,244,246,0.92)';
-      ctx.font = '12px sans-serif';
-      ctx.fillText(own.name, s3.x + 8, s3.y - 6);
+      ctx.beginPath();
+      ctx.moveTo(s3.x - 5, s3.y); ctx.lineTo(s3.x + 5, s3.y);
+      ctx.moveTo(s3.x, s3.y - 5); ctx.lineTo(s3.x, s3.y + 5);
+      ctx.stroke();
     }
+
+    // F-358: линейка масштаба и числа мира — по ним видно, что это карта, а не картинка
+    drawScaleBar(ctx, view, cam);
     ctx.restore();
     this.frames++;
     this.lastDrawMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
@@ -336,6 +524,19 @@ export class WorldView {
     const x0 = (-ox - pad) / k, x1 = (view.w - ox + pad) / k;
     const y0 = (-oy - pad) / k, y1 = (view.h - oy + pad) / k;
     ctx.lineCap = 'butt';
+    // F-364: дороги есть только на суше. Раньше редкая дорога между двумя
+    // прибрежными городками шла по прямой через залив — линия уходила в море
+    // и даже за кадр. Режем дороги по берегу.
+    const coast = world.coast;
+    let landClip = false;
+    if (coast && coast.length) {
+      ctx.save();
+      ctx.beginPath();
+      coast.forEach(([x, y], i) => (i ? ctx.lineTo(x * k + ox, y * k + oy) : ctx.moveTo(x * k + ox, y * k + oy)));
+      ctx.closePath();
+      ctx.clip();
+      landClip = true;
+    }
     for (const r of world.roads) {
       if (Math.max(r.x1, r.x2) < x0 || Math.min(r.x1, r.x2) > x1) continue;
       if (Math.max(r.y1, r.y2) < y0 || Math.min(r.y1, r.y2) > y1) continue;
@@ -350,6 +551,7 @@ export class WorldView {
       ctx.stroke();
     }
     ctx.setLineDash([]);
+    if (landClip) { ctx.restore(); landClip = false; }
     // разрушенные мосты: короткая перечёркнутая перемычка на середине дороги
     for (const id of world.destroyed.bridges) {
       const r = world.roads.find((k) => k.id === id);
@@ -386,16 +588,8 @@ export class WorldView {
         ctx.fillText(city.name, sx + 6, sy + 4);
       }
     }
-    if (countryLabels) {
-      ctx.font = '10px sans-serif';
-      for (const ctry of world.countries) {
-        if (ctry.own) continue;
-        const sx = ctry.capital.x * k + ox, sy = ctry.capital.y * k + oy;
-        if (sx < -60 || sy < -20 || sx > view.w + 60 || sy > view.h + 20) continue;
-        ctx.fillStyle = 'rgba(232,238,244,0.55)';
-        ctx.fillText(ctry.name.toUpperCase(), sx + 4, sy - 8);
-      }
-    }
+    // F-356: подписи стран живут в draw(), чтобы не дублироваться в слое подробностей
+    void countryLabels;
     this.detailCam = { x: cam.x, y: cam.y, scale: cam.scale };
     this.detailRev = world.rev || 0;
     this.rebuilds++;
@@ -483,8 +677,14 @@ export function drawMark(ctx, x, y, type, k = 1) {
 
 function shadeFor(country) {
   const seed = country.id.charCodeAt(1) * 31 + country.id.length * 7;
-  const tones = ['#39443a', '#41463a', '#3a463f', '#464a3c', '#38453c', '#433f36'];
-  return tones[seed % tones.length];
+  return WV.tones[seed % WV.tones.length];
+}
+
+/* '#616f4b' + прозрачность → 'rgba(97,111,75,a)' */
+function hexToRgba(hex, alpha) {
+  const h = String(hex).replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
 }
 
 export function isOwnPoint(world, x, y) {
