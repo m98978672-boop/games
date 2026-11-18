@@ -147,6 +147,56 @@ for (const file of registry.engineCore || []) {
 const siteHtml = read('site/index.html');
 ok(!/ratcore\/src\//.test(siteHtml), 'витрина не тянет внутренние модули движка напрямую (только бандл)');
 
+// ---------------------------------------------------------------- 8. Тема не ломает чужие вёрстки
+// Полный shared/theme.css содержит правила для элементов и классов
+// (`.topbar{position:fixed}`, `.panel{position:fixed;padding}`, `.brand`,
+// `.btn`, `.toast`, `*{margin:0;padding:0}`). Если подключить его к разделу
+// со своей вёрсткой, эти правила протекают в чужой HUD и ломают вид.
+// Поэтому: theme.css — только игры-шаблоны по HUD-скелету (белый список),
+// все остальные берут только токены, а правила темы не должны
+// переопределять одноимённые классы разделов.
+const HUD_SKELETON = new Set(['1in8b', 'frontline-command', 'game-base', 'truck-showroom']);
+const themeCss = read('shared/theme.css');
+const tokensCss = read('shared/tokens.css');
+
+ok(/@import url\("\.\/tokens\.css"\)/.test(themeCss), 'theme.css подключает tokens.css — палитра в одном месте');
+ok(!/:root\s*\{/.test(themeCss), 'в theme.css нет собственного :root (токены только в tokens.css)');
+const tokensRules = [...tokensCss.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{/g)]
+  .map((m) => m[1].trim())
+  .filter((sel) => sel && !sel.startsWith('@') && !sel.includes(':root'));
+ok(tokensRules.length === 0,
+  'tokens.css содержит только переменные, ни одного правила для классов/элементов' +
+  (tokensRules.length ? ' — лишние селекторы: ' + tokensRules.join(' ') : ''));
+
+const sectionsWithCss = [];
+for (const entry of readdirSync(ROOT)) {
+  if (!statSync(join(ROOT, entry)).isDirectory()) continue;
+  for (const cssName of ['style.css', 'styles.css']) {
+    if (existsSync(join(ROOT, entry, cssName))) sectionsWithCss.push({ section: entry, cssName });
+  }
+}
+for (const { section, cssName } of sectionsWithCss) {
+  const css = read(join(section, cssName));
+  const usesTheme = /@import url\("\.\.\/shared\/theme\.css"\)/.test(css);
+  const usesTokens = /@import url\("\.\.\/shared\/tokens\.css"\)/.test(css);
+  if (usesTheme) {
+    ok(HUD_SKELETON.has(section),
+      `${section}: полный theme.css разрешён только играм-шаблонам HUD (сейчас — ${HUD_SKELETON.has(section) ? 'шаблон' : 'своя вёрстка → нужен tokens.css'})`);
+  } else if (usesTokens) {
+    ok(true, `${section}: берёт только токены — своя вёрстка не ломается`);
+    // правило-импорт должно быть первым: иначе браузер его отбросит
+    const firstCode = css.replace(/^\s*(\/\*[\s\S]*?\*\/\s*)*/, '');
+    ok(firstCode.startsWith('@import url("../shared/tokens.css")'),
+      `${section}: @import токенов стоит первой строкой (иначе браузер его игнорирует)`);
+  }
+}
+
+// Ни один раздел со своей вёрсткой не должен определять через тему
+// позиционирование, которого у него нет: проверяем, что после разделения
+// theme.css больше не задаёт position:fixed глобально для .topbar/.panel
+const fixedTopbar = /\.topbar\s*\{[^}]*position:\s*fixed/.test(themeCss);
+ok(fixedTopbar, 'theme.css по-прежнему даёт HUD-скелет (.topbar fixed) — шаблонные игры работают как раньше');
+
 if (failed) {
   console.error(`\n✗ Провалено проверок: ${failed}`);
   process.exit(1);
