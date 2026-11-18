@@ -29,7 +29,12 @@ ok('стран столько, сколько в настройках', world.co
 ok('наша страна ровно одна', world.countries.filter((c) => c.own).length === 1);
 const own = world.own;
 ok('наша страна та же, что в world.own', own && own.id === world.countries.find((c) => c.own).id);
-near('наша страна — площадь 7000 × 7000 км', Math.sqrt(polygonArea(own.poly)), WM.ownKm, 320, );
+// §95: мир стал планетой из пяти материков, и наша страна — не весь материк,
+// а своя доля на самом большом: примерно 1300 × 1900 км (12 млн км²)
+ok('наша страна — большая, но не весь мир', (() => {
+  const a = polygonArea(own.poly) / 1e6;
+  return a > 4 && a < 30;
+})(), Math.round(polygonArea(own.poly) / 1e6) + ' млн км²');
 ok('наша страна — шестиугольная ячейка, а не остров', own.poly.length >= 5 && own.poly.length <= 12, own.poly.length);
 ok('сторона мира 24000 км', world.sizeKm === WM.sizeKm);
 ok('городов 7…15 на страну (включая пограничные)', world.countries.every((c) => (c.cities || []).length >= WM.citiesPer[0] && (c.cities || []).length <= WM.citiesPer[1] + 2),
@@ -56,8 +61,11 @@ ok('отметки рельефа — Float32Array', world.marks instanceof Floa
 ok('отметки — точки по три числа', world.marks.length % 3 === 0 && world.marks.length > 900, world.marks.length);
 ok('отметок не больше, чем сеяли (часть ушла в море)', world.marks.length <= WM.marksPer * 3, world.marks.length);
 ok('все отметки на суше', (() => {
-  const coast = world.coast;
-  for (let i = 0; i < world.marks.length; i += 3) if (!pointInPolygon(world.marks[i], world.marks[i + 1], coast)) return false;
+  // §95: суши теперь пять материков — отметка годится, если легла на любой из них
+  const lands = world.lands;
+  for (let i = 0; i < world.marks.length; i += 3) {
+    if (!lands.some((l) => pointInPolygon(world.marks[i], world.marks[i + 1], l.poly))) return false;
+  }
   return true;
 })());
 const markTypes = new Set();
@@ -78,7 +86,7 @@ ok('центр своей страны внутри', pointInPolygon(0, 0, own.p
 ok('далеко за границей — снаружи', !pointInPolygon(11000, 11000, own.poly));
 ok('далеко за границей — не наша страна', (countryAt(world, 11000, 11000) || {}).own !== true);
 ok('в центре — наша страна', countryAt(world, 0, 0).own === true);
-ok('area квадрата 7000² близка к 49 млн', Math.abs(polygonArea(own.poly) - 7000 * 7000) / (7000 * 7000) < 0.14, Math.round(polygonArea(own.poly)));
+ok('площадь нашей страны разумна', polygonArea(own.poly) > 4e6 && polygonArea(own.poly) < 30e6, Math.round(polygonArea(own.poly) / 1e6) + ' млн км²');
 ok('площадь положительная у всех стран', world.countries.every((c) => polygonArea(c.poly) > 1e6));
 const sl = sitesFor(WM.countries, 424242);
 ok('точек-семян столько же, сколько стран', sl.length === WM.countries, sl.length);
@@ -93,10 +101,10 @@ ok('ячейки покрывают континент без перекрыти
   return Math.abs(sum - coast) / coast < 0.02;
 })(), '');
 ok('столица каждой страны внутри своей ячейки', world.countries.every((c) => pointInPolygon(c.capital.x, c.capital.y, c.poly)));
-ok('центр страны — самая просторная точка', world.countries.every((c) => {
+ok('столица стоит в самой просторной точке страны', world.countries.filter((c) => !c.own).every((c) => {
   const pole = poleOfInaccessibility(c.poly);
   return Math.abs(pole.r - c.radiusKm / 0.95) < 30;
-}), '');
+}), 'своя столица закреплена в центре мира отдельно');
 ok('радиус страны — расстояние до границы', world.countries.every((c) => Math.abs(cellRadius(c.poly, c.capital) * 0.95 - c.radiusKm) < 1));
 const borderDist = Math.max(...world.countries.flatMap((c) => c.cities.filter((k) => k.border).map((k) => cellRadius(c.poly, k))));
 ok('пограничные городки стоят у границы', borderDist < 300, Math.round(borderDist));
@@ -104,7 +112,7 @@ ok('пограничный городок ближе к границе, чем �
   .every((k) => cellRadius(c.poly, k) < c.radiusKm)));
 const pairs = world.pairs;
 ok('у стран есть соседи по границе', pairs.length > 10, pairs.length);
-ok('у нашей страны шесть соседей', pairs.filter((p) => p.a === 'own' || p.b === 'own').length === 6,
+ok('у нашей страны есть соседи по материку', pairs.filter((p) => p.a === 'own' || p.b === 'own').length >= 3,
   pairs.filter((p) => p.a === 'own' || p.b === 'own').length);
 ok('соседство симметрично и без самопар', pairs.every((p) => p.a !== p.b && pairs.filter((q) => q.a === p.a && q.b === p.b).length === 1));
 ok('соседи граничат, а не «рядом»', pairs.every((p) => p.km <= 130), Math.max(...pairs.map((p) => p.km)));
@@ -120,7 +128,8 @@ ok('расстояние до отрезка на самом отрезке ~0',
 near('расстояние до отрезка сбоку', segmentDistance(5, 3, 0, 0, 10, 0), 3, 1e-9);
 near('расстояние до конца отрезка', segmentDistance(-4, 3, 0, 0, 10, 0), 5, 1e-9);
 ok('дороги не короче 40 км', world.roads.every((r) => Math.hypot(r.x2 - r.x1, r.y2 - r.y1) > 40), Math.round(Math.min(...world.roads.map((r) => Math.hypot(r.x2 - r.x1, r.y2 - r.y1)))));
-ok('главные дороги длиннее 200 км', world.roads.filter((r) => r.kind === 'main').every((r) => Math.hypot(r.x2 - r.x1, r.y2 - r.y1) > 200));
+// §95: на маленьких материках страны меньше, и дороги в них короче — но не «точки»
+ok('главные дороги заметной длины', world.roads.filter((r) => r.kind === 'main').every((r) => Math.hypot(r.x2 - r.x1, r.y2 - r.y1) > 120));
 ok('все дороги внутри мира', world.roads.every((r) => Math.abs(r.x1) <= WM.sizeKm / 2 && Math.abs(r.x2) <= WM.sizeKm / 2));
 ok('международных дорог меньше, чем местных', world.roads.filter((r) => r.kind === 'international').length <= world.roads.filter((r) => r.kind === 'local').length);
 ok('координаты городов — числа', world.cities.every((c) => Number.isFinite(c.x) && Number.isFinite(c.y)));
@@ -393,7 +402,7 @@ ok('-61 — вражда', relationLevel(-61).id === 'enmity');
 ok('у всех уровней есть русское имя', DIPLO.levels.every((l) => l.name.length > 3 && !/§/.test(l.name)));
 const contacts = contactsOf(w7, 'own');
 ok('у нашей страны 17 контактов', contacts.length === WM.countries - 1, contacts.length);
-ok('шесть из них — соседи', contacts.filter((c) => c.neighbour).length === 6, contacts.filter((c) => c.neighbour).length);
+ok('все соседи помечены в контактах', contacts.filter((c) => c.neighbour).length === w7.pairs.filter((p) => p.a === 'own' || p.b === 'own').length, contacts.filter((c) => c.neighbour).length);
 ok('контакты отсортированы от тёплых к холодным', contacts.every((c, i) => i === 0 || contacts[i - 1].score >= c.score));
 ok('каждый сосед есть в списке', w7.pairs.filter((p) => p.a === 'own' || p.b === 'own')
   .every((p) => contacts.some((c) => c.id === (p.a === 'own' ? p.b : p.a))));

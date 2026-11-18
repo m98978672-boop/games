@@ -1,13 +1,15 @@
-/* §93: вид карты мира — берег, вписывание, кадр, подписи и цена.
-   Группы: берег, вписывание, кадр, подписи и линейка, цена кадра.
+/* §93–§95: вид карты мира — планета из материков, вписывание, кадр, подписи и цена.
+   Группы: планета, вписывание, кадр, подписи и линейка, цена кадра, мир вокруг.
    Каждая группа — не меньше двадцати проверяемых значений. */
 import { createCanvas } from '@napi-rs/canvas';
 import {
   buildWorld, advanceWars, coastPolygon, landMarks, pointInPolygon, WM, buildMarks
 } from '../src/worldmap2d.js';
 import {
-  WV, WorldView, landBox, fitLandScale, ownOverview, drawMapLegend, overviewScale, drawScaleBar, clampViewScale
+  WV, WorldView, landBox, fitLandScale, ownOverview, drawMapLegend, overviewScale, drawScaleBar,
+  clampViewScale, planetBox, detailOffset, drawGraticule, drawCompass
 } from '../src/worldview.js';
+import { geoOf as geoDeg, formatLat, formatLon } from '../src/planet2d.js';
 
 let pass = 0, fail = 0;
 const ok = (name, cond, extra = '') => {
@@ -29,58 +31,57 @@ for (let t = 0; t < 60 * 24 * 4; t += 45) advanceWars(world, 9000 + t);
 const coast = world.coast;
 const radiusOf = ([x, y]) => Math.hypot(x, y);
 
-/* ——— 1. берег ——— */
-group('берег');
-ok('берег есть и он не пустой', Array.isArray(coast) && coast.length >= 72, coast.length);
-ok('берег из 180 точек', coast.length === 180, coast.length);
-ok('берег состоит из пар чисел', coast.every((p) => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1])));
-const radii = coast.map(radiusOf);
-const rMin = Math.min(...radii), rMax = Math.max(...radii);
-ok('берег не круг: радиус гуляет больше чем на 10 %', (rMax - rMin) / rMax > 0.1, ((rMax - rMin) / rMax).toFixed(3));
-ok('самый дальний мыс дальше 14 000 км', rMax > 14000, Math.round(rMax));
-ok('самый глубокий залив не ближе 11 000 км', rMin > 11000, Math.round(rMin));
-ok('берег целиком внутри квадрата карты', rMax < world.sizeKm / 2, Math.round(rMax) + ' < ' + world.sizeKm / 2);
-ok('квадрат карты расширен под океан и острова', world.sizeKm === 40000, world.sizeKm);
-ok('средний радиус близок к 11 600 км', Math.abs(radii.reduce((a, b) => a + b, 0) / radii.length - 13300) < 2000);
-// звезда: углы точек строго растут, значит берег простой и не самопересекается
-ok('берег — простая замкнутая линия', (() => {
-  // у звездообразного берега каждый следующий угол строго больше на шаг сетки
-  const step = (Math.PI * 2) / coast.length;
-  for (let i = 0; i < coast.length; i++) {
-    const a1 = Math.atan2(coast[i][1], coast[i][0]);
-    const a2 = Math.atan2(coast[(i + 1) % coast.length][1], coast[(i + 1) % coast.length][0]);
-    let d = a2 - a1;
-    while (d <= 0) d += Math.PI * 2;
-    if (Math.abs(d - step) > 1e-6) return false;
+/* ——— 1. планета: несколько материков ——— */
+group('планета');
+const lands = world.lands;
+const onAnyLand = (x, y) => lands.some((l) => pointInPolygon(x, y, l.poly));
+ok('материков пять, а не один', Array.isArray(lands) && lands.length === 5, lands && lands.length);
+ok('у каждого материка есть имя и берег', lands.every((l) => typeof l.name === 'string' && l.name.length > 2 && Array.isArray(l.poly)));
+ok('берег каждого материка — 240 точек', lands.every((l) => l.poly.length === 240), lands.map((l) => l.poly.length).join(','));
+ok('берег из пар чисел', lands.every((l) => l.poly.every((q) => Array.isArray(q) && q.length === 2 && Number.isFinite(q[0]) && Number.isFinite(q[1]))));
+ok('берег не круг: радиус гуляет больше чем на 10 %', lands.every((l) => {
+  const r = l.poly.map(radiusOf);
+  return (Math.max(...r) - Math.min(...r)) / Math.max(...r) > 0.1;
+}));
+ok('наш материк самый большой', lands[0].rKm > Math.max(...lands.slice(1).map((l) => l.rKm)), Math.round(lands[0].rKm));
+ok('центр мира лежит на нашем материке', pointInPolygon(0, 0, lands[0].poly));
+ok('материки внутри карты', lands.every((l) => l.poly.every(([x, y]) => Math.abs(x) < world.sizeKm / 2 && Math.abs(y) < world.sizeKm / 2)));
+ok('материки не залезают в полярные льды', (() => {
+  const ice = Math.min(...world.caps[0].poly.map((q) => Math.abs(q[1])));
+  return lands.every((l) => Math.max(...l.poly.map(([x, y]) => Math.hypot(x, y))) < ice);
+})());
+ok('материки не налезают друг на друга', (() => {
+  for (let i = 0; i < lands.length; i++) {
+    for (let j = 0; j < lands.length; j++) {
+      if (i === j) continue;
+      if (lands[j].poly.some(([x, y]) => pointInPolygon(x, y, lands[i].poly))) return false;
+    }
   }
   return true;
 })());
-ok('длина берега больше длины окружности того же радиуса', (() => {
-  let len = 0;
-  for (let i = 0; i < coast.length; i++) {
-    const a = coast[i], b = coast[(i + 1) % coast.length];
-    len += Math.hypot(a[0] - b[0], a[1] - b[1]);
-  }
-  const circle = 2 * Math.PI * (radii.reduce((x, y) => x + y, 0) / radii.length);
-  return len > circle * 1.02;
-})());
-ok('центр мира внутри берега', pointInPolygon(0, 0, coast));
-ok('угол карты снаружи берега', !pointInPolygon(world.sizeKm / 2 - 10, world.sizeKm / 2 - 10, coast));
-ok('все столицы внутри берега', world.countries.every((c) => pointInPolygon(c.capital.x, c.capital.y, coast)));
-ok('все города внутри берега', world.cities.every((c) => pointInPolygon(c.x, c.y, coast)));
-ok('ни одна дорога не начинается в море', world.roads.every((r) => pointInPolygon(r.x1, r.y1, coast) && pointInPolygon(r.x2, r.y2, coast)));
-ok('все армии на суше', world.armies.every((a) => pointInPolygon(a.x, a.y, coast)));
+ok('страны живут на материках', world.countries.every((c) => lands.some((l) => l.id === c.land)));
+ok('на каждом материке есть хотя бы одна страна', lands.every((l) => world.countries.some((c) => c.land === l.id)),
+  lands.map((l) => world.countries.filter((c) => c.land === l.id).length).join(','));
+ok('все столицы на суше', world.countries.every((c) => onAnyLand(c.capital.x, c.capital.y)));
+ok('все города на суше', world.cities.every((c) => onAnyLand(c.x, c.y)));
+ok('ни одна дорога не идёт по морю', world.roads.every((r) => onAnyLand(r.x1, r.y1) && onAnyLand(r.x2, r.y2)));
+ok('все армии на суше', world.armies.every((a) => onAnyLand(a.x, a.y)));
 ok('рельеф только на суше', (() => {
-  for (let i = 0; i < world.marks.length; i += 3) if (!pointInPolygon(world.marks[i], world.marks[i + 1], coast)) return false;
+  for (let i = 0; i < world.marks.length; i += 3) if (!onAnyLand(world.marks[i], world.marks[i + 1])) return false;
   return true;
 })());
-ok('рельефа хватает на всю сушу', world.marks.length / 3 > 200, world.marks.length / 3);
-ok('фильтр рельефа детерминирован', landMarks(buildMarks(424242), coast).length === world.marks.length);
-const sameCoast = coastPolygon();
-ok('берег считается одинаково при повторном вызове', sameCoast.length === coast.length && Math.abs(radiusOf(sameCoast[7]) - radiusOf(coast[7])) < 1e-9);
-ok('берег континента не зависит от seed', (() => {
-  const a = coastPolygon(); const b = coastPolygon(11600, 180);
-  return a.every((p, i) => Math.abs(p[0] - b[i][0]) < 1e-9 && Math.abs(p[1] - b[i][1]) < 1e-9);
+ok('рельефа хватает на всю сушу', world.marks.length / 3 > 250, world.marks.length / 3);
+ok('острова не на материках', world.islands.every((i) => i.poly.every(([x, y]) => !onAnyLand(x, y))));
+ok('подписи океана стоят на воде', world.oceans.length >= 2 && world.oceans.every((o) => !onAnyLand(o.x, o.y)), world.oceans.length);
+ok('планета повторяется от сида', (() => {
+  const again = buildWorld(424242);
+  return again.lands.length === world.lands.length
+    && again.lands[1].poly[5][0] === lands[1].poly[5][0]
+    && again.countries.length === world.countries.length;
+})());
+ok('другой сид — другая планета', (() => {
+  const other = buildWorld(777);
+  return Math.abs(other.lands[1].poly[5][0] - lands[1].poly[5][0]) > 1;
 })());
 
 /* ——— 2. вписывание ——— */
@@ -107,7 +108,17 @@ ok('каждый мыс попадает в кадр с полем', coast.every
   const sy = wide.h / 2 + (y - box.y) * sWide;
   return sx > 0 && sy > 0 && sx < wide.w && sy < wide.h;
 }));
-ok('обзор для квадрата остаётся отдельным масштабом', overviewScale(wide) > sWide, overviewScale(wide).toFixed(4) + ' vs ' + sWide.toFixed(4));
+// §95: обзор мира — вся планета, поэтому он шире, чем вписывание одного материка
+ok('обзор планеты шире вписывания своего материка', ownScale < sWide, ownScale.toFixed(4) + ' < ' + sWide.toFixed(4));
+ok('обзор планеты видит все материки', (() => {
+  const pb = planetBox(world);
+  const k = ownOverview(world, wide).scale;
+  const cx = world.own.capital.x, cy = world.own.capital.y;
+  return lands.every((l) => l.poly.every(([x, y]) => {
+    const sx = wide.w / 2 + (x - cx) * k, sy = wide.h / 2 + (y - cy) * k;
+    return sx >= 0 && sy >= 0 && sx <= wide.w && sy <= wide.h;
+  })) && pb.w > 0;
+})());
 ok('обзор опирается на поля WV', Math.abs(overviewScale(wide) - (700 - 2 * WV.overviewPad) / 21400) < 1e-9);
 const cvOpen = makeCanvas(1200, 700);
 const vOpen = new WorldView(cvOpen, { createCanvas: (a, b) => createCanvas(a, b) });
@@ -115,7 +126,7 @@ vOpen.resize(); vOpen.setWorld(world);
 vOpen.open();
 // F-391: в центре кадра — своя страна, а не середина рамки суши
 near('open() ставит камеру на свою столицу', vOpen.cam.x, world.own.capital.x, 1e-6);
-near('open() ставит масштаб по континенту вокруг столицы', vOpen.cam.scale, ownScale, 1e-6);
+near('open() ставит масштаб по планете вокруг столицы', vOpen.cam.scale, ownScale, 1e-6);
 ok('своя страна — в середине кадра', Math.abs(vOpen.cam.x) < 1 && Math.abs(vOpen.cam.y) < 1);
 ok('без перехода прозрачность полная', vOpen.alpha === 1, vOpen.alpha);
 const vFly = new WorldView(makeCanvas(1200, 700), { createCanvas: (a, b) => createCanvas(a, b) });
@@ -177,7 +188,8 @@ for (let y = 4; y < 700; y += 4) {
   }
 }
 const totalPx = Math.ceil((700 - 4) / 4) * Math.ceil((1200 - 4) / 4);
-ok('континент занимает больше четверти кадра', landPx / totalPx > 0.25, (landPx / totalPx).toFixed(2));
+// §95: на карте планеты суши около седьмой части — как на настоящей карте мира
+ok('суша занимает заметную часть кадра', landPx / totalPx > 0.09, (landPx / totalPx).toFixed(2));
 ok('континент не заливает весь кадр', landPx / totalPx < 0.85, (landPx / totalPx).toFixed(2));
 ok('моря в кадре тоже много', seaPx / totalPx > 0.1, (seaPx / totalPx).toFixed(2));
 ok('на карте есть светлые линии и подписи', bright > 60, bright);
@@ -304,7 +316,93 @@ ok('подписи не выходят за кадр', (() => {
   return seen.filter(([t]) => names.has(t)).every(([, x]) => x >= 0 && x <= 390);
 })());
 
-/* ——— 5. цена кадра ——— */
+/* ——— 5. георазметка ——— */
+group('георазметка');
+{
+  const cvG = makeCanvas(1200, 700);
+  const vG = new WorldView(cvG, { createCanvas: (a, b) => createCanvas(a, b) });
+  vG.resize(); vG.setWorld(world); vG.step(0.02); vG.step(0.02); vG.open();
+  const texts = () => {
+    const seen = [];
+    const orig = vG.ctx.fillText.bind(vG.ctx);
+    vG.ctx.fillText = (t, x, y) => { seen.push({ t: String(t), x, y }); return orig(t, x, y); };
+    vG.draw();
+    vG.ctx.fillText = orig;
+    return seen;
+  };
+  const wide = texts();
+  const degLat = wide.filter((q) => /° (с|ю)\. ш\./.test(q.t));
+  const degLon = wide.filter((q) => /° (в|з)\. д\./.test(q.t));
+  ok('на карте есть подписи широты', degLat.length >= 2, degLat.length);
+  ok('на карте есть подписи долготы', degLon.length >= 2, degLon.length);
+  ok('подписи широты — в градусах и словами', degLat.every((q) => /^\d+° (с|ю)\. ш\.$/.test(q.t)), degLat[0] && degLat[0].t);
+  ok('подписи долготы — в градусах и словами', degLon.every((q) => /^(\d+° (в|з)\. д\.|0° меридиан)$/.test(q.t)), degLon[0] && degLon[0].t);
+  ok('подписаны нулевые линии', wide.some((q) => q.t === 'экватор') || wide.some((q) => q.t === '0° меридиан'),
+    wide.filter((q) => /экватор|0°/.test(q.t)).map((q) => q.t).join(','));
+  ok('подписи градусов не лезут в подписи стран', wide.filter((q) => /°/.test(q.t)).every((q) => q.x > 0 && q.x < 1200));
+  // сетка стоит на карте: сдвиг камеры на 1000 км сдвигает подпись на 1000 · масштаб
+  const x1 = wide.find((q) => /° в\. д\./.test(q.t));
+  vG.cam.x += 1000;
+  const shifted = texts().find((q) => q.t === x1.t);
+  ok('подпись меридиана едет вместе с картой', !!shifted && Math.abs((x1.x - shifted.x) - 1000 * vG.cam.scale) < 1.5,
+    x1.x.toFixed(1) + ' → ' + (shifted && shifted.x.toFixed(1)));
+  vG.cam.x -= 1000;
+  // на телефоне подписей меньше, чем на мониторе
+  const cvP = makeCanvas(390, 844);
+  const vP = new WorldView(cvP, { createCanvas: (a, b) => createCanvas(a, b) });
+  vP.resize(); vP.setWorld(world); vP.step(0.02); vP.step(0.02); vP.open();
+  const seenP = [];
+  const origP = vP.ctx.fillText.bind(vP.ctx);
+  vP.ctx.fillText = (t, x, y) => { seenP.push(String(t)); return origP(t, x, y); };
+  vP.draw();
+  vP.ctx.fillText = origP;
+  ok('на телефоне сетка подписана реже', seenP.filter((t) => /°/.test(t)).length <= wide.filter((q) => /°/.test(q.t)).length,
+    seenP.filter((t) => /°/.test(t)).length + ' ≤ ' + wide.filter((q) => /°/.test(q.t)).length);
+  ok('на телефоне подписи не вылезают за край', seenP.every((t) => t.length < 20));
+  // компас
+  const compassTexts = ['С', 'Ю', 'З', 'В'];
+  ok('компас подписан четырьмя сторонами', compassTexts.every((t) => wide.some((q) => q.t === t)));
+  const north = wide.find((q) => q.t === 'С');
+  ok('север — в правом верхнем углу', !!north && north.x > 1000 && north.y < 80, north && Math.round(north.x) + ';' + Math.round(north.y));
+  ok('компас рисуется функцией с числами', (() => {
+    const c = makeCanvas(400, 300);
+    const r = drawCompass(c.getContext('2d'), { w: 400, h: 300 });
+    return r && r.x > 300 && r.y < 80 && r.r > 10;
+  })());
+  // подписи океана — в мире, а не в долях экрана
+  const ocean = wide.filter((q) => q.t === 'О К Е А Н');
+  ok('океан подписан словами', ocean.length >= 1, ocean.length);
+  const before = { x: ocean[0].x };
+  vG.cam.x -= 2000;
+  const after = texts().filter((q) => q.t === 'О К Е А Н');
+  ok('подпись океана едет с картой, а не стоит на экране',
+    after.every((q) => Math.abs(q.x - before.x) > 1), after.length ? after[0].x.toFixed(0) + ' vs ' + before.x.toFixed(0) : 'нет');
+  vG.cam.x += 2000;
+  // слой подробностей
+  const off = detailOffset({ w: 1200, h: 700 }, { x: 0, y: 0, scale: 0.03 }, { x: 0, y: 0, scale: 0.03 }, 96);
+  ok('слой подробностей при той же камере стоит на месте', Math.abs(off.x + 96) < 1e-9 && Math.abs(off.y + 96) < 1e-9, off.x.toFixed(2));
+  const off2 = detailOffset({ w: 1200, h: 700 }, { x: 100, y: -50, scale: 0.03 }, { x: 0, y: 0, scale: 0.03 }, 96);
+  ok('при сдвиге камеры слой едет вместе с миром', Math.abs(off2.x + 96 + 100 * 0.03) < 1e-9 && Math.abs(off2.y + 96 - 50 * 0.03) < 1e-9,
+    off2.x.toFixed(2) + ';' + off2.y.toFixed(2));
+  ok('масштаб слоя пересчитывается отношением', Math.abs(detailOffset({ w: 900, h: 600 }, { x: 0, y: 0, scale: 0.06 }, { x: 0, y: 0, scale: 0.03 }, 40).k - 2) < 1e-9);
+  ok('нулевой масштаб не ломает слой', detailOffset({ w: 900, h: 600 }, { x: 0, y: 0, scale: 0.03 }, { x: 0, y: 0, scale: 0 }, 40).k === 1);
+  // градусы из километров
+  ok('километры переводятся в градусы', (() => {
+    const a = geoDeg(world, 0, 0), b = geoDeg(world, 20000, -20000);
+    return Math.abs(a.lat) < 1e-9 && Math.abs(a.lon) < 1e-9 && Math.abs(b.lon - 180) < 1e-9 && Math.abs(b.lat - 90) < 1e-9;
+  })());
+  ok('широта подписывается по-русски', formatLat(60) === '60° с. ш.' && formatLat(-30) === '30° ю. ш.' && formatLat(0) === 'экватор',
+    formatLat(60));
+  ok('долгота подписывается по-русски', formatLon(30) === '30° в. д.' && formatLon(-45) === '45° з. д.' && formatLon(0) === '0° меридиан',
+    formatLon(30));
+  ok('сетка возвращает число линий', (() => {
+    const c = makeCanvas(600, 400);
+    const r = drawGraticule(c.getContext('2d'), { w: 600, h: 400 }, { x: 0, y: 0, scale: 0.02 }, world);
+    return r && r.lines > 6;
+  })());
+}
+
+/* ——— 6. цена кадра ——— */
 group('цена кадра');
 const cost = (w, h, scale) => {
   const c = makeCanvas(w, h);
