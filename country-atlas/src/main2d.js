@@ -165,28 +165,33 @@ map.init((done, total) => {
     startState.loaded = true;
     applyStartScene();
     window.__ratgrad = { map };
-    // границы §7 и экономика §31.33 считаются следом, чтобы карта появилась сразу
+    // границы §7 и экономика §31.33 считаются следом, чтобы карта появилась сразу.
+    // F-352: каждый слой собирается отдельно: раньше одна ошибка (например, моря)
+    // обрывала весь блок — и кнопка «карта мира» оставалась без обработчика.
     setTimeout(() => {
-      try {
-        map.buildBorders();
-        map.buildWater();
-        map.buildEconomy();
-        map.updateEconomyPanel();
-        map.buildRailLayer();
-        map.buildAirLayer();
-        if (map.water) map.buildSeaLayer();
-        map.draw();
-        restoreOffline();
-        setupWorld();
+      const step = (name, fn) => {
+        try { fn(); } catch (err) {
+          if (hud.status) hud.status.textContent = name + ' не собрались: ' + err.message;
+        }
+      };
+      step('границы', () => map.buildBorders());
+      // F-354: вода считается по одной задаче за кадр — вместо 1.3 с подряд
+      const afterWater = () => {
+        step('экономика', () => { map.buildEconomy(); map.updateEconomyPanel(); });
+        step('железная дорога', () => map.buildRailLayer());
+        step('аэродромы', () => map.buildAirLayer());
+        step('морские пути', () => { if (map.water) map.buildSeaLayer(); });
+        step('рисунок', () => map.draw());
+        step('сейв', () => restoreOffline());
+        step('карта мира', () => setupWorld());
         // карта страны готова — кнопка «начать игру» оживает, пролёт идёт дальше
         if (intro) {
           intro.ready = true;
           startState.loaded = true;
           applyStartScene();
         }
-      } catch (err) {
-        if (hud.status) hud.status.textContent = 'границы не собрались: ' + err.message;
-      }
+      };
+      step('вода', () => map.buildWaterDeferred(afterWater));
     }, 30);
   });
 }
@@ -253,6 +258,7 @@ function setupIntro() {
 }
 
 function setupWorld() {
+  if (worldView) return;                     // уже подключено — второй раз не нужно
   worldScreen = document.getElementById('world-screen');
   const canvas = document.getElementById('world-map');
   const back = document.getElementById('world-back');
@@ -265,7 +271,6 @@ function setupWorld() {
   if (!worldScreen || !canvas || !openBtn) return;
 
   worldView = new WorldView(canvas, {});
-  if (window.__ratgrad) { window.__ratgrad.worldView = worldView; window.__ratgrad.getWorld = ensureWorld; }
   worldView.onStats = (text) => { if (statsEl) statsEl.textContent = text; };
 
   /* мир считается один раз и дальше идёт вместе с часами игры */
@@ -277,6 +282,7 @@ function setupWorld() {
     while (world.minutes + 45 <= target) advanceWars(world, world.minutes + 45);
     if (target > world.minutes) advanceWars(world, target);
     worldView.setWorld(world);
+    if (window.__ratgrad) { window.__ratgrad.worldView = worldView; window.__ratgrad.getWorld = ensureWorld; }
     return world;
   };
 
@@ -330,12 +336,18 @@ function setupWorld() {
     worldRaf = requestAnimationFrame(loop);
     const dt = Math.min(0.1, (now - worldLast) / 1000 || 0.016);
     worldLast = now;
-    // часы игры продолжают идти: война живёт и пока мы смотрим
+    // часы игры продолжают идти: война живёт и пока мы смотрим.
+    // F-351: шагаем только когда игра прожила новую минуту, а не каждый кадр.
     const target = map.transport ? map.transport.minutes : 0;
-    if (target > world.minutes) advanceWars(world, target);
+    if (world && target - world.minutes >= 1) advanceWars(world, target);
     try {
       worldView.step(dt);
-      worldView.draw();
+      // F-351: если кадр мира дороже бюджета — рисуем реже, но время идёт так же
+      const budget = worldView.lastDrawMs > 12 ? 33 : 16;
+      if (now - (worldView.drawnAt || 0) >= budget - 3 || !worldView.drawnAt) {
+        worldView.drawnAt = now;
+        worldView.draw();
+      }
     } catch (err) {
       if (hud.status) hud.status.textContent = 'карта мира не нарисовалась: ' + err.message;
       worldRaf = 0;
@@ -638,15 +650,25 @@ window.addEventListener('keydown', (e) => {
    Кадр рисуется не чаще 20 раз в секунду, в скрытой вкладке — ни одного. */
 let lastTick = 0;
 let lastDraw = 0;
+let drawCost = 16;                  // сколько стоит кадр страны — мерим, а не гадаем
 function liveLoop(now) {
   requestAnimationFrame(liveLoop);
   if (document.hidden || !map.transport || !map.showVehicles) { lastTick = now; return; }
   const dt = Math.min(0.5, (now - lastTick) / 1000);
   lastTick = now;
-  map.tick(dt);
-  if (now - lastDraw < 50) return;
+  map.tick(dt);                     // мир живёт всегда: числа не зависят от отрисовки
+  // F-350: не рисуем то, что не видно. Раньше карта страны перерисовывалась 20 раз
+  // в секунду даже под заставкой и под открытой картой мира — на телефоне это и был
+  // «лагает»: два отрисовщика работали одновременно.
+  if (worldScreen && worldScreen.classList.contains && worldScreen.classList.contains('open')) return;
+  if (overlayPhase(startState) !== 'closed') return;
+  // F-350: и не чаще, чем успеваем: кадр в 30 мс не должен идти 20 раз в секунду
+  const interval = Math.max(50, Math.min(200, drawCost * 2.5));
+  if (now - lastDraw < interval) return;
   lastDraw = now;
-  map.draw();
+  const t0 = performance.now();
+  try { map.draw(); } catch (err) { /* кадр не должен убивать цикл */ }
+  drawCost = drawCost * 0.8 + (performance.now() - t0) * 0.2;
 }
 if (typeof requestAnimationFrame === 'function') {
   lastTick = performance.now();
@@ -655,4 +677,7 @@ if (typeof requestAnimationFrame === 'function') {
 
 if (hud.loadingText) hud.loadingText.textContent = 'мир ' + WORLD2D.sizeKm + ' × ' + WORLD2D.sizeKm + ' км…';
 setupIntro();
+// F-353: «карта мира» подключается сразу, а не после сборки страны: даже если
+// сборка где-то упадёт, кнопка обязана открывать карту мира
+setupWorld();
 boot();

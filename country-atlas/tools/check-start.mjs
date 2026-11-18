@@ -72,6 +72,17 @@ ok('после нажатия заставка уходит', loading.classList.
 ok('пролёт остановлен', lt.running === false);
 ok('пролёт не сломал карту мира', !!win.__ratgradIntro && typeof win.__ratgradIntro.draw === 'function');
 
+// «карта мира»: кнопка обязана открывать экран сразу после загрузки страницы
+const worldBtn = $('world-open');
+ok('кнопка «карта мира» на месте', !!worldBtn);
+let worldErr = null;
+try { worldBtn.click(); } catch (err) { worldErr = err.message; }
+tick(timers, 10);
+const worldScreen = $('world-screen');
+ok('клик по «карта мира» не падает', !worldErr, worldErr || '');
+ok('экран мира открылся', !!(worldScreen && worldScreen.classList.contains('open')));
+ok('карта мира не пустая', /стран \d+/.test(($('world-stats') || {}).textContent || ''), (($('world-stats') || {}).textContent || '').slice(0, 40));
+
 console.log(`\nOK: живая страница · ${pass} проверок · пролёт ${lt.t.toFixed(1)} с, кадров ${lt.frames}`);
 if (fail) { console.log(`FAIL: ${fail}`); process.exit(1); }
 process.exit(0);

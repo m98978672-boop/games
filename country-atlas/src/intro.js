@@ -94,6 +94,31 @@ export function insideOwn(own, x, y) {
   return pointInPolygon(x, y, own.poly);
 }
 
+/* F-347: рисуем из большого слоя только видимый прямоугольник.
+   Кадр остаётся прежним (тот же слой, те же CSS-координаты), но браузер не
+   пересэмплирует весь буфер: на телефоне это 19 → 2 мс на кадр. */
+export function drawLayerCrop(ctx, img, cam, view, sizeKm, bank = 0) {
+  if (!img || !img.width) return;
+  const k = cam.scale;                        // CSS-пикселей на километр
+  const side = sizeKm * k;                    // сколько CSS-пикселей занимает весь слой
+  if (!(side > 0)) return;
+  const kp = img.width / side;                // пикселей слоя на CSS-пиксель
+  // при крене кадр поворачивается — берём кусок с запасом, чтобы углы не пустели
+  const pad = Math.ceil(Math.max(view.w, view.h) * Math.abs(bank)) + 2;
+  const lx = view.w / 2 - (cam.x + sizeKm / 2) * k;
+  const ly = view.h / 2 - (cam.y + sizeKm / 2) * k;
+  let dx = -pad, dy = -pad, dw = view.w + pad * 2, dh = view.h + pad * 2;
+  let sx = (dx - lx) * kp, sy = (dy - ly) * kp, sw = dw * kp, sh = dh * kp;
+  // обрезаем источник по буферу и на столько же подрезаем приёмник
+  if (sx < 0) { const cut = -sx; dx += cut / kp; dw -= cut / kp; sw -= cut; sx = 0; }
+  if (sy < 0) { const cut = -sy; dy += cut / kp; dh -= cut / kp; sh -= cut; sy = 0; }
+  const maxX = img.width - sx, maxY = img.height - sy;
+  if (sw > maxX) { const over = sw - maxX; dw -= over / kp; sw = maxX; }
+  if (sh > maxY) { const over = sh - maxY; dh -= over / kp; sh = maxY; }
+  if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0) return;
+  ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+}
+
 export class Intro {
   constructor(canvas, world, opts = {}) {
     this.canvas = canvas;
@@ -113,6 +138,7 @@ export class Intro {
     this.rng = engineRng(world.seed || 1);
     this.captionW = new Map();   // F-345: ширина подписи по её тексту
     this.raf = 0;
+    this.lastDrawAt = 0;
     this.running = false;
     this.ready = false;
     this.points = tourWaypoints(world.own, world.seed);
@@ -141,8 +167,34 @@ export class Intro {
     wv.setWorld(this.world);
     wv.paintBasePass(0);
     wv.paintBasePass(1);
-    this.bg = wv.base;
+    // F-348: размытие подложки запекаем один раз. Раньше `filter = blur(4px)` стоял
+    // в каждом кадре — на телефоне это 10 мс из 27 на ровном месте.
+    this.bg = this.blurOnce(wv.base, this.bgBlurPx());
     return this.bg;
+  }
+
+  /* F-348: радиус размытия в пикселях буфера — из того, как подложка ляжет в кадр,
+     чтобы после масштабирования получились те же 4 px, что и раньше. */
+  bgBlurPx() {
+    const baseScale = Math.max(this.view.w, this.view.h) / this.world.sizeKm * 1.18;
+    const drawn = this.world.sizeKm * baseScale / Math.max(1, this.bg ? this.bg.width : INTRO.bgPx);
+    return Math.max(0.5, INTRO.blurPx / Math.max(0.05, drawn));
+  }
+
+  blurOnce(src, px) {
+    const size = Math.ceil(src.width) || 1;
+    const cv = this.opts.createCanvas ? this.opts.createCanvas(size, size) : document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    const ctx = cv.getContext('2d');
+    if (!ctx) return src;
+    if (ctx.filter !== undefined) {
+      ctx.filter = 'blur(' + px.toFixed(2) + 'px)';
+      ctx.drawImage(src, 0, 0);
+      ctx.filter = 'none';
+      return cv;
+    }
+    ctx.drawImage(src, 0, 0);
+    return cv;
   }
 
   /* Резкий слой своей страны: шире мира не нужно — только 7000 км вокруг столицы. */
@@ -257,6 +309,12 @@ export class Intro {
       const step = Number.isFinite(raw) && raw > 0 ? Math.min(0.1, raw) : 0.016;
       this.clock.advance(step, (fixed) => { this.t += fixed; });
       this.fade = Math.min(1, this.fade + step / INTRO.fadeInSec);
+      // F-350: слабое устройство не должно «зависать» — рисуем реже, время идёт так же
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (now < this.lastDrawAt) this.lastDrawAt = now;      // часы браузера начались заново
+      const budget = this.lastDrawMs > 12 ? 33 : 16;
+      if (now - this.lastDrawAt < budget - 3) return;
+      this.lastDrawAt = now;
       // пролёт — украшение: если канва не умеет чего-то, игра всё равно должна открыться
       try { this.draw(); } catch (err) { this.stop(); }
     };
@@ -294,27 +352,30 @@ export class Intro {
     const bx = view.w / 2 - (cam.x * 0.4) * baseScale / 8;
     const by = view.h / 2 - (cam.y * 0.4) * baseScale / 8;
     ctx.globalAlpha = 0.5;
-    if (ctx.filter !== undefined) ctx.filter = 'blur(' + INTRO.blurPx + 'px)';
     ctx.drawImage(this.bg, bx - span * baseScale / 2, by - span * baseScale / 2, span * baseScale, span * baseScale);
-    if (ctx.filter !== undefined) ctx.filter = 'none';
     ctx.globalAlpha = 1;
 
     // 2. резкая страна: камера идёт от города к городу
     if (this.layer) {
-      const k = cam.scale;
-      const lx = view.w / 2 - (cam.x + world.sizeKm / 2) * k;
-      const ly = view.h / 2 - (cam.y + world.sizeKm / 2) * k;
-      const side = world.sizeKm * k;
       ctx.save();
       if (this.bank) {
         ctx.translate(view.w / 2, view.h / 2);
         ctx.rotate(this.bank);
         ctx.translate(-view.w / 2, -view.h / 2);
       }
-      ctx.drawImage(this.layer, lx, ly, side, side);
-      // края: снова размытая карта мира, уже поверх резкой страны
-      if (this.edge) ctx.drawImage(this.edge, 0, 0, view.w, view.h);
+      // F-347: из слоя страны берём только видимый кусок — иначе каждый кадр
+      // браузер пересэмплирует все 2200² пикселя, даже если видно 10 % кадра
+      drawLayerCrop(ctx, this.layer, cam, view, world.sizeKm, this.bank);
       ctx.restore();
+      // F-349: подложка краёв — статичная размытая картинка на весь кадр: кладём её
+      // 1:1 в пикселях холста. Раньше она каждый кадр проходила через поворот и
+      // масштаб — 15 из 27 мс кадра на телефоне.
+      if (this.edge) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(this.edge, 0, 0);
+        ctx.restore();
+      }
       // 3. края мягко уходят в размытую подложку
       const g = ctx.createRadialGradient(view.w / 2, view.h / 2, Math.min(view.w, view.h) * 0.18,
         view.w / 2, view.h / 2, Math.max(view.w, view.h) * 0.72);

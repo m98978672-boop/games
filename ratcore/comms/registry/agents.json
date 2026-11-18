@@ -12,9 +12,9 @@
     {
       "agentId": "ai-atlas-02",
       "role": "game-integration",
-      "branch": "arena/179b48ee-games",
+      "branch": "arena/221a00b2-games",
       "status": "active",
-      "notes": "Подключил RatCore к country-atlas по-настоящему: часы пролёта идут GamesEngine.clock({tickHz:60,maxSubsteps:4}), украшения берут GamesEngine.rng(seed), есть встроенный фолбэк. Исправил заставку: пролёт больше не гаснет вместе с загрузкой (жил 1–5 с, живёт до нажатия «начать игру»). Спека — country-atlas/SPEC.md §90 (F-335…F-346, v2.34), проверки — tests/start2d.mjs (95) и tools/check-start.mjs (26 на живой странице)."
+      "notes": "Подключил RatCore к country-atlas: часы пролёта на GamesEngine.clock, случайность на GamesEngine.rng, встроенный фолбэк (§90). Починил заставку — пролёт больше не гаснет вместе с загрузкой. По К29: кнопка «карта мира» подключается при загрузке и не зависит от сборки страны; кадр пролёта на телефоне 36.7 → 18.3 мс, вода 1124 → 460 мс по частям, невидимое не рисуется (§91)."
     }
   ]
 }
