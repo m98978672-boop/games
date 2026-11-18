@@ -5,7 +5,7 @@
   "stats": {
     "games": 16,
     "files": 1179,
-    "totalBytes": 35877683,
+    "totalBytes": 35878301,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -19,8 +19,8 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "878820722ad50a0953b29664c6fa64adb22ac2adb4c879f004059beb3310217b",
-      "totalSize": 1827510,
+      "infoHash": "e890e5f2095641932454ec78c1b4dbdedf41a43da03431b8cd5d8b8417b3b635",
+      "totalSize": 1828128,
       "chunkSize": 262144,
       "chunkCount": 7,
       "fileCount": 83,
@@ -47,8 +47,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 305066,
-          "sha256": "84b8b73849991349b4615097b48496380b509e641e8943d079a794ce19c8f3a5"
+          "size": 305157,
+          "sha256": "bb95d5ebdbf5a93ff3eafa7eadbf272a5fc238c2a41b4ed83f03dbc57f689d4f"
         },
         {
           "path": "cover.svg",
@@ -322,8 +322,8 @@
         },
         {
           "path": "src/worldview.js",
-          "size": 90157,
-          "sha256": "125a6600d8c52e79d59d1486a7846274993aa7794203e6cb6db37755641db2ec"
+          "size": 90684,
+          "sha256": "e46296c066f115e5dd554d037007d70e1d82dfb4c9d975410eee7590563763cc"
         },
         {
           "path": "terrain-worker.min.js",

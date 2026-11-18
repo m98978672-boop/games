@@ -599,7 +599,8 @@ group('простая карта и тумблер областей');
 
   // мелкие дороги и кресты — только при приближении
   ok('на обзоре дорог нет вовсе', WV.roadScale > 0.021, WV.roadScale);
-  ok('мелкие дороги — только при очень большом зуме', WV.localRoadScale >= 0.2, WV.localRoadScale);
+  ok('мелкие дороги — только при очень большом зуме', WV.localRoadScale >= 0.5, WV.localRoadScale);
+  ok('на среднем зуме дорог тоже нет', WV.roadScale > 0.25, WV.roadScale);
   ok('отметки рельефа не рисуются на обзоре', WV.markScale > 0.021, WV.markScale);
   ok('кресты разрушенного не рисуются на обзоре', WV.ruinScale > 0.021, WV.ruinScale);
 
@@ -614,7 +615,7 @@ group('простая карта и тумблер областей');
   const dRoads = diff(overviewRoads.cv, plain.cv);
   WV.localRoadScale = savedLocal;
   ok('мелкие дороги возвращаются при приближении', dRoads > 500, dRoads);
-  ok('после проверки порог дорог на месте', WV.localRoadScale === 0.25, WV.localRoadScale);
+  ok('после проверки порог дорог на месте', WV.localRoadScale === 0.55, WV.localRoadScale);
 }
 
 /* ——— 8. §101: одна палитра на две карты, дороги только на зуме ——— */
@@ -664,9 +665,9 @@ group('одна палитра и дороги на зуме');
     }
     return n;
   };
-  ok('порог дорог — очень большой зум', WV.roadScale >= 0.1, WV.roadScale);
+  ok('порог дорог — глубокий зум', WV.roadScale >= 0.3, WV.roadScale);
   ok('на обзоре дороги не рисуются', diff(shot(0.021, 0), shot(0.021)) > 500, 'разница между «нет дорог» и «есть»');
-  ok('на зуме шоссе видны', diff(shot(0.3, 0.9), shot(0.3)) > 200);
+  ok('на глубоком зуме шоссе видны', diff(shot(0.8, 0.9), shot(0.8)) > 200);
 }
 
 console.log(`\nOK: 8 групп · ${pass} проверок`);

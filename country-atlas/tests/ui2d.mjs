@@ -352,8 +352,8 @@ const visible = html
   ok(/showRegions: this\.showRegions/.test(view), 'легенда знает про тумблер');
   ok(/e\[0\] !== 'region' \|\| opts\.showRegions !== false/.test(view), 'строка легенды об областях скрыта вместе с ними');
   // упрощение карты
-  ok(/roadScale: 0\.12/.test(view), 'дороги — только при очень большом зуме');
-  ok(/localRoadScale: 0\.25/.test(view), 'мелкие дороги — ещё позже');
+  ok(/roadScale: 0\.35/.test(view), 'дороги — только при очень большом зуме');
+  ok(/localRoadScale: 0\.55/.test(view), 'мелкие дороги — ещё позже');
   ok(/markScale: 0\.05/.test(view), 'отметки рельефа — только при приближении');
   ok(/ruinScale: 0\.05/.test(view), 'кресты разрушенного — только при приближении');
   ok(/const showRoads = cam\.scale >= WV\.roadScale/.test(view), 'дороги проверяют масштаб');
