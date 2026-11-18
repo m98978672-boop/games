@@ -7,6 +7,8 @@ import { WorldView, WV } from './worldview.js';
 import { MARK, pointInPolygon } from './worldmap2d.js';
 import { drawMark } from './worldview.js';
 import { hash01 } from './accidents2d.js';
+import { fixedClock, engineRng } from './engine2d.js';
+import { tourProgress, flightBank } from './startscene2d.js';
 
 export const INTRO = {
   hopSec: 9.2,          // сколько камера идёт от точки к точке — пролёт видно, а не «пять секунд»
@@ -20,7 +22,12 @@ export const INTRO = {
   sights: ['Старая крепость', 'Северный мост', 'Соляные шахты', 'Обсерватория на холме',
     'Старая мельница', 'Каменный круг', 'Портовый маяк', 'Курган предков'],
   sightsPerTour: 4,     // сколько достопримечательностей вплетается в маршрут
-  caption: true
+  caption: true,
+  progress: true,       // полоска круга внизу кадра
+  cacheCaption: true,   // ширина подписи меряется один раз на точку, а не 60 раз в секунду
+  fadeInSec: 0.9,       // заставка проявляется из темноты, а не «включается»
+  bankMax: 0.035,       // крен камеры на повороте маршрута, радианы
+  narrowW: 560          // уже этой ширины подпись кадра короче, чтобы не лезть на полоску
 };
 
 /* F-305: достопримечательности страны. Места детерминированы сидом: те же холмы,
@@ -96,6 +103,15 @@ export class Intro {
     this.view = { w: 1, h: 1 };
     this.dpr = 1;
     this.t = 0;
+    this.fade = 0;           // 0 — темнота, 1 — кадр проявился
+    this.bank = 0;           // крен камеры на вираже
+    this.dir = null;
+    this.prevCam = null;
+    // F-336: время анимации идёт фиксированным шагом движка, а не «как получится»
+    this.clock = fixedClock({ tickHz: 60 });
+    // F-337: украшения пролёта берут случайность у движка — от сида мира, чтобы кадр повторялся
+    this.rng = engineRng(world.seed || 1);
+    this.captionW = new Map();   // F-345: ширина подписи по её тексту
     this.raf = 0;
     this.running = false;
     this.ready = false;
@@ -234,9 +250,13 @@ export class Intro {
       if (!this.running) { this.raf = 0; return; }
       this.raf = requestAnimationFrame(loop);
       const now = Number.isFinite(ms) ? ms : (this.last || 0) + 16;
-      const dt = Math.min(0.1, (now - (this.last || now)) / 1000 || 0.016);
+      const raw = (now - (this.last || now)) / 1000;
       this.last = now;
-      this.t += Number.isFinite(dt) ? dt : 0.016;
+      // F-336: шаг не бывает отрицательным — иначе пролёт откатывался бы назад
+      // (так бывает после сворачивания вкладки: браузер начинает отсчёт заново)
+      const step = Number.isFinite(raw) && raw > 0 ? Math.min(0.1, raw) : 0.016;
+      this.clock.advance(step, (fixed) => { this.t += fixed; });
+      this.fade = Math.min(1, this.fade + step / INTRO.fadeInSec);
       // пролёт — украшение: если канва не умеет чего-то, игра всё равно должна открыться
       try { this.draw(); } catch (err) { this.stop(); }
     };
@@ -255,6 +275,16 @@ export class Intro {
     const { ctx, view, world } = this;
     if (!this.bg) return this;
     const cam = tourCam(this.points, this.t);
+    // F-344: на повороте маршрута камера закладывает вираж — кадр перестаёт быть рывком
+    if (this.prevCam) {
+      const dx = cam.x - this.prevCam.x, dy = cam.y - this.prevCam.y;
+      if (Math.hypot(dx, dy) > 2) {
+        const dir = { a: Math.atan2(dy, dx) };
+        if (this.dir) this.bank = this.bank * 0.9 + flightBank(this.dir, dir, INTRO.bankMax) * 0.1;
+        this.dir = dir;
+      }
+    }
+    this.prevCam = { x: cam.x, y: cam.y };
     ctx.save();
     // 1. подложка: вся карта мира, размытая, чуть притушенная
     ctx.fillStyle = '#08131c';
@@ -275,9 +305,16 @@ export class Intro {
       const lx = view.w / 2 - (cam.x + world.sizeKm / 2) * k;
       const ly = view.h / 2 - (cam.y + world.sizeKm / 2) * k;
       const side = world.sizeKm * k;
+      ctx.save();
+      if (this.bank) {
+        ctx.translate(view.w / 2, view.h / 2);
+        ctx.rotate(this.bank);
+        ctx.translate(-view.w / 2, -view.h / 2);
+      }
       ctx.drawImage(this.layer, lx, ly, side, side);
       // края: снова размытая карта мира, уже поверх резкой страны
       if (this.edge) ctx.drawImage(this.edge, 0, 0, view.w, view.h);
+      ctx.restore();
       // 3. края мягко уходят в размытую подложку
       const g = ctx.createRadialGradient(view.w / 2, view.h / 2, Math.min(view.w, view.h) * 0.18,
         view.w / 2, view.h / 2, Math.max(view.w, view.h) * 0.72);
@@ -298,21 +335,47 @@ export class Intro {
     ctx.fillStyle = gb;
     ctx.fillRect(0, view.h * 0.55, view.w, view.h * 0.45);
 
+    // F-344: заставка проявляется из темноты — начало пролёта видно, а не «уже поздно»
+    if (this.fade < 1) {
+      ctx.fillStyle = 'rgba(6,14,20,' + (1 - this.fade).toFixed(3) + ')';
+      ctx.fillRect(0, 0, view.w, view.h);
+    }
+
     // F-306: подпись точки пролёта — видно, над чем именно летит камера
     if (INTRO.caption !== false && this.points.length) {
-      const i = Math.max(0, Math.min(this.points.length - 1, cam.i));
+      // F-343: подпись называет точку, к которой летим, — ту же, что видит камера
+      const n = this.points.length;
+      const i = (cam.i + 1) % n;
       const pt = this.points[i] || { name: '' };
       if (this.shownPoint !== pt.name && typeof this.opts.onPoint === 'function') {
         this.shownPoint = pt.name;
-        try { this.opts.onPoint(pt, i + 1, this.points.length); } catch (err) { /* подпись — украшение */ }
+        try { this.opts.onPoint(pt, i + 1, n); } catch (err) { /* подпись — украшение */ }
       }
-      const text = 'пролёт над страной · ' + (i + 1) + ' из ' + this.points.length + ' · ' + pt.name;
+      // F-343: на узком экране подпись короче — иначе она наезжает на полоску круга
+      const tail = (i + 1) + ' из ' + n + ' · ' + pt.name;
+      const text = view.w < INTRO.narrowW ? tail : 'пролёт над страной · ' + tail;
       ctx.font = '12px sans-serif';
-      const tw = ctx.measureText ? ctx.measureText(text).width : text.length * 6;
+      // F-345: подпись меняется раз в 9.2 с, а кадров 60 в секунду — мерим один раз
+      let tw = INTRO.cacheCaption === false ? undefined : this.captionW.get(text);
+      if (tw === undefined) {
+        tw = ctx.measureText ? ctx.measureText(text).width : text.length * 6;
+        this.captionW.set(text, tw);
+      }
       ctx.fillStyle = 'rgba(6,14,20,0.62)';
       ctx.fillRect(12, view.h - 36, tw + 18, 23);
       ctx.fillStyle = 'rgba(226,234,240,0.92)';
       ctx.fillText(text, 21, view.h - 20);
+    }
+
+    // F-343: полоска круга — видно, что пролёт длинный и он идёт
+    if (INTRO.progress !== false) {
+      const pw = Math.max(90, Math.min(220, view.w * 0.32));
+      const px0 = view.w - pw - 14, py0 = view.h - 18;
+      const done = tourProgress(this.t, INTRO.hopSec, this.points.length);
+      ctx.fillStyle = 'rgba(6,14,20,0.62)';
+      ctx.fillRect(px0, py0, pw, 3.5);
+      ctx.fillStyle = 'rgba(255,214,110,0.88)';
+      ctx.fillRect(px0, py0, Math.max(2, pw * done), 3.5);
     }
     ctx.restore();
     this.frames++;

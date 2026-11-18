@@ -1,6 +1,6 @@
 {
   "schema": "ratcore-registry/1",
-  "updatedAt": "2026-11-16",
+  "updatedAt": "2026-11-18",
   "agents": [
     {
       "agentId": "ai-architect-01",
@@ -8,6 +8,13 @@
       "branch": "arena/5b278e22-games",
       "status": "active",
       "notes": "Подготовил полную документацию RatCore (25 веток инструментов, 112 формул, 74 алгоритма, ToolGuard, BridgeGuard, 7-уровневое сжатие невидимого мира). Жду команду владельца перед началом написания кода."
+    },
+    {
+      "agentId": "ai-atlas-02",
+      "role": "game-integration",
+      "branch": "arena/179b48ee-games",
+      "status": "active",
+      "notes": "Подключил RatCore к country-atlas по-настоящему: часы пролёта идут GamesEngine.clock({tickHz:60,maxSubsteps:4}), украшения берут GamesEngine.rng(seed), есть встроенный фолбэк. Исправил заставку: пролёт больше не гаснет вместе с загрузкой (жил 1–5 с, живёт до нажатия «начать игру»). Спека — country-atlas/SPEC.md §90 (F-335…F-346, v2.34), проверки — tests/start2d.mjs (95) и tools/check-start.mjs (26 на живой странице)."
     }
   ]
 }
