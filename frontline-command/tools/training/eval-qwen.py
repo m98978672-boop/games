@@ -17,17 +17,22 @@ spec.loader.exec_module(helpers)
 
 def main():
     p=argparse.ArgumentParser()
-    p.add_argument('--data',type=Path,required=True);p.add_argument('--adapter',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--data',type=Path,required=True);p.add_argument('--adapter',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--count',type=int,default=3)
     args=p.parse_args()
+    if not 1 <= args.count <= 100: raise ValueError('invalid evaluation count')
     torch.set_num_threads(int(os.getenv('OMP_NUM_THREADS','2')))
     manifest,data=helpers.read_data(args.data)
-    # Choose different held-out battles and teacher actions when available.
+    # Round-robin across available teacher actions and seeds; no duplicate rows.
     selected=[]
-    for action in ('hold','build','supply'):
-        candidates=[r for r in data['eval'] if json.loads(r['response'])['action']==action]
-        if candidates:
+    pools={action:[r for r in data['eval'] if json.loads(r['response'])['action']==action] for action in ('hold','build','supply','none')}
+    while len(selected)<min(args.count,len(data['eval'])):
+        added=False
+        for candidates in pools.values():
+            if not candidates: continue
             index=next((i for i,r in enumerate(candidates) if r['seed'] not in {x['seed'] for x in selected}),0)
-            selected.append(candidates[index])
+            selected.append(candidates.pop(index));added=True
+            if len(selected)>=min(args.count,len(data['eval'])): break
+        if not added: break
     if not selected: raise ValueError('no evaluation examples')
     weights=hf_hub_download(helpers.MODEL,'model.safetensors-00001-of-00001.safetensors',revision=helpers.REVISION)
     digest=hashlib.sha256()
@@ -54,5 +59,5 @@ def main():
     for row,raw in zip(selected,before):
         text=generate(model,row);print('adapter',row['seed'],row['response'],repr(text),flush=True)
         results.append({'seed':row['seed'],'swapSides':row['swapSides'],'input':row['input'],'teacher':row['response'],'base':raw,'adapter':text})
-    args.output.write_text(json.dumps({'method':'Greedy CPU Transformers inference without WebLLM JSON grammar; only three held-out examples, not a battle or proof of skill.','results':results},ensure_ascii=False,indent=2)+'\n')
+    args.output.write_text(json.dumps({'method':'Greedy CPU Transformers inference without WebLLM JSON grammar on a small held-out-seed sample; not a battle or proof of skill.','results':results},ensure_ascii=False,indent=2)+'\n')
 if __name__=='__main__':main()

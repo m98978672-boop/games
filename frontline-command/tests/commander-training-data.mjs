@@ -3,6 +3,7 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';import {join} from 'node:path';import {createHash} from 'node:crypto';
 import {collect,teacher,writeDataset} from '../tools/training/collect-commander.mjs';
 import {validateProposal} from '../src/sim/neutral_commander.js';
+import {BASE_PROMPT,commanderPrompt} from '../src/ai/commander-prompts.js';
 assert.deepEqual(teacher({squads:[],points:[],builds:[]}),{action:'none'});
 assert.deepEqual(teacher({squads:[{ammo:69,engineers:1}],points:[{}],builds:[{}]}),{action:'supply',squad:0});
 assert.deepEqual(teacher({squads:[{ammo:70,engineers:1}],points:[{}],builds:[{}]}),{action:'build',squad:0,build:0});
@@ -19,6 +20,10 @@ try{
    assert.ok(validateProposal(row.response,fake),'teacher output passes actual validator');
   }
  }
+ assert.equal(manifest.prompt,BASE_PROMPT,'baseline dataset uses baseline prompt');
+ const knowledge=await collect({...opts,knowledge:true});
+ assert.equal(knowledge.prompt,commanderPrompt(true),'knowledge dataset matches worker prompt');
+ assert.deepEqual(knowledge.data.train.map(r=>r.input),(await readFile(join(dir,'train.jsonl'),'utf8')).trim().split('\n').map(x=>JSON.parse(x).input),'prompt choice must not affect snapshots');
  const again=await collect(opts);
  for(const split of ['train','eval']){
   const contents=again.data[split].map(row=>JSON.stringify(row)).join('\n')+'\n';

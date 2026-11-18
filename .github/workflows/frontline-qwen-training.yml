@@ -26,7 +26,7 @@ jobs:
       - name: Collect simulation snapshots and validate dataset
         run: |
           node frontline-command/tests/commander-training-data.mjs
-          node frontline-command/tools/training/collect-commander.mjs "$RUNNER_TEMP/commander-data"
+          node frontline-command/tools/training/collect-commander.mjs "$RUNNER_TEMP/commander-data" --knowledge
       - name: Install CPU training dependencies
         run: |
           python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
@@ -36,7 +36,7 @@ jobs:
         run: |
           set +e
           set -o pipefail
-          python -u frontline-command/tools/training/train-qwen.py --data "$RUNNER_TEMP/commander-data" --output "$RUNNER_TEMP/commander-output" --steps 8 --eval-count 4 2>&1 | tee "$RUNNER_TEMP/training.log"
+          python -u frontline-command/tools/training/train-qwen.py --data "$RUNNER_TEMP/commander-data" --output "$RUNNER_TEMP/commander-output" --steps 32 --eval-count 8 2>&1 | tee "$RUNNER_TEMP/training.log"
           status=$?
           if [ "$status" -ne 0 ]; then
             python -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"training.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
@@ -82,4 +82,49 @@ jobs:
         run: |
           set -eu
           tag="frontline-qwen35-lora-research-$GITHUB_RUN_ID"
-          gh release create "$tag" --target "$GITHUB_SHA" --title 'Frontline Qwen3.5 experimental LoRA' --notes 'Exploratory CPU LoRA run imitating a simple hand-written teacher on simulation snapshots, not proof of strategic strength. This PEFT adapter is NOT a WebLLM model and is not installed in the published game. The archive contains the training/evaluation dataset and loss report. Base model Qwen/Qwen3.5-0.8B, Apache-2.0, revision 2fc06364715b967f1860aea9cf38778875588b17.' "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz"
+          gh release create "$tag" --target "$GITHUB_SHA" --title 'Frontline Qwen3.5 knowledge-prompt experimental LoRA' --notes 'Exploratory 32-step CPU LoRA run with the knowledge-mode prompt, imitating a simple hand-written teacher on simulation snapshots, not proof of strategic strength. This PEFT adapter is NOT a WebLLM model and is not installed in the published game. The archive contains the training/evaluation dataset and loss report. Base model Qwen/Qwen3.5-0.8B, Apache-2.0, revision 2fc06364715b967f1860aea9cf38778875588b17.' "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz"
+  evaluate:
+    needs: train
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: commander-complete-${{ github.run_id }}
+          path: ${{ runner.temp }}
+      - name: Extract research adapter and held-out data
+        run: |
+          mkdir "$RUNNER_TEMP/evaluation"
+          tar -xzf "$RUNNER_TEMP/frontline-qwen35-lora-research.tar.gz" -C "$RUNNER_TEMP/evaluation"
+      - name: Install CPU inference dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Generate and score held-out examples
+        run: |
+          python -u frontline-command/tools/training/eval-qwen.py --data "$RUNNER_TEMP/evaluation/dataset" --adapter "$RUNNER_TEMP/evaluation/adapter" --output "$RUNNER_TEMP/generated.json" --count 8
+          node frontline-command/tools/training/score-generated.mjs "$RUNNER_TEMP/generated.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: commander-generated-${{ github.run_id }}
+          path: ${{ runner.temp }}/generated.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish exploratory evaluation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "frontline-qwen35-eval-$GITHUB_RUN_ID" --target "$GITHUB_SHA" --title 'Frontline Qwen knowledge-prompt exploratory inference check' --notes 'Eight held-out-seed snapshots (some also used for the loss check), greedy CPU Transformers inference without WebLLM JSON grammar. The adapter and teacher are experimental; this is not a battle or proof of strategic skill.' "$RUNNER_TEMP/generated.json"
