@@ -337,3 +337,7 @@ button.menu-card { text-align: left; font-family: inherit; }
 #model-status { color: #dfe7d6; min-height: 2em; overflow-wrap: anywhere; }
 #model-files { color: #cfd8c2; overflow-wrap: anywhere; padding-left: 20px; }
 #model-send:disabled { opacity: .5; cursor: not-allowed; }
+#dropbox-request-url { display: block; box-sizing: border-box; width: min(100%, 520px); margin-top: 8px; padding: 8px; background: #1b2018; color: var(--text); border: 1px solid var(--line); }
+#dropbox-request-open { text-decoration: none; }
+#dropbox-request-open[hidden] { display: none; }
+#dropbox-request-status { margin-top: 8px; overflow-wrap: anywhere; }

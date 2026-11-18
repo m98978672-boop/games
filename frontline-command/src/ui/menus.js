@@ -48,7 +48,7 @@ export class Menus {
         </div>
         <button type="button" class="menu-card" data-act="model-storage">
           <b>Хранилище модели ИИ</b>
-          <small>Передать файлы модели в рабочую среду через этот предпросмотр.</small>
+          <small>Передать файлы через Dropbox или сервер предпросмотра.</small>
         </button>
         <div class="menu-card" data-act="skills">
           <b>Дерево навыков</b>
@@ -91,9 +91,17 @@ export class Menus {
   modelStorage() {
     this.show(`
       <h1>Хранилище <span>модели</span></h1>
-      <div class="subtitle">Передайте архив ZIP или отдельные файлы модели в рабочую среду. Модель не запускается автоматически.</div>
+      <div class="subtitle">Передайте файлы модели через Dropbox или через временный сервер предпросмотра. Модель не подключается автоматически.</div>
+      <h2>Постоянное хранилище Dropbox</h2>
+      <p>Создайте <a href="https://www.dropbox.com/requests" target="_blank" rel="noopener noreferrer">запрос файлов в Dropbox</a> для папки Frontline-Model-Inbox, вставьте ссылку запроса ниже и откройте её. Загрузка проходит на сайте Dropbox, а не в памяти браузера игры.</p>
+      <p class="model-storage-note">Любой, кто получит ссылку запроса, сможет отправлять файлы и занимать место в вашем Dropbox. Не публикуйте её и не отправляйте пароли или личные данные.</p>
+      <label for="dropbox-request-url">Ссылка запроса файлов Dropbox</label>
+      <input id="dropbox-request-url" type="url" placeholder="https://www.dropbox.com/request/…" autocomplete="off">
+      <div class="btn-row"><a id="dropbox-request-open" class="btn primary" target="_blank" rel="noopener noreferrer" hidden>Открыть загрузку в Dropbox</a></div>
+      <div id="dropbox-request-status" role="status" aria-live="polite">Вставьте ссылку созданного запроса.</div>
+      <h2>Временный сервер предпросмотра</h2>
       <p>Можно выбрать несколько файлов; они загружаются по очереди небольшими блоками. Один файл — до 600 МиБ, всего — до 1 ГиБ. Не закрывайте страницу во время загрузки.</p>
-      <p class="model-storage-note">Это временное хранилище предпросмотра. Не передавайте пароли или личные данные. Большие файлы могут не сохраниться между сеансами.</p>
+      <p class="model-storage-note">Временное хранилище предпросмотра может не сохраниться между сеансами и недоступно на статическом сайте.</p>
       <label for="model-file">Выберите файл или файлы модели</label>
       <input id="model-file" type="file" multiple accept=".zip,.bin,.json,.txt,.model,.wasm,.gguf,.safetensors">
       <div class="btn-row"><button type="button" class="btn primary" id="model-send" disabled>Загрузить</button><button type="button" class="btn" id="model-back">Назад</button></div>
