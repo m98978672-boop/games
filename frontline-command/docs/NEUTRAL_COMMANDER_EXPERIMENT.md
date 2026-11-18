@@ -29,4 +29,4 @@
 
 Проверить фактическую загрузку и инференс Qwen на устройстве с WebGPU и доступом к Hugging Face/GitHub, включая скорость и корректность JSON; затем сравнить работу в парных боях и оценить смещение, отказы и FPS. Собирать тренировочные данные и проводить обучение отдельно; здесь обучение не выполнялось. Нельзя делать вывод об улучшении ИИ или заявлять, что модель обучилась командованию, до этих проверок.
 
-Исходный worker — `src/ai/commander-worker-entry.js`, собранный модуль — `src/ai/commander-worker.js` для статического сайта; пересборка `npm run build:neutral-commander` после `npm ci`. Лицензии и уведомления в `src/ai/licenses/`. Модель Qwen3.5 лицензирована Apache-2.0: https://huggingface.co/Qwen/Qwen3.5-0.8B/raw/main/README.md .
+Исходный worker — `src/ai/commander-worker-entry.js`, собранный модуль — `src/ai/commander-worker.bundle.js` для статического сайта; пересборка `npm run build:neutral-commander` после `npm ci`. Лицензии и уведомления в `src/ai/licenses/`. Модель Qwen3.5 лицензирована Apache-2.0: https://huggingface.co/Qwen/Qwen3.5-0.8B/raw/main/README.md .

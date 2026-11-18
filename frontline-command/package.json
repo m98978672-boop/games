@@ -77,7 +77,7 @@
     "diagnose:crowd-slot:mixed": "node tools/crowd-slot-mixed-doors.mjs",
     "diagnose:group-pair:mixed": "node tools/group-pair-mixed-doors.mjs",
     "test:battlefield:browser": "node tests/battlefield-browser.mjs",
-    "build:neutral-commander": "esbuild src/ai/commander-worker-entry.js --bundle --format=esm --platform=browser --minify --legal-comments=inline --outfile=src/ai/commander-worker.js",
+    "build:neutral-commander": "esbuild src/ai/commander-worker-entry.js --bundle --format=esm --platform=browser --minify --legal-comments=inline --outfile=src/ai/commander-worker.bundle.js",
     "test:neutral-commander:browser": "node tests/neutral-commander-browser.mjs",
     "test:model-inbox": "node tests/model-inbox.mjs"
   },

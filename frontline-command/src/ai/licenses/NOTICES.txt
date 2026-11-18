@@ -1,4 +1,4 @@
-The generated commander-worker.js bundles @mlc-ai/web-llm 0.2.87 (Apache-2.0; WEB-LLM-APACHE-2.0.txt). Its upstream distribution includes:
+The generated commander-worker.bundle.js bundles @mlc-ai/web-llm 0.2.87 (Apache-2.0; WEB-LLM-APACHE-2.0.txt). Its upstream distribution includes:
 - loglevel, Copyright (c) 2013 Tim Perry, MIT (LOGLEVEL-MIT.txt).
 - Code adapted from openai-node, Copyright 2024 OpenAI, Apache-2.0 (WEB-LLM-APACHE-2.0.txt).
 - TypeScript helper code, Copyright (c) Microsoft Corporation, under the following license:
