@@ -2,7 +2,7 @@ name: Frontline Qwen LoRA research
 on:
   workflow_dispatch:
   push:
-    branches: [arena/1f0ec4dc-games]
+    branches: [arena/75b096c6-games]
     paths: [.github/workflows/frontline-qwen-training.yml, frontline-command/tools/training/train-qwen.py, frontline-command/tools/training/collect-commander.mjs]
 permissions:
   contents: read
