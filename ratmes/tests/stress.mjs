@@ -1,7 +1,7 @@
 // Стресс-тест и бенчмарк подсистем RatMes:
-// 1. 1,000 сообщений + полнотекстовый BM25 поиск с фильтрами (net:, has:file, has:voice, pinned:, "точная фраза").
+// 1. 1,000 сообщений + полнотекстовый BM25 поиск с фильтрами (net:, has:file, pinned:, "точная фраза").
 // 2. Планировщик приоритетов (urgent/high обгоняют bulk), AIMD окно перегрузки и Circuit Breaker (CLOSED -> OPEN -> HALF_OPEN -> CLOSED).
-// 3. Голосовые WAV-заметки (проверка RIFF/WAVE заголовка и пиков волны) + безопасный Markdown-lite AST.
+// 3. Безопасный Markdown-lite AST (без innerHTML) и карта чанков передачи файла.
 // 4. Папки, черновики, реакции, правки, CRDT tombstone удаление, экспорт Deflate Bundle и дедуплицированный импорт.
 // Запуск: node tests/stress.mjs
 
@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 
 import { createRatMesEngine } from '../src/engine/ratmes-engine.mjs';
 import { PriorityTransferScheduler } from '../src/engine/net-scheduler.mjs';
-import { parseMarkdownLite, synthesizeDemoVoiceWav } from '../src/engine/media-pipeline.mjs';
+import { parseMarkdownLite, buildChunkMap } from '../src/engine/media-pipeline.mjs';
 
 let passed = 0;
 async function test(name, fn) {
@@ -24,9 +24,9 @@ async function test(name, fn) {
   }
 }
 
-console.log('=== RatMes Stress, Search BM25, Scheduler, Voice & Workspace Tests ===');
+console.log('=== RatMes Stress, Search BM25, Scheduler, Files & Workspace Tests ===');
 
-await test('Бенчмарк 1,000 сообщений + BM25 поиск с фильтрами (net:, has:voice, pinned:, "точная фраза")', async () => {
+await test('Бенчмарк 1,000 сообщений + BM25 поиск с фильтрами (net:, has:file, pinned:, "точная фраза")', async () => {
   const engine = createRatMesEngine({ seed: 7777, country: 'RU', seedDemoChats: false });
   const nets = ['ratmes', 'vk', 'max', 'telegram', 'discord'];
   const started = performance.now();
@@ -45,16 +45,16 @@ await test('Бенчмарк 1,000 сообщений + BM25 поиск с фи�
   }
   const ingestMs = performance.now() - started;
 
-  // Проверяем голосовое сообщение WAV + закрепление
-  const voicePipe = await engine.tools.pipeline([
-    { tool: 'pack.voice', args: { chatId: 'chat-ratmes', network: 'ratmes', durationSec: 1.8 } },
+  // Проверяем файл (вложение) + закрепление
+  const filePipe = await engine.tools.pipeline([
+    { tool: 'pack.media', args: { chatId: 'chat-ratmes', network: 'ratmes', filename: 'otchet.pdf', mimeType: 'application/pdf', bytes: new Uint8Array(2048) } },
     { tool: 'pack.validate', args: { handleId: '$envelopeId', targetNetwork: 'ratmes' } },
     { tool: 'vault.append', args: { handleId: '$envelopeId' } },
     { tool: 'vault.storeMedia', args: { handleId: '$attachmentId' } },
   ]);
-  assert.equal(voicePipe.ok, true);
-  const voiceMsgId = voicePipe.data.vars.msgId;
-  await engine.tools.workspace.togglePin({ chatId: 'chat-ratmes', msgId: voiceMsgId });
+  assert.equal(filePipe.ok, true);
+  const fileMsgId = filePipe.data.vars.msgId;
+  await engine.tools.workspace.togglePin({ chatId: 'chat-ratmes', msgId: fileMsgId });
 
   // BM25 точная фраза
   const q1 = await engine.tools.search.query({ q: '"квантового резерва"' });
@@ -68,11 +68,11 @@ await test('Бенчмарк 1,000 сообщений + BM25 поиск с фи�
   assert.ok(q2.data.totalMatches > 50);
   assert.ok(q2.data.hits.every((h) => h.network === 'telegram'));
 
-  // Фильтр по голосу + закреплённым
-  const q3 = await engine.tools.search.query({ q: 'has:voice pinned:true' });
+  // Фильтр по вложениям + закреплённым
+  const q3 = await engine.tools.search.query({ q: 'has:file pinned:true' });
   assert.equal(q3.ok, true);
   assert.equal(q3.data.totalMatches, 1);
-  assert.equal(q3.data.hits[0].msgId, voiceMsgId);
+  assert.equal(q3.data.hits[0].msgId, fileMsgId);
 
   console.log(`    [метрика] 1,000 сообщений: запись+индекс ${ingestMs.toFixed(1)} мс, BM25 поиск ${q1.data.durationMs} мс`);
 });
@@ -115,13 +115,11 @@ await test('PriorityTransferScheduler: high/urgent обгоняют bulk + AIMD 
   assert.equal(closed.state, 'CLOSED');
 });
 
-await test('Синтезатор голосовых WAV (RIFF/WAVE PCM 16-bit) и безопасный Markdown-lite AST', async () => {
-  const { wavBytes, durationSec, peaks } = synthesizeDemoVoiceWav({ durationSec: 1.5, sampleRate: 16000 });
-  assert.equal(durationSec, 1.5);
-  assert.equal(peaks.length, 32);
-  const header = new TextDecoder().decode(wavBytes.subarray(0, 12));
-  assert.ok(header.startsWith('RIFF') && header.endsWith('WAVE'));
-  assert.equal(wavBytes.byteLength, 44 + 1.5 * 16000 * 2);
+await test('Карта чанков передачи файла и безопасный Markdown-lite AST', async () => {
+  const chunkMap = buildChunkMap(5, 2, 3);
+  assert.equal(chunkMap.length, 5);
+  assert.equal(chunkMap[0], 'done');
+  assert.equal(chunkMap[3], 'dropped');
 
   const ast = parseMarkdownLite('Привет **мир** и `код` с https://example.com @alex #ratmes\n```js\nconst x = 1;\n```');
   assert.equal(ast.length, 2);

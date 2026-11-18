@@ -5,7 +5,6 @@
 import { createBridgeClient } from './bridge-client.mjs';
 import { createAudioCue } from './audio.mjs';
 import { renderMarkdownToFragment } from './markdown-render.mjs';
-import { createVoiceRecorder } from './voice-recorder.mjs';
 import { createCommandPalette } from './command-palette.mjs';
 import { getServiceGuide, listServiceGuides, sanitizeBridgeInput } from '../engine/service-guides.mjs';
 import { applyBrandBadge, createBrandSvg, getBrandTheme } from './brand-icons.mjs';
@@ -71,9 +70,13 @@ function fmtRelativeTime(iso) {
   if (diffSec < 86400) return `был(а) ${Math.floor(diffSec / 3600)} ч назад`;
   return `был(а) ${Math.floor(diffSec / 86400)} дн назад`;
 }
-function fmtDuration(ms) {
-  const sec = Math.max(0, Math.round((ms || 0) / 1000));
-  return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+// Ссылка на вложение: облачный файл (Supabase Storage) или локальный Vault ПК-агента.
+function resolveAttachmentUrl(att) {
+  if (!att) return null;
+  if (att.publicUrl) return att.publicUrl;
+  if (att.storagePath) return state.client.getCloudMediaUrl(att.storagePath);
+  if (att.mediaRelPath) return state.client.getVaultMediaUrl(att.mediaRelPath);
+  return null;
 }
 function avatarInitials(name) {
   const clean = String(name || 'У').replace(/^[^\p{L}\p{N}]+/u, '').trim();
@@ -87,6 +90,9 @@ function avatarHue(str) {
   for (let i = 0; i < s.length; i += 1) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
   return Math.abs(hash) % 360;
 }
+
+// Предел размера вложения для реальной передачи через облако (Supabase Storage).
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 const audio = createAudioCue();
 
@@ -1164,30 +1170,38 @@ function renderMessages() {
       }));
     }
 
-    const bodyNode = h('div', { className: 'msg-text' });
-    bodyNode.appendChild(renderMarkdownToFragment(m.text || ''));
-    bubble.appendChild(bodyNode);
+    // Плейсхолдер «📎 имя» (подпись по умолчанию) не дублируем строкой текста — его показывает плашка файла
+    const isAttachmentPlaceholder = Boolean(m.attachment) && /^📎\s/.test((m.text || '').trim());
+    if (!isAttachmentPlaceholder) {
+      const bodyNode = h('div', { className: 'msg-text' });
+      bodyNode.appendChild(renderMarkdownToFragment(m.text || ''));
+      bubble.appendChild(bodyNode);
+    }
 
     if (m.attachment && !m.deleted) {
       const attName = m.attachment.filename || m.attachment.name || 'Файл';
-      const mediaUrl = m.attachment.mediaRelPath ? state.client.getVaultMediaUrl(m.attachment.mediaRelPath) : null;
-      const isImg = m.attachment.mediaKind === 'image' || Boolean(m.attachment.isImage);
-      const durMs = m.attachment.durationMs || ((m.attachment.durationSec || 0) * 1000);
-      if (m.attachment.isVoice) {
-        const voiceBox = h('div', { className: 'msg-voice' },
-          h('span', { className: 'voice-ico', text: '🎙️' }),
-          h('span', { text: `Голосовое · ${fmtDuration(durMs)}` }),
-        );
-        if (mediaUrl) voiceBox.appendChild(h('audio', { controls: 'true', src: mediaUrl, className: 'voice-player' }));
-        bubble.appendChild(voiceBox);
-      } else if (isImg && mediaUrl) {
+      const mediaUrl = resolveAttachmentUrl(m.attachment);
+      const isImg = m.attachment.mediaKind === 'image';
+      if (isImg && mediaUrl) {
         bubble.appendChild(h('div', { className: 'msg-image-wrap' },
           h('img', { src: mediaUrl, alt: attName, className: 'msg-image', loading: 'lazy' }),
         ));
       } else {
         bubble.appendChild(h('div', { className: 'msg-attachment' },
           h('span', { text: `📎 ${attName} (${fmtBytes(m.attachment.sizeBytes)})` }),
-          mediaUrl ? h('a', { href: mediaUrl, download: attName, className: 'btn btn-sm btn-ghost', text: 'Скачать' }) : null,
+          mediaUrl
+            ? h('a', {
+              href: mediaUrl,
+              download: attName,
+              target: m.attachment.source === 'cloud' ? '_blank' : null,
+              rel: m.attachment.source === 'cloud' ? 'noopener' : null,
+              className: 'btn btn-sm btn-ghost',
+              text: 'Скачать',
+            })
+            // Файл пришёл из облака, но ссылка ещё не догрузилась — честно говорим об этом.
+            : m.attachment.source === 'cloud' || m.attachment.storagePath
+              ? h('span', { className: 'muted-text', text: 'файл в облаке' })
+              : h('span', { className: 'muted-text', text: 'на другом устройстве' }),
         ));
       }
     }
@@ -1342,20 +1356,7 @@ async function sendMessage(e) {
   const myPeerId = state.client.getCloudPeerId();
   let packRes;
 
-  if (att?.isVoice) {
-    packRes = await state.client.call('pack.voice', {
-      chatId: chat.chatId,
-      chatTitle: chat.title,
-      network: chat.network,
-      base64: att.base64Data || null,
-      mimeType: att.mimeType || 'audio/webm',
-      durationSec: att.durationSec || 2,
-      waveform: att.waveform || null,
-      caption: text || '🎙️ Голосовое сообщение',
-      senderId: myPeerId,
-      senderName: state.displayName,
-    });
-  } else if (att) {
+  if (att) {
     packRes = await state.client.call('pack.media', {
       chatId: chat.chatId,
       chatTitle: chat.title,
@@ -1395,7 +1396,7 @@ async function sendMessage(e) {
 
   const handleId = packRes.data.envelope.handleId;
   const msgId = packRes.data.msgId || `${state.client.getCloudPeerId()}-${Date.now()}`;
-  const bodyText = text || (att?.isVoice ? '🎙️ Голосовое сообщение' : `📎 ${att?.name || 'Вложение'}`);
+  const bodyText = text || (att ? `📎 ${att.name || 'Вложение'}` : '');
 
   const pipeRes = await state.client.pipeline([
     { tool: 'pack.validate', args: { handleId } },
@@ -1419,12 +1420,45 @@ async function sendMessage(e) {
 
   // В облачных комнатах (общих, личных DM и комнатах по ссылке) сразу пушим в живой Supabase!
   if (isCloud) {
+    // Файл сначала уходит в Supabase Storage, и только потом метаданные в сообщение —
+    // так вложение реально доступно другим людям и на других устройствах.
+    let cloudAttachment = null;
+    if (att) {
+      if (att.base64Data) {
+        const up = await state.client.uploadMediaBlob({
+          roomId: chat.chatId,
+          filename: att.name,
+          mimeType: att.mimeType,
+          base64: att.base64Data,
+        });
+        if (up?.ok) {
+          cloudAttachment = {
+            filename: att.name,
+            mimeType: att.mimeType,
+            sizeBytes: att.sizeBytes || up.data.sizeBytes,
+            mediaKind: up.data.mediaKind || '',
+            sha256: up.data.sha256,
+            storagePath: up.data.storagePath,
+          };
+          await state.client.call('cloud.attachLocalMedia', {
+            chatId: chat.chatId,
+            msgId,
+            attachment: { ...cloudAttachment, publicUrl: up.data.publicUrl },
+          });
+        } else {
+          showToast('Файл не загрузился', up?.error || 'Облако временно недоступно', 'warn');
+        }
+      } else {
+        showToast('Файл слишком большой', `Максимум ${fmtBytes(MAX_ATTACHMENT_BYTES)} — сообщение уйдёт без файла`, 'warn');
+      }
+    }
     const pushRes = await state.client.pushSupabaseMessage({
       msgId,
       roomId: chat.chatId,
       network: chat.network,
       senderName: state.displayName,
       text: bodyText,
+      attachment: cloudAttachment,
     });
     if (pushRes?.ok) {
       audio.sent();
@@ -2280,13 +2314,13 @@ function bindEvents() {
         name: file.name,
         mimeType: file.type || 'application/octet-stream',
         sizeBytes: file.size || 2048,
-        base64Data: file.size <= 3 * 1024 * 1024 ? base64Data : null,
+        base64Data,
       };
       el('attachmentName').textContent = file.name;
       el('attachmentMeta').textContent = fmtBytes(file.size);
       el('attachmentBar').hidden = false;
     };
-    if (file.size <= 3 * 1024 * 1024) reader.readAsDataURL(file);
+    if (file.size <= MAX_ATTACHMENT_BYTES) reader.readAsDataURL(file);
     else {
       state.pendingAttachment = { name: file.name, mimeType: file.type || 'application/octet-stream', sizeBytes: file.size };
       el('attachmentName').textContent = file.name;
@@ -2298,40 +2332,6 @@ function bindEvents() {
     state.pendingAttachment = null;
     el('attachmentBar').hidden = true;
     el('fileInput').value = '';
-  });
-
-  // Голосовые сообщения
-  const voiceRecorder = createVoiceRecorder({
-    canvasEl: el('voiceRecCanvas'),
-    timerEl: el('voiceRecTimer'),
-  });
-  el('btnRecordVoice')?.addEventListener('click', async () => {
-    if (voiceRecorder.isRecording()) return;
-    const res = await voiceRecorder.start();
-    if (!res?.started) {
-      showToast('Микрофон недоступен', res?.reason || '', 'warn');
-      return;
-    }
-    el('voiceRecordBar').hidden = false;
-  });
-  el('btnCancelVoice')?.addEventListener('click', () => {
-    voiceRecorder.cancel();
-    el('voiceRecordBar').hidden = true;
-  });
-  el('btnStopSendVoice')?.addEventListener('click', async () => {
-    const rec = await voiceRecorder.stop();
-    el('voiceRecordBar').hidden = true;
-    if (!rec) return;
-    state.pendingAttachment = {
-      name: `voice-${Date.now()}.webm`,
-      mimeType: rec.mimeType || 'audio/webm',
-      sizeBytes: rec.sizeBytes || 0,
-      base64Data: rec.base64,
-      isVoice: true,
-      durationSec: rec.durationSec,
-      waveform: rec.waveform,
-    };
-    el('composerForm')?.requestSubmit();
   });
 
   // Пересылка
@@ -2801,7 +2801,7 @@ async function bootstrap() {
   }));
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('./sw.js?v=16').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=17').then((reg) => {
       reg.update().catch(() => {});
     }).catch(() => {});
     navigator.serviceWorker.addEventListener('controllerchange', () => {

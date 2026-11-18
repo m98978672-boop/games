@@ -805,21 +805,6 @@ body {
   border-radius: 0 6px 6px 0;
   overflow-wrap: anywhere;
 }
-.msg-voice {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 4px;
-  padding: 7px 9px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.22);
-  font-size: 12px;
-}
-.voice-player {
-  width: 100%;
-  max-width: 260px;
-  height: 32px;
-}
 .msg-image-wrap {
   margin-top: 4px;
 }
@@ -893,30 +878,6 @@ body {
   object-fit: cover;
   border: 1px solid var(--border);
 }
-
-.voice-box {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.voice-waveform {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 28px;
-  padding: 2px 0;
-}
-
-.voice-bar {
-  flex: 1;
-  min-width: 3px;
-  border-radius: 2px;
-  background: var(--accent);
-  opacity: 0.85;
-}
-
-.voice-audio { width: 100%; height: 30px; }
 
 /* Реакции и кнопки действий */
 .msg-reactions {
@@ -1041,8 +1002,8 @@ body {
 }
 .can-write-action:hover { background: rgba(255, 255, 255, 0.18); }
 
-/* Composer & Voice Recording */
-.reply-bar, .attachment-bar, .voice-record-bar {
+/* Composer */
+.reply-bar, .attachment-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1054,24 +1015,6 @@ body {
   flex-shrink: 0;
   min-width: 0;
 }
-.voice-record-bar {
-  flex-wrap: wrap;
-}
-.voice-record-bar canvas {
-  flex: 1 1 80px;
-  min-width: 60px;
-  max-width: 100%;
-  height: 28px;
-}
-
-.rec-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--bad);
-  box-shadow: 0 0 8px var(--bad);
-}
-
 .attachment-info { display: flex; flex-direction: column; }
 .attachment-info span { font-size: 11px; color: var(--text-1); }
 

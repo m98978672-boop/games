@@ -1,5 +1,5 @@
 // Полнотекстовый поисковый движок RatMes (инвертированный индекс + BM25 + русский/латинский префиксный стемминг
-// + структурированные фильтры net:, from:, has:file, has:voice, pinned:, "точная фраза").
+// + структурированные фильтры net:, from:, has:file, pinned:, "точная фраза").
 // Работает одинаково в Node.js и браузере, полностью пересобирается из файлов RatMes-Vault/ за миллисекунды.
 
 const RU_SUFFIXES = [
@@ -53,7 +53,6 @@ export function parseSearchQuery(rawQuery) {
     from: null,
     chatId: null,
     hasFile: false,
-    hasVoice: false,
     pinnedOnly: false,
     includeDeleted: false,
   };
@@ -77,7 +76,6 @@ export function parseSearchQuery(rawQuery) {
       if ((key === 'from' || key === 'sender') && val) { filters.from = val; continue; }
       if (key === 'chat' && val) { filters.chatId = val; continue; }
       if (key === 'has' && (val === 'file' || val === 'media' || val === 'att')) { filters.hasFile = true; continue; }
-      if (key === 'has' && (val === 'voice' || val === 'audio')) { filters.hasVoice = true; continue; }
       if (key === 'pinned' && (val === 'true' || val === '1' || val === 'yes')) { filters.pinnedOnly = true; continue; }
       if (key === 'deleted' && (val === 'true' || val === '1')) { filters.includeDeleted = true; continue; }
     }
@@ -125,7 +123,7 @@ function buildSnippet(text, queryTerms, phrases, radius = 48) {
 
 export class FullTextSearchIndex {
   constructor() {
-    // docId (msgId) -> { msgId, chatId, chatTitle, network, senderName, text, lowerText, ts, seq, hasFile, hasVoice, deleted, tokenCount, tfMap }
+    // docId (msgId) -> { msgId, chatId, chatTitle, network, senderName, text, lowerText, ts, seq, hasFile, deleted, tokenCount, tfMap }
     this.docs = new Map();
     // term -> Map<docId, termFreq>
     this.postings = new Map();
@@ -158,7 +156,6 @@ export class FullTextSearchIndex {
     }
 
     const mime = String(msg.attachment?.mimeType || '');
-    const isVoice = Boolean(msg.attachment?.isVoice || mime.startsWith('audio/'));
     const doc = {
       msgId: msg.msgId,
       chatId: msg.chatId,
@@ -170,7 +167,6 @@ export class FullTextSearchIndex {
       ts: msg.ts || 0,
       seq: msg.seq || 0,
       hasFile: Boolean(msg.attachment),
-      hasVoice: isVoice,
       pinned: Boolean(pinned),
       deleted: Boolean(msg.deleted),
       tokenCount: tokens.length || 1,
@@ -321,7 +317,6 @@ export class FullTextSearchIndex {
       if (parsed.filters.chatId && doc.chatId !== parsed.filters.chatId) continue;
       if (parsed.filters.from && !doc.senderName.toLowerCase().includes(parsed.filters.from)) continue;
       if (parsed.filters.hasFile && !doc.hasFile) continue;
-      if (parsed.filters.hasVoice && !doc.hasVoice) continue;
       if (parsed.filters.pinnedOnly && !doc.pinned) continue;
 
       const snip = buildSnippet(doc.text, parsed.terms, parsed.phrases);
@@ -334,7 +329,6 @@ export class FullTextSearchIndex {
         seq: doc.seq,
         ts: doc.ts,
         hasFile: doc.hasFile,
-        hasVoice: doc.hasVoice,
         pinned: doc.pinned,
         score: Number(score.toFixed(4)),
         snippet: snip.snippet,
