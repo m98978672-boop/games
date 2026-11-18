@@ -96,7 +96,7 @@ export function createCommandPalette({
         const empty = document.createElement('p');
         empty.className = 'muted-text';
         empty.style.padding = '8px 10px';
-        empty.textContent = 'Ничего не найдено. Попробуй фильтры: net:telegram, has:file, has:voice, pinned:true';
+        empty.textContent = 'Ничего не найдено. Попробуй фильтры: net:telegram, has:file, from:Аня, pinned:true';
         resultsEl.appendChild(empty);
       }
     }

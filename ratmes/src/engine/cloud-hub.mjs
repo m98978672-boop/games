@@ -16,6 +16,14 @@ export const SUPABASE_PUBLIC_CONFIG = Object.freeze({
     presence: 'ratmes_presence',
     cloudLinks: 'ratmes_cloud_links',
   }),
+  // Файлы (вложения) живут в публичном bucket'е Supabase Storage:
+  // https://<ref>.supabase.co/storage/v1/object/public/ratmes-media/<path>
+  storage: Object.freeze({
+    bucket: 'ratmes-media',
+    publicBase: 'https://cuhfnzgytndyntpbnbda.supabase.co/storage/v1/object/public/ratmes-media',
+    uploadBase: 'https://cuhfnzgytndyntpbnbda.supabase.co/storage/v1/object/ratmes-media',
+    maxBytes: 10 * 1024 * 1024,
+  }),
 });
 
 export const GAMES_CHAT_ROOMS = Object.freeze([

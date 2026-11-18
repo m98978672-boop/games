@@ -13,7 +13,7 @@ export const MESSENGERS = Object.freeze({
     maxTextLen: 32000,
     maxFileMb: 2048,
     supportsLanP2P: true,
-    features: ['text', 'reply', 'forward', 'media', 'voice', 'edit', 'delete', 'react', 'lan-p2p'],
+    features: ['text', 'reply', 'forward', 'media', 'edit', 'delete', 'react', 'lan-p2p'],
   },
   vk: {
     id: 'vk',
@@ -25,7 +25,7 @@ export const MESSENGERS = Object.freeze({
     ramIdleMb: 68,
     maxTextLen: 4096,
     maxFileMb: 200,
-    features: ['text', 'reply', 'forward', 'media', 'voice', 'edit', 'delete', 'react'],
+    features: ['text', 'reply', 'forward', 'media', 'edit', 'delete', 'react'],
   },
   max: {
     id: 'max',
@@ -38,7 +38,7 @@ export const MESSENGERS = Object.freeze({
     ramIdleMb: 64,
     maxTextLen: 4096,
     maxFileMb: 100,
-    features: ['text', 'reply', 'forward', 'media', 'voice', 'delete'],
+    features: ['text', 'reply', 'forward', 'media', 'delete'],
   },
   telegram: {
     id: 'telegram',
@@ -50,7 +50,7 @@ export const MESSENGERS = Object.freeze({
     ramIdleMb: 115,
     maxTextLen: 4096,
     maxFileMb: 2000,
-    features: ['text', 'reply', 'forward', 'media', 'voice', 'edit', 'delete', 'react'],
+    features: ['text', 'reply', 'forward', 'media', 'edit', 'delete', 'react'],
   },
   whatsapp: {
     id: 'whatsapp',
@@ -62,7 +62,7 @@ export const MESSENGERS = Object.freeze({
     ramIdleMb: 145,
     maxTextLen: 65536,
     maxFileMb: 2000,
-    features: ['text', 'reply', 'forward', 'media', 'voice', 'edit', 'delete', 'react'],
+    features: ['text', 'reply', 'forward', 'media', 'edit', 'delete', 'react'],
   },
   discord: {
     id: 'discord',
@@ -98,7 +98,7 @@ export const MESSENGERS = Object.freeze({
     ramIdleMb: 110,
     maxTextLen: 16000,
     maxFileMb: 100,
-    features: ['text', 'reply', 'media', 'voice', 'edit', 'delete', 'react'],
+    features: ['text', 'reply', 'media', 'edit', 'delete', 'react'],
   },
   wechat: {
     id: 'wechat',
@@ -110,7 +110,7 @@ export const MESSENGERS = Object.freeze({
     ramIdleMb: 185,
     maxTextLen: 4000,
     maxFileMb: 100,
-    features: ['text', 'media', 'voice'],
+    features: ['text', 'media'],
   },
   line: {
     id: 'line',

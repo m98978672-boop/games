@@ -37,7 +37,7 @@ npm run audit    # статический сканер RM-107 (0 нарушен�
 2. **Вечный файловый резерв `RatMes-Vault/` (`src/engine/vault-store.mjs`):**
    Атомарная краш-безопасная запись (`tmp → fsync → rename → fsync(dir)`), автолечение оборванных хвостов `vault.healTail` (`RM-201`), пересборка индекса `vault.rebuildIndex` (`RM-203`) и переносимый Deflate-экспорт/импорт с дедупликацией (`pack.bundle` / `vault.importBundle`).
 3. **Полнотекстовый поиск BM25 (`src/engine/search-index.mjs`, ветка `search.*`):**
-   Инвертированный индекс с русским/латинским стеммингом, префиксным расширением, точными фразами в кавычках и фильтрами (`net:`, `from:`, `has:file`, `has:voice`, `pinned:true`) — **~1 мс на 1 000 сообщений**, доступен по **`Ctrl+K`**.
+   Инвертированный индекс с русским/латинским стеммингом, префиксным расширением, точными фразами в кавычках и фильтрами (`net:`, `from:`, `has:file`, `pinned:true`) — **~1 мс на 1 000 сообщений**, доступен по **`Ctrl+K`**.
 4. **Планировщик приоритетов, AIMD и Circuit Breaker (`src/engine/net-scheduler.mjs`):**
    Устраняет Head-of-Line Blocking (`urgent > high > normal > bulk`), регулирует окно перегрузки AIMD, автоматически переводит отвалившийся маршрут на План Б через `CLOSED → OPEN → HALF_OPEN` и качает Outbox с Full-Jitter backoff.
 5. **3-фазный движок времени (`src/engine/chrono.mjs`) и память `S3-FIFO` (`src/engine/cache-s3fifo.mjs`):**
