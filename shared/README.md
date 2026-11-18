@@ -16,6 +16,9 @@
 скопируйте `theme.css` рядом с `index.html` игры и подключите `./theme.css`.
 
 - [`theme.css`](./theme.css) — дизайн-токены (`:root`) и общие компоненты HUD.
+- [`engine.js`](./engine.js) — **единая точка входа движка RatCore** для всех разделов (`GamesEngine.rng/clock/create/ready/badge`).
+- [`engine-bootstrap.js`](./engine-bootstrap.js) — автоподстановка версии движка и плашки в HUD на любой странице.
+- [`engine-registry.json`](./engine-registry.json) — реестр разделов и их подключения к движку (проверяется в CI).
 - Базовая игра-шаблон, демонстрирующая этот дизайн: [`../game-base/`](../game-base/).
 - Пошаговая инструкция «как создать новую игру»: [`../game-base/TEMPLATE.md`](../game-base/TEMPLATE.md).
 
@@ -95,3 +98,23 @@
 
 Подробная пошаговая инструкция для ИИ-разработчика — в
 [`game-base/TEMPLATE.md`](../game-base/TEMPLATE.md).
+
+---
+
+## 5. Движок RatCore — обязателен в каждом разделе
+
+Все разделы Games (витрина, новости, мессенджер, портал разработчиков и **каждая** игра) подключают
+один и тот же движок из корня репозитория:
+
+```html
+<script src="../shared/engine.js"></script>        <!-- до игровых/прикладных скриптов -->
+<div class="engine-hud-slot" data-engine-badge></div>   <!-- плашка версии в общем HUD-стиле -->
+<script src="../shared/engine-bootstrap.js" defer></script>
+```
+
+- `GamesEngine.rng(seed)` — детерминированный ГПСЧ ядра (тот же `mulberry32`, что раньше был скопирован в играх).
+- `GamesEngine.clock({ tickHz })` — фиксированный шаг симуляции ядра с защитой от «спирали смерти».
+- `GamesEngine.create(config)` — полноценный экземпляр движка с `tools.*` и `ToolGuard`.
+- Модули движка собираются в один классический скрипт: `node ratcore/tools/build-browser-bundle.mjs`.
+
+Проверка покрытия (обязательна в CI): `node game-base/tests/engine.mjs`.

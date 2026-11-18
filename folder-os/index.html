@@ -124,6 +124,7 @@
 </style>
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
 
 <div id="desktop">
   <div id="desktop-icons"></div>
@@ -178,6 +179,7 @@
   <div class="ins-hint">Нажмите <b>F3</b> показать/скрыть инспектор · Всё в этой ОС - папки и файлы</div>
 </div>
 
+<script src="../shared/engine.js"></script>
 <script>
 /* ===================== VIRTUAL FILE SYSTEM ===================== */
 const STORAGE='folderos_v3';
@@ -540,5 +542,6 @@ function openApp(id){const a=APPS.find(x=>x.id===id);if(!a){notify('Прилож
 setInterval(()=>{kernel.schedule();cores.forEach(core=>core.process());},700);
 setTimeout(()=>{openApp('filemanager');setTimeout(()=>openApp('terminal'),150);},200);
 </script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

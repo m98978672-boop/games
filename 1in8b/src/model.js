@@ -25,9 +25,24 @@
     return h >>> 0;
   }
 
-  /* mulberry32 — быстрый детерминированный ГПСЧ */
+  /* mulberry32 — быстрый детерминированный ГПСЧ.
+     Числа берёт ЯДРО движка RatCore (алгоритм тот же), поэтому все
+     существующие сиды и сохранения дают прежние жизни бит-в-бит. */
   function makeRng(seed) {
-    var a = (typeof seed === 'string' ? hashSeed(seed) : seed >>> 0) || 1;
+    var numericSeed = (typeof seed === 'string' ? hashSeed(seed) : seed >>> 0) || 1;
+    var makeCore = (typeof window !== 'undefined' && window.RatCore && window.RatCore.createRng) || null;
+    if (typeof makeCore === 'function') {
+      var coreRng = makeCore(numericSeed);
+      var coreFn = function () { return coreRng.next(); };
+      coreFn.state = function () { return coreRng.state; };
+      coreFn.setState = function (v) { coreRng.state = Number(v) || 0; };
+      coreFn.int = function (n) { return Math.floor(coreFn() * n); };
+      coreFn.range = function (a2, b2) { return a2 + coreFn() * (b2 - a2); };
+      coreFn.chance = function (p) { return coreFn() < p; };
+      coreFn.pick = function (arr) { return arr[Math.floor(coreFn() * arr.length)]; };
+      return coreFn;
+    }
+    var a = numericSeed;
     var fn = function () {
       a |= 0; a = (a + 0x6D2B79F5) | 0;
       var t = Math.imul(a ^ (a >>> 15), 1 | a);

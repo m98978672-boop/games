@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
 <canvas id="game"></canvas>
 
 <!-- ============================ ИГРОВОЙ HUD ============================ -->
@@ -304,6 +305,7 @@
 </div>
 
 <script src="three.min.js"></script>
+<script src="../shared/engine.js"></script>
 <script src="src/bugcodes.js"></script>
 <script src="src/data.js"></script>
 <script src="src/outline.js"></script>
@@ -347,5 +349,6 @@
   }
 })();
 </script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

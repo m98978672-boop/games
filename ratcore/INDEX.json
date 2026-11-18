@@ -6,7 +6,7 @@
   "updatedAt": "2026-11-16",
   "branch": "arena/99666b55-games",
   "codeStarted": true,
-  "integratedIntoGamesShowcase": false,
+  "integratedIntoGamesShowcase": true,
   "implementation": {
     "entrypoint": "ratcore/ratcore.js",
     "toolsManifest": "ratcore/tools-manifest.json",
@@ -15,7 +15,10 @@
     "cloudBackend": {
       "provider": "supabase",
       "project": "games-cloud-save",
-      "tables": ["public.ratcore_cloud_snapshots", "public.ratcore_ai_messages"]
+      "tables": [
+        "public.ratcore_cloud_snapshots",
+        "public.ratcore_ai_messages"
+      ]
     },
     "cloudEcosystem": {
       "linearProject": "RatCore Engine (GAM-8..GAM-12 — all Done)",
@@ -94,51 +97,191 @@
     "algorithms": 125,
     "compressionAndRuntimeLevels": 12,
     "wireProtocol": "ratcore-wire/2",
-    "powerProfilesCpuPct": { "eco": 40, "balanced": 60, "turbo": 75 },
+    "powerProfilesCpuPct": {
+      "eco": 40,
+      "balanced": 60,
+      "turbo": 75
+    },
     "errorCodeRange": "RC-100..RC-999"
   },
   "documents": [
-    { "id": "agents-root", "path": "AGENTS.md", "role": "Universal AI entrypoint at repository root" },
-    { "id": "readme", "path": "ratcore/README.md", "role": "Project overview and document map" },
-    { "id": "spec", "path": "ratcore/SPEC.md", "version": "0.9-draft", "role": "Master specification, 5-barrier ToolGuard, 3-tier Zero-Cost Opt-In modularity, runtime self-healing, decisions D-01..D-17" },
-    { "id": "ai-contract", "path": "ratcore/AI_CONTRACT.md", "role": "Mandatory AI rulebook including ToolGuard and BridgeGuard" },
-    { "id": "tools", "path": "ratcore/TOOLS.md", "version": "0.9-draft", "role": "All 36 upgraded RatCore.tools.* v2.0 branches, tools.discover, RatStudio, 14 optional opt-in packs, presets and genre recipes" },
-    { "id": "algorithms", "path": "ratcore/ALGORITHMS.md", "version": "0.8-draft", "role": "185 formulas (F-01..F-185) and 125 algorithms (A-01..A-125)" },
-    { "id": "compression", "path": "ratcore/COMPRESSION.md", "version": "0.4-draft", "role": "12-level compression, ratcore-wire/2, Power & Thermal Guard (40/60/75%), Dynamic Resolution, Async Shader Pre-Warm, Self-Healing, WebGPU/WASM packs" },
-    { "id": "bridge", "path": "ratcore/BRIDGE.md", "version": "0.2-draft", "role": "Cross-engine bridge protocol (Three.js, Godot 4, Canvas 2D, Pereplet, RatCore federation, AI RPC, RCW2 binary streaming)" },
-    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#016" }
+    {
+      "id": "agents-root",
+      "path": "AGENTS.md",
+      "role": "Universal AI entrypoint at repository root"
+    },
+    {
+      "id": "readme",
+      "path": "ratcore/README.md",
+      "role": "Project overview and document map"
+    },
+    {
+      "id": "spec",
+      "path": "ratcore/SPEC.md",
+      "version": "0.9-draft",
+      "role": "Master specification, 5-barrier ToolGuard, 3-tier Zero-Cost Opt-In modularity, runtime self-healing, decisions D-01..D-17"
+    },
+    {
+      "id": "ai-contract",
+      "path": "ratcore/AI_CONTRACT.md",
+      "role": "Mandatory AI rulebook including ToolGuard and BridgeGuard"
+    },
+    {
+      "id": "tools",
+      "path": "ratcore/TOOLS.md",
+      "version": "0.9-draft",
+      "role": "All 36 upgraded RatCore.tools.* v2.0 branches, tools.discover, RatStudio, 14 optional opt-in packs, presets and genre recipes"
+    },
+    {
+      "id": "algorithms",
+      "path": "ratcore/ALGORITHMS.md",
+      "version": "0.8-draft",
+      "role": "185 formulas (F-01..F-185) and 125 algorithms (A-01..A-125)"
+    },
+    {
+      "id": "compression",
+      "path": "ratcore/COMPRESSION.md",
+      "version": "0.4-draft",
+      "role": "12-level compression, ratcore-wire/2, Power & Thermal Guard (40/60/75%), Dynamic Resolution, Async Shader Pre-Warm, Self-Healing, WebGPU/WASM packs"
+    },
+    {
+      "id": "bridge",
+      "path": "ratcore/BRIDGE.md",
+      "version": "0.2-draft",
+      "role": "Cross-engine bridge protocol (Three.js, Godot 4, Canvas 2D, Pereplet, RatCore federation, AI RPC, RCW2 binary streaming)"
+    },
+    {
+      "id": "devlog",
+      "path": "ratcore/DEVLOG.md",
+      "role": "Engineering log entries #001..#016"
+    }
   ],
   "toolBranches": [
-    "build", "move", "remove", "watch", "look", "see", "hear", "think", "guess",
-    "comm", "bugs", "bridge", "anim", "phys", "nav", "env", "fx", "ai", "sim",
-    "ui", "input", "audio", "save", "test", "stream",
-    "net", "destroy", "story", "mod", "cutscene",
-    "shader", "quest", "voice", "eco", "coopAi", "assist"
+    "build",
+    "move",
+    "remove",
+    "watch",
+    "look",
+    "see",
+    "hear",
+    "think",
+    "guess",
+    "comm",
+    "bugs",
+    "bridge",
+    "anim",
+    "phys",
+    "nav",
+    "env",
+    "fx",
+    "ai",
+    "sim",
+    "ui",
+    "input",
+    "audio",
+    "save",
+    "test",
+    "stream",
+    "net",
+    "destroy",
+    "story",
+    "mod",
+    "cutscene",
+    "shader",
+    "quest",
+    "voice",
+    "eco",
+    "coopAi",
+    "assist"
   ],
   "modularity": {
     "policy": "zero-cost-opt-in",
     "disabledErrorCode": "RC-108",
-    "core": ["build", "move", "remove", "watch", "look", "see", "input", "ui", "save", "stream"],
-    "standardModules": ["anim", "phys", "nav", "env", "fx", "ai", "sim", "audio", "hear", "test"],
+    "core": [
+      "build",
+      "move",
+      "remove",
+      "watch",
+      "look",
+      "see",
+      "input",
+      "ui",
+      "save",
+      "stream"
+    ],
+    "standardModules": [
+      "anim",
+      "phys",
+      "nav",
+      "env",
+      "fx",
+      "ai",
+      "sim",
+      "audio",
+      "hear",
+      "test"
+    ],
     "optionalPacks": {
-      "pack:multiplayer": ["net"],
-      "pack:destruction": ["destroy"],
-      "pack:narrative": ["story", "quest"],
-      "pack:mods": ["mod"],
-      "pack:cinema": ["cutscene"],
-      "pack:styles": ["shader"],
-      "pack:voice": ["voice"],
-      "pack:ecology": ["eco"],
-      "pack:companion": ["coopAi"],
-      "pack:assist": ["assist"],
-      "pack:webgpu": ["webgpu-compute"],
-      "pack:wasm-accel": ["wasm-simd-hotloops"],
-      "pack:studio": ["studio", "save.timeline*", "test.autoBalance", "build.exportSingleHtml"],
-      "pack:ai-team": ["think", "guess", "comm", "bugs", "bridge"]
+      "pack:multiplayer": [
+        "net"
+      ],
+      "pack:destruction": [
+        "destroy"
+      ],
+      "pack:narrative": [
+        "story",
+        "quest"
+      ],
+      "pack:mods": [
+        "mod"
+      ],
+      "pack:cinema": [
+        "cutscene"
+      ],
+      "pack:styles": [
+        "shader"
+      ],
+      "pack:voice": [
+        "voice"
+      ],
+      "pack:ecology": [
+        "eco"
+      ],
+      "pack:companion": [
+        "coopAi"
+      ],
+      "pack:assist": [
+        "assist"
+      ],
+      "pack:webgpu": [
+        "webgpu-compute"
+      ],
+      "pack:wasm-accel": [
+        "wasm-simd-hotloops"
+      ],
+      "pack:studio": [
+        "studio",
+        "save.timeline*",
+        "test.autoBalance",
+        "build.exportSingleHtml"
+      ],
+      "pack:ai-team": [
+        "think",
+        "guess",
+        "comm",
+        "bugs",
+        "bridge"
+      ]
     },
     "presets": [
-      "minimal-2d", "arcade-3d", "rpg-3d", "shooter-fps", "citybuilder",
-      "survival", "multiplayer-sandbox", "ai-dev-full"
+      "minimal-2d",
+      "arcade-3d",
+      "rpg-3d",
+      "shooter-fps",
+      "citybuilder",
+      "survival",
+      "multiplayer-sandbox",
+      "ai-dev-full"
     ]
   },
   "directories": {
@@ -151,5 +294,18 @@
     "handoffs": "ratcore/comms/handoffs/",
     "bridges": "ratcore/comms/bridges/",
     "reports": "ratcore/reports/"
+  },
+  "integration": {
+    "browserBundle": "ratcore/ratcore.bundle.js",
+    "bundleBuilder": "ratcore/tools/build-browser-bundle.mjs",
+    "bridge": "shared/engine.js",
+    "bootstrap": "shared/engine-bootstrap.js",
+    "registry": "shared/engine-registry.json",
+    "coverageTest": "game-base/tests/engine.mjs",
+    "sections": 21,
+    "externalEngineBridges": [
+      "route-engine/src/ratcore-bridge.mjs",
+      "pereplet-prototype/ratcore-bridge.mjs"
+    ]
   }
 }

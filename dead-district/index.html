@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="style.css?v=20261110h">
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
 
 <div class="viewport-wrap">
   <canvas id="game" width="480" height="270" aria-label="Игровое поле Dead District 480x270"></canvas>
@@ -236,6 +237,7 @@
 
 <noscript><p style="color:#ffffff;padding:24px">Для запуска Dead District в браузере нужен JavaScript.</p></noscript>
 
+<script src="../shared/engine.js"></script>
 <script src="web/data_bundle.js?v=20261110e"></script>
 <script src="web/core.js?v=20261110c"></script>
 <script src="web/algorithms.js?v=20261110g"></script>
@@ -249,5 +251,6 @@
 <script src="web/isometric.js?v=20261110h"></script>
 <script src="web/renderer_audio.js?v=20261110e"></script>
 <script src="web/main.js?v=20261110h"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

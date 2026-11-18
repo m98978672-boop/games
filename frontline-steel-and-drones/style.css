@@ -1,3 +1,4 @@
+@import url("../shared/theme.css");
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0b0e09; --panel:#151a12; --panel2:#202719; --panel3:#2b351f; --line:#46543a;

@@ -9,8 +9,15 @@ export const invLerp = (a, b, v) => (b === a ? 0 : clamp((v - a) / (b - a), 0, 1
 export const deg = (rad) => (rad * 180) / Math.PI;
 export const rad = (d) => (d * Math.PI) / 180;
 
-/** Детерминированный ГПСЧ (mulberry32). */
+/** Детерминированный ГПСЧ. Числа берёт ЯДРО движка RatCore (тот же mulberry32),
+ *  поэтому существующие сиды и сохранения дают прежние значения бит-в-бит. */
 export function rng(seed) {
+  const glob = typeof globalThis !== 'undefined' ? globalThis : null;
+  const make = glob && glob.RatCore && typeof glob.RatCore.createRng === 'function' ? glob.RatCore.createRng : null;
+  if (make) {
+    const core = make(seed >>> 0);
+    return function () { return core.next(); };
+  }
   let a = seed >>> 0;
   return function () {
     a = (a + 0x6d2b79f5) >>> 0;

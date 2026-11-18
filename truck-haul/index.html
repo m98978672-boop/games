@@ -13,7 +13,8 @@
     <header class="topbar">
       <a class="brand" href="../index.html" aria-label="На главную">← <span>GAMES</span></a>
       <div class="title"><span class="eyebrow">СИМУЛЯТОР ДАЛЬНИХ ПЕРЕВОЗОК</span><h1>ДАЛЬНОБОЙ</h1></div>
-      <div class="top-actions"><span class="save-indicator" id="save-indicator">● ПРОГРЕСС СОХРАНЁН</span><button class="icon-btn" id="help-btn" aria-label="Управление">?</button></div>
+      <div class="top-actions">
+  <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div><span class="save-indicator" id="save-indicator">● ПРОГРЕСС СОХРАНЁН</span><button class="icon-btn" id="help-btn" aria-label="Управление">?</button></div>
     </header>
 
     <section class="game-layout">
@@ -72,6 +73,8 @@
       <div id="modal-content"></div>
     </section>
   </div>
+  <script src="../shared/engine.js"></script>
   <script type="module" src="game3d.bundle.js"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

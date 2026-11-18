@@ -27,8 +27,15 @@ export const MIN_VEHICLE_PX = 3;      // F-116: транспорт виден н
 export const VEHICLES_PER_1000KM = { M: 12, R: 7, L: 3, G: 1.2, F: 1 };
 export const MAX_PER_ROUTE = 26;      // чтобы магистраль на 5000 км не рождала 130 машин
 
-/* mulberry32: маленький детерминированный ГПСЧ */
+/* ГПСЧ мира. Числа берёт ЯДРО движка RatCore (тот же mulberry32),
+   поэтому сид мира даёт прежнюю страну бит-в-бит. */
 export function rng(seed) {
+  const glob = typeof globalThis !== 'undefined' ? globalThis : null;
+  const make = glob && glob.RatCore && typeof glob.RatCore.createRng === 'function' ? glob.RatCore.createRng : null;
+  if (make) {
+    const core = make(seed >>> 0);
+    return function next() { return core.next(); };
+  }
   let a = seed >>> 0;
   return function next() {
     a = (a + 0x6d2b79f5) >>> 0;

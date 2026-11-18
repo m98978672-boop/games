@@ -781,24 +781,7 @@
           "url": "https://www.nasa.gov/live"
         }
       ],
-      "comments": [
-        {
-          "id": "c-s301-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "18 ноября 2026 — исторический день: сигнал от Voyager 1 летит к Земле ровно 24 часа! Обязательно поучаствуем в акции NASA Shine Bright.",
-          "createdAt": "2026-11-17T22:01:00Z"
-        },
-        {
-          "id": "c-s301-gcal",
-          "author": "Максим (владелец Games)",
-          "tool": "Google Calendar",
-          "toolUrl": "https://www.google.com/calendar/event?eid=YXFraHZrcTZlbGhkdDFpMzdvanJrOGk4cmsgbTk4OTc4NjcyQG0",
-          "text": "Поставил событие в календарь на 18 ноября 2026, чтобы не пропустить веху Voyager 1 и эфир NASA JPL 19 ноября!",
-          "createdAt": "2026-11-17T22:03:00Z"
-        }
-      ],
+      "comments": [],
       "featured": true,
       "pinned": true,
       "autoPosted": false
@@ -876,24 +859,7 @@
           "url": "https://en.wikipedia.org/wiki/Grand_Theft_Auto_VI"
         }
       ],
-      "comments": [
-        {
-          "id": "c-g101-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "Ждём 19 ноября! Особенно круто, что Rockstar подтвердили саундтрек от Justice и отказ от генеративного ИИ. Добавил в избранное под кодом G-101.",
-          "createdAt": "2026-11-17T22:01:00Z"
-        },
-        {
-          "id": "c-g101-sheets",
-          "author": "Максим (владелец Games)",
-          "tool": "Google Sheets",
-          "toolUrl": "https://docs.google.com/spreadsheets/d/16vFasgolSX0RDGNvJ2bLF-JEgOAXwWZOuHcOfPFLn58/edit",
-          "text": "Внёс G-101 в наш реестр Google Sheets — сверяли дату 19 ноября и технические параметры по трём источникам.",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -938,24 +904,7 @@
           "url": "https://socradar.io/blog/cve-2026-125350-google-patches-chrome-zero-day/"
         }
       ],
-      "comments": [
-        {
-          "id": "c-c501-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "Ребята, обновите Chrome до 157.0.8103.50+ и Edge до 157.0.4341.46+ прямо сейчас — CVE-2026-125350 в списке CISA KEV!",
-          "createdAt": "2026-11-17T22:01:00Z"
-        },
-        {
-          "id": "c-c501-gmail",
-          "author": "Максим (владелец Games)",
-          "tool": "Gmail",
-          "toolUrl": "https://mail.google.com/mail/u/0/#drafts",
-          "text": "Вынес предупреждение по коду C-501 в сводку Gmail-черновика, чтобы не забыть проверить все рабочие браузеры до 24 ноября.",
-          "createdAt": "2026-11-17T22:03:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1000,24 +949,7 @@
           "url": "https://science.nasa.gov/mission/roman-space-telescope/adopt-a-pixel/"
         }
       ],
-      "comments": [
-        {
-          "id": "c-s306-gcal",
-          "author": "Максим (владелец Games)",
-          "tool": "Google Calendar",
-          "toolUrl": "https://www.google.com/calendar/event?eid=MjUzYzlsYWs1a2ZudXU3M2toYXNocWNtcnMgbTk4OTc4NjcyQG0",
-          "text": "Уже добавил прямой эфир 7 декабря 2026 (21:30 CET) в Google Calendar — обязательно заберу свой «личный пиксель Вселенной»!",
-          "createdAt": "2026-11-17T22:03:00Z"
-        },
-        {
-          "id": "c-s306-notion",
-          "author": "Максим (владелец Games)",
-          "tool": "Notion",
-          "toolUrl": "https://app.notion.com/p/Games-2026-41b5c62035e48124a33cc11b2cfb725b",
-          "text": "Отметил S-306 в Notion как одну из главных космических премьер зимы 2026.",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1170,30 +1102,13 @@
           "url": "https://www.techradar.com/gaming/nintendo/the-legend-of-zelda-ocarina-of-time-for-nintendo-switch-2-hits-1-million-physical-copies-sold-in-the-us-making-it-the-best-selling-game-of-2026-so-far"
         }
       ],
-      "comments": [
-        {
-          "id": "c-g102-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "1 миллион физических копий за неделю в США — вот что значит правильный ремейк классики! Код G-102 легко запомнить.",
-          "createdAt": "2026-11-17T22:01:00Z"
-        },
-        {
-          "id": "c-g102-docs",
-          "author": "Максим (владелец Games)",
-          "tool": "Google Docs",
-          "toolUrl": "https://docs.google.com/document/d/1EKn7seFqCa7yENNC9zqfsrozjsHUlJaiPYQZpR0OCps/edit",
-          "text": "Поразительно, что даже в 2026-м физические картриджи Nintendo бьют миллионные рекорды за 7 дней.",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
     {
       "id": "auto-3dnews-106370377b",
-      "code": "T-709",
+      "code": "T-700",
       "category": "tech",
       "title": "Хакерский карманный Linux-компьютер Flipper One стал доступен для заказа за $399",
       "summary": "Компания Flipper Devices, известная своим хакерским мультитулом Flipper Zero, запустила сбор средств на выпуск нового устройства — Flipper One. Карманный компьютер на базе Linux оценили в $399, а первые поставки покупате",
@@ -1316,16 +1231,7 @@
           "url": "https://github.com/m98978672-boop/games/blob/arena/89d3f773-games/site/game-antivirus.js"
         }
       ],
-      "comments": [
-        {
-          "id": "c-c502-linear",
-          "author": "Максим (владелец Games)",
-          "tool": "Linear",
-          "toolUrl": "https://linear.app/gamebobli/issue/GAM-7/vkladka-obshenie-v-portale-games-s-vstroennym-ratmes-i-igrovymi#comment-fa01ccaf",
-          "text": "25 из 25 red-team атак заблокированы Антивирусом Games v1.1 + ClamAV в GitHub Actions. Теперь игроки и читатели Новостей под двойной защитой!",
-          "createdAt": "2026-11-17T22:01:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1426,16 +1332,7 @@
           "url": "https://github.com/m98978672-boop/games"
         }
       ],
-      "comments": [
-        {
-          "id": "c-g103-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "Каталог Games растёт: уже 16 встроенных игр и 6 проверенных проектов сообщества — и всё бесплатно прямо в браузере!",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1703,16 +1600,7 @@
           "url": "https://oceanexplorer.noaa.gov/"
         }
       ],
-      "comments": [
-        {
-          "id": "c-f603-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "Стеклянные губки NOAA из кремнезёма живут тысячелетиями и выглядят как инопланетная архитектура. Отличное вдохновение для подводных миров!",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1753,16 +1641,7 @@
           "url": "https://www.sciencedaily.com/releases/2026/10/261012185021.htm"
         }
       ],
-      "comments": [
-        {
-          "id": "c-s305-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "XLSSC 122 на дистанции 10,4 млрд световых лет — удивительно, что тёмная материя в центре оказалась плотнее расчётов. Жду новых статей Caltech!",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1803,16 +1682,7 @@
           "url": "https://www.sciencedaily.com/releases/2026/10/261007042108.htm"
         }
       ],
-      "comments": [
-        {
-          "id": "c-s303-docs",
-          "author": "Максим (владелец Games)",
-          "tool": "Google Docs",
-          "toolUrl": "https://docs.google.com/document/d/1EKn7seFqCa7yENNC9zqfsrozjsHUlJaiPYQZpR0OCps/edit",
-          "text": "Фактически Webb позволяет смотреть в прошлое нашей собственной системы, когда столкнулись прото-Земля и Тейя.",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1853,16 +1723,7 @@
           "url": "https://phys.org/news/2026-09-climate-poses-threat-cultural-heritage.html"
         }
       ],
-      "comments": [
-        {
-          "id": "c-w402-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "Перевозка ~250 000 работ Лувра в Льеве́н показывает, насколько серьёзно музеи готовятся к наводнениям. Даже ели Страдивари под угрозой!",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1903,16 +1764,7 @@
           "url": "https://web.dev/blog/webgpu-supported-major-browsers"
         }
       ],
-      "comments": [
-        {
-          "id": "c-t202-linear",
-          "author": "Максим (владелец Games)",
-          "tool": "Linear",
-          "toolUrl": "https://linear.app/gamebobli/issue/GAM-7/vkladka-obshenie-v-portale-games-s-vstroennym-ratmes-i-igrovymi#comment-fa01ccaf",
-          "text": "WebGPU Baseline открывает дорогу браузерной 3D-графике уровня нативных движков прямо в нашем каталоге Games!",
-          "createdAt": "2026-11-17T22:01:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -1957,16 +1809,7 @@
           "url": "https://news.un.org/en/story/2026/07/1168031"
         }
       ],
-      "comments": [
-        {
-          "id": "c-w401-docs",
-          "author": "Максим (владелец Games)",
-          "tool": "Google Docs",
-          "toolUrl": "https://docs.google.com/document/d/1EKn7seFqCa7yENNC9zqfsrozjsHUlJaiPYQZpR0OCps/edit",
-          "text": "Рад за рифы Акабы, Олимп и ташкентский модернизм — и за то, что исторический центр Вены наконец вывели из списка объектов под угрозой.",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -2007,16 +1850,7 @@
           "url": "https://www.sciencedaily.com/releases/2026/07/260722032111.htm"
         }
       ],
-      "comments": [
-        {
-          "id": "c-s304-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "Beta Pictoris d нашли по химическому спектру угарного газа и подтвердили на телескопе VLT в Чили — потрясающий метод!",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -2057,16 +1891,7 @@
           "url": "https://www.reuters.com/technology/microsoft-unveils-new-quantum-computing-chip-design-made-with-ai-2026-06-02/"
         }
       ],
-      "comments": [
-        {
-          "id": "c-t201-notion",
-          "author": "Максим (владелец Games)",
-          "tool": "Notion",
-          "toolUrl": "https://app.notion.com/p/Games-2026-41b5c62035e48124a33cc11b2cfb725b",
-          "text": "Оценил, что проверили не только пресс-релиз Microsoft, но и критику физиков из Сент-Эндрюса. Честный фактчек без хайпа!",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -2107,16 +1932,7 @@
           "url": "https://www.washingtontimes.com/news/2026/may/19/ocean-census-discovers-record-1100-new-marine-species-one-year/"
         }
       ],
-      "comments": [
-        {
-          "id": "c-f601-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "1 100+ новых морских видов за один год и акула-призрак на глубине 820 м — океан всё ещё загадочнее космоса!",
-          "createdAt": "2026-11-17T22:01:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -2157,16 +1973,7 @@
           "url": "https://www.nasa.gov/mission/artemis-ii/"
         }
       ],
-      "comments": [
-        {
-          "id": "c-s302-supabase",
-          "author": "Максим (владелец Games)",
-          "tool": "Supabase",
-          "toolUrl": "https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda",
-          "text": "Artemis II вернулся домой 10 апреля 2026 после 9 дней и 1 часа 32 минут — люди снова облетели Луну!",
-          "createdAt": "2026-11-17T22:01:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -2207,16 +2014,7 @@
           "url": "https://tech-insider.org/google-quantum-ai-neutral-atom-willow-2026/"
         }
       ],
-      "comments": [
-        {
-          "id": "c-t203-docs",
-          "author": "Максим (владелец Games)",
-          "tool": "Google Docs",
-          "toolUrl": "https://docs.google.com/document/d/1EKn7seFqCa7yENNC9zqfsrozjsHUlJaiPYQZpR0OCps/edit",
-          "text": "Двухтрековая стратегия Google (сверхпроводники + нейтральные атомы) показывает, что лидер квантовой гонки ещё не определён.",
-          "createdAt": "2026-11-17T22:02:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     },
@@ -2257,18 +2055,10 @@
           "url": "https://phys.org/news/2024-01-dark-black-eggs-ocean-floor.html"
         }
       ],
-      "comments": [
-        {
-          "id": "c-f602-dropbox",
-          "author": "Максим (владелец Games)",
-          "tool": "Dropbox",
-          "toolUrl": "https://www.dropbox.com/home/Games-News",
-          "text": "Отдельный плюс за честный фактчек: вирусная статья 2026-го оказалась пересказом исследования января 2024 — мы честно указали реальную дату! Копия ленты сохранена в Dropbox.",
-          "createdAt": "2026-11-17T22:04:00Z"
-        }
-      ],
+      "comments": [],
       "pinned": true,
       "autoPosted": false
     }
-  ]
+  ],
+  "notes": "Комментарии к новостям пишут только реальные читатели — они хранятся в браузере (localStorage) и проверяются GamesAntivirus. Заранее заготовленных и симулированных комментариев в ленте нет."
 }

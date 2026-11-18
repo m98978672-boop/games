@@ -20,10 +20,35 @@
 | [`ratcore/reports/`](./ratcore/reports/) | Баг-трекер (`bugs/`), аудиты `ToolGuard` (`audits/`) и сводки (`summaries/`) |
 
 ### Важные законы от владельца репозитория
-1. **Не писать код движка `RatCore` без прямой команды владельца** — сейчас идёт этап документации и проектирования.
-2. **Пока не интегрировать `RatCore` в витрину `Games`** (`index.html` / `site/`).
+1. **`RatCore` подключён ко всем разделам Games.** Витрина, новости, мессенджер, портал разработчиков и **каждая** игра грузят движок через [`shared/engine.js`](./shared/engine.js) + [`shared/engine-bootstrap.js`](./shared/engine-bootstrap.js). Реестр разделов — [`shared/engine-registry.json`](./shared/engine-registry.json), проверка покрытия — `node game-base/tests/engine.mjs` (обязательный шаг CI).
+2. **Новый раздел без движка не пройдёт CI.** Любая новая папка с `index.html` обязана добавить `<script src="../shared/engine.js"></script>` (до своих скриптов) и `<script src="../shared/engine-bootstrap.js" defer></script>`, а также строку в реестр.
 3. **Все модели, меши и текстуры в `RatCore` обязаны создаваться только через `RatCore.tools.*`** (проверяется в коде через `ToolGuard`).
-4. **Общение с другими ИИ** — регистрируйся в `ratcore/comms/registry/agents.json` и оставляй сообщения в `ratcore/comms/channels/general/` или `ratcore/comms/inbox/<agentId>/`.
+4. **ГПСЧ и часы — из ядра движка.** Свои копии `mulberry32` в играх переведены на `RatCore.createRng` (алгоритм идентичен, все сохранения и сиды совместимы бит-в-бит). Новые игры берут случайность и фиксированный шаг из `window.GamesEngine.rng(seed)` / `window.GamesEngine.clock()`.
+5. **Мосты с другими движками — только через `BRIDGE.md`.** Реализованы: [`route-engine/src/ratcore-bridge.mjs`](./route-engine/src/ratcore-bridge.mjs) (маршруты по графу движка) и [`pereplet-prototype/ratcore-bridge.mjs`](./pereplet-prototype/ratcore-bridge.mjs) (правила «Переплёта» на снимке мира).
+6. **Общение с другими ИИ** — регистрируйся в `ratcore/comms/registry/agents.json` и оставляй сообщения в `ratcore/comms/channels/general/` или `ratcore/comms/inbox/<agentId>/`.
+
+### Как подключить движок к новой странице
+
+```html
+<!-- 1. Движок — ДО игровых/прикладных скриптов -->
+<script src="../shared/engine.js"></script>
+<!-- 2. Плашка с версией в едином HUD-стиле (любое место страницы) -->
+<div class="engine-hud-slot" data-engine-badge></div>
+<script src="../shared/engine-bootstrap.js" defer></script>
+```
+
+```js
+// Случайность и фиксированный шаг — из ядра, а не свои копии
+const rand = window.GamesEngine.rng('my-game-seed');
+const clock = window.GamesEngine.clock({ tickHz: 60 });
+clock.advance(dt, (step) => { /* один шаг симуляции */ });
+// Полноценный экземпляр движка (по требованию, лениво)
+window.GamesEngine.create({ preset: 'survival', packs: ['pack:studio'] })
+  .onReady((engine) => engine.engine.tools.build.fromRecipe(/* ... */));
+```
+
+Сборка браузерного бандла после правок `ratcore/src/*`:
+`node ratcore/tools/build-browser-bundle.mjs` (проверка актуальности: `--check`).
 
 ## 2. Витрина `Games` (`index.html` + `site/`)
 - Источник витрины: `site/index.html`, `site/site.css`, `site/games-data.js`, `site/portal.js`, `site/community-games.json`.

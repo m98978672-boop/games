@@ -155,6 +155,7 @@
     </div>
 
     <div class="top-actions">
+  <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
       <button class="tb" id="btn-pause" title="Пауза (Пробел)">❙❙ Пауза</button>
       <div class="speeds" id="speeds" role="group" aria-label="Скорость времени">
         <button data-v="1" class="on">1×</button><button data-v="2">2×</button><button data-v="4">4×</button><button data-v="8">8×</button><button data-v="12">12×</button><button data-v="16">16×</button>
@@ -312,6 +313,7 @@
 <noscript><p style="color:#f2ecdf;padding:24px">Для игры нужен JavaScript.</p></noscript>
 
 <!-- обычные скрипты без сборки: работает и с file://, и с GitHub Pages -->
+<script src="../shared/engine.js"></script>
 <script src="src/algo.js"></script>
 <script src="src/countries.js"></script>
 <script src="src/names.js"></script>
@@ -333,5 +335,6 @@
 <script src="src/sound.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/main.js"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

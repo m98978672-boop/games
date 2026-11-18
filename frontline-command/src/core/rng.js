@@ -1,7 +1,25 @@
 // Детерминированный ГПСЧ (mulberry32): одинаковый сид — одинаковая война.
+// Числа берутся из ЯДРА движка RatCore, когда оно доступно: алгоритм совпадает,
+// поэтому все существующие сиды дают прежнюю войну бит-в-бит.
+function engineCreateRng() {
+  const glob = typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : null);
+  return glob && glob.RatCore && typeof glob.RatCore.createRng === 'function' ? glob.RatCore.createRng : null;
+}
+
 export class RNG {
-  constructor(seed = 1) { this.seed = seed >>> 0; this.s = this.seed || 1; }
+  constructor(seed = 1) {
+    this.seed = seed >>> 0;
+    this.s = this.seed || 1;
+    const make = engineCreateRng();
+    this.core = make ? make(this.s) : null;
+    this.engine = this.core ? 'ratcore' : 'fallback';
+  }
   next() {
+    if (this.core) {
+      const value = this.core.next();
+      this.s = this.core.state;
+      return value;
+    }
     this.s = (this.s + 0x6d2b79f5) >>> 0;
     let t = this.s;
     t = Math.imul(t ^ (t >>> 15), t | 1);
