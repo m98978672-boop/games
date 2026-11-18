@@ -140,6 +140,13 @@
     #world-top{ font-size:11px; gap:6px; }
     #world-top button{ min-height:40px; padding:8px 12px; }
   }
+  /* §100: кнопок на карте стало четыре — на телефоне ряд переносится, а не сжимается
+     до нечитаемых четырёх столбиков по 2 буквы */
+  @media (max-width: 560px){
+    #world-top{ flex-wrap:wrap; row-gap:6px; }
+    #world-top .rowbtn{ margin-left:0; width:100%; }
+    #world-top button{ flex:1 1 0; padding:8px 4px; font-size:11px; }
+  }
 
   #loading{ position:fixed; inset:0; display:grid; align-items:end; justify-items:center; background:#0d2233; overflow:hidden;
     color:#e9eef2; transition:opacity .4s; z-index:10; padding-bottom:7vh; }
@@ -175,6 +182,7 @@
     <span id="world-load">загрузка…</span>
     <div class="rowbtn">
       <button id="world-satellite" title="спутник: показать армии">спутник: вкл</button>
+      <button id="world-regions-border" title="показать границы областей пунктиром">области: выкл</button>
       <button id="world-terrain" title="показать, где технике тяжело: болота и горы">техника: обычно</button>
       <button id="world-back" title="назад к своей стране">назад</button>
     </div>

@@ -6,6 +6,7 @@
    потом отметки. Пока не готово — карта честно показывает то, что уже есть. */
 import { MARK, countryAt, canSeeArmies, visibleArmiesFor, pointInPolygon } from './worldmap2d.js';
 import { BIOMES, BIOME_ORDER, biomeAt, passabilityAt } from './biome2d.js';
+import { MAP_TONES } from './palette.js';
 import { regionAt as regionOf } from './regions2d.js';
 import { countryAt as countryAtWorld } from './worldmap2d.js';
 
@@ -26,12 +27,23 @@ export const WV = {
   countryLabelScale: 0.008,
   armyScale: 0.1,
   gridKm: 2000,              // шаг сетки меридианов и параллелей
-  // F-357: палитра карты — море, суша и тона стран. Раньше всё было почти чёрным
-  ocean: ['#07141d', '#0e3247', '#1d5f79'],
-  land: '#5e6c48',
-  landOwn: '#7d8b5c',
-  tones: ['#5f7047', '#6f6c46', '#556b4e', '#7a6f47', '#5c7058', '#736a44', '#647449', '#57684b'],
-  capitalLabelScale: 0.05    // с этого масштаба подписываем столицы
+  // F-357 + §101: палитра карты мира — та же, что у карты страны (MAP_TONES):
+  // море, песок, луг, лес, камень. Раньше планета была почти чёрной, светлой была
+  // только карта страны — получались два разных мира.
+  ocean: [MAP_TONES.seaDeep, MAP_TONES.seaMid, MAP_TONES.seaShelf],
+  land: MAP_TONES.land,
+  landOwn: MAP_TONES.own,
+  tones: ['#6e8557', '#7d7a53', '#5f7a58', '#87794f', '#67805f', '#7d7450', '#708049', '#637652'],
+  capitalLabelScale: 0.05,   // с этого масштаба подписываем столицы
+  // §101: дороги на карте мира — только при очень большом зуме. Владелец: «почему дороги
+  // такие большие, если на карте мира я их должен видеть только при очень большом зуме».
+  // До 0,12 px/км дорог нет вовсе: на обзоре это были жёлтые толстые линии поверх стран.
+  roadScale: 0.12,
+  localRoadScale: 0.25,
+  ruinScale: 0.05,
+  // §100: отметки рельефа — тоже подробность: на обзоре планеты это серая пыль
+  // поверх покрова, поэтому они появляются вместе с мелкими дорогами
+  markScale: 0.05
 };
 
 /* F-301: масштаб, при котором в кадр влезает континент.
@@ -393,9 +405,10 @@ export function drawRegionBorders(ctx, view, cam, world, toPx) {
     }
   };
   const own = visible.filter((r) => r.country === 'own');
-  // §99: на обзоре планеты области всех стран — это шум шириной в пару пикселей,
-  // поэтому чужие границы появляются только при приближении; своя страна видна всегда
-  const other = cam.scale >= 0.05 ? visible.filter((r) => r.country !== 'own') : [];
+  // §100: слой теперь по тумблеру, и когда игрок его включил, он ждёт все области,
+  // а не только свои. Раньше чужие границы прятались на обзоре ради кадра — при
+  // выключенном по умолчанию слое экономить нечего
+  const other = visible.filter((r) => r.country !== 'own');
   const w = cam.scale > 0.1 ? 1.4 : 1;
   if (other.length) {
     trace(other);
@@ -669,7 +682,7 @@ export function drawGraticule(ctx, view, cam, world, opts = {}) {
     lines++;
     const zero = lat === 0;
     if (x1 <= x0) continue;
-    ctx.strokeStyle = zero ? 'rgba(255,214,140,0.30)' : 'rgba(160,208,230,0.13)';
+    ctx.strokeStyle = zero ? 'rgba(120,74,20,0.32)' : 'rgba(12,52,70,0.14)';
     ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
     if ((Math.round(lat / stepDeg) % labelEvery) !== 0) continue;
     const text = zero ? 'экватор' : Math.abs(lat) + '° ' + (lat > 0 ? 'с. ш.' : 'ю. ш.');
@@ -680,7 +693,7 @@ export function drawGraticule(ctx, view, cam, world, opts = {}) {
       if (x < 46 || x > view.w - 46) continue;
       // на суше подписи не ставим: там уже есть названия стран
       if (onLand(world, lonToX(lon), latToY(lat))) continue;
-      ctx.fillStyle = 'rgba(170,212,232,0.34)';
+      ctx.fillStyle = 'rgba(12,48,66,0.62)';
       ctx.fillText(text, x, y - 8);
     }
   }
@@ -699,7 +712,7 @@ export function drawGraticule(ctx, view, cam, world, opts = {}) {
       const y = sy(latToY(lat));
       if (y < 22 || y > view.h - 22) continue;
       if (onLand(world, lonToX(lon), latToY(lat))) continue;
-      ctx.fillStyle = 'rgba(170,212,232,0.34)';
+      ctx.fillStyle = 'rgba(12,48,66,0.62)';
       ctx.fillText(text, x, y);
       break;
     }
@@ -792,6 +805,9 @@ export class WorldView {
     this.alpha = 1;
     this.showArmies = true;
     this.showTerrain = false;   // §99: слой «где технике тяжело» по кнопке
+    // §100: границы областей — по тумблеру и по умолчанию выключены: на общей карте
+    // они давали паутину пунктира поверх стран, и было непонятно, что нарисовано
+    this.showRegions = false;
     this.labels = true;
     this.dpr = 1;
     this.frames = 0;
@@ -1138,8 +1154,10 @@ export class WorldView {
 
     // §99: на глубоком зуме покров перерисовывается резко, в кадре
     paintBiomeScreen(ctx, view, cam, world, p);
-    // §99: отметки рельефа и значки болот и гор — в кадре, размером в пикселях экрана
-    paintMarksScreen(ctx, view, cam, world, p);
+    // §99: отметки рельефа и значки болот и гор — в кадре, размером в пикселях экрана.
+    // §100: на обзоре планеты их нет — покров и так виден цветом, а серые значки
+    // читались как пыль; появляются вместе с мелкими дорогами при приближении
+    if (cam.scale >= WV.markScale) paintMarksScreen(ctx, view, cam, world, p);
 
     // F-302: дороги, города и их подписи живут в отдельном слое с полями по краям.
     // Пока камера стоит (а смотрят карту мира именно так), слой просто копируется.
@@ -1173,7 +1191,8 @@ export class WorldView {
 
     // §99: границы стран и областей — в кадре, тонкими линиями поверх карты и дорог
     drawCountryBorders(ctx, view, cam, world, p);
-    drawRegionBorders(ctx, view, cam, world, p);
+    // §100: границы областей — по тумблеру «области», по умолчанию карта без них
+    if (this.showRegions) drawRegionBorders(ctx, view, cam, world, p);
 
     // §99: режим «где технике тяжело» — готовый слой поверх карты, а не пересчёт клеток
     // на каждом кадре. Включается кнопкой, в обычном виде карта остаётся чистой.
@@ -1249,7 +1268,8 @@ export class WorldView {
       ctx.font = '600 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(150,196,214,0.5)';
+      // §101: море стало светлым, как на карте страны, — слово «ОКЕАН» тёмной краской
+      ctx.fillStyle = 'rgba(12,48,66,0.62)';
       const spots = (world.oceans && world.oceans.length) ? world.oceans
         : [{ x: -12000, y: 14000 }, { x: 12000, y: -14000 }];
       for (const spot of spots) {
@@ -1312,7 +1332,7 @@ export class WorldView {
     drawCompass(ctx, view);
     // F-358: линейка масштаба и числа мира — по ним видно, что это карта, а не картинка
     drawScaleBar(ctx, view, cam);
-    drawMapLegend(ctx, view);
+    drawMapLegend(ctx, view, { showRegions: this.showRegions, showRoads: cam.scale >= WV.roadScale });
     ctx.restore();
     this.frames++;
     this.lastDrawMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
@@ -1394,30 +1414,40 @@ export class WorldView {
       ctx.setLineDash(dash);
       ctx.stroke();
     };
+    // §101: дороги — только при очень большом зуме. На обзоре планеты шоссе были
+    // толстыми жёлтыми линиями поверх стран: их видно, но карту они закрывают.
+    // До WV.roadScale дорог нет совсем; местные — от WV.localRoadScale.
+    const showRoads = cam.scale >= WV.roadScale;
+    const showLocal = cam.scale >= WV.localRoadScale;
     // §99: дорога — это корпус и сердцевина, как на настоящих картах: тёмный контур
     // отделяет её от леса и болота, светлая середина показывает, что ехать можно.
     // §99: на глубоком зуме дорога толще — в масштабе она должна оставаться дорогой
-    const zk = cam.scale > 0.35 ? 1.9 : (cam.scale > 0.12 ? 1.4 : 1);
-    ctx.strokeStyle = 'rgba(24,30,26,0.55)';
-    ctx.lineWidth = 2.6 * zk;
-    traceRoads(roadPaths.local, []);
-    ctx.strokeStyle = 'rgba(226,232,224,0.66)';
-    ctx.lineWidth = 1.1 * zk;
-    traceRoads(roadPaths.local, []);
-    ctx.strokeStyle = 'rgba(38,28,10,0.6)';
-    ctx.lineWidth = 3.8 * zk;
-    traceRoads(roadPaths.highway, []);
-    // §96: шоссе между странами — тёплая линия с пунктирной осевой
-    ctx.strokeStyle = 'rgba(255,214,110,0.95)';
-    ctx.lineWidth = 2.2 * zk;
-    traceRoads(roadPaths.highway, []);
-    ctx.strokeStyle = 'rgba(214,64,48,0.62)';
-    ctx.lineWidth = 1.2;
-    traceRoads(roadPaths.broken, [3, 4]);
-    if (roadPaths.highway.length) {
-      ctx.strokeStyle = 'rgba(40,32,16,0.5)';
-      ctx.lineWidth = 1;
-      traceRoads(roadPaths.highway, [5, 5]);
+    // §101: толщина растёт с масштабом плавно — на пороге дорога тонкая, на зуме толстая
+    const zk = cam.scale >= 0.4 ? 1.9 : (cam.scale >= 0.25 ? 1.45 : 0.8);
+    if (showLocal) {
+      ctx.strokeStyle = 'rgba(24,30,26,0.55)';
+      ctx.lineWidth = 2.6 * zk;
+      traceRoads(roadPaths.local, []);
+      ctx.strokeStyle = 'rgba(226,232,224,0.66)';
+      ctx.lineWidth = 1.1 * zk;
+      traceRoads(roadPaths.local, []);
+    }
+    if (showRoads) {
+      ctx.strokeStyle = 'rgba(38,28,10,0.6)';
+      ctx.lineWidth = 3.8 * zk;
+      traceRoads(roadPaths.highway, []);
+      // §96: шоссе между странами — тёплая линия с пунктирной осевой
+      ctx.strokeStyle = 'rgba(255,214,110,0.95)';
+      ctx.lineWidth = 2.2 * zk;
+      traceRoads(roadPaths.highway, []);
+      ctx.strokeStyle = 'rgba(214,64,48,0.62)';
+      ctx.lineWidth = 1.2;
+      traceRoads(roadPaths.broken, [3, 4]);
+      if (roadPaths.highway.length && cam.scale >= 0.25) {
+        ctx.strokeStyle = 'rgba(40,32,16,0.5)';
+        ctx.lineWidth = 1;
+        traceRoads(roadPaths.highway, [5, 5]);
+      }
     }
     ctx.setLineDash([]);
     if (landClip) { ctx.restore(); landClip = false; }
@@ -1457,8 +1487,8 @@ export class WorldView {
     };
     dots(towns, 2, 'rgba(232,238,244,0.8)');
     dots(caps, 3, '#f4f6f8');
-    dots(ruins, 2, '#d64030');
-    if (ruins.length) {
+    dots(ruins, cam.scale >= WV.ruinScale ? 2 : 1.6, '#d64030');
+    if (ruins.length && cam.scale >= WV.ruinScale) {
       ctx.strokeStyle = '#d64030';
       ctx.lineWidth = 1.4;
       ctx.beginPath();
@@ -1598,7 +1628,7 @@ export function drawMapLegend(ctx, view, opts = {}) {
   // красные и зелёные пятна на карте читаются как «просто так покрасили»
   // §99: и покров земли — лес, болото, горы, пустыня, «технике тяжело», дороги
   // и граница области. Без этого зелёные и бурые пятна на карте — загадка.
-  const entries = opts.entries || [
+  const all = [
     ['city', 'город'], ['capital', 'столица'], ['own', 'наша столица'],
     ['army', 'наша армия'], ['armybar', 'боеготовность'],
     ['road', 'дорога'], ['highway', 'шоссе'], ['region', 'граница области'],
@@ -1607,6 +1637,11 @@ export function drawMapLegend(ctx, view, opts = {}) {
     ['desert', 'пустыня, степь'], ['bad', 'технике тяжело'],
     ['battle', 'бой и взрыв'], ['ruin', 'разрушено']
   ];
+  // §100: строку про границы областей показываем только когда тумблер «области» включён —
+  // легенда не должна расшифровывать то, чего на карте нет
+  const entries = opts.entries || all.filter((e) =>
+    (e[0] !== 'region' || opts.showRegions !== false) &&
+    ((e[0] !== 'road' && e[0] !== 'highway') || opts.showRoads !== false));
   const narrow = view.w < 560;
   // на телефоне места мало: оставляем то, без чего карта непонятна — своя страна,
   // лес, болото, дорога, союзники, враги и захваченные области
