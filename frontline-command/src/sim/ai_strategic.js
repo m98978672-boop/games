@@ -167,7 +167,7 @@ export class StrategicAI {
 
     // 4. Снабжение: отряды без патронов
     for (const sq of mySquads) {
-      if (sq.ammoRatio() < 0.22 && game.time - (sq.lastSupplyOrder || 0) > 30) {
+      if (sq.ammoRatio() < 0.22 && (!game.cfg.flag('squad_orders_fix_v1', true) || !(sq.state === 'regroup' && sq.objective?.type === 'resupply')) && game.time - (sq.lastSupplyOrder || 0) > 30) {
         sq.lastSupplyOrder = game.time;
         game.api.issue({
           source: faction === game.playerFaction ? 'autopilot' : 'enemyAI',

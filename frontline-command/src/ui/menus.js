@@ -42,14 +42,6 @@ export class Menus {
           <b>Демонстрация: ИИ против ИИ</b>
           <small>Симметричный прогон без игрока: проверка, что правила не дают преимущества ни одной стороне.</small>
         </div>
-        <div class="menu-card" data-act="neutral-ai-demo">
-          <b>Эксперимент: общий помощник ИИ</b>
-          <small>Один локальный помощник для обеих сторон, отдельно и по одинаковым правилам. Требует WebGPU и загрузки около 400 МБ из сети; без модели работает штатный ИИ.</small>
-        </div>
-        <div class="menu-card" data-act="neutral-ai-knowledge">
-          <b>Эксперимент: помощник со знаниями</b>
-          <small>Той же модели обеих сторон добавлены сведения о солдатах, стенах, танках и снабжении. Не обучение; улучшение не доказано. Нужны WebGPU и модель.</small>
-        </div>
         <button type="button" class="menu-card" data-act="model-storage">
           <b>Хранилище модели ИИ</b>
           <small>Передать файлы через Dropbox или подключить ZIP к этому браузеру.</small>
@@ -95,13 +87,10 @@ export class Menus {
   modelStorage() {
     this.show(`
       <h1>Хранилище <span>модели</span></h1>
-      <div class="subtitle">Подключите исходную модель к этому браузеру или передайте файлы в Dropbox.</div>
-      <h2>Модель для игры</h2>
-      <p>Эксперимент в игре использует исходную Qwen3.5, не дообученный адаптер. Скачайте оригинальный ZIP (около 426 МиБ), затем выберите его ниже в разделе «Подключить ZIP к игре».</p>
+      <div class="subtitle">Передайте файлы в Dropbox или сохраните исходную модель в кэше браузера.</div>
+      <h2>Исходная модель</h2>
+      <p id="training-model-note">В обычных режимах игра использует игровой ИИ, а не эту нейросеть. Сохранение ZIP в кэш не подключает модель к игре. Обученный адаптер не подключён к игре и не подходит для импорта.</p>
       <div class="btn-row"><a id="model-original-download" class="btn primary" href="https://github.com/m98978672-boop/games/releases/download/frontline-qwen35-0.8b-0ec1389/Qwen3.5-0.8B-q4f16_1-MLC.zip" target="_blank" rel="noopener noreferrer">Скачать исходную модель</a></div>
-      <h2>Обучение: исследовательский результат</h2>
-      <p id="training-model-note">Пробный LoRA-адаптер после 32 шагов пока не подключён к игре и не подходит для импорта ZIP ниже. В малой CPU-проверке допустимы 5 из 8 ответов, но модель ошибается при выборе отрядов. Улучшение игры не доказано.</p>
-      <p><a href="https://github.com/m98978672-boop/games/releases/tag/frontline-qwen35-lora-research-44375607542" target="_blank" rel="noopener noreferrer">Адаптер и данные исследования</a> · <a href="https://github.com/m98978672-boop/games/releases/tag/frontline-qwen35-eval-44375607542" target="_blank" rel="noopener noreferrer">Результаты пробной проверки</a></p>
       <h2>Постоянное хранилище Dropbox</h2>
       <p>Создайте <a href="https://www.dropbox.com/requests" target="_blank" rel="noopener noreferrer">запрос файлов в Dropbox</a> для папки Frontline-Model-Inbox, вставьте ссылку запроса ниже и откройте её. Загрузка проходит на сайте Dropbox, а не в памяти браузера игры.</p>
       <p class="model-storage-note">Любой, кто получит ссылку запроса, сможет отправлять файлы и занимать место в вашем Dropbox. Не публикуйте её и не отправляйте пароли или личные данные.</p>
@@ -109,12 +98,12 @@ export class Menus {
       <input id="dropbox-request-url" type="url" placeholder="https://www.dropbox.com/request/…" autocomplete="off">
       <div class="btn-row"><a id="dropbox-request-open" class="btn primary" target="_blank" rel="noopener noreferrer" hidden>Открыть загрузку в Dropbox</a></div>
       <div id="dropbox-request-status" role="status" aria-live="polite">Вставьте ссылку созданного запроса.</div>
-      <h2>Подключить ZIP к игре</h2>
-      <p>Выберите скачанный оригинальный ZIP Qwen3.5-0.8B-q4f16_1-MLC. Игра проверит архив и сохранит файлы модели в кэше этого браузера. Нужны свободное место и WebGPU с поддержкой shader-f16; библиотека модели также загружается из сети. Кэш может быть удалён браузером.</p>
+      <h2>Сохранить ZIP модели в браузере</h2>
+      <p>Выберите оригинальный ZIP Qwen3.5-0.8B-q4f16_1-MLC. Файлы будут проверены и сохранены в кэше этого браузера, если достаточно места. Браузер может удалить кэш; на ИИ обычной игры он не влияет.</p>
       <input id="model-import-file" type="file" accept=".zip">
-      <div class="btn-row"><button type="button" class="btn primary" id="model-import">Подключить архив</button></div>
+      <div class="btn-row"><button type="button" class="btn primary" id="model-import">Сохранить архив</button></div>
       <progress id="model-import-progress" max="100" value="0" aria-label="Ход подключения модели"></progress>
-      <div id="model-import-status" role="status" aria-live="polite">Архив не подключён в этом сеансе.</div>
+      <div id="model-import-status" role="status" aria-live="polite">Архив не сохранён в этом сеансе.</div>
       <h2>Временный сервер предпросмотра</h2>
       <p>Можно выбрать несколько файлов; они загружаются по очереди небольшими блоками. Один файл — до 600 МиБ, всего — до 1 ГиБ. Не закрывайте страницу во время загрузки.</p>
       <p class="model-storage-note">Временное хранилище предпросмотра может не сохраниться между сеансами и недоступно на статическом сайте.</p>
@@ -165,7 +154,7 @@ export class Menus {
       <div class="form-row"><label>Подсказки</label><input id="set-hints" type="checkbox" ${settings.showHints ? 'checked' : ''}></div>
       <div class="form-row"><label>Режим для дальтоников</label><input id="set-cb" type="checkbox" ${settings.colorblind ? 'checked' : ''}></div>
       <div class="form-row"><label>Автосохранение</label><input id="set-auto" type="checkbox" ${settings.autosave ? 'checked' : ''}></div>
-      <div class="form-row"><label for="set-occupancy">Боты не проходят друг сквозь друга (эксперимент)</label><input id="set-occupancy" type="checkbox" ${settings.movementOccupancy ? 'checked' : ''}></div>
+      <div class="form-row"><label for="set-occupancy">Избегать столкновений бойцов</label><input id="set-occupancy" type="checkbox" ${settings.movementOccupancy ? 'checked' : ''}></div>
       <div style="font-size:12px;color:#c8ae7a">Боты ждут или пробуют обход; в тесных группах возможны пробки. Наложения из старых сохранений или до включения режима могут сохраняться.</div>
       <div class="btn-row">
         <button class="btn primary" id="set-close">Готово</button>

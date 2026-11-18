@@ -351,6 +351,7 @@ const openPts = (o) => ({ x1: o.p1[0], y1: o.p1[1], x2: o.p2[0], y2: o.p2[1] });
   cfgOff.flags.tactical_withdraw_v1 = false;
   cfgOff.flags.tank_smooth_turn_v1 = false;
   cfgOff.flags.bridge_deck_v1 = false;
+  cfgOff.flags.squad_orders_fix_v1 = false; // fixture predates squad order fixes
   cfgOff.flags.wall_collision_v2 = false;
   const gOff = new Game({ cfg: cfgOff, seed: 7, difficulty: 'regular', aiVsAi: true });
   const w = gOff.walls;

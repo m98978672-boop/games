@@ -5,7 +5,7 @@
   "stats": {
     "games": 16,
     "files": 1180,
-    "totalBytes": 35882593,
+    "totalBytes": 35883156,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -2088,8 +2088,8 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "71c00be092d31f31b68b772c397ab02cf6bd9537183c3a6c4c18c9a4f3466b12",
-      "totalSize": 9764050,
+      "infoHash": "f8889e659a8bacab9ec929b18b9fd1a76efc7ecbd7ac90e1bedc4a2e766a9232",
+      "totalSize": 9764613,
       "chunkSize": 262144,
       "chunkCount": 38,
       "fileCount": 534,
@@ -3481,8 +3481,8 @@
         },
         {
           "path": "package.json",
-          "size": 14379,
-          "sha256": "9c83995c031bbe190b88280439e08b42fc6b56fe83eb5a695aa6f739bb975f23"
+          "size": 14457,
+          "sha256": "ec1f0b3c55676666ab442b5ab667d0b1d5e010550b1b3ad0d136713b75897698"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3521,8 +3521,8 @@
         },
         {
           "path": "src/core/build-info.js",
-          "size": 849,
-          "sha256": "d5d2a098e19e5f8bdf75640f60c6f373804b1f1d7ec173b6b1543cffbf1bd55f"
+          "size": 842,
+          "sha256": "496d09c88cf1e2c88efc04d9c978fe48e60290a2474929a40038b573e5581975"
         },
         {
           "path": "src/core/config.js",
@@ -3586,13 +3586,13 @@
         },
         {
           "path": "src/sim/ai_squad.js",
-          "size": 9702,
-          "sha256": "a915ef877197c71ad3d8dee7cee3b76e4f1a0212d130c889beb52f7cc48f7d99"
+          "size": 11262,
+          "sha256": "3e5c95751622207e8cd685a13b59a9c80327af17d382931cf76193c1d76cb3d4"
         },
         {
           "path": "src/sim/ai_strategic.js",
-          "size": 15185,
-          "sha256": "25320e80f00a8282d847838b6bdc877b672e62667352d2a8dc84a7b0a2901b84"
+          "size": 15300,
+          "sha256": "c58954cd622709ac54279c07e38de1df24ffd673409841595debfc50d0ef740b"
         },
         {
           "path": "src/sim/autopilot.js",
@@ -3696,8 +3696,8 @@
         },
         {
           "path": "src/sim/squads.js",
-          "size": 13860,
-          "sha256": "85ee1e09da76060f27674430d4d228d5d387fa029f30b3e96a19787bfcd89cbc"
+          "size": 14696,
+          "sha256": "c7dfc9e9093c2d3576b4cd052c27bb49c4f255be45f5128410d4bcd6fea31d82"
         },
         {
           "path": "src/sim/units.js",
@@ -3731,8 +3731,8 @@
         },
         {
           "path": "src/ui/menus.js",
-          "size": 23814,
-          "sha256": "749a89e2f6e5436f2cf71c0535f68310f61fc0a32cb8528ab46e19fb5e6f5857"
+          "size": 21919,
+          "sha256": "03f5429c24f75c7dd12a8625344a118fa44ef37b45fd43a3a7fde81c8b183721"
         },
         {
           "path": "src/ui/model_import.js",
@@ -3741,8 +3741,8 @@
         },
         {
           "path": "src/ui/model_storage.js",
-          "size": 8007,
-          "sha256": "69e0b53403552594a102ab761b64e50946f731076993bd20009dbb69c5b8d495"
+          "size": 7883,
+          "sha256": "d9215ab44f1da23144f0bf877ea2035373df0966a11a849b99c0da1cffc0645a"
         },
         {
           "path": "src/vendor/EASYSTAR-LICENSE.txt",

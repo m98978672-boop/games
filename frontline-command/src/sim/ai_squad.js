@@ -66,6 +66,31 @@ export class SquadAI {
       }
       return;
     }
+    if (game.cfg.flag('squad_orders_fix_v1', true) && sq.state === 'regroup' && sq.objective?.type === 'resupply') {
+      const source = game.world.pointById(sq.objective.pointId);
+      if (!source || source.owner !== sq.faction || source.hp <= 0 || !['hq', 'depot', 'factory'].includes(source.type)) {
+        const next = game.world.nearestPoint(c.x, c.y, p => p.owner === sq.faction && p.hp > 0 && ['hq', 'depot', 'factory'].includes(p.type)).point;
+        if (!next) {
+          sq.objective = null; sq.retreatPoint = null; sq.holdsAt = null;
+          sq.state = 'hold'; sq.behavior = 'hold'; sq.stateLabel = 'держит позицию';
+          sq.reason = 'нет доступного снабжения'; this.log(sq, sq.reason);
+          return;
+        }
+        sq.objective = { x: next.x, y: next.y, pointId: next.id, type: 'resupply' };
+        sq.retreatPoint = { x: next.x, y: next.y };
+        sq.originalObjective = null; sq.objectiveOffset = null;
+      }
+      // Resupply is physical and may wait for stock: do not resume merely
+      // because morale/ammo are above the generic regroup threshold.
+      if (units.every(u => u.reserve >= u.reserveCapacity)) {
+        sq.objective = null; sq.retreatPoint = null; sq.holdsAt = null;
+        sq.state = 'hold'; sq.behavior = 'hold'; sq.stateLabel = 'снабжение получено';
+        sq.reason = 'отряд пополнил боеприпасы'; this.log(sq, sq.reason);
+      } else {
+        sq.stateLabel = 'за снабжением';
+        return;
+      }
+    }
     if (sq.state === 'regroup') {
       if (morale > cfg.regroupMorale && ammo > 0.35) {
         sq.behavior = sq.objective ? 'attack' : 'hold';

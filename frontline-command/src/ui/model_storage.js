@@ -27,8 +27,8 @@ export function bindModelStorage(root,goBack){
   importButton.disabled=true;importFile.disabled=true;back.disabled=true;
   try{
    await importModelArchive(file,{progress:(stage,fraction)=>{importProgress.value=Math.round(fraction*100);importStatus.textContent=`${stage==='verify'?'Проверка архива':'Сохранение файлов модели'}: ${importProgress.value}%. Не закрывайте страницу.`;}});
-   importStatus.textContent='Файлы модели сохранены в кэше этого браузера. Вернитесь в меню и запустите эксперимент «Обе стороны». WebGPU и доступ к библиотеке модели всё ещё необходимы.';
-  }catch(e){importStatus.textContent=`Подключение не выполнено: ${e.message}. Проверьте архив и свободное место в браузере.`;}
+   importStatus.textContent='Файлы модели сохранены в кэше этого браузера. В обычной игре нейросеть не используется.';
+  }catch(e){importStatus.textContent=`Сохранение не выполнено: ${e.message}. Проверьте архив и свободное место в браузере.`;}
   finally{importButton.disabled=false;importFile.disabled=false;back.disabled=false;}
  };
  let info=null,closed=false,busy=false,current=null,xhr=null;

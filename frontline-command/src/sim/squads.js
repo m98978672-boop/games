@@ -215,10 +215,21 @@ export class Squad {
       return { accepted: true, reason: 'стойка изменена' };
     }
     if (order.type === 'resupply') {
-      const depot = game.world.nearestPoint(this.centroid().x, this.centroid().y, (p) => ['depot', 'hq', 'factory'].includes(p.type) && p.owner === this.faction && p.hp > 0);
+      // Internal rollback exists to compare historical wall-off replays.
+      const fixedOrders = game.cfg.flag('squad_orders_fix_v1', true);
+      const nearest = game.world.nearestPoint(this.centroid().x, this.centroid().y, (p) => ['depot', 'hq', 'factory'].includes(p.type) && p.owner === this.faction && p.hp > 0);
+      const depot = fixedOrders ? nearest.point : nearest;
       if (!depot) return { accepted: false, reason: 'нет своего склада' };
+      if (fixedOrders) {
+        this.order = order;
+        this.lastOrderAt = game.time;
+        this.originalObjective = null;
+        this.objectiveOffset = null;
+        this.holdsAt = null;
+      }
       this.objective = { x: depot.x, y: depot.y, pointId: depot.id, type: 'resupply' };
       this.retreatPoint = { x: depot.x, y: depot.y };
+      if (fixedOrders) { this.directiveId = null; this.behavior = 'avoid'; this.stats.ordersOk++; }
       this.state = 'regroup'; this.stateLabel = 'за снабжением';
       this.reason = 'запрошено снабжение → ближайший склад';
       return { accepted: true, reason: 'идём за снабжением' };
@@ -249,6 +260,7 @@ export class Squad {
     this.lastOrderAt = game.time;
     this.originalObjective = null;
     this.objectiveOffset = null;
+    if (game.cfg.flag('squad_orders_fix_v1', true)) this.holdsAt = null;
     this.phaseIndex = 0;
     this.phaseEnteredAt = game.time;
     this.addObjectiveFromOrder(order);
@@ -279,10 +291,14 @@ export class Squad {
         this.objective = { x, y, pointId, sectorId, type: 'capture' };
         this.behavior = 'attack'; this.state = 'advance'; this.stateLabel = 'захват';
         break;
-      case 'hold':
+      case 'hold': {
         this.objective = { x, y, pointId, sectorId, type: 'hold' };
-        this.behavior = 'hold'; this.state = 'hold'; this.stateLabel = 'держит позицию';
+        const c = this.centroid(), atTarget = !this.game.cfg.flag('squad_orders_fix_v1', true) || dist(c.x, c.y, x, y) < 90;
+        this.behavior = atTarget ? 'hold' : 'attack';
+        this.state = atTarget ? 'hold' : 'advance';
+        this.stateLabel = atTarget ? 'держит позицию' : 'выдвигается на позицию';
         break;
+      }
       case 'retreat':
         this.objective = { x, y, pointId, sectorId, type: 'retreat' };
         this.behavior = 'avoid'; this.state = 'retreat'; this.stateLabel = 'отходит';
