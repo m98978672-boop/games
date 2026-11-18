@@ -50,6 +50,45 @@ window.GamesEngine.create({ preset: 'survival', packs: ['pack:studio'] })
 Сборка браузерного бандла после правок `ratcore/src/*`:
 `node ratcore/tools/build-browser-bundle.mjs` (проверка актуальности: `--check`).
 
+## 1b. P2P-раздача игр (вкладка «Торрент»)
+Отдельный отдел витрины: `torrent/` + `shared/p2p/` + свой сервер `tools/p2p-server/`.
+
+| Что | Где |
+|---|---|
+| Клиент (куски, WebRTC, проверка sha256) | [`shared/p2p/client.js`](./shared/p2p/client.js) |
+| `.torrent`, magnet, раскладка потока на куски | [`shared/p2p/torrentfile.js`](./shared/p2p/torrentfile.js) |
+| **Автоудаление плохих файлов** | [`shared/p2p/sanitize.js`](./shared/p2p/sanitize.js) |
+| Поиск сервера / режим HTTPS-сида | [`shared/p2p/config.js`](./shared/p2p/config.js) |
+| Свой сервер: трекер + сигналинг + резервный сид | [`tools/p2p-server/server.mjs`](./tools/p2p-server/server.mjs) |
+| Каталог раздач (генерируется) | [`site/torrent-catalog.json`](./site/torrent-catalog.json) |
+| Документация | [`torrent/README.md`](./torrent/README.md) |
+
+**Законы, которые нельзя нарушать:**
+
+1. **Игровые файлы не удаляются никогда.** Автоочистка убирает только вредоносное
+   (исполняемые, майнеры, похитители ключей, автозапуск). Каждая игра обязана
+   собираться из кусков бит-в-бит — это проверяет `node tools/torrent/test.mjs`.
+2. **Бинарники не чистятся как текст.** EXR/PNG/звук читаются как байты; иначе
+   «BiDi-символы» в случайных байтах меняют файл (реальный случай: `dawn.exr`).
+3. **Сигнатуры не должны ловить игровой код.** `stratum` в шейдере — не майнер;
+   контрольные примеры в `tools/torrent/test.mjs` (в том числе `last-shore/bundle.js`).
+4. **После правки каталога игр** пересоберите раздачи:
+   `node tools/torrent/build-catalog.mjs` (проверка: `--check`).
+5. Раздача — это игра, а не git-копия папки: `docs/`, скриншоты, тесты и
+   lock-файлы в манифест не попадают (бюджет: < 60 МБ на все игры).
+
+**Свой сервер:** `node tools/p2p-server/server.mjs` → `http://localhost:8787/torrent/`.
+Один процесс = трекер + сигналинг + резервный сид + статика сайта. Без сервера
+вкладка честно работает через HTTPS-сид (GitHub Pages).
+
+## 1c. Очередь новостей на 100 статей
+`site/scripts/build-news-backlog.mjs` кладёт в `site/news-feed.json` статьи двух очередей:
+`queue: "now"` (актуальное сейчас) и `queue: "future"` (календарь событий с датой вперёд,
+`scheduledFor`). Автопост (`site/scripts/auto-post-news.mjs`) сам «раскрывает» будущие
+статьи в день события — они не теряются, даже если автопост не запускался. У каждой
+статьи есть `factCheck`, локальная обложка `site/assets/news/<код>.svg` и **`comments: []`**
+(комментарии пишут только реальные читатели).
+
 ## 2. Витрина `Games` (`index.html` + `site/`)
 - Источник витрины: `site/index.html`, `site/site.css`, `site/games-data.js`, `site/portal.js`, `site/community-games.json`.
 - После правки `site/index.html` синхронизируй корень командой `node site/sync-root.mjs`.

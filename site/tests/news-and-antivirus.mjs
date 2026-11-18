@@ -145,6 +145,28 @@ for (const item of verifiedArticles) {
   assert.ok(Array.isArray(item.comments), `Article ${item.code} must declare comments array`);
   assert.equal(item.comments.length, 0, `Article ${item.code} must NOT ship simulated/pre-written comments`);
 }
+// Запас статей «на сейчас и на будущее»: 100 штук (40 сейчас + 60 в очередь),
+// каждые со своим фактчеком, локальной обложкой и БЕЗ заготовленных комментариев.
+const nowQueue = feed.items.filter((i) => i.queue === 'now');
+const futureQueue = feed.items.filter((i) => i.queue === 'future');
+assert.ok(nowQueue.length >= 40, `news backlog must keep >= 40 "now" articles (found ${nowQueue.length})`);
+assert.ok(futureQueue.length >= 60, `news backlog must keep >= 60 scheduled articles (found ${futureQueue.length})`);
+assert.ok(feed.autoPost?.backlog?.total >= 100, 'autoPost.backlog must account for >= 100 prepared articles');
+for (const item of [...nowQueue, ...futureQueue]) {
+  assert.equal(item.factCheck?.verified, true, `${item.code} from backlog must carry verified factCheck`);
+  assert.ok(Array.isArray(item.proofs) && item.proofs.length >= 1, `${item.code} must keep a proof link`);
+  assert.equal(item.comments.length, 0, `${item.code} must not ship pre-written comments`);
+  assert.ok(item.image && /^site\/assets\//.test(item.image), `${item.code} must declare a local cover`);
+  assert.equal(existsSync(path.join(repoRoot, item.image)), true, `${item.code} cover must exist: ${item.image}`);
+}
+for (const item of futureQueue) {
+  assert.match(String(item.scheduledFor || ''), /^\d{4}-\d{2}-\d{2}$/, `${item.code} must carry scheduledFor date`);
+  assert.ok(item.scheduledFor > '2026-11-18', `${item.code} scheduled date must be in the future`);
+}
+// Очередь должна быть равномерна по рубрикам, а не в одну тему.
+const backlogCats = new Set([...nowQueue, ...futureQueue].map((i) => i.category));
+assert.ok(backlogCats.size >= 6, 'backlog must cover all 6 news categories');
+
 const shippedComments = feed.items.reduce((sum, item) => sum + (Array.isArray(item.comments) ? item.comments.length : 0), 0);
 assert.equal(shippedComments, 0, 'news-feed.json must not contain any pre-written comments (only live reader comments)');
 

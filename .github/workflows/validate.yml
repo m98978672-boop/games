@@ -28,6 +28,10 @@ jobs:
         run: |
           node ratcore/tools/build-browser-bundle.mjs --check
           node game-base/tests/engine.mjs
+      - name: Test the P2P torrent (share catalog, pieces, auto-removal of bad files) and its own server
+        run: |
+          node tools/torrent/test.mjs
+          node tools/p2p-server/test.mjs
       - name: Test bridges between RatCore and other engines (route-engine, «Переплёт»)
         run: |
           (cd route-engine && npm test)
