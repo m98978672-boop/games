@@ -227,6 +227,22 @@ try {
   ok(state.peers.size >= 2, `трекер держит пиров: ${state.peers.size}`);
   ok(await readPackedChunk(state.torrents.get(game.gameId), 0), 'кусок читается из кеша сервера');
 
+  // ------------------------------------------------ поиск сервера в браузере
+  // Клиент ищет публичные адреса через new URL(path, base). Без базы это
+  // бросает TypeError, и список молча не загружался бы — проверяем на живом
+  // примере: тот же файл, который вкладка тянет с GitHub Pages.
+  console.log('\n[поиск сервера]');
+  // config.js — браузерный модуль: он вешает API на globalThis.GamesP2P,
+  // а не на module.exports, поэтому читаем оттуда.
+  require('../../shared/p2p/config.js');
+  const CONFIG = globalThis.GamesP2P || {};
+  assert.equal(typeof CONFIG.resolveServer, 'function', 'config.js публикует resolveServer');
+  const probe = await CONFIG.resolveServer({ endpoint: base.replace('/api/p2p', '/api/p2p'), timeoutMs: 1500 });
+  ok(probe.online === true && probe.endpoint === `${base}/api/p2p`, `свой сервер находится за один запрос (${probe.source})`);
+
+  const publicList = JSON.parse(await readFile(new URL('../../site/p2p-endpoints.json', import.meta.url), 'utf8'));
+  ok(Array.isArray(publicList.endpoints), 'site/p2p-endpoints.json — валидный список адресов');
+
   console.log(`\n✓ Сервер прошёл все проверки: ${passed}`);
 } finally {
   server.close();

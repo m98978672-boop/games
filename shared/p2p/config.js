@@ -88,7 +88,12 @@
 
   async function loadPublicEndpoints() {
     try {
-      const res = await fetch(new URL('../site/p2p-endpoints.json', root.location ? root.location.href : './'), { cache: 'no-cache' });
+      // База для URL обязательна: `new URL(path)` без базы бросает TypeError,
+      // и список публичных серверов молча не загружался бы (страница живёт
+      // в подкаталоге /games/torrent/, поэтому путь считаем от документа).
+      const base = (root.location && root.location.href) || 'https://localhost/';
+      const target = new URL('../site/p2p-endpoints.json', base).toString();
+      const res = await fetch(target, { cache: 'no-cache' });
       if (!res.ok) return [];
       const data = await res.json();
       return Array.isArray(data && data.endpoints)
