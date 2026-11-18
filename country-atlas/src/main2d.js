@@ -267,6 +267,8 @@ function setupWorld() {
   const statsEl = document.getElementById('world-stats');
   const contactsEl = document.getElementById('world-contacts');
   const techEl = document.getElementById('world-tech');
+  const techBarEl = document.getElementById('world-techbar');
+  const hintEl = document.getElementById('world-hint');
   const loadEl = document.getElementById('world-load');
   if (!worldScreen || !canvas || !openBtn) return;
 
@@ -316,15 +318,38 @@ function setupWorld() {
       contactsEl.style.whiteSpace = 'pre-line';
     }
     if (techEl) {
-      // в панели — свои последние разработки и кто из соседей впереди по науке
+      // F-370: в панели видно состояние науки словами и числами — изучается или нет,
+      // сколько очков осталось и сколько это по времени, что дальше в очереди.
       const mine = tech.last.slice(-3).reverse();
       const leaders = tech.leaders.map((c) => c.name + ' ' + c.count).join(' · ');
+      const eta = (min) => (min <= 0 ? 'меньше минуты'
+        : min < 120 ? Math.max(1, Math.round(min)) + ' мин'
+        : min < 2880 ? Math.round(min / 60) + ' ч'
+        : Math.round(min / 1440) + ' дн');
       techEl.textContent = [
-        'открыто ' + tech.count + ' · следующая: ' + (tech.next || 'всё открыто') + ' (' + Math.round(tech.progress * 100) + '%)',
+        tech.research
+          ? 'изучается: ' + tech.next + ' · ' + tech.bar + '% · осталось ' + nf(tech.left) + ' очков ≈ ' + eta(tech.etaMin)
+          : 'наука стоит: всё открыто',
+        tech.queue.length
+          ? 'в очереди: ' + tech.queue.map((q) => q.name + ' (' + q.branch + ', уровень ' + q.tier + ')').join(' · ')
+          : 'очередь пуста',
+        'открыто ' + nf(tech.count) + ' из ' + nf(tech.catalog) + ' · +' + nf(tech.perDay) + ' очков в сутки',
         mine.length ? 'последние: ' + mine.join('; ') : 'пока ничего не открыто',
         leaders ? 'впереди по науке: ' + leaders : ''
       ].filter(Boolean).join('\n');
       techEl.style.whiteSpace = 'pre-line';
+    }
+    if (techBarEl) {
+      const fill = techBarEl.querySelector ? techBarEl.querySelector('i') : null;
+      if (fill) fill.style.width = Math.max(0, Math.min(100, tech.bar)) + '%';
+      if (techBarEl.classList) techBarEl.classList.toggle('done', !tech.research);
+    }
+    if (hintEl) {
+      // F-371: числа подсказки вернулись: сколько чего на карте прямо сейчас
+      hintEl.textContent = 'тяните — сдвиг · щипок и колесо — зум · стран ' + st.countries +
+        ' · войн ' + st.wars + ' · боёв ' + nf(st.battles) + ' · взрывов ' + nf(st.explosionsTotal) +
+        ' · технологий ' + nf(tech.count) + ' из ' + nf(tech.catalog);
+      hintEl.style.whiteSpace = 'pre-line';
     }
     if (loadEl) loadEl.textContent = worldView.loading ? 'рисуем мир…' : 'мир: ' + WM.countries + ' стран · ' + world.own.tech.count + ' технологий';
     return st;

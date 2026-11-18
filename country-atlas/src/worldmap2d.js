@@ -13,7 +13,10 @@ import {
 } from './tech2d.js';
 
 export const WM = {
-  sizeKm: 24000,             // сторона карты мира
+  // F-365: сторона карты мира. Континент с изрезанным берегом вырос до радиуса
+  // 15 400 км, и в квадрате 24 000 суша срезалась его же краем: на воде висели
+  // города и дороги. 32 000 — берег целиком в кадре с запасом ~600 км.
+  sizeKm: 32000,
   ownKm: 7000,               // наша страна — квадрат в центре
   countries: 18,             // всего стран, включая нашу
   citiesPer: [7, 13],        // городов в стране, включая два пограничных
@@ -101,11 +104,34 @@ export function sitesFor(count, seed = 424242) {
 }
 
 /* Побережье: континент — правильный многоугольник, за его край страны не выходят. */
-export function coastPolygon(radiusKm = 11600, sides = 72) {
-  const pts = [];
+/* F-355: берег континента — не циркуль. Несколько волн разной длины дают заливы,
+   мысы и полуострова; многоугольник остаётся простым, поэтому ячейки стран режутся
+   по нему как раньше. Радиус средней линии тот же 11 600 км. */
+export function coastPolygon(radiusKm = 11600, sides = 180) {
+  const wave = (a) => 0.10 * Math.sin(a * 2 - 1.2)     // длинная волна: континент вытянут, а не круг
+    + 0.10 * Math.sin(a * 3 + 0.7)
+    + 0.06 * Math.sin(a * 5 - 1.9)
+    + 0.04 * Math.sin(a * 7 + 0.3)
+    + 0.03 * Math.sin(a * 11 + 2.6)
+    + 0.02 * Math.sin(a * 17 - 0.4);
+  // F-361: считаем волну на всех углах и растягиваем её в коридор [0.965R … 1.33R].
+  // Иначе в «заливах» берег подходил к центру ближе кольца стран, крайняя страна
+  // оказывалась в море, и её границы рисовались по воде (а карта выглядела дырявой).
+  let lo = Infinity, hi = -Infinity;
+  const raw = [];
   for (let i = 0; i < sides; i++) {
     const a = (i / sides) * Math.PI * 2;
-    pts.push([Math.cos(a) * radiusKm, Math.sin(a) * radiusKm]);
+    const k = 1 + wave(a);
+    raw.push([a, k]);
+    if (k < lo) lo = k;
+    if (k > hi) hi = k;
+  }
+  const span = hi - lo || 1;
+  const rMin = radiusKm * 0.965, rMax = radiusKm * 1.33;
+  const pts = [];
+  for (const [a, k] of raw) {
+    const r = rMin + ((k - lo) / span) * (rMax - rMin);
+    pts.push([Math.cos(a) * r, Math.sin(a) * r]);
   }
   return pts;
 }
@@ -319,6 +345,18 @@ export function buildMarks(seed, sizeKm = WM.sizeKm, count = WM.marksPer) {
     marks[i * 3] = x; marks[i * 3 + 1] = y; marks[i * 3 + 2] = types.indexOf(t);
   }
   return marks;
+}
+
+/* F-362: рельеф бывает только на суше. Отметки рождаются на квадрате карты,
+   поэтому часть попадала в океан и читалась там как мусор. Фильтр детерминирован
+   (тот же seed — те же отметки) и заодно разрежает массив: рисовать дешевле. */
+export function landMarks(marks, clip) {
+  if (!marks || !clip || !clip.length) return marks;
+  const keep = [];
+  for (let i = 0; i < marks.length; i += 3) {
+    if (pointInPolygon(marks[i], marks[i + 1], clip)) keep.push(marks[i], marks[i + 1], marks[i + 2]);
+  }
+  return Float32Array.from(keep);
 }
 
 /* F-294: армии. У каждой страны одна-две группы у границы; видны, только если
@@ -603,12 +641,13 @@ export function buildWorld(seed = 424242) {
   const w = {
     seed,
     sizeKm: WM.sizeKm,
+    coast: clip,             // F-355: берег континента — по нему рисуется суша и море
     minutes: 0,
     countries,
     own,
     cities: allCities,
     roads: allRoads,
-    marks: buildMarks(seed),
+    marks: landMarks(buildMarks(seed), clip),   // F-362: отметки рельефа только на суше
     armies,
     wars: [],
     pairs: adjacency(countries),

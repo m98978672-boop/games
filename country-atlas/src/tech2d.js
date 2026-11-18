@@ -155,6 +155,38 @@ export function nextTech(state) {
   return null;
 }
 
+/* F-369: очередь разработок — что страна возьмёт после текущей цели.
+   Считаем на копии счётчиков: сама наука не двигается, панель просто показывает
+   три ближайших проекта. Без этой функции в интерфейсе было видно только
+   «следующая», и было непонятно, изучается ли что-то вообще. */
+export function techQueue(state, n = 3) {
+  if (!state || !state.order || !state.order.length || !state.next) return [];
+  const total = state.order.length;
+  const tiers = { ...state.tiers };
+  let count = state.count;
+  let ptr = state.ptr;
+  // первым делом «закрываем» текущую цель: иначе очередь начиналась бы с неё же
+  const cur = state.next;
+  tiers[cur.branch] = cur.tier;
+  count++;
+  const bi = TECH.branches.findIndex((b) => b.id === cur.branch);
+  ptr = (Math.max(0, bi) + 1) % total;
+  const out = [];
+  for (let k = 0; k < total * TECH.tiers && out.length < n; k++) {
+    const bIdx = state.order[(ptr + k) % total];
+    const branch = TECH.branches[bIdx];
+    if (!branch) continue;
+    const tier = (tiers[branch.id] || 0) + 1;
+    if (tier > TECH.tiers) continue;
+    const variant = Math.floor(hash01(state.seed + (count + 1) * 37 + bIdx * 101, 173) * TECH.variants) % TECH.variants;
+    const t = techAt(techIndex(bIdx, tier, variant));
+    out.push({ name: t.name, branch: branch.name, tier, cost: t.cost });
+    tiers[branch.id] = tier;
+    count++;
+  }
+  return out;
+}
+
 /* F-326: шаг науки. Баллы копятся вместе с игровыми минутами; сколько накопилось —
    столько технологий и открылось. Один и тот же отрезок времени даёт одно и то же. */
 export function advanceTech(world, minutes) {
@@ -199,7 +231,18 @@ export function techStats(world, observerId = 'own') {
     .filter((c) => c.id !== observerId && c.tech)
     .map((c) => ({ id: c.id, name: c.name, count: c.tech.count }))
     .sort((a, b) => b.count - a.count);
+  const left = st && st.next ? Math.max(0, st.next.cost - st.points) : 0;
+  const ratePerMin = st ? (st.rate || 0) * (st.eff ? st.eff.science : 1) : 0;
+  const etaMin = st && st.next && ratePerMin > 0 ? Math.ceil(left / ratePerMin) : 0;
   return {
+    // F-370: видно, изучается ли что-то прямо сейчас и сколько ждать
+    research: !!(st && st.next),
+    left,
+    ratePerMin: Math.round(ratePerMin * 100) / 100,
+    etaMin,
+    etaDays: etaMin > 0 ? Math.ceil(etaMin / 1440) : 0,
+    bar: st && st.next ? Math.round(st.next.progress * 100) : 100,
+    queue: st ? techQueue(st, 3) : [],
     count: st ? st.count : 0,
     catalog: techCount(),
     points: st ? Math.round(st.points) : 0,
