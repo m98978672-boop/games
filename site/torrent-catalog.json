@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1171,
-    "totalBytes": 35833818,
+    "files": 1173,
+    "totalBytes": 35848753,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -19,8 +19,8 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "c08528c9bf18c1364f19308441d5c2bc25c6e409b4601c5c1fce0263e74ef547",
-      "totalSize": 1813322,
+      "infoHash": "ae83e80f07d788e60ed01d2b09d40cead9c5f733d927ad7ef04f2e4c4984b4e9",
+      "totalSize": 1818008,
       "chunkSize": 262144,
       "chunkCount": 7,
       "fileCount": 81,
@@ -47,8 +47,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 304174,
-          "sha256": "ef55b3db7398314ab810945dd6db7058402f1748e282067318d29375d05942b0"
+          "size": 304678,
+          "sha256": "6dfb1232800aad53cbcb031c2ce52d93a8e9405e8f27d9fe38c9854d11350f5e"
         },
         {
           "path": "cover.svg",
@@ -57,8 +57,8 @@
         },
         {
           "path": "index.html",
-          "size": 22685,
-          "sha256": "10bd9cb8b5e86ebdd13d63046845f54745b9baaef51498c2f40b3135d64c39f8"
+          "size": 23273,
+          "sha256": "e01148cad0d74d19946087c9604a1f58fe770d1a829d9b977aa488963dffc142"
         },
         {
           "path": "map-worker.min.js",
@@ -192,8 +192,8 @@
         },
         {
           "path": "src/main2d.js",
-          "size": 38252,
-          "sha256": "d59cc858f060630a35f0edbf83facf78e17d8f7117c4fe045f5848600a5d28b4"
+          "size": 38982,
+          "sha256": "926c28f981999247da29ab725847d87bbff176bb35eec35815d763c1a4d7a97d"
         },
         {
           "path": "src/map-worker.js",
@@ -322,8 +322,8 @@
         },
         {
           "path": "src/worldview.js",
-          "size": 86747,
-          "sha256": "bba4640fd9ea8caf72e6ce4b97c243773d2bdd0d5891d4e80031a71e14506617"
+          "size": 89204,
+          "sha256": "c385b0b54ca2978540a457390b2f515f70de9b023b3247833b004bcc7f95638d"
         },
         {
           "path": "terrain-worker.min.js",
@@ -357,8 +357,8 @@
         },
         {
           "path": "tools/look-world.mjs",
-          "size": 1679,
-          "sha256": "86a92e85b66f21d6ade869fa43dc3b8f39263cb84724d45c315b0a8f6dee2609"
+          "size": 2086,
+          "sha256": "11139f44bf5dc708105b1c04461fe464ffef740824114b853dc7409bb78c2e3a"
         },
         {
           "path": "tools/perf-dormant.mjs",
@@ -2078,11 +2078,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "c7671773f547ef33c272caba20d673c0ff59b6eda5cbaa7ac1701eebe648b286",
-      "totalSize": 9730081,
+      "infoHash": "682d1568fbecf730a22b21dd264f5b29b9a98eeaee6370695ae5b4f640644bd0",
+      "totalSize": 9740330,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 527,
+      "fileCount": 529,
       "files": [
         {
           "path": ".gitattributes",
@@ -3716,13 +3716,18 @@
         },
         {
           "path": "src/ui/menus.js",
-          "size": 20894,
-          "sha256": "46a5ae5f815c4d3919092300b232f43b7927bf26f18578cae12d8abfe360ec00"
+          "size": 21882,
+          "sha256": "47be42020af467bac92840cef8393ec2692002a2fc19cc44e5d7fdc1ff9e7932"
+        },
+        {
+          "path": "src/ui/model_import.js",
+          "size": 3812,
+          "sha256": "046ea4018777d8b3d16496a3671f97f15cfe507bd8eaae176feb9245d68a67c1"
         },
         {
           "path": "src/ui/model_storage.js",
-          "size": 6580,
-          "sha256": "f72cb13d0b41b15d3fb5f0d3f4c24e9232f2296f717a5d366c5990af40965d96"
+          "size": 8007,
+          "sha256": "69e0b53403552594a102ab761b64e50946f731076993bd20009dbb69c5b8d495"
         },
         {
           "path": "src/vendor/EASYSTAR-LICENSE.txt",
@@ -4433,6 +4438,11 @@
           "path": "tools/opposing-columns.mjs",
           "size": 8735,
           "sha256": "1ddfc08647daa6a57f3e9ba038a65f33934009f7f34187959152e09f1d80ee80"
+        },
+        {
+          "path": "tools/package-qwen-model.py",
+          "size": 4022,
+          "sha256": "c9d7e7258ff07998edd70514070aa5069545c713825cac45073157d6a30e1817"
         },
         {
           "path": "tools/remaining-group-failures.mjs",

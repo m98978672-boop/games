@@ -550,5 +550,68 @@ ok('камера смотрит на свою столицу и видит ве�
     Math.abs(x * cam.scale) <= 1200 / 2 && Math.abs(y * cam.scale) <= 700 / 2);
 })());
 
-console.log(`\nOK: 6 групп · ${pass} проверок`);
+/* ——— 7. §100: простая карта и тумблер «области» ——— */
+group('простая карта и тумблер областей');
+{
+  const pixels = (cv) => {
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] > 40) n++;
+    return n;
+  };
+  const diff = (a, b) => {
+    const da = a.getContext('2d').getImageData(0, 0, a.width, a.height).data;
+    const db = b.getContext('2d').getImageData(0, 0, b.width, b.height).data;
+    let n = 0;
+    for (let i = 0; i < da.length; i += 4) {
+      if (Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2]) > 12) n++;
+    }
+    return n;
+  };
+  const shot = (scale, showRegions) => {
+    const cv = makeCanvas(900, 600);
+    const v = new WorldView(cv, { createCanvas: (a, b) => createCanvas(a, b) });
+    v.resize(); v.setWorld(world); v.step(0.02); v.step(0.02); v.open();
+    v.transition = null; v.alpha = 1;
+    v.cam.scale = scale; v.cam.x = 0; v.cam.y = 0;
+    if (showRegions !== undefined) v.showRegions = showRegions;
+    v.draw();
+    return { v, cv };
+  };
+
+  const plain = shot(0.021);
+  ok('границы областей по умолчанию выключены', plain.v.showRegions === false);
+  ok('обзор рисуется без ошибок', pixels(plain.cv) > 10000, pixels(plain.cv));
+
+  const withRegions = shot(0.021, true);
+  const dRegion = diff(plain.cv, withRegions.cv);
+  ok('тумблер «области» включает пунктир областей', dRegion > 1000, dRegion);
+  ok('пунктир областей — тонкие линии, а не заливка', dRegion < 60000, dRegion);
+
+  const offLegend = drawMapLegend(makeCanvas(900, 600).getContext('2d'), { w: 900, h: 600 }, { showRegions: false });
+  const onLegend = drawMapLegend(makeCanvas(900, 600).getContext('2d'), { w: 900, h: 600 }, { showRegions: true });
+  ok('в легенде без областей на строку меньше', onLegend.rows === offLegend.rows + 1, offLegend.rows + ' → ' + onLegend.rows);
+  ok('легенда без областей всё равно полная', offLegend.rows >= 16, offLegend.rows);
+  ok('легенда помещается в кадр при тумблере', onLegend.x + onLegend.w <= 900 && onLegend.y + onLegend.h <= 600);
+
+  // мелкие дороги и кресты — только при приближении
+  ok('мелкие дороги не рисуются на обзоре', WV.localRoadScale > 0.021, WV.localRoadScale);
+  ok('отметки рельефа не рисуются на обзоре', WV.markScale > 0.021, WV.markScale);
+  ok('кресты разрушенного не рисуются на обзоре', WV.ruinScale > 0.021, WV.ruinScale);
+
+  const zoomed = shot(0.22);
+  ok('на зуме карта подробная', pixels(zoomed.cv) > 10000);
+  // если разрешить мелкие дороги на обзоре, кадр меняется — значит на обзоре их точно нет
+  const savedLocal = WV.localRoadScale;
+  const overviewRoads = shot(0.021);
+  WV.localRoadScale = 0;
+  overviewRoads.v.detail = null;
+  overviewRoads.v.draw();
+  const dRoads = diff(overviewRoads.cv, plain.cv);
+  WV.localRoadScale = savedLocal;
+  ok('мелкие дороги возвращаются при приближении', dRoads > 500, dRoads);
+  ok('после проверки порог дорог на месте', WV.localRoadScale === 0.05, WV.localRoadScale);
+}
+
+console.log(`\nOK: 7 групп · ${pass} проверок`);
 if (fail) { console.log(`FAIL: ${fail}`); process.exit(1); }

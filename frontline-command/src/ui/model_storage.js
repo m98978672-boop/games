@@ -1,3 +1,4 @@
+import {importModelArchive} from './model_import.js';
 // An opt-in inbox in the local preview server, not browser localStorage.
 // Files are sent in small pieces; no model is executed or unpacked here.
 const base=new URL('../../../__model_inbox/',import.meta.url);
@@ -20,6 +21,16 @@ export function bindModelStorage(root,goBack){
   if(url){requestOpen.href=url;requestStatus.textContent='Откройте Dropbox и загрузите файлы на его странице.';}
   else {requestOpen.removeAttribute('href');requestStatus.textContent=requestInput.value.trim()?'Нужна ссылка вида https://www.dropbox.com/request/… без дополнительных параметров.':'Вставьте ссылку созданного запроса.';}
  });
+ const importFile=root.querySelector('#model-import-file'),importButton=root.querySelector('#model-import'),importStatus=root.querySelector('#model-import-status'),importProgress=root.querySelector('#model-import-progress');
+ importButton.onclick=async()=>{
+  const file=importFile.files?.[0];if(!file){importStatus.textContent='Сначала выберите ZIP модели.';return;}
+  importButton.disabled=true;importFile.disabled=true;back.disabled=true;
+  try{
+   await importModelArchive(file,{progress:(stage,fraction)=>{importProgress.value=Math.round(fraction*100);importStatus.textContent=`${stage==='verify'?'Проверка архива':'Сохранение файлов модели'}: ${importProgress.value}%. Не закрывайте страницу.`;}});
+   importStatus.textContent='Файлы модели сохранены в кэше этого браузера. Вернитесь в меню и запустите эксперимент «Обе стороны». WebGPU и доступ к библиотеке модели всё ещё необходимы.';
+  }catch(e){importStatus.textContent=`Подключение не выполнено: ${e.message}. Проверьте архив и свободное место в браузере.`;}
+  finally{importButton.disabled=false;importFile.disabled=false;back.disabled=false;}
+ };
  let info=null,closed=false,busy=false,current=null,xhr=null;
  const explain=s=>({'file exists':'файл с таким именем уже загружен; переименуйте новый файл','storage full':'недостаточно места в хранилище','bad file name or size':'недопустимое имя или размер файла','invalid request':'недопустимый запрос','forbidden':'сервер отклонил запрос','wrong offset':'нарушен порядок блоков','upload not found':'сеанс загрузки потерян; начните заново','incomplete':'передан не весь файл','storage error':'ошибка записи в хранилище'}[s]||s);
  const say=s=>{if(!closed)status.textContent=s;};

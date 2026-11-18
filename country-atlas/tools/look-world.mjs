@@ -23,8 +23,14 @@ view.resize(); view.setWorld(world);
 view.step(0.02); view.step(0.02);      // два прохода базового слоя — как в игре
 view.open();
 view.alpha = 1;
-// третий аргумент «terrain» включает слой «где технике тяжело»
-if (process.argv[4] === 'terrain') view.showTerrain = true;
+// третий аргумент включает слой поверх карты:
+//   terrain — «где технике тяжело», regions — границы областей пунктиром
+const layer = process.argv[4] || '';
+if (layer === 'terrain') view.showTerrain = true;
+if (layer === 'regions') view.showRegions = true;
+// пятый аргумент — масштаб: 0.22 приближает карту, чтобы видеть подробности
+const zoom = Number(process.argv[5]);
+if (Number.isFinite(zoom) && zoom > 0) view.cam.scale = zoom;
 view.draw();
 writeFileSync(out, cv.toBuffer('image/png'));
 console.log('ok ' + w + '×' + h + ' · масштаб ' + view.cam.scale.toFixed(4) + ' · ' + view.lastDrawMs.toFixed(1) + ' мс → ' + out);

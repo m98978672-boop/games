@@ -1,0 +1,52 @@
+name: Verify Frontline model archive
+on:
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/frontline-model-integrity.yml, frontline-command/src/ui/model_import.js, frontline-command/tests/model-import-browser.mjs]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontline-command/package-lock.json
+      - name: Verify release bytes against Dropbox content hash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          gh release download frontline-qwen35-0.8b-0ec1389 --pattern 'Qwen3.5-0.8B-q4f16_1-MLC.zip' --dir "$RUNNER_TEMP"
+          python3 - "$RUNNER_TEMP/Qwen3.5-0.8B-q4f16_1-MLC.zip" <<'PY'
+          import hashlib, sys, zipfile
+          path = sys.argv[1]
+          block_hashes = hashlib.sha256()
+          with open(path, 'rb') as f:
+              for block in iter(lambda: f.read(4 * 1024 * 1024), b''):
+                  block_hashes.update(hashlib.sha256(block).digest())
+          digest = block_hashes.hexdigest()
+          expected = 'c4a3d3a678dee041f7d43d039c5e7dd9b627aeb19732d3d9174b70374c3086c1'
+          print('Dropbox content-hash of release archive:', digest)
+          if digest != expected:
+              raise SystemExit('Archive differs from uploaded Dropbox file')
+          with zipfile.ZipFile(path) as archive:
+              if archive.testzip() is not None:
+                  raise SystemExit('ZIP failed integrity check')
+              expected_names = {f'params_shard_{i}.bin' for i in range(11)} | {'merges.txt', 'mlc-chat-config.json', 'tensor-cache.json', 'tensor-cache-b16.json', 'tokenizer.json', 'tokenizer_config.json', 'vocab.json'}
+              if not expected_names.issubset(archive.namelist()):
+                  raise SystemExit('Archive is missing required model files')
+          print('Dropbox hash matches release; ZIP and 18 model files verified')
+          PY
+      - name: Test real archive import in Chromium
+        env:
+          MODEL_ZIP: ${{ runner.temp }}/Qwen3.5-0.8B-q4f16_1-MLC.zip
+        run: |
+          npm ci --prefix frontline-command --no-audit --no-fund
+          node frontline-command/tests/model-import-browser.mjs

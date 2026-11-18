@@ -1,0 +1,33 @@
+name: Package Frontline model archive
+
+# One-time packaging from this working branch. Weights stay out of Git.
+on:
+  push:
+    branches: [arena/618960d4-games]
+    paths:
+      - .github/workflows/frontline-model-archive.yml
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pinned model and verify every file
+        run: python3 frontline-command/tools/package-qwen-model.py "$RUNNER_TEMP/Qwen3.5-0.8B-q4f16_1-MLC.zip"
+      - name: Publish verified archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          tag=frontline-qwen35-0.8b-0ec1389
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to overwrite." >&2
+            exit 1
+          fi
+          (cd "$RUNNER_TEMP" && sha256sum Qwen3.5-0.8B-q4f16_1-MLC.zip > Qwen3.5-0.8B-q4f16_1-MLC.zip.sha256)
+          gh release create "$tag" --target "$GITHUB_SHA" --title 'Qwen3.5-0.8B WebLLM model archive' --notes 'Original Apache-2.0 model: https://huggingface.co/mlc-ai/Qwen3.5-0.8B-q4f16_1-MLC/tree/0ec138972555613c1d7812a821778ad0398c8790. This is a repackaging of the pinned files, not an independently verified game-ready commander. Uploading the archive does not install the model automatically.' "$RUNNER_TEMP/Qwen3.5-0.8B-q4f16_1-MLC.zip" "$RUNNER_TEMP/Qwen3.5-0.8B-q4f16_1-MLC.zip.sha256"
