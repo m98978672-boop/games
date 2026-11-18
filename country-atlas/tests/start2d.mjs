@@ -113,6 +113,21 @@ ok('камера помнит прошлое положение', !!intro.prevCa
 ok('пролёт длиннее минуты — анимация видна', (points.length * INTRO.hopSec) > 120, points.length * INTRO.hopSec);
 ok('пролёт не заканчивается сам', /loop/.test(introSrc) && !/stop\(\);\s*\/\/\s*конец/.test(introSrc));
 ok('заставка рисует подпись и полоску в одном кадре', introSrc.includes('tourProgress(') && introSrc.includes('над страной'));
+// телефон: подпись кадра не наезжает на полоску круга
+const meas = (text, size = 12) => {
+  const c = createCanvas(8, 8).getContext('2d');
+  c.font = size + 'px sans-serif';
+  return c.measureText(text).width;
+};
+const tail = '4 из 17 · Каменный круг';
+const pwAt = (w) => Math.max(90, Math.min(220, w * 0.32));
+ok('порог узкого экрана задан', INTRO.narrowW === 560, INTRO.narrowW);
+ok('на телефоне подпись короче полной', tail.length < ('пролёт над страной · ' + tail).length);
+ok('на телефоне подпись не лезет на полоску', 12 + meas(tail) + 18 < 390 - pwAt(390) - 14,
+  (12 + meas(tail) + 18).toFixed(0) + ' vs ' + (390 - pwAt(390) - 14).toFixed(0));
+ok('на широком экране подпись целиком', 12 + meas('пролёт над страной · ' + tail) + 18 < 900 - pwAt(900) - 14);
+ok('полоска укладывается в треть кадра', pwAt(390) <= 390 / 3 + 1 && pwAt(1600) <= 220);
+ok('подпись не вылезает за кадр', 12 + meas('пролёт над страной · 4 из 17 · Каменный круг') + 18 < 560);
 
 /* ——— 3. движок ——— */
 group('движок');
