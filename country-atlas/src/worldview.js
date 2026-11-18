@@ -5,6 +5,9 @@
    Загрузка идёт в два прохода прямо во время анимации перехода: сначала страны и границы,
    потом отметки. Пока не готово — карта честно показывает то, что уже есть. */
 import { MARK, countryAt, canSeeArmies, visibleArmiesFor, pointInPolygon } from './worldmap2d.js';
+import { BIOMES, BIOME_ORDER, biomeAt, passabilityAt } from './biome2d.js';
+import { regionAt as regionOf } from './regions2d.js';
+import { countryAt as countryAtWorld } from './worldmap2d.js';
 
 export const WV = {
   baseSize: 1400,          // сторона базового слоя, px
@@ -186,6 +189,314 @@ function hatchPattern(ctx, color) {
 
 /* §96: политический окрас рисуется каждый кадр, поэтому здесь важна дешевизна:
    страны проверяются по рамке, штриховка берётся из готового узора. */
+
+
+/* §99: отметки рельефа и значки болот и гор рисуются в кадре, а не в базовом слое.
+   Размер значка — в пикселях экрана, поэтому на зуме он не превращается в дерево
+   в пол-экрана, а остаётся значком. Значки копятся по видам в общие пути:
+   720 отметок — это двенадцать вызовов рисования, а не две тысячи. */
+const MARK_TYPES = ['forest', 'swamp', 'mountain', 'steppe', 'desert', 'tundra'];
+
+export function paintMarksScreen(ctx, view, cam, world, toPx) {
+  if (!world) return 0;
+  const halfW = view.w / (2 * cam.scale) + 200, halfH = view.h / (2 * cam.scale) + 200;
+  const inside = (x, y) => Math.abs(x - cam.x) <= halfW && Math.abs(y - cam.y) <= halfH;
+  const px = cam.scale > 0.25 ? 2.4 : (cam.scale > 0.06 ? 2.1 : 1.9);
+  const byKind = new Map();
+  const push = (kind, sx, sy) => {
+    if (!byKind.has(kind)) byKind.set(kind, []);
+    byKind.get(kind).push(sx, sy);
+  };
+  const marks = world.marks || [];
+  // §99: на обзоре планеты значков много, а различить их нельзя — берём каждый второй,
+  // иначе отметки читаются «пылью», а путь из 2 000 треугольников стоит 1,7 мс
+  const step = cam.scale < 0.05 ? 12 : 3;
+  for (let i = 0; i < marks.length; i += step) {
+    if (!inside(marks[i], marks[i + 1])) continue;
+    const kind = MARK_TYPES[marks[i + 2]] || 'forest';
+    const s = toPx(marks[i], marks[i + 1]);
+    push(kind, s.x, s.y);
+  }
+  // значки покрова: болото «≡», горы «∧», тундра точками
+  const g = world.biomes;
+  if (g && cam.scale > 0.02) {
+    const cellKm = g.sizeKm / g.size;
+    if (cellKm * cam.scale > 7) {
+      const half = g.sizeKm / 2;
+      for (let j = 0; j < g.size; j++) {
+        for (let i = 0; i < g.size; i++) {
+          const c = g.code[j * g.size + i];
+          if (c !== 2 && c !== 3 && c !== 6) continue;
+          const x = -half + (i + 0.5) * cellKm, y = -half + (j + 0.5) * cellKm;
+          if (!inside(x, y)) continue;
+          const s = toPx(x, y);
+          push(c === 2 ? 'swamp' : (c === 3 ? 'mountain' : 'tundra'), s.x, s.y);
+        }
+      }
+    }
+  }
+  let drawn = 0;
+  const k = px / WV.markPx;
+  ctx.save();
+  ctx.lineWidth = 1;
+  for (const [kind, pts] of byKind) {
+    const tone = MARK[kind] ? MARK[kind].tone : '#4a5a46';
+    const size = WV.markPx * k;
+    if (kind === 'forest') {
+      ctx.beginPath();
+      for (let i = 0; i < pts.length; i += 2) {
+        const x = pts[i], y = pts[i + 1];
+        for (let j = -1; j <= 1; j++) {
+          ctx.moveTo(x + j * size - size * 0.5, y + size * 0.6);
+          ctx.lineTo(x + j * size, y - size * 0.8);
+          ctx.lineTo(x + j * size + size * 0.5, y + size * 0.6);
+          ctx.closePath();
+        }
+      }
+      ctx.fillStyle = tone;
+      ctx.fill();
+    } else if (kind === 'mountain') {
+      ctx.beginPath();
+      for (let i = 0; i < pts.length; i += 2) {
+        const x = pts[i], y = pts[i + 1];
+        ctx.moveTo(x - size, y + size * 0.6);
+        ctx.lineTo(x, y - size);
+        ctx.lineTo(x + size, y + size * 0.6);
+      }
+      ctx.strokeStyle = tone;
+      ctx.stroke();
+    } else if (kind === 'swamp') {
+      ctx.beginPath();
+      for (let i = 0; i < pts.length; i += 2) {
+        const x = pts[i], y = pts[i + 1];
+        for (let j = -1; j <= 1; j++) {
+          ctx.moveTo(x - size, y + j * size * 0.7);
+          ctx.lineTo(x + size, y + j * size * 0.7);
+        }
+      }
+      ctx.strokeStyle = tone;
+      ctx.stroke();
+    } else {
+      // степь, пустыня, тундра — короткие штрихи
+      ctx.beginPath();
+      for (let i = 0; i < pts.length; i += 2) {
+        const x = pts[i], y = pts[i + 1];
+        ctx.moveTo(x - size * 0.6, y);
+        ctx.lineTo(x + size * 0.6, y);
+      }
+      ctx.strokeStyle = tone;
+      ctx.stroke();
+    }
+    drawn += pts.length / 2;
+  }
+  ctx.restore();
+  return drawn;
+}
+
+/* §99: покров на глубоком зуме. В базовом слое клетки растягиваются в мутные квадраты,
+   поэтому при приближении видимые клетки перерисовываются в кадре — резко и по размеру. */
+export function paintBiomeScreen(ctx, view, cam, world, toPx) {
+  const g = world && world.biomes;
+  if (!g) return 0;
+  const cellKm = g.sizeKm / g.size;
+  if (cellKm * cam.scale < 6) return 0;                 // мелко — хватает базового слоя
+  const half = g.sizeKm / 2;
+  const halfW = view.w / (2 * cam.scale) + cellKm, halfH = view.h / (2 * cam.scale) + cellKm;
+  const i0 = Math.max(0, Math.floor((cam.x - halfW + half) / cellKm));
+  const i1 = Math.min(g.size - 1, Math.ceil((cam.x + halfW + half) / cellKm));
+  const j0 = Math.max(0, Math.floor((cam.y - halfH + half) / cellKm));
+  const j1 = Math.min(g.size - 1, Math.ceil((cam.y + halfH + half) / cellKm));
+  const byKind = new Map();
+  for (let j = j0; j <= j1; j++) {
+    for (let i = i0; i <= i1; i++) {
+      const c = g.code[j * g.size + i];
+      if (!c) continue;
+      const kind = BIOME_ORDER[c - 1];
+      if (!byKind.has(kind)) byKind.set(kind, []);
+      byKind.get(kind).push(i, j);
+    }
+  }
+  let drawn = 0;
+  for (const [kind, cells] of byKind) {
+    const tint = BIOMES.kinds[kind] && BIOMES.kinds[kind].tint;
+    if (!tint) continue;
+    ctx.beginPath();
+    for (let k = 0; k < cells.length; k += 2) {
+      const x = -half + cells[k] * cellKm, y = -half + cells[k + 1] * cellKm;
+      const a = toPx(x, y), b = toPx(x + cellKm, y + cellKm);
+      ctx.rect(a.x, a.y, b.x - a.x, b.y - a.y);
+      drawn++;
+    }
+    ctx.fillStyle = tint;
+    ctx.fill();
+  }
+  return drawn;
+}
+
+
+/* §99: границы стран — в кадре. Своя страна светлая и толще, остальные тёмные:
+   по карте видно, где кончается страна, а где начинается область. */
+export function drawCountryBorders(ctx, view, cam, world, toPx) {
+  if (!world || !world.countries) return 0;
+  const halfW = view.w / (2 * cam.scale) + 600, halfH = view.h / (2 * cam.scale) + 600;
+  const near = (poly) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of poly) {
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    return !(x0 > cam.x + halfW || x1 < cam.x - halfW || y0 > cam.y + halfH || y1 < cam.y - halfH);
+  };
+  const w = cam.scale > 0.1 ? 2 : 1.4;
+  let drawn = 0;
+  for (const pass of [0, 1]) {
+    ctx.beginPath();
+    for (const c of world.countries) {
+      if ((c.own ? 1 : 0) !== pass) continue;
+      if (!near(c.poly)) continue;
+      for (let i = 0; i < c.poly.length; i++) {
+        const s = toPx(c.poly[i][0], c.poly[i][1]);
+        if (i) ctx.lineTo(s.x, s.y); else ctx.moveTo(s.x, s.y);
+      }
+      ctx.closePath();
+      drawn++;
+    }
+    ctx.strokeStyle = pass ? 'rgba(250,252,244,0.9)' : 'rgba(10,16,20,0.55)';
+    ctx.lineWidth = pass ? w + 0.8 : w;
+    ctx.stroke();
+  }
+  return drawn;
+}
+
+/* §99: границы областей — в кадре, тонким пунктиром. Своя страна светлее и чуть толще;
+   на любом масштабе линия остаётся линией, а не «колючей проволокой». */
+export function drawRegionBorders(ctx, view, cam, world, toPx) {
+  const regions = (world && world.regions) || [];
+  if (!regions.length) return 0;
+  const halfW = view.w / (2 * cam.scale) + 400, halfH = view.h / (2 * cam.scale) + 400;
+  const visible = regions.filter((r) => {
+    if (!r.box) return true;
+    return !(r.box[0] > cam.x + halfW || r.box[2] < cam.x - halfW
+      || r.box[1] > cam.y + halfH || r.box[3] < cam.y - halfH);
+  });
+  if (!visible.length) return 0;
+  const trace = (list) => {
+    ctx.beginPath();
+    for (const r of list) {
+      const pts = r.poly;
+      if (!pts || pts.length < 3) continue;
+      for (let i = 0; i < pts.length; i++) {
+        const s = toPx(pts[i][0], pts[i][1]);
+        if (i) ctx.lineTo(s.x, s.y); else ctx.moveTo(s.x, s.y);
+      }
+      ctx.closePath();
+    }
+  };
+  const own = visible.filter((r) => r.country === 'own');
+  // §99: на обзоре планеты области всех стран — это шум шириной в пару пикселей,
+  // поэтому чужие границы появляются только при приближении; своя страна видна всегда
+  const other = cam.scale >= 0.05 ? visible.filter((r) => r.country !== 'own') : [];
+  const w = cam.scale > 0.1 ? 1.4 : 1;
+  if (other.length) {
+    trace(other);
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(8,12,16,0.28)';
+    ctx.lineWidth = w + 1.2;
+    ctx.stroke();
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = 'rgba(238,242,226,0.34)';
+    ctx.lineWidth = w;
+    ctx.stroke();
+  }
+  if (own.length) {
+    trace(own);
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(8,12,16,0.42)';
+    ctx.lineWidth = w + 1.6;
+    ctx.stroke();
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = 'rgba(255,252,236,0.82)';
+    ctx.lineWidth = w + 0.2;
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  return visible.length;
+}
+
+/* §99: клетки покрова одним общим путём на вид. 13 000 клеток — это 13 000 вызовов
+   fillRect, если рисовать по клетке; общий путь на вид — шесть заливок. */
+export function paintBiomeCells(ctx, biomes, toPx) {
+  if (!biomes || !biomes.code) return;
+  const n = biomes.size;
+  const cellPx = (biomes.sizeKm / n) ;
+  const byKind = new Map();
+  for (let j = 0; j < n; j++) {
+    const row = j * n;
+    for (let i = 0; i < n; i++) {
+      const c = biomes.code[row + i];
+      if (!c) continue;
+      const kind = BIOME_ORDER[c - 1];
+      if (!byKind.has(kind)) byKind.set(kind, []);
+      byKind.get(kind).push(i, j);
+    }
+  }
+  const half = biomes.sizeKm / 2;
+  for (const [kind, cells] of byKind) {
+    const tint = BIOMES.kinds[kind] && BIOMES.kinds[kind].tint;
+    if (!tint) continue;
+    ctx.beginPath();
+    for (let k = 0; k < cells.length; k += 2) {
+      const i = cells[k], j = cells[k + 1];
+      const x = -half + i * cellPx, y = -half + j * cellPx;
+      const a = toPx(x), b = toPx(y);
+      const a2 = toPx(x + cellPx), b2 = toPx(y + cellPx);
+      // клетки чуть перекрываются: швов между пятнами не видно
+      ctx.rect(a - 0.5, b - 0.5, a2 - a + 1, b2 - b + 1);
+    }
+    ctx.fillStyle = tint;
+    ctx.fill();
+  }
+}
+
+/* §99: слой «где технике тяжело» — болота и горы штрихуются, лес и тундра помечаются
+   точками. Включается кнопкой: в обычном виде карта остаётся чистой. */
+export function drawTerrainBad(ctx, view, cam, world, toPx) {
+  if (!world || !world.biomes) return { bad: 0, slow: 0 };
+  const n = world.biomes.size;
+  const cellPx = world.biomes.sizeKm / n;
+  const half = world.biomes.sizeKm / 2;
+  const halfW = view.w / (2 * cam.scale), halfH = view.h / (2 * cam.scale);
+  const badCells = [], slowCells = [];
+  for (let j = 0; j < n; j++) {
+    const y = -half + (j + 0.5) * cellPx;
+    if (y < cam.y - halfH - cellPx || y > cam.y + halfH + cellPx) continue;
+    for (let i = 0; i < n; i++) {
+      const c = world.biomes.code[j * n + i];
+      if (!c) continue;
+      const x = -half + (i + 0.5) * cellPx;
+      if (x < cam.x - halfW - cellPx || x > cam.x + halfW + cellPx) continue;
+      const pass = BIOMES.kinds[BIOME_ORDER[c - 1]].pass;
+      if (pass < BIOMES.bad) badCells.push(i, j);
+      else if (pass < BIOMES.slow) slowCells.push(i, j);
+    }
+  }
+  const paint = (cells, fill, stroke) => {
+    if (!cells.length) return;
+    ctx.beginPath();
+    for (let k = 0; k < cells.length; k += 2) {
+      const x = -half + cells[k] * cellPx, y = -half + cells[k + 1] * cellPx;
+      // toPx в кадре — это p(x, y), две координаты; одним аргументом вышел бы NaN
+      const a = toPx(x, y), b = toPx(x + cellPx, y + cellPx);
+      ctx.rect(a.x, a.y, b.x - a.x, b.y - a.y);
+    }
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 0.6; ctx.stroke(); }
+  };
+  paint(slowCells, 'rgba(232,196,96,0.10)', null);
+  paint(badCells, 'rgba(214,72,48,0.22)', 'rgba(222,96,64,0.45)');
+  return { bad: badCells.length / 2, slow: slowCells.length / 2 };
+}
+
 export function drawPolitics(ctx, view, cam, world, toScreen) {
   if (!world || !world.countries) return { allies: 0, enemies: 0, taken: 0 };
   const own = world.own;
@@ -480,6 +791,7 @@ export class WorldView {
     this.transition = null;        // {from, to, t, ms}
     this.alpha = 1;
     this.showArmies = true;
+    this.showTerrain = false;   // §99: слой «где технике тяжело» по кнопке
     this.labels = true;
     this.dpr = 1;
     this.frames = 0;
@@ -733,10 +1045,18 @@ export class WorldView {
         ctx.beginPath();
         ctry.poly.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
         ctx.closePath();
-        ctx.fillStyle = ctry.own ? 'rgba(158,172,112,0.75)' : hexToRgba(shadeFor(ctry), 0.5);
+        // §99: тон страны полупрозрачный — под ним виден покров земли, а не ровное пятно
+        ctx.fillStyle = ctry.own ? 'rgba(158,172,112,0.30)' : hexToRgba(shadeFor(ctry), 0.16);
         ctx.fill();
       }
       if (lands.length) ctx.restore();
+      // §99: покров земли — леса, болота, горы, степи, пустыни и тундра. Рисуется
+      // клетками по одному общему пути на вид: видно, где лес и где технике тяжело.
+      if (this.world.biomes) {
+        if (lands.length) { ctx.save(); landPathAll(); ctx.clip(); }
+        paintBiomeCells(ctx, this.world.biomes, toPx);
+        if (lands.length) ctx.restore();
+      }
       if (lands.length) {
         // F-366: климат по широте — у полюсов суша холоднее (тундра), у экватора
         // суше (степь и пустыня). Градиент один на всю планету, но суша перестаёт
@@ -746,11 +1066,11 @@ export class WorldView {
         ctx.clip();
         const half = this.world.sizeKm / 2;
         const clim = ctx.createLinearGradient(0, toPx(-half), 0, toPx(half));
-        clim.addColorStop(0, 'rgba(126,148,152,0.34)');
-        clim.addColorStop(0.22, 'rgba(120,136,120,0.12)');
-        clim.addColorStop(0.5, 'rgba(198,176,116,0.2)');
-        clim.addColorStop(0.78, 'rgba(120,136,120,0.12)');
-        clim.addColorStop(1, 'rgba(126,148,152,0.34)');
+        clim.addColorStop(0, 'rgba(126,148,152,0.16)');
+        clim.addColorStop(0.22, 'rgba(120,136,120,0.05)');
+        clim.addColorStop(0.5, 'rgba(198,176,116,0.08)');
+        clim.addColorStop(0.78, 'rgba(120,136,120,0.05)');
+        clim.addColorStop(1, 'rgba(126,148,152,0.16)');
         ctx.fillStyle = clim;
         ctx.fillRect(0, 0, size, size);
         // мягкая тень у самого берега: суша «встаёт» над водой
@@ -775,39 +1095,9 @@ export class WorldView {
       }
       return;
     }
-    // пасс 1: отметки рельефа значками, как на настоящих картах
-    const marks = this.world.marks;
-    // F-360: отметок много, а базовый слой уменьшается до кадра — значки выходят
-    // «пылью». Берём каждую вторую и рисуем крупнее: читается как рельеф.
-    // §95: суши стало пять материков — отметки рисуем все, иначе рельеф читается пылью
-    for (let i = 0; i < marks.length; i += 3) {
-      const x = toPx(marks[i]), y = toPx(marks[i + 1]);
-      const type = ['forest', 'swamp', 'mountain', 'steppe', 'desert', 'tundra'][marks[i + 2]] || 'forest';
-      drawMark(ctx, x, y, type, 2.1);
-    }
-    // границы поверх отметок, чтобы линии читались; тоже только по суше
-    const lands2 = this.world.lands || [];
-    const clipToLand = lands2.length > 0 || coast.length > 0;
-    if (clipToLand) {
-      ctx.save();
-      if (lands2.length) {
-        ctx.beginPath();
-        for (const land of lands2) {
-          land.poly.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
-          ctx.closePath();
-        }
-      } else coastPath();
-      ctx.clip();
-    }
-    for (const ctry of this.world.countries) {
-      ctx.beginPath();
-      ctry.poly.forEach(([x, y], i) => (i ? ctx.lineTo(toPx(x), toPx(y)) : ctx.moveTo(toPx(x), toPx(y))));
-      ctx.closePath();
-      ctx.strokeStyle = ctry.own ? 'rgba(246,250,240,0.9)' : 'rgba(14,20,24,0.5)';
-      ctx.lineWidth = ctry.own ? 2 : 1;
-      ctx.stroke();
-    }
-    if (clipToLand) ctx.restore();
+    // пасс 1: §99 — здесь больше ничего не рисуется. Отметки рельефа, значки болот и гор,
+    // границы областей и стран переехали в кадр: в базовом слое на глубоком зуме они
+    // растягивались в мутные пятна и «колючую проволоку» вместо тонких линий.
   }
 
   draw() {
@@ -846,6 +1136,11 @@ export class WorldView {
     // F-392: своя армия видна всегда, чужая — только спутнику
     const shownArmies = this.showArmies ? visibleArmiesFor(world, 'own') : [];
 
+    // §99: на глубоком зуме покров перерисовывается резко, в кадре
+    paintBiomeScreen(ctx, view, cam, world, p);
+    // §99: отметки рельефа и значки болот и гор — в кадре, размером в пикселях экрана
+    paintMarksScreen(ctx, view, cam, world, p);
+
     // F-302: дороги, города и их подписи живут в отдельном слое с полями по краям.
     // Пока камера стоит (а смотрят карту мира именно так), слой просто копируется.
     if (this.needsDetail()) this.paintDetail();
@@ -874,6 +1169,22 @@ export class WorldView {
       ctx.lineWidth = 1;
       ctx.stroke();
       ctx.setLineDash([]);
+    }
+
+    // §99: границы стран и областей — в кадре, тонкими линиями поверх карты и дорог
+    drawCountryBorders(ctx, view, cam, world, p);
+    drawRegionBorders(ctx, view, cam, world, p);
+
+    // §99: режим «где технике тяжело» — готовый слой поверх карты, а не пересчёт клеток
+    // на каждом кадре. Включается кнопкой, в обычном виде карта остаётся чистой.
+    if (this.showTerrain) {
+      const layer = this.ensureTerrainLayer();
+      if (layer) {
+        const span = world.sizeKm * cam.scale;
+        const ox = view.w / 2 - (cam.x + world.sizeKm / 2) * cam.scale;
+        const oy = view.h / 2 - (cam.y + world.sizeKm / 2) * cam.scale;
+        ctx.drawImage(layer, ox, oy, span, span);
+      }
     }
 
     // §96: политический окрас — кто союзник, кто враг, чьи области захвачены.
@@ -1083,18 +1394,28 @@ export class WorldView {
       ctx.setLineDash(dash);
       ctx.stroke();
     };
-    // §96: шоссе между странами — тёплая линия с пунктирной осевой, местные — тонкие
-    ctx.strokeStyle = 'rgba(255,214,110,0.8)';
-    ctx.lineWidth = 2;
-    traceRoads(roadPaths.highway, []);
-    ctx.strokeStyle = 'rgba(232,238,244,0.32)';
-    ctx.lineWidth = 0.9;
+    // §99: дорога — это корпус и сердцевина, как на настоящих картах: тёмный контур
+    // отделяет её от леса и болота, светлая середина показывает, что ехать можно.
+    // §99: на глубоком зуме дорога толще — в масштабе она должна оставаться дорогой
+    const zk = cam.scale > 0.35 ? 1.9 : (cam.scale > 0.12 ? 1.4 : 1);
+    ctx.strokeStyle = 'rgba(24,30,26,0.55)';
+    ctx.lineWidth = 2.6 * zk;
     traceRoads(roadPaths.local, []);
-    ctx.strokeStyle = 'rgba(214,64,48,0.55)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(226,232,224,0.66)';
+    ctx.lineWidth = 1.1 * zk;
+    traceRoads(roadPaths.local, []);
+    ctx.strokeStyle = 'rgba(38,28,10,0.6)';
+    ctx.lineWidth = 3.8 * zk;
+    traceRoads(roadPaths.highway, []);
+    // §96: шоссе между странами — тёплая линия с пунктирной осевой
+    ctx.strokeStyle = 'rgba(255,214,110,0.95)';
+    ctx.lineWidth = 2.2 * zk;
+    traceRoads(roadPaths.highway, []);
+    ctx.strokeStyle = 'rgba(214,64,48,0.62)';
+    ctx.lineWidth = 1.2;
     traceRoads(roadPaths.broken, [3, 4]);
     if (roadPaths.highway.length) {
-      ctx.strokeStyle = 'rgba(40,32,16,0.45)';
+      ctx.strokeStyle = 'rgba(40,32,16,0.5)';
       ctx.lineWidth = 1;
       traceRoads(roadPaths.highway, [5, 5]);
     }
@@ -1173,6 +1494,75 @@ export class WorldView {
     return countryAt(this.world, w.x, w.y);
   }
 
+
+  /* §99: слой «где технике тяжело» считается один раз и лежит готовой картинкой:
+     болота и горы штрихуются, лес, тундра и пустыня помечаются тёплым. Каждый кадр
+     его просто переносят на экран — 7 000 клеток заново рисовать не нужно. */
+  ensureTerrainLayer() {
+    if (this.terrainLayer) return this.terrainLayer;
+    const world = this.world;
+    if (!world || !world.biomes) return null;
+    const size = WV.baseSize;
+    const cv = (typeof document !== 'undefined' && document.createElement)
+      ? document.createElement('canvas') : null;
+    if (!cv) return null;
+    cv.width = size; cv.height = size;
+    const c2 = cv.getContext('2d');
+    if (!c2) return null;
+    const biomes = world.biomes;
+    const n = biomes.size;
+    const cellKm = biomes.sizeKm / n;
+    const half = biomes.sizeKm / 2;
+    const toPx = (v) => ((v + half) / world.sizeKm) * size;
+    const paths = { bad: [], slow: [] };
+    for (let j = 0; j < n; j++) {
+      for (let i = 0; i < n; i++) {
+        const c = biomes.code[j * n + i];
+        if (!c) continue;
+        const pass = BIOMES.kinds[BIOME_ORDER[c - 1]].pass;
+        if (pass < BIOMES.bad) paths.bad.push(i, j);
+        else if (pass < BIOMES.slow) paths.slow.push(i, j);
+      }
+    }
+    const paint = (cells, fill, stroke) => {
+      if (!cells.length) return;
+      c2.beginPath();
+      for (let k = 0; k < cells.length; k += 2) {
+        const x = -half + cells[k] * cellKm, y = -half + cells[k + 1] * cellKm;
+        c2.rect(toPx(x), toPx(y), toPx(x + cellKm) - toPx(x), toPx(y + cellKm) - toPx(y));
+      }
+      c2.fillStyle = fill;
+      c2.fill();
+      if (stroke) { c2.strokeStyle = stroke; c2.lineWidth = 0.6; c2.stroke(); }
+    };
+    paint(paths.slow, 'rgba(232,196,96,0.16)', null);
+    paint(paths.bad, 'rgba(214,72,48,0.34)', 'rgba(226,108,72,0.5)');
+    this.terrainLayer = cv;
+    return cv;
+  }
+
+  /* §99: что под курсором — покров, проходимость, область и страна. Панель показывает
+     это словами: «болото · технике тяжело · Лесная окраина, Ратград». */
+  infoAtScreen(sx, sy) {
+    if (!this.world) return null;
+    const w = screenToWorld(this.cam, this.view, sx, sy);
+    const b = this.world.biomes ? biomeAt(this.world.biomes, w.x, w.y) : null;
+    const r = this.world.regions ? regionOf(this.world.regions, w.x, w.y) : null;
+    const ctry = countryAtWorld(this.world, w.x, w.y);
+    const pass = this.world.biomes ? passabilityAt(this.world.biomes, w.x, w.y) : 0;
+    return {
+      x: Math.round(w.x),
+      y: Math.round(w.y),
+      biome: b ? b.name : 'вода',
+      biomeKind: b ? b.kind : 'water',
+      pass: b ? b.pass : 0,
+      hard: !!b && b.pass < BIOMES.bad,
+      slow: !!b && b.pass >= BIOMES.bad && b.pass < BIOMES.slow,
+      region: r ? r.name : null,
+      country: ctry ? ctry.name : null
+    };
+  }
+
   zoomAt(sx, sy, factor) {
     const before = screenToWorld(this.cam, this.view, sx, sy);
     this.cam.scale = clampViewScale(this.cam.scale * factor);
@@ -1206,19 +1596,30 @@ export class WorldView {
 export function drawMapLegend(ctx, view, opts = {}) {
   // §96: в легенде появились союзники, враги и захваченные области — иначе
   // красные и зелёные пятна на карте читаются как «просто так покрасили»
+  // §99: и покров земли — лес, болото, горы, пустыня, «технике тяжело», дороги
+  // и граница области. Без этого зелёные и бурые пятна на карте — загадка.
   const entries = opts.entries || [
     ['city', 'город'], ['capital', 'столица'], ['own', 'наша столица'],
-    ['army', 'наша армия'], ['armybar', 'боеготовность'], ['ally', 'союзник'],
-    ['enemy', 'враг'], ['taken', 'захвачено'], ['battle', 'бой и взрыв'], ['ruin', 'разрушено']
+    ['army', 'наша армия'], ['armybar', 'боеготовность'],
+    ['road', 'дорога'], ['highway', 'шоссе'], ['region', 'граница области'],
+    ['ally', 'союзник'], ['enemy', 'враг'], ['taken', 'захвачено'],
+    ['forest', 'лес'], ['swamp', 'болото'], ['mountain', 'горы'],
+    ['desert', 'пустыня, степь'], ['bad', 'технике тяжело'],
+    ['battle', 'бой и взрыв'], ['ruin', 'разрушено']
   ];
   const narrow = view.w < 560;
   // на телефоне места мало: оставляем то, без чего карта непонятна — своя страна,
-  // союзники, враги и захваченные области
-  const keep = ['own', 'ally', 'enemy', 'taken'];
-  const rows = narrow ? keep.map((k) => entries.find((e) => e[0] === k)).filter(Boolean) : entries;
+  // лес, болото, дорога, союзники, враги и захваченные области
+  const keep = ['own', 'forest', 'swamp', 'road', 'ally', 'enemy', 'taken'];
+  const chosen = narrow ? keep.map((k) => entries.find((e) => e[0] === k)).filter(Boolean) : entries;
+  // на широком экране легенда в две колонки — иначе она закрывает пол-карты
+  const cols = narrow ? 1 : (chosen.length > 10 ? 2 : 1);
+  const rowsPerCol = Math.ceil(chosen.length / cols);
+  const rows = chosen;
   const rowH = narrow ? 13 : 14;
-  const wBox = narrow ? 132 : 158;
-  const hBox = rows.length * rowH + 14;
+  const colW = narrow ? 132 : 168;
+  const wBox = narrow ? colW : colW * cols;
+  const hBox = rowsPerCol * rowH + 14;
   const x = narrow ? 10 : view.w - wBox - 12;
   const y = narrow ? 56 : view.h - hBox - 12;
   ctx.save();
@@ -1231,8 +1632,10 @@ export function drawMapLegend(ctx, view, opts = {}) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   rows.forEach(([kind, label], i) => {
-    const cy = y + 7 + i * rowH + rowH / 2 - 3;
-    const cx = x + 12;
+    const col = Math.floor(i / rowsPerCol);
+    const row = i % rowsPerCol;
+    const cy = y + 7 + row * rowH + rowH / 2 - 3;
+    const cx = x + 12 + col * colW;
     if (kind === 'city') {
       ctx.beginPath(); ctx.arc(cx, cy, 2.2, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(232,238,244,0.85)'; ctx.fill();
@@ -1264,6 +1667,47 @@ export function drawMapLegend(ctx, view, opts = {}) {
       ctx.fillStyle = 'rgba(255,150,80,0.5)'; ctx.fill();
       ctx.beginPath(); ctx.arc(cx, cy, 1.6, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255,190,120,0.95)'; ctx.fill();
+    } else if (kind === 'road' || kind === 'highway') {
+      // §99: дорога показана так же, как на карте — корпус и светлая середина
+      ctx.strokeStyle = 'rgba(24,30,26,0.7)';
+      ctx.lineWidth = kind === 'highway' ? 3.6 : 2.6;
+      ctx.beginPath(); ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy); ctx.stroke();
+      ctx.strokeStyle = kind === 'highway' ? 'rgba(255,214,110,0.95)' : 'rgba(226,232,224,0.7)';
+      ctx.lineWidth = kind === 'highway' ? 2 : 1.1;
+      ctx.beginPath(); ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy); ctx.stroke();
+    } else if (kind === 'region') {
+      // §99: граница области — светлая линия в тёмной обводке
+      ctx.strokeStyle = 'rgba(8,12,16,0.5)'; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,252,236,0.85)'; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy); ctx.stroke();
+    } else if (kind === 'forest' || kind === 'swamp' || kind === 'mountain' || kind === 'desert') {
+      // §99: покров земли — тот же цвет, что и пятна на карте
+      const key = kind === 'desert' ? 'desert' : kind;
+      ctx.fillStyle = BIOMES.kinds[key].tint;
+      ctx.fillRect(cx - 6, cy - 5, 12, 10);
+      ctx.strokeStyle = 'rgba(8,12,16,0.35)'; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - 6, cy - 5, 12, 10);
+      if (kind === 'swamp') {
+        ctx.strokeStyle = 'rgba(226,240,236,0.7)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let k = -1; k <= 1; k++) { ctx.moveTo(cx - 4, cy + k * 2.4); ctx.lineTo(cx + 4, cy + k * 2.4); }
+        ctx.stroke();
+      } else if (kind === 'mountain') {
+        ctx.strokeStyle = 'rgba(240,240,232,0.8)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx - 4, cy + 3); ctx.lineTo(cx, cy - 3); ctx.lineTo(cx + 4, cy + 3);
+        ctx.stroke();
+      }
+    } else if (kind === 'bad') {
+      // §99: «технике тяжело» — красная штриховка
+      ctx.fillStyle = 'rgba(214,72,48,0.28)';
+      ctx.fillRect(cx - 6, cy - 5, 12, 10);
+      ctx.strokeStyle = 'rgba(222,96,64,0.85)'; ctx.lineWidth = 1;
+      ctx.strokeRect(cx - 6, cy - 5, 12, 10);
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, cy + 4); ctx.lineTo(cx + 5, cy - 4);
+      ctx.stroke();
     } else if (kind === 'ally') {
       ctx.fillStyle = POLITICS.ally;
       ctx.fillRect(cx - 5, cy - 4, 10, 8);
@@ -1289,7 +1733,7 @@ export function drawMapLegend(ctx, view, opts = {}) {
       ctx.stroke();
     }
     ctx.fillStyle = 'rgba(214,226,234,0.92)';
-    ctx.fillText(label, x + 22, cy);
+    ctx.fillText(label, cx + 13, cy);
   });
   ctx.textBaseline = 'alphabetic';
   ctx.restore();

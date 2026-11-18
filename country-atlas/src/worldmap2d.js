@@ -20,6 +20,7 @@ import {
   REGIONS, buildRegions, regionAt as findRegion, nearestRegion, regionsOf,
   regionIncome, pressRegion, regionsStats
 } from './regions2d.js';
+import { buildBiomes, passabilityAt, biomeAt, BIOMES } from './biome2d.js';
 
 export const WM = {
   // F-372: сторона карты мира. В квадрате 24 000 суша срезалась его же краем —
@@ -831,9 +832,13 @@ export function buildWorld(seed = 424242) {
       }
     }
   }
+  // §99: покров земли — леса, болота, горы, степи, пустыни и тундра. По нему видно,
+  // где технике тяжело, а где она проходит ходом.
+  const biomes = buildBiomes(lands, seed);
   const w = {
     seed,
     sizeKm: WM.sizeKm,
+    biomes,                  // §99: пятна покрова и их проходимость
     lands,                   // F-397: материки планеты — у каждого свой берег и свои страны
     regions,                 // §96: области и республики стран
     captures: [],            // §96: журнал захватов и отбитых областей
@@ -1173,6 +1178,27 @@ export function advanceWars(world, minutes) {
 }
 
 /* §96: какая область накрывает мировую точку. */
+/* §99: страна под точкой — по границам, без канвы. */
+export function countryAtWorld(world, x, y) {
+  if (!world || !world.countries) return null;
+  for (const c of world.countries) if (pointInPolygon(x, y, c.poly)) return c;
+  return null;
+}
+
+/* §99: насколько тяжело технике в точке — 1 сухо и ровно, 0,25 болото, 0 вода. */
+export function passabilityAtWorld(world, x, y) {
+  if (!world || !world.biomes) return 0;
+  const land = (world.lands || []).find((l) => pointInPolygon(x, y, l.poly));
+  return passabilityAt(world.biomes, x, y, land || null);
+}
+
+/* §99: какой покров под точкой — «лес», «болото», «горы» и так далее. */
+export function biomeAtWorld(world, x, y) {
+  if (!world || !world.biomes) return null;
+  const b = biomeAt(world.biomes, x, y);
+  return b ? { kind: b.kind, name: BIOMES.kinds[b.kind].name, pass: BIOMES.kinds[b.kind].pass, blob: b } : null;
+}
+
 export function regionAt(world, x, y) {
   if (!world || !world.regions) return null;
   return findRegion(world.regions, x, y);
