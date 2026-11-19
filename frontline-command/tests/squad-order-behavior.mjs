@@ -104,3 +104,49 @@ for(const useExtendedSave of [false,true])for(const faction of [0,1]){
  assert.equal(loaded.state,'regroup');assert.ok(Number.isFinite(loaded.anchor.x)&&Number.isFinite(loaded.anchor.y),'restored trip has a valid target');
 }
 console.log('squad orders: radio and physical movement to two hold positions, real resupply, rerouting and no-source refusal, both factions, swapped starts and save formats');
+
+// Exercise the actual automated radio order, not a direct call to reinforceSquad.
+for (const faction of [0,1]) {
+ const {g,sq}=fixture(faction),{a}=findOpen(g);
+ sq.templateId='assault';sq.template=cfg.templates.assault;
+ sq.addUnit(g.spawnUnit(faction,'infantry',a.x,a.y));
+ for (const key of Object.keys(g.logistics.stock[faction])) g.logistics.stock[faction][key]=100000;
+ g.time=40;g.autopilot.maintainSquads(faction);
+ const order=g.api.orders.find(o=>o.type==='reinforce');assert.ok(order,'autopilot queued a reinforcement');
+ for(let i=0;i<400&&order.status==='queued';i++)g.step(.05);
+ assert.equal(order.status,'accepted',`reinforcement must reach executeCommand: ${order.result}`);
+ assert.equal(sq.count(),6,'missing squad members are created');
+}
+for (const swapSides of [false,true]) for (const faction of [0,1]) {
+ const {g,sq}=fixture(faction,swapSides),{a,b,c}=findOpen(g);
+ const u=g.spawnUnit(faction,'infantry',a.x,a.y);sq.addUnit(u);sq.retreatTier='never';
+ sq.retreatPoint=c; // an earlier retreat must not override the new destination
+ const o=issue(g,sq,'retreat',b);assert.equal(o.status,'accepted');
+ assert.deepEqual(sq.retreatPoint,b,'explicit retreat replaces the previous rally destination');
+ for(let i=0;i<1000&&sq.state==='retreat';i++)g.step(.05);
+ assert.ok(Math.hypot(u.x-b.x,u.y-b.y)<160,'soldier physically approaches the new retreat target');
+}
+console.log('reinforcement dispatch and explicit retreat: both factions and swapped sides');
+
+for (const faction of [0,1]) {
+ const {g,sq}=fixture(faction),{a}=findOpen(g);sq.templateId='assault';sq.template=cfg.templates.assault;
+ sq.addUnit(g.spawnUnit(faction,'infantry',a.x,a.y));
+ for (const key of Object.keys(g.logistics.stock[faction])) g.logistics.stock[faction][key]=0;
+ const empty=g.api.issue({source:'autopilot',type:'reinforce',faction,params:{squadId:sq.id}});
+ for(let i=0;i<300&&empty.status==='queued';i++)g.step(.05);
+ assert.equal(empty.status,'refused');assert.match(empty.result,/ресурс/);assert.equal(sq.count(),1,'no free reinforcement');
+ const wrong=g.api.issue({source:'enemyAI',type:'reinforce',faction:1-faction,params:{squadId:sq.id}});
+ for(let i=0;i<300&&wrong.status==='queued';i++)g.step(.05);
+ assert.equal(wrong.status,'refused');assert.equal(sq.count(),1,'cannot reinforce the other faction');
+}
+for (const useExtendedSave of [false,true]) for (const faction of [0,1]) {
+ cfg.flags.alg_save=useExtendedSave;
+ const {g,sq}=fixture(faction),{a,b,c}=findOpen(g),u=g.spawnUnit(faction,'infantry',a.x,a.y);sq.addUnit(u);sq.retreatTier='never';sq.retreatPoint=c;
+ assert.equal(issue(g,sq,'retreat',b).status,'accepted');
+ assert.equal(Save.saveWar(g),true);const data=Save.loadWar(),restored=new Game({cfg,seed:7,aiVsAi:true});assert.equal(Save.applyWar(restored,data),true);
+ const loaded=restored.squads.get(sq.id);assert.deepEqual(loaded.retreatPoint,b,'save preserves the correct retreat destination');
+ for(const ai of restored.strategic)ai.update=()=>{};restored.autopilot.update=()=>{};restored.rules.update=()=>{};restored.build.update=()=>{};restored.influence.update=()=>{};restored.checkVictory=()=>{};
+ for(let i=0;i<1000&&loaded.state==='retreat';i++)restored.step(.05);
+ const lu=loaded.units()[0];assert.ok(Math.hypot(lu.x-b.x,lu.y-b.y)<160,'restored soldier approaches retreat target');
+}
+console.log('reinforcement refusal, faction isolation and retreat continuation after both save formats');

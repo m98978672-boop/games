@@ -79,7 +79,7 @@ export class CommandAPI {
         if (!sq || sq.state === 'destroyed') { results.push({ accepted: false, reason: 'отряд расформирован' }); continue; }
         results.push(sq.receiveOrder(order, this));
       }
-    } else if (order.type === 'create_squad' || order.type === 'produce' || order.type === 'build_profile'
+    } else if ((order.type === 'reinforce' && game.cfg.flag('squad_orders_fix_v1', true)) || order.type === 'create_squad' || order.type === 'produce' || order.type === 'build_profile'
       || order.type === 'set_autopilot' || order.type === 'upgrade' || order.type === 'place_build' || order.type === 'demolish'
       || order.type === 'build_line' || order.type === 'build_zone' || order.type === 'build_template'
       || order.type === 'set_build_priority' || order.type === 'cancel_build') {
