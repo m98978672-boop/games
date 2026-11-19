@@ -1217,7 +1217,11 @@
   /* --------------------------------------------------------------- тик */
 
   Sim.tick = function (s, dt) {
-    if (dt <= 0) return;
+    // Number.isFinite отсекает NaN и Infinity: сравнение `NaN <= 0` ложно,
+    // поэтому прежняя проверка пропускала NaN в s.time, и партия ломалась
+    // безвозвратно (день становится NaN, события не наступают).
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    if (!s || !Number.isFinite(s.time)) s.time = C.dayStartHour / 24;
     const dHours = dt * C.hoursPerSecond;
     const dDays = dHours / 24;
     const prevDay = Math.floor(s.time);

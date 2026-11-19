@@ -104,8 +104,8 @@
           <article class="mode-card mode-cloud" id="cloud">
             <div class="mode-card-top"><span class="mode-number">02</span><span class="mode-tag">УДАЛЁННЫЙ GPU + ВИДЕОПОТОК</span><span class="mode-icon">⌁</span></div>
             <h3>Облачная игра</h3>
-            <p>Нужен доступный GPU-хост — свой компьютер или арендованный сервер — с официальным Steam-клиентом и реальным видеопотоком. Подключение, безопасное сопряжение и запуск проверенных игр ещё не реализованы.</p>
-            <div class="cloud-state" id="cloudState"><span class="cloud-state-dot"></span><span><strong>GPU-хост не подключён</strong><small>стриминг ещё не реализован</small></span></div>
+            <p>Нужен доступный GPU-хост — свой компьютер или арендованный сервер — с официальным Steam-клиентом и реальным видеопотоком. PLAYBRIDGE проверяет хост через свой backend и не открывает его адрес браузеру. Настроить свой хост: переменная <code>CLOUD_HOST_URL</code> в README.</p>
+            <div class="cloud-state" id="cloudState"><span class="cloud-state-dot"></span><span><strong>GPU-хост не подключён</strong><small>хост не настроен на сервере</small></span></div>
             <button class="button button-mode button-disabled" id="cloudButton" type="button" disabled>Облачный запуск недоступен</button>
             <a class="mode-footnote mode-link" href="README.md#собственный-gpu-компьютер-как-хост">Как подключить собственный GPU-хост ↗</a>
           </article>

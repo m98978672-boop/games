@@ -1737,7 +1737,12 @@ class CascadeHydroGame {
   _loop(now) {
     requestAnimationFrame((t) => this._loop(t));
 
-    const rawDt = Math.min(0.08, Math.max(0.001, (now - this._lastTime) / 1000));
+    // Битая отметка времени проходит сквозь Math.max/Math.min и заражает
+    // физику воды NaN: уровни, расходы и деньги перестают считаться.
+    if (!Number.isFinite(now)) now = performance.now();
+    let raw = (now - this._lastTime) / 1000;
+    if (!Number.isFinite(raw) || raw < 0) raw = 0;
+    const rawDt = Math.min(0.08, Math.max(0.001, raw));
     this._lastTime = now;
     this._frameCount++;
 

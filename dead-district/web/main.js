@@ -844,8 +844,13 @@
   }
 
   function loop(ts) {
+    // Битая отметка времени не должна отравлять симуляцию: NaN через
+    // Math.max/Math.min проходит насквозь и ломает физику зомби.
+    if (!Number.isFinite(ts)) ts = lastTime || 0;
     if (!lastTime) lastTime = ts;
-    var dt = Math.min(0.05, Math.max(0.001, (ts - lastTime) / 1000));
+    var raw = (ts - lastTime) / 1000;
+    if (!Number.isFinite(raw) || raw < 0) raw = 0;
+    var dt = Math.min(0.05, Math.max(0.001, raw));
     lastTime = ts;
     stepSimulation(dt);
     DD.Renderer.renderFrame(canvasEl, state);

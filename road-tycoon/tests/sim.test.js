@@ -293,6 +293,28 @@ test('10 игровых дней на стартовой сети без NaN', (
   ok(s.vehicles.length <= C.maxVehicles, 'машин не больше лимита');
 });
 
+test('битый dt не отравляет партию', () => {
+  const s = Sim.newGame(21);
+  const before = s.time;
+  // NaN и Infinity приходят из requestAnimationFrame в нештатных ситуациях.
+  // Раньше `NaN <= 0` было ложью, NaN попадал в s.time и ломал сохранение.
+  Sim.tick(s, NaN);
+  Sim.tick(s, Infinity);
+  Sim.tick(s, undefined);
+  finite(s.time, 'время после битого dt');
+  ok(s.time === before, 'время не сдвинулось от битого dt');
+  Sim.tick(s, 0.05);
+  ok(Number.isFinite(s.time) && s.time > before, 'нормальный тик по-прежнему работает');
+});
+
+test('испорченное сохранение чинится, а не наследует NaN', () => {
+  const s = Sim.newGame(22);
+  s.time = NaN;
+  Sim.tick(s, 0.05);
+  finite(s.time, 'время восстановлено');
+  ok(s.time >= C.dayStartHour / 24, 'время откатилось к началу дня');
+});
+
 console.log('\n' + passed + ' тестов прошло, ' + failures.length + ' упало');
 if (failures.length) {
   console.log('\nПадения:');

@@ -109,6 +109,25 @@
 
   function clearPast() { remove(K_PAST); }
 
+  /* Полная замена книги жизней — нужна импорту: он приносит записи из файла.
+     Ограничение то же, что и при обычной записи, чтобы localStorage не разросся. */
+  function replacePast(list) {
+    var clean = (Array.isArray(list) ? list : []).filter(function (l) {
+      return l && typeof l === 'object' && l.name;
+    }).map(function (l) {
+      var copy = Object.assign({}, l);
+      // history рисуется в карточке жизни: без массива чисел она падает.
+      copy.history = (Array.isArray(copy.history) ? copy.history : []).filter(function (h) {
+        return h && Number.isFinite(Number(h.age));
+      });
+      copy.age = Number(copy.age) || 0;
+      copy.savedAt = Number(copy.savedAt) || Date.now();
+      return copy;
+    });
+    write(K_PAST, clean.slice(0, 200));
+    return clean.length;
+  }
+
   function stats() {
     var list = pastLives();
     var total = list.length;
@@ -142,7 +161,7 @@
   window.IN8B = window.IN8B || {};
   window.IN8B.save = {
     saveLife: saveLife, loadLife: loadLife, hasLife: hasLife, clearLife: clearLife, peekLife: peekLife,
-    pastLives: pastLives, addPastLife: addPastLife, clearPast: clearPast, stats: stats,
+    pastLives: pastLives, addPastLife: addPastLife, clearPast: clearPast, replacePast: replacePast, stats: stats,
     loadSettings: loadSettings, saveSettings: saveSettings,
     serialize: serialize, restore: restore
   };

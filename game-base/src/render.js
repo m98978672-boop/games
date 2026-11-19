@@ -180,6 +180,45 @@
           ctx.fill();
         }
 
+        // --- разные силуэты режимов: звезда, тень или светлячок ---
+        if (s.mode === 'stars') {
+          ctx.save();
+          ctx.translate(fx, fy);
+          ctx.rotate(reduced ? 0 : t * 0.6 + f.phase);
+          ctx.fillStyle = hexA('#fff0c2', 0.95 * alpha);
+          ctx.beginPath();
+          for (let k = 0; k < 10; k++) {
+            const rad = k % 2 === 0 ? r * 1.25 : r * 0.5;
+            const a = (Math.PI / 5) * k;
+            const px2 = Math.cos(a) * rad, py2 = Math.sin(a) * rad;
+            if (k === 0) ctx.moveTo(px2, py2); else ctx.lineTo(px2, py2);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+          continue;
+        }
+        if (s.mode === 'shadow') {
+          ctx.save();
+          ctx.globalAlpha = alpha * 0.92;
+          ctx.fillStyle = '#151a24';
+          ctx.beginPath();
+          ctx.arc(fx, fy, r * 1.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = alpha;
+          ctx.strokeStyle = hexA(accent, 0.7);
+          ctx.lineWidth = 1.4;
+          ctx.stroke();
+          // пара внимательных глаз — тень «живая»
+          ctx.fillStyle = hexA('#ffe9a8', 0.9);
+          ctx.beginPath();
+          ctx.arc(fx - r * 0.35, fy - r * 0.15, Math.max(1.1, r * 0.16), 0, Math.PI * 2);
+          ctx.arc(fx + r * 0.35, fy - r * 0.15, Math.max(1.1, r * 0.16), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          continue;
+        }
+
         // тельце — чуть вытянутый овал
         ctx.save();
         ctx.translate(fx, fy);

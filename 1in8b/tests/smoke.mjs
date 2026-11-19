@@ -95,5 +95,24 @@ if (entry) {
   ok(Array.isArray(entry.features) && entry.features.length <= 4, 'не больше 4 пунктов features');
 }
 
+// 7. Мемориал: фильтры, сравнение и перенос книги жизней
+const ui = readFileSync(join(root, 'src/ui.js'), 'utf8');
+const save = readFileSync(join(root, 'src/save.js'), 'utf8');
+const main = readFileSync(join(root, 'src/main.js'), 'utf8');
+const htmlLow = html;
+for (const id of ['memorial-filters', 'mem-country', 'mem-age', 'mem-sort', 'mem-compare',
+  'btn-export-past', 'btn-import-past', 'past-import-file']) {
+  ok(htmlLow.includes(`id="${id}"`), 'мемориал: в разметке есть ' + id);
+}
+ok(ui.includes('applyMemorialFilters'), 'мемориал: фильтры по стране и возрасту');
+ok(ui.includes('renderCompare'), 'мемориал: сравнение двух жизней');
+ok(ui.includes('exportPast') && ui.includes('importPast'), 'мемориал: экспорт и импорт книги жизней');
+ok(save.includes('replacePast'), 'save.js умеет заменять книгу жизней при импорте');
+ok(main.includes("el('btn-export-past')"), 'кнопка экспорта подключена');
+ok(main.includes("el('past-import-file')"), 'импорт из файла подключён');
+ok(!/alert\s*\(/.test(ui + main), 'в интерфейсе нет блокирующих alert');
+// Импорт обязан отбрасывать мусор, а не падать на нём.
+ok(/Number\.isFinite\(Number\(l\.age\)\)/.test(ui), 'импорт проверяет возраст на число');
+
 if (failed) { console.error(`\n✗ Провалено проверок: ${failed}`); process.exit(1); }
 console.log('\n✓ Все проверки пройдены');

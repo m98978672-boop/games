@@ -1398,7 +1398,12 @@ class Game {
 
   // ---------------------------------------------------------------- Игровой цикл
   loop(now) {
-    const dt = Math.min(0.05, (now - this.last) / 1000);
+    // Битая отметка времени рвёт физику грузовика: NaN через Math.min
+    // проходит насквозь, и машина улетает в бесконечность.
+    if (!Number.isFinite(now)) now = (typeof performance !== 'undefined' ? performance.now() : this.last);
+    let raw = (now - this.last) / 1000;
+    if (!Number.isFinite(raw) || raw < 0) raw = 0;
+    const dt = Math.min(0.05, raw);
     this.last = now;
     this.fpsAccum += dt;
     this.fpsFrames++;
