@@ -17,6 +17,14 @@
   ],
   "sections": [
     {
+      "id": "iinga",
+      "path": "iinga/index.html",
+      "kind": "game",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Прямой доступ; не включать в витрину"
+    },
+    {
       "id": "storefront",
       "path": "index.html",
       "kind": "portal",
