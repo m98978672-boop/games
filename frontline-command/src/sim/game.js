@@ -574,7 +574,7 @@ export class Game {
     }
     if (order.type === 'reinforce') {
       const sq = this.squads.get(order.params.squadId);
-      if (!sq) return { accepted: false, reason: 'отряд не найден' };
+      if (!sq || sq.faction !== order.faction || sq.state === 'destroyed') return { accepted: false, reason: 'свой отряд не найден' };
       const res = this.reinforceSquad(sq);
       return { accepted: !!res.ok, reason: res.reason };
     }

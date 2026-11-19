@@ -303,6 +303,8 @@ export class Squad {
         this.objective = { x, y, pointId, sectorId, type: 'retreat' };
         this.behavior = 'avoid'; this.state = 'retreat'; this.stateLabel = 'отходит';
         this.rallyPoint = { x, y };
+        // Squad and soldier retreat logic both follow retreatPoint, not rallyPoint.
+        if (this.game.cfg.flag('squad_orders_fix_v1', true)) this.retreatPoint = { x, y };
         break;
       case 'patrol':
         this.objective = { x, y, pointId, sectorId, type: 'patrol' };
