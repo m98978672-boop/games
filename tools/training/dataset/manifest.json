@@ -1,0 +1,37 @@
+{
+  "schema": "games-knowledge-v1",
+  "madeAt": "2026-11-19T23:12:29.930Z",
+  "seed": 7,
+  "counts": {
+    "total": 565,
+    "train": 508,
+    "eval": 57,
+    "byKind": {
+      "game-decision": 400,
+      "bug-rule": 115,
+      "bug-severity": 10,
+      "code-check": 3,
+      "play-guide": 19,
+      "code-ui": 1,
+      "repo-rule": 5,
+      "code-dom": 1,
+      "play-frontline": 7,
+      "code-dt": 2,
+      "code-css": 1,
+      "code-security": 1
+    }
+  },
+  "files": {
+    "train": {
+      "name": "train.jsonl",
+      "count": 508,
+      "sha256": "6c1e0e16a54ecc7a8e2a56cfc16ab84f141a610c1c00a204a39b9dba27f6354a"
+    },
+    "eval": {
+      "name": "eval.jsonl",
+      "count": 57,
+      "sha256": "d450b5a5d9653118dba40aee23c8e6c5f3afa90f877d02ed39679649dec6197b"
+    }
+  },
+  "note": "Только настоящие данные репозитория: состояния боя Frontline, каталог правил баг-искателя и реальные исправления. Ничего выдуманного."
+}

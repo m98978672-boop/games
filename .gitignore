@@ -6,3 +6,6 @@ truck-showroom/preview.png
 tools/bughunt/report.md
 tools/bughunt/report.json
 _shots/
+
+# python-кэш от обучения
+tools/training/__pycache__/
