@@ -81,12 +81,19 @@ jobs:
       - name: Обучить LoRA
         timeout-minutes: 240
         run: |
+          set +e
           set -o pipefail
           python -u tools/training/finetune.py \
             --data "$RUNNER_TEMP/knowledge" \
             --out "$RUNNER_TEMP/model-out" \
             --steps "${{ inputs.steps || '256' }}" \
-            --rank 16 --eval-limit 8 2>&1 | tee "$RUNNER_TEMP/train.log"
+            --rank 16 --eval-count 8 2>&1 | tee "$RUNNER_TEMP/train.log"
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            # Логи артефактов бывают недоступны снаружи, а аннотация видна всегда.
+            python -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"train.log"); s="".join(open(p,errors="replace").readlines()[-40:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit "$status"
 
       - name: Проверить, что адаптер действительно обучался
         run: |
