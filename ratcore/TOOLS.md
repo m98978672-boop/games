@@ -94,7 +94,7 @@
 | `build.surface` | `{ points: [[x,y,z],...], isoLevel?, cellSize?, texId? }` | `A-17` (Surface Nets по полю/точкам) | `MeshHandle` (гладкий меш) |
 | `build.primitive` | `{ shape: 'box'|'prism'|'cylinder'|'cone'|'roof'|'arch'|'sphere', size, segments?, texId? }` | Параметрические формулы + `F-25` | `MeshHandle` |
 | `build.combine` | `{ parts: Array<{ mesh: MeshHandle, pos?, rotDeg?, scale?, name? }>, mergeBuffers?: true }` | Трансформация вершин матрицей `Mat4` (`F-03`) + слияние | Единый составной `MeshHandle` |
-| `build.fromRecipe` | `{ modelId, ops: Array<{ tool, args }>, seed? }` | Последовательный запуск `ops` с проверкой `RC-103` | `MeshHandle` (воспроизводимый по рецепту) |
+| `build.fromRecipe` | `{ modelId, ops: Array<{ tool, args }>, seed? }` | Последовательный запуск `ops` с проверкой `RC-103`; операция рецепта `build.indexed` принимает `{ positions, indices, color? }` с проверкой размера и индексов | `MeshHandle` (воспроизводимый по рецепту) |
 | `build.exportRecipe` | `{ mesh: MeshHandle }` | Извлечение замороженного `recipe` (без сырых вершин!) | JSON-рецепт `.ratmodel.json` |
 | `build.validate` | `{ mesh: MeshHandle, maxTris?, checkNormals?: true, checkHoles?: true, checkNaN?: true }` | `A-18` (аудит геометрии) | `{ valid, validatedHandle, issues[], stats }` |
 

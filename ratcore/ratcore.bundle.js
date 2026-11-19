@@ -191,6 +191,18 @@ function finalizeGeometry(posArr, idxArr, uvArr = null, colorHex = '#88b4d8') {
   };
 }
 
+// Indexed authoring recipe for externally sourced, preprocessed meshes.
+function buildIndexedGeometry({positions, indices, color} = {}) {
+  const array = (a) => Array.isArray(a) || ArrayBuffer.isView(a) && !(a instanceof DataView);
+  if (!array(positions) || !array(indices) || positions.length < 9 || positions.length % 3 ||
+      indices.length < 3 || indices.length % 3 || positions.length > 450000 || indices.length > 150000 ||
+      !positions.every(v => Number.isFinite(v) && Math.abs(v) <= 10000) ||
+      !indices.every(i => Number.isInteger(i) && i >= 0 && i < positions.length / 3)) {
+    throw new RatCoreError('RC-201', 'Некорректная индексированная геометрия', 'Проверь вершины и треугольники.');
+  }
+  return finalizeGeometry(positions, indices, null, color);
+}
+
 // 1. Примитивы: box, cylinder, cone, roof, sphere (поддерживает и sx/sy/sz/kind, и w/h/d/r/shape)
 function buildPrimitiveGeometry(opts = {}) {
   const kind = opts.kind || opts.shape || 'box';
@@ -554,6 +566,7 @@ function packVertex64({ x, y, z, normalIdx = 0, uvU = 0, uvV = 0, matId = 0, ao 
   const hi = (((matId >>> 3) & 0xff) << 16) | ((clamp(uvV | 0, 0, 255) << 8) | clamp(uvU | 0, 0, 255));
   return new Uint32Array([lo, hi >>> 0]);
 }
+    exports["buildIndexedGeometry"] = buildIndexedGeometry;
     exports["buildPrimitiveGeometry"] = buildPrimitiveGeometry;
     exports["triangulateEarClipping"] = triangulateEarClipping;
     exports["buildExtrudeGeometry"] = buildExtrudeGeometry;
@@ -6582,7 +6595,7 @@ class Software3DRenderer {
       if (!ent || !ent.mesh) continue;
       // Жёсткая проверка ToolGuard — сырой меш мгновенно выбросит RC-101!
       const meshEntry = vault.readSealedMesh(ent.mesh, 'Software3DRenderer');
-      const { positions, indices, colors } = meshEntry.buffers;
+      const { positions, indices, colors, normals } = meshEntry.buffers;
       const objNumericId = ent.numericId || (eIdx + 1);
       const [ox, oy, oz] = worldToScene(ent.x || 0, ent.y || 0, ent.h || 0);
       const scale = ent.scale || 1;
@@ -6604,6 +6617,12 @@ class Software3DRenderer {
         return { w: [wx, wy, wz], cx, cy, cz };
       };
 
+      const vertexShade = camera.mode === 'smooth' && normals ? new Float32Array(positions.length / 3) : null;
+      if (vertexShade) for (let i = 0; i < vertexShade.length; i++) {
+        const [x,y,z] = normals.subarray(i*3,i*3+3);
+        const light = vec3Dot([x*cosY-z*sinY,y,x*sinY+z*cosY],this.sunDir);
+        vertexShade[i] = 0.52 + 0.48 * Math.max(0,light);
+      }
       for (let t = 0; t < indices.length; t += 3) {
         const i0 = indices[t], i1 = indices[t + 1], i2 = indices[t + 2];
         const v0 = transform(i0);
@@ -6626,7 +6645,7 @@ class Software3DRenderer {
         const [br, bg, bb] = unpackRGBA(baseCol);
         const shaded = packRGBA((br * shade) | 0, (bg * shade) | 0, (bb * shade) | 0, 255);
 
-        this._rasterTri(p0, p1, p2, shaded, objNumericId);
+        this._rasterTri(p0, p1, p2, shaded, objNumericId, vertexShade && [br,bg,bb,vertexShade[i0],vertexShade[i1],vertexShade[i2]]);
         drawnTris++;
       }
     }
@@ -6642,7 +6661,7 @@ class Software3DRenderer {
     };
   }
 
-  _rasterTri(p0, p1, p2, color, objectId) {
+  _rasterTri(p0, p1, p2, color, objectId, lighting) {
     const minX = Math.max(0, Math.floor(Math.min(p0[0], p1[0], p2[0])));
     const maxX = Math.min(this.width - 1, Math.ceil(Math.max(p0[0], p1[0], p2[0])));
     const minY = Math.max(0, Math.floor(Math.min(p0[1], p1[1], p2[1])));
@@ -6665,7 +6684,8 @@ class Software3DRenderer {
         const idx = y * this.width + x;
         if (z < this.zBuffer[idx]) {
           this.zBuffer[idx] = z;
-          this.surface.pixels[idx] = color;
+          const shade = lighting && (w0*lighting[3]+w1*lighting[4]+w2*lighting[5]);
+          this.surface.pixels[idx] = lighting ? packRGBA(lighting[0]*shade,lighting[1]*shade,lighting[2]*shade,255) : color;
           this.objectIdBuffer[idx] = objectId;
         }
       }
@@ -7619,7 +7639,7 @@ class RatCoreWorkerPool {
     var { SpatialHashGrid, ddaRaycast3D } = __import("src/world/spatial.js");
     var { WorldGraph, generateWorldMap } = __import("src/world/graph.js");
     var { synthesizeTextureData } = __import("src/assets/textures.js");
-    var { buildPrimitiveGeometry, buildExtrudeGeometry, buildLatheGeometry, buildVoxelsGreedyGeometry, combineGeometries, validateMeshBuffers } = __import("src/assets/mesh-builder.js");
+    var { buildPrimitiveGeometry, buildIndexedGeometry, buildExtrudeGeometry, buildLatheGeometry, buildVoxelsGreedyGeometry, combineGeometries, validateMeshBuffers } = __import("src/assets/mesh-builder.js");
     var { Software3DRenderer } = __import("src/render/software-3d.js");
     var { packRGBA } = __import("src/assets/raster.js");
     var { encodeWire2Frame, decodeWire2Frame, fastCdcSplit, diffFastCdcChunks } = __import("src/compress/wire2.js");
@@ -7931,6 +7951,7 @@ function createRatCoreEngine(config = {}) {
         const builtParts = [];
         for (const step of ops) {
           if (step.tool === 'build.primitive') builtParts.push({ ...buildPrimitiveGeometry(step.args), offset: step.offset || [0, step.args?.y || 0, 0] });
+          else if (step.tool === 'build.indexed') builtParts.push({ ...buildIndexedGeometry(step.args), offset: step.offset || [0, 0, 0] });
           else if (step.tool === 'build.extrude') builtParts.push({ ...buildExtrudeGeometry(step.args), offset: step.offset || [0, 0, 0] });
           else if (step.tool === 'build.lathe') builtParts.push({ ...buildLatheGeometry(step.args), offset: step.offset || [0, 0, 0] });
           else if (step.tool === 'build.voxels') builtParts.push({ ...buildVoxelsGreedyGeometry(step.args), offset: step.offset || [0, 0, 0] });
@@ -7939,7 +7960,7 @@ function createRatCoreEngine(config = {}) {
             const vox = parsed.cells.map((c) => ({ x: Math.round(c.x), y: c.k, z: Math.round(-c.y), mat: 1 }));
             builtParts.push({ ...buildVoxelsGreedyGeometry({ voxels: vox }), offset: step.offset || [0, 0, 0] });
           } else {
-            throw new RatCoreError('RC-104', `Неизвестная операция рецепта: ${step.tool}`, 'Допустимы build.primitive, build.extrude, build.lathe, build.voxels, build.layer.');
+            throw new RatCoreError('RC-104', `Неизвестная операция рецепта: ${step.tool}`, 'Допустимы build.primitive, build.indexed, build.extrude, build.lathe, build.voxels, build.layer.');
           }
         }
         const geom = builtParts.length === 1 ? builtParts[0] : combineGeometries(builtParts, args.color || '#88b4d8');
