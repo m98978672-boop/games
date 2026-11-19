@@ -1,0 +1,33 @@
+name: Retrieve Frontline waypoint evaluation
+on:
+  push:
+    branches: [arena/2045b9f2-games]
+    paths: [.github/workflows/frontline-obstacle-report.yml]
+permissions:
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve completed research release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release download frontline-obstacle-research-44615251755 --pattern frontline-obstacle-research.tar.gz --dir "$RUNNER_TEMP"
+          mkdir "$RUNNER_TEMP/obstacle"
+          tar -xzf "$RUNNER_TEMP/frontline-obstacle-research.tar.gz" -C "$RUNNER_TEMP/obstacle"
+      - name: Report compact decision and physical replay results
+        run: |
+          python - <<'PY'
+          import json,os
+          p=os.path.join(os.environ['RUNNER_TEMP'],'obstacle')
+          report=json.load(open(p+'/report.json')); replay=json.load(open(p+'/replay.json'))
+          print('::notice::COMPACT_SUMMARY '+json.dumps({'training':{k:report[k] for k in ('steps','train_count','eval_count','heldout_loss_before','heldout_loss_after')},'replay':replay['summary']},separators=(',',':')))
+          rows=[]
+          for result,actual in zip(report['results'],replay['rows']):
+              assert result['spec']['id']==actual['id']
+              rows.append({'spec':result['spec'],'teacher':result['teacher'],'base_output':result['base'],'adapter_output':result['adapter'],'replay':actual})
+          assert len(rows)==replay['summary']['total']==report['eval_count']
+          for i in range(0,len(rows),3): print('::notice::COMPACT_ROWS '+json.dumps(rows[i:i+3],separators=(',',':')))
+          PY
