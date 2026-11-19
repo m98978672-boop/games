@@ -5,7 +5,7 @@
   "stats": {
     "games": 16,
     "files": 1180,
-    "totalBytes": 35883156,
+    "totalBytes": 35883479,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -2088,8 +2088,8 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "f8889e659a8bacab9ec929b18b9fd1a76efc7ecbd7ac90e1bedc4a2e766a9232",
-      "totalSize": 9764613,
+      "infoHash": "24639819fe33ce691bb1425f729557c5074daa6524cb91d911061f9ab838fe87",
+      "totalSize": 9764936,
       "chunkSize": 262144,
       "chunkCount": 38,
       "fileCount": 534,
@@ -3522,7 +3522,7 @@
         {
           "path": "src/core/build-info.js",
           "size": 842,
-          "sha256": "496d09c88cf1e2c88efc04d9c978fe48e60290a2474929a40038b573e5581975"
+          "sha256": "3ee3a9984671de9e7fd06aabc38a8683c0f4274262ce54d6400be5a787512fa7"
         },
         {
           "path": "src/core/config.js",
@@ -3606,8 +3606,8 @@
         },
         {
           "path": "src/sim/command_api.js",
-          "size": 6722,
-          "sha256": "c76706ad87763dc3acb6ceb13f11a48a1aa9a18d6913636da963d6dbea4ed3ff"
+          "size": 6800,
+          "sha256": "5ed555b03fc8fa011bac112a02987869924fa8ef470087cc475da636eece062a"
         },
         {
           "path": "src/sim/crowd_nav.js",
@@ -3631,8 +3631,8 @@
         },
         {
           "path": "src/sim/game.js",
-          "size": 49739,
-          "sha256": "56f8a92575e3f643216a545667bc9358ce6c19d098cd35673ad930944bb1ebc5"
+          "size": 49808,
+          "sha256": "582c0a2a3d7bd9b15dc50efdf550d9311fcfc93456a1b0e7969c733e797bcfd9"
         },
         {
           "path": "src/sim/incremental_route.js",
@@ -3696,8 +3696,8 @@
         },
         {
           "path": "src/sim/squads.js",
-          "size": 14696,
-          "sha256": "c7dfc9e9093c2d3576b4cd052c27bb49c4f255be45f5128410d4bcd6fea31d82"
+          "size": 14872,
+          "sha256": "09d8099f46d618c03804a3ca939c2bc55efba9f4ae2d1f52ef1f65f1c7c9ef25"
         },
         {
           "path": "src/sim/units.js",
