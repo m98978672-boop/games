@@ -89,7 +89,7 @@ node tools/p2p-server/server.mjs
 | [`tools/torrent/build-catalog.mjs`](../tools/torrent/build-catalog.mjs) | сборка каталога раздач из файлов репозитория |
 | [`site/torrent-catalog.json`](../site/torrent-catalog.json) | каталог: игры, файлы, `info_hash`, куски |
 
-Сейчас в раздаче: **232 игры · 2058 файлов · 389 кусков · 48.2 МБ**:
+Сейчас в раздаче: **232 игры · 2064 файла · 391 кусок · 48.5 МБ**:
 
 | Что | Сколько | Откуда |
 |---|---:|---|
