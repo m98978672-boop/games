@@ -14,7 +14,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release download frontline-obstacle-research-44615251755 --pattern frontline-obstacle-research.tar.gz --dir "$RUNNER_TEMP"
+          gh release download frontline-obstacle-research-44616374497 --pattern frontline-obstacle-research.tar.gz --dir "$RUNNER_TEMP"
           mkdir "$RUNNER_TEMP/obstacle"
           tar -xzf "$RUNNER_TEMP/frontline-obstacle-research.tar.gz" -C "$RUNNER_TEMP/obstacle"
       - name: Report compact decision and physical replay results
