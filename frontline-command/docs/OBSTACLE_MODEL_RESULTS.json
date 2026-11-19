@@ -1,0 +1,322 @@
+[
+  {
+    "model": "adapter",
+    "with_examples": false,
+    "case": "gap-top",
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "prompt": "Now solve this new map:\n.....\n..#..\n.S#G.\n..#..\n#####\nAnswer:",
+    "raw": "U\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 6
+  },
+  {
+    "model": "adapter",
+    "with_examples": false,
+    "case": "gap-bottom-mirror",
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "prompt": "Now solve this new map:\n#####\n..#..\n.G#S.\n..#..\n.....\nAnswer:",
+    "raw": "U\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 6
+  },
+  {
+    "model": "adapter",
+    "with_examples": false,
+    "case": "door",
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "prompt": "Now solve this new map:\n..#..\n..#..\n.S.G.\n..#..\n..#..\nAnswer:",
+    "raw": "U\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 2
+  },
+  {
+    "model": "adapter",
+    "with_examples": false,
+    "case": "sealed",
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "prompt": "Now solve this new map:\n..#..\n.S#G.\n..#..\n..#..\n..#..\nAnswer:",
+    "raw": "U\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": null
+  },
+  {
+    "model": "adapter",
+    "with_examples": true,
+    "case": "gap-top",
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "prompt": "Example map:\n#####\n.S#G.\n..#..\n.....\nAnswer: DDRRUU\n\nExample map:\n#####\n#S#G#\n#####\nAnswer: NONE\n\nNow solve this new map:\n.....\n..#..\n.S#G.\n..#..\n#####\nAnswer:",
+    "raw": "DRLU\n",
+    "format_valid": true,
+    "safe": false,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 6
+  },
+  {
+    "model": "adapter",
+    "with_examples": true,
+    "case": "gap-bottom-mirror",
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "prompt": "Example map:\n#####\n.S#G.\n..#..\n.....\nAnswer: DDRRUU\n\nExample map:\n#####\n#S#G#\n#####\nAnswer: NONE\n\nNow solve this new map:\n#####\n..#..\n.G#S.\n..#..\n.....\nAnswer:",
+    "raw": "DRLU\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 6
+  },
+  {
+    "model": "adapter",
+    "with_examples": true,
+    "case": "door",
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "prompt": "Example map:\n#####\n.S#G.\n..#..\n.....\nAnswer: DDRRUU\n\nExample map:\n#####\n#S#G#\n#####\nAnswer: NONE\n\nNow solve this new map:\n..#..\n..#..\n.S.G.\n..#..\n..#..\nAnswer:",
+    "raw": "DDRRUU\n",
+    "format_valid": true,
+    "safe": false,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 2
+  },
+  {
+    "model": "adapter",
+    "with_examples": true,
+    "case": "sealed",
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "prompt": "Example map:\n#####\n.S#G.\n..#..\n.....\nAnswer: DDRRUU\n\nExample map:\n#####\n#S#G#\n#####\nAnswer: NONE\n\nNow solve this new map:\n..#..\n.S#G.\n..#..\n..#..\n..#..\nAnswer:",
+    "raw": "DDRRUU\n",
+    "format_valid": true,
+    "safe": false,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": null
+  },
+  {
+    "model": "base",
+    "with_examples": false,
+    "case": "gap-top",
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "prompt": "Now solve this new map:\n.....\n..#..\n.S#G.\n..#..\n#####\nAnswer:",
+    "raw": "U\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 6
+  },
+  {
+    "model": "base",
+    "with_examples": false,
+    "case": "gap-bottom-mirror",
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "prompt": "Now solve this new map:\n#####\n..#..\n.G#S.\n..#..\n.....\nAnswer:",
+    "raw": "U\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 6
+  },
+  {
+    "model": "base",
+    "with_examples": false,
+    "case": "door",
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "prompt": "Now solve this new map:\n..#..\n..#..\n.S.G.\n..#..\n..#..\nAnswer:",
+    "raw": "U\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 2
+  },
+  {
+    "model": "base",
+    "with_examples": false,
+    "case": "sealed",
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "prompt": "Now solve this new map:\n..#..\n.S#G.\n..#..\n..#..\n..#..\nAnswer:",
+    "raw": "U\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": null
+  },
+  {
+    "model": "base",
+    "with_examples": true,
+    "case": "gap-top",
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "prompt": "Example map:\n#####\n.S#G.\n..#..\n.....\nAnswer: DDRRUU\n\nExample map:\n#####\n#S#G#\n#####\nAnswer: NONE\n\nNow solve this new map:\n.....\n..#..\n.S#G.\n..#..\n#####\nAnswer:",
+    "raw": "DRLR\n",
+    "format_valid": true,
+    "safe": false,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 6
+  },
+  {
+    "model": "base",
+    "with_examples": true,
+    "case": "gap-bottom-mirror",
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "prompt": "Example map:\n#####\n.S#G.\n..#..\n.....\nAnswer: DDRRUU\n\nExample map:\n#####\n#S#G#\n#####\nAnswer: NONE\n\nNow solve this new map:\n#####\n..#..\n.G#S.\n..#..\n.....\nAnswer:",
+    "raw": "DRLU\n",
+    "format_valid": true,
+    "safe": true,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 6
+  },
+  {
+    "model": "base",
+    "with_examples": true,
+    "case": "door",
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "prompt": "Example map:\n#####\n.S#G.\n..#..\n.....\nAnswer: DDRRUU\n\nExample map:\n#####\n#S#G#\n#####\nAnswer: NONE\n\nNow solve this new map:\n..#..\n..#..\n.S.G.\n..#..\n..#..\nAnswer:",
+    "raw": "DRU\n",
+    "format_valid": true,
+    "safe": false,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": 2
+  },
+  {
+    "model": "base",
+    "with_examples": true,
+    "case": "sealed",
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "prompt": "Example map:\n#####\n.S#G.\n..#..\n.....\nAnswer: DDRRUU\n\nExample map:\n#####\n#S#G#\n#####\nAnswer: NONE\n\nNow solve this new map:\n..#..\n.S#G.\n..#..\n..#..\n..#..\nAnswer:",
+    "raw": "DDRRUU\n",
+    "format_valid": true,
+    "safe": false,
+    "reached": false,
+    "optimal": false,
+    "unreachable_correct": false,
+    "shortest_length": null
+  }
+]
