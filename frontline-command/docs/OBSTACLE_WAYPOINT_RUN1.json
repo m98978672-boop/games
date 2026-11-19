@@ -1,0 +1,811 @@
+{
+  "summary": {
+    "training": {
+      "steps": 64,
+      "train_count": 45,
+      "eval_count": 13,
+      "heldout_loss_before": 0.24507871843301332,
+      "heldout_loss_after": 0.27781493617938113
+    },
+    "replay": {
+      "total": 13,
+      "base": {
+        "success": 8,
+        "invalid": 0,
+        "wallCross": 0
+      },
+      "adapter": {
+        "success": 5,
+        "invalid": 0,
+        "wallCross": 0
+      },
+      "baseline": {
+        "success": 13,
+        "invalid": 0,
+        "wallCross": 0
+      }
+    }
+  },
+  "rows": [
+    {
+      "spec": {
+        "id": "eval-37-272-224-32-1-D",
+        "split": "eval",
+        "seed": 37,
+        "width": 272,
+        "height": 224,
+        "offset": 32,
+        "faction": 1,
+        "closed": "D"
+      },
+      "teacher": "U",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-37-272-224-32-1-D",
+        "teacher": "U",
+        "side": 1,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000017,
+          "limit": 8.25,
+          "success": false
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 16.950000000000106,
+          "maxStep": 5.5000000000000595,
+          "limit": 8.25,
+          "success": true
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 17.95000000000012,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-31-272-224--32-1-U",
+        "split": "eval",
+        "seed": 31,
+        "width": 272,
+        "height": 224,
+        "offset": -32,
+        "faction": 1,
+        "closed": "U"
+      },
+      "teacher": "D",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-31-272-224--32-1-U",
+        "teacher": "D",
+        "side": 1,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 18.950000000000134,
+          "maxStep": 5.500000000000057,
+          "limit": 8.25,
+          "success": true
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000057,
+          "limit": 8.25,
+          "success": false
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 13.75000000000006,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-31-272-224-32-0-U",
+        "split": "eval",
+        "seed": 31,
+        "width": 272,
+        "height": 224,
+        "offset": 32,
+        "faction": 0,
+        "closed": "U"
+      },
+      "teacher": "D",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-31-272-224-32-0-U",
+        "teacher": "D",
+        "side": 0,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 16.6000000000001,
+          "maxStep": 5.500000000000052,
+          "limit": 8.25,
+          "success": true
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000017,
+          "limit": 8.25,
+          "success": false
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 13.75000000000006,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-31-272-224-32-1-U",
+        "split": "eval",
+        "seed": 31,
+        "width": 272,
+        "height": 224,
+        "offset": 32,
+        "faction": 1,
+        "closed": "U"
+      },
+      "teacher": "D",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-31-272-224-32-1-U",
+        "teacher": "D",
+        "side": 1,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 17.600000000000115,
+          "maxStep": 5.5000000000000515,
+          "limit": 8.25,
+          "success": true
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000034,
+          "limit": 8.25,
+          "success": false
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 13.150000000000052,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-31-208-208-32-1-U",
+        "split": "eval",
+        "seed": 31,
+        "width": 208,
+        "height": 208,
+        "offset": 32,
+        "faction": 1,
+        "closed": "U"
+      },
+      "teacher": "D",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-31-208-208-32-1-U",
+        "teacher": "D",
+        "side": 1,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 9.199999999999996,
+          "maxStep": 5.5,
+          "limit": 8.25,
+          "success": true
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000017,
+          "limit": 8.25,
+          "success": false
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 7.7499999999999805,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-31-272-224--32-0-U",
+        "split": "eval",
+        "seed": 31,
+        "width": 272,
+        "height": 224,
+        "offset": -32,
+        "faction": 0,
+        "closed": "U"
+      },
+      "teacher": "D",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-31-272-224--32-0-U",
+        "teacher": "D",
+        "side": 0,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 17.600000000000115,
+          "maxStep": 5.500000000000052,
+          "limit": 8.25,
+          "success": true
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000014,
+          "limit": 8.25,
+          "success": false
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 14.900000000000077,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-37-272-224--32-0-D",
+        "split": "eval",
+        "seed": 37,
+        "width": 272,
+        "height": 224,
+        "offset": -32,
+        "faction": 0,
+        "closed": "D"
+      },
+      "teacher": "U",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-37-272-224--32-0-D",
+        "teacher": "U",
+        "side": 0,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000017,
+          "limit": 8.25,
+          "success": false
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 16.6000000000001,
+          "maxStep": 5.500000000000064,
+          "limit": 8.25,
+          "success": true
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 14.550000000000072,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-37-208-208--32-1-D",
+        "split": "eval",
+        "seed": 37,
+        "width": 208,
+        "height": 208,
+        "offset": -32,
+        "faction": 1,
+        "closed": "D"
+      },
+      "teacher": "U",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-37-208-208--32-1-D",
+        "teacher": "U",
+        "side": 1,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.5000000000000595,
+          "limit": 8.25,
+          "success": false
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 8.79999999999999,
+          "maxStep": 5.500000000000027,
+          "limit": 8.25,
+          "success": true
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 6.949999999999983,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-31-208-208-32-0-U",
+        "split": "eval",
+        "seed": 31,
+        "width": 208,
+        "height": 208,
+        "offset": 32,
+        "faction": 0,
+        "closed": "U"
+      },
+      "teacher": "D",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-31-208-208-32-0-U",
+        "teacher": "D",
+        "side": 0,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 8.949999999999992,
+          "maxStep": 5.5,
+          "limit": 8.25,
+          "success": true
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.50000000000005,
+          "limit": 8.25,
+          "success": false
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 6.799999999999984,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-37-208-208-32-0-D",
+        "split": "eval",
+        "seed": 37,
+        "width": 208,
+        "height": 208,
+        "offset": 32,
+        "faction": 0,
+        "closed": "D"
+      },
+      "teacher": "U",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-37-208-208-32-0-D",
+        "teacher": "U",
+        "side": 0,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000003,
+          "limit": 8.25,
+          "success": false
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 9.049999999999994,
+          "maxStep": 5.5,
+          "limit": 8.25,
+          "success": true
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 10.20000000000001,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-31-208-208--32-0-U",
+        "split": "eval",
+        "seed": 31,
+        "width": 208,
+        "height": 208,
+        "offset": -32,
+        "faction": 0,
+        "closed": "U"
+      },
+      "teacher": "D",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-31-208-208--32-0-U",
+        "teacher": "D",
+        "side": 0,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 10.050000000000008,
+          "maxStep": 5.5,
+          "limit": 8.25,
+          "success": true
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000053,
+          "limit": 8.25,
+          "success": false
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 36.40000000000007,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-37-208-208--32-0-D",
+        "split": "eval",
+        "seed": 37,
+        "width": 208,
+        "height": 208,
+        "offset": -32,
+        "faction": 0,
+        "closed": "D"
+      },
+      "teacher": "U",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-37-208-208--32-0-D",
+        "teacher": "U",
+        "side": 0,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000017,
+          "limit": 8.25,
+          "success": false
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 9.950000000000006,
+          "maxStep": 5.5,
+          "limit": 8.25,
+          "success": true
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 17.20000000000011,
+          "success": true
+        }
+      }
+    },
+    {
+      "spec": {
+        "id": "eval-31-208-208--32-1-U",
+        "split": "eval",
+        "seed": 31,
+        "width": 208,
+        "height": 208,
+        "offset": -32,
+        "faction": 1,
+        "closed": "U"
+      },
+      "teacher": "D",
+      "base_output": {
+        "raw": "D\n",
+        "choice": "D",
+        "completed": true,
+        "tokens": 4
+      },
+      "adapter_output": {
+        "raw": "U\n",
+        "choice": "U",
+        "completed": true,
+        "tokens": 4
+      },
+      "replay": {
+        "id": "eval-31-208-208--32-1-U",
+        "teacher": "D",
+        "side": 1,
+        "base": {
+          "choice": "D",
+          "valid": true,
+          "near": true,
+          "wallCross": false,
+          "switched": true,
+          "accepted": 2,
+          "seconds": 9.900000000000006,
+          "maxStep": 5.5,
+          "limit": 8.25,
+          "success": true
+        },
+        "adapter": {
+          "choice": "U",
+          "valid": true,
+          "near": false,
+          "wallCross": false,
+          "switched": false,
+          "accepted": 1,
+          "seconds": 79.9999999999976,
+          "maxStep": 5.500000000000013,
+          "limit": 8.25,
+          "success": false
+        },
+        "baseline": {
+          "near": true,
+          "wallCross": false,
+          "seconds": 14.650000000000073,
+          "success": true
+        }
+      }
+    }
+  ]
+}

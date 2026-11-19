@@ -1,0 +1,662 @@
+[
+  {
+    "model": "adapter",
+    "mode": "sanity_sample",
+    "case": "sanity-0",
+    "seed": 800,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.5,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "5\n",
+    "question": "What is 2 + 3? Reply with the number only."
+  },
+  {
+    "model": "adapter",
+    "mode": "sanity_sample",
+    "case": "sanity-1",
+    "seed": 801,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.45,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "5\n",
+    "question": "Сколько будет два плюс три? Ответь только числом."
+  },
+  {
+    "model": "adapter",
+    "mode": "thinking_sample",
+    "case": "gap-top",
+    "seed": 700,
+    "generated_tokens": 256,
+    "budget": 256,
+    "seconds": 22.49,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "score": null
+  },
+  {
+    "model": "adapter",
+    "mode": "thinking_sample",
+    "case": "gap-bottom-mirror",
+    "seed": 701,
+    "generated_tokens": 256,
+    "budget": 256,
+    "seconds": 22.74,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "score": null
+  },
+  {
+    "model": "adapter",
+    "mode": "thinking_sample",
+    "case": "door",
+    "seed": 702,
+    "generated_tokens": 256,
+    "budget": 256,
+    "seconds": 22.05,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "score": null
+  },
+  {
+    "model": "adapter",
+    "mode": "thinking_sample",
+    "case": "sealed",
+    "seed": 703,
+    "generated_tokens": 256,
+    "budget": 256,
+    "seconds": 22.26,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "score": null
+  },
+  {
+    "model": "adapter",
+    "mode": "sample",
+    "case": "gap-top",
+    "seed": 700,
+    "generated_tokens": 7,
+    "budget": 64,
+    "seconds": 1.85,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "DRRLLUU\n",
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "score": {
+      "raw": "DRRLLUU\n",
+      "format_valid": true,
+      "safe": false,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 6
+    }
+  },
+  {
+    "model": "adapter",
+    "mode": "sample",
+    "case": "gap-bottom-mirror",
+    "seed": 701,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.63,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 6
+    }
+  },
+  {
+    "model": "adapter",
+    "mode": "sample",
+    "case": "door",
+    "seed": 702,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.69,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "R\n",
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "score": {
+      "raw": "R\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 2
+    }
+  },
+  {
+    "model": "adapter",
+    "mode": "sample",
+    "case": "sealed",
+    "seed": 703,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.63,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": null
+    }
+  },
+  {
+    "model": "adapter",
+    "mode": "greedy",
+    "case": "gap-top",
+    "seed": 700,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.61,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 6
+    }
+  },
+  {
+    "model": "adapter",
+    "mode": "greedy",
+    "case": "gap-bottom-mirror",
+    "seed": 701,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.65,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 6
+    }
+  },
+  {
+    "model": "adapter",
+    "mode": "greedy",
+    "case": "door",
+    "seed": 702,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.66,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 2
+    }
+  },
+  {
+    "model": "adapter",
+    "mode": "greedy",
+    "case": "sealed",
+    "seed": 703,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 1.62,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": null
+    }
+  },
+  {
+    "model": "base",
+    "mode": "sanity_sample",
+    "case": "sanity-0",
+    "seed": 800,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 0.39,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "5\n",
+    "question": "What is 2 + 3? Reply with the number only."
+  },
+  {
+    "model": "base",
+    "mode": "sanity_sample",
+    "case": "sanity-1",
+    "seed": 801,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 0.4,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "5\n",
+    "question": "Сколько будет два плюс три? Ответь только числом."
+  },
+  {
+    "model": "base",
+    "mode": "thinking_sample",
+    "case": "gap-top",
+    "seed": 700,
+    "generated_tokens": 256,
+    "budget": 256,
+    "seconds": 21.13,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "score": null
+  },
+  {
+    "model": "base",
+    "mode": "thinking_sample",
+    "case": "gap-bottom-mirror",
+    "seed": 701,
+    "generated_tokens": 256,
+    "budget": 256,
+    "seconds": 20.58,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "score": null
+  },
+  {
+    "model": "base",
+    "mode": "thinking_sample",
+    "case": "door",
+    "seed": 702,
+    "generated_tokens": 256,
+    "budget": 256,
+    "seconds": 20.39,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "score": null
+  },
+  {
+    "model": "base",
+    "mode": "thinking_sample",
+    "case": "sealed",
+    "seed": 703,
+    "generated_tokens": 256,
+    "budget": 256,
+    "seconds": 20.87,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "score": null
+  },
+  {
+    "model": "base",
+    "mode": "sample",
+    "case": "gap-top",
+    "seed": 700,
+    "generated_tokens": 7,
+    "budget": 64,
+    "seconds": 0.79,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "DRRLLUU\n",
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "score": {
+      "raw": "DRRLLUU\n",
+      "format_valid": true,
+      "safe": false,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 6
+    }
+  },
+  {
+    "model": "base",
+    "mode": "sample",
+    "case": "gap-bottom-mirror",
+    "seed": 701,
+    "generated_tokens": 5,
+    "budget": 64,
+    "seconds": 0.63,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "LLRR\n",
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "score": {
+      "raw": "LLRR\n",
+      "format_valid": true,
+      "safe": false,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 6
+    }
+  },
+  {
+    "model": "base",
+    "mode": "sample",
+    "case": "door",
+    "seed": 702,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 0.58,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "R\n",
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "score": {
+      "raw": "R\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 2
+    }
+  },
+  {
+    "model": "base",
+    "mode": "sample",
+    "case": "sealed",
+    "seed": 703,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 0.57,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "NONE\n",
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "score": {
+      "raw": "NONE\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": true,
+      "shortest_length": null
+    }
+  },
+  {
+    "model": "base",
+    "mode": "greedy",
+    "case": "gap-top",
+    "seed": 700,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 0.53,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 6
+    }
+  },
+  {
+    "model": "base",
+    "mode": "greedy",
+    "case": "gap-bottom-mirror",
+    "seed": 701,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 0.59,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      "#####",
+      "..#..",
+      ".G#S.",
+      "..#..",
+      "....."
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 6
+    }
+  },
+  {
+    "model": "base",
+    "mode": "greedy",
+    "case": "door",
+    "seed": 702,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 0.55,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": 2
+    }
+  },
+  {
+    "model": "base",
+    "mode": "greedy",
+    "case": "sealed",
+    "seed": 703,
+    "generated_tokens": 4,
+    "budget": 64,
+    "seconds": 0.54,
+    "ended_with_eos": true,
+    "has_final": true,
+    "answer": "U\n",
+    "map": [
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "..#..",
+      "..#.."
+    ],
+    "score": {
+      "raw": "U\n",
+      "format_valid": true,
+      "safe": true,
+      "reached": false,
+      "optimal": false,
+      "unreachable_correct": false,
+      "shortest_length": null
+    }
+  }
+]

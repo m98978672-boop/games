@@ -1,0 +1,519 @@
+{
+  "summary": {
+    "training": {
+      "steps": 256,
+      "dev_choice_token_loss_before": 5.332923139844622,
+      "dev_choice_token_loss_after": 0.0036257797785635504,
+      "dataset": {
+        "train": {
+          "generated": 160,
+          "kept": 131,
+          "rejected": 29,
+          "sha256": "5d8f5eb4126fc1aa45bdc77dccae09372957554a23a20b67ac3fc2ebe13f44b0",
+          "allSha256": "1ca06a00e5c4bb66815d980b15731fd2b39b412c92d1b60aef5f37f57422c026",
+          "labels": {
+            "U": 68,
+            "D": 63
+          },
+          "uniqueInputs": 77
+        },
+        "dev": {
+          "generated": 16,
+          "kept": 14,
+          "rejected": 2,
+          "sha256": "d073be1227b2d66b93cef29cb2721592a2cd72e4701536f8caed72aaee8966e3",
+          "allSha256": "f4615051687ac7f9580af14cb1cfacae4c22fb7de150bfd3353ad4f32c893554",
+          "labels": {
+            "U": 7,
+            "D": 7
+          },
+          "uniqueInputs": 8
+        },
+        "test": {
+          "generated": 36,
+          "kept": 23,
+          "rejected": 13,
+          "sha256": "c112b826cc4315b8350b839325a49ea700a8ce826662d32eadca4b5e0adea030",
+          "allSha256": "4e1a5c3a8ab81e2e227dd04c5a455f6a210e1153ca694abf2933f47da2d55dc5",
+          "labels": {
+            "U": 11,
+            "D": 12
+          },
+          "uniqueInputs": 17
+        }
+      }
+    },
+    "metrics": {
+      "base": {
+        "all": {
+          "total": 36,
+          "success": 12,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "withOneTeacher": {
+          "total": 23,
+          "success": 12,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "withoutOneTeacher": {
+          "total": 13,
+          "success": 0,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "faction0": {
+          "total": 18,
+          "success": 7,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "faction1": {
+          "total": 18,
+          "success": 5,
+          "wallCross": 0,
+          "invalid": 0
+        }
+      },
+      "adapter": {
+        "all": {
+          "total": 36,
+          "success": 23,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "withOneTeacher": {
+          "total": 23,
+          "success": 23,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "withoutOneTeacher": {
+          "total": 13,
+          "success": 0,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "faction0": {
+          "total": 18,
+          "success": 12,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "faction1": {
+          "total": 18,
+          "success": 11,
+          "wallCross": 0,
+          "invalid": 0
+        }
+      },
+      "baseline": {
+        "all": {
+          "total": 36,
+          "success": 36,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "withOneTeacher": {
+          "total": 23,
+          "success": 23,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "withoutOneTeacher": {
+          "total": 13,
+          "success": 13,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "faction0": {
+          "total": 18,
+          "success": 18,
+          "wallCross": 0,
+          "invalid": 0
+        },
+        "faction1": {
+          "total": 18,
+          "success": 18,
+          "wallCross": 0,
+          "invalid": 0
+        }
+      }
+    },
+    "paired": {
+      "improved": 0,
+      "regressed": 13
+    },
+    "gate": {
+      "allSyntheticTestScenesPassed": false,
+      "noWallCrossing": true,
+      "noInvalidChoices": true,
+      "noRegressionAgainstBaseline": false,
+      "deploymentReady": false,
+      "reason": "Synthetic offline replay is not a normal match, WebLLM integration, performance or safety acceptance."
+    }
+  },
+  "rows": [
+    {
+      "id": "test-313-304-240-0-1-U",
+      "faction": 1,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-304-240-0-1-D",
+      "faction": 1,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-304-240-40-0-U",
+      "faction": 0,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-304-240-40-0-D",
+      "faction": 0,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-304-240-40-1-U",
+      "faction": 1,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-304-240-40-1-D",
+      "faction": 1,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-304-240--40-0-U",
+      "faction": 0,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "D",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-304-240--40-0-D",
+      "faction": 0,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-304-240--40-1-U",
+      "faction": 1,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-304-240--40-1-D",
+      "faction": 1,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-304-240-0-0-U",
+      "faction": 0,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-304-240-0-0-D",
+      "faction": 0,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-248-216-0-1-U",
+      "faction": 1,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "D",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-248-216-0-1-D",
+      "faction": 1,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-248-216-40-0-U",
+      "faction": 0,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-248-216-40-0-D",
+      "faction": 0,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-248-216-40-1-U",
+      "faction": 1,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-248-216-40-1-D",
+      "faction": 1,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-248-216--40-0-U",
+      "faction": 0,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-248-216--40-0-D",
+      "faction": 0,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-248-216--40-1-U",
+      "faction": 1,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "D",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-248-216--40-1-D",
+      "faction": 1,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-248-216-0-0-U",
+      "faction": 0,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-248-216-0-0-D",
+      "faction": 0,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-216-200-0-1-U",
+      "faction": 1,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "D",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-216-200-0-1-D",
+      "faction": 1,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-216-200-40-0-U",
+      "faction": 0,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-313-216-200-40-0-D",
+      "faction": 0,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-216-200-40-1-U",
+      "faction": 1,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "D",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-216-200-40-1-D",
+      "faction": 1,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-216-200--40-0-U",
+      "faction": 0,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "D",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-307-216-200--40-0-D",
+      "faction": 0,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": false,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-216-200--40-1-U",
+      "faction": 1,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-216-200--40-1-D",
+      "faction": 1,
+      "teacher": "U",
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-216-200-0-0-U",
+      "faction": 0,
+      "teacher": "D",
+      "base_choice": "D",
+      "base_success": true,
+      "adapter_choice": "D",
+      "adapter_success": true,
+      "baseline_success": true
+    },
+    {
+      "id": "test-311-216-200-0-0-D",
+      "faction": 0,
+      "teacher": null,
+      "base_choice": "D",
+      "base_success": false,
+      "adapter_choice": "U",
+      "adapter_success": false,
+      "baseline_success": true
+    }
+  ]
+}

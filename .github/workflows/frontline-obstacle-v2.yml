@@ -1,0 +1,85 @@
+name: Frontline waypoint learning v2
+on:
+  push:
+    branches: [arena/2045b9f2-games]
+    paths: [.github/workflows/frontline-obstacle-v2.yml, frontline-command/tools/training/train-obstacle-v2.py, frontline-command/tools/training/collect-obstacle-v2.mjs, frontline-command/tools/training/summarize-obstacle-v2.mjs]
+permissions:
+  contents: read
+jobs:
+  train-and-evaluate:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test physical scenarios and split isolation
+        run: node frontline-command/tests/obstacle-training-v2.mjs
+      - name: Collect expanded Game.step dataset
+        run: node frontline-command/tools/training/collect-obstacle-v2.mjs "$RUNNER_TEMP/v2-data"
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Train one-token waypoint decision model
+        run: python -u frontline-command/tools/training/train-obstacle-v2.py --data "$RUNNER_TEMP/v2-data" --output "$RUNNER_TEMP/v2-output" --steps 256
+      - name: Replay all test scenes, including teacher rejects
+        run: |
+          node frontline-command/tools/training/replay-obstacle-game.mjs "$RUNNER_TEMP/v2-output/report.json" "$RUNNER_TEMP/v2-output/replay.json"
+          node frontline-command/tools/training/summarize-obstacle-v2.mjs "$RUNNER_TEMP/v2-output/report.json" "$RUNNER_TEMP/v2-output/replay.json" "$RUNNER_TEMP/v2-output/summary.json"
+      - name: Output compact evaluation annotations
+        if: always()
+        run: |
+          python - <<'PY'
+          import os,json
+          p=os.path.join(os.environ['RUNNER_TEMP'],'v2-output','summary.json')
+          if os.path.exists(p):
+            d=json.load(open(p)); print('::notice::V2_SUMMARY '+json.dumps({k:v for k,v in d.items() if k!='rows'},separators=(',',':')))
+            rows=[{'id':r['id'],'faction':r['faction'],'teacher':r['teacher'],'base_choice':r['base']['choice'],'base_success':r['base']['success'],'adapter_choice':r['adapter']['choice'],'adapter_success':r['adapter']['success'],'baseline_success':r['baseline']['success']} for r in d['rows']]
+            for i in range(0,len(rows),6):print('::notice::V2_ROWS '+json.dumps(rows[i:i+6],separators=(',',':')))
+          PY
+      - name: Pack completed research result
+        run: |
+          cp -r "$RUNNER_TEMP/v2-data" "$RUNNER_TEMP/v2-output/dataset"
+          tar -C "$RUNNER_TEMP/v2-output" -czf "$RUNNER_TEMP/frontline-obstacle-v2.tar.gz" adapter dataset report.json replay.json summary.json progress.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontline-obstacle-v2-debug
+          path: |
+            ${{ runner.temp }}/v2-data/
+            ${{ runner.temp }}/v2-output/
+            ${{ runner.temp }}/frontline-obstacle-v2.tar.gz
+          if-no-files-found: warn
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontline-obstacle-v2-complete
+          path: ${{ runner.temp }}/frontline-obstacle-v2.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+  publish:
+    needs: train-and-evaluate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontline-obstacle-v2-complete
+          path: ${{ runner.temp }}
+      - name: Preserve research outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "frontline-obstacle-v2-$GITHUB_RUN_ID" --target "$GITHUB_SHA" --title 'Frontline waypoint learning v2 research' --notes 'Research-only PEFT adapter, datasets and ALL held-out synthetic Game.step replay outcomes including rejected teacher examples. Two-token constrained decoder. This is not a browser model, not installed in the game, and its acceptance status is reported inside summary.json.' "$RUNNER_TEMP/frontline-obstacle-v2.tar.gz"
