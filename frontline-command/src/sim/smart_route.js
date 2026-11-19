@@ -84,9 +84,13 @@ export function updateSmartRoute(game, u) {
     state.active.unit._smartRetryAt=game.time+3;
     state.active=null;
   }
-  if (!state.active && eligible(game,u) && game.time >= (u._smartRetryAt || 0) && !game.walls.navQueue?.size &&
-      (((game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false) || truckRouteAssist(game,u)) && (u.stuck || 0)>=1) ||
-       ((game.cfg.flag('bot_obstacle_vision_v1', false) || truckRouteAssist(game,u)) && seesObstacle(game,u)))) {
+  // Avoid expensive building-geometry lookups on every frame when the sensor
+  // is still cooling down and this unit has not become stuck.
+  const vision = game.cfg.flag('bot_obstacle_vision_v1', false) || truckRouteAssist(game,u);
+  const stuck = (game.cfg.flag('smart_route_v2', false) || vision) && (u.stuck || 0)>=1;
+  const sensorReady = vision && game.time >= (u._obstacleVisionNext || 0);
+  if (!state.active && (stuck || sensorReady) && game.time >= (u._smartRetryAt || 0) &&
+      !game.walls.navQueue?.size && eligible(game,u) && (stuck || seesObstacle(game,u))) {
     try { state.active={ unit:u, started:game.time, planner:new EasyStarPlanner(game,u) }; }
     catch { u._smartRetryAt=game.time+3; }
   }

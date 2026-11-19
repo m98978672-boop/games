@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';
 import {moveAlongFlow} from '../src/sim/units.js';import {truckRouteAssist} from '../src/sim/smart_route.js';
-const cfg=await loadConfig();assert(cfg.flag('truck_route_assist_v1'));assert(!cfg.flag('bot_obstacle_vision_v1'));
+const cfg=await loadConfig();assert(cfg.flag('truck_route_assist_v1'));assert(cfg.flag('bot_obstacle_vision_v1'));
+cfg.flags.bot_obstacle_vision_v1=false; // isolate truck-specific fallback and cancellation
 for(const faction of [0,1]){
  const g=new Game({cfg,seed:5,aiVsAi:true});g.units.clear();g.unitGrid.clear();
  g.world={W:1024,H:1024,navVersion:1,isBaseWalkable:(x,y)=>x>0&&y>0&&x<1024&&y<1024,isWalkable:(x,y)=>x>0&&y>0&&x<1024&&y<1024,speedAt:()=>1};

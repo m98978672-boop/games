@@ -37,14 +37,9 @@ try{
     return {flag:cfg.flag('bot_obstacle_vision_v1'),arrived:!!u.arrived,pathFailed:!!u.pathFailed,collided,maxStep,limit:u.speed*.05*1.5};
   });}
   await page.goto(base,{waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
-  const off=await runScene();assert.equal(off.flag,false);assert.equal(off.pathFailed,true);
-  const route='**/data/feature_flags.json';
-  await page.route(route,async r=>{const resp=await r.fetch(),data=await resp.json(),flag=data.flags.find(f=>f.id==='bot_obstacle_vision_v1');
-    if(!flag)throw Error('missing feature flag');flag.enabled=true;await r.fulfill({response:resp,json:data});});
-  await page.reload({waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
   const on=await runScene();assert.equal(on.flag,true);assert.equal(on.arrived,true);assert.equal(on.pathFailed,false);
   assert.equal(on.collided,false);assert.ok(on.maxStep<=on.limit+1e-9);
   await page.evaluate(()=>window.__frontline.newGame({seed:1,aiVsAi:true}));
   await page.waitForFunction(()=>window.__frontline.game?.time>0.1,{timeout:30000});
-  assert.deepEqual(errors,[]);console.log('Chromium: default off, opt-in U detour, collision/speed check, live game ticks, no page errors');
+  assert.deepEqual(errors,[]);console.log('Chromium: default-on U detour, collision/speed check, live game ticks, no page errors');
 }finally{if(browser)await browser.close();if(server.listening)await new Promise(r=>server.close(r));}

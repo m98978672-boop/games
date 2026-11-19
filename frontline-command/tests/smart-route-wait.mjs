@@ -5,7 +5,7 @@ import {updateTimers} from '../src/sim/units.js';
 import {updateSmartRoute,smartRouteSearching} from '../src/sim/smart_route.js';
 
 for (const faction of [0,1]) {
-  const cfg=await loadConfig();cfg.flags.smart_route_v2=true;
+  const cfg=await loadConfig();cfg.flags.smart_route_v2=true;cfg.flags.bot_obstacle_vision_v1=false;
   const game=new Game({cfg,seed:7,aiVsAi:true});game.units.clear();game.unitGrid.clear();
   game.world={W:2048,H:2048,navVersion:1,isBaseWalkable:(x,y)=>x>0&&y>0&&x<2048&&y<2048,
     isWalkable:(x,y)=>x>0&&y>0&&x<2048&&y<2048,speedAt:()=>1};

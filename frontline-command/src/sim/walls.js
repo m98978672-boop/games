@@ -318,11 +318,16 @@ export class Walls {
     // refs are inserted into all cells touched by their thickness-expanded box.
     const xlo=Math.floor((minX-radius)/CELL),xhi=Math.floor((maxX+radius)/CELL);
     const ylo=Math.floor((minY-radius)/CELL),yhi=Math.floor((maxY+radius)/CELL);
-    const visited=new Set(),isVeh=!!mover?.isVehicle;
+    // Most small steps touch one cell, or no wall refs at all. Only allocate
+    // deduplication when refs can appear in more than one queried cell.
+    const multiCell=xlo!==xhi||ylo!==yhi,isVeh=!!mover?.isVehicle;
+    let visited=null;
     for(let cx=xlo;cx<=xhi;cx++)for(let cy=ylo;cy<=yhi;cy++){
       const refs=this.grid.get(cellKey(cx,cy));if(!refs)continue;
+      if(multiCell&&!visited)visited=new Set();
       for(const ref of refs){
-        if(visited.has(ref))continue;visited.add(ref);if(ref.breached)continue;
+        if(visited){if(visited.has(ref))continue;visited.add(ref);}
+        if(ref.breached)continue;
         const lim=radius+ref.thickness*.5;
         if(maxX<ref.bx0-lim||minX>ref.bx1+lim||maxY<ref.by0-lim||minY>ref.by1+lim)continue;
         if(ref.kind==='segment'){
