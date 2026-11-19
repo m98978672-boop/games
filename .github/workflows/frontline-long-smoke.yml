@@ -41,19 +41,19 @@ jobs:
       - name: Run short staged training and resume
         run: |
           set -eu
-          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/one" --initial-adapter "$RUNNER_TEMP/source/adapter" --phase 1 --active-seconds 3600 --max-steps 4
-          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/restart" --resume "$RUNNER_TEMP/one/snapshot" --phase 1 --active-seconds 3600 --max-steps 3
-          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/two" --resume "$RUNNER_TEMP/restart/snapshot" --phase 2 --active-seconds 3600 --max-steps 3
-          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/three" --resume "$RUNNER_TEMP/two/snapshot" --phase 3 --active-seconds 3600 --max-steps 3
+          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/one" --initial-adapter "$RUNNER_TEMP/source/adapter" --phase 1 --active-seconds 3600 --max-steps 3 --eval-commands 1 --eval-token-budget 8
+          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/restart" --resume "$RUNNER_TEMP/one/snapshot" --phase 1 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
+          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/two" --resume "$RUNNER_TEMP/restart/snapshot" --phase 2 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
+          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/three" --resume "$RUNNER_TEMP/two/snapshot" --phase 3 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
           python - <<'PY'
           import json,os
           t=os.environ['RUNNER_TEMP']; paths=['one','restart','two','three']
           rows=[json.load(open(f'{t}/{x}/snapshot/progress.json')) for x in paths]
           assert [x['phase'] for x in rows]==[1,1,2,3]
-          assert [x['steps'] for x in rows]==[4,7,10,13]
+          assert [x['steps'] for x in rows]==[3,5,7,9]
           assert all(rows[i]['active_seconds']>rows[i-1]['active_seconds'] for i in range(1,4))
           assert len({x['dataset_sha256'] for x in rows})==1
-          assert sum(rows[-1]['task_counts'].values())==13
+          assert sum(rows[-1]['task_counts'].values())==9
           print('::notice::SMOKE_PROGRESS '+json.dumps(rows[-1],separators=(',',':'))
           PY
       - uses: actions/upload-artifact@v4

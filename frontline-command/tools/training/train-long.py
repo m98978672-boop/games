@@ -44,6 +44,13 @@ def read_data(folder):
         sizes=lambda split:{(r['spec']['width'],r['spec']['height']) for r in route[split+'-all']}
         if keys(a)&keys(b) or seeds(a)&seeds(b) or sizes(a)&sizes(b):raise ValueError('waypoint leakage')
     cm,commander=helper.read_data(folder/'commander')
+    tm=json.loads((folder/'commander/test-manifest.json').read_text())
+    raw=(folder/'commander/test.jsonl').read_bytes()
+    if hashlib.sha256(raw).hexdigest()!=tm['sha256']:raise ValueError('commander test hash mismatch')
+    test=[json.loads(x) for x in raw.splitlines()]
+    if len(test)!=tm['count'] or set(tm['seeds']) & (set(cm['trainSeeds']) | set(cm['evalSeeds'])):raise ValueError('commander test seed leakage')
+    previous={json.dumps(r['input'],sort_keys=True) for s in ('train','eval') for r in commander[s]}
+    if any(r['seed'] not in tm['seeds'] or json.dumps(r['input'],sort_keys=True) in previous for r in test):raise ValueError('commander test observation leakage')
     files=sorted(p for p in folder.rglob('*') if p.is_file())
     d=hashlib.sha256()
     for p in files:
@@ -69,8 +76,8 @@ def main():
     p.add_argument('--initial-adapter',type=Path);p.add_argument('--resume',type=Path)
     p.add_argument('--active-seconds',type=float,required=True);p.add_argument('--phase',type=int,required=True)
     p.add_argument('--checkpoint-every',type=float,default=900);p.add_argument('--eval-every',type=float,default=2700)
-    p.add_argument('--release');p.add_argument('--max-steps',type=int,default=0);args=p.parse_args()
-    if not (0<args.active_seconds<=18000) or args.phase not in (1,2,3) or args.checkpoint_every<=0 or args.eval_every<=0:raise ValueError('bad schedule')
+    p.add_argument('--release');p.add_argument('--max-steps',type=int,default=0);p.add_argument('--eval-commands',type=int,default=6);p.add_argument('--eval-token-budget',type=int,default=48);args=p.parse_args()
+    if not (0<args.active_seconds<=18000) or args.phase not in (1,2,3) or args.checkpoint_every<=0 or args.eval_every<=0 or not 1<=args.eval_commands<=6 or not 1<=args.eval_token_budget<=96:raise ValueError('bad schedule')
     if (args.initial_adapter is None)==(args.resume is None):raise ValueError('provide initial adapter OR resume')
     torch.set_num_threads(int(os.getenv('OMP_NUM_THREADS','2')));torch.manual_seed(97531);random.seed(97531)
     wm,nav,cm,commander,datahash=read_data(args.data)
@@ -93,7 +100,7 @@ def main():
         inp['walls']=[([w[2],w[3],w[0],w[1]] if random.random()<.5 else w) for w in walls]
         return {'input':inp,'response':row['response']}
     comm_train=[helper.encode(tok,cm['prompt'],r) for r in commander['train']]
-    comm_eval=[(helper.encode(tok,cm['prompt'],r),r) for r in command_samples(commander['eval'])]
+    comm_eval=[(helper.encode(tok,cm['prompt'],r),r) for r in command_samples(commander['eval'],args.eval_commands)]
     route_eval=[encode_route(r) for r in nav['dev']]
     if not (comm_train and comm_eval and route_eval and nav['train']):raise ValueError('empty training/evaluation data')
     base=AutoModelForImageTextToText.from_pretrained(helper.MODEL,revision=helper.REVISION,dtype=torch.bfloat16,low_cpu_mem_usage=True)
@@ -107,7 +114,7 @@ def main():
     active=0.0;step=0;best_score=None;best_metrics=None;phase_start=0.0;slot=0;task_counts={'waypoint':0,'commander':0}
     if args.resume:
         progress=json.loads((args.resume/'progress.json').read_text())
-        if progress['dataset_sha256']!=datahash or progress['phase'] not in (args.phase-1,args.phase):raise ValueError('wrong dataset or phase')
+        if progress['dataset_sha256']!=datahash or progress['phase'] not in (args.phase-1,args.phase) or progress['eval_commands']!=args.eval_commands or progress['eval_token_budget']!=args.eval_token_budget:raise ValueError('wrong dataset, evaluation settings or phase')
         active=float(progress['active_seconds']);step=int(progress['steps']);best_score=tuple(progress['best_score']);best_metrics=progress['best_metrics'];task_counts=dict(progress['task_counts'])
         if progress['phase']==args.phase:
             if float(progress['phase_budget_seconds'])!=args.active_seconds:raise ValueError('cannot change budget when resuming a phase')
@@ -128,7 +135,7 @@ def main():
                 l=route_logits(prefix);pred=max(('U','D'),key=lambda c:float(l[ids[c]]));correct+=int(ids[pred]==target)
             exact=0;valid=0
             for (prefix,_),row in comm_eval:
-                inp=torch.tensor([prefix]);out=model.generate(input_ids=inp,do_sample=False,max_new_tokens=96,use_cache=True,pad_token_id=tok.pad_token_id)
+                inp=torch.tensor([prefix]);out=model.generate(input_ids=inp,do_sample=False,max_new_tokens=args.eval_token_budget,use_cache=True,pad_token_id=tok.pad_token_id)
                 raw=tok.decode(out[0,len(prefix):],skip_special_tokens=True,clean_up_tokenization_spaces=False).strip()
                 try:
                     obj=json.loads(raw);expected=json.loads(row['response']);valid+=int(isinstance(obj,dict));exact+=int(obj==expected)
@@ -147,7 +154,7 @@ def main():
         if temp.exists():shutil.rmtree(temp)
         temp.mkdir();model.save_pretrained(temp/'adapter',safe_serialization=True);shutil.copytree(best_dir,temp/'best')
         torch.save({'optimizer':opt.state_dict(),'torch_rng':torch.get_rng_state(),'python_rng':random.getstate()},temp/'state.pt')
-        progress={'schema':'frontline-long-checkpoint-v1','phase':args.phase,'steps':step,'active_seconds':active,'phase_start_active':phase_start,'phase_budget_seconds':args.active_seconds,'next_slot':1-slot,'task_counts':task_counts,'dataset_sha256':datahash,'best_score':list(best_score),'best_metrics':best_metrics,'initial_adapter_release':'frontline-obstacle-v2-44626512571','model':helper.MODEL,'revision':helper.REVISION}
+        progress={'schema':'frontline-long-checkpoint-v1','phase':args.phase,'steps':step,'active_seconds':active,'phase_start_active':phase_start,'phase_budget_seconds':args.active_seconds,'next_slot':1-slot,'task_counts':task_counts,'eval_commands':args.eval_commands,'eval_token_budget':args.eval_token_budget,'dataset_sha256':datahash,'best_score':list(best_score),'best_metrics':best_metrics,'initial_adapter_release':'frontline-obstacle-v2-44626512571','model':helper.MODEL,'revision':helper.REVISION}
         (temp/'progress.json').write_text(json.dumps(progress,ensure_ascii=False,indent=2)+'\n')
         old=args.work/'snapshot-old'
         if old.exists():shutil.rmtree(old)

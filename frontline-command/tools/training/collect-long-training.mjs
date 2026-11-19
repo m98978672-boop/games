@@ -1,11 +1,11 @@
 // More varied but still synthetic U-wall waypoints plus normal-game commander
 // snapshots. Every waypoint label comes from two actual Game.step trials.
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {simulate} from './collect-obstacle-game.mjs';
 import {visible,SYSTEM} from './collect-obstacle-v2.mjs';
-import {writeDataset as writeCommander} from './collect-commander.mjs';
+import {writeDataset as writeCommander,collect as collectCommander} from './collect-commander.mjs';
 
 // Sizes and seeds are disjoint between splits, including known previous tests.
 const SIZES={
@@ -50,8 +50,19 @@ export async function collectLong(out,quick=false){
  const waypoint=await waypointData(resolve(out,'waypoint'),quick);
  // Regular simulation snapshots are strictly from each independent faction;
  // the same commanderPrompt(true) and rules apply to both sides.
- const commander=await writeCommander(resolve(out,'commander'),{trainSeeds:quick?[501]:[501,502,503,504,505,506,507,508,509,510,511,512],evalSeeds:quick?[601]:[601,602,603,604],seconds:quick?20:120,interval:20,knowledge:true});
- const manifest={schema:'frontline-long-training-v1',waypoint:waypoint.counts,commander:commander.files,notes:'Separate synthetic waypoint tasks and normal-game commander snapshots. Commander labels imitate a simple rule, not an expert. No enemy or opposing-side observations are passed to the model. Not evidence of better gameplay.'};
+ const commanderDir=resolve(out,'commander');
+ const commander=await writeCommander(commanderDir,{trainSeeds:quick?[501]:[501,502,503,504,505,506,507,508,509,510,511,512],evalSeeds:quick?[601]:[601,602,603,604],seconds:quick?20:120,interval:20,knowledge:true});
+ // A separate seed family is never used for training or checkpoint selection.
+ const testSeeds=quick?[801]:[801,802,803,804];
+ const testData=await collectCommander({trainSeeds:[501],evalSeeds:testSeeds,seconds:quick?20:120,interval:20,knowledge:true});
+ const previous=new Set();
+ for(const split of ['train','eval'])for(const line of (await readFile(resolve(commanderDir,split+'.jsonl'),'utf8')).trim().split('\n'))previous.add(key(JSON.parse(line).input));
+ const testRows=testData.data.eval.filter(r=>!previous.has(key(r.input)));
+ if(!testRows.length)throw Error('empty independent commander test');
+ const testRaw=testRows.map(r=>JSON.stringify(r)).join('\n')+'\n';await writeFile(resolve(commanderDir,'test.jsonl'),testRaw);
+ const testManifest={count:testRows.length,sha256:hash(testRaw),seeds:testSeeds,duplicatesRemoved:testData.data.eval.length-testRows.length};
+ await writeFile(resolve(commanderDir,'test-manifest.json'),JSON.stringify(testManifest,null,2)+'\n');
+ const manifest={schema:'frontline-long-training-v1',waypoint:waypoint.counts,commander:{...commander.files,test:testManifest},notes:'Separate synthetic waypoint tasks and normal-game commander snapshots. Commander labels imitate a simple rule, not an expert. No enemy or opposing-side observations are passed to the model. Not evidence of better gameplay.'};
  await writeFile(resolve(out,'collection.json'),JSON.stringify(manifest,null,2)+'\n');return manifest;
 }
 if(process.argv[1]&&resolve(process.argv[1])===new URL(import.meta.url).pathname){
