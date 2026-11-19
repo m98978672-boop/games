@@ -1,0 +1,792 @@
+{
+  "summary": {
+    "metrics": {
+      "baseline": {
+        "all": {
+          "total": 48,
+          "success": 48,
+          "wallCross": 0,
+          "fallback": 0
+        },
+        "faction0": {
+          "total": 24,
+          "success": 24,
+          "wallCross": 0,
+          "fallback": 0
+        },
+        "faction1": {
+          "total": 24,
+          "success": 24,
+          "wallCross": 0,
+          "fallback": 0
+        }
+      },
+      "base": {
+        "all": {
+          "total": 48,
+          "success": 18,
+          "wallCross": 0,
+          "fallback": 0
+        },
+        "faction0": {
+          "total": 24,
+          "success": 11,
+          "wallCross": 0,
+          "fallback": 0
+        },
+        "faction1": {
+          "total": 24,
+          "success": 7,
+          "wallCross": 0,
+          "fallback": 0
+        }
+      },
+      "adapter": {
+        "all": {
+          "total": 48,
+          "success": 39,
+          "wallCross": 0,
+          "fallback": 0
+        },
+        "faction0": {
+          "total": 24,
+          "success": 21,
+          "wallCross": 0,
+          "fallback": 0
+        },
+        "faction1": {
+          "total": 24,
+          "success": 18,
+          "wallCross": 0,
+          "fallback": 0
+        }
+      },
+      "baseFallback": {
+        "all": {
+          "total": 48,
+          "success": 48,
+          "wallCross": 0,
+          "fallback": 38
+        },
+        "faction0": {
+          "total": 24,
+          "success": 24,
+          "wallCross": 0,
+          "fallback": 18
+        },
+        "faction1": {
+          "total": 24,
+          "success": 24,
+          "wallCross": 0,
+          "fallback": 20
+        }
+      },
+      "adapterFallback": {
+        "all": {
+          "total": 48,
+          "success": 48,
+          "wallCross": 0,
+          "fallback": 31
+        },
+        "faction0": {
+          "total": 24,
+          "success": 24,
+          "wallCross": 0,
+          "fallback": 15
+        },
+        "faction1": {
+          "total": 24,
+          "success": 24,
+          "wallCross": 0,
+          "fallback": 16
+        }
+      }
+    },
+    "adapterFallbackDelay": {
+      "meanSeconds": 0.6093749999999952,
+      "maxSeconds": 18.34999999999978,
+      "scenesMoreThan1sSlower": 22
+    },
+    "gates": {
+      "allSyntheticScenesReach": true,
+      "noWallCrossing": true,
+      "noMoreThan1sSlower": false,
+      "deploymentReady": false
+    },
+    "reason": "offline synthetic test only; no running-model latency, real battle, WebGPU, reliability or browser performance acceptance"
+  },
+  "rows": [
+    {
+      "id": "holdout-419-200-256-0-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 17.550000000000114,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 14.050000000000065
+    },
+    {
+      "id": "holdout-419-200-256-0-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 6.749999999999984,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.200000000000095
+    },
+    {
+      "id": "holdout-421-200-256-36-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 16.250000000000096,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.000000000000078
+    },
+    {
+      "id": "holdout-421-200-256-36-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 16.800000000000104,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.6000000000001
+    },
+    {
+      "id": "holdout-421-200-256-36-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 16.6000000000001,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.550000000000086
+    },
+    {
+      "id": "holdout-421-200-256-36-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 17.000000000000107,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 13.600000000000058
+    },
+    {
+      "id": "holdout-409-200-256--36-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 13.500000000000057,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 14.850000000000076
+    },
+    {
+      "id": "holdout-409-200-256--36-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 13.450000000000056,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 16.300000000000097
+    },
+    {
+      "id": "holdout-409-200-256--36-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 17.700000000000117,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 14.250000000000068
+    },
+    {
+      "id": "holdout-409-200-256--36-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 6.399999999999985,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 8.79999999999999
+    },
+    {
+      "id": "holdout-419-200-256-0-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 12.600000000000044,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 11.400000000000027
+    },
+    {
+      "id": "holdout-419-200-256-0-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 16.6500000000001,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 15.350000000000083
+    },
+    {
+      "id": "holdout-421-312-224-0-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 19.700000000000145,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 15.000000000000078
+    },
+    {
+      "id": "holdout-421-312-224-0-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 22.85000000000019,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.4500000000001
+    },
+    {
+      "id": "holdout-401-312-224-36-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 18.05000000000012,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.000000000000078
+    },
+    {
+      "id": "holdout-401-312-224-36-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 18.900000000000134,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.150000000000095
+    },
+    {
+      "id": "holdout-401-312-224-36-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 19.750000000000146,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 17.15000000000011
+    },
+    {
+      "id": "holdout-401-312-224-36-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 20.400000000000155,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 38.749999999999936
+    },
+    {
+      "id": "holdout-419-312-224--36-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 20.15000000000015,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.350000000000097
+    },
+    {
+      "id": "holdout-419-312-224--36-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 15.200000000000081,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.80000000000009
+    },
+    {
+      "id": "holdout-419-312-224--36-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 20.400000000000155,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 17.500000000000114
+    },
+    {
+      "id": "holdout-419-312-224--36-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 19.700000000000145,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.050000000000093
+    },
+    {
+      "id": "holdout-421-312-224-0-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 22.75000000000019,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.500000000000085
+    },
+    {
+      "id": "holdout-421-312-224-0-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 18.55000000000013,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 18.350000000000126
+    },
+    {
+      "id": "holdout-401-264-200-0-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 17.550000000000114,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 18.00000000000012
+    },
+    {
+      "id": "holdout-401-264-200-0-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 17.90000000000012,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.600000000000087
+    },
+    {
+      "id": "holdout-409-264-200-36-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 14.200000000000067,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.050000000000079
+    },
+    {
+      "id": "holdout-409-264-200-36-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 22.20000000000018,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.100000000000094
+    },
+    {
+      "id": "holdout-409-264-200-36-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 13.450000000000056,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.300000000000082
+    },
+    {
+      "id": "holdout-409-264-200-36-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 14.100000000000065,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.100000000000094
+    },
+    {
+      "id": "holdout-421-264-200--36-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 11.850000000000033,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 18.900000000000134
+    },
+    {
+      "id": "holdout-421-264-200--36-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 11.400000000000027,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.000000000000092
+    },
+    {
+      "id": "holdout-421-264-200--36-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 14.150000000000066,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 15.10000000000008
+    },
+    {
+      "id": "holdout-421-264-200--36-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 13.550000000000058,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.80000000000009
+    },
+    {
+      "id": "holdout-401-264-200-0-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 13.900000000000063,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 8.249999999999982
+    },
+    {
+      "id": "holdout-401-264-200-0-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 14.000000000000064,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 15.600000000000087
+    },
+    {
+      "id": "holdout-409-184-208-0-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 10.25000000000001,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.400000000000098
+    },
+    {
+      "id": "holdout-409-184-208-0-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 7.299999999999982,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.400000000000098
+    },
+    {
+      "id": "holdout-419-184-208-36-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 6.5999999999999845,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 8.09999999999998
+    },
+    {
+      "id": "holdout-419-184-208-36-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 12.500000000000043,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.6000000000001
+    },
+    {
+      "id": "holdout-419-184-208-36-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 14.350000000000069,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.150000000000095
+    },
+    {
+      "id": "holdout-419-184-208-36-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 7.299999999999982,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 9.049999999999994
+    },
+    {
+      "id": "holdout-401-184-208--36-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 6.699999999999984,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 8.14999999999998
+    },
+    {
+      "id": "holdout-401-184-208--36-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 10.000000000000007,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 10.650000000000016
+    },
+    {
+      "id": "holdout-401-184-208--36-1-U",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 12.35000000000004,
+      "model": false,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.050000000000093
+    },
+    {
+      "id": "holdout-401-184-208--36-1-D",
+      "faction": 1,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 7.049999999999983,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 8.699999999999989
+    },
+    {
+      "id": "holdout-409-184-208-0-0-U",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "D"
+      },
+      "baseline": true,
+      "baselineSeconds": 7.149999999999983,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": false,
+      "fallbackSeconds": 9.199999999999996
+    },
+    {
+      "id": "holdout-409-184-208-0-0-D",
+      "faction": 0,
+      "choices": {
+        "base": "D",
+        "adapter": "U"
+      },
+      "baseline": true,
+      "baselineSeconds": 10.85000000000002,
+      "model": true,
+      "fallbackSuccess": true,
+      "fallbackUsed": true,
+      "fallbackSeconds": 16.300000000000097
+    }
+  ]
+}
