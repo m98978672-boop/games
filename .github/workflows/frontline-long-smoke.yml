@@ -40,11 +40,16 @@ jobs:
           python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
       - name: Run short staged training and resume
         run: |
-          set -eu
-          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/one" --initial-adapter "$RUNNER_TEMP/source/adapter" --phase 1 --active-seconds 3600 --max-steps 3 --eval-commands 1 --eval-token-budget 8
-          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/restart" --resume "$RUNNER_TEMP/one/snapshot" --phase 1 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
-          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/two" --resume "$RUNNER_TEMP/restart/snapshot" --phase 2 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
-          python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/three" --resume "$RUNNER_TEMP/two/snapshot" --phase 3 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
+          set -euo pipefail
+          run() {
+            if "$@" 2>&1 | tee "$RUNNER_TEMP/smoke-last.log"; then return 0; fi
+            python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"smoke-last.log"),errors="replace").read()[-5000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+            return 1
+          }
+          run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/one" --initial-adapter "$RUNNER_TEMP/source/adapter" --phase 1 --active-seconds 3600 --max-steps 3 --eval-commands 1 --eval-token-budget 8
+          run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/restart" --resume "$RUNNER_TEMP/one/snapshot" --phase 1 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
+          run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/two" --resume "$RUNNER_TEMP/restart/snapshot" --phase 2 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
+          run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/three" --resume "$RUNNER_TEMP/two/snapshot" --phase 3 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
           python - <<'PY'
           import json,os
           t=os.environ['RUNNER_TEMP']; paths=['one','restart','two','three']
