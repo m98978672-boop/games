@@ -29,7 +29,11 @@ def extract(ids, marker, thinking, decode):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--adapter',type=Path);p.add_argument('--output',type=Path);p.add_argument('--self-test',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--adapter',type=Path);p.add_argument('--output',type=Path);p.add_argument('--self-test',action='store_true')
+    p.add_argument('--thinking-only',action='store_true');p.add_argument('--base-only',action='store_true')
+    p.add_argument('--case',action='append',choices=[c['id'] for c in nav.CASES]);p.add_argument('--thinking-budget',type=int,default=256)
+    args=p.parse_args()
+    if not 1 <= args.thinking_budget <= 4096: p.error('thinking budget must be between 1 and 4096')
     self_test()
     if args.self_test: print('Qwen study parser and navigation scorer OK'); return
     if not args.adapter or not args.output: p.error('--adapter and --output required')
@@ -53,7 +57,8 @@ def main():
     model=AutoModelForImageTextToText.from_pretrained(nav.MODEL,revision=nav.REVISION,dtype=torch.bfloat16,low_cpu_mem_usage=True);model.eval()
     results=[]
     # Same prompts for every condition; one seed per case, shared across models.
-    modes=[('greedy',False,False,64),('sample',False,True,64),('thinking_sample',True,True,256)]
+    modes=[('greedy',False,False,64),('sample',False,True,64),('thinking_sample',True,True,args.thinking_budget)]
+    if args.thinking_only: modes=[m for m in modes if m[1]]
     def generate(model,label,mode,thinking,sample,budget,case_id,system,user,seed,grid=None):
         torch.manual_seed(seed)
         messages=([{'role':'system','content':system}] if system else [])+[{'role':'user','content':user}]
@@ -83,10 +88,13 @@ def main():
     def run(m,label):
         for mode,thinking,sample,budget in modes:
             for n,case in enumerate(nav.CASES):
+                if args.case and case['id'] not in args.case: continue
                 generate(m,label,mode,thinking,sample,budget,case['id'],nav.SYSTEM,nav.prompt(case,False),700+n,case['map'])
-        for n,question in enumerate(['What is 2 + 3? Reply with the number only.','Сколько будет два плюс три? Ответь только числом.']):
-            generate(m,label,'sanity_sample',False,True,64,'sanity-'+str(n),None,question,800+n)
+        if not args.thinking_only:
+            for n,question in enumerate(['What is 2 + 3? Reply with the number only.','Сколько будет два плюс три? Ответь только числом.']):
+                generate(m,label,'sanity_sample',False,True,64,'sanity-'+str(n),None,question,800+n)
     run(model,'base')
-    adapted=PeftModel.from_pretrained(model,args.adapter); adapted.eval();run(adapted,'adapter')
+    if not args.base_only:
+        adapted=PeftModel.from_pretrained(model,args.adapter); adapted.eval();run(adapted,'adapter')
 
 if __name__=='__main__':main()

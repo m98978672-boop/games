@@ -33,7 +33,7 @@ jobs:
           python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
           python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
       - name: Run controlled model study
-        run: python -u frontline-command/tools/training/study-qwen.py --adapter "$RUNNER_TEMP/adapter-data/adapter" --output "$RUNNER_TEMP/qwen-study.json"
+        run: python -u frontline-command/tools/training/study-qwen.py --adapter "$RUNNER_TEMP/adapter-data/adapter" --output "$RUNNER_TEMP/qwen-study.json" --thinking-only --base-only --case gap-top --case door --thinking-budget 1024
       - name: Report result groups in annotations
         if: always()
         run: |
