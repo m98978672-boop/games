@@ -5,7 +5,8 @@ import { Game } from '../src/sim/game.js';
 import { moveAlongFlow } from '../src/sim/units.js';
 
 const cfg=await loadConfig();
-assert.equal(cfg.flag('smart_route_v2'),false,'experiment must remain off until acceptance');
+assert.equal(cfg.flag('smart_route_v2'),false,'separate route trigger remains off');
+cfg.flags.bot_obstacle_vision_v1=false; // isolate the alternative trigger under test
 const game=new Game({cfg,seed:5,aiVsAi:true});
 game.units.clear();game.unitGrid.clear();
 const w=1024;

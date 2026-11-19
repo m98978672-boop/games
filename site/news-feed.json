@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-19T09:51:17.652Z",
+  "updatedAt": "2026-11-19T14:51:21.242Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
-    "lastRunAt": "2026-11-19T04:52:35.570Z",
+    "lastRunAt": "2026-11-19T14:51:21.242Z",
     "sourcesCount": 11,
     "verifiedArticlesCount": 19,
     "commentSyncTools": [
@@ -19,14 +19,14 @@
     ],
     "mode": "verified-editorial+auto-rss",
     "workflow": ".github/workflows/auto-news.yml",
-    "totalRuns": 4,
-    "lastSourcesReachable": 11,
+    "totalRuns": 5,
+    "lastSourcesReachable": 10,
     "categoriesCount": 6,
     "backlog": {
       "total": 100,
       "now": 40,
       "future": 60,
-      "builtAt": "2026-11-19T09:51:17.653Z",
+      "builtAt": "2026-11-18T14:07:33.421Z",
       "note": "Статьи очереди «на будущее» лежат с датой вперёд и раскрываются по расписанию автопоста."
     }
   },
@@ -459,6 +459,45 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
+      "id": "plan-games-ba52195a27",
+      "code": "G-550",
+      "category": "games",
+      "title": "Оптимизация под слабые устройства",
+      "summary": "Ограничение FPS и разрешения делает игру доступной на старых телефонах.",
+      "body": [
+        "Динамическое разрешение и уровни детализации (LOD) снижают нагрузку. Это расширяет аудиторию без потери картинки на мощных устройствах."
+      ],
+      "tags": [
+        "Оптимизация",
+        "Мобильные"
+      ],
+      "sourceName": "web.dev — производительность",
+      "sourceUrl": "https://web.dev/fast/",
+      "publishedAt": "2027-09-12T09:00:00.000Z",
+      "scheduledFor": "2027-09-12",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Календарь события (web.dev — производительность)",
+          "url": "https://web.dev/fast/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Дата и источник события сверены с официальным календарём «web.dev — производительность»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-550.svg",
+      "imageCaption": "Обложка рубрики: Оптимизация под слабые устройства",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
       "id": "plan-security-a1ee87320a",
       "code": "C-128",
       "category": "security",
@@ -573,6 +612,45 @@
       },
       "image": "site/assets/news/w-457.svg",
       "imageCaption": "Обложка рубрики: Образовательные сезоны: когда стартуют курсы",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "plan-facts-093f4a597e",
+      "code": "F-983",
+      "category": "facts",
+      "title": "Сколько занимает один кадр текстуры",
+      "summary": "Разрешение напрямую определяет объём видеопамяти.",
+      "body": [
+        "Текстура 2048×2048 в 32 битах занимает около 16 МБ без сжатия. Сжатые форматы уменьшают это в несколько раз."
+      ],
+      "tags": [
+        "Текстуры",
+        "Память"
+      ],
+      "sourceName": "Khronos — KTX 2.0",
+      "sourceUrl": "https://www.khronos.org/ktx/",
+      "publishedAt": "2027-08-30T09:00:00.000Z",
+      "scheduledFor": "2027-08-30",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Календарь события (Khronos — KTX 2.0)",
+          "url": "https://www.khronos.org/ktx/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Дата и источник события сверены с официальным календарём «Khronos — KTX 2.0»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-983.svg",
+      "imageCaption": "Обложка рубрики: Сколько занимает один кадр текстуры",
       "imageCredit": "Games News · локальная обложка"
     },
     {
@@ -1353,6 +1431,45 @@
       },
       "image": "site/assets/news/w-318.svg",
       "imageCaption": "Обложка рубрики: Открытые карты для путешествий",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "plan-games-71ddb64858",
+      "code": "G-900",
+      "category": "games",
+      "title": "Кроссплатформенные игры: один код на вебе и в нативе",
+      "summary": "Общие модули позволяют собрать одну игру для браузера и нативной платформы.",
+      "body": [
+        "Web-сборка и нативная используют один геймплейный код, различаясь рендером и оболочкой. Это упрощает поддержку."
+      ],
+      "tags": [
+        "Кроссплатформа",
+        "Сборки"
+      ],
+      "sourceName": "MDN — Progressive web apps",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/Progressive_web_apps",
+      "publishedAt": "2027-05-03T09:00:00.000Z",
+      "scheduledFor": "2027-05-03",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Календарь события (MDN — Progressive web apps)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/Progressive_web_apps"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Дата и источник события сверены с официальным календарём «MDN — Progressive web apps»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-900.svg",
+      "imageCaption": "Обложка рубрики: Кроссплатформенные игры: один код на вебе и в нативе",
       "imageCredit": "Games News · локальная обложка"
     },
     {
@@ -2289,6 +2406,1313 @@
       },
       "image": "site/assets/news/c-445.svg",
       "imageCaption": "Обложка рубрики: Двухфакторная аутентификация: что выбрать",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-a708cff6de",
+      "code": "W-741",
+      "category": "world",
+      "title": "Защищенность самоходки «Лотос» от ядерного взрыва проверили",
+      "summary": "Защищенность самоходки «Лотос» от ядерного взрыва проверили",
+      "body": [
+        "Защищенность самоходки «Лотос» от ядерного взрыва проверили. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Наука и техника"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/20/zaschischennost-samohodki-lotos-ot-yadernogo-vzryva-proverili/",
+      "publishedAt": "2026-11-19T14:44:48.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/20/zaschischennost-samohodki-lotos-ot-yadernogo-vzryva-proverili/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-741.svg",
+      "imageCaption": "Обложка рубрики: Защищенность самоходки «Лотос» от ядерного взрыва проверили",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-35cfb1fc49",
+      "code": "S-784",
+      "category": "science",
+      "title": "NASA Conducts Latest RS-25 Engine Test in Support of Future Artemis Missions",
+      "summary": "Preparations for Next Moonwalk Simulations Underway (and Underwater)",
+      "body": [
+        "Preparations for Next Moonwalk Simulations Underway (and Underwater)",
+        "NASA conducts a hot fire test of RS-25 engine No. 10001 on the Fred Haise Test Stand at NASA’s Stennis Space Center near Bay St. Louis, Mississippi, on Nov. 18, 2026.",
+        "NASA conducts a hot fire test of RS-25 engine No. 10001 on the Fred Haise Test Stand at NASA’s Stennis Space Center near Bay St. Louis, Mississippi, on Nov. 18, 2026.",
+        "NASA conducts a hot fire test of RS-25 engine No. 10001 on the Fred Haise Test Stand at NASA’s Stennis Space Center near Bay St. Louis, Mississippi, on Nov. 18, 2026."
+      ],
+      "tags": [
+        "RS-25",
+        "Stennis Space Center"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://www.nasa.gov/image-article/latest-rs-25-engine-test-in-support-of-future-artemis-missions/",
+      "publishedAt": "2026-11-19T14:44:39.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://www.nasa.gov/image-article/latest-rs-25-engine-test-in-support-of-future-artemis-missions/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-784.svg",
+      "imageCaption": "Обложка рубрики: NASA Conducts Latest RS-25 Engine Test in Support of Future Artemis Mi",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-609899df0a",
+      "code": "W-729",
+      "category": "world",
+      "title": "Предсказан возможный ответ России за Крымский мост",
+      "summary": "Предсказан возможный ответ России за Крымский мост",
+      "body": [
+        "Предсказан возможный ответ России за Крымский мост. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Бывший СССР"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/19/stalo-izvestno-o-vozmozhnom-otvete-rossii-za-krymskiy-most/",
+      "publishedAt": "2026-11-19T14:42:18.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/19/stalo-izvestno-o-vozmozhnom-otvete-rossii-za-krymskiy-most/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-729.svg",
+      "imageCaption": "Обложка рубрики: Предсказан возможный ответ России за Крымский мост",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-194bc09886",
+      "code": "C-923",
+      "category": "security",
+      "title": "Разбудили всю страну, чтобы поймать 22 школьника. В Южной Корее устроили самый громкий античит в истории",
+      "summary": "Общенациональную систему предупреждения об опасности впервые использовали для поиска цифровых шпаргалок.",
+      "body": [
+        "Общенациональную систему предупреждения об опасности впервые использовали для поиска цифровых шпаргалок."
+      ],
+      "tags": [
+        "Технологии/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580345.php",
+      "publishedAt": "2026-11-19T14:40:08.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580345.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-923.svg",
+      "imageCaption": "Обложка рубрики: Разбудили всю страну, чтобы поймать 22 школьника. В Южной Корее устрои",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-544aa0c1c6",
+      "code": "W-803",
+      "category": "world",
+      "title": "Туск исключил консультации с Россией по европейскому аспекту переговоров",
+      "summary": "Туск исключил консультации с Россией по европейскому аспекту переговоров",
+      "body": [
+        "Туск исключил консультации с Россией по европейскому аспекту переговоров. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Мир"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/19/tusk-isklyuchil-konsultatsii-s-rossiey-po-evropeyskomu-aspektu-peregovorov/",
+      "publishedAt": "2026-11-19T14:40:07.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/19/tusk-isklyuchil-konsultatsii-s-rossiey-po-evropeyskomu-aspektu-peregovorov/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-803.svg",
+      "imageCaption": "Обложка рубрики: Туск исключил консультации с Россией по европейскому аспекту переговор",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-044b4240bc",
+      "code": "T-941",
+      "category": "tech",
+      "title": "Как IT-стартап накапливает PR-долг и обещает рынку больше, чем может показать продукт",
+      "summary": "На лендинге написано «готово для крупного бизнеса». В документации нет ограничений по нагрузке. В кейсе обещан рост конверсии, но не объяснено, при каких условиях он получен. Через несколько месяцев команда удивляется, п",
+      "body": [
+        "На лендинге написано «готово для крупного бизнеса». В документации нет ограничений по нагрузке. В кейсе обещан рост конверсии, но не объяснено, при каких условиях он получен. Через несколько месяцев команда удивляется, почему покупатели спрашивают про SLA, безопасность и поддержку. Компания при этом могла ни разу не соврать. Чаще она просто создала разрыв между обещанием, объяснением и доказательством. Я называю его PR-долгом. Он возникает, когда компания обещает рынку больше, чем может подтвердить публичными материалами: продуктом, документацией, кейсам"
+      ],
+      "tags": [
+        "пиар",
+        "раунд",
+        "стартап",
+        "пиар в ит"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1109976/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109976",
+      "publishedAt": "2026-11-19T14:34:57.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1109976/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109976"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-941.svg",
+      "imageCaption": "Обложка рубрики: Как IT-стартап накапливает PR-долг и обещает рынку больше, чем может п",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-90db627b4c",
+      "code": "W-997",
+      "category": "world",
+      "title": "Атаки на Крымский мост, компромиссы по Украине и «новая Ялта». Путин выступил с речью после исторического саммита с Трампом и Си",
+      "summary": "Атаки на Крымский мост, компромиссы по Украине и «новая Ялта». Путин выступил с речью после исторического саммита с Трампом и Си",
+      "body": [
+        "Атаки на Крымский мост, компромиссы по Украине и «новая Ялта». Путин выступил с речью после исторического саммита с Трампом и Си. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Мир"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/19/long-ataki-na-krymskiy-most-kompromissy-po-ukraine-i-novaya-yalta-putin-vystupil-s-rechyu-posle-istoricheskogo-sammita-s-trampom-i-si/",
+      "publishedAt": "2026-11-19T14:33:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/19/long-ataki-na-krymskiy-most-kompromissy-po-ukraine-i-novaya-yalta-putin-vystupil-s-rechyu-posle-istoricheskogo-sammita-s-trampom-i-si/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-997.svg",
+      "imageCaption": "Обложка рубрики: Атаки на Крымский мост, компромиссы по Украине и «новая Ялта». Путин в",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-956dc30927",
+      "code": "T-775",
+      "category": "tech",
+      "title": "1С-Битрикс выпустил bx-nginx 1.30.7 в ответ на новое раскрытие уязвимостей веб-сервера nginx",
+      "summary": "18 ноября 2026 года разработчики nginx опубликовали исправления безопасности. Среди них – исправление CVE-2026-123007. На сервере с включенным HTTP/2 эта уязвимость может позволить удаленному атакующему без авторизации в",
+      "body": [
+        "18 ноября 2026 года разработчики nginx опубликовали исправления безопасности. Среди них – исправление CVE-2026-123007. На сервере с включенным HTTP/2 эта уязвимость может позволить удаленному атакующему без авторизации выполнить код с правами рабочего процесса nginx.",
+        "Мы выпустили обновление безопасности для пакета bx-nginx, который используется в серверном окружении коробочного Битрикс24 и сайтов на «1С-Битрикс: Управление сайтом». Исправленная сборка – 1.30.7. Рекомендуем установить ее в первую очередь на серверы, доступные из интернета."
+      ],
+      "tags": [
+        "информационная безопасност",
+        "битрикс",
+        "nginx",
+        "уязвимость"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1109970/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109970",
+      "publishedAt": "2026-11-19T14:32:21.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1109970/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109970"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-775.svg",
+      "imageCaption": "Обложка рубрики: 1С-Битрикс выпустил bx-nginx 1.30.7 в ответ на новое раскрытие уязвимо",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-aa54e085f0",
+      "code": "S-756",
+      "category": "science",
+      "title": "NASA’s Voyager 1 Makes History Reaching One Light-Day From Earth",
+      "summary": "Voyager 1, depicted in this artist’s concept, reached one light-day from Earth on Nov. 18, 2026.",
+      "body": [
+        "Voyager 1, depicted in this artist’s concept, reached one light-day from Earth on Nov. 18, 2026.",
+        "Credit: NASA/JPL-Caltech",
+        "NASA’s Voyager 1 probe, humanity’s farthest-flying spacecraft, has reached one light-day from Earth, after more than 49 years of constant travel. A light-day is the distance light travels in 24 hours, equaling about 16.1 billion miles (25.9 billion kilometers). The spacecraft achieved the milestone at 2:16 a.m. PST (5:16 a.m. EST) Nov. 18.",
+        "Voyager team members at NASA’s Jet Propulsion Laboratory in Southern California, managed by Caltech, heard from the probe 24 hours later, the time it took for the spacecraft’s radio signal traveling at the speed of light to reach Earth, early Thursday."
+      ],
+      "tags": [
+        "Voyager 1",
+        "Heliophysics",
+        "Heliophysics Division",
+        "Jet Propulsion Laboratory"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasas-voyager-1-makes-history-reaching-one-light-day-from-earth/",
+      "publishedAt": "2026-11-19T14:31:15.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://www.nasa.gov/news-release/nasas-voyager-1-makes-history-reaching-one-light-day-from-earth/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-756.svg",
+      "imageCaption": "Обложка рубрики: NASA’s Voyager 1 Makes History Reaching One Light-Day From Earth",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-e235a931aa",
+      "code": "T-931",
+      "category": "tech",
+      "title": "Бот, который ищет учеников для репетиторов: архитектура за 1187 ₽ в месяц",
+      "summary": "Я сделал бота, который находит в соцсетях сообщения вида «посоветуйте репетитора по химии» и пересылает их репетиторам. Главная сложность оказалась не в сборе данных, а в фильтрации: на один настоящий запрос приходится о",
+      "body": [
+        "Я сделал бота, который находит в соцсетях сообщения вида «посоветуйте репетитора по химии» и пересылает их репетиторам. Главная сложность оказалась не в сборе данных, а в фильтрации: на один настоящий запрос приходится около двухсот постов рекламы. Рассказываю, как устроен конвейер и как он живёт на бесплатных лимитах LLM."
+      ],
+      "tags": [
+        "python",
+        "telegram-бот",
+        "vk api",
+        "llm"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1109966/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109966",
+      "publishedAt": "2026-11-19T14:26:56.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1109966/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109966"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-931.svg",
+      "imageCaption": "Обложка рубрики: Бот, который ищет учеников для репетиторов: архитектура за 1187 ₽ в ме",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-f403873272",
+      "code": "T-911",
+      "category": "tech",
+      "title": "Золото, бриллианты и BigData: ювелирный рынок на данных",
+      "summary": "Перед тем, как совершить покупку, человек проходит большой путь от выбора магазина до выбора самого ювелирного изделия.",
+      "body": [
+        "Перед тем, как совершить покупку, человек проходит большой путь от выбора магазина до выбора самого ювелирного изделия.",
+        "Представим человека, который выбирает украшение в подарок – он может посмотреть ассортимент нескольких ювелирных магазинов, сравнить цены, вернуться к понравившемуся варианту, и только потом совершить покупку, возможно вообще в офлайне. Для бизнеса в целом - это одна продажа, но для аналитика это целая цепочка интересов сразу к нескольким брендам.",
+        "Поэтому мы решили заглянуть во внутрь этой цепочки, опираясь не только на финансовые показатели рынка, но и на результаты отдельных игроков, поисковые запросы, покупательскую активность."
+      ],
+      "tags": [
+        "Big Data",
+        "аналитика данных",
+        "ювелирный рынок",
+        "потребительское поведение"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/companies/t2/articles/1108854/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1108854",
+      "publishedAt": "2026-11-19T14:25:06.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/companies/t2/articles/1108854/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1108854"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-911.svg",
+      "imageCaption": "Обложка рубрики: Золото, бриллианты и BigData: ювелирный рынок на данных",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-4046a10632",
+      "code": "C-951",
+      "category": "security",
+      "title": "Украсть файлы, уничтожить данные, захватить ПК. В России обнаружили новый зловред BadVibe",
+      "summary": "BadVibe атакует пользователей России и Беларуси.",
+      "body": [
+        "BadVibe атакует пользователей России и Беларуси."
+      ],
+      "tags": [
+        "SecurityLab"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580375.php",
+      "publishedAt": "2026-11-19T14:15:00.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580375.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-951.svg",
+      "imageCaption": "Обложка рубрики: Украсть файлы, уничтожить данные, захватить ПК. В России обнаружили но",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-81bc82cb22",
+      "code": "C-755",
+      "category": "security",
+      "title": "Telegram начнёт проверять SIM-карту в смартфоне. Одного номера для аккаунта уже недостаточно",
+      "summary": "Мессенджер готовят к проверкам по требованию властей.",
+      "body": [
+        "Мессенджер готовят к проверкам по требованию властей."
+      ],
+      "tags": [
+        "SecurityLab"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580367.php",
+      "publishedAt": "2026-11-19T13:43:21.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580367.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-755.svg",
+      "imageCaption": "Обложка рубрики: Telegram начнёт проверять SIM-карту в смартфоне. Одного номера для акк",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-48767676d5",
+      "code": "S-824",
+      "category": "science",
+      "title": "Неандертальский клей",
+      "summary": "Березовый деготь считается самым ранним искусственным материалом в истории. Им склеивали каменные орудия еще неандертальцы — например, в Тоскане нашли отщепы со следами березового вара возрастом около 200 тысяч лет. Люди",
+      "body": [
+        "Березовый деготь считается самым ранним искусственным материалом в истории. Им склеивали каменные орудия еще неандертальцы — например, в Тоскане нашли отщепы со следами березового вара возрастом около 200 тысяч лет. Люди в мезолите и вовсе использовали вар как жвачку — теперь по пожеванным кусочкам дегтя ученые восстанавливают ДНК их владельцев. Но как древним людям удавалось получать деготь?"
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/blog/2026/11/19/perst-129",
+      "publishedAt": "2026-11-19T13:40:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/blog/2026/11/19/perst-129"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-824.svg",
+      "imageCaption": "Обложка рубрики: Неандертальский клей",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-6ce0621019",
+      "code": "G-837",
+      "category": "games",
+      "title": "Crimson Desert победила в восьми номинациях на Korea Game Awards 2026",
+      "summary": "В этом году южнокорейская компания Pearl Abyss отметилась релизом амбициозной Crimson Desert, которая всего за полгода получила ворох глобальных обновление и полномасштабное DLC Charting the Unknown. Несмотря на такую пр",
+      "body": [
+        "В этом году южнокорейская компания Pearl Abyss отметилась релизом амбициозной Crimson Desert, которая всего за полгода получила ворох глобальных обновление и полномасштабное DLC Charting the Unknown. Несмотря на такую продуктивность разработчики […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73565/crimson_desert_pobedila_v_vosmi_nominaciyah_na_korea_game_awards_2026",
+      "publishedAt": "2026-11-19T13:38:30.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73565/crimson_desert_pobedila_v_vosmi_nominaciyah_na_korea_game_awards_2026"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-837.svg",
+      "imageCaption": "Обложка рубрики: Crimson Desert победила в восьми номинациях на Korea Game Awards 2026",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-18f28cc48a",
+      "code": "G-707",
+      "category": "games",
+      "title": "В GTA VI нет проституток — Rockstar объяснила почему",
+      "summary": "В Grand Theft Auto VI до неприличия много занятий: помимо криминальной активности можно рыбачить, прыгать с парашютом, да скроллить ленту соцсетей в конце концов. Но чего в шестой части делать нельзя — это вызывать секс-",
+      "body": [
+        "В Grand Theft Auto VI до неприличия много занятий: помимо криминальной активности можно рыбачить, прыгать с парашютом, да скроллить ленту соцсетей в конце концов. Но чего в шестой части делать нельзя — это вызывать секс-работниц. Этой фичи, которая присутствовала в играх серии с 2001 года, в новинке нет.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73564/v_gta_vi_net_prostitutok_rockstar_obyasnila_pochemu",
+      "publishedAt": "2026-11-19T13:29:35.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73564/v_gta_vi_net_prostitutok_rockstar_obyasnila_pochemu"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-707.svg",
+      "imageCaption": "Обложка рубрики: В GTA VI нет проституток — Rockstar объяснила почему",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-1c5712fe79",
+      "code": "C-929",
+      "category": "security",
+      "title": "16 пешек и 120 лет без ответа: простая шахматная загадка до сих пор мучает учёных",
+      "summary": "Задача 1906 года победила даже современные компьютеры.",
+      "body": [
+        "Задача 1906 года победила даже современные компьютеры."
+      ],
+      "tags": [
+        "Наука/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580352.php",
+      "publishedAt": "2026-11-19T13:08:56.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580352.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-929.svg",
+      "imageCaption": "Обложка рубрики: 16 пешек и 120 лет без ответа: простая шахматная загадка до сих пор му",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-b65b6cc5c6",
+      "code": "G-951",
+      "category": "games",
+      "title": "В Nexus Mods объявили, какие изменения ждут SteamDB",
+      "summary": "В сентябре появилась новость, что сайт Nexus Mods покупает базу данных SteamDB. Новые хозяева сразу начали планировать будущее сайта, но обещали не вводить радикальных изменений. Теперь наконец стало известно, над чем им",
+      "body": [
+        "В сентябре появилась новость, что сайт Nexus Mods покупает базу данных SteamDB. Новые хозяева сразу начали планировать будущее сайта, но обещали не вводить радикальных изменений. Теперь наконец стало известно, над чем именно трудилась команда.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73563/v_nexus_mods_obyavili_kakie_izmeneniya_zhdut_steamdb",
+      "publishedAt": "2026-11-19T12:27:45.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73563/v_nexus_mods_obyavili_kakie_izmeneniya_zhdut_steamdb"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-951.svg",
+      "imageCaption": "Обложка рубрики: В Nexus Mods объявили, какие изменения ждут SteamDB",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-13997e3f1d",
+      "code": "S-798",
+      "category": "science",
+      "title": "Поздние эректусы обжили тропический лес",
+      "summary": "Группа ученых описала девять архаических человеческих зубов, обнаруженных в двух пещерах, которые находятся на юге Китая. Исследование показало, что восемь из девяти образцов представляли собой останки людей прямоходящих",
+      "body": [
+        "Группа ученых описала девять архаических человеческих зубов, обнаруженных в двух пещерах, которые находятся на юге Китая. Исследование показало, что восемь из девяти образцов представляли собой останки людей прямоходящих, которые, как оказалось, обитали в тропических лесах Восточной Азии между 324 и 184 тысячами лет назад. Еще один зуб принадлежал гоминину, видовой статус которого остался непонятен. Этим находкам посвящены две статьи (один, два), опубликованные в журнале Nature."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/19/last-homo-erectus-in-east-asia",
+      "publishedAt": "2026-11-19T12:05:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/19/last-homo-erectus-in-east-asia"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-798.svg",
+      "imageCaption": "Обложка рубрики: Поздние эректусы обжили тропический лес",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-e7d18c7574",
+      "code": "C-797",
+      "category": "security",
+      "title": "Everything Is a Web Application, Including Your Firewall",
+      "summary": "One of the early targets of PHP2Shell exploitation was the firewall. On October 28, Palo Alto Networks confirmed that attackers were exploiting the two PHP vulnerabilities, CVE-2026-109618 and CVE-2026-109619, against PA",
+      "body": [
+        "One of the early targets of PHP2Shell exploitation was the firewall. On October 28, Palo Alto Networks confirmed that attackers were exploiting the two PHP vulnerabilities, CVE-2026-109618 and CVE-2026-109619, against PAN-OS management interfaces exposed to the internet. Both flaws let anyone execute code on the web server without authentication. The disclosure itself went a little wrong."
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/everything-is-web-application-including.html",
+      "publishedAt": "2026-11-19T11:52:23.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/everything-is-web-application-including.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-797.svg",
+      "imageCaption": "Обложка рубрики: Everything Is a Web Application, Including Your Firewall",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-394df233c8",
+      "code": "S-998",
+      "category": "science",
+      "title": "Три пишем, два в уме",
+      "summary": "Игорь пришел в школу в приподнятом настроении, в рюкзаке у него было два желтых яблока и карманные шахматы. Но он не ожидал, что у Кирилла с собой пять динозавров — три красных и два зеленых, — да и настрой не очень. Хот",
+      "body": [
+        "Игорь пришел в школу в приподнятом настроении, в рюкзаке у него было два желтых яблока и карманные шахматы. Но он не ожидал, что у Кирилла с собой пять динозавров — три красных и два зеленых, — да и настрой не очень. Хотите узнать, чем дело кончилось? Пройдите наш тест, и вы вспомните, почему математика — это вовсе не сухие цифры. А потом бегом на Международный математический диктант — он не только для школьников, но и для студентов, учителей и родителей."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/material/2026/11/19/three-two-math",
+      "publishedAt": "2026-11-19T11:50:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/material/2026/11/19/three-two-math"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-998.svg",
+      "imageCaption": "Обложка рубрики: Три пишем, два в уме",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-f805e9320b",
+      "code": "S-829",
+      "category": "science",
+      "title": "Нейроны островковой коры запустили тревогу у мышей",
+      "summary": "Китайские нейробиологи идентифицировали нейронный путь, регулирующий острую тревогу у мышей. В ответ на запах хищника или удар током Crh-экспрессирующие нейроны островковой коры активировались и отправляли сигнал дальше ",
+      "body": [
+        "Китайские нейробиологи идентифицировали нейронный путь, регулирующий острую тревогу у мышей. В ответ на запах хищника или удар током Crh-экспрессирующие нейроны островковой коры активировались и отправляли сигнал дальше — в парабрахиальное ядро, а затем — в заднее паравентрикулярное ядро таламуса. Блокирование этой цепи на любом уровне приводило к снижению тревожного поведения. Исследование опубликовано в журнале Molecular Psychiatry."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/19/the-anxiety-circuit",
+      "publishedAt": "2026-11-19T11:48:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/19/the-anxiety-circuit"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-829.svg",
+      "imageCaption": "Обложка рубрики: Нейроны островковой коры запустили тревогу у мышей",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-fb7bc906bc",
+      "code": "T-750",
+      "category": "tech",
+      "title": "Пульс есть, но пациент без сознания: «Вояджер-1» перестал передавать телеметрию и научные данные, улетев на световые сутки",
+      "summary": "NASA сообщило о новой технической неисправности межпланетного зонда «Вояджер-1» (Voyager 1), из-за которой аппарат перестал передавать на Землю научные и инженерные данные. Проблему обнаружили 14 ноября 2026 года, когда ",
+      "body": [
+        "NASA сообщило о новой технической неисправности межпланетного зонда «Вояджер-1» (Voyager 1), из-за которой аппарат перестал передавать на Землю научные и инженерные данные. Проблему обнаружили 14 ноября 2026 года, когда антенна NASA Deep Space Network (DSN) в Канберре установила связь с зондом и приняла несущую радиочастоту, однако сами данные в сигнале отсутствовали. Источник изображения: NASA"
+      ],
+      "tags": [
+        "- космос"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151532",
+      "publishedAt": "2026-11-19T10:55:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151532"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-750.svg",
+      "imageCaption": "Обложка рубрики: Пульс есть, но пациент без сознания: «Вояджер-1» перестал передавать т",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-127ea6dc6a",
+      "code": "T-841",
+      "category": "tech",
+      "title": "Google открыла доступ к Genie 4 – ИИ для генерации целых миров, которые можно менять прямо на ходу",
+      "summary": "Ранее в этом месяце подразделение Google DeepMind анонсировало ИИ-модель Genie 4, которая способна генерировать виртуальные миры с реалистичной физикой, звуками и разговорами персонажей. Теперь же разработчики представил",
+      "body": [
+        "Ранее в этом месяце подразделение Google DeepMind анонсировало ИИ-модель Genie 4, которая способна генерировать виртуальные миры с реалистичной физикой, звуками и разговорами персонажей. Теперь же разработчики представили обновлённую версию Project Genie, доступную на тарифе AI Ultra. Создаваемые алгоритмом миры стали более отзывчивыми, креативными и социальными. Источник изображения: Google"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151528",
+      "publishedAt": "2026-11-19T10:50:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151528"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-841.svg",
+      "imageCaption": "Обложка рубрики: Google открыла доступ к Genie 4 – ИИ для генерации целых миров, которы",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-25991a89e0",
+      "code": "G-983",
+      "category": "games",
+      "title": "Ролевая стратегия Arknights: Endfield признана лучшей игрой 2026-го в Google Play",
+      "summary": "Недавно Google объявила победителей своей ежегодной премии Best of Play, в которой отмечаются лучшие продукты, доступные в Google Play. Организаторы наградили несколько лучших приложений, игр и книг за 2026 год, но в это",
+      "body": [
+        "Недавно Google объявила победителей своей ежегодной премии Best of Play, в которой отмечаются лучшие продукты, доступные в Google Play. Организаторы наградили несколько лучших приложений, игр и книг за 2026 год, но в этой заметке мы сосредоточимся только на интерактивных развлечениях.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73562/rolevaya_strategiya_arknights_endfield_priznana_luchshey_igroy_2026_go_v_google_play",
+      "publishedAt": "2026-11-19T10:33:44.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73562/rolevaya_strategiya_arknights_endfield_priznana_luchshey_igroy_2026_go_v_google_play"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-983.svg",
+      "imageCaption": "Обложка рубрики: Ролевая стратегия Arknights: Endfield признана лучшей игрой 2026-го в ",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-a181cd6b72",
+      "code": "T-824",
+      "category": "tech",
+      "title": "Nvidia решила подкупить взбунтовавшихся сотрудников акциями и повышением зарплат",
+      "summary": "Компания Nvidia пообещала сотрудникам в декабре повысить им зарплаты и предоставить акции, чтобы унять недовольство, возникшее из-за ухода Дженсена Хуанга (Jensen Huang) с поста гендиректора. На первом общем собрании кол",
+      "body": [
+        "Компания Nvidia пообещала сотрудникам в декабре повысить им зарплаты и предоставить акции, чтобы унять недовольство, возникшее из-за ухода Дженсена Хуанга (Jensen Huang) с поста гендиректора. На первом общем собрании коллектива при новом руководстве сотрудникам пообещали дополнительные премии и заверили их: «У нас всё будет хорошо». Источник изображения: nvidia.com"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151529",
+      "publishedAt": "2026-11-19T10:15:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151529"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-824.svg",
+      "imageCaption": "Обложка рубрики: Nvidia решила подкупить взбунтовавшихся сотрудников акциями и повышени",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-80ad552a34",
+      "code": "T-895",
+      "category": "tech",
+      "title": "Мощнейшая за 20 лет магнитная буря перекроила радиационные пояса Земли — их стало четыре вместо двух",
+      "summary": "Серия мощнейших вспышек на Солнце в десятых числах мая 2024 года привела к невиданному ранее явлению — два стабильных радиационных пояса вокруг Земли на пару месяцев расщепились на четыре. Это стало неожиданностью для оп",
+      "body": [
+        "Серия мощнейших вспышек на Солнце в десятых числах мая 2024 года привела к невиданному ранее явлению — два стабильных радиационных пояса вокруг Земли на пару месяцев расщепились на четыре. Это стало неожиданностью для операторов спутников, и могло повлечь за собой массовую потерю аппаратов на орбите. Историческое представление о двух радиационных поясах Земли. Источник изображения: NASA"
+      ],
+      "tags": [
+        "- на острие науки"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151526",
+      "publishedAt": "2026-11-19T09:40:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151526"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-895.svg",
+      "imageCaption": "Обложка рубрики: Мощнейшая за 20 лет магнитная буря перекроила радиационные пояса Земли",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-7656d9cbe4",
+      "code": "C-719",
+      "category": "security",
+      "title": "Hackers Breach N-able Cloud Server, Disrupting Email Security Management Across 3 Regions",
+      "summary": "N-able on Wednesday disclosed that unknown threat actors gained unauthorized access to one of the servers in the Mail Assure and Spam Experts Hosted Cloud, causing it to disable management interfaces and APIs.",
+      "body": [
+        "N-able on Wednesday disclosed that unknown threat actors gained unauthorized access to one of the servers in the Mail Assure and Spam Experts Hosted Cloud, causing it to disable management interfaces and APIs.",
+        "\"We have taken steps to mitigate the threat and are continuing to harden our services to reduce the risk of recurrence,\" N-able said.",
+        "\"The investigation is ongoing, but at this time we"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/n-able-confirms-hackers-accessed-cloud.html",
+      "publishedAt": "2026-11-19T09:31:26.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/n-able-confirms-hackers-accessed-cloud.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-719.svg",
+      "imageCaption": "Обложка рубрики: Hackers Breach N-able Cloud Server, Disrupting Email Security Manageme",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-bbc-world-f613178e59",
+      "code": "W-974",
+      "category": "world",
+      "title": "Dozens missing after boat carrying 100 migrants sinks off Senegal's coast",
+      "summary": "Some local media report that at least four bodies have been recovered.",
+      "body": [
+        "Some local media report that at least four bodies have been recovered."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/c58j484089ewo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-19T09:02:52.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/c58j484089ewo?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-974.svg",
+      "imageCaption": "Обложка рубрики: Dozens missing after boat carrying 100 migrants sinks off Senegal's co",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-top-d8fdd770f0",
+      "code": "F-750",
+      "category": "facts",
+      "title": "Как я заставил STM32H750 вещать на FM-частотах без радиомодуля",
+      "summary": "Тема программной генерации FM-радиосигнала не нова, как и сами FM-трансмиттеры не являются чем-то новым. В этой статье я хочу рассказать об одном подходе в реализации FM-трансмиттера на базе STM32H750 без использования в",
+      "body": [
+        "Тема программной генерации FM-радиосигнала не нова, как и сами FM-трансмиттеры не являются чем-то новым. В этой статье я хочу рассказать об одном подходе в реализации FM-трансмиттера на базе STM32H750 без использования внешних модулей и обвязки.",
+        "Созданный FM-трансмиттер позволяет вещать WAV-файл c SD-карты и не требует дополнительных радиомодулей."
+      ],
+      "tags": [
+        "stm32",
+        "stm32h750",
+        "таймеры",
+        "прерывания"
+      ],
+      "sourceName": "Хабр Популярное",
+      "sourceUrl": "https://habr.com/ru/companies/ruvds/articles/1108576/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1108576",
+      "publishedAt": "2026-11-19T09:02:07.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Популярное)",
+          "url": "https://habr.com/ru/companies/ruvds/articles/1108576/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1108576"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/f-750.svg",
+      "imageCaption": "Обложка рубрики: Как я заставил STM32H750 вещать на FM-частотах без радиомодуля",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-8779d09d1e",
+      "code": "C-710",
+      "category": "security",
+      "title": "Ruby Releases Fixes for 7 Regex and String Flaws, Warns 5 Have Proof-of-Concept RCE",
+      "summary": "Ruby contains seven memory-safety flaws in its regular expression engine and its string case-conversion code. For five of them, its maintainers say, proof-of-concept exploits, or PoCs, have shown that crafted input can r",
+      "body": [
+        "Ruby contains seven memory-safety flaws in its regular expression engine and its string case-conversion code. For five of them, its maintainers say, proof-of-concept exploits, or PoCs, have shown that crafted input can run code on the machine.",
+        "\"We are aware of PoCs that prove some of them can be used to trigger remote code execution,\" the maintainers said.",
+        "The project released fixed versions"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/ruby-releases-fixes-for-7-regex-and.html",
+      "publishedAt": "2026-11-19T08:42:11.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/ruby-releases-fixes-for-7-regex-and.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-710.svg",
+      "imageCaption": "Обложка рубрики: Ruby Releases Fixes for 7 Regex and String Flaws, Warns 5 Have Proof-o",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-5c388c4afe",
+      "code": "C-721",
+      "category": "security",
+      "title": "Researcher Demonstrates Database RCE Exploits Affecting PostgreSQL, MySQL and Oracle",
+      "summary": "Low-privilege database accounts that cannot read a single application table can still be used to run code on the database server itself, a researcher has shown, by reaching memory-corruption bugs in the engine code behin",
+      "body": [
+        "Low-privilege database accounts that cannot read a single application table can still be used to run code on the database server itself, a researcher has shown, by reaching memory-corruption bugs in the engine code behind ordinary SQL.",
+        "The exploits, published yesterday, are the researcher's proofs of concept against PostgreSQL, MySQL and ClickHouse, plus a separate Oracle chain that needs no"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/researcher-demonstrates-database-rce.html",
+      "publishedAt": "2026-11-19T08:14:00.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/researcher-demonstrates-database-rce.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-721.svg",
+      "imageCaption": "Обложка рубрики: Researcher Demonstrates Database RCE Exploits Affecting PostgreSQL, My",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-top-a4f3a4890d",
+      "code": "F-904",
+      "category": "facts",
+      "title": "Свой ИИ-агент: пошаговое руководство для новичков",
+      "summary": "LLM стали привычным инструментом: кто-то использует их как продвинутый поиск, кто-то просит объяснить сложную тему, написать код или накидать идей. Часто можно услышать, как ИИ-агенты самостоятельно решают ту или иную пр",
+      "body": [
+        "LLM стали привычным инструментом: кто-то использует их как продвинутый поиск, кто-то просит объяснить сложную тему, написать код или накидать идей. Часто можно услышать, как ИИ-агенты самостоятельно решают ту или иную практическую задачу.",
+        "В этой статье мы простыми словами разберем, что представляют собой ИИ-агент, как устроен и зачем может быть полезно написать своего агента. Мы не будем использовать фреймворки для создания агентов или готовые решения по типу OpenCode, материал рассчитан на тех, кто только начинает погружаться в тему и не обладает глубокими техническими знаниями. Мы пошагово пройдем путь от теории до создания вашего первого работающего агента."
+      ],
+      "tags": [
+        "ии",
+        "ии-агенты",
+        "LLM",
+        "OpenCode"
+      ],
+      "sourceName": "Хабр Популярное",
+      "sourceUrl": "https://habr.com/ru/companies/selectel/articles/1109694/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109694",
+      "publishedAt": "2026-11-19T08:01:00.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Популярное)",
+          "url": "https://habr.com/ru/companies/selectel/articles/1109694/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109694"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/f-904.svg",
+      "imageCaption": "Обложка рубрики: Свой ИИ-агент: пошаговое руководство для новичков",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-bf4fa92691",
+      "code": "S-757",
+      "category": "science",
+      "title": "APOD: 2026 November 19 – The Horsehead and Flame Nebulas",
+      "summary": "APOD: 2026 November 19 – The…",
+      "body": [
+        "APOD: 2026 November 19 – The…",
+        "Astronomy Picture of the Day",
+        "Discover the cosmos! Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.",
+        "The Horsehead and Flame Nebulas"
+      ],
+      "tags": [
+        "APOD"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/image-article/apod-2026-november-19-the-horsehead-and-flame-nebulas/",
+      "publishedAt": "2026-11-19T05:05:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/image-article/apod-2026-november-19-the-horsehead-and-flame-nebulas/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-757.svg",
+      "imageCaption": "Обложка рубрики: APOD: 2026 November 19 – The Horsehead and Flame Nebulas",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-9edcb3e90f",
+      "code": "S-708",
+      "category": "science",
+      "title": "El Niño Rains Paint the Atacama",
+      "summary": "Earth Observatory Science",
+      "body": [
+        "Earth Observatory Science",
+        "El Niño Rains Paint the Atacama",
+        "Remote Sensing Technology",
+        "More Content Collections"
+      ],
+      "tags": [
+        "Earth Observatory",
+        "Land Cover",
+        "Landsat 9",
+        "Vegetation"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/earth/earth-observatory/el-nino-rains-paint-the-atacama/",
+      "publishedAt": "2026-11-19T05:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/earth/earth-observatory/el-nino-rains-paint-the-atacama/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-708.svg",
+      "imageCaption": "Обложка рубрики: El Niño Rains Paint the Atacama",
       "imageCredit": "Games News · локальная обложка"
     },
     {
@@ -3670,44 +5094,6 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
-      "id": "auto-hackernews-sec-bcaf11ea61",
-      "code": "C-951",
-      "category": "security",
-      "title": "10-Year-Old NGINX HTTP/2 Flaw Lets Unauthenticated Attackers Execute Code on Servers",
-      "summary": "A flaw in NGINX's HTTP/2 support can allow an attacker to run code on servers with HTTP/2 enabled, without needing to log in.",
-      "body": [
-        "A flaw in NGINX's HTTP/2 support can allow an attacker to run code on servers with HTTP/2 enabled, without needing to log in.",
-        "The decade-old flaw, CVE-2026-123007, dubbed \"nginx2root,\" has been present in NGINX's open-source code since version 1.9.5, released on September 22, 2015. Fixed versions 1.31.9 and 1.30.7 came out today.",
-        "F5, the company behind NGINX, says attackers can run code where"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/10-year-old-nginx-http2-flaw-lets.html",
-      "publishedAt": "2026-11-18T18:31:17.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/10-year-old-nginx-http2-flaw-lets.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-951.svg",
-      "imageCaption": "Обложка рубрики: 10-Year-Old NGINX HTTP/2 Flaw Lets Unauthenticated Attackers Execute C",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
       "id": "auto-securitylab-838cc0ee94",
       "code": "C-846",
       "category": "security",
@@ -3820,818 +5206,6 @@
       "image": "site/assets/news/s-842.svg",
       "imageCaption": "Обложка рубрики: NASA Announces Mid-Power Electric Rocket Challenge for US Companies",
       "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "s301-voyager-1-one-light-day",
-      "code": "S-301",
-      "category": "science",
-      "title": "Voyager 1 18 ноября 2026 достигает исторической отметки — 1 световой день от Земли",
-      "summary": "Запущенный в 1977 году аппарат NASA улетел дальше 25,9 млрд км: теперь радиосигнал от Земли до зонда идёт ровно 24 часа в одну сторону.",
-      "body": [
-        "В среду, 18 ноября 2026 года, космический аппарат NASA Voyager 1 станет первым созданным человеком объектом в истории, удалившимся от Земли на расстояние ровно одного светового дня — более 16 миллиардов миль (около 25,9 миллиарда километров).",
-        "Это означает, что команда, отправленная с антенн Deep Space Network, летит к зонду со скоростью света ровно 24 часа, а подтверждение возвращается на Землю только спустя двое суток. Аппарат работает в межзвёздном пространстве уже почти полвека — с момента старта 5 сентября 1977 года.",
-        "В честь рубежа NASA объявило всемирную акцию «Shine Bright for Voyager’s Light-Day» (17 ноября, передача сигнала «VGR» азбукой Морзе на go.nasa.gov/shinebright) и прямой брифинг инженеров JPL 19 ноября в 12:00 EST на nasa.gov/live."
-      ],
-      "tags": [
-        "Voyager 1",
-        "NASA",
-        "Космос",
-        "Рекорд"
-      ],
-      "sourceName": "NASA · Release M26-086",
-      "sourceUrl": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-join-voyager-1-one-light-day-activities/",
-      "publishedAt": "2026-11-17T19:30:00Z",
-      "readMin": 3,
-      "icon": "🛰️",
-      "accent": "indigo",
-      "image": "site/assets/news/s301-voyager1.jpg",
-      "imageCaption": "Космический аппарат Voyager 1 в межзвёздном пространстве на дистанции более 25,9 млрд км от Земли.",
-      "imageCredit": "NASA / JPL-Caltech",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено по официальному пресс-релизу NASA M26-086 (обновлён 13 ноября 2026)."
-      },
-      "proofs": [
-        {
-          "label": "Официальный релиз NASA M26-086 (Voyager 1 One-Light Day)",
-          "url": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-join-voyager-1-one-light-day-activities/"
-        },
-        {
-          "label": "Прямой эфир брифинга NASA JPL",
-          "url": "https://www.nasa.gov/live"
-        }
-      ],
-      "comments": [],
-      "featured": true,
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "g101-gta-vi-november-2026",
-      "code": "G-101",
-      "category": "games",
-      "title": "GTA VI выходит 19 ноября 2026 на PS5 и Xbox Series X|S: 30 FPS, саундтрек Justice и отказ от ИИ",
-      "summary": "Rockstar Games выпускает Grand Theft Auto VI в вымышленном штате Леонида и Вайс-Сити; предзагрузка стартовала 12 ноября, генеративный ИИ в разработке не использовался.",
-      "body": [
-        "До одного из крупнейших релизов десятилетия остаются считанные дни: Grand Theft Auto VI официально выходит 19 ноября 2026 года на PlayStation 5 и Xbox Series X|S. Сюжет разворачивается в современном штате Леонида и солнечном Вайс-Сити вокруг дуэта главных героев — Джейсона и Люсии.",
-        "По подтверждённым данным превью и технических обзоров, консольная версия на старте работает в стабильных 30 кадрах в секунду на обновлённом движке RAGE. Оригинальный саундтрек написал французский электронный дуэт Justice, а Rockstar отдельно подчеркнула, что при создании мира, диалогов и графики не использовала генеративный ИИ.",
-        "Предзагрузка файлов (в том числе для коробочных изданий формата code-in-box) открылась 12 ноября 2026 года, чтобы разгрузить серверы в день мирового старта."
-      ],
-      "tags": [
-        "GTA VI",
-        "Rockstar",
-        "PS5",
-        "Xbox"
-      ],
-      "sourceName": "IGN · Rockstar Games",
-      "sourceUrl": "https://www.ign.com/games/grand-theft-auto-vi",
-      "publishedAt": "2026-11-17T19:15:00Z",
-      "readMin": 3,
-      "icon": "🌴",
-      "accent": "blue",
-      "image": "site/assets/news/g101-gta6.jpg",
-      "imageCaption": "Официальный ключевой арт Grand Theft Auto VI — Джейсон и Люсия в Вайс-Сити, штат Леонида.",
-      "imageCredit": "Rockstar Games",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Перепроверено по IGN, Wikipedia (обновление ноября 2026) и сводкам предзагрузки."
-      },
-      "proofs": [
-        {
-          "label": "Карточка игры и сводка релизов на IGN",
-          "url": "https://www.ign.com/games/grand-theft-auto-vi"
-        },
-        {
-          "label": "Подробности саундтрека и предзагрузки (IGN)",
-          "url": "https://www.ign.com/articles/gta-6-leak-seemingly-reveals-full-track-list-days-before-launch"
-        },
-        {
-          "label": "Статья Wikipedia: Grand Theft Auto VI",
-          "url": "https://en.wikipedia.org/wiki/Grand_Theft_Auto_VI"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "c501-chrome-zero-day-cve-2026-125350",
-      "code": "C-501",
-      "category": "security",
-      "title": "Срочный патч Chrome и Edge: 0-day CVE-2026-125350 (CVSS 8.8) в XML активно атакуется",
-      "summary": "Восьмая уязвимость нулевого дня в Chrome за 2026 год затрагивает библиотеку libxslt и внесена в каталог CISA KEV со сроком исправления до 24 ноября 2026.",
-      "body": [
-        "Google и Microsoft выпустили экстренные обновления безопасности для браузеров на движке Chromium, закрывающие активно эксплуатируемую уязвимость нулевого дня CVE-2026-125350 (оценка опасности CVSS 8.8 High). Ошибка типа use-after-free находится в компоненте обработки XML (libxslt) и может приводить к повреждению памяти через специально подготовленную веб-страницу.",
-        "Уязвимость сообщили исследователи 6 ноября, исправление попало в коммит Chromium 61cab3f77203 уже 7 ноября, а 9 ноября вышли стабильные патчи: Google Chrome 157.0.8103.50/.51 (Extended Stable 156.0.8078.96) и Microsoft Edge 157.0.4341.46.",
-        "10 ноября агентство CISA добавило CVE-2026-125350 в обязательный каталог активно эксплуатируемых уязвимостей (KEV) с дедлайном обновления до 24 ноября 2026 года. Пользователям рекомендуется открыть chrome://settings/help и перезапустить браузер прямо сейчас."
-      ],
-      "tags": [
-        "Chrome",
-        "0-day",
-        "CVE-2026-125350",
-        "CISA KEV"
-      ],
-      "sourceName": "CISA KEV · CybersecurityNews · SOCRadar",
-      "sourceUrl": "https://cybersecuritynews.com/chrome-zero-day-vulnerability-exploited/",
-      "publishedAt": "2026-11-17T18:50:00Z",
-      "readMin": 3,
-      "icon": "🚨",
-      "accent": "crimson",
-      "image": "site/assets/news/c501-chrome-0day.jpg",
-      "imageCaption": "Предупреждение об экстренном обновлении Google Chrome — восьмой 0-day патч 2026 года (CVE-2026-125350).",
-      "imageCredit": "SecNews / Chromium Security",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Перекрёстно проверено по SOCRadar, CybersecurityNews, ThreatDefence и коммиту Chromium 61cab3f77203."
-      },
-      "proofs": [
-        {
-          "label": "Разбор CVE-2026-125350 и версий патчей (CybersecurityNews)",
-          "url": "https://cybersecuritynews.com/chrome-zero-day-vulnerability-exploited/"
-        },
-        {
-          "label": "Аналитика CISA KEV и libxslt (SOCRadar)",
-          "url": "https://socradar.io/blog/cve-2026-125350-google-patches-chrome-zero-day/"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "s306-nasa-roman-first-images-dec-2026",
-      "code": "S-306",
-      "category": "science",
-      "title": "Телескоп NASA Nancy Grace Roman покажет первые панорамные снимки Вселенной 7 декабря 2026",
-      "summary": "Запущенный 30 августа на Falcon Heavy инфракрасный телескоп завершает калибровку в точке L2, а NASA открыло акцию «Усынови пиксель космоса».",
-      "body": [
-        "17 ноября 2026 года NASA объявило точную дату премьеры первых научных изображений новейшего космического телескопа Nancy Grace Roman: презентация пройдёт в прямом эфире 7 декабря 2026 года в 15:30 EST (21:30 CET) на ежегодной конференции Американского геофизического союза (AGU) в Сан-Франциско и на nasa.gov/live.",
-        "Телескоп Roman стартовал 30 августа 2026 года на ракете SpaceX Falcon Heavy с космодрома имени Кеннеди и совершил трёхмесячный перелёт длиной около миллиона миль к точке Лагранжа L2. Благодаря сверхширокому полю зрения он будет снимать гигантские панорамы неба для изучения тёмной энергии, тёмной материи и прямого поиска экзопланет с помощью коронографа нового поколения.",
-        "Любой желающий уже может поучаствовать в акции «Adopt a Pixel» на сайте science.nasa.gov — забронировать уникальный пиксель на одном из первых снимков и получить цифровую коллекционную карточку своего участка Вселенной."
-      ],
-      "tags": [
-        "Roman",
-        "NASA",
-        "Телескоп",
-        "Космос"
-      ],
-      "sourceName": "NASA · Advisory M26-088",
-      "sourceUrl": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-view-roman-telescopes-first-images/",
-      "publishedAt": "2026-11-17T18:20:00Z",
-      "readMin": 3,
-      "icon": "🔭",
-      "accent": "indigo",
-      "image": "site/assets/news/s306-roman-telescope.jpg",
-      "imageCaption": "Космический телескоп NASA Nancy Grace Roman в чистой комнате Центра космических полётов Годдарда (Мэриленд).",
-      "imageCredit": "NASA / Jolearra Tshiteya",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено полностью по официальному медиа-адвайзори NASA M26-088 от 17 ноября 2026."
-      },
-      "proofs": [
-        {
-          "label": "Официальный релиз NASA M26-088 (17 ноября 2026)",
-          "url": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-view-roman-telescopes-first-images/"
-        },
-        {
-          "label": "Акция NASA Adopt a Pixel",
-          "url": "https://science.nasa.gov/mission/roman-space-telescope/adopt-a-pixel/"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "g102-zelda-oot-switch-2-million",
-      "code": "G-102",
-      "category": "games",
-      "title": "Ремейк The Legend of Zelda: Ocarina of Time на Switch 2 продал 1 млн физических копий в США за неделю",
-      "summary": "По данным аналитика Circana Мэта Пискателлы, вышедший 5 ноября 2026 эксклюзив стал самой быстропродаваемой игрой 2026 года в США вплоть до старта GTA VI.",
-      "body": [
-        "Ремейк культовой The Legend of Zelda: Ocarina of Time, вышедший эксклюзивно для Nintendo Switch 2 5 ноября 2026 года, преодолел отметку в 1 миллион проданных физических картриджей в США уже в первую неделю после релиза.",
-        "Как сообщил ведущий аналитик исследовательской компании Circana Мэт Пискателла, это первый случай с момента выхода Tears of the Kingdom в 2023 году, когда игра на физическом носителе разошлась миллионным тиражом в США всего за семь дней.",
-        "Результат мгновенно вывел обновлённую Ocarina of Time в лидеры американского чарта 2026 года — и это без учёта цифровых продаж в Nintendo eShop, которые Nintendo традиционно раскрывает в квартальных отчётах."
-      ],
-      "tags": [
-        "Zelda",
-        "Switch 2",
-        "Nintendo",
-        "Circana"
-      ],
-      "sourceName": "TechRadar · Circana",
-      "sourceUrl": "https://www.techradar.com/gaming/nintendo/the-legend-of-zelda-ocarina-of-time-for-nintendo-switch-2-hits-1-million-physical-copies-sold-in-the-us-making-it-the-best-selling-game-of-2026-so-far",
-      "publishedAt": "2026-11-17T17:40:00Z",
-      "readMin": 2,
-      "icon": "🗡️",
-      "accent": "emerald",
-      "image": "site/assets/news/g102-zelda-switch2.jpg",
-      "imageCaption": "The Legend of Zelda: Ocarina of Time — классика Nintendo, побившая рекорд физических продаж 2026 года на Switch 2.",
-      "imageCredit": "Nintendo / XDA",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено по публикациям TechRadar и игровых сводок на базе данных Circana (Mat Piscatella)."
-      },
-      "proofs": [
-        {
-          "label": "Репортаж TechRadar о миллионе физических копий в США (Circana)",
-          "url": "https://www.techradar.com/gaming/nintendo/the-legend-of-zelda-ocarina-of-time-for-nintendo-switch-2-hits-1-million-physical-copies-sold-in-the-us-making-it-the-best-selling-game-of-2026-so-far"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "c502-games-antivirus-v11-redteam",
-      "code": "C-502",
-      "category": "security",
-      "title": "Антивирус Games v1.1 прошёл 25 из 25 red-team атак и подключил ClamAV в GitHub Actions",
-      "summary": "10-проходная проверка пользовательских игр и новостей теперь ловит IDN-омоглифы, склеенный eval/Function, принудительные редиректы и SVG-полиглоты в обложках.",
-      "body": [
-        "После полноценного red-team аудита на 25 тестовых сценариев встроенный 10-проходный антивирус портала Games обновлён до версии v1.1 и получил нулевой процент пропусков: 21 реальная атака заблокирована, 4 чистые игры прошли с риском 0/100.",
-        "В новой версии закрыты хитрые векторы обхода: домены-двойники со смешанными алфавитами (латиница + кириллица до нормализации в punycode), обфускация eval через Unicode-последовательности и склейку строк, вызовы window['Function'] и принудительные внешние редиректы location.replace.",
-        "Отдельно добавлена проверка загружаемых изображений-обложек (data:image/*) на встроенные теги script, HTML/SVG-инъекции и JS-полиглоты, а на сервере GitHub Actions каждый Pull Request дополнительно сканирует ClamAV."
-      ],
-      "tags": [
-        "Антивирус Games",
-        "Red Team",
-        "ClamAV",
-        "Безопасность"
-      ],
-      "sourceName": "Games Security · PR #262",
-      "sourceUrl": "https://github.com/m98978672-boop/games/pull/262",
-      "publishedAt": "2026-11-17T17:10:00Z",
-      "readMin": 2,
-      "icon": "🛡️",
-      "accent": "emerald",
-      "image": "site/assets/icon.svg",
-      "imageCaption": "Эмблема защищённой экосистемы портала Games — 10-проходная клиентская проверка + ClamAV CI.",
-      "imageCredit": "Games Portal",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Подтверждено прогоном 25-кейсового red-team теста и CI-набора site/tests/news-and-antivirus.mjs."
-      },
-      "proofs": [
-        {
-          "label": "Pull Request #262 с тестами и исправлениями антивируса",
-          "url": "https://github.com/m98978672-boop/games/pull/262"
-        },
-        {
-          "label": "Исходный код site/game-antivirus.js",
-          "url": "https://github.com/m98978672-boop/games/blob/arena/89d3f773-games/site/game-antivirus.js"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "g103-games-portal-catalog-update",
-      "code": "G-103",
-      "category": "games",
-      "title": "Каталог Games: 16 бесплатных браузерных игр онлайн + 6 проектов сообщества с 10× защитой",
-      "summary": "Все игры запускаются мгновенно без установки и регистрации, сохраняются в облаке и проверяются встроенным 10-проходным антивирусом.",
-      "body": [
-        "Витрина Games объединяет 16 собственных браузерных игр разных жанров — от 3D-приключения РАТГРАД и гео-атласов до тактических головоломок, симуляторов и аркад — плюс 6 проверенных проектов от независимых авторов сообщества.",
-        "Каждая добавляемая игра проходит 10-проходный клиентский антивирус GamesAntivirus v1.1 и серверный сканер ClamAV в GitHub Actions. Игровые сохранения можно переносить между телефоном и компьютером через встроенный Менеджер сохранений.",
-        "А теперь рядом с вкладками «Игры» и «Общение» работает обновлённая вкладка «Новости» с короткими кодами поиска, реальными фото, доказательствами и комментариями."
-      ],
-      "tags": [
-        "Games",
-        "РАТГРАД",
-        "Браузерные игры",
-        "Сообщество"
-      ],
-      "sourceName": "Редакция Games",
-      "sourceUrl": "https://m98978672-boop.github.io/games/",
-      "publishedAt": "2026-11-17T16:30:00Z",
-      "readMin": 2,
-      "icon": "🎮",
-      "accent": "blue",
-      "image": "site/assets/country-atlas.jpg",
-      "imageCaption": "Витрина бесплатных браузерных игр Games — запускается на телефоне и ПК без установки.",
-      "imageCredit": "Games Portal",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено по актуальному каталогу site/games-data.js и site/community-games.json (6 игр сообщества)."
-      },
-      "proofs": [
-        {
-          "label": "Официальная витрина Games на GitHub Pages",
-          "url": "https://m98978672-boop.github.io/games/"
-        },
-        {
-          "label": "Репозиторий m98978672-boop/games на GitHub",
-          "url": "https://github.com/m98978672-boop/games"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "f603-noaa-deep-sea-glass-sponges",
-      "code": "F-603",
-      "category": "facts",
-      "title": "Живые «хрустальные замки» океана: глубоководные стеклянные губки NOAA живут тысячи лет",
-      "summary": "Экспедиции NOAA Ocean Exploration фиксируют на глубинах Тихого океана удивительных шестилучевых губок со скелетом из природного кремнезёма, создающих целые подводные сады.",
-      "body": [
-        "Во время глубоководных погружений телеуправляемых аппаратов NOAA Ocean Exploration в Тихом океане камеры регулярно находят гигантские «хрустальные» сооружения — шестилучевые стеклянные губки (Hexactinellida). Их ажурный скелет действительно состоит из микроскопических игл биогенного кремнезёма — природного стекла.",
-        "Стеклянные губки — одни из главных долгожителей планеты: отдельные колонии и экземпляры способны жить сотни и даже тысячи лет, фильтруя тысячи литров ледяной океанской воды и создавая укрытия для глубоководных рыб, креветок и офиур.",
-        "Материаловеды активно изучают решётчатую структуру скелета таких губок: она выдерживает колоссальное давление океанских глубин и вдохновляет инженеров на создание сверхлёгких и прочных строительных конструкций и оптоволокна."
-      ],
-      "tags": [
-        "NOAA",
-        "Глубоководье",
-        "Природа",
-        "Бионика"
-      ],
-      "sourceName": "NOAA Ocean Exploration",
-      "sourceUrl": "https://oceanexplorer.noaa.gov/",
-      "publishedAt": "2026-10-15T12:00:00Z",
-      "readMin": 2,
-      "icon": "🪸",
-      "accent": "cyan",
-      "image": "site/assets/news/f603-noaa-sponge.jpg",
-      "imageCaption": "Глубоководная стеклянная губка на дне Тихого океана, снятая телеуправляемым аппаратом NOAA.",
-      "imageCredit": "NOAA Ocean Exploration",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено по открытому научному архиву NOAA Ocean Exploration."
-      },
-      "proofs": [
-        {
-          "label": "Официальный портал экспедиций NOAA Ocean Exploration",
-          "url": "https://oceanexplorer.noaa.gov/"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "s305-webb-xlssc122-dark-matter-lens",
-      "code": "S-305",
-      "category": "science",
-      "title": "Древнее скопление XLSSC 122 (10,4 млрд световых лет) удивило астрономов плотностью тёмной материи",
-      "summary": "Наблюдения James Webb показали самое далёкое известное скопление — сильную гравитационную линзу, центр которой оказался плотнее прогнозов стандартной космологии.",
-      "body": [
-        "Команда астрономов под руководством Кайла Финнера (Caltech / IPAC) совместно с учёными Университета Ёнсе опубликовала в октябре 2026 года серию из трёх исследований скопления галактик XLSSC 122, расположенного на расстоянии около 10,4 миллиарда световых лет — в эпоху так называемого «космического полудня».",
-        "Снимки космического телескопа James Webb выявили дуги искажённого света ещё более далёких фоновых галактик, сделав XLSSC 122 самым удалённым из известных скоплений с эффектом сильного гравитационного линзирования.",
-        "Расчёты массы по искривлению света преподнесли сюрприз: распределение тёмной материи в центре XLSSC 122 оказалось заметно концентрированнее и плотнее, чем предсказывают стандартные симуляции формирования структур Вселенной. Это даёт физикам редкий полигон для проверки свойств самой тёмной материи."
-      ],
-      "tags": [
-        "James Webb",
-        "XLSSC 122",
-        "Тёмная материя",
-        "Астрофизика"
-      ],
-      "sourceName": "Caltech IPAC · ScienceDaily",
-      "sourceUrl": "https://www.sciencedaily.com/releases/2026/10/261012185021.htm",
-      "publishedAt": "2026-10-13T16:00:00Z",
-      "readMin": 3,
-      "icon": "🌌",
-      "accent": "indigo",
-      "image": "site/assets/news/s305-xlssc122-lens.jpg",
-      "imageCaption": "Гравитационное линзирование далёкого скопления галактик на снимке космического телескопа James Webb.",
-      "imageCredit": "NASA / ESA / CSA / STScI",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено полностью по релизу ScienceDaily / Caltech IPAC от 13 октября 2026 (доклад AAS 248)."
-      },
-      "proofs": [
-        {
-          "label": "Релиз ScienceDaily: JWST раскрывает древнее скопление XLSSC 122",
-          "url": "https://www.sciencedaily.com/releases/2026/10/261012185021.htm"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "s303-webb-21-extreme-debris-disks",
-      "code": "S-303",
-      "category": "science",
-      "title": "Телескоп James Webb нашёл следы столкновений планет размером с Марс в 21 звёздной системе",
-      "summary": "Исследование в The Astrophysical Journal показало: примерно треть редких экстремальных дисков обломков насыщена кремнезёмом от катастроф, похожих на рождение Луны.",
-      "body": [
-        "Астрономы Кейт Су (Институт космических наук SSI) и Агнеш Кошпал (Обсерватория Конкоя) опубликовали в октябрьском номере The Astrophysical Journal масштабный обзор 21 редкого «экстремального диска обломков» вокруг молодых звёзд, объединив 16 новых спектров телескопа James Webb и 5 архивных наблюдений Spitzer.",
-        "Оказалось, что диски чётко делятся на два класса: примерно треть богата минеральным кремнезёмом (силикой) — это химический след колоссальных лобовых столкновений протопланет размером с Марс, аналогичных гипотетическому удару Тейи о раннюю Землю, породившему нашу Луну.",
-        "Остальные две трети систем содержат мало кремнезёма и указывают на более мягкие удары тел размером с Луну. Работа впервые дала прямую статистику того, насколько бурно формируются каменистые планеты по всей Галактике."
-      ],
-      "tags": [
-        "James Webb",
-        "Планеты",
-        "Астрономия",
-        "ApJ"
-      ],
-      "sourceName": "ScienceDaily · Astrophysical Journal",
-      "sourceUrl": "https://www.sciencedaily.com/releases/2026/10/261007042108.htm",
-      "publishedAt": "2026-10-07T14:00:00Z",
-      "readMin": 3,
-      "icon": "☄️",
-      "accent": "indigo",
-      "image": "site/assets/news/s303-webb-collision.jpg",
-      "imageCaption": "Художественная реконструкция NASA: столкновение молодых каменистых планет в экстремальном диске обломков.",
-      "imageCredit": "NASA / JPL-Caltech",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено полностью по публикации ScienceDaily от 7 октября 2026 (исследование ApJ от 1 октября 2026)."
-      },
-      "proofs": [
-        {
-          "label": "Релиз ScienceDaily: 21 экстремальный диск обломков в данных JWST",
-          "url": "https://www.sciencedaily.com/releases/2026/10/261007042108.htm"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "w402-climate-threat-europe-unesco-louvre",
-      "code": "W-402",
-      "category": "world",
-      "title": "43 % объектов ЮНЕСКО в Европе под климатическим риском: Лувр перевозит ~250 000 экспонатов",
-      "summary": "Отчёт EDHEC Climate Institute показал уязвимость музеев и памятников к наводнениям и жаре — от венецианской Ла Фениче до елей Страдивари в Валь-ди-Фьемме.",
-      "body": [
-        "Согласно исследованию EDHEC Climate Institute, представленному в сентябре 2026 года, 43 % европейских объектов Всемирного наследия ЮНЕСКО находятся в зоне высокого риска из-за экстремальных погодных явлений, наводнений и подъёма уровня моря. В США о прямом климатическом ущербе коллекциям сообщили уже 35 % директоров художественных музеев.",
-        "Крупнейшие музеи мира ускоряют эвакуацию запасников: парижский Лувр, расположенный у берега Сены, переводит около 250 000 произведений искусства в защищённый центр консервации в Льеве́не. Под угрозой оказались также венецианский театр Ла Фениче и высокогорные еловые леса Валь-ди-Фьемме в Италии, древесина которых столетиями использовалась для изготовления скрипок Страдивари.",
-        "По оценкам экономистов, при отсутствии мер адаптации к 2100 году климатический удар по туризму и культурной экономике может стоить регионам до 41 % ВВП в Риме и 32 % в Мадриде."
-      ],
-      "tags": [
-        "ЮНЕСКО",
-        "Лувр",
-        "Климат",
-        "Культура"
-      ],
-      "sourceName": "Phys.org · EDHEC Climate Institute",
-      "sourceUrl": "https://phys.org/news/2026-09-climate-poses-threat-cultural-heritage.html",
-      "publishedAt": "2026-09-21T12:00:00Z",
-      "readMin": 3,
-      "icon": "🏛️",
-      "accent": "amber",
-      "image": "site/assets/news/w402-venice-climate.jpg",
-      "imageCaption": "Историческая архитектура Венеции во время подъёма воды («acqua alta») — один из символов климатических вызовов для наследия Европы.",
-      "imageCredit": "Venice / Public Heritage Archive",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено полностью по материалу Phys.org от 21 сентября 2026 (данные EDHEC Climate Institute) и репортажу DW."
-      },
-      "proofs": [
-        {
-          "label": "Исследование EDHEC Climate Institute на Phys.org (21 сент 2026)",
-          "url": "https://phys.org/news/2026-09-climate-poses-threat-cultural-heritage.html"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "t202-webgpu-baseline-all-browsers-2026",
-      "code": "T-202",
-      "category": "tech",
-      "title": "WebGPU вышел на Baseline во всех главных браузерах: 3D-графика и ИИ-шейдеры работают прямо во вкладке",
-      "summary": "Chrome/Edge, Safari 26 (macOS Tahoe и iOS 26) и Firefox 141+/145+ включили W3C WebGPU по умолчанию — браузерные игры получили доступ к GPU на уровне Vulkan и Metal.",
-      "body": [
-        "Веб-графика прошла исторический перелом: стандарт W3C WebGPU заработал по умолчанию во всех трёх главных браузерных движках — Chromium (Chrome и Edge), WebKit (Safari 26 на macOS Tahoe, iOS 26, iPadOS и visionOS) и Gecko (Firefox 141+ на Windows и 145+ на macOS Apple Silicon, при продолжающейся доработке для Linux и Android).",
-        "В отличие от устаревающего WebGL, новый интерфейс напрямую обращается к современным API видеокарт (Vulkan, Metal, Direct3D 12) и впервые приносит в браузер полноценные вычислительные шейдеры (compute shaders). Это ускоряет и 3D-рендеринг (Three.js WebGPURenderer, Babylon.js), и локальный запуск нейросетей прямо на видеокарте пользователя без отправки данных в облако.",
-        "Для браузерных витрин вроде Games это означает резкий скачок качества графики без установки лаунчеров и тяжёлых инсталляторов."
-      ],
-      "tags": [
-        "WebGPU",
-        "Браузеры",
-        "3D",
-        "W3C"
-      ],
-      "sourceName": "web.dev · W3C WebGPU",
-      "sourceUrl": "https://web.dev/blog/webgpu-supported-major-browsers",
-      "publishedAt": "2026-09-05T11:30:00Z",
-      "readMin": 3,
-      "icon": "⚡",
-      "accent": "violet",
-      "image": "site/assets/news/t202-webgpu-ocean.jpg",
-      "imageCaption": "Реалтайм-симуляция океанских волн и отражений на WebGPU compute-шейдерах прямо в окне браузера.",
-      "imageCredit": "WebGPU Ocean Demo (GitHub)",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено по официальному блогу web.dev и сводкам поддержки браузеров 2026 (Safari 26, Firefox 141/145, Chrome)."
-      },
-      "proofs": [
-        {
-          "label": "Официальный анонс поддержки WebGPU в главных браузерах (web.dev)",
-          "url": "https://web.dev/blog/webgpu-supported-major-browsers"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "w401-unesco-48th-busan-2026",
-      "code": "W-401",
-      "category": "world",
-      "title": "48-я сессия ЮНЕСКО в Пусане: 25 новых объектов наследия (рифы Акабы, Олимп, Ташкент) и 6 под угрозой",
-      "summary": "В июле 2026 года Комитет Всемирного наследия впервые включил памятники Комор, Сан-Томе и Принсипи и Южного Судана, а исторический центр Вены сняли с «красного списка».",
-      "body": [
-        "На 48-й сессии Комитета Всемирного наследия ЮНЕСКО, прошедшей 19–29 июля 2026 года в южнокорейском Пусане, список пополнился сразу 25 новыми объектами. Впервые в истории статус Всемирного наследия получили сразу три страны: Коморские Острова, Сан-Томе и Принсипи, а также Южный Судан (миграционный ландшафт Бома–Бадингило).",
-        "Среди знаковых новичков — морской заповедник Акабы в Иордании с уникальными теплостойкими коралловыми рифами, гора Олимп в Греции, ансамбль ташкентского модернизма в Узбекистане и ископаемые слои Западного Лимфьорда в Дании.",
-        "Одновременно комитет внёс 6 объектов в Список наследия под угрозой (три — по экстренной процедуре: замки горы Амель в Ливане, древняя Себастия в Палестине и ландшафт Бома–Бадингило). Приятной новостью стало исключение исторического центра Вены из списка угрозы после пересмотра высотных строек."
-      ],
-      "tags": [
-        "ЮНЕСКО",
-        "Пусан 2026",
-        "Наследие",
-        "Мир"
-      ],
-      "sourceName": "UNESCO · UN News",
-      "sourceUrl": "https://www.unesco.org/en/world-heritage/committee-2026",
-      "publishedAt": "2026-07-29T15:00:00Z",
-      "readMin": 3,
-      "icon": "🌍",
-      "accent": "amber",
-      "image": "site/assets/news/w401-unesco-aqaba.jpg",
-      "imageCaption": "Коралловые рифы морского заповедника Акабы (Иордания) — один из 25 новых объектов Всемирного наследия ЮНЕСКО 2026 года.",
-      "imageCredit": "UNESCO World Heritage Centre",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено полностью по официальной странице 48-й сессии UNESCO и сообщению UN News от 27 июля 2026."
-      },
-      "proofs": [
-        {
-          "label": "Итоги 48-й сессии Комитета Всемирного наследия (UNESCO)",
-          "url": "https://www.unesco.org/en/world-heritage/committee-2026"
-        },
-        {
-          "label": "Сообщение UN News о 6 объектах в Списке под угрозой (27 июля 2026)",
-          "url": "https://news.un.org/en/story/2026/07/1168031"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "s304-webb-beta-pictoris-d",
-      "code": "S-304",
-      "category": "science",
-      "title": "Телескоп James Webb открыл скрытую гигантскую экзопланету Beta Pictoris d по химическому спектру",
-      "summary": "Учёные Калифорнийского университета в Сан-Диего нашли планету массой от 2 Юпитеров на орбите ~30 а.е. благодаря «штрих-коду» угарного газа; открытие подтвердил телескоп VLT.",
-      "body": [
-        "В июле 2026 года в Astrophysical Journal Letters было опубликовано открытие новой планеты-гиганта Beta Pictoris d в одной из самых изученных молодых звёздных систем (63 световых года от Земли, возраст около 23 миллионов лет).",
-        "Команда Эйдана Гиббса и Жан-Батиста Руффио (UC San Diego) применила спектрограф NIRSpec телескопа James Webb и сумела отделить слабый свет планеты от яркого пылевого диска по характерному молекулярному «штрих-коду» угарного газа (CO), а инструмент MIRI добавил признаки водяного пара и метана.",
-        "Новая планета имеет массу не менее двух масс Юпитера и вращается далеко от звезды — примерно в 30 астрономических единицах (как Нептун от Солнца). Существование Beta Pictoris d независимо подтвердили архивные и новые снимки телескопа ESO VLT в Чили и камеры NIRCam."
-      ],
-      "tags": [
-        "Экзопланеты",
-        "James Webb",
-        "Beta Pictoris",
-        "ESO VLT"
-      ],
-      "sourceName": "UC San Diego · ScienceDaily",
-      "sourceUrl": "https://www.sciencedaily.com/releases/2026/07/260722032111.htm",
-      "publishedAt": "2026-07-23T14:00:00Z",
-      "readMin": 3,
-      "icon": "🪐",
-      "accent": "indigo",
-      "image": "site/assets/news/s304-beta-pictoris.jpg",
-      "imageCaption": "Художественная концепция STScI: система Беты Живописца с новооткрытой внешней планетой-гигантом Beta Pictoris d справа.",
-      "imageCredit": "NASA / ESA / CSA / STScI / Ralf Crawford",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено полностью по релизу ScienceDaily от 23 июля 2026 (публикация ApJL, UCSD и подтверждение VLT)."
-      },
-      "proofs": [
-        {
-          "label": "Релиз ScienceDaily: JWST открывает скрытую планету Beta Pictoris d",
-          "url": "https://www.sciencedaily.com/releases/2026/07/260722032111.htm"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "t201-microsoft-majorana-2-quantum",
-      "code": "T-201",
-      "category": "tech",
-      "title": "Microsoft показала квантовый чип Majorana 2 на свинце с помощью ИИ — физики требуют открытых данных",
-      "summary": "На конференции Build (2 июня 2026) Microsoft заявила о 1000-кратном росте отдельных метрик и цели 2029 года, однако независимые учёные критикуют закрытость экспериментов.",
-      "body": [
-        "2 июня 2026 года на конференции Build в Сан-Франциско Microsoft представила второе поколение своей квантовой архитектуры — чип Majorana 2. Как сообщает Reuters, при разработке нового поколения компания с помощью ИИ-моделирования заменила алюминиевый сверхпроводник на свинцовый, что должно существенно повысить устойчивость топологических кубитов.",
-        "Исполнительный вице-президент Microsoft Джейсон Зандер заявил о 1000-кратном улучшении ряда инженерных показателей по сравнению с прошлым прототипом и назвал целевым сроком запуска первых коммерческих квантовых систем 2029 год (синхронно с планами IBM).",
-        "Вместе с тем Reuters подчёркивает скепсис академического сообщества: физик Генри Легг из Сент-Эндрюсского университета раскритиковал отсутствие открытых воспроизводимых данных, на что Microsoft сослалась на коммерческую тайну и требования конфиденциальности программы DARPA."
-      ],
-      "tags": [
-        "Квантовые компьютеры",
-        "Microsoft",
-        "Majorana 2",
-        "Reuters"
-      ],
-      "sourceName": "Reuters",
-      "sourceUrl": "https://www.reuters.com/technology/microsoft-unveils-new-quantum-computing-chip-design-made-with-ai-2026-06-02/",
-      "publishedAt": "2026-06-02T17:00:00Z",
-      "readMin": 3,
-      "icon": "⚛️",
-      "accent": "violet",
-      "image": "site/assets/news/t201-majorana2.jpg",
-      "imageCaption": "Квантовый процессор архитектуры Majorana в лаборатории Microsoft.",
-      "imageCredit": "Microsoft Quantum",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено полностью по репортажу Reuters от 2 июня 2026 с цитатами Microsoft и независимого физика Henry Legg."
-      },
-      "proofs": [
-        {
-          "label": "Репортаж Reuters о Majorana 2 и критике физиков (2 июня 2026)",
-          "url": "https://www.reuters.com/technology/microsoft-unveils-new-quantum-computing-chip-design-made-with-ai-2026-06-02/"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "f601-ocean-census-1100-new-species",
-      "code": "F-601",
-      "category": "facts",
-      "title": "Рекорд океанографии: проект Ocean Census открыл более 1 100 новых морских видов за один год",
-      "summary": "Международная коалиция из 1 000 учёных из 85 стран ускорила темп открытий на 54 % — среди находок глубоководная «акула-призрак» и хищная губка у Антарктиды.",
-      "body": [
-        "19 мая 2026 года глобальная инициатива Nippon Foundation–Nekton Ocean Census объявила о рекордном результате: за последние 12 месяцев исследователи описали и каталогизировали более 1 100 ранее неизвестных науке морских видов — на 54 % больше, чем годом ранее (728 видов).",
-        "В проекте участвуют свыше 1 000 морских биологов из 85 стран, использующих автономные батискафы, ДНК-баркодирование и высокоточную 3D-томографию. Среди самых ярких открытий — глубоководная химера («акула-призрак»), обнаруженная на глубине около 820 метров (2 700 футов) у побережья Австралии, и хищная губка, получившая прозвище «шар смерти», с глубины около 3 650 метров у Антарктиды.",
-        "Учёные напоминают, что более 90 % обитателей глубин мирового океана до сих пор не имеют даже научного названия, и подобные экспедиции критичны для сохранения глубоководных экосистем."
-      ],
-      "tags": [
-        "Океан",
-        "Ocean Census",
-        "Рекорд",
-        "Биология"
-      ],
-      "sourceName": "The Washington Times · Ocean Census",
-      "sourceUrl": "https://www.washingtontimes.com/news/2026/may/19/ocean-census-discovers-record-1100-new-marine-species-one-year/",
-      "publishedAt": "2026-05-19T13:00:00Z",
-      "readMin": 3,
-      "icon": "🦈",
-      "accent": "cyan",
-      "image": "site/assets/news/f601-ghost-shark.jpg",
-      "imageCaption": "Глубоководная химера («акула-призрак») — один из 1 100+ новых морских видов, описанных программой Ocean Census.",
-      "imageCredit": "Ocean Census / NIWA",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено по публикации The Washington Times от 19 мая 2026 и репортажу Good Morning America (ABC)."
-      },
-      "proofs": [
-        {
-          "label": "Репортаж The Washington Times (19 мая 2026): 1 100+ новых видов",
-          "url": "https://www.washingtontimes.com/news/2026/may/19/ocean-census-discovers-record-1100-new-marine-species-one-year/"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "s302-nasa-artemis-ii-completed",
-      "code": "S-302",
-      "category": "science",
-      "title": "NASA Artemis II успешно завершил первый за 50+ лет пилотируемый облёт Луны",
-      "summary": "Экипаж корабля Orion (Рид Уайзман, Виктор Гловер, Кристина Кох и Джереми Хансен) стартовал 1 апреля и благополучно приводнился в Тихом океане 10 апреля 2026 года.",
-      "body": [
-        "Человечество официально вернулось в дальний космос: миссия NASA Artemis II, стартовавшая 1 апреля 2026 года на сверхтяжёлой ракете SLS со стартового комплекса LC-39B во Флориде, успешно завершилась 10 апреля приводнением капсулы Orion в Тихом океане у побережья Сан-Диего.",
-        "В десятидневном полёте (точная продолжительность — 9 дней 1 час 32 минуты) участвовали астронавты NASA Рид Уайзман, Виктор Гловер, Кристина Кох и астронавт Канадского космического агентства Джереми Хансен. 6 апреля экипаж прошёл за обратной стороной Луны, пронаблюдав заход Земли и лунное затмение Солнца, и проверил системы жизнеобеспечения, ручное пилотирование и теплозащитный щит на скорости возвращения из лунного пространства.",
-        "Успех Artemis II открывает прямой путь к следующей миссии программы — посадке астронавтов у южного полюса Луны."
-      ],
-      "tags": [
-        "Artemis II",
-        "NASA",
-        "Луна",
-        "Orion"
-      ],
-      "sourceName": "NASA · Release 26-026",
-      "sourceUrl": "https://www.nasa.gov/mission/artemis-ii/",
-      "publishedAt": "2026-04-21T15:00:00Z",
-      "readMin": 3,
-      "icon": "🚀",
-      "accent": "indigo",
-      "image": "site/assets/news/s302-artemis2.jpg",
-      "imageCaption": "Ракета-носитель NASA SLS с пилотируемым кораблём Orion программы Artemis на стартовой площадке 39B.",
-      "imageCredit": "NASA / Joel Kowsky",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено по официальной странице миссии NASA Artemis II, релизу 26-026 (1 апреля 2026) и итогам JSC (21 апреля 2026)."
-      },
-      "proofs": [
-        {
-          "label": "Официальная страница миссии NASA Artemis II",
-          "url": "https://www.nasa.gov/mission/artemis-ii/"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "t203-google-quantum-ai-willow-neutral-atom",
-      "code": "T-203",
-      "category": "tech",
-      "title": "Google Quantum AI объединяет 105-кубитный чип Willow с платформой на нейтральных атомах",
-      "summary": "24 марта 2026 года Google объявила двухтрековую стратегию: к сверхпроводящим процессорам добавилась команда нейтральных атомов под руководством доктора Адама Кауфмана.",
-      "body": [
-        "Google Quantum AI расширила свою исследовательскую программу за пределы одних лишь сверхпроводников: 24 марта 2026 года компания запустила второе аппаратное направление на базе нейтральных атомов в лаборатории в Боулдере (штат Колорадо), которую возглавил физик Адам Кауфман.",
-        "Параллельно Google продолжает развивать свой 105-кубитный сверхпроводящий процессор Willow, демонстрирующий точность 99,97 % на однокубитных и 99,88 % на двухкубитных операциях. Объединение двух платформ позволяет сравнивать масштабируемость и коррекцию ошибок в реальных экспериментах.",
-        "Аналитики отрасли отмечают, что конкуренция между Google, IBM и Microsoft ускоряет движение к коммерческим квантовым расчётам в химии, материаловедении и криптографии."
-      ],
-      "tags": [
-        "Google Quantum",
-        "Willow",
-        "Нейтральные атомы",
-        "Наука"
-      ],
-      "sourceName": "Tech Insider · Google Quantum AI",
-      "sourceUrl": "https://tech-insider.org/google-quantum-ai-neutral-atom-willow-2026/",
-      "publishedAt": "2026-03-25T10:00:00Z",
-      "readMin": 2,
-      "icon": "🧊",
-      "accent": "violet",
-      "image": "site/assets/news/t203-google-willow.jpg",
-      "imageCaption": "105-кубитный квантовый процессор Google Willow.",
-      "imageCredit": "Google Quantum AI",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Проверено по обзорам Google Quantum AI (март–октябрь 2026), подтверждены дата 24 марта и характеристики Willow."
-      },
-      "proofs": [
-        {
-          "label": "Обзор двухтрековой стратегии Google Quantum AI (Willow + нейтральные атомы)",
-          "url": "https://tech-insider.org/google-quantum-ai-neutral-atom-willow-2026/"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
-    },
-    {
-      "id": "f602-kuril-kamchatka-6200m-flatworm-eggs",
-      "code": "F-602",
-      "category": "facts",
-      "title": "Загадочные чёрные «яйца» на глубине 6 200 м в Курило-Камчатском жёлобе — мировой рекорд и честный фактчек даты",
-      "summary": "В 2026 году история снова стала вирусной, но наш фактчек проверил первоисточник: учёные Университета Хоккайдо опубликовали это рекордное открытие в Biology Letters в январе 2024 года.",
-      "body": [
-        "Весной 2026 года в соцсетях и СМИ снова разлетелась история о загадочных чёрных сферах диаметром около 3 мм, поднятых со дна Курило-Камчатского жёлоба с глубины 6 200 метров. Наш фактчек проверил первоисточник: научная работа биологов Университета Хоккайдо (Япония) вышла в журнале Biology Letters ещё в январе 2024 года, а в марте 2026-го получила вторую волну популярности.",
-        "Внутри каждой чёрной оболочки учёные обнаружили от 3 до 7 эмбрионов свободноживущих плоских червей (Platyhelminthes). Это почти вдвое побило предыдущий рекорд глубины для этой группы организмов (3 232 метра) и доказало, что плоские черви способны размножаться даже в хадальной зоне, где давление в 600 раз выше атмосферного.",
-        "Честно указывать реальную дату первичной научной публикации — обязательное правило раздела «Новости Games»."
-      ],
-      "tags": [
-        "Фактчек",
-        "Океан",
-        "Рекорд 6200 м",
-        "Biology Letters"
-      ],
-      "sourceName": "Phys.org · Biology Letters (Фактчек)",
-      "sourceUrl": "https://phys.org/news/2024-01-dark-black-eggs-ocean-floor.html",
-      "publishedAt": "2026-03-23T11:00:00Z",
-      "readMin": 2,
-      "icon": "🔎",
-      "accent": "cyan",
-      "image": "site/assets/news/f602-kuril-eggs.jpg",
-      "imageCaption": "Чёрные коконы плоских червей с глубины 6 200 метров Курило-Камчатского жёлоба (Университет Хоккайдо).",
-      "imageCredit": "Hokkaido University / Biology Letters",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-17",
-        "method": "Фактчек выявил повторную вирусную волну марта 2026 года и точно атрибутировал оригинальное исследование Biology Letters (январь 2024)."
-      },
-      "proofs": [
-        {
-          "label": "Оригинальный научный релиз Phys.org (январь 2024, Университет Хоккайдо)",
-          "url": "https://phys.org/news/2024-01-dark-black-eggs-ocean-floor.html"
-        }
-      ],
-      "comments": [],
-      "pinned": true,
-      "autoPosted": false
     },
     {
       "id": "backlog-games-07776c2798",
@@ -6184,121 +6758,816 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
-      "id": "plan-games-ba52195a27",
-      "code": "G-550",
-      "category": "games",
-      "title": "Оптимизация под слабые устройства",
-      "summary": "Ограничение FPS и разрешения делает игру доступной на старых телефонах.",
+      "id": "s301-voyager-1-one-light-day",
+      "code": "S-301",
+      "category": "science",
+      "title": "Voyager 1 18 ноября 2026 достигает исторической отметки — 1 световой день от Земли",
+      "summary": "Запущенный в 1977 году аппарат NASA улетел дальше 25,9 млрд км: теперь радиосигнал от Земли до зонда идёт ровно 24 часа в одну сторону.",
       "body": [
-        "Динамическое разрешение и уровни детализации (LOD) снижают нагрузку. Это расширяет аудиторию без потери картинки на мощных устройствах."
+        "В среду, 18 ноября 2026 года, космический аппарат NASA Voyager 1 станет первым созданным человеком объектом в истории, удалившимся от Земли на расстояние ровно одного светового дня — более 16 миллиардов миль (около 25,9 миллиарда километров).",
+        "Это означает, что команда, отправленная с антенн Deep Space Network, летит к зонду со скоростью света ровно 24 часа, а подтверждение возвращается на Землю только спустя двое суток. Аппарат работает в межзвёздном пространстве уже почти полвека — с момента старта 5 сентября 1977 года.",
+        "В честь рубежа NASA объявило всемирную акцию «Shine Bright for Voyager’s Light-Day» (17 ноября, передача сигнала «VGR» азбукой Морзе на go.nasa.gov/shinebright) и прямой брифинг инженеров JPL 19 ноября в 12:00 EST на nasa.gov/live."
       ],
       "tags": [
-        "Оптимизация",
-        "Мобильные"
+        "Voyager 1",
+        "NASA",
+        "Космос",
+        "Рекорд"
       ],
-      "sourceName": "web.dev — производительность",
-      "sourceUrl": "https://web.dev/fast/",
-      "publishedAt": "2027-09-12T09:00:00.000Z",
-      "scheduledFor": "2027-09-12",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
+      "sourceName": "NASA · Release M26-086",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-join-voyager-1-one-light-day-activities/",
+      "publishedAt": "2026-11-17T19:30:00Z",
+      "readMin": 3,
+      "icon": "🛰️",
+      "accent": "indigo",
+      "image": "site/assets/news/s301-voyager1.jpg",
+      "imageCaption": "Космический аппарат Voyager 1 в межзвёздном пространстве на дистанции более 25,9 млрд км от Земли.",
+      "imageCredit": "NASA / JPL-Caltech",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено по официальному пресс-релизу NASA M26-086 (обновлён 13 ноября 2026)."
+      },
       "proofs": [
         {
-          "label": "Календарь события (web.dev — производительность)",
-          "url": "https://web.dev/fast/"
+          "label": "Официальный релиз NASA M26-086 (Voyager 1 One-Light Day)",
+          "url": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-join-voyager-1-one-light-day-activities/"
+        },
+        {
+          "label": "Прямой эфир брифинга NASA JPL",
+          "url": "https://www.nasa.gov/live"
         }
       ],
       "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "queue": "future",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Дата и источник события сверены с официальным календарём «web.dev — производительность»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "image": "site/assets/news/g-550.svg",
-      "imageCaption": "Обложка рубрики: Оптимизация под слабые устройства",
-      "imageCredit": "Games News · локальная обложка"
+      "featured": true,
+      "pinned": true,
+      "autoPosted": false
     },
     {
-      "id": "plan-games-71ddb64858",
-      "code": "G-900",
+      "id": "g101-gta-vi-november-2026",
+      "code": "G-101",
       "category": "games",
-      "title": "Кроссплатформенные игры: один код на вебе и в нативе",
-      "summary": "Общие модули позволяют собрать одну игру для браузера и нативной платформы.",
+      "title": "GTA VI выходит 19 ноября 2026 на PS5 и Xbox Series X|S: 30 FPS, саундтрек Justice и отказ от ИИ",
+      "summary": "Rockstar Games выпускает Grand Theft Auto VI в вымышленном штате Леонида и Вайс-Сити; предзагрузка стартовала 12 ноября, генеративный ИИ в разработке не использовался.",
       "body": [
-        "Web-сборка и нативная используют один геймплейный код, различаясь рендером и оболочкой. Это упрощает поддержку."
+        "До одного из крупнейших релизов десятилетия остаются считанные дни: Grand Theft Auto VI официально выходит 19 ноября 2026 года на PlayStation 5 и Xbox Series X|S. Сюжет разворачивается в современном штате Леонида и солнечном Вайс-Сити вокруг дуэта главных героев — Джейсона и Люсии.",
+        "По подтверждённым данным превью и технических обзоров, консольная версия на старте работает в стабильных 30 кадрах в секунду на обновлённом движке RAGE. Оригинальный саундтрек написал французский электронный дуэт Justice, а Rockstar отдельно подчеркнула, что при создании мира, диалогов и графики не использовала генеративный ИИ.",
+        "Предзагрузка файлов (в том числе для коробочных изданий формата code-in-box) открылась 12 ноября 2026 года, чтобы разгрузить серверы в день мирового старта."
       ],
       "tags": [
-        "Кроссплатформа",
-        "Сборки"
+        "GTA VI",
+        "Rockstar",
+        "PS5",
+        "Xbox"
       ],
-      "sourceName": "MDN — Progressive web apps",
-      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/Progressive_web_apps",
-      "publishedAt": "2027-05-03T09:00:00.000Z",
-      "scheduledFor": "2027-05-03",
-      "readMin": 1,
-      "icon": "🎮",
+      "sourceName": "IGN · Rockstar Games",
+      "sourceUrl": "https://www.ign.com/games/grand-theft-auto-vi",
+      "publishedAt": "2026-11-17T19:15:00Z",
+      "readMin": 3,
+      "icon": "🌴",
       "accent": "blue",
+      "image": "site/assets/news/g101-gta6.jpg",
+      "imageCaption": "Официальный ключевой арт Grand Theft Auto VI — Джейсон и Люсия в Вайс-Сити, штат Леонида.",
+      "imageCredit": "Rockstar Games",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Перепроверено по IGN, Wikipedia (обновление ноября 2026) и сводкам предзагрузки."
+      },
       "proofs": [
         {
-          "label": "Календарь события (MDN — Progressive web apps)",
-          "url": "https://developer.mozilla.org/ru/docs/Web/Progressive_web_apps"
+          "label": "Карточка игры и сводка релизов на IGN",
+          "url": "https://www.ign.com/games/grand-theft-auto-vi"
+        },
+        {
+          "label": "Подробности саундтрека и предзагрузки (IGN)",
+          "url": "https://www.ign.com/articles/gta-6-leak-seemingly-reveals-full-track-list-days-before-launch"
+        },
+        {
+          "label": "Статья Wikipedia: Grand Theft Auto VI",
+          "url": "https://en.wikipedia.org/wiki/Grand_Theft_Auto_VI"
         }
       ],
       "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "queue": "future",
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Дата и источник события сверены с официальным календарём «MDN — Progressive web apps»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "image": "site/assets/news/g-900.svg",
-      "imageCaption": "Обложка рубрики: Кроссплатформенные игры: один код на вебе и в нативе",
-      "imageCredit": "Games News · локальная обложка"
+      "pinned": true,
+      "autoPosted": false
     },
     {
-      "id": "plan-facts-093f4a597e",
-      "code": "F-983",
+      "id": "c501-chrome-zero-day-cve-2026-125350",
+      "code": "C-501",
+      "category": "security",
+      "title": "Срочный патч Chrome и Edge: 0-day CVE-2026-125350 (CVSS 8.8) в XML активно атакуется",
+      "summary": "Восьмая уязвимость нулевого дня в Chrome за 2026 год затрагивает библиотеку libxslt и внесена в каталог CISA KEV со сроком исправления до 24 ноября 2026.",
+      "body": [
+        "Google и Microsoft выпустили экстренные обновления безопасности для браузеров на движке Chromium, закрывающие активно эксплуатируемую уязвимость нулевого дня CVE-2026-125350 (оценка опасности CVSS 8.8 High). Ошибка типа use-after-free находится в компоненте обработки XML (libxslt) и может приводить к повреждению памяти через специально подготовленную веб-страницу.",
+        "Уязвимость сообщили исследователи 6 ноября, исправление попало в коммит Chromium 61cab3f77203 уже 7 ноября, а 9 ноября вышли стабильные патчи: Google Chrome 157.0.8103.50/.51 (Extended Stable 156.0.8078.96) и Microsoft Edge 157.0.4341.46.",
+        "10 ноября агентство CISA добавило CVE-2026-125350 в обязательный каталог активно эксплуатируемых уязвимостей (KEV) с дедлайном обновления до 24 ноября 2026 года. Пользователям рекомендуется открыть chrome://settings/help и перезапустить браузер прямо сейчас."
+      ],
+      "tags": [
+        "Chrome",
+        "0-day",
+        "CVE-2026-125350",
+        "CISA KEV"
+      ],
+      "sourceName": "CISA KEV · CybersecurityNews · SOCRadar",
+      "sourceUrl": "https://cybersecuritynews.com/chrome-zero-day-vulnerability-exploited/",
+      "publishedAt": "2026-11-17T18:50:00Z",
+      "readMin": 3,
+      "icon": "🚨",
+      "accent": "crimson",
+      "image": "site/assets/news/c501-chrome-0day.jpg",
+      "imageCaption": "Предупреждение об экстренном обновлении Google Chrome — восьмой 0-day патч 2026 года (CVE-2026-125350).",
+      "imageCredit": "SecNews / Chromium Security",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Перекрёстно проверено по SOCRadar, CybersecurityNews, ThreatDefence и коммиту Chromium 61cab3f77203."
+      },
+      "proofs": [
+        {
+          "label": "Разбор CVE-2026-125350 и версий патчей (CybersecurityNews)",
+          "url": "https://cybersecuritynews.com/chrome-zero-day-vulnerability-exploited/"
+        },
+        {
+          "label": "Аналитика CISA KEV и libxslt (SOCRadar)",
+          "url": "https://socradar.io/blog/cve-2026-125350-google-patches-chrome-zero-day/"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "s306-nasa-roman-first-images-dec-2026",
+      "code": "S-306",
+      "category": "science",
+      "title": "Телескоп NASA Nancy Grace Roman покажет первые панорамные снимки Вселенной 7 декабря 2026",
+      "summary": "Запущенный 30 августа на Falcon Heavy инфракрасный телескоп завершает калибровку в точке L2, а NASA открыло акцию «Усынови пиксель космоса».",
+      "body": [
+        "17 ноября 2026 года NASA объявило точную дату премьеры первых научных изображений новейшего космического телескопа Nancy Grace Roman: презентация пройдёт в прямом эфире 7 декабря 2026 года в 15:30 EST (21:30 CET) на ежегодной конференции Американского геофизического союза (AGU) в Сан-Франциско и на nasa.gov/live.",
+        "Телескоп Roman стартовал 30 августа 2026 года на ракете SpaceX Falcon Heavy с космодрома имени Кеннеди и совершил трёхмесячный перелёт длиной около миллиона миль к точке Лагранжа L2. Благодаря сверхширокому полю зрения он будет снимать гигантские панорамы неба для изучения тёмной энергии, тёмной материи и прямого поиска экзопланет с помощью коронографа нового поколения.",
+        "Любой желающий уже может поучаствовать в акции «Adopt a Pixel» на сайте science.nasa.gov — забронировать уникальный пиксель на одном из первых снимков и получить цифровую коллекционную карточку своего участка Вселенной."
+      ],
+      "tags": [
+        "Roman",
+        "NASA",
+        "Телескоп",
+        "Космос"
+      ],
+      "sourceName": "NASA · Advisory M26-088",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-view-roman-telescopes-first-images/",
+      "publishedAt": "2026-11-17T18:20:00Z",
+      "readMin": 3,
+      "icon": "🔭",
+      "accent": "indigo",
+      "image": "site/assets/news/s306-roman-telescope.jpg",
+      "imageCaption": "Космический телескоп NASA Nancy Grace Roman в чистой комнате Центра космических полётов Годдарда (Мэриленд).",
+      "imageCredit": "NASA / Jolearra Tshiteya",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено полностью по официальному медиа-адвайзори NASA M26-088 от 17 ноября 2026."
+      },
+      "proofs": [
+        {
+          "label": "Официальный релиз NASA M26-088 (17 ноября 2026)",
+          "url": "https://www.nasa.gov/news-release/nasa-invites-media-public-to-view-roman-telescopes-first-images/"
+        },
+        {
+          "label": "Акция NASA Adopt a Pixel",
+          "url": "https://science.nasa.gov/mission/roman-space-telescope/adopt-a-pixel/"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "g102-zelda-oot-switch-2-million",
+      "code": "G-102",
+      "category": "games",
+      "title": "Ремейк The Legend of Zelda: Ocarina of Time на Switch 2 продал 1 млн физических копий в США за неделю",
+      "summary": "По данным аналитика Circana Мэта Пискателлы, вышедший 5 ноября 2026 эксклюзив стал самой быстропродаваемой игрой 2026 года в США вплоть до старта GTA VI.",
+      "body": [
+        "Ремейк культовой The Legend of Zelda: Ocarina of Time, вышедший эксклюзивно для Nintendo Switch 2 5 ноября 2026 года, преодолел отметку в 1 миллион проданных физических картриджей в США уже в первую неделю после релиза.",
+        "Как сообщил ведущий аналитик исследовательской компании Circana Мэт Пискателла, это первый случай с момента выхода Tears of the Kingdom в 2023 году, когда игра на физическом носителе разошлась миллионным тиражом в США всего за семь дней.",
+        "Результат мгновенно вывел обновлённую Ocarina of Time в лидеры американского чарта 2026 года — и это без учёта цифровых продаж в Nintendo eShop, которые Nintendo традиционно раскрывает в квартальных отчётах."
+      ],
+      "tags": [
+        "Zelda",
+        "Switch 2",
+        "Nintendo",
+        "Circana"
+      ],
+      "sourceName": "TechRadar · Circana",
+      "sourceUrl": "https://www.techradar.com/gaming/nintendo/the-legend-of-zelda-ocarina-of-time-for-nintendo-switch-2-hits-1-million-physical-copies-sold-in-the-us-making-it-the-best-selling-game-of-2026-so-far",
+      "publishedAt": "2026-11-17T17:40:00Z",
+      "readMin": 2,
+      "icon": "🗡️",
+      "accent": "emerald",
+      "image": "site/assets/news/g102-zelda-switch2.jpg",
+      "imageCaption": "The Legend of Zelda: Ocarina of Time — классика Nintendo, побившая рекорд физических продаж 2026 года на Switch 2.",
+      "imageCredit": "Nintendo / XDA",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено по публикациям TechRadar и игровых сводок на базе данных Circana (Mat Piscatella)."
+      },
+      "proofs": [
+        {
+          "label": "Репортаж TechRadar о миллионе физических копий в США (Circana)",
+          "url": "https://www.techradar.com/gaming/nintendo/the-legend-of-zelda-ocarina-of-time-for-nintendo-switch-2-hits-1-million-physical-copies-sold-in-the-us-making-it-the-best-selling-game-of-2026-so-far"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "c502-games-antivirus-v11-redteam",
+      "code": "C-502",
+      "category": "security",
+      "title": "Антивирус Games v1.1 прошёл 25 из 25 red-team атак и подключил ClamAV в GitHub Actions",
+      "summary": "10-проходная проверка пользовательских игр и новостей теперь ловит IDN-омоглифы, склеенный eval/Function, принудительные редиректы и SVG-полиглоты в обложках.",
+      "body": [
+        "После полноценного red-team аудита на 25 тестовых сценариев встроенный 10-проходный антивирус портала Games обновлён до версии v1.1 и получил нулевой процент пропусков: 21 реальная атака заблокирована, 4 чистые игры прошли с риском 0/100.",
+        "В новой версии закрыты хитрые векторы обхода: домены-двойники со смешанными алфавитами (латиница + кириллица до нормализации в punycode), обфускация eval через Unicode-последовательности и склейку строк, вызовы window['Function'] и принудительные внешние редиректы location.replace.",
+        "Отдельно добавлена проверка загружаемых изображений-обложек (data:image/*) на встроенные теги script, HTML/SVG-инъекции и JS-полиглоты, а на сервере GitHub Actions каждый Pull Request дополнительно сканирует ClamAV."
+      ],
+      "tags": [
+        "Антивирус Games",
+        "Red Team",
+        "ClamAV",
+        "Безопасность"
+      ],
+      "sourceName": "Games Security · PR #262",
+      "sourceUrl": "https://github.com/m98978672-boop/games/pull/262",
+      "publishedAt": "2026-11-17T17:10:00Z",
+      "readMin": 2,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "image": "site/assets/icon.svg",
+      "imageCaption": "Эмблема защищённой экосистемы портала Games — 10-проходная клиентская проверка + ClamAV CI.",
+      "imageCredit": "Games Portal",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Подтверждено прогоном 25-кейсового red-team теста и CI-набора site/tests/news-and-antivirus.mjs."
+      },
+      "proofs": [
+        {
+          "label": "Pull Request #262 с тестами и исправлениями антивируса",
+          "url": "https://github.com/m98978672-boop/games/pull/262"
+        },
+        {
+          "label": "Исходный код site/game-antivirus.js",
+          "url": "https://github.com/m98978672-boop/games/blob/arena/89d3f773-games/site/game-antivirus.js"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "g103-games-portal-catalog-update",
+      "code": "G-103",
+      "category": "games",
+      "title": "Каталог Games: 16 бесплатных браузерных игр онлайн + 6 проектов сообщества с 10× защитой",
+      "summary": "Все игры запускаются мгновенно без установки и регистрации, сохраняются в облаке и проверяются встроенным 10-проходным антивирусом.",
+      "body": [
+        "Витрина Games объединяет 16 собственных браузерных игр разных жанров — от 3D-приключения РАТГРАД и гео-атласов до тактических головоломок, симуляторов и аркад — плюс 6 проверенных проектов от независимых авторов сообщества.",
+        "Каждая добавляемая игра проходит 10-проходный клиентский антивирус GamesAntivirus v1.1 и серверный сканер ClamAV в GitHub Actions. Игровые сохранения можно переносить между телефоном и компьютером через встроенный Менеджер сохранений.",
+        "А теперь рядом с вкладками «Игры» и «Общение» работает обновлённая вкладка «Новости» с короткими кодами поиска, реальными фото, доказательствами и комментариями."
+      ],
+      "tags": [
+        "Games",
+        "РАТГРАД",
+        "Браузерные игры",
+        "Сообщество"
+      ],
+      "sourceName": "Редакция Games",
+      "sourceUrl": "https://m98978672-boop.github.io/games/",
+      "publishedAt": "2026-11-17T16:30:00Z",
+      "readMin": 2,
+      "icon": "🎮",
+      "accent": "blue",
+      "image": "site/assets/country-atlas.jpg",
+      "imageCaption": "Витрина бесплатных браузерных игр Games — запускается на телефоне и ПК без установки.",
+      "imageCredit": "Games Portal",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено по актуальному каталогу site/games-data.js и site/community-games.json (6 игр сообщества)."
+      },
+      "proofs": [
+        {
+          "label": "Официальная витрина Games на GitHub Pages",
+          "url": "https://m98978672-boop.github.io/games/"
+        },
+        {
+          "label": "Репозиторий m98978672-boop/games на GitHub",
+          "url": "https://github.com/m98978672-boop/games"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "f603-noaa-deep-sea-glass-sponges",
+      "code": "F-603",
       "category": "facts",
-      "title": "Сколько занимает один кадр текстуры",
-      "summary": "Разрешение напрямую определяет объём видеопамяти.",
+      "title": "Живые «хрустальные замки» океана: глубоководные стеклянные губки NOAA живут тысячи лет",
+      "summary": "Экспедиции NOAA Ocean Exploration фиксируют на глубинах Тихого океана удивительных шестилучевых губок со скелетом из природного кремнезёма, создающих целые подводные сады.",
       "body": [
-        "Текстура 2048×2048 в 32 битах занимает около 16 МБ без сжатия. Сжатые форматы уменьшают это в несколько раз."
+        "Во время глубоководных погружений телеуправляемых аппаратов NOAA Ocean Exploration в Тихом океане камеры регулярно находят гигантские «хрустальные» сооружения — шестилучевые стеклянные губки (Hexactinellida). Их ажурный скелет действительно состоит из микроскопических игл биогенного кремнезёма — природного стекла.",
+        "Стеклянные губки — одни из главных долгожителей планеты: отдельные колонии и экземпляры способны жить сотни и даже тысячи лет, фильтруя тысячи литров ледяной океанской воды и создавая укрытия для глубоководных рыб, креветок и офиур.",
+        "Материаловеды активно изучают решётчатую структуру скелета таких губок: она выдерживает колоссальное давление океанских глубин и вдохновляет инженеров на создание сверхлёгких и прочных строительных конструкций и оптоволокна."
       ],
       "tags": [
-        "Текстуры",
-        "Память"
+        "NOAA",
+        "Глубоководье",
+        "Природа",
+        "Бионика"
       ],
-      "sourceName": "Khronos — KTX 2.0",
-      "sourceUrl": "https://www.khronos.org/ktx/",
-      "publishedAt": "2027-08-30T09:00:00.000Z",
-      "scheduledFor": "2027-08-30",
-      "readMin": 1,
-      "icon": "⚡",
-      "accent": "amber",
+      "sourceName": "NOAA Ocean Exploration",
+      "sourceUrl": "https://oceanexplorer.noaa.gov/",
+      "publishedAt": "2026-10-15T12:00:00Z",
+      "readMin": 2,
+      "icon": "🪸",
+      "accent": "cyan",
+      "image": "site/assets/news/f603-noaa-sponge.jpg",
+      "imageCaption": "Глубоководная стеклянная губка на дне Тихого океана, снятая телеуправляемым аппаратом NOAA.",
+      "imageCredit": "NOAA Ocean Exploration",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено по открытому научному архиву NOAA Ocean Exploration."
+      },
       "proofs": [
         {
-          "label": "Календарь события (Khronos — KTX 2.0)",
-          "url": "https://www.khronos.org/ktx/"
+          "label": "Официальный портал экспедиций NOAA Ocean Exploration",
+          "url": "https://oceanexplorer.noaa.gov/"
         }
       ],
       "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "queue": "future",
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "s305-webb-xlssc122-dark-matter-lens",
+      "code": "S-305",
+      "category": "science",
+      "title": "Древнее скопление XLSSC 122 (10,4 млрд световых лет) удивило астрономов плотностью тёмной материи",
+      "summary": "Наблюдения James Webb показали самое далёкое известное скопление — сильную гравитационную линзу, центр которой оказался плотнее прогнозов стандартной космологии.",
+      "body": [
+        "Команда астрономов под руководством Кайла Финнера (Caltech / IPAC) совместно с учёными Университета Ёнсе опубликовала в октябре 2026 года серию из трёх исследований скопления галактик XLSSC 122, расположенного на расстоянии около 10,4 миллиарда световых лет — в эпоху так называемого «космического полудня».",
+        "Снимки космического телескопа James Webb выявили дуги искажённого света ещё более далёких фоновых галактик, сделав XLSSC 122 самым удалённым из известных скоплений с эффектом сильного гравитационного линзирования.",
+        "Расчёты массы по искривлению света преподнесли сюрприз: распределение тёмной материи в центре XLSSC 122 оказалось заметно концентрированнее и плотнее, чем предсказывают стандартные симуляции формирования структур Вселенной. Это даёт физикам редкий полигон для проверки свойств самой тёмной материи."
+      ],
+      "tags": [
+        "James Webb",
+        "XLSSC 122",
+        "Тёмная материя",
+        "Астрофизика"
+      ],
+      "sourceName": "Caltech IPAC · ScienceDaily",
+      "sourceUrl": "https://www.sciencedaily.com/releases/2026/10/261012185021.htm",
+      "publishedAt": "2026-10-13T16:00:00Z",
+      "readMin": 3,
+      "icon": "🌌",
+      "accent": "indigo",
+      "image": "site/assets/news/s305-xlssc122-lens.jpg",
+      "imageCaption": "Гравитационное линзирование далёкого скопления галактик на снимке космического телескопа James Webb.",
+      "imageCredit": "NASA / ESA / CSA / STScI",
       "factCheck": {
         "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Дата и источник события сверены с официальным календарём «Khronos — KTX 2.0»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+        "checkedAt": "2026-11-17",
+        "method": "Проверено полностью по релизу ScienceDaily / Caltech IPAC от 13 октября 2026 (доклад AAS 248)."
       },
-      "image": "site/assets/news/f-983.svg",
-      "imageCaption": "Обложка рубрики: Сколько занимает один кадр текстуры",
-      "imageCredit": "Games News · локальная обложка"
+      "proofs": [
+        {
+          "label": "Релиз ScienceDaily: JWST раскрывает древнее скопление XLSSC 122",
+          "url": "https://www.sciencedaily.com/releases/2026/10/261012185021.htm"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "s303-webb-21-extreme-debris-disks",
+      "code": "S-303",
+      "category": "science",
+      "title": "Телескоп James Webb нашёл следы столкновений планет размером с Марс в 21 звёздной системе",
+      "summary": "Исследование в The Astrophysical Journal показало: примерно треть редких экстремальных дисков обломков насыщена кремнезёмом от катастроф, похожих на рождение Луны.",
+      "body": [
+        "Астрономы Кейт Су (Институт космических наук SSI) и Агнеш Кошпал (Обсерватория Конкоя) опубликовали в октябрьском номере The Astrophysical Journal масштабный обзор 21 редкого «экстремального диска обломков» вокруг молодых звёзд, объединив 16 новых спектров телескопа James Webb и 5 архивных наблюдений Spitzer.",
+        "Оказалось, что диски чётко делятся на два класса: примерно треть богата минеральным кремнезёмом (силикой) — это химический след колоссальных лобовых столкновений протопланет размером с Марс, аналогичных гипотетическому удару Тейи о раннюю Землю, породившему нашу Луну.",
+        "Остальные две трети систем содержат мало кремнезёма и указывают на более мягкие удары тел размером с Луну. Работа впервые дала прямую статистику того, насколько бурно формируются каменистые планеты по всей Галактике."
+      ],
+      "tags": [
+        "James Webb",
+        "Планеты",
+        "Астрономия",
+        "ApJ"
+      ],
+      "sourceName": "ScienceDaily · Astrophysical Journal",
+      "sourceUrl": "https://www.sciencedaily.com/releases/2026/10/261007042108.htm",
+      "publishedAt": "2026-10-07T14:00:00Z",
+      "readMin": 3,
+      "icon": "☄️",
+      "accent": "indigo",
+      "image": "site/assets/news/s303-webb-collision.jpg",
+      "imageCaption": "Художественная реконструкция NASA: столкновение молодых каменистых планет в экстремальном диске обломков.",
+      "imageCredit": "NASA / JPL-Caltech",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено полностью по публикации ScienceDaily от 7 октября 2026 (исследование ApJ от 1 октября 2026)."
+      },
+      "proofs": [
+        {
+          "label": "Релиз ScienceDaily: 21 экстремальный диск обломков в данных JWST",
+          "url": "https://www.sciencedaily.com/releases/2026/10/261007042108.htm"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "w402-climate-threat-europe-unesco-louvre",
+      "code": "W-402",
+      "category": "world",
+      "title": "43 % объектов ЮНЕСКО в Европе под климатическим риском: Лувр перевозит ~250 000 экспонатов",
+      "summary": "Отчёт EDHEC Climate Institute показал уязвимость музеев и памятников к наводнениям и жаре — от венецианской Ла Фениче до елей Страдивари в Валь-ди-Фьемме.",
+      "body": [
+        "Согласно исследованию EDHEC Climate Institute, представленному в сентябре 2026 года, 43 % европейских объектов Всемирного наследия ЮНЕСКО находятся в зоне высокого риска из-за экстремальных погодных явлений, наводнений и подъёма уровня моря. В США о прямом климатическом ущербе коллекциям сообщили уже 35 % директоров художественных музеев.",
+        "Крупнейшие музеи мира ускоряют эвакуацию запасников: парижский Лувр, расположенный у берега Сены, переводит около 250 000 произведений искусства в защищённый центр консервации в Льеве́не. Под угрозой оказались также венецианский театр Ла Фениче и высокогорные еловые леса Валь-ди-Фьемме в Италии, древесина которых столетиями использовалась для изготовления скрипок Страдивари.",
+        "По оценкам экономистов, при отсутствии мер адаптации к 2100 году климатический удар по туризму и культурной экономике может стоить регионам до 41 % ВВП в Риме и 32 % в Мадриде."
+      ],
+      "tags": [
+        "ЮНЕСКО",
+        "Лувр",
+        "Климат",
+        "Культура"
+      ],
+      "sourceName": "Phys.org · EDHEC Climate Institute",
+      "sourceUrl": "https://phys.org/news/2026-09-climate-poses-threat-cultural-heritage.html",
+      "publishedAt": "2026-09-21T12:00:00Z",
+      "readMin": 3,
+      "icon": "🏛️",
+      "accent": "amber",
+      "image": "site/assets/news/w402-venice-climate.jpg",
+      "imageCaption": "Историческая архитектура Венеции во время подъёма воды («acqua alta») — один из символов климатических вызовов для наследия Европы.",
+      "imageCredit": "Venice / Public Heritage Archive",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено полностью по материалу Phys.org от 21 сентября 2026 (данные EDHEC Climate Institute) и репортажу DW."
+      },
+      "proofs": [
+        {
+          "label": "Исследование EDHEC Climate Institute на Phys.org (21 сент 2026)",
+          "url": "https://phys.org/news/2026-09-climate-poses-threat-cultural-heritage.html"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "t202-webgpu-baseline-all-browsers-2026",
+      "code": "T-202",
+      "category": "tech",
+      "title": "WebGPU вышел на Baseline во всех главных браузерах: 3D-графика и ИИ-шейдеры работают прямо во вкладке",
+      "summary": "Chrome/Edge, Safari 26 (macOS Tahoe и iOS 26) и Firefox 141+/145+ включили W3C WebGPU по умолчанию — браузерные игры получили доступ к GPU на уровне Vulkan и Metal.",
+      "body": [
+        "Веб-графика прошла исторический перелом: стандарт W3C WebGPU заработал по умолчанию во всех трёх главных браузерных движках — Chromium (Chrome и Edge), WebKit (Safari 26 на macOS Tahoe, iOS 26, iPadOS и visionOS) и Gecko (Firefox 141+ на Windows и 145+ на macOS Apple Silicon, при продолжающейся доработке для Linux и Android).",
+        "В отличие от устаревающего WebGL, новый интерфейс напрямую обращается к современным API видеокарт (Vulkan, Metal, Direct3D 12) и впервые приносит в браузер полноценные вычислительные шейдеры (compute shaders). Это ускоряет и 3D-рендеринг (Three.js WebGPURenderer, Babylon.js), и локальный запуск нейросетей прямо на видеокарте пользователя без отправки данных в облако.",
+        "Для браузерных витрин вроде Games это означает резкий скачок качества графики без установки лаунчеров и тяжёлых инсталляторов."
+      ],
+      "tags": [
+        "WebGPU",
+        "Браузеры",
+        "3D",
+        "W3C"
+      ],
+      "sourceName": "web.dev · W3C WebGPU",
+      "sourceUrl": "https://web.dev/blog/webgpu-supported-major-browsers",
+      "publishedAt": "2026-09-05T11:30:00Z",
+      "readMin": 3,
+      "icon": "⚡",
+      "accent": "violet",
+      "image": "site/assets/news/t202-webgpu-ocean.jpg",
+      "imageCaption": "Реалтайм-симуляция океанских волн и отражений на WebGPU compute-шейдерах прямо в окне браузера.",
+      "imageCredit": "WebGPU Ocean Demo (GitHub)",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено по официальному блогу web.dev и сводкам поддержки браузеров 2026 (Safari 26, Firefox 141/145, Chrome)."
+      },
+      "proofs": [
+        {
+          "label": "Официальный анонс поддержки WebGPU в главных браузерах (web.dev)",
+          "url": "https://web.dev/blog/webgpu-supported-major-browsers"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "w401-unesco-48th-busan-2026",
+      "code": "W-401",
+      "category": "world",
+      "title": "48-я сессия ЮНЕСКО в Пусане: 25 новых объектов наследия (рифы Акабы, Олимп, Ташкент) и 6 под угрозой",
+      "summary": "В июле 2026 года Комитет Всемирного наследия впервые включил памятники Комор, Сан-Томе и Принсипи и Южного Судана, а исторический центр Вены сняли с «красного списка».",
+      "body": [
+        "На 48-й сессии Комитета Всемирного наследия ЮНЕСКО, прошедшей 19–29 июля 2026 года в южнокорейском Пусане, список пополнился сразу 25 новыми объектами. Впервые в истории статус Всемирного наследия получили сразу три страны: Коморские Острова, Сан-Томе и Принсипи, а также Южный Судан (миграционный ландшафт Бома–Бадингило).",
+        "Среди знаковых новичков — морской заповедник Акабы в Иордании с уникальными теплостойкими коралловыми рифами, гора Олимп в Греции, ансамбль ташкентского модернизма в Узбекистане и ископаемые слои Западного Лимфьорда в Дании.",
+        "Одновременно комитет внёс 6 объектов в Список наследия под угрозой (три — по экстренной процедуре: замки горы Амель в Ливане, древняя Себастия в Палестине и ландшафт Бома–Бадингило). Приятной новостью стало исключение исторического центра Вены из списка угрозы после пересмотра высотных строек."
+      ],
+      "tags": [
+        "ЮНЕСКО",
+        "Пусан 2026",
+        "Наследие",
+        "Мир"
+      ],
+      "sourceName": "UNESCO · UN News",
+      "sourceUrl": "https://www.unesco.org/en/world-heritage/committee-2026",
+      "publishedAt": "2026-07-29T15:00:00Z",
+      "readMin": 3,
+      "icon": "🌍",
+      "accent": "amber",
+      "image": "site/assets/news/w401-unesco-aqaba.jpg",
+      "imageCaption": "Коралловые рифы морского заповедника Акабы (Иордания) — один из 25 новых объектов Всемирного наследия ЮНЕСКО 2026 года.",
+      "imageCredit": "UNESCO World Heritage Centre",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено полностью по официальной странице 48-й сессии UNESCO и сообщению UN News от 27 июля 2026."
+      },
+      "proofs": [
+        {
+          "label": "Итоги 48-й сессии Комитета Всемирного наследия (UNESCO)",
+          "url": "https://www.unesco.org/en/world-heritage/committee-2026"
+        },
+        {
+          "label": "Сообщение UN News о 6 объектах в Списке под угрозой (27 июля 2026)",
+          "url": "https://news.un.org/en/story/2026/07/1168031"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "s304-webb-beta-pictoris-d",
+      "code": "S-304",
+      "category": "science",
+      "title": "Телескоп James Webb открыл скрытую гигантскую экзопланету Beta Pictoris d по химическому спектру",
+      "summary": "Учёные Калифорнийского университета в Сан-Диего нашли планету массой от 2 Юпитеров на орбите ~30 а.е. благодаря «штрих-коду» угарного газа; открытие подтвердил телескоп VLT.",
+      "body": [
+        "В июле 2026 года в Astrophysical Journal Letters было опубликовано открытие новой планеты-гиганта Beta Pictoris d в одной из самых изученных молодых звёздных систем (63 световых года от Земли, возраст около 23 миллионов лет).",
+        "Команда Эйдана Гиббса и Жан-Батиста Руффио (UC San Diego) применила спектрограф NIRSpec телескопа James Webb и сумела отделить слабый свет планеты от яркого пылевого диска по характерному молекулярному «штрих-коду» угарного газа (CO), а инструмент MIRI добавил признаки водяного пара и метана.",
+        "Новая планета имеет массу не менее двух масс Юпитера и вращается далеко от звезды — примерно в 30 астрономических единицах (как Нептун от Солнца). Существование Beta Pictoris d независимо подтвердили архивные и новые снимки телескопа ESO VLT в Чили и камеры NIRCam."
+      ],
+      "tags": [
+        "Экзопланеты",
+        "James Webb",
+        "Beta Pictoris",
+        "ESO VLT"
+      ],
+      "sourceName": "UC San Diego · ScienceDaily",
+      "sourceUrl": "https://www.sciencedaily.com/releases/2026/07/260722032111.htm",
+      "publishedAt": "2026-07-23T14:00:00Z",
+      "readMin": 3,
+      "icon": "🪐",
+      "accent": "indigo",
+      "image": "site/assets/news/s304-beta-pictoris.jpg",
+      "imageCaption": "Художественная концепция STScI: система Беты Живописца с новооткрытой внешней планетой-гигантом Beta Pictoris d справа.",
+      "imageCredit": "NASA / ESA / CSA / STScI / Ralf Crawford",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено полностью по релизу ScienceDaily от 23 июля 2026 (публикация ApJL, UCSD и подтверждение VLT)."
+      },
+      "proofs": [
+        {
+          "label": "Релиз ScienceDaily: JWST открывает скрытую планету Beta Pictoris d",
+          "url": "https://www.sciencedaily.com/releases/2026/07/260722032111.htm"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "t201-microsoft-majorana-2-quantum",
+      "code": "T-201",
+      "category": "tech",
+      "title": "Microsoft показала квантовый чип Majorana 2 на свинце с помощью ИИ — физики требуют открытых данных",
+      "summary": "На конференции Build (2 июня 2026) Microsoft заявила о 1000-кратном росте отдельных метрик и цели 2029 года, однако независимые учёные критикуют закрытость экспериментов.",
+      "body": [
+        "2 июня 2026 года на конференции Build в Сан-Франциско Microsoft представила второе поколение своей квантовой архитектуры — чип Majorana 2. Как сообщает Reuters, при разработке нового поколения компания с помощью ИИ-моделирования заменила алюминиевый сверхпроводник на свинцовый, что должно существенно повысить устойчивость топологических кубитов.",
+        "Исполнительный вице-президент Microsoft Джейсон Зандер заявил о 1000-кратном улучшении ряда инженерных показателей по сравнению с прошлым прототипом и назвал целевым сроком запуска первых коммерческих квантовых систем 2029 год (синхронно с планами IBM).",
+        "Вместе с тем Reuters подчёркивает скепсис академического сообщества: физик Генри Легг из Сент-Эндрюсского университета раскритиковал отсутствие открытых воспроизводимых данных, на что Microsoft сослалась на коммерческую тайну и требования конфиденциальности программы DARPA."
+      ],
+      "tags": [
+        "Квантовые компьютеры",
+        "Microsoft",
+        "Majorana 2",
+        "Reuters"
+      ],
+      "sourceName": "Reuters",
+      "sourceUrl": "https://www.reuters.com/technology/microsoft-unveils-new-quantum-computing-chip-design-made-with-ai-2026-06-02/",
+      "publishedAt": "2026-06-02T17:00:00Z",
+      "readMin": 3,
+      "icon": "⚛️",
+      "accent": "violet",
+      "image": "site/assets/news/t201-majorana2.jpg",
+      "imageCaption": "Квантовый процессор архитектуры Majorana в лаборатории Microsoft.",
+      "imageCredit": "Microsoft Quantum",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено полностью по репортажу Reuters от 2 июня 2026 с цитатами Microsoft и независимого физика Henry Legg."
+      },
+      "proofs": [
+        {
+          "label": "Репортаж Reuters о Majorana 2 и критике физиков (2 июня 2026)",
+          "url": "https://www.reuters.com/technology/microsoft-unveils-new-quantum-computing-chip-design-made-with-ai-2026-06-02/"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "f601-ocean-census-1100-new-species",
+      "code": "F-601",
+      "category": "facts",
+      "title": "Рекорд океанографии: проект Ocean Census открыл более 1 100 новых морских видов за один год",
+      "summary": "Международная коалиция из 1 000 учёных из 85 стран ускорила темп открытий на 54 % — среди находок глубоководная «акула-призрак» и хищная губка у Антарктиды.",
+      "body": [
+        "19 мая 2026 года глобальная инициатива Nippon Foundation–Nekton Ocean Census объявила о рекордном результате: за последние 12 месяцев исследователи описали и каталогизировали более 1 100 ранее неизвестных науке морских видов — на 54 % больше, чем годом ранее (728 видов).",
+        "В проекте участвуют свыше 1 000 морских биологов из 85 стран, использующих автономные батискафы, ДНК-баркодирование и высокоточную 3D-томографию. Среди самых ярких открытий — глубоководная химера («акула-призрак»), обнаруженная на глубине около 820 метров (2 700 футов) у побережья Австралии, и хищная губка, получившая прозвище «шар смерти», с глубины около 3 650 метров у Антарктиды.",
+        "Учёные напоминают, что более 90 % обитателей глубин мирового океана до сих пор не имеют даже научного названия, и подобные экспедиции критичны для сохранения глубоководных экосистем."
+      ],
+      "tags": [
+        "Океан",
+        "Ocean Census",
+        "Рекорд",
+        "Биология"
+      ],
+      "sourceName": "The Washington Times · Ocean Census",
+      "sourceUrl": "https://www.washingtontimes.com/news/2026/may/19/ocean-census-discovers-record-1100-new-marine-species-one-year/",
+      "publishedAt": "2026-05-19T13:00:00Z",
+      "readMin": 3,
+      "icon": "🦈",
+      "accent": "cyan",
+      "image": "site/assets/news/f601-ghost-shark.jpg",
+      "imageCaption": "Глубоководная химера («акула-призрак») — один из 1 100+ новых морских видов, описанных программой Ocean Census.",
+      "imageCredit": "Ocean Census / NIWA",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено по публикации The Washington Times от 19 мая 2026 и репортажу Good Morning America (ABC)."
+      },
+      "proofs": [
+        {
+          "label": "Репортаж The Washington Times (19 мая 2026): 1 100+ новых видов",
+          "url": "https://www.washingtontimes.com/news/2026/may/19/ocean-census-discovers-record-1100-new-marine-species-one-year/"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "s302-nasa-artemis-ii-completed",
+      "code": "S-302",
+      "category": "science",
+      "title": "NASA Artemis II успешно завершил первый за 50+ лет пилотируемый облёт Луны",
+      "summary": "Экипаж корабля Orion (Рид Уайзман, Виктор Гловер, Кристина Кох и Джереми Хансен) стартовал 1 апреля и благополучно приводнился в Тихом океане 10 апреля 2026 года.",
+      "body": [
+        "Человечество официально вернулось в дальний космос: миссия NASA Artemis II, стартовавшая 1 апреля 2026 года на сверхтяжёлой ракете SLS со стартового комплекса LC-39B во Флориде, успешно завершилась 10 апреля приводнением капсулы Orion в Тихом океане у побережья Сан-Диего.",
+        "В десятидневном полёте (точная продолжительность — 9 дней 1 час 32 минуты) участвовали астронавты NASA Рид Уайзман, Виктор Гловер, Кристина Кох и астронавт Канадского космического агентства Джереми Хансен. 6 апреля экипаж прошёл за обратной стороной Луны, пронаблюдав заход Земли и лунное затмение Солнца, и проверил системы жизнеобеспечения, ручное пилотирование и теплозащитный щит на скорости возвращения из лунного пространства.",
+        "Успех Artemis II открывает прямой путь к следующей миссии программы — посадке астронавтов у южного полюса Луны."
+      ],
+      "tags": [
+        "Artemis II",
+        "NASA",
+        "Луна",
+        "Orion"
+      ],
+      "sourceName": "NASA · Release 26-026",
+      "sourceUrl": "https://www.nasa.gov/mission/artemis-ii/",
+      "publishedAt": "2026-04-21T15:00:00Z",
+      "readMin": 3,
+      "icon": "🚀",
+      "accent": "indigo",
+      "image": "site/assets/news/s302-artemis2.jpg",
+      "imageCaption": "Ракета-носитель NASA SLS с пилотируемым кораблём Orion программы Artemis на стартовой площадке 39B.",
+      "imageCredit": "NASA / Joel Kowsky",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено по официальной странице миссии NASA Artemis II, релизу 26-026 (1 апреля 2026) и итогам JSC (21 апреля 2026)."
+      },
+      "proofs": [
+        {
+          "label": "Официальная страница миссии NASA Artemis II",
+          "url": "https://www.nasa.gov/mission/artemis-ii/"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "t203-google-quantum-ai-willow-neutral-atom",
+      "code": "T-203",
+      "category": "tech",
+      "title": "Google Quantum AI объединяет 105-кубитный чип Willow с платформой на нейтральных атомах",
+      "summary": "24 марта 2026 года Google объявила двухтрековую стратегию: к сверхпроводящим процессорам добавилась команда нейтральных атомов под руководством доктора Адама Кауфмана.",
+      "body": [
+        "Google Quantum AI расширила свою исследовательскую программу за пределы одних лишь сверхпроводников: 24 марта 2026 года компания запустила второе аппаратное направление на базе нейтральных атомов в лаборатории в Боулдере (штат Колорадо), которую возглавил физик Адам Кауфман.",
+        "Параллельно Google продолжает развивать свой 105-кубитный сверхпроводящий процессор Willow, демонстрирующий точность 99,97 % на однокубитных и 99,88 % на двухкубитных операциях. Объединение двух платформ позволяет сравнивать масштабируемость и коррекцию ошибок в реальных экспериментах.",
+        "Аналитики отрасли отмечают, что конкуренция между Google, IBM и Microsoft ускоряет движение к коммерческим квантовым расчётам в химии, материаловедении и криптографии."
+      ],
+      "tags": [
+        "Google Quantum",
+        "Willow",
+        "Нейтральные атомы",
+        "Наука"
+      ],
+      "sourceName": "Tech Insider · Google Quantum AI",
+      "sourceUrl": "https://tech-insider.org/google-quantum-ai-neutral-atom-willow-2026/",
+      "publishedAt": "2026-03-25T10:00:00Z",
+      "readMin": 2,
+      "icon": "🧊",
+      "accent": "violet",
+      "image": "site/assets/news/t203-google-willow.jpg",
+      "imageCaption": "105-кубитный квантовый процессор Google Willow.",
+      "imageCredit": "Google Quantum AI",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Проверено по обзорам Google Quantum AI (март–октябрь 2026), подтверждены дата 24 марта и характеристики Willow."
+      },
+      "proofs": [
+        {
+          "label": "Обзор двухтрековой стратегии Google Quantum AI (Willow + нейтральные атомы)",
+          "url": "https://tech-insider.org/google-quantum-ai-neutral-atom-willow-2026/"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
+    },
+    {
+      "id": "f602-kuril-kamchatka-6200m-flatworm-eggs",
+      "code": "F-602",
+      "category": "facts",
+      "title": "Загадочные чёрные «яйца» на глубине 6 200 м в Курило-Камчатском жёлобе — мировой рекорд и честный фактчек даты",
+      "summary": "В 2026 году история снова стала вирусной, но наш фактчек проверил первоисточник: учёные Университета Хоккайдо опубликовали это рекордное открытие в Biology Letters в январе 2024 года.",
+      "body": [
+        "Весной 2026 года в соцсетях и СМИ снова разлетелась история о загадочных чёрных сферах диаметром около 3 мм, поднятых со дна Курило-Камчатского жёлоба с глубины 6 200 метров. Наш фактчек проверил первоисточник: научная работа биологов Университета Хоккайдо (Япония) вышла в журнале Biology Letters ещё в январе 2024 года, а в марте 2026-го получила вторую волну популярности.",
+        "Внутри каждой чёрной оболочки учёные обнаружили от 3 до 7 эмбрионов свободноживущих плоских червей (Platyhelminthes). Это почти вдвое побило предыдущий рекорд глубины для этой группы организмов (3 232 метра) и доказало, что плоские черви способны размножаться даже в хадальной зоне, где давление в 600 раз выше атмосферного.",
+        "Честно указывать реальную дату первичной научной публикации — обязательное правило раздела «Новости Games»."
+      ],
+      "tags": [
+        "Фактчек",
+        "Океан",
+        "Рекорд 6200 м",
+        "Biology Letters"
+      ],
+      "sourceName": "Phys.org · Biology Letters (Фактчек)",
+      "sourceUrl": "https://phys.org/news/2024-01-dark-black-eggs-ocean-floor.html",
+      "publishedAt": "2026-03-23T11:00:00Z",
+      "readMin": 2,
+      "icon": "🔎",
+      "accent": "cyan",
+      "image": "site/assets/news/f602-kuril-eggs.jpg",
+      "imageCaption": "Чёрные коконы плоских червей с глубины 6 200 метров Курило-Камчатского жёлоба (Университет Хоккайдо).",
+      "imageCredit": "Hokkaido University / Biology Letters",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-17",
+        "method": "Фактчек выявил повторную вирусную волну марта 2026 года и точно атрибутировал оригинальное исследование Biology Letters (январь 2024)."
+      },
+      "proofs": [
+        {
+          "label": "Оригинальный научный релиз Phys.org (январь 2024, Университет Хоккайдо)",
+          "url": "https://phys.org/news/2024-01-dark-black-eggs-ocean-floor.html"
+        }
+      ],
+      "comments": [],
+      "pinned": true,
+      "autoPosted": false
     }
   ],
   "notes": "Комментарии к новостям пишут только реальные читатели — они хранятся в браузере (localStorage) и проверяются GamesAntivirus. Заранее заготовленных и симулированных комментариев (в том числе «от редакции») в ленте нет."

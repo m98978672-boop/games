@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';import {motionWallSweepFree} from '../src/sim/motion_wall_sweep.js';
-const cfg=await loadConfig();assert.equal(cfg.flag('motion_wall_exact_v1',false),false);
+const cfg=await loadConfig();assert.equal(cfg.flag('motion_wall_exact_v1',false),true);assert.equal(cfg.flag('motion_wall_sweep_v1',false),true);
 const g=new Game({cfg,seed:1,aiVsAi:true});let state=12345;const rand=()=>((state=Math.imul(state,1664525)+1013904223>>>0)/4294967296);
 const b=g.world.buildings.find(b=>b.type==='hq'&&b.faction===0),st=g.walls.state(b),door=st.outline.openings.find(o=>o.type==='door');
 // Vehicle / infantry, closed and open doors; exact cannot miss densely sampled geometry.

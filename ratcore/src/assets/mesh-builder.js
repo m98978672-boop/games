@@ -58,6 +58,18 @@ function finalizeGeometry(posArr, idxArr, uvArr = null, colorHex = '#88b4d8') {
   };
 }
 
+// Indexed authoring recipe for externally sourced, preprocessed meshes.
+export function buildIndexedGeometry({positions, indices, color} = {}) {
+  const array = (a) => Array.isArray(a) || ArrayBuffer.isView(a) && !(a instanceof DataView);
+  if (!array(positions) || !array(indices) || positions.length < 9 || positions.length % 3 ||
+      indices.length < 3 || indices.length % 3 || positions.length > 450000 || indices.length > 150000 ||
+      !positions.every(v => Number.isFinite(v) && Math.abs(v) <= 10000) ||
+      !indices.every(i => Number.isInteger(i) && i >= 0 && i < positions.length / 3)) {
+    throw new RatCoreError('RC-201', 'Некорректная индексированная геометрия', 'Проверь вершины и треугольники.');
+  }
+  return finalizeGeometry(positions, indices, null, color);
+}
+
 // 1. Примитивы: box, cylinder, cone, roof, sphere (поддерживает и sx/sy/sz/kind, и w/h/d/r/shape)
 export function buildPrimitiveGeometry(opts = {}) {
   const kind = opts.kind || opts.shape || 'box';

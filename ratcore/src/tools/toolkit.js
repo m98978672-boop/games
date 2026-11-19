@@ -19,6 +19,7 @@ import { WorldGraph, generateWorldMap } from '../world/graph.js';
 import { synthesizeTextureData } from '../assets/textures.js';
 import {
   buildPrimitiveGeometry,
+  buildIndexedGeometry,
   buildExtrudeGeometry,
   buildLatheGeometry,
   buildVoxelsGreedyGeometry,
@@ -292,6 +293,7 @@ export function createRatCoreEngine(config = {}) {
         const builtParts = [];
         for (const step of ops) {
           if (step.tool === 'build.primitive') builtParts.push({ ...buildPrimitiveGeometry(step.args), offset: step.offset || [0, step.args?.y || 0, 0] });
+          else if (step.tool === 'build.indexed') builtParts.push({ ...buildIndexedGeometry(step.args), offset: step.offset || [0, 0, 0] });
           else if (step.tool === 'build.extrude') builtParts.push({ ...buildExtrudeGeometry(step.args), offset: step.offset || [0, 0, 0] });
           else if (step.tool === 'build.lathe') builtParts.push({ ...buildLatheGeometry(step.args), offset: step.offset || [0, 0, 0] });
           else if (step.tool === 'build.voxels') builtParts.push({ ...buildVoxelsGreedyGeometry(step.args), offset: step.offset || [0, 0, 0] });
@@ -300,7 +302,7 @@ export function createRatCoreEngine(config = {}) {
             const vox = parsed.cells.map((c) => ({ x: Math.round(c.x), y: c.k, z: Math.round(-c.y), mat: 1 }));
             builtParts.push({ ...buildVoxelsGreedyGeometry({ voxels: vox }), offset: step.offset || [0, 0, 0] });
           } else {
-            throw new RatCoreError('RC-104', `Неизвестная операция рецепта: ${step.tool}`, 'Допустимы build.primitive, build.extrude, build.lathe, build.voxels, build.layer.');
+            throw new RatCoreError('RC-104', `Неизвестная операция рецепта: ${step.tool}`, 'Допустимы build.primitive, build.indexed, build.extrude, build.lathe, build.voxels, build.layer.');
           }
         }
         const geom = builtParts.length === 1 ? builtParts[0] : combineGeometries(builtParts, args.color || '#88b4d8');

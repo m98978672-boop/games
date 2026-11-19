@@ -4,7 +4,8 @@ import { Game } from '../src/sim/game.js';
 import { moveAlongFlow } from '../src/sim/units.js';
 import { obstacleAhead, updateSmartRoute } from '../src/sim/smart_route.js';
 const cfg=await loadConfig();
-assert.equal(cfg.flag('bot_obstacle_vision_v1',false),false,'experimental sensor must be off by default');
+assert.equal(cfg.flag('bot_obstacle_vision_v1',false),true,'obstacle sensing is enabled for ordinary play');
+cfg.flags.bot_obstacle_vision_v1=false; // exercise the explicit fallback below
 const g=new Game({cfg,seed:5,aiVsAi:true});g.units.clear();g.unitGrid.clear();
 let wall=false, terrain=false;
 g.world={W:1024,H:1024,navVersion:1,isBaseWalkable:(x,y)=>x>0&&y>0&&x<1024&&y<1024&&!(terrain&&x>=210&&x<=230),

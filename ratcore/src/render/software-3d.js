@@ -49,7 +49,7 @@ export class Software3DRenderer {
       if (!ent || !ent.mesh) continue;
       // Жёсткая проверка ToolGuard — сырой меш мгновенно выбросит RC-101!
       const meshEntry = vault.readSealedMesh(ent.mesh, 'Software3DRenderer');
-      const { positions, indices, colors } = meshEntry.buffers;
+      const { positions, indices, colors, normals } = meshEntry.buffers;
       const objNumericId = ent.numericId || (eIdx + 1);
       const [ox, oy, oz] = worldToScene(ent.x || 0, ent.y || 0, ent.h || 0);
       const scale = ent.scale || 1;
@@ -71,6 +71,12 @@ export class Software3DRenderer {
         return { w: [wx, wy, wz], cx, cy, cz };
       };
 
+      const vertexShade = camera.mode === 'smooth' && normals ? new Float32Array(positions.length / 3) : null;
+      if (vertexShade) for (let i = 0; i < vertexShade.length; i++) {
+        const [x,y,z] = normals.subarray(i*3,i*3+3);
+        const light = vec3Dot([x*cosY-z*sinY,y,x*sinY+z*cosY],this.sunDir);
+        vertexShade[i] = 0.52 + 0.48 * Math.max(0,light);
+      }
       for (let t = 0; t < indices.length; t += 3) {
         const i0 = indices[t], i1 = indices[t + 1], i2 = indices[t + 2];
         const v0 = transform(i0);
@@ -93,7 +99,7 @@ export class Software3DRenderer {
         const [br, bg, bb] = unpackRGBA(baseCol);
         const shaded = packRGBA((br * shade) | 0, (bg * shade) | 0, (bb * shade) | 0, 255);
 
-        this._rasterTri(p0, p1, p2, shaded, objNumericId);
+        this._rasterTri(p0, p1, p2, shaded, objNumericId, vertexShade && [br,bg,bb,vertexShade[i0],vertexShade[i1],vertexShade[i2]]);
         drawnTris++;
       }
     }
@@ -109,7 +115,7 @@ export class Software3DRenderer {
     };
   }
 
-  _rasterTri(p0, p1, p2, color, objectId) {
+  _rasterTri(p0, p1, p2, color, objectId, lighting) {
     const minX = Math.max(0, Math.floor(Math.min(p0[0], p1[0], p2[0])));
     const maxX = Math.min(this.width - 1, Math.ceil(Math.max(p0[0], p1[0], p2[0])));
     const minY = Math.max(0, Math.floor(Math.min(p0[1], p1[1], p2[1])));
@@ -132,7 +138,8 @@ export class Software3DRenderer {
         const idx = y * this.width + x;
         if (z < this.zBuffer[idx]) {
           this.zBuffer[idx] = z;
-          this.surface.pixels[idx] = color;
+          const shade = lighting && (w0*lighting[3]+w1*lighting[4]+w2*lighting[5]);
+          this.surface.pixels[idx] = lighting ? packRGBA(lighting[0]*shade,lighting[1]*shade,lighting[2]*shade,255) : color;
           this.objectIdBuffer[idx] = objectId;
         }
       }

@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createEngine} from '../ratcore/ratcore.js';
+import {createAvatarEngine} from './avatar-engine.mjs';
+const core=createEngine({preset:'balanced'});
+const rejected=core.tools.build.fromRecipe({ops:[{tool:'build.indexed',args:{positions:[0,0,0,1,0,0,1,1,0],indices:[0,1,3]}}]});
+assert.equal(rejected.ok,false);
+const source=JSON.parse(readFileSync(new URL('./assets/avatar.json',import.meta.url)));
+const avatar=createAvatarEngine(core,source);
+const render=()=>{const f=avatar.capture(240,280);assert.ok(f.drawnTris>0);assert.ok(f.nonEmptyRatio>0.035);return Array.from(f.pixels);};
+const front=render();avatar.setAngle(180);assert.notDeepEqual(render(),front);
+avatar.setAngle(0);avatar.setOutfit('skirt');assert.notDeepEqual(render(),front);
+avatar.setOutfit('trousers');assert.deepEqual(render(),front);
+const joints=Array.from({length:8},()=>({angle:0}));joints[1].angle=-70;
+avatar.setMotion('wave',joints);assert.notDeepEqual(render(),front);
+avatar.setMotion('rest',joints);assert.deepEqual(render(),front);
+console.log('ИИнга: импорт, поворот, смена одежды, жест и остановка проверены');
