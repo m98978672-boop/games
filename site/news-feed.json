@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-19T04:52:35.570Z",
+  "updatedAt": "2026-11-19T14:51:21.242Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
-    "lastRunAt": "2026-11-19T04:52:35.570Z",
+    "lastRunAt": "2026-11-19T14:51:21.242Z",
     "sourcesCount": 11,
     "verifiedArticlesCount": 19,
     "commentSyncTools": [
@@ -19,8 +19,8 @@
     ],
     "mode": "verified-editorial+auto-rss",
     "workflow": ".github/workflows/auto-news.yml",
-    "totalRuns": 4,
-    "lastSourcesReachable": 11,
+    "totalRuns": 5,
+    "lastSourcesReachable": 10,
     "categoriesCount": 6,
     "backlog": {
       "total": 100,
@@ -2292,6 +2292,1313 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
+      "id": "auto-lenta-top-a708cff6de",
+      "code": "W-741",
+      "category": "world",
+      "title": "Защищенность самоходки «Лотос» от ядерного взрыва проверили",
+      "summary": "Защищенность самоходки «Лотос» от ядерного взрыва проверили",
+      "body": [
+        "Защищенность самоходки «Лотос» от ядерного взрыва проверили. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Наука и техника"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/20/zaschischennost-samohodki-lotos-ot-yadernogo-vzryva-proverili/",
+      "publishedAt": "2026-11-19T14:44:48.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/20/zaschischennost-samohodki-lotos-ot-yadernogo-vzryva-proverili/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-741.svg",
+      "imageCaption": "Обложка рубрики: Защищенность самоходки «Лотос» от ядерного взрыва проверили",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-35cfb1fc49",
+      "code": "S-784",
+      "category": "science",
+      "title": "NASA Conducts Latest RS-25 Engine Test in Support of Future Artemis Missions",
+      "summary": "Preparations for Next Moonwalk Simulations Underway (and Underwater)",
+      "body": [
+        "Preparations for Next Moonwalk Simulations Underway (and Underwater)",
+        "NASA conducts a hot fire test of RS-25 engine No. 10001 on the Fred Haise Test Stand at NASA’s Stennis Space Center near Bay St. Louis, Mississippi, on Nov. 18, 2026.",
+        "NASA conducts a hot fire test of RS-25 engine No. 10001 on the Fred Haise Test Stand at NASA’s Stennis Space Center near Bay St. Louis, Mississippi, on Nov. 18, 2026.",
+        "NASA conducts a hot fire test of RS-25 engine No. 10001 on the Fred Haise Test Stand at NASA’s Stennis Space Center near Bay St. Louis, Mississippi, on Nov. 18, 2026."
+      ],
+      "tags": [
+        "RS-25",
+        "Stennis Space Center"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://www.nasa.gov/image-article/latest-rs-25-engine-test-in-support-of-future-artemis-missions/",
+      "publishedAt": "2026-11-19T14:44:39.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://www.nasa.gov/image-article/latest-rs-25-engine-test-in-support-of-future-artemis-missions/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-784.svg",
+      "imageCaption": "Обложка рубрики: NASA Conducts Latest RS-25 Engine Test in Support of Future Artemis Mi",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-609899df0a",
+      "code": "W-729",
+      "category": "world",
+      "title": "Предсказан возможный ответ России за Крымский мост",
+      "summary": "Предсказан возможный ответ России за Крымский мост",
+      "body": [
+        "Предсказан возможный ответ России за Крымский мост. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Бывший СССР"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/19/stalo-izvestno-o-vozmozhnom-otvete-rossii-za-krymskiy-most/",
+      "publishedAt": "2026-11-19T14:42:18.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/19/stalo-izvestno-o-vozmozhnom-otvete-rossii-za-krymskiy-most/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-729.svg",
+      "imageCaption": "Обложка рубрики: Предсказан возможный ответ России за Крымский мост",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-194bc09886",
+      "code": "C-923",
+      "category": "security",
+      "title": "Разбудили всю страну, чтобы поймать 22 школьника. В Южной Корее устроили самый громкий античит в истории",
+      "summary": "Общенациональную систему предупреждения об опасности впервые использовали для поиска цифровых шпаргалок.",
+      "body": [
+        "Общенациональную систему предупреждения об опасности впервые использовали для поиска цифровых шпаргалок."
+      ],
+      "tags": [
+        "Технологии/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580345.php",
+      "publishedAt": "2026-11-19T14:40:08.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580345.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-923.svg",
+      "imageCaption": "Обложка рубрики: Разбудили всю страну, чтобы поймать 22 школьника. В Южной Корее устрои",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-544aa0c1c6",
+      "code": "W-803",
+      "category": "world",
+      "title": "Туск исключил консультации с Россией по европейскому аспекту переговоров",
+      "summary": "Туск исключил консультации с Россией по европейскому аспекту переговоров",
+      "body": [
+        "Туск исключил консультации с Россией по европейскому аспекту переговоров. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Мир"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/19/tusk-isklyuchil-konsultatsii-s-rossiey-po-evropeyskomu-aspektu-peregovorov/",
+      "publishedAt": "2026-11-19T14:40:07.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/19/tusk-isklyuchil-konsultatsii-s-rossiey-po-evropeyskomu-aspektu-peregovorov/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-803.svg",
+      "imageCaption": "Обложка рубрики: Туск исключил консультации с Россией по европейскому аспекту переговор",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-044b4240bc",
+      "code": "T-941",
+      "category": "tech",
+      "title": "Как IT-стартап накапливает PR-долг и обещает рынку больше, чем может показать продукт",
+      "summary": "На лендинге написано «готово для крупного бизнеса». В документации нет ограничений по нагрузке. В кейсе обещан рост конверсии, но не объяснено, при каких условиях он получен. Через несколько месяцев команда удивляется, п",
+      "body": [
+        "На лендинге написано «готово для крупного бизнеса». В документации нет ограничений по нагрузке. В кейсе обещан рост конверсии, но не объяснено, при каких условиях он получен. Через несколько месяцев команда удивляется, почему покупатели спрашивают про SLA, безопасность и поддержку. Компания при этом могла ни разу не соврать. Чаще она просто создала разрыв между обещанием, объяснением и доказательством. Я называю его PR-долгом. Он возникает, когда компания обещает рынку больше, чем может подтвердить публичными материалами: продуктом, документацией, кейсам"
+      ],
+      "tags": [
+        "пиар",
+        "раунд",
+        "стартап",
+        "пиар в ит"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1109976/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109976",
+      "publishedAt": "2026-11-19T14:34:57.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1109976/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109976"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-941.svg",
+      "imageCaption": "Обложка рубрики: Как IT-стартап накапливает PR-долг и обещает рынку больше, чем может п",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-90db627b4c",
+      "code": "W-997",
+      "category": "world",
+      "title": "Атаки на Крымский мост, компромиссы по Украине и «новая Ялта». Путин выступил с речью после исторического саммита с Трампом и Си",
+      "summary": "Атаки на Крымский мост, компромиссы по Украине и «новая Ялта». Путин выступил с речью после исторического саммита с Трампом и Си",
+      "body": [
+        "Атаки на Крымский мост, компромиссы по Украине и «новая Ялта». Путин выступил с речью после исторического саммита с Трампом и Си. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Мир"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/19/long-ataki-na-krymskiy-most-kompromissy-po-ukraine-i-novaya-yalta-putin-vystupil-s-rechyu-posle-istoricheskogo-sammita-s-trampom-i-si/",
+      "publishedAt": "2026-11-19T14:33:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/19/long-ataki-na-krymskiy-most-kompromissy-po-ukraine-i-novaya-yalta-putin-vystupil-s-rechyu-posle-istoricheskogo-sammita-s-trampom-i-si/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-997.svg",
+      "imageCaption": "Обложка рубрики: Атаки на Крымский мост, компромиссы по Украине и «новая Ялта». Путин в",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-956dc30927",
+      "code": "T-775",
+      "category": "tech",
+      "title": "1С-Битрикс выпустил bx-nginx 1.30.7 в ответ на новое раскрытие уязвимостей веб-сервера nginx",
+      "summary": "18 ноября 2026 года разработчики nginx опубликовали исправления безопасности. Среди них – исправление CVE-2026-123007. На сервере с включенным HTTP/2 эта уязвимость может позволить удаленному атакующему без авторизации в",
+      "body": [
+        "18 ноября 2026 года разработчики nginx опубликовали исправления безопасности. Среди них – исправление CVE-2026-123007. На сервере с включенным HTTP/2 эта уязвимость может позволить удаленному атакующему без авторизации выполнить код с правами рабочего процесса nginx.",
+        "Мы выпустили обновление безопасности для пакета bx-nginx, который используется в серверном окружении коробочного Битрикс24 и сайтов на «1С-Битрикс: Управление сайтом». Исправленная сборка – 1.30.7. Рекомендуем установить ее в первую очередь на серверы, доступные из интернета."
+      ],
+      "tags": [
+        "информационная безопасност",
+        "битрикс",
+        "nginx",
+        "уязвимость"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1109970/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109970",
+      "publishedAt": "2026-11-19T14:32:21.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1109970/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109970"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-775.svg",
+      "imageCaption": "Обложка рубрики: 1С-Битрикс выпустил bx-nginx 1.30.7 в ответ на новое раскрытие уязвимо",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-aa54e085f0",
+      "code": "S-756",
+      "category": "science",
+      "title": "NASA’s Voyager 1 Makes History Reaching One Light-Day From Earth",
+      "summary": "Voyager 1, depicted in this artist’s concept, reached one light-day from Earth on Nov. 18, 2026.",
+      "body": [
+        "Voyager 1, depicted in this artist’s concept, reached one light-day from Earth on Nov. 18, 2026.",
+        "Credit: NASA/JPL-Caltech",
+        "NASA’s Voyager 1 probe, humanity’s farthest-flying spacecraft, has reached one light-day from Earth, after more than 49 years of constant travel. A light-day is the distance light travels in 24 hours, equaling about 16.1 billion miles (25.9 billion kilometers). The spacecraft achieved the milestone at 2:16 a.m. PST (5:16 a.m. EST) Nov. 18.",
+        "Voyager team members at NASA’s Jet Propulsion Laboratory in Southern California, managed by Caltech, heard from the probe 24 hours later, the time it took for the spacecraft’s radio signal traveling at the speed of light to reach Earth, early Thursday."
+      ],
+      "tags": [
+        "Voyager 1",
+        "Heliophysics",
+        "Heliophysics Division",
+        "Jet Propulsion Laboratory"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://www.nasa.gov/news-release/nasas-voyager-1-makes-history-reaching-one-light-day-from-earth/",
+      "publishedAt": "2026-11-19T14:31:15.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://www.nasa.gov/news-release/nasas-voyager-1-makes-history-reaching-one-light-day-from-earth/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-756.svg",
+      "imageCaption": "Обложка рубрики: NASA’s Voyager 1 Makes History Reaching One Light-Day From Earth",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-e235a931aa",
+      "code": "T-931",
+      "category": "tech",
+      "title": "Бот, который ищет учеников для репетиторов: архитектура за 1187 ₽ в месяц",
+      "summary": "Я сделал бота, который находит в соцсетях сообщения вида «посоветуйте репетитора по химии» и пересылает их репетиторам. Главная сложность оказалась не в сборе данных, а в фильтрации: на один настоящий запрос приходится о",
+      "body": [
+        "Я сделал бота, который находит в соцсетях сообщения вида «посоветуйте репетитора по химии» и пересылает их репетиторам. Главная сложность оказалась не в сборе данных, а в фильтрации: на один настоящий запрос приходится около двухсот постов рекламы. Рассказываю, как устроен конвейер и как он живёт на бесплатных лимитах LLM."
+      ],
+      "tags": [
+        "python",
+        "telegram-бот",
+        "vk api",
+        "llm"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1109966/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109966",
+      "publishedAt": "2026-11-19T14:26:56.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1109966/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109966"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-931.svg",
+      "imageCaption": "Обложка рубрики: Бот, который ищет учеников для репетиторов: архитектура за 1187 ₽ в ме",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-f403873272",
+      "code": "T-911",
+      "category": "tech",
+      "title": "Золото, бриллианты и BigData: ювелирный рынок на данных",
+      "summary": "Перед тем, как совершить покупку, человек проходит большой путь от выбора магазина до выбора самого ювелирного изделия.",
+      "body": [
+        "Перед тем, как совершить покупку, человек проходит большой путь от выбора магазина до выбора самого ювелирного изделия.",
+        "Представим человека, который выбирает украшение в подарок – он может посмотреть ассортимент нескольких ювелирных магазинов, сравнить цены, вернуться к понравившемуся варианту, и только потом совершить покупку, возможно вообще в офлайне. Для бизнеса в целом - это одна продажа, но для аналитика это целая цепочка интересов сразу к нескольким брендам.",
+        "Поэтому мы решили заглянуть во внутрь этой цепочки, опираясь не только на финансовые показатели рынка, но и на результаты отдельных игроков, поисковые запросы, покупательскую активность."
+      ],
+      "tags": [
+        "Big Data",
+        "аналитика данных",
+        "ювелирный рынок",
+        "потребительское поведение"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/companies/t2/articles/1108854/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1108854",
+      "publishedAt": "2026-11-19T14:25:06.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/companies/t2/articles/1108854/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1108854"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-911.svg",
+      "imageCaption": "Обложка рубрики: Золото, бриллианты и BigData: ювелирный рынок на данных",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-4046a10632",
+      "code": "C-951",
+      "category": "security",
+      "title": "Украсть файлы, уничтожить данные, захватить ПК. В России обнаружили новый зловред BadVibe",
+      "summary": "BadVibe атакует пользователей России и Беларуси.",
+      "body": [
+        "BadVibe атакует пользователей России и Беларуси."
+      ],
+      "tags": [
+        "SecurityLab"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580375.php",
+      "publishedAt": "2026-11-19T14:15:00.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580375.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-951.svg",
+      "imageCaption": "Обложка рубрики: Украсть файлы, уничтожить данные, захватить ПК. В России обнаружили но",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-81bc82cb22",
+      "code": "C-755",
+      "category": "security",
+      "title": "Telegram начнёт проверять SIM-карту в смартфоне. Одного номера для аккаунта уже недостаточно",
+      "summary": "Мессенджер готовят к проверкам по требованию властей.",
+      "body": [
+        "Мессенджер готовят к проверкам по требованию властей."
+      ],
+      "tags": [
+        "SecurityLab"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580367.php",
+      "publishedAt": "2026-11-19T13:43:21.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580367.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-755.svg",
+      "imageCaption": "Обложка рубрики: Telegram начнёт проверять SIM-карту в смартфоне. Одного номера для акк",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-48767676d5",
+      "code": "S-824",
+      "category": "science",
+      "title": "Неандертальский клей",
+      "summary": "Березовый деготь считается самым ранним искусственным материалом в истории. Им склеивали каменные орудия еще неандертальцы — например, в Тоскане нашли отщепы со следами березового вара возрастом около 200 тысяч лет. Люди",
+      "body": [
+        "Березовый деготь считается самым ранним искусственным материалом в истории. Им склеивали каменные орудия еще неандертальцы — например, в Тоскане нашли отщепы со следами березового вара возрастом около 200 тысяч лет. Люди в мезолите и вовсе использовали вар как жвачку — теперь по пожеванным кусочкам дегтя ученые восстанавливают ДНК их владельцев. Но как древним людям удавалось получать деготь?"
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/blog/2026/11/19/perst-129",
+      "publishedAt": "2026-11-19T13:40:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/blog/2026/11/19/perst-129"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-824.svg",
+      "imageCaption": "Обложка рубрики: Неандертальский клей",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-6ce0621019",
+      "code": "G-837",
+      "category": "games",
+      "title": "Crimson Desert победила в восьми номинациях на Korea Game Awards 2026",
+      "summary": "В этом году южнокорейская компания Pearl Abyss отметилась релизом амбициозной Crimson Desert, которая всего за полгода получила ворох глобальных обновление и полномасштабное DLC Charting the Unknown. Несмотря на такую пр",
+      "body": [
+        "В этом году южнокорейская компания Pearl Abyss отметилась релизом амбициозной Crimson Desert, которая всего за полгода получила ворох глобальных обновление и полномасштабное DLC Charting the Unknown. Несмотря на такую продуктивность разработчики […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73565/crimson_desert_pobedila_v_vosmi_nominaciyah_na_korea_game_awards_2026",
+      "publishedAt": "2026-11-19T13:38:30.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73565/crimson_desert_pobedila_v_vosmi_nominaciyah_na_korea_game_awards_2026"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-837.svg",
+      "imageCaption": "Обложка рубрики: Crimson Desert победила в восьми номинациях на Korea Game Awards 2026",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-18f28cc48a",
+      "code": "G-707",
+      "category": "games",
+      "title": "В GTA VI нет проституток — Rockstar объяснила почему",
+      "summary": "В Grand Theft Auto VI до неприличия много занятий: помимо криминальной активности можно рыбачить, прыгать с парашютом, да скроллить ленту соцсетей в конце концов. Но чего в шестой части делать нельзя — это вызывать секс-",
+      "body": [
+        "В Grand Theft Auto VI до неприличия много занятий: помимо криминальной активности можно рыбачить, прыгать с парашютом, да скроллить ленту соцсетей в конце концов. Но чего в шестой части делать нельзя — это вызывать секс-работниц. Этой фичи, которая присутствовала в играх серии с 2001 года, в новинке нет.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73564/v_gta_vi_net_prostitutok_rockstar_obyasnila_pochemu",
+      "publishedAt": "2026-11-19T13:29:35.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73564/v_gta_vi_net_prostitutok_rockstar_obyasnila_pochemu"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-707.svg",
+      "imageCaption": "Обложка рубрики: В GTA VI нет проституток — Rockstar объяснила почему",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-1c5712fe79",
+      "code": "C-929",
+      "category": "security",
+      "title": "16 пешек и 120 лет без ответа: простая шахматная загадка до сих пор мучает учёных",
+      "summary": "Задача 1906 года победила даже современные компьютеры.",
+      "body": [
+        "Задача 1906 года победила даже современные компьютеры."
+      ],
+      "tags": [
+        "Наука/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580352.php",
+      "publishedAt": "2026-11-19T13:08:56.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580352.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-929.svg",
+      "imageCaption": "Обложка рубрики: 16 пешек и 120 лет без ответа: простая шахматная загадка до сих пор му",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-b65b6cc5c6",
+      "code": "G-951",
+      "category": "games",
+      "title": "В Nexus Mods объявили, какие изменения ждут SteamDB",
+      "summary": "В сентябре появилась новость, что сайт Nexus Mods покупает базу данных SteamDB. Новые хозяева сразу начали планировать будущее сайта, но обещали не вводить радикальных изменений. Теперь наконец стало известно, над чем им",
+      "body": [
+        "В сентябре появилась новость, что сайт Nexus Mods покупает базу данных SteamDB. Новые хозяева сразу начали планировать будущее сайта, но обещали не вводить радикальных изменений. Теперь наконец стало известно, над чем именно трудилась команда.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73563/v_nexus_mods_obyavili_kakie_izmeneniya_zhdut_steamdb",
+      "publishedAt": "2026-11-19T12:27:45.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73563/v_nexus_mods_obyavili_kakie_izmeneniya_zhdut_steamdb"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-951.svg",
+      "imageCaption": "Обложка рубрики: В Nexus Mods объявили, какие изменения ждут SteamDB",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-13997e3f1d",
+      "code": "S-798",
+      "category": "science",
+      "title": "Поздние эректусы обжили тропический лес",
+      "summary": "Группа ученых описала девять архаических человеческих зубов, обнаруженных в двух пещерах, которые находятся на юге Китая. Исследование показало, что восемь из девяти образцов представляли собой останки людей прямоходящих",
+      "body": [
+        "Группа ученых описала девять архаических человеческих зубов, обнаруженных в двух пещерах, которые находятся на юге Китая. Исследование показало, что восемь из девяти образцов представляли собой останки людей прямоходящих, которые, как оказалось, обитали в тропических лесах Восточной Азии между 324 и 184 тысячами лет назад. Еще один зуб принадлежал гоминину, видовой статус которого остался непонятен. Этим находкам посвящены две статьи (один, два), опубликованные в журнале Nature."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/19/last-homo-erectus-in-east-asia",
+      "publishedAt": "2026-11-19T12:05:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/19/last-homo-erectus-in-east-asia"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-798.svg",
+      "imageCaption": "Обложка рубрики: Поздние эректусы обжили тропический лес",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-e7d18c7574",
+      "code": "C-797",
+      "category": "security",
+      "title": "Everything Is a Web Application, Including Your Firewall",
+      "summary": "One of the early targets of PHP2Shell exploitation was the firewall. On October 28, Palo Alto Networks confirmed that attackers were exploiting the two PHP vulnerabilities, CVE-2026-109618 and CVE-2026-109619, against PA",
+      "body": [
+        "One of the early targets of PHP2Shell exploitation was the firewall. On October 28, Palo Alto Networks confirmed that attackers were exploiting the two PHP vulnerabilities, CVE-2026-109618 and CVE-2026-109619, against PAN-OS management interfaces exposed to the internet. Both flaws let anyone execute code on the web server without authentication. The disclosure itself went a little wrong."
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/everything-is-web-application-including.html",
+      "publishedAt": "2026-11-19T11:52:23.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/everything-is-web-application-including.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-797.svg",
+      "imageCaption": "Обложка рубрики: Everything Is a Web Application, Including Your Firewall",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-394df233c8",
+      "code": "S-998",
+      "category": "science",
+      "title": "Три пишем, два в уме",
+      "summary": "Игорь пришел в школу в приподнятом настроении, в рюкзаке у него было два желтых яблока и карманные шахматы. Но он не ожидал, что у Кирилла с собой пять динозавров — три красных и два зеленых, — да и настрой не очень. Хот",
+      "body": [
+        "Игорь пришел в школу в приподнятом настроении, в рюкзаке у него было два желтых яблока и карманные шахматы. Но он не ожидал, что у Кирилла с собой пять динозавров — три красных и два зеленых, — да и настрой не очень. Хотите узнать, чем дело кончилось? Пройдите наш тест, и вы вспомните, почему математика — это вовсе не сухие цифры. А потом бегом на Международный математический диктант — он не только для школьников, но и для студентов, учителей и родителей."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/material/2026/11/19/three-two-math",
+      "publishedAt": "2026-11-19T11:50:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/material/2026/11/19/three-two-math"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-998.svg",
+      "imageCaption": "Обложка рубрики: Три пишем, два в уме",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-f805e9320b",
+      "code": "S-829",
+      "category": "science",
+      "title": "Нейроны островковой коры запустили тревогу у мышей",
+      "summary": "Китайские нейробиологи идентифицировали нейронный путь, регулирующий острую тревогу у мышей. В ответ на запах хищника или удар током Crh-экспрессирующие нейроны островковой коры активировались и отправляли сигнал дальше ",
+      "body": [
+        "Китайские нейробиологи идентифицировали нейронный путь, регулирующий острую тревогу у мышей. В ответ на запах хищника или удар током Crh-экспрессирующие нейроны островковой коры активировались и отправляли сигнал дальше — в парабрахиальное ядро, а затем — в заднее паравентрикулярное ядро таламуса. Блокирование этой цепи на любом уровне приводило к снижению тревожного поведения. Исследование опубликовано в журнале Molecular Psychiatry."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/19/the-anxiety-circuit",
+      "publishedAt": "2026-11-19T11:48:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/19/the-anxiety-circuit"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-829.svg",
+      "imageCaption": "Обложка рубрики: Нейроны островковой коры запустили тревогу у мышей",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-fb7bc906bc",
+      "code": "T-750",
+      "category": "tech",
+      "title": "Пульс есть, но пациент без сознания: «Вояджер-1» перестал передавать телеметрию и научные данные, улетев на световые сутки",
+      "summary": "NASA сообщило о новой технической неисправности межпланетного зонда «Вояджер-1» (Voyager 1), из-за которой аппарат перестал передавать на Землю научные и инженерные данные. Проблему обнаружили 14 ноября 2026 года, когда ",
+      "body": [
+        "NASA сообщило о новой технической неисправности межпланетного зонда «Вояджер-1» (Voyager 1), из-за которой аппарат перестал передавать на Землю научные и инженерные данные. Проблему обнаружили 14 ноября 2026 года, когда антенна NASA Deep Space Network (DSN) в Канберре установила связь с зондом и приняла несущую радиочастоту, однако сами данные в сигнале отсутствовали. Источник изображения: NASA"
+      ],
+      "tags": [
+        "- космос"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151532",
+      "publishedAt": "2026-11-19T10:55:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151532"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-750.svg",
+      "imageCaption": "Обложка рубрики: Пульс есть, но пациент без сознания: «Вояджер-1» перестал передавать т",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-127ea6dc6a",
+      "code": "T-841",
+      "category": "tech",
+      "title": "Google открыла доступ к Genie 4 – ИИ для генерации целых миров, которые можно менять прямо на ходу",
+      "summary": "Ранее в этом месяце подразделение Google DeepMind анонсировало ИИ-модель Genie 4, которая способна генерировать виртуальные миры с реалистичной физикой, звуками и разговорами персонажей. Теперь же разработчики представил",
+      "body": [
+        "Ранее в этом месяце подразделение Google DeepMind анонсировало ИИ-модель Genie 4, которая способна генерировать виртуальные миры с реалистичной физикой, звуками и разговорами персонажей. Теперь же разработчики представили обновлённую версию Project Genie, доступную на тарифе AI Ultra. Создаваемые алгоритмом миры стали более отзывчивыми, креативными и социальными. Источник изображения: Google"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151528",
+      "publishedAt": "2026-11-19T10:50:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151528"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-841.svg",
+      "imageCaption": "Обложка рубрики: Google открыла доступ к Genie 4 – ИИ для генерации целых миров, которы",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-25991a89e0",
+      "code": "G-983",
+      "category": "games",
+      "title": "Ролевая стратегия Arknights: Endfield признана лучшей игрой 2026-го в Google Play",
+      "summary": "Недавно Google объявила победителей своей ежегодной премии Best of Play, в которой отмечаются лучшие продукты, доступные в Google Play. Организаторы наградили несколько лучших приложений, игр и книг за 2026 год, но в это",
+      "body": [
+        "Недавно Google объявила победителей своей ежегодной премии Best of Play, в которой отмечаются лучшие продукты, доступные в Google Play. Организаторы наградили несколько лучших приложений, игр и книг за 2026 год, но в этой заметке мы сосредоточимся только на интерактивных развлечениях.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73562/rolevaya_strategiya_arknights_endfield_priznana_luchshey_igroy_2026_go_v_google_play",
+      "publishedAt": "2026-11-19T10:33:44.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73562/rolevaya_strategiya_arknights_endfield_priznana_luchshey_igroy_2026_go_v_google_play"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-983.svg",
+      "imageCaption": "Обложка рубрики: Ролевая стратегия Arknights: Endfield признана лучшей игрой 2026-го в ",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-a181cd6b72",
+      "code": "T-824",
+      "category": "tech",
+      "title": "Nvidia решила подкупить взбунтовавшихся сотрудников акциями и повышением зарплат",
+      "summary": "Компания Nvidia пообещала сотрудникам в декабре повысить им зарплаты и предоставить акции, чтобы унять недовольство, возникшее из-за ухода Дженсена Хуанга (Jensen Huang) с поста гендиректора. На первом общем собрании кол",
+      "body": [
+        "Компания Nvidia пообещала сотрудникам в декабре повысить им зарплаты и предоставить акции, чтобы унять недовольство, возникшее из-за ухода Дженсена Хуанга (Jensen Huang) с поста гендиректора. На первом общем собрании коллектива при новом руководстве сотрудникам пообещали дополнительные премии и заверили их: «У нас всё будет хорошо». Источник изображения: nvidia.com"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151529",
+      "publishedAt": "2026-11-19T10:15:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151529"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-824.svg",
+      "imageCaption": "Обложка рубрики: Nvidia решила подкупить взбунтовавшихся сотрудников акциями и повышени",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-80ad552a34",
+      "code": "T-895",
+      "category": "tech",
+      "title": "Мощнейшая за 20 лет магнитная буря перекроила радиационные пояса Земли — их стало четыре вместо двух",
+      "summary": "Серия мощнейших вспышек на Солнце в десятых числах мая 2024 года привела к невиданному ранее явлению — два стабильных радиационных пояса вокруг Земли на пару месяцев расщепились на четыре. Это стало неожиданностью для оп",
+      "body": [
+        "Серия мощнейших вспышек на Солнце в десятых числах мая 2024 года привела к невиданному ранее явлению — два стабильных радиационных пояса вокруг Земли на пару месяцев расщепились на четыре. Это стало неожиданностью для операторов спутников, и могло повлечь за собой массовую потерю аппаратов на орбите. Историческое представление о двух радиационных поясах Земли. Источник изображения: NASA"
+      ],
+      "tags": [
+        "- на острие науки"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151526",
+      "publishedAt": "2026-11-19T09:40:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151526"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-895.svg",
+      "imageCaption": "Обложка рубрики: Мощнейшая за 20 лет магнитная буря перекроила радиационные пояса Земли",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-7656d9cbe4",
+      "code": "C-719",
+      "category": "security",
+      "title": "Hackers Breach N-able Cloud Server, Disrupting Email Security Management Across 3 Regions",
+      "summary": "N-able on Wednesday disclosed that unknown threat actors gained unauthorized access to one of the servers in the Mail Assure and Spam Experts Hosted Cloud, causing it to disable management interfaces and APIs.",
+      "body": [
+        "N-able on Wednesday disclosed that unknown threat actors gained unauthorized access to one of the servers in the Mail Assure and Spam Experts Hosted Cloud, causing it to disable management interfaces and APIs.",
+        "\"We have taken steps to mitigate the threat and are continuing to harden our services to reduce the risk of recurrence,\" N-able said.",
+        "\"The investigation is ongoing, but at this time we"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/n-able-confirms-hackers-accessed-cloud.html",
+      "publishedAt": "2026-11-19T09:31:26.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/n-able-confirms-hackers-accessed-cloud.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-719.svg",
+      "imageCaption": "Обложка рубрики: Hackers Breach N-able Cloud Server, Disrupting Email Security Manageme",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-bbc-world-f613178e59",
+      "code": "W-974",
+      "category": "world",
+      "title": "Dozens missing after boat carrying 100 migrants sinks off Senegal's coast",
+      "summary": "Some local media report that at least four bodies have been recovered.",
+      "body": [
+        "Some local media report that at least four bodies have been recovered."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/c58j484089ewo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-19T09:02:52.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/c58j484089ewo?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-974.svg",
+      "imageCaption": "Обложка рубрики: Dozens missing after boat carrying 100 migrants sinks off Senegal's co",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-top-d8fdd770f0",
+      "code": "F-750",
+      "category": "facts",
+      "title": "Как я заставил STM32H750 вещать на FM-частотах без радиомодуля",
+      "summary": "Тема программной генерации FM-радиосигнала не нова, как и сами FM-трансмиттеры не являются чем-то новым. В этой статье я хочу рассказать об одном подходе в реализации FM-трансмиттера на базе STM32H750 без использования в",
+      "body": [
+        "Тема программной генерации FM-радиосигнала не нова, как и сами FM-трансмиттеры не являются чем-то новым. В этой статье я хочу рассказать об одном подходе в реализации FM-трансмиттера на базе STM32H750 без использования внешних модулей и обвязки.",
+        "Созданный FM-трансмиттер позволяет вещать WAV-файл c SD-карты и не требует дополнительных радиомодулей."
+      ],
+      "tags": [
+        "stm32",
+        "stm32h750",
+        "таймеры",
+        "прерывания"
+      ],
+      "sourceName": "Хабр Популярное",
+      "sourceUrl": "https://habr.com/ru/companies/ruvds/articles/1108576/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1108576",
+      "publishedAt": "2026-11-19T09:02:07.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Популярное)",
+          "url": "https://habr.com/ru/companies/ruvds/articles/1108576/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1108576"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/f-750.svg",
+      "imageCaption": "Обложка рубрики: Как я заставил STM32H750 вещать на FM-частотах без радиомодуля",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-8779d09d1e",
+      "code": "C-710",
+      "category": "security",
+      "title": "Ruby Releases Fixes for 7 Regex and String Flaws, Warns 5 Have Proof-of-Concept RCE",
+      "summary": "Ruby contains seven memory-safety flaws in its regular expression engine and its string case-conversion code. For five of them, its maintainers say, proof-of-concept exploits, or PoCs, have shown that crafted input can r",
+      "body": [
+        "Ruby contains seven memory-safety flaws in its regular expression engine and its string case-conversion code. For five of them, its maintainers say, proof-of-concept exploits, or PoCs, have shown that crafted input can run code on the machine.",
+        "\"We are aware of PoCs that prove some of them can be used to trigger remote code execution,\" the maintainers said.",
+        "The project released fixed versions"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/ruby-releases-fixes-for-7-regex-and.html",
+      "publishedAt": "2026-11-19T08:42:11.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/ruby-releases-fixes-for-7-regex-and.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-710.svg",
+      "imageCaption": "Обложка рубрики: Ruby Releases Fixes for 7 Regex and String Flaws, Warns 5 Have Proof-o",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-5c388c4afe",
+      "code": "C-721",
+      "category": "security",
+      "title": "Researcher Demonstrates Database RCE Exploits Affecting PostgreSQL, MySQL and Oracle",
+      "summary": "Low-privilege database accounts that cannot read a single application table can still be used to run code on the database server itself, a researcher has shown, by reaching memory-corruption bugs in the engine code behin",
+      "body": [
+        "Low-privilege database accounts that cannot read a single application table can still be used to run code on the database server itself, a researcher has shown, by reaching memory-corruption bugs in the engine code behind ordinary SQL.",
+        "The exploits, published yesterday, are the researcher's proofs of concept against PostgreSQL, MySQL and ClickHouse, plus a separate Oracle chain that needs no"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/researcher-demonstrates-database-rce.html",
+      "publishedAt": "2026-11-19T08:14:00.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/researcher-demonstrates-database-rce.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-721.svg",
+      "imageCaption": "Обложка рубрики: Researcher Demonstrates Database RCE Exploits Affecting PostgreSQL, My",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-top-a4f3a4890d",
+      "code": "F-904",
+      "category": "facts",
+      "title": "Свой ИИ-агент: пошаговое руководство для новичков",
+      "summary": "LLM стали привычным инструментом: кто-то использует их как продвинутый поиск, кто-то просит объяснить сложную тему, написать код или накидать идей. Часто можно услышать, как ИИ-агенты самостоятельно решают ту или иную пр",
+      "body": [
+        "LLM стали привычным инструментом: кто-то использует их как продвинутый поиск, кто-то просит объяснить сложную тему, написать код или накидать идей. Часто можно услышать, как ИИ-агенты самостоятельно решают ту или иную практическую задачу.",
+        "В этой статье мы простыми словами разберем, что представляют собой ИИ-агент, как устроен и зачем может быть полезно написать своего агента. Мы не будем использовать фреймворки для создания агентов или готовые решения по типу OpenCode, материал рассчитан на тех, кто только начинает погружаться в тему и не обладает глубокими техническими знаниями. Мы пошагово пройдем путь от теории до создания вашего первого работающего агента."
+      ],
+      "tags": [
+        "ии",
+        "ии-агенты",
+        "LLM",
+        "OpenCode"
+      ],
+      "sourceName": "Хабр Популярное",
+      "sourceUrl": "https://habr.com/ru/companies/selectel/articles/1109694/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109694",
+      "publishedAt": "2026-11-19T08:01:00.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Популярное)",
+          "url": "https://habr.com/ru/companies/selectel/articles/1109694/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109694"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/f-904.svg",
+      "imageCaption": "Обложка рубрики: Свой ИИ-агент: пошаговое руководство для новичков",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-bf4fa92691",
+      "code": "S-757",
+      "category": "science",
+      "title": "APOD: 2026 November 19 – The Horsehead and Flame Nebulas",
+      "summary": "APOD: 2026 November 19 – The…",
+      "body": [
+        "APOD: 2026 November 19 – The…",
+        "Astronomy Picture of the Day",
+        "Discover the cosmos! Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.",
+        "The Horsehead and Flame Nebulas"
+      ],
+      "tags": [
+        "APOD"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/image-article/apod-2026-november-19-the-horsehead-and-flame-nebulas/",
+      "publishedAt": "2026-11-19T05:05:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/image-article/apod-2026-november-19-the-horsehead-and-flame-nebulas/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-757.svg",
+      "imageCaption": "Обложка рубрики: APOD: 2026 November 19 – The Horsehead and Flame Nebulas",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-9edcb3e90f",
+      "code": "S-708",
+      "category": "science",
+      "title": "El Niño Rains Paint the Atacama",
+      "summary": "Earth Observatory Science",
+      "body": [
+        "Earth Observatory Science",
+        "El Niño Rains Paint the Atacama",
+        "Remote Sensing Technology",
+        "More Content Collections"
+      ],
+      "tags": [
+        "Earth Observatory",
+        "Land Cover",
+        "Landsat 9",
+        "Vegetation"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/earth/earth-observatory/el-nino-rains-paint-the-atacama/",
+      "publishedAt": "2026-11-19T05:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/earth/earth-observatory/el-nino-rains-paint-the-atacama/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-708.svg",
+      "imageCaption": "Обложка рубрики: El Niño Rains Paint the Atacama",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
       "id": "auto-bbc-world-8fda97737d",
       "code": "W-723",
       "category": "world",
@@ -2507,1318 +3814,6 @@
       "autoPosted": true,
       "image": "site/assets/news/w-873.svg",
       "imageCaption": "Обложка рубрики: Главный стратег Пентагона ушел со встречи по Украине, не послушав секр",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-news-c6ac767d7c",
-      "code": "T-904",
-      "category": "tech",
-      "title": "[Перевод] Ошибся в разводке SD-карты: вместо новой платы за 500+ евро — переходник, ремонт примерно за 50",
-      "summary": "Инженер Henrik Forstén заказал плату с ошибкой: разъём SD-карты подключён к выводам с логическими уровнями 1,8 В вместо 3,3 В, и карта не работает. Всё остальное на плате было исправно, а перевыпуск обошёлся бы больше че",
-      "body": [
-        "Инженер Henrik Forstén заказал плату с ошибкой: разъём SD-карты подключён к выводам с логическими уровнями 1,8 В вместо 3,3 В, и карта не работает. Всё остальное на плате было исправно, а перевыпуск обошёлся бы больше чем в 500 евро. Вместо этого он развёл маленькую четырёхслойную плату-переходник с преобразователем уровней и своим разъёмом, которая садится прямо на площадки старого разъёма. Полуотверстия при шаге 1,1 мм дешёвые производители не делают, поэтому площадки оказались под платой, и паять их пришлось вслепую: паста, термофен, а направляющими с"
-      ],
-      "tags": [
-        "печатная плата",
-        "SD-карта",
-        "интерпозер",
-        "преобразователь уровней"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1109656/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109656",
-      "publishedAt": "2026-11-19T04:27:25.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1109656/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109656"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-904.svg",
-      "imageCaption": "Обложка рубрики: [Перевод] Ошибся в разводке SD-карты: вместо новой платы за 500+ евро ",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-ixbt-games-5430c7dc81",
-      "code": "G-751",
-      "category": "games",
-      "title": "Crimson Desert проигнорировали на The Game Awards 2026. Возмутился даже создатель Palworld",
-      "summary": "Руководитель издательства Pocketpair Джон Бакли, считает, что разработчики незаслуженно оказались вне главных категорий премии. Недоумение игроков в соцсетях усилило волну критики.",
-      "body": [
-        "Руководитель издательства Pocketpair Джон Бакли, считает, что разработчики незаслуженно оказались вне главных категорий премии. Недоумение игроков в соцсетях усилило волну критики.",
-        "Crimson Desert получила всего одну номинацию на The Game Awards 2026 и осталась за бортом претендентов на звание «Игра года», вызвав недовольство игроков и представителей игровой индустрии.",
-        "Своё разочарование не стал скрывать Джон «Bucky» Бакли, руководитель издательского отдела и коммуникаций Pocketpair, известный по работе над Palworld.",
-        "Представитель студии обратил внимание, что проект Pearl Abyss отметили лишь в одной категории. По его мнению, с учётом масштабов игры этого совершенно недостаточно. Бакли также не понимает, почему Crimson Desert обошли стороной в номинациях «Лучшая ролевая игра» и «Лучшая приключенческая игра»."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/19/crimson-desert-proignorirovali-na-the-game-awards-2026-vozmutilsia-daze-sozdatel-palworld.html",
-      "publishedAt": "2026-11-19T04:25:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/19/crimson-desert-proignorirovali-na-the-game-awards-2026-vozmutilsia-daze-sozdatel-palworld.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-751.svg",
-      "imageCaption": "Обложка рубрики: Crimson Desert проигнорировали на The Game Awards 2026. Возмутился даж",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-ixbt-games-7af21c0656",
-      "code": "G-932",
-      "category": "games",
-      "title": "AMD готовит крупные анонсы для CES 2027. Презентация состоится в январе",
-      "summary": "AMD раскроет планы по новым Ryzen, Radeon и другим решениям в первые дни января. Джек Хюин обещает, что грядущая эра компьютеров будет «чем-то особенным», хотя детали компания пока держит в секрете.",
-      "body": [
-        "AMD раскроет планы по новым Ryzen, Radeon и другим решениям в первые дни января. Джек Хюин обещает, что грядущая эра компьютеров будет «чем-то особенным», хотя детали компания пока держит в секрете.",
-        "AMD проведёт большую презентацию на выставке CES 2027 5 января, пообещав представить новые технологические решения и обозначить следующий этап развития компьютерной индустрии.",
-        "Анонс опубликовал Джек Хюин, старший вице-президент и генеральный директор подразделения Computing and Graphics в AMD. В коротком видеоролике в социальных сетях он заявил, что «следующая эра компьютеров станет чем-то особенным».",
-        "Мы заново представляем границы возможного, расширяем пределы современных технологий и создаём будущее, полное возможностей, о которых раньше могли только мечтать."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/19/amd-gotovit-krupnye-anonsy-dlia-ces-2027-prezentaciia-sostoitsia-v-ianvare.html",
-      "publishedAt": "2026-11-19T04:16:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/19/amd-gotovit-krupnye-anonsy-dlia-ces-2027-prezentaciia-sostoitsia-v-ianvare.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-932.svg",
-      "imageCaption": "Обложка рубрики: AMD готовит крупные анонсы для CES 2027. Презентация состоится в январ",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-ixbt-games-bb347c3a58",
-      "code": "G-801",
-      "category": "games",
-      "title": "PS5 Pro раскрыла потенциал GTA VI. Обычная PS5 заметно уступает в графике",
-      "summary": "GTA VI работает при 30 кадрах в секунду как на обычной PS5, так и на PS5 Pro. Более производительная консоль Sony обеспечивает заметно более качественную графику, улучшенные отражения и освещение.",
-      "body": [
-        "GTA VI работает при 30 кадрах в секунду как на обычной PS5, так и на PS5 Pro. Более производительная консоль Sony обеспечивает заметно более качественную графику, улучшенные отражения и освещение.",
-        "Автор канала ElAnalistaDeBits подготовил подробное сравнение двух версий игры. Rockstar Games предусмотрела для обеих консолей только один графический режим с частотой 30 кадров в секунду. При этом внутренняя разрешающая способность изображения одинакова, однако PS5 Pro использует технологию масштабирования PSSR, благодаря которой картинка выглядит заметно чётче. Особенно хорошо разница видна при рассмотрении мелких деталей окружения.",
-        "Наиболее существенные улучшения связаны с трассировкой лучей. На PS5 Pro GTA VI предлагает более продвинутые эффекты отражений, в которых отображается значительно больше деталей. Также улучшены глобальное освещение и тени, благодаря чему игровой мир выглядит естественнее. Различается и детализация окружения: на обычной PS5 она ниже, что особенно заметно на растительности. При этом дальность прорисовки на обеих консолях практически одинаковая.",
-        "Что касается производительности, обе системы ориентированы на 30 кадров в секунду, однако на стандартной PS5 наблюдаются ощутимые просадки. Впрочем, это не означает, что владельцы базовой консоли получили значительно худшую версию. GTA VI хорошо выглядит на двух устройствах, а главные преимущества PS5 Pro заключаются в качестве изображения и дополнительных графических эффектах."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/19/ps5-pro-raskryla-potencial-gta-vi-obycnaia-ps5-zametno-ustupaet-v-grafike.html",
-      "publishedAt": "2026-11-19T04:12:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/19/ps5-pro-raskryla-potencial-gta-vi-obycnaia-ps5-zametno-ustupaet-v-grafike.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-801.svg",
-      "imageCaption": "Обложка рубрики: PS5 Pro раскрыла потенциал GTA VI. Обычная PS5 заметно уступает в граф",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-ixbt-games-852a390d87",
-      "code": "G-903",
-      "category": "games",
-      "title": "В GTA VI нет привычного интернета. Rockstar объяснила отказ от особенности серии",
-      "summary": "Rockstar Games отказалась от интернет-сайтов в GTA VI, знакомых фанатам серии со времён четвёртой части, заменив их приложениями и вымышленными социальными сетями.",
-      "body": [
-        "Rockstar Games отказалась от интернет-сайтов в GTA VI, знакомых фанатам серии со времён четвёртой части, заменив их приложениями и вымышленными социальными сетями.",
-        "GTA VI позволяет увидеть современный Вайс-Сити, хотя некоторые привычные элементы серии останутся в прошлом. Сетевые порталы, которые присутствовали в играх начиная с GTA IV, больше не появятся. Об этом рассказал один из руководителей Rockstar North Роб Нельсон.",
-        "При этом студия не собирается полностью отказываться от виртуального мира и социальных сетей. Вместо привычных сайтов появятся различные приложения, которые уже можно было заметить в первых трейлерах.",
-        "Нам это не казалось необходимым. Мы определённо хотели сосредоточиться на приложениях и создавать их."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/19/v-gta-vi-net-privycnogo-interneta-rockstar-obieiasnila-otkaz-ot-osobennosti-serii.html",
-      "publishedAt": "2026-11-19T04:04:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/19/v-gta-vi-net-privycnogo-interneta-rockstar-obieiasnila-otkaz-ot-osobennosti-serii.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-903.svg",
-      "imageCaption": "Обложка рубрики: В GTA VI нет привычного интернета. Rockstar объяснила отказ от особенн",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-news-e99882f8ad",
-      "code": "T-742",
-      "category": "tech",
-      "title": "Мой набор программ: собираю полезный софт в репозитории ltm_list",
-      "summary": "Привет всем енотам и не енотам! Сегодня расскажу про свой пак полезных программ на Python и Lua. Все программы написал сам — ни у кого ничего не воровал, честное енотовское.",
-      "body": [
-        "Привет всем енотам и не енотам! Сегодня расскажу про свой пак полезных программ на Python и Lua. Все программы написал сам — ни у кого ничего не воровал, честное енотовское.",
-        "Исходники собраны в репозитории ltm_list на GitHub . Ну а теперь посмотрим, что там есть и чем это может быть полезно!"
-      ],
-      "tags": [
-        "bash",
-        "lua",
-        "python",
-        "linux"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1109650/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109650",
-      "publishedAt": "2026-11-19T03:31:17.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1109650/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109650"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-742.svg",
-      "imageCaption": "Обложка рубрики: Мой набор программ: собираю полезный софт в репозитории ltm_list",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-news-72233ea9d8",
-      "code": "T-874",
-      "category": "tech",
-      "title": "XXII конференция «Свободное ПО в высшей школе» (OSEDUCONF-2027) состоится в февраля 2027 года в Переславле-Залесском",
-      "summary": "«Базальт СПО» и ИПС им. А.К. Айламазяна РАН сообщили , что XXII конференция «Свободное программное обеспечение в высшей школе» (OSEDUCONF-2027) состоится 5-7 февраля 2027 года в Институте программных систем РАН в Пересла",
-      "body": [
-        "«Базальт СПО» и ИПС им. А.К. Айламазяна РАН сообщили , что XXII конференция «Свободное программное обеспечение в высшей школе» (OSEDUCONF-2027) состоится 5-7 февраля 2027 года в Институте программных систем РАН в Переславле-Залесском Ярославской области. Публикация программы конференции ожидается в конце января 2027 года."
-      ],
-      "tags": [
-        "OSEDUCONF 2027",
-        "OSEDUCONF"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1109192/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109192",
-      "publishedAt": "2026-11-19T03:17:42.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1109192/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109192"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-874.svg",
-      "imageCaption": "Обложка рубрики: XXII конференция «Свободное ПО в высшей школе» (OSEDUCONF-2027) состои",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-news-acf94b1761",
-      "code": "T-825",
-      "category": "tech",
-      "title": "Представлен открытый проект Framecalm — это утилита для оптимизации Windows 10/11 под игры",
-      "summary": "Разработчик под ником krezio ( @krezio ) выпустил открытый проект под названием Framecalm ( веб-сайт решения ). Это инструмент на С# и HTML для оптимизации ПК на Windows 10/11 под игры. Проект опубликован на GitHub под л",
-      "body": [
-        "Разработчик под ником krezio ( @krezio ) выпустил открытый проект под названием Framecalm ( веб-сайт решения ). Это инструмент на С# и HTML для оптимизации ПК на Windows 10/11 под игры. Проект опубликован на GitHub под лицензией MIT."
-      ],
-      "tags": [
-        "Framecalm"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1109254/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109254",
-      "publishedAt": "2026-11-19T02:33:20.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1109254/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109254"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-825.svg",
-      "imageCaption": "Обложка рубрики: Представлен открытый проект Framecalm — это утилита для оптимизации Wi",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-bbc-world-4fc7437a5c",
-      "code": "W-920",
-      "category": "world",
-      "title": "AI giant Anthropic valued at up to $1.5tn ahead of stock market debut",
-      "summary": "The firm started just five years ago and is now one of the biggest names in artificial intelligence.",
-      "body": [
-        "The firm started just five years ago and is now one of the biggest names in artificial intelligence."
-      ],
-      "tags": [
-        "BBC World"
-      ],
-      "sourceName": "BBC World",
-      "sourceUrl": "https://www.bbc.co.uk/news/articles/c6742m39xgzxo?at_medium=RSS&at_campaign=rss",
-      "publishedAt": "2026-11-19T02:20:15.000Z",
-      "readMin": 1,
-      "icon": "🌐",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (BBC World)",
-          "url": "https://www.bbc.co.uk/news/articles/c6742m39xgzxo?at_medium=RSS&at_campaign=rss"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-19",
-        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-920.svg",
-      "imageCaption": "Обложка рубрики: AI giant Anthropic valued at up to $1.5tn ahead of stock market debut",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-lenta-top-b32fb64958",
-      "code": "W-943",
-      "category": "world",
-      "title": "«Это невозможно». Португалия отказала в помощи Украине. Как страна ЕС объяснила свое решение?",
-      "summary": "«Это невозможно». Португалия отказала в помощи Украине. Как страна ЕС объяснила свое решение?",
-      "body": [
-        "«Это невозможно». Португалия отказала в помощи Украине. Как страна ЕС объяснила свое решение?. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Мир"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/19/long-eto-nevozmozhno-portugaliya-otkazala-v-pomoschi-ukraine-kak-strana-es-ob-yasnila-svoe-reshenie/",
-      "publishedAt": "2026-11-18T23:37:28.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/19/long-eto-nevozmozhno-portugaliya-otkazala-v-pomoschi-ukraine-kak-strana-es-ob-yasnila-svoe-reshenie/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-943.svg",
-      "imageCaption": "Обложка рубрики: «Это невозможно». Португалия отказала в помощи Украине. Как страна ЕС ",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-news-e0519da501",
-      "code": "T-894",
-      "category": "tech",
-      "title": "Grid и Layout + контроль в Figma",
-      "summary": "Как мы грид в figma пилили, так что бы контролировать через переменные",
-      "body": [
-        "Как мы грид в figma пилили, так что бы контролировать через переменные",
-        "Попробовали 3 подхода: дефолтный Grid, Auto layout grid, и гибрид дефолтного грида + костыли из variables :))"
-      ],
-      "tags": [
-        "design system",
-        "design principles",
-        "grid",
-        "layout"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1109640/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109640",
-      "publishedAt": "2026-11-18T23:36:29.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1109640/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109640"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-894.svg",
-      "imageCaption": "Обложка рубрики: Grid и Layout + контроль в Figma",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-lenta-top-e96ccd8253",
-      "code": "W-816",
-      "category": "world",
-      "title": "«Водопады рвоты» стали причиной раздора двух семейных пар",
-      "summary": "«Водопады рвоты» стали причиной раздора двух семейных пар",
-      "body": [
-        "«Водопады рвоты» стали причиной раздора двух семейных пар. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Интернет и СМИ"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/19/vodopady-rvoty-stali-prichinoy-razdora-dvuh-semeynyh-par/",
-      "publishedAt": "2026-11-18T23:36:24.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/19/vodopady-rvoty-stali-prichinoy-razdora-dvuh-semeynyh-par/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-816.svg",
-      "imageCaption": "Обложка рубрики: «Водопады рвоты» стали причиной раздора двух семейных пар",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-lenta-top-940d95a892",
-      "code": "W-871",
-      "category": "world",
-      "title": "Муж пытками заставил женщину заниматься секс-шантажом",
-      "summary": "Муж пытками заставил женщину заниматься секс-шантажом",
-      "body": [
-        "Муж пытками заставил женщину заниматься секс-шантажом. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Из жизни"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/19/muzh-pytkami-zastavil-zhenschinu-zanimatsya-seks-shantazhom/",
-      "publishedAt": "2026-11-18T23:36:09.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/19/muzh-pytkami-zastavil-zhenschinu-zanimatsya-seks-shantazhom/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-871.svg",
-      "imageCaption": "Обложка рубрики: Муж пытками заставил женщину заниматься секс-шантажом",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-lenta-top-294ca90aa4",
-      "code": "W-948",
-      "category": "world",
-      "title": "Названы способные снизить риск развития депрессии продукты",
-      "summary": "Названы способные снизить риск развития депрессии продукты",
-      "body": [
-        "Названы способные снизить риск развития депрессии продукты. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Наука и техника"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/19/nazvany-sposobnye-snizit-risk-razvitiya-depressii-produkty/",
-      "publishedAt": "2026-11-18T23:35:44.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/19/nazvany-sposobnye-snizit-risk-razvitiya-depressii-produkty/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-948.svg",
-      "imageCaption": "Обложка рубрики: Названы способные снизить риск развития депрессии продукты",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-bbc-world-bb73c9c05a",
-      "code": "W-960",
-      "category": "world",
-      "title": "Myanmar faces historic genocide verdict at UN court over Rohingya massacres",
-      "summary": "No state has ever been found guilty by an international court of committing genocide.",
-      "body": [
-        "No state has ever been found guilty by an international court of committing genocide."
-      ],
-      "tags": [
-        "BBC World"
-      ],
-      "sourceName": "BBC World",
-      "sourceUrl": "https://www.bbc.co.uk/news/articles/c5m2l90ez144o?at_medium=RSS&at_campaign=rss",
-      "publishedAt": "2026-11-18T23:04:06.000Z",
-      "readMin": 1,
-      "icon": "🌐",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (BBC World)",
-          "url": "https://www.bbc.co.uk/news/articles/c5m2l90ez144o?at_medium=RSS&at_campaign=rss"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-960.svg",
-      "imageCaption": "Обложка рубрики: Myanmar faces historic genocide verdict at UN court over Rohingya mass",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nasa-5e6e1459cf",
-      "code": "S-989",
-      "category": "science",
-      "title": "NASA Sets Coverage for Northrop Grumman CRS-25 Launch, Prelaunch",
-      "summary": "NASA’s Northrop Grumman Commercial Resupply Services 24 mission launched Saturday, April 11, 2026, aboard the company’s Cygnus XL spacecraft atop a SpaceX Falcon 9 rocket from Space Launch Complex 40 at Cape Canaveral Sp",
-      "body": [
-        "NASA’s Northrop Grumman Commercial Resupply Services 24 mission launched Saturday, April 11, 2026, aboard the company’s Cygnus XL spacecraft atop a SpaceX Falcon 9 rocket from Space Launch Complex 40 at Cape Canaveral Space Force Station in Florida. NASA’s Northrop Grumman Commercial Resupply Services 25 mission will deliver approximately 11,000 pounds of science and supplies to the International Space Station.",
-        "Credit: Northrop Grumman",
-        "NASA, Northrop Grumman, and SpaceX are targeting no earlier than 10:47 a.m. EST, Sunday, Nov. 29, for the next launch delivering science investigations, supplies, and equipment to the International Space Station. The agency also will hold a prelaunch media teleconference on Monday, Nov. 23.",
-        "Filled with approximately 11,000 pounds of cargo, the Northrop Grumman Cygnus XL spacecraft, aboard a SpaceX Falcon 9 rocket, will launch from Space Launch Complex 40 at Cape Canaveral Space Force Station in Florida. The mission is known as NASA’s Northrop Grumman Commercial Resupply Services 25, or Northrop Grumman CRS-25."
-      ],
-      "tags": [
-        "Commercial Resupply",
-        "ISS Research",
-        "Johnson Space Center",
-        "Kennedy Space Center"
-      ],
-      "sourceName": "NASA",
-      "sourceUrl": "https://www.nasa.gov/news-release/nasa-sets-coverage-for-northrop-grumman-crs-25-launch-prelaunch/",
-      "publishedAt": "2026-11-18T22:19:17.000Z",
-      "readMin": 1,
-      "icon": "🚀",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (NASA)",
-          "url": "https://www.nasa.gov/news-release/nasa-sets-coverage-for-northrop-grumman-crs-25-launch-prelaunch/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-989.svg",
-      "imageCaption": "Обложка рубрики: NASA Sets Coverage for Northrop Grumman CRS-25 Launch, Prelaunch",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-news-ad4bd5a171",
-      "code": "T-875",
-      "category": "tech",
-      "title": "iFixit: ремонт Apple HomeView оказался «неоправданно сложным»",
-      "summary": "Команда iFixit разобрала хаб умного дома Apple HomeView и раскритиковала конструкцию устройства. Apple использует слишком много клея и винты разных типов, а во время разборки легко повредить внутренние элементы.",
-      "body": [
-        "Команда iFixit разобрала хаб умного дома Apple HomeView и раскритиковала конструкцию устройства. Apple использует слишком много клея и винты разных типов, а во время разборки легко повредить внутренние элементы."
-      ],
-      "tags": [
-        "apple",
-        "HomeView",
-        "гаджеты",
-        "iFixit"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1109636/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109636",
-      "publishedAt": "2026-11-18T22:11:32.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1109636/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109636"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-875.svg",
-      "imageCaption": "Обложка рубрики: iFixit: ремонт Apple HomeView оказался «неоправданно сложным»",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nplus1-33364c3067",
-      "code": "S-888",
-      "category": "science",
-      "title": "Сибирская язва у турецкого мясника проявилась крупными геморрагическими пузырями",
-      "summary": "В турецкую больницу поступил 33-летний мясник с жалобами на болезненные язвы на левой кисти в течение трех дней и нарастающий отек руки в течение нескольких часов. За три дна до появления язв он забил больную корову. При",
-      "body": [
-        "В турецкую больницу поступил 33-летний мясник с жалобами на болезненные язвы на левой кисти в течение трех дней и нарастающий отек руки в течение нескольких часов. За три дна до появления язв он забил больную корову. При осмотре отмечались круглая отечная псевдобуллезная бляшка на тыльной поверхности левой кисти у основания большого пальца и схожее образование над четвертым запястно-пястным суставом, а также отек руки и увеличение подмышечных лимфоузлов. Из-за подозрения на кожную форму сибирской язвы пациенту назначили ципрофлоксацин и пенициллин. Врачи"
-      ],
-      "tags": [
-        "N+1 Наука"
-      ],
-      "sourceName": "N+1 Наука",
-      "sourceUrl": "https://nplus1.ru/news/2026/11/19/cutaneous-anthrax",
-      "publishedAt": "2026-11-18T22:00:00.000Z",
-      "readMin": 1,
-      "icon": "🔬",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (N+1 Наука)",
-          "url": "https://nplus1.ru/news/2026/11/19/cutaneous-anthrax"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-888.svg",
-      "imageCaption": "Обложка рубрики: Сибирская язва у турецкого мясника проявилась крупными геморрагическим",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-news-e30ca3cf08",
-      "code": "T-742",
-      "category": "tech",
-      "title": "Управление памятью в контейнерах STL. Ускоряем код с помощью кастомных аллокаторов",
-      "summary": "В предыдущей статье мы подробно разобрали, как устроена архитектура работы с памятью в STL. Мы увидели, как стандартная библиотека разделяет выделение сырой памяти и конструирование объектов. Однако стандартный std::allo",
-      "body": [
-        "В предыдущей статье мы подробно разобрали, как устроена архитектура работы с памятью в STL. Мы увидели, как стандартная библиотека разделяет выделение сырой памяти и конструирование объектов. Однако стандартный std::allocator универсален, а за универсальность приходится платить скоростью. Когда узловой контейнер (например, std::list или std::map) добавляет элемент, он обращается к динамической памяти. В высоконагруженных системах или игровых движках это может стать узким местом. В этой статье мы рассмотрим проектирование кастомных аллокаторов, которые мо"
-      ],
-      "tags": [
-        "управление памятью",
-        "stl containers",
-        "аллокатор",
-        "с++11"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1102204/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1102204",
-      "publishedAt": "2026-11-18T21:41:06.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1102204/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1102204"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-742.svg",
-      "imageCaption": "Обложка рубрики: Управление памятью в контейнерах STL. Ускоряем код с помощью кастомных",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-3dnews-303e71c93f",
-      "code": "T-757",
-      "category": "tech",
-      "title": "Intel запустила новую волну увольнений — Тан продолжает повышать эффективность компании",
-      "summary": "После серии увольнений за последние два года Intel снова сокращает штат сотрудников, пишет Business Insider. Увольнения являются последним признаком того, что усилия генерального директора Лип-Бу Тана (Lip-Bu Tan), напра",
-      "body": [
-        "После серии увольнений за последние два года Intel снова сокращает штат сотрудников, пишет Business Insider. Увольнения являются последним признаком того, что усилия генерального директора Лип-Бу Тана (Lip-Bu Tan), направленные на оптимизацию структуры компании, продолжаются и в последние месяцы года. Источник изображения: Intel"
-      ],
-      "tags": [
-        "3DNews"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151505",
-      "publishedAt": "2026-11-18T21:25:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151505"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-757.svg",
-      "imageCaption": "Обложка рубрики: Intel запустила новую волну увольнений — Тан продолжает повышать эффек",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-stopgame-37bbeedb7a",
-      "code": "G-820",
-      "category": "games",
-      "title": "GTA VI наконец вышла. Что нужно знать о долгожданном продолжении серии?",
-      "summary": "Если ваш аккаунт на PS5 или Xbox зарегистрирован в восточном полушарии, то вам уже доступна Grand Theft Auto VI — новая часть культовой серии Rockstar Games. Если вдруг у вас остались вопросы по игре, в заметке собрали в",
-      "body": [
-        "Если ваш аккаунт на PS5 или Xbox зарегистрирован в восточном полушарии, то вам уже доступна Grand Theft Auto VI — новая часть культовой серии Rockstar Games. Если вдруг у вас остались вопросы по игре, в заметке собрали всё самое важное и интересное.… […]"
-      ],
-      "tags": [
-        "StopGame"
-      ],
-      "sourceName": "StopGame",
-      "sourceUrl": "https://stopgame.ru/newsdata/73553/gta_vi_nakonec_vyshla_chto_nuzhno_znat_o_dolgozhdannom_prodolzhenii_serii",
-      "publishedAt": "2026-11-18T21:01:08.000Z",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (StopGame)",
-          "url": "https://stopgame.ru/newsdata/73553/gta_vi_nakonec_vyshla_chto_nuzhno_znat_o_dolgozhdannom_prodolzhenii_serii"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-820.svg",
-      "imageCaption": "Обложка рубрики: GTA VI наконец вышла. Что нужно знать о долгожданном продолжении серии",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-news-ab855f3fb2",
-      "code": "T-847",
-      "category": "tech",
-      "title": "Сайт вашего бизнеса не работает из‑за кибератаки: объясняю, как взыскать убытки с хостинг‑провайдера",
-      "summary": "Российским предпринимателям необязательно читать новости, чтобы узнавать о кибератаках на хостинг-провайдеров.",
-      "body": [
-        "Российским предпринимателям необязательно читать новости, чтобы узнавать о кибератаках на хостинг-провайдеров.",
-        "Если не работает сайт вашего бизнеса, сайты партнёров и конкурентов, не получается скачать резервные копии; если потеряны образы виртуальных серверов, сетевые настройки, содержимое облачных сервисов и т.д., то с большой долей вероятности это она – кибератака на хостинг-провайдера .",
-        "как взыскать убытки с хостера"
-      ],
-      "tags": [
-        "хостинг-провайдер",
-        "хостеры",
-        "кибератаки",
-        "резервное копирование"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1109380/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109380",
-      "publishedAt": "2026-11-18T20:58:14.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1109380/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1109380"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-847.svg",
-      "imageCaption": "Обложка рубрики: Сайт вашего бизнеса не работает из‑за кибератаки: объясняю, как взыска",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-3dnews-e7b01d1a4e",
-      "code": "T-711",
-      "category": "tech",
-      "title": "Google заставит разработчиков адаптировать приложения под складные смартфоны — иначе их заблокируют в Play Store",
-      "summary": "Компания Google собирается ввести обязательные требования к качеству интерфейса для размещаемых в Google Play игр и программ, чтобы те корректно работали на складных смартфонах. Разработчикам ПО, которые не выполнят базо",
-      "body": [
-        "Компания Google собирается ввести обязательные требования к качеству интерфейса для размещаемых в Google Play игр и программ, чтобы те корректно работали на складных смартфонах. Разработчикам ПО, которые не выполнят базовые условия, запретят публиковать новинки и выпускать обновления в каталоге, а такие приложения потеряют позиции в выдаче. Источник изображения: Google"
-      ],
-      "tags": [
-        "- ПО для мобильных устройс"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151500",
-      "publishedAt": "2026-11-18T20:30:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151500"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-711.svg",
-      "imageCaption": "Обложка рубрики: Google заставит разработчиков адаптировать приложения под складные сма",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-3dnews-9b10b6b6aa",
-      "code": "T-723",
-      "category": "tech",
-      "title": "Hyundai забрала Boston Dynamics под полный контроль — теперь роботов Atlas ждёт массовое производство",
-      "summary": "Hyundai Motor Group стала единоличным владельцем американской компании Boston Dynamics, занимающейся робототехникой. Этот переход позволит ускорить процесс коммерциализации человекоподобного робота Atlas, который разраба",
-      "body": [
-        "Hyundai Motor Group стала единоличным владельцем американской компании Boston Dynamics, занимающейся робототехникой. Этот переход позволит ускорить процесс коммерциализации человекоподобного робота Atlas, который разрабатывается Boston Dynamics, пишет The Korea Herald. Источник изображения: Boston Dynamics"
-      ],
-      "tags": [
-        "- мир роботехники"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151499",
-      "publishedAt": "2026-11-18T20:25:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151499"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-723.svg",
-      "imageCaption": "Обложка рубрики: Hyundai забрала Boston Dynamics под полный контроль — теперь роботов A",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-3dnews-86fcf41fcf",
-      "code": "T-857",
-      "category": "tech",
-      "title": "Разработчики смогут решать, достоин ли ПК запускать их приложения и игры — Microsoft готовит новую защиту Windows",
-      "summary": "Microsoft тестирует новую систему Windows Baseline Protection, из-за которой даже лицензионные приложения могут не запуститься на ПК с недостаточным уровнем защиты. Система объединит восемь существующих механизмов безопа",
-      "body": [
-        "Microsoft тестирует новую систему Windows Baseline Protection, из-за которой даже лицензионные приложения могут не запуститься на ПК с недостаточным уровнем защиты. Система объединит восемь существующих механизмов безопасности Windows 11 в единую систему проверки, результаты которой смогут использовать сторонние разработчики. Если компьютер не будет соответствовать их требованиям, приложения могут ограничить отдельные функции или полностью заблокировать запуск. Источник изображений: windowslatest.com"
-      ],
-      "tags": [
-        "- программное обеспечение"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151498",
-      "publishedAt": "2026-11-18T20:20:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151498"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-857.svg",
-      "imageCaption": "Обложка рубрики: Разработчики смогут решать, достоин ли ПК запускать их приложения и иг",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-stopgame-c97a93636d",
-      "code": "G-793",
-      "category": "games",
-      "title": "Тактическая RPG с разветвлённым сюжетом Calame выйдет в феврале 2027 года",
-      "summary": "Трейлер с анонсом даты релиза Calame.… […]",
-      "body": [
-        "Трейлер с анонсом даты релиза Calame.… […]"
-      ],
-      "tags": [
-        "StopGame"
-      ],
-      "sourceName": "StopGame",
-      "sourceUrl": "https://stopgame.ru/newsdata/73561/takticheskaya_rpg_s_razvetvlennym_syuzhetom_calame_vyydet_v_fevrale_2027_goda",
-      "publishedAt": "2026-11-18T20:17:03.000Z",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (StopGame)",
-          "url": "https://stopgame.ru/newsdata/73561/takticheskaya_rpg_s_razvetvlennym_syuzhetom_calame_vyydet_v_fevrale_2027_goda"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-793.svg",
-      "imageCaption": "Обложка рубрики: Тактическая RPG с разветвлённым сюжетом Calame выйдет в феврале 2027 г",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-stopgame-5558a6445d",
-      "code": "G-860",
-      "category": "games",
-      "title": "GTA VI не получит апдейт с поддержкой 40/60 fps, заявила Rockstar",
-      "summary": "Релизная версия Grand Theft Auto VI выдаёт 30 кадров в секунду на всех моделях PlayStation 5 и Xbox Series. Желающие прокатиться по Вайс-Сити в 60 fps надеялись, что позже фреймрейт повысят хотя бы на более мощной PS5 Pr",
-      "body": [
-        "Релизная версия Grand Theft Auto VI выдаёт 30 кадров в секунду на всех моделях PlayStation 5 и Xbox Series. Желающие прокатиться по Вайс-Сити в 60 fps надеялись, что позже фреймрейт повысят хотя бы на более мощной PS5 Pro, однако чудо-патча лучше не ждать.… […]"
-      ],
-      "tags": [
-        "StopGame"
-      ],
-      "sourceName": "StopGame",
-      "sourceUrl": "https://stopgame.ru/newsdata/73560/gta_vi_ne_poluchit_apdeyt_s_podderzhkoy_40_60_fps_zayavila_rockstar",
-      "publishedAt": "2026-11-18T20:12:32.000Z",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (StopGame)",
-          "url": "https://stopgame.ru/newsdata/73560/gta_vi_ne_poluchit_apdeyt_s_podderzhkoy_40_60_fps_zayavila_rockstar"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-860.svg",
-      "imageCaption": "Обложка рубрики: GTA VI не получит апдейт с поддержкой 40/60 fps, заявила Rockstar",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-stopgame-5e4ad4eecc",
-      "code": "G-836",
-      "category": "games",
-      "title": "Завершились слушания по делу об увольнениях в Rockstar",
-      "summary": "Трудовой трибунал в Глазго завершил слушания по делу об увольнении 34 сотрудников Rockstar. Теперь суду предстоит вынести вердикт. Бывшие девелоперы ждут решения уже больше года: их уволили в 2025-м, незадолго до заверше",
-      "body": [
-        "Трудовой трибунал в Глазго завершил слушания по делу об увольнении 34 сотрудников Rockstar. Теперь суду предстоит вынести вердикт. Бывшие девелоперы ждут решения уже больше года: их уволили в 2025-м, незадолго до завершения работы над Grand Theft Auto VI.… […]"
-      ],
-      "tags": [
-        "StopGame"
-      ],
-      "sourceName": "StopGame",
-      "sourceUrl": "https://stopgame.ru/newsdata/73559/zavershilis_slushaniya_po_delu_ob_uvolneniyah_v_rockstar",
-      "publishedAt": "2026-11-18T19:42:54.000Z",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (StopGame)",
-          "url": "https://stopgame.ru/newsdata/73559/zavershilis_slushaniya_po_delu_ob_uvolneniyah_v_rockstar"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-836.svg",
-      "imageCaption": "Обложка рубрики: Завершились слушания по делу об увольнениях в Rockstar",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-3dnews-a8b2aad086",
-      "code": "T-715",
-      "category": "tech",
-      "title": "Инженеры угрожают новому руководству Nvidia увольнениями, если Хуанг не вернётся на пост гендира",
-      "summary": "Временная глава Nvidia Колетт Кресс (Colette Kress) столкнулась с недовольством части сотрудников после отставки Дженсена Хуанга (Jensen Huang). Петиция за возвращение основателя компании собрала почти 200 тыс. подписей,",
-      "body": [
-        "Временная глава Nvidia Колетт Кресс (Colette Kress) столкнулась с недовольством части сотрудников после отставки Дженсена Хуанга (Jensen Huang). Петиция за возвращение основателя компании собрала почти 200 тыс. подписей, а отдельные специалисты заявили о намерении уволиться. Источник изображения: Nvidia"
-      ],
-      "tags": [
-        "3DNews"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151494",
-      "publishedAt": "2026-11-18T19:31:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151494"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-715.svg",
-      "imageCaption": "Обложка рубрики: Инженеры угрожают новому руководству Nvidia увольнениями, если Хуанг н",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-securitylab-77db59986b",
-      "code": "C-744",
-      "category": "security",
-      "title": "Cрочно обновите nginx: Один сетевой запрос — и root на сервере даже внутри Docker",
-      "summary": "Уязвимость HTTP/2 затрагивает версии веб-сервера начиная с 2015 года, а цепочка атак позволяет получить права root.",
-      "body": [
-        "Уязвимость HTTP/2 затрагивает версии веб-сервера начиная с 2015 года, а цепочка атак позволяет получить права root."
-      ],
-      "tags": [
-        "SecurityLab"
-      ],
-      "sourceName": "SecurityLab",
-      "sourceUrl": "https://www.securitylab.ru/news/580329.php",
-      "publishedAt": "2026-11-18T19:07:07.000Z",
-      "readMin": 1,
-      "icon": "🛡️",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (SecurityLab)",
-          "url": "https://www.securitylab.ru/news/580329.php"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-744.svg",
-      "imageCaption": "Обложка рубрики: Cрочно обновите nginx: Один сетевой запрос — и root на сервере даже вн",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nasa-0c12373bb7",
-      "code": "S-879",
-      "category": "science",
-      "title": "MAF EAP – Holidays – How to manage the BAH HUMBUG that tries to sneak in",
-      "summary": "Preparations for Next Moonwalk Simulations Underway (and Underwater)",
-      "body": [
-        "Preparations for Next Moonwalk Simulations Underway (and Underwater)",
-        "Feet in woolen socks by the fireplace.",
-        "Holidays are often a fun break during a busy year – a long weekend here and there is an event many of us can get behind. However, when a short holiday break turns into a full holiday season, we know that this is a different “ball game”.",
-        "Everyone has stress about something – some people love the holidays, and some people are holiday-avoidant… and some live in the middle. What specific stressors or challenges you experience might not bother your sibling, your spouse or your coworker. We want to be aware of and have a clear understanding of what holidays mean to you as a person."
-      ],
-      "tags": [
-        "NASA"
-      ],
-      "sourceName": "NASA",
-      "sourceUrl": "https://www.nasa.gov/centers-and-facilities/michoud/maf-eap/maf-eap-holidays-how-to-manage-the-bah-humbug-that-tries-to-sneak-in/",
-      "publishedAt": "2026-11-18T18:58:27.000Z",
-      "readMin": 1,
-      "icon": "🚀",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (NASA)",
-          "url": "https://www.nasa.gov/centers-and-facilities/michoud/maf-eap/maf-eap-holidays-how-to-manage-the-bah-humbug-that-tries-to-sneak-in/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-879.svg",
-      "imageCaption": "Обложка рубрики: MAF EAP – Holidays – How to manage the BAH HUMBUG that tries to sneak ",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-hackernews-sec-bcaf11ea61",
-      "code": "C-951",
-      "category": "security",
-      "title": "10-Year-Old NGINX HTTP/2 Flaw Lets Unauthenticated Attackers Execute Code on Servers",
-      "summary": "A flaw in NGINX's HTTP/2 support can allow an attacker to run code on servers with HTTP/2 enabled, without needing to log in.",
-      "body": [
-        "A flaw in NGINX's HTTP/2 support can allow an attacker to run code on servers with HTTP/2 enabled, without needing to log in.",
-        "The decade-old flaw, CVE-2026-123007, dubbed \"nginx2root,\" has been present in NGINX's open-source code since version 1.9.5, released on September 22, 2015. Fixed versions 1.31.9 and 1.30.7 came out today.",
-        "F5, the company behind NGINX, says attackers can run code where"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/10-year-old-nginx-http2-flaw-lets.html",
-      "publishedAt": "2026-11-18T18:31:17.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/10-year-old-nginx-http2-flaw-lets.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-951.svg",
-      "imageCaption": "Обложка рубрики: 10-Year-Old NGINX HTTP/2 Flaw Lets Unauthenticated Attackers Execute C",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-securitylab-838cc0ee94",
-      "code": "C-846",
-      "category": "security",
-      "title": "Взлом GTA VI за день до выхода: что на самом деле удалось получить хакерам на PS5",
-      "summary": "За день до релиза исследователю PS5 показали расшифрованные игровые пакеты.",
-      "body": [
-        "За день до релиза исследователю PS5 показали расшифрованные игровые пакеты."
-      ],
-      "tags": [
-        "SecurityLab"
-      ],
-      "sourceName": "SecurityLab",
-      "sourceUrl": "https://www.securitylab.ru/news/580328.php",
-      "publishedAt": "2026-11-18T18:20:17.000Z",
-      "readMin": 1,
-      "icon": "🛡️",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (SecurityLab)",
-          "url": "https://www.securitylab.ru/news/580328.php"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-846.svg",
-      "imageCaption": "Обложка рубрики: Взлом GTA VI за день до выхода: что на самом деле удалось получить хак",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-hackernews-sec-05579930ed",
-      "code": "C-953",
-      "category": "security",
-      "title": "F5 Warns 6 Critical BIG-IP Flaws Can Crash Traffic in Specific Setups, May Allow RCE",
-      "summary": "Six critical vulnerabilities in F5 BIG-IP allow an attacker to crash the Traffic Management Microkernel (TMM) without logging in, disrupting traffic until the TMM restarts.",
-      "body": [
-        "Six critical vulnerabilities in F5 BIG-IP allow an attacker to crash the Traffic Management Microkernel (TMM) without logging in, disrupting traffic until the TMM restarts.",
-        "Each flaw needs a specific setup on a virtual server: an iRule that uses a particular command, or an APM policy that includes two particular kinds of agent.",
-        "F5, which makes BIG-IP, disclosed the flaws today and says they"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/f5-warns-6-critical-big-ip-flaws-can.html",
-      "publishedAt": "2026-11-18T18:15:39.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/f5-warns-6-critical-big-ip-flaws-can.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-953.svg",
-      "imageCaption": "Обложка рубрики: F5 Warns 6 Critical BIG-IP Flaws Can Crash Traffic in Specific Setups,",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nasa-2b958316fe",
-      "code": "S-842",
-      "category": "science",
-      "title": "NASA Announces Mid-Power Electric Rocket Challenge for US Companies",
-      "summary": "Preparations for Next Moonwalk Simulations Underway (and Underwater)",
-      "body": [
-        "Preparations for Next Moonwalk Simulations Underway (and Underwater)",
-        "The Hall thruster is part of an Solar Electric Propulsion (SEP) system that uses 10 times less propellant than equivalent chemical rockets.",
-        "Image Credit: NASA/Michelle M. Murphy (Wyle Information Systems, LLC)",
-        "NASA launched a new competition inviting U.S. companies to produce prototypes of mid-power Hall effect thrusters – a type of electric propulsion system considered crucial for future space operations and exploration."
-      ],
-      "tags": [
-        "CoECI News",
-        "Glenn Research Center"
-      ],
-      "sourceName": "NASA",
-      "sourceUrl": "https://www.nasa.gov/directorates/stmd/prizes-challenges-crowdsourcing-program/nasa-announces-mid-power-electric-rocket-challenge-for-us-companies/",
-      "publishedAt": "2026-11-18T18:12:32.000Z",
-      "readMin": 1,
-      "icon": "🚀",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (NASA)",
-          "url": "https://www.nasa.gov/directorates/stmd/prizes-challenges-crowdsourcing-program/nasa-announces-mid-power-electric-rocket-challenge-for-us-companies/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-18",
-        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-842.svg",
-      "imageCaption": "Обложка рубрики: NASA Announces Mid-Power Electric Rocket Challenge for US Companies",
       "imageCredit": "Games News · локальная обложка"
     },
     {
