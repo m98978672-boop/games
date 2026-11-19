@@ -716,6 +716,10 @@ body.placing #map { cursor: crosshair; }
   animation: dailyIn 0.3s ease;
 }
 .daily.hidden { display: none; }
+/* Итоги дня — отчёт за прошедший день: он обязан быть поверх тостов,
+   иначе всплывающие сообщения перекрывают цифры ровно в момент, когда
+   игрок их читает. Тосты в это время уходят под карточку. */
+.daily:not(.hidden) { z-index: 40; }
 .daily-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; margin-bottom: 5px; }
 .daily-head span { color: var(--accent-2); font-weight: 700; font-variant-numeric: tabular-nums; }
 .daily-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
@@ -908,6 +912,9 @@ body.placing #map { cursor: crosshair; }
   .news { display: none; }
   .hint { font-size: 10px; padding: 6px 9px; }
   .toasts { left: 8px; right: 8px; top: 132px; bottom: auto; max-width: none; max-height: 46px; overflow: hidden; z-index: 34; }
+  /* На телефоне карточка итогов занимает нижнюю треть: тосты отступают
+     вниз-вверх так, чтобы не лечь на её заголовок и цифры. */
+  #daily:not(.hidden) ~ .toasts { top: auto; bottom: calc(37vh + 122px); }
   .toasts .toast:not(:last-child) { display: none; }
   .toast { padding: 5px 8px; font-size: 10px; gap: 5px; }
   .daily { top: auto; bottom: calc(37vh + 66px); left: 8px; right: 8px; transform: none; width: auto; z-index: 26; }

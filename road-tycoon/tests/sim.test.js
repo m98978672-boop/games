@@ -315,6 +315,31 @@ test('испорченное сохранение чинится, а не нас
   ok(s.time >= C.dayStartHour / 24, 'время откатилось к началу дня');
 });
 
+
+test('карточка итогов дня не прячется под тостами', () => {
+  // В PLAN.md этот баг был записан как известное ограничение: на телефоне
+  // всплывающие сообщения ложились поверх цифр отчёта. Проверяем порядок слоёв.
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  const z = (selector) => {
+    const re = new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}', 'g');
+    let last = null, m;
+    while ((m = re.exec(css))) {
+      const hit = /z-index:\s*(\d+)/.exec(m[1]);
+      if (hit) last = Number(hit[1]);
+    }
+    return last;
+  };
+  const daily = z('.daily:not(.hidden)');
+  const toasts = z('.toasts');
+  ok(daily !== null, 'у карточки итогов дня задан слой');
+  ok(toasts !== null, 'у тостов задан слой');
+  ok(daily > toasts, 'отчёт дня выше тостов (' + daily + ' > ' + toasts + ')');
+  // На телефоне тосты ещё и уступают место по вертикали.
+  ok(/#daily:not\(\.hidden\) ~ \.toasts/.test(css), 'на телефоне тосты сдвигаются от карточки');
+});
+
 console.log('\n' + passed + ' тестов прошло, ' + failures.length + ' упало');
 if (failures.length) {
   console.log('\nПадения:');

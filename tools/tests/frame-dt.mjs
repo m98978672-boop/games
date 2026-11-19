@@ -46,6 +46,8 @@ const GAMES = [
   ['night-taxi/game.bundle.js', 'Ночное такси (сборка)'],
   ['road-tycoon/src/main.js', 'ТРАССА'],
   ['road-tycoon/src/sim.js', 'ТРАССА (шаг симуляции)'],
+  ['truck-haul/src/main.js', 'ДАЛЬНОБОЙ 3D (исходник)'],
+  ['truck-haul/game3d.bundle.js', 'ДАЛЬНОБОЙ 3D (сборка)'],
   ['truck-showroom/src/app.js', 'ГАРАЖ 3D (исходник)'],
   ['truck-showroom/showroom.bundle.js', 'ГАРАЖ 3D (сборка)'],
 ];
@@ -67,7 +69,10 @@ for (const [rel, title] of GAMES) {
     console.log('  · ' + `${title}: ${rel} не считает dt — проверка не нужна`);
     continue;
   }
-  const guarded = /Number\.isFinite\((now|t|ts|i|_d|raw|dt|_r|stamp)/.test(src);
+  // Минификатор переписывает `if (!Number.isFinite(x)) ...` в
+  // `Number.isFinite(x)||(...)`, поэтому принимаем обе формы.
+  const guarded = /Number\.isFinite\(\w+\)\s*\|\|/.test(src)
+    || /Number\.isFinite\((now|t|ts|i|_d|raw|dt|_r|stamp)/.test(src);
   ok(guarded, `${title}: ${rel} проверяет отметку времени на конечность`);
 }
 

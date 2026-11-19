@@ -6,8 +6,8 @@
     "games": 232,
     "storefront": 16,
     "collection": 216,
-    "files": 2064,
-    "totalBytes": 50863161,
+    "files": 2065,
+    "totalBytes": 50869907,
     "chunks": 391,
     "blockedFiles": 3
   },
@@ -5183,8 +5183,8 @@
       "play": "road-tycoon/index.html",
       "cover": "road-tycoon/cover.svg",
       "dir": "road-tycoon",
-      "infoHash": "1ec681c446b6f0a36c88ee881e8f251edac8f96146de3c7fbf625d35f619c8f0",
-      "totalSize": 1157238,
+      "infoHash": "af76764a8981e6677701764a41bb9d379633b6227f3d509ed1340c94bfd8564e",
+      "totalSize": 1157943,
       "chunkSize": 262144,
       "chunkCount": 5,
       "fileCount": 18,
@@ -5261,8 +5261,8 @@
         },
         {
           "path": "style.css",
-          "size": 47361,
-          "sha256": "114349b25fa988f6fd47d4aecfd02d76cf010c503d01723aac00c06a0d783c5b"
+          "size": 48066,
+          "sha256": "87cc4bb347f2bacf09f88e52ebffd9c792df02a5745e8cbcf1d852fd090f015c"
         },
         {
           "path": "tools/balance.js",
@@ -6193,11 +6193,11 @@
       "play": "truck-haul/index.html",
       "cover": "truck-haul/cover.svg",
       "dir": "truck-haul",
-      "infoHash": "67b32e372019e6a46fdb73ddd10c5480982143c6453def954459d74db07af310",
-      "totalSize": 717457,
+      "infoHash": "7e395b4f28c7986b8bfd747a1df2372f626ca59169aca717c4f5561af2e140a0",
+      "totalSize": 723498,
       "chunkSize": 262144,
       "chunkCount": 3,
-      "fileCount": 8,
+      "fileCount": 9,
       "files": [
         {
           "path": ".gitignore",
@@ -6216,8 +6216,8 @@
         },
         {
           "path": "game3d.bundle.js",
-          "size": 621370,
-          "sha256": "83355be03710082f64daead600fd685c34a10eaf0933885b07d9ffed77b69912"
+          "size": 622496,
+          "sha256": "142c6687496b9b44bc2a21ad4487e3f1dc6f92ea23694acfcafc1ca354c368df"
         },
         {
           "path": "index.html",
@@ -6230,9 +6230,14 @@
           "sha256": "164836fa48aaf2a4e50b015ba8f67256f673eaa458dfa4e95f95cfaeb915ec82"
         },
         {
+          "path": "src/logic.js",
+          "size": 7147,
+          "sha256": "e2df46c019ea4cd0558cd583482695964a0e5c2de20f1772b11e2bd19ae5dc3a"
+        },
+        {
           "path": "src/main.js",
-          "size": 42579,
-          "sha256": "1509783fd0926d0256b7c89acd10b92779156294e5e57cb0c58fe7bafc8b3e55"
+          "size": 40347,
+          "sha256": "0008fbf06a575224de2b0eb1e6e30e44d70f09429d6c6d1dc8032ac60cfcfe67"
         },
         {
           "path": "style.css",

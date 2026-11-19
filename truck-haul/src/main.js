@@ -1,19 +1,23 @@
 import * as THREE from 'three';
+import Logic from './logic.js';
 
 const $ = id => document.getElementById(id);
 const SAVE='dalnoboy-3d-save-v1';
-const cities=[['Санкт-Петербург','Новгород','Тверь','Москва','Владимир','Ярославль','Вологда','Псков'],['Нижний Новгород','Казань','Самара','Уфа','Пермь','Ижевск','Киров','Саранск'],['Волгоград','Саратов','Астрахань','Ростов-на-Дону','Краснодар','Воронеж','Элиста','Ставрополь'],['Екатеринбург','Тюмень','Челябинск','Омск','Новосибирск','Томск','Барнаул','Курган'],['Мурманск','Архангельск','Петрозаводск','Сыктывкар','Ухта','Котлас','Апатиты','Онега']];
 const regions=['Северо-Запад','Поволжье','Юг','Урал и Сибирь','Север'];
-const cargoes=[['Продукты',5,12],['Пиломатериалы',10,20],['Стальной прокат',16,27],['Медицинское оборудование',4,12],['Строительная техника',15,25],['Бытовая техника',7,17],['Зерно',12,22],['Мебель',5,14],['Автозапчасти',4,12],['Стекло',9,18],['Электроника',3,10],['Цемент',15,24],['Текстиль',5,14],['Рыбная продукция',7,15],['Трубы',12,20],['Сельхозтехника',16,25],['Фармацевтика',4,11],['Кабель',10,21],['Солнечные панели',6,16],['Бумажные рулоны',10,18],['Кофе и чай',4,12],['Упакованная вода',8,18],['Шины',7,15],['Пластиковая тара',5,13],['Запчасти для станков',10,22]];
 const defaultState={money:24000,fuel:420,oil:100,temp:82,condition:100,engine:100,brakes:100,suspension:100,tires:100,fatigue:0,odometer:0,completed:0,reputation:0,region:0,jobs:[],active:null,speed:0,lateral:0,day:1,minute:500,firstPerson:false,gear:1,gearboxAuto:true,rpm:750};
+// Чистая логика игры подключается до первого использования:
+// const-биндинги не поднимаются, как function, и порядок здесь важен.
+const cities=Logic.CITIES;
+const cargoes=Logic.CARGOES;
+const rand=Logic.rand;
+const makeRoute=Logic.makeRoute;
+const makeJobs=Logic.makeJobs;
+const cash=n=>Math.round(n).toLocaleString('ru-RU')+' ₽';const clamp=Logic.clamp;
+
 let saved={};try{saved=JSON.parse(localStorage.getItem(SAVE)||'{}')}catch{}
 const S={...defaultState,...saved,traffic:[]};if(!Array.isArray(S.jobs)||!S.jobs.length)S.jobs=makeJobs(250);for(const j of S.jobs)if(!Array.isArray(j.route))j.route=makeRoute(j.id||1);if(S.active&&!Array.isArray(S.active.route))S.active.route=makeRoute(S.active.id||1);S.speed=0;S.firstPerson=false;
 let keys=new Set(),paused=false,modalRegion=S.region,toastTimer=0,last=0,worldFlow=0,spawn=0,treeTimer=0, weather=['ЯСНО','ОБЛАЧНО','ДОЖДЬ','ТУМАН'][Math.floor(Math.random()*4)];
-function rand(seed){let n=seed>>>0;return()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296}}
-function makeRoute(seed){const r=rand(6401+seed*31),p=[{x:.5,y:.94}];for(let i=1;i<8;i++)p.push({x:clamp(.5+(r()-.5)*.82,.09,.91),y:.94-i*.118});p.push({x:clamp(.5+(r()-.5)*.7,.14,.86),y:.035});return p}
-function makeJobs(count,start=1){const r=rand(81252+start*733);return Array.from({length:count},(_,i)=>{const region=Math.floor(r()*5),list=cities[region],a=Math.floor(r()*list.length),b=(a+1+Math.floor(r()*(list.length-1)))%list.length,c=cargoes[Math.floor(r()*cargoes.length)],distance=Math.round((70+r()*360)/5)*5,load=+(c[1]+r()*(c[2]-c[1])).toFixed(1),urgent=r()<.17,fragile=['Стекло','Электроника','Фармацевтика'].includes(c[0]),reward=Math.round((distance*(45+r()*16)+load*220+(urgent?6500:0)+(fragile?3500:0))/100)*100;return{id:start+i,region,from:list[a],to:list[b],cargo:c[0],distance,load,reward,urgent,fragile,deadline:Math.round(distance/(urgent?83:57)+r()*1.3),route:makeRoute(start+i+region*99),status:'available'}})}
 function save(){try{localStorage.setItem(SAVE,JSON.stringify(S));$('save-indicator').textContent='● СОХРАНЕНО';setTimeout(()=>$('save-indicator').textContent='● АВТОСОХРАНЕНИЕ',1500)}catch{}}
-const cash=n=>Math.round(n).toLocaleString('ru-RU')+' ₽';function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function toast(text){const n=$('event-toast');n.textContent=text;n.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove('show'),2500)}
 
 // Three.js scene: a lightweight, original low-poly tractor, trailer and highway.
@@ -107,7 +111,7 @@ function syncScene(dt){updateRoadGeometry();sign.position.x=roadCenterAt(115);tr
  scene.fog.color.set(weather==='ТУМАН'?0xd7ddda:weather==='ДОЖДЬ'?0x85999f:0x9ebbc2);scene.fog.near=weather==='ТУМАН'?45:140;scene.fog.far=weather==='ТУМАН'?200:530;scene.background.set(weather==='ЯСНО'?0x83b2cb:weather==='ТУМАН'?0xbac3c0:0x879ea5);
  if(weather==='ДОЖДЬ'&&rainCount){rain.visible=true;const p=rain.geometry.attributes.position;for(let i=0;i<p.count;i++){p.array[i*3+2]+=S.speed/3.6*dt*1.8;p.array[i*3+1]-=dt*19;if(p.array[i*3+1]<0)p.array[i*3+1]=24}p.needsUpdate=true}else rain.visible=false;
 }
-function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;simulate(dt);syncScene(dt);renderer.render(scene,camera);ui();requestAnimationFrame(frame)}
+function frame(t){if(!Number.isFinite(t))t=performance.now();let _r=(t-last)/1000;if(!Number.isFinite(_r)||_r<0)_r=0;const dt=Math.min(.05,_r);last=t;simulate(dt);syncScene(dt);renderer.render(scene,camera);ui();requestAnimationFrame(frame)}
 
 function toggleCamera(){S.firstPerson=!S.firstPerson;toast(S.firstPerson?'Вид из кабины':'Камера снаружи')}
 function toggleCruise(){S.cruise=!S.cruise;toast(S.cruise?'Круиз-контроль включён':'Круиз-контроль выключен')}
