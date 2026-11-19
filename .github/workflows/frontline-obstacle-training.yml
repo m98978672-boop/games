@@ -31,7 +31,7 @@ jobs:
           python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
           python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
       - name: Train and generate decisions for unseen game scenes
-        run: python -u frontline-command/tools/training/train-obstacle-game.py --data "$RUNNER_TEMP/obstacle-data" --output "$RUNNER_TEMP/obstacle-output" --steps 64
+        run: python -u frontline-command/tools/training/train-obstacle-game.py --data "$RUNNER_TEMP/obstacle-data" --output "$RUNNER_TEMP/obstacle-output" --steps 128
       - name: Replay generated decisions through the game
         run: node frontline-command/tools/training/replay-obstacle-game.mjs "$RUNNER_TEMP/obstacle-output/report.json" "$RUNNER_TEMP/obstacle-output/replay.json"
       - name: Report results

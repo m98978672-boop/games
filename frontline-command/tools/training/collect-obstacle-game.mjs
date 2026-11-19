@@ -33,6 +33,14 @@ export function observation(spec){
  return {start:[mirror(768),768+offset],goal:[mirror(1130),768+offset],walls:segments,waypoints:{U:[upper.x,upper.y],D:[lower.x,lower.y]}};
 }
 
+// Canonical coordinates are relative to the soldier, x points toward the
+// opposing side, and positive y points down. No labels or faction are sent.
+export function modelObservation(spec){
+ const o=observation(spec), [sx,sy]=o.start, sign=spec.faction?-1:1;
+ const point=([x,y])=>[(x-sx)*sign,y-sy];
+ return {goal:point(o.goal),walls:o.walls.map(([x,y,x2,y2])=>[...point([x,y]),...point([x2,y2])]),waypoints:{U:point(o.waypoints.U),D:point(o.waypoints.D)}};
+}
+
 export async function simulate(spec,choice=null){
  const cfg=await loadConfig(); const obs=observation(spec), {faction,seed}=spec;
  const g=new Game({cfg,seed,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.occupancyGrid.clear();g.squads.clear();g.api.orders=[];
@@ -63,7 +71,7 @@ export async function simulate(spec,choice=null){
  return {obs,choice,first,near:Math.hypot(u.x-goal.x,u.y-goal.y)<90,wallCross,maxStep,limit:u.speed*.05*1.5,seconds:g.time,switched,accepted};
 }
 
-const SYSTEM='You are selecting a waypoint for one soldier. Walls are solid line segments. Given start, goal, walls and two waypoint coordinates, choose U or D to reach the goal safely. Reply with exactly U or D.';
+const SYSTEM='Choose a reachable waypoint U or D for a soldier. The soldier starts at (0,0); positive x is forward, positive y is down. Every wall is a solid segment [x1,y1,x2,y2], impossible to cross. Goal and U/D are points [x,y]. Walls can span the whole map. Reply with exactly U or D.';
 export async function collect(out,{quick=false}={}){
  await mkdir(out,{recursive:true}); const all={};
  for(const split of ['train','eval']){
@@ -76,7 +84,7 @@ export async function collect(out,{quick=false}={}){
    const good=runs.filter(valid).sort((a,b)=>a.seconds-b.seconds);
    if(good.length!==1){failed++;console.error('rejected',spec.id,'valid candidates',good.length);continue;}
    const run=good[0];
-   rows.push({spec,input:run.obs,response:run.choice,teacher:{seconds:run.seconds,maxStep:run.maxStep},other:{near:runs.find(r=>r!==run).near,switched:runs.find(r=>r!==run).switched}});
+   rows.push({spec,input:modelObservation(spec),response:run.choice,teacher:{seconds:run.seconds,maxStep:run.maxStep},other:{near:runs.find(r=>r!==run).near,switched:runs.find(r=>r!==run).switched}});
    console.error(split,spec.id,'label',run.choice,'seconds',run.seconds.toFixed(2));
   }
   if(!rows.length)throw Error(`empty ${split}`);
