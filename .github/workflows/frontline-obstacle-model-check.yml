@@ -38,7 +38,7 @@ jobs:
         if: always()
         run: |
           if [ -f "$RUNNER_TEMP/obstacle-results.json" ]; then
-            python -c 'import json,os; p=os.path.join(os.environ["RUNNER_TEMP"],"obstacle-results.json"); d=json.load(open(p)); [print("::notice::OBSTACLE_RESULT "+json.dumps(r,ensure_ascii=True,separators=(",",":"))) for r in d["results"]]'
+            python -c 'import json,os; p=os.path.join(os.environ["RUNNER_TEMP"],"obstacle-results.json"); d=json.load(open(p)); [print("::notice::OBSTACLE_GROUP "+json.dumps([r for r in d["results"] if r["model"]==m],ensure_ascii=True,separators=(",",":"))) for m in ("base","adapter")]'
           fi
       - uses: actions/upload-artifact@v4
         if: always()
