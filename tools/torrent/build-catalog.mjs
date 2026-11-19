@@ -226,11 +226,60 @@ async function buildOne(game) {
   };
 }
 
+// Проверка «игра действительно запускается», а не просто «файлы на месте».
+// bughunt уже находил в импортированных играх битые url() в CSS и скрипты,
+// которые падают при загрузке: сам по себе index.html этого не ловит.
+async function checkCollectionGame(absDir) {
+  const problems = [];
+  const skip = new Set(['manifest.json']);
+  // Свой обход: нужны абсолютные пути (walk() отдаёт только относительные).
+  const files = [];
+  const collect = async (dir, base) => {
+    for (const e of await readdir(dir, { withFileTypes: true })) {
+      const rel = base ? `${base}/${e.name}` : e.name;
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory()) await collect(abs, rel);
+      else files.push({ rel, abs });
+    }
+  };
+  await collect(absDir, '');
+  const known = new Set(files.map((f) => f.rel));
+
+  const existsRef = (ref, dirOf) => {
+    const clean = String(ref).split('#')[0].split('?')[0].trim();
+    if (!clean || /^(https?:|data:|blob:|mailto:|javascript:|\/\/|#)/i.test(clean)) return true;
+    const rel = path.posix.normalize(path.posix.join(dirOf, clean)).replace(/^\.\//, '');
+    return known.has(rel) || known.has(rel.replace(/^\//, ''));
+  };
+
+  for (const f of files) {
+    if (skip.has(f.rel)) continue;
+    const dirOf = path.posix.dirname(f.rel);
+    if (/\.html?$/i.test(f.rel)) {
+      const text = await readFile(f.abs, 'utf8');
+      for (const m of text.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
+        if (!existsRef(m[1], dirOf)) problems.push(`ссылка ${m[1]} в ${f.rel}`);
+      }
+    } else if (/\.css$/i.test(f.rel)) {
+      const text = await readFile(f.abs, 'utf8');
+      for (const m of text.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/gi)) {
+        if (!existsRef(m[1], dirOf)) problems.push(`css-url ${m[1]} в ${f.rel}`);
+      }
+    }
+  }
+  return problems;
+}
+
 // Раздача одной игры коллекции: папка collection/<id>/ уже проверена
 // (автономна, без внешних ссылок), но автоудаление плохих файлов всё равно
 // прогоняется — правило одно и то же для всех раздач.
 async function buildCollectionOne(entry, index) {
   const dir = `collection/${entry.id}`;
+  const entryProblems = await checkCollectionGame(path.join(repoRoot, dir));
+  if (entryProblems.length) {
+    console.error(`  ✗ ${entry.id}: пропущена (${entryProblems.slice(0, 2).join('; ')})`);
+    return null;
+  }
   const collected = await collectFiles(dir, entry.id);
   const blocked = collected.filter((f) => f.blocked).map((f) => ({
     path: f.rel, rule: f.blocked.rule, kind: f.blocked.kind, size: f.size,

@@ -234,24 +234,6 @@
   "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
  },
  {
-  "id": "number-nexus",
-  "title": "Number Nexus",
-  "source": "rit",
-  "files": 3,
-  "license": "MIT",
-  "author": "ritaban06/mini-js-games-hub",
-  "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
- },
- {
-  "id": "neon-tunnel",
-  "title": "neon-tunnel",
-  "source": "rit",
-  "files": 3,
-  "license": "MIT",
-  "author": "ritaban06/mini-js-games-hub",
-  "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
- },
- {
   "id": "audio-visulizer",
   "title": "audio_visulizer",
   "source": "rit",
@@ -837,15 +819,6 @@
   "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
  },
  {
-  "id": "spot-the-diff",
-  "title": "spot_the_diff",
-  "source": "rit",
-  "files": 3,
-  "license": "MIT",
-  "author": "ritaban06/mini-js-games-hub",
-  "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
- },
- {
   "id": "moving-imposter",
   "title": "moving_imposter",
   "source": "rit",
@@ -857,15 +830,6 @@
  {
   "id": "flame-fighter",
   "title": "flame_fighter",
-  "source": "rit",
-  "files": 3,
-  "license": "MIT",
-  "author": "ritaban06/mini-js-games-hub",
-  "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
- },
- {
-  "id": "css-inspector",
-  "title": "css_inspector",
   "source": "rit",
   "files": 3,
   "license": "MIT",
@@ -909,15 +873,6 @@
   "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
  },
  {
-  "id": "chronoquest",
-  "title": "ChronoQuest",
-  "source": "rit",
-  "files": 3,
-  "license": "MIT",
-  "author": "ritaban06/mini-js-games-hub",
-  "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
- },
- {
   "id": "adventure-game",
   "title": "adventure_game",
   "source": "rit",
@@ -929,15 +884,6 @@
  {
   "id": "slot-spinner",
   "title": "slot-spinner",
-  "source": "rit",
-  "files": 3,
-  "license": "MIT",
-  "author": "ritaban06/mini-js-games-hub",
-  "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
- },
- {
-  "id": "jigsaw-game",
-  "title": "jigsaw_game",
   "source": "rit",
   "files": 3,
   "license": "MIT",
@@ -994,15 +940,6 @@
   "title": "Space_Dominators",
   "source": "gz",
   "files": 24,
-  "license": "Apache-2.0",
-  "author": "kunjgit/GameZone",
-  "sourceUrl": "https://github.com/kunjgit/GameZone"
- },
- {
-  "id": "carrom",
-  "title": "Carrom",
-  "source": "gz",
-  "files": 11,
   "license": "Apache-2.0",
   "author": "kunjgit/GameZone",
   "sourceUrl": "https://github.com/kunjgit/GameZone"
@@ -1386,15 +1323,6 @@
   "sourceUrl": "https://github.com/kunjgit/GameZone"
  },
  {
-  "id": "mansion-mystery",
-  "title": "Mansion_Mystery",
-  "source": "gz",
-  "files": 4,
-  "license": "Apache-2.0",
-  "author": "kunjgit/GameZone",
-  "sourceUrl": "https://github.com/kunjgit/GameZone"
- },
- {
   "id": "math-race-game",
   "title": "Math_Race_Game",
   "source": "gz",
@@ -1424,15 +1352,6 @@
  {
   "id": "maze-explorer",
   "title": "Maze_Explorer",
-  "source": "gz",
-  "files": 5,
-  "license": "Apache-2.0",
-  "author": "kunjgit/GameZone",
-  "sourceUrl": "https://github.com/kunjgit/GameZone"
- },
- {
-  "id": "physics-quizz",
-  "title": "Physics_Quizz",
   "source": "gz",
   "files": 5,
   "license": "Apache-2.0",
@@ -1552,15 +1471,6 @@
   "title": "Single_Player_Solitaire",
   "source": "gz",
   "files": 4,
-  "license": "Apache-2.0",
-  "author": "kunjgit/GameZone",
-  "sourceUrl": "https://github.com/kunjgit/GameZone"
- },
- {
-  "id": "baseball",
-  "title": "Baseball",
-  "source": "gz",
-  "files": 7,
   "license": "Apache-2.0",
   "author": "kunjgit/GameZone",
   "sourceUrl": "https://github.com/kunjgit/GameZone"
@@ -1764,15 +1674,6 @@
   "sourceUrl": "https://github.com/kunjgit/GameZone"
  },
  {
-  "id": "flappy-birdd",
-  "title": "Flappy_Birdd",
-  "source": "gz",
-  "files": 4,
-  "license": "Apache-2.0",
-  "author": "kunjgit/GameZone",
-  "sourceUrl": "https://github.com/kunjgit/GameZone"
- },
- {
   "id": "pictionary-game",
   "title": "Pictionary_Game",
   "source": "gz",
@@ -1904,14 +1805,6 @@
   "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
  },
  {
-  "id": "key-maestro",
-  "title": "Key Maestro",
-  "source": "rit",
-  "license": "MIT",
-  "author": "ritaban06/mini-js-games-hub",
-  "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
- },
- {
   "id": "island-survival",
   "title": "island-survival",
   "source": "rit",
@@ -1926,5 +1819,101 @@
   "license": "MIT",
   "author": "ritaban06/mini-js-games-hub",
   "sourceUrl": "https://github.com/ritaban06/mini-js-games-hub"
+ },
+ {
+  "id": "roadfighter",
+  "title": "RoadFighter",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "tennis",
+  "title": "Tennis",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "path-finder",
+  "title": "path_finder",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "catch-the-falling-object",
+  "title": "Catch_The_Falling_Object",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "pattern-creation-game",
+  "title": "Pattern_Creation_Game",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "block-dodger",
+  "title": "Block_Dodger",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "quizify",
+  "title": "Quizify",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "intellect-quest",
+  "title": "Intellect_Quest",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "falling-ball",
+  "title": "Falling_Ball",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "color-switch-challenger",
+  "title": "color_switch_challenger",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "emoji-intruder",
+  "title": "Emoji_Intruder",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
+ },
+ {
+  "id": "drop-dash-game",
+  "title": "Drop_Dash_Game",
+  "source": "gz",
+  "license": "Apache-2.0",
+  "author": "kunjgit/GameZone",
+  "sourceUrl": "https://github.com/kunjgit/GameZone"
  }
 ]
