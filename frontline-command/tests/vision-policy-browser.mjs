@@ -41,7 +41,7 @@ try{
     return {enabled:cfg.flag('vision_nav_policy_v1',false),mode,combat,dispatched:g._visionPolicyMetrics.group||0,groupUsed:!!units[0]._crowdActive,extra:['arrival_stuck_guard_v1','crowd_slot_avoid_v1','group_nav_pair_v1','vision_nav_fast_v1','safe_vehicle_spawn_v1','motion_slide_guard_v1','near_goal_direct_v1','motion_wall_sweep_v1','vehicle_pickup_exterior_v1','logistics_dropoff_v1','motion_wall_exact_v1','vehicle_spawn_all_v1'].map(id=>cfg.flag(id,false))};
   });}
   await page.goto(base,{waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
-  const off=await check();assert.deepEqual(off,{enabled:false,mode:'group',combat:'combat',dispatched:0,groupUsed:false,extra:[false,false,false,false,false,false,false,false,false,false,false,false]});
+  const off=await check();assert.deepEqual(off,{enabled:false,mode:'group',combat:'combat',dispatched:0,groupUsed:false,extra:[false,false,false,false,false,false,false,true,false,false,true,false]});
   await page.route('**/data/feature_flags.json',async r=>{const resp=await r.fetch(),data=await resp.json();
     for(const id of ['vision_nav_policy_v1','group_nav_3to5_v1','arrival_stuck_guard_v1','crowd_slot_avoid_v1','group_nav_pair_v1','vision_nav_fast_v1','safe_vehicle_spawn_v1','motion_slide_guard_v1','near_goal_direct_v1','motion_wall_sweep_v1','vehicle_pickup_exterior_v1','logistics_dropoff_v1','motion_wall_exact_v1','vehicle_spawn_all_v1']){const f=data.flags.find(f=>f.id===id);assert.ok(f);f.enabled=true;}
     await r.fulfill({response:resp,json:data});});

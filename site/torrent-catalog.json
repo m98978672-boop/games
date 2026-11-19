@@ -5,7 +5,7 @@
   "stats": {
     "games": 16,
     "files": 1180,
-    "totalBytes": 35883479,
+    "totalBytes": 35884054,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -2088,8 +2088,8 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "24639819fe33ce691bb1425f729557c5074daa6524cb91d911061f9ab838fe87",
-      "totalSize": 9764936,
+      "infoHash": "c9323fa9951b8ee00a17ca686a85684c2068da385f319f1360232ae4c8bd28b0",
+      "totalSize": 9765511,
       "chunkSize": 262144,
       "chunkCount": 38,
       "fileCount": 534,
@@ -3351,8 +3351,8 @@
         },
         {
           "path": "data/feature_flags.json",
-          "size": 15803,
-          "sha256": "fcb2e8205816b287ea6b9fdf4d1c1e7ebe11a2cb57dabf23534137f7791fd5f7"
+          "size": 15637,
+          "sha256": "d9f5d0e16b1e19c388b75ee8025fab59e8c944366755a02405efd961ccd96dbc"
         },
         {
           "path": "data/game_audit_contract.json",
@@ -3481,8 +3481,8 @@
         },
         {
           "path": "package.json",
-          "size": 14457,
-          "sha256": "ec1f0b3c55676666ab442b5ab667d0b1d5e010550b1b3ad0d136713b75897698"
+          "size": 14607,
+          "sha256": "a33beac3618dfc56fa785d7d78be89620986336a243a9f784015b8a5eb5e56d6"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3522,7 +3522,7 @@
         {
           "path": "src/core/build-info.js",
           "size": 842,
-          "sha256": "3ee3a9984671de9e7fd06aabc38a8683c0f4274262ce54d6400be5a787512fa7"
+          "sha256": "5355e4e38126bb95a80faa1c657dd1fd244ff3899b666a9c46350fb2029a07c4"
         },
         {
           "path": "src/core/config.js",
@@ -3651,8 +3651,8 @@
         },
         {
           "path": "src/sim/motion_wall_sweep.js",
-          "size": 806,
-          "sha256": "75ef73f937f9865e393409de318cedaf3f11d32e78a4d7b29e94d121e772f430"
+          "size": 942,
+          "sha256": "ec7733d09bf0ec93b2ea2686c787fdbceee65fa3b3022bed9b6b7bbf38955e72"
         },
         {
           "path": "src/sim/nav.js",
@@ -3686,8 +3686,8 @@
         },
         {
           "path": "src/sim/smart_route.js",
-          "size": 6191,
-          "sha256": "0176002a5317c3e64c70b7787ebb6014a9cc432c566b1a0c1517ade2a118ae4a"
+          "size": 6390,
+          "sha256": "e7ed99d4d13454b26d4451be029d121d163fa89790ab6bff0f0f2ab632938009"
         },
         {
           "path": "src/sim/solid_units.js",
@@ -3716,8 +3716,8 @@
         },
         {
           "path": "src/sim/walls.js",
-          "size": 46154,
-          "sha256": "dadf84e7251bf6bfac382774a5aa834b628885f8ccda2243f80bf10df15baceb"
+          "size": 46410,
+          "sha256": "85379e21fe8a304dc5c31374f3a179cbe779ba389c38a55edf4b2943dc6de8d1"
         },
         {
           "path": "src/sim/world.js",
