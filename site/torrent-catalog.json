@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1180,
-    "totalBytes": 35884054,
+    "files": 1185,
+    "totalBytes": 35911443,
     "chunks": 146,
     "blockedFiles": 1
   },
@@ -2088,11 +2088,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "c9323fa9951b8ee00a17ca686a85684c2068da385f319f1360232ae4c8bd28b0",
-      "totalSize": 9765511,
+      "infoHash": "629780fe2b8676f1c8d7041d70f0eaec47b963a6f136dcfefb2b2122835636f3",
+      "totalSize": 9792900,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 534,
+      "fileCount": 539,
       "files": [
         {
           "path": ".gitattributes",
@@ -4550,14 +4550,39 @@
           "sha256": "8456545dd248cbf1ce3e56ab9e3365f9fa415182a974ec7de3728ca331312647"
         },
         {
+          "path": "tools/training/collect-obstacle-game.mjs",
+          "size": 7125,
+          "sha256": "89164b1352a755de2373e3c656648e2dfe43a1991b3ce0858a33bc7d60b29276"
+        },
+        {
           "path": "tools/training/eval-qwen.py",
           "size": 3932,
           "sha256": "ea37e7e63c8e5f516e832066a01e472fa9634f0d80a2c190eb67a1f8e62a6126"
         },
         {
+          "path": "tools/training/obstacle-eval.py",
+          "size": 6744,
+          "sha256": "256d0cb1fcab91df7f450552c6822855070924b3f6a213d235e5d030d719ae5b"
+        },
+        {
+          "path": "tools/training/replay-obstacle-game.mjs",
+          "size": 1650,
+          "sha256": "a33676bf53a55752349f45ca27da1e8a29f17a5b932436820ac325fa93da4083"
+        },
+        {
           "path": "tools/training/score-generated.mjs",
           "size": 1071,
           "sha256": "421e0640e7f1f29e4553113390f02496fc1131b4e278499f763ca5c91fbfa933"
+        },
+        {
+          "path": "tools/training/study-qwen.py",
+          "size": 5857,
+          "sha256": "84fa4ce72ddc84c32dda312dd9ecc37e80933595d2bf344f00f51a96d6f71cee"
+        },
+        {
+          "path": "tools/training/train-obstacle-game.py",
+          "size": 6013,
+          "sha256": "31a526c6f61a8be3ced1936ec0fe52b6557941d71223acd88a2caab0c2d95650"
         },
         {
           "path": "tools/training/train-qwen.py",
