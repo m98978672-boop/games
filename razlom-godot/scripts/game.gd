@@ -387,24 +387,46 @@ func share_contact(sender, point: Vector3) -> void:
 func enemy_fire(guard) -> void:
 	if state.passage or guard.dead or guard.arm_wounds.y >= 60 or not guard.sees_player():
 		return
+	guard.shots_fired += 1
 	guard.motion.fire()
 	guard.weapon_motion.trigger_shot()
 	play_tone(70, 0.04, 0.06)
-	# Actual ray with angular dispersion: walls, other guards and posture matter.
+	# A practiced guard settles better, but never becomes a distant hitscan sniper.
+	# Triangular jitter approximates a human shot distribution without a hard accuracy lock.
 	var origin: Vector3 = guard.global_position + Vector3.UP * 1.5
 	var height: float = 1.16 * (0.72 if player.crouched else 1.0)
 	var target: Vector3 = player.global_position + Vector3.UP * height
+	var aim_direction := (target - origin).normalized()
 	var distance := origin.distance_to(target)
-	var spread: float = lerpf(0.025, 0.004, clampf(guard.aim_time / 2.5, 0, 1)) * distance
-	var right := (target - origin).normalized().cross(Vector3.UP).normalized()
-	target += right * world_rng.randf_range(-spread, spread) + Vector3.UP * world_rng.randf_range(-spread, spread)
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + (target - origin).normalized() * 80, 1 | 2 | 4 | 8)
+	var quality := clampf(guard.aim_time / 2.5, 0.0, 1.0)
+	var deviation := (0.28 + distance * 0.024) * lerpf(1.0, 0.62, quality)
+	var right := aim_direction.cross(Vector3.UP).normalized()
+	if right.length_squared() < 0.01:
+		right = Vector3.RIGHT
+	var up := right.cross(aim_direction).normalized()
+	var jitter_x := (world_rng.randf() + world_rng.randf() + world_rng.randf() - 1.5) * deviation * 1.9
+	var jitter_y := (world_rng.randf() + world_rng.randf() + world_rng.randf() - 1.5) * deviation * 1.9
+	var shot_direction := (aim_direction + right * (jitter_x / maxf(distance, 1.0)) + up * (jitter_y / maxf(distance, 1.0))).normalized()
+	var ray_end := origin + shot_direction * 80.0
+	var query := PhysicsRayQueryParameters3D.create(origin, ray_end, 1 | 2 | 4 | 8)
 	query.exclude = [guard.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	var impact_point: Vector3 = hit.position if not hit.is_empty() else ray_end
 	if not hit.is_empty():
 		impact_particles(hit.position, hit.normal)
 		if hit.collider == player:
+			guard.shots_hit += 1
 			player.receive_bullet(hit.position, origin)
+	# Close cracks make a visible body duck, interrupt aim, and alert nearby guards.
+	var player_center: Vector3 = player.global_position + Vector3.UP * height
+	var travel := clampf((player_center - origin).dot(shot_direction), 0.0, origin.distance_to(impact_point))
+	var closest := origin + shot_direction * travel
+	if closest.distance_to(player_center) < 1.35 and (hit.is_empty() or hit.collider != player):
+		guard.near_misses += 1
+		noise(impact_point, 14.0)
+		for other in enemies:
+			if is_instance_valid(other) and other != guard and not other.dead and other.global_position.distance_to(impact_point) < 14.0:
+				other.suppress(0.45)
 
 func throw_charge() -> void:
 	if state.charges <= 0:
