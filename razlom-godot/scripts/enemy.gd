@@ -169,7 +169,7 @@ func _physics_process(delta: float) -> void:
 	cooldown -= delta
 	suppression = maxf(0, suppression - delta)
 	startle_time = maxf(0.0, startle_time - delta)
-	var wants_weapon_up := alert and not game.state.passage and suppression <= 0.0 and startle_time <= 0.0
+	var wants_weapon_up: bool = alert and not game.state.passage and suppression <= 0.0 and startle_time <= 0.0
 	weapon_raise = move_toward(weapon_raise, 1.0 if wants_weapon_up else 0.0, delta / (RAISE_TIME if wants_weapon_up else LOWER_TIME))
 	if visible_contact and not game.state.passage and weapon_raise >= 0.95 and suppression <= 0:
 		aim_time = minf(2.5, aim_time + delta)
