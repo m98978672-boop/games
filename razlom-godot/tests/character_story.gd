@@ -79,7 +79,7 @@ func run_tests() -> void:
 	s.relay_log = true
 	s.relay_shared = true
 	game.interactions.vera_dialog()
-	check(press_named(game, "Дело Веры • медицинский") and game.interactions.column.get_child(1).text.contains("медицинский"), "Vera directly offers her medical side quest")
+	check(press_named(game, "Дело Веры • медицинский") and game.interactions.column.get_child(1).text.contains("Запечатанный ящик"), "Vera directly offers her medical side quest")
 	check(press_named(game, "Взяться за дело") and game.quests.phase("medicine") == 1, "Medical quest can be accepted directly through Vera")
 	game.interactions.vera_dialog()
 	check(press_named(game, "Дело Веры • раненый электрик"), "Same character offers a separate rescue quest")

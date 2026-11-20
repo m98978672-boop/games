@@ -124,7 +124,10 @@ func restore(source: Dictionary) -> bool:
 		return false
 	if not data.has("vera_bond"):
 		data["vera_bond"] = 0
-	if not data.vera_bond is int or data.vera_bond < 0 or data.vera_bond > 3:
+	var bond_value: Variant = data.get("vera_bond", 0)
+	if not (bond_value is int or bond_value is float) or not is_finite(float(bond_value)):
+		return false
+	if float(bond_value) != floor(float(bond_value)) or bond_value < 0 or bond_value > 3:
 		return false
 	for key in ["armor", "helmet", "pain", "leg_wound", "left_arm_wound", "right_arm_wound"]:
 		if not data.has(key):
@@ -165,8 +168,9 @@ func restore(source: Dictionary) -> bool:
 	if quest_data.get("power", 0) > 0 and not data.relay_shared:
 		return false
 	# Commit only after all checks: failed restore must not mutate live state.
-	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken", "relay_log", "relay_shared", "vera_bond"]:
+	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken", "relay_log", "relay_shared"]:
 		set(key, data[key])
+	vera_bond = int(bond_value)
 	quests = quest_data.duplicate(true)
 	tracked_quest = data.get("tracked_quest", "")
 	return true
