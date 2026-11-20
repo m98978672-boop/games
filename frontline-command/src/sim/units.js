@@ -5,7 +5,7 @@ import { motionWallSweepFree } from './motion_wall_sweep.js';
 import {
   clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp, TAU, normAngle, approachAngle,
 } from '../core/mathx.js';
-import { updateSmartRoute, discardSmartRoute, cancelSelectedSmartRoute, smartRouteSearching, truckRouteAssist } from './smart_route.js';
+import { updateSmartRoute, discardSmartRoute, cancelSelectedSmartRoute, smartRouteSearching, truckRouteAssist, combatRouteAllowed } from './smart_route.js';
 import { doorPairWaypoint, doorPairPositionFree } from './door_pair.js';
 import { solidUnitMoveFree, occupiedDetour, blockingUnit } from './solid_units.js';
 import { courtesyYield } from './door_courtesy.js';
@@ -421,7 +421,7 @@ export function reviveUnit(game, u) {
 // ---------- Движение ----------
 export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWaypoint = false } = {}) {
   if (u._crowdActive && (!(game.cfg.flag('crowd_nav_v2', false) || game.cfg.flag('movement_occupancy_v1', false)) || u.playerControlled || u.perception.hasContact || !u.goal)) clearCrowdState(u);
-  if (u._smartRoute && ((!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false) && !truckRouteAssist(game,u)) || !u.goal || u.perception.hasContact || u.playerControlled)) discardSmartRoute(u);
+  if (u._smartRoute && ((!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false) && !truckRouteAssist(game,u)) || !u.goal || (u.perception.hasContact && !combatRouteAllowed(game,u)) || u.playerControlled)) discardSmartRoute(u);
   if (!u.alive || u.downed) return;
   const solid = game.cfg.flag('unit_solid_2d_v1', false);
   const occupancy = game.cfg.flag('movement_occupancy_v1', false);
@@ -808,7 +808,7 @@ export function moveAlongFlow(game, u, dt) {
     moveUnit(game,u,u.goal.x-u.x,u.goal.y-u.y,dt,null,{skipDoorWaypoint:true});
     return;
   }
-  if (visionChoice && (visionChoice.mode === 'combat' || ((visionChoice.mode === 'group' || visionChoice.mode === 'pair') && u._crowdActive))) cancelSelectedSmartRoute(game,u);
+  if (visionChoice && ((visionChoice.mode === 'combat' && !combatRouteAllowed(game,u)) || ((visionChoice.mode === 'group' || visionChoice.mode === 'pair') && u._crowdActive))) cancelSelectedSmartRoute(game,u);
   else if (game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false) || truckRouteAssist(game,u)) {
     if (!visionChoice || visionChoice.obstacle || (u.stuck || 0) >= 1 || u._smartRoute || game._smartRouteState?.active?.unit === u)
       updateSmartRoute(game,u);

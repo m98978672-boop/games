@@ -3,9 +3,10 @@
 import EasyStar from '../vendor/easystar.js';
 const CELL=32, MARGIN=512, MAX_CELLS=16384;
 export class EasyStarPlanner {
-  constructor(game,unit) {
+  constructor(game,unit,{maxStartDrift=32}={}) {
     if(!game?.world||!game.walls||!unit?.goal||![game.world.W,game.world.H,unit.x,unit.y,unit.radius,unit.goal.x,unit.goal.y].every(Number.isFinite)||unit.radius<=0)throw Error('invalid planning input');
     this.game=game;this.world=game.world;this.walls=game.walls;this.unit=unit;this.start={x:unit.x,y:unit.y};this.goal={...unit.goal};this.radius=unit.radius;this.version=game.world.navVersion;
+    this.maxStartDrift=maxStartDrift;
     this.status='running';this.path=null;this.reason=null;this.operations=0;this.expanded=0;this.phase='grid';this.cursor=0;
     this.minX=Math.max(0,Math.floor((Math.min(unit.x,unit.goal.x)-MARGIN)/CELL));this.minY=Math.max(0,Math.floor((Math.min(unit.y,unit.goal.y)-MARGIN)/CELL));
     const maxX=Math.min(Math.floor(game.world.W/CELL)-1,Math.floor((Math.max(unit.x,unit.goal.x)+MARGIN)/CELL));
@@ -24,7 +25,7 @@ export class EasyStarPlanner {
   step(budget){
     if(!Number.isInteger(budget)||budget<1||budget>10000)throw Error('invalid operation budget');
     const u=this.unit;
-    if(this.status==='running'&&(this.game.world!==this.world||this.game.walls!==this.walls||this.world.navVersion!==this.version||this.walls.navQueue?.size>0||u.radius!==this.radius||!u.goal||![u.x,u.y,u.goal.x,u.goal.y].every(Number.isFinite)||Math.hypot(u.goal.x-this.goal.x,u.goal.y-this.goal.y)>1||Math.hypot(u.x-this.start.x,u.y-this.start.y)>32||!u.alive||u.downed))this.cancel('stale');
+    if(this.status==='running'&&(this.game.world!==this.world||this.game.walls!==this.walls||this.world.navVersion!==this.version||this.walls.navQueue?.size>0||u.radius!==this.radius||!u.goal||![u.x,u.y,u.goal.x,u.goal.y].every(Number.isFinite)||Math.hypot(u.goal.x-this.goal.x,u.goal.y-this.goal.y)>1||Math.hypot(u.x-this.start.x,u.y-this.start.y)>this.maxStartDrift||!u.alive||u.downed))this.cancel('stale');
     let used=0;
     if(this.status==='running'&&this.phase==='grid'){
       while(used<budget&&this.cursor<this.rows*this.cols){const i=this.cursor++,x=i%this.cols,y=Math.floor(i/this.cols),p=this.point(x,y);this.grid[y][x]=this.free(p.x,p.y,this.radius+CELL*Math.SQRT2/2)?0:1;used++;}

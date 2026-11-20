@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1207,
-    "totalBytes": 36004675,
+    "files": 1209,
+    "totalBytes": 36013221,
     "chunks": 146,
     "blockedFiles": 3
   },
@@ -2088,11 +2088,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "32dbeb19f21b59997efe683d85b058a7884b4d56e04a0efb9ba455b8949809a2",
-      "totalSize": 9886132,
+      "infoHash": "b5a42a3173e09418d712825cfa5cc6f45296a3f828248eadbb05a7af47a86f39",
+      "totalSize": 9894678,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 561,
+      "fileCount": 563,
       "files": [
         {
           "path": ".gitattributes",
@@ -3481,8 +3481,8 @@
         },
         {
           "path": "package.json",
-          "size": 14971,
-          "sha256": "f15c159c8cdd4d682763b763b4f9e4ffbacf8bd593b8c5c4ccc23f4d9c39feea"
+          "size": 15055,
+          "sha256": "89243659d7bb2495ebf28c31c699c8bc909ab713093e04b1c2d0453b361cbb6b"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3522,7 +3522,7 @@
         {
           "path": "src/core/build-info.js",
           "size": 843,
-          "sha256": "7ea72ad35b8722a3d263c4d337ea8afa2724ff6d4c1fd528e55bace9812ffc34"
+          "sha256": "72a7923f6693ce095052f5e45e20435c4f0d0888d0626ab79c6f3280bae12b6f"
         },
         {
           "path": "src/core/config.js",
@@ -3581,8 +3581,8 @@
         },
         {
           "path": "src/sim/ai_soldier.js",
-          "size": 28671,
-          "sha256": "e717d464c85700f88d5a7aaf819786e5e92387e568b0fcec6d60dd67c77321e4"
+          "size": 29274,
+          "sha256": "2ba2bc28564f49c5bea54fa9ed65bc213be394379c6d0dbbd5b8d5a91229acb3"
         },
         {
           "path": "src/sim/ai_squad.js",
@@ -3641,8 +3641,8 @@
         },
         {
           "path": "src/sim/easystar_route.js",
-          "size": 4450,
-          "sha256": "eeef532373d021fc4cd8f53770234d5428c09fa02c5f381e17a117cb7aec4388"
+          "size": 4526,
+          "sha256": "9c986e434ba3b2e5351ff1c4d61431ca0137719925617cb535eb6cafd474209c"
         },
         {
           "path": "src/sim/game.js",
@@ -3701,8 +3701,8 @@
         },
         {
           "path": "src/sim/smart_route.js",
-          "size": 6390,
-          "sha256": "e7ed99d4d13454b26d4451be029d121d163fa89790ab6bff0f0f2ab632938009"
+          "size": 9330,
+          "sha256": "63af2890e74e3eec7071c76efa7ccaa5c09a77e126d7642ef3468080bc0d2527"
         },
         {
           "path": "src/sim/solid_units.js",
@@ -3716,8 +3716,8 @@
         },
         {
           "path": "src/sim/units.js",
-          "size": 45279,
-          "sha256": "c9c2bb8df23ece0b2ec832653354be3391f5facca55de19f1070f706415982aa"
+          "size": 45365,
+          "sha256": "6654443e4faa02db85725c8a0a03b4c0106968c57c238bf212b6021ba86ddf94"
         },
         {
           "path": "src/sim/vision_nav_policy.js",
@@ -4078,6 +4078,16 @@
           "path": "tools/column-algorithm-wars.mjs",
           "size": 2503,
           "sha256": "d5d53665141c55cee085e812e81153e48441aa65bb576dc6c56b455a4bec25d4"
+        },
+        {
+          "path": "tools/combat-obstacle-battles.mjs",
+          "size": 1691,
+          "sha256": "135030ef5e88ef46e86427daa66e8bbd1244d176b6eee9bbd81dae5f5218709b"
+        },
+        {
+          "path": "tools/combat-obstacle-realmap.mjs",
+          "size": 3066,
+          "sha256": "cc3ec96b5301326e366711470ea1dbdd55c7fb1b74ec15bb0f817c9cfbbf3965"
         },
         {
           "path": "tools/cooperative-bridge-scenes.mjs",
