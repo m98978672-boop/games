@@ -31,7 +31,7 @@ class ProjectChecks(unittest.TestCase):
         for path in textures:
             raw = path.read_bytes()
             self.assertEqual(raw[:8], b'\x89PNG\r\n\x1a\n')
-            self.assertEqual(struct.unpack('>II', raw[16:24]), (64, 64))
+            self.assertEqual(struct.unpack('>II', raw[16:24]), (256, 256))
 
     def test_reusable_model_scenes(self):
         models = list((ROOT / 'assets/models').glob('*.tscn'))
