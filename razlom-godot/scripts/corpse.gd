@@ -75,7 +75,7 @@ func hit_at(_power: float, point: Vector3, normal: Vector3, _impulse: Vector3) -
 	var limb := visual.get_node_or_null(path) as Node3D
 	if limb == null: return
 	if not limb.has_meta("corpse_rest_rotation"): limb.set_meta("corpse_rest_rotation", limb.rotation)
-	var previous: Tween = limb.get_meta("corpse_hit_tween", null)
+	var previous: Tween = limb.get_meta("corpse_hit_tween") if limb.has_meta("corpse_hit_tween") else null
 	if previous != null: previous.kill()
 	var rest: Vector3 = limb.get_meta("corpse_rest_rotation")
 	var reaction := create_tween()
