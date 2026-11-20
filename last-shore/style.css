@@ -405,6 +405,31 @@ body.dragging-item { cursor: grabbing; }
 
 .tagline { margin: 18px 0 22px; line-height: 1.6; color: #ddd4c4; font-size: 15px; }
 
+/* Финал: спасение с острова. Зелёный рассвет вместо красной смерти. */
+.overlay h1.escaped {
+  background: linear-gradient(180deg, #e6f0cf, #5f9e5a);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.escape-inner { max-width: 560px; }
+.escape-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 18px;
+}
+.escape-stats div {
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 9px 10px;
+}
+.escape-stats span { display: block; font-size: 11px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.escape-stats b { display: block; font-size: 17px; margin-top: 3px; }
+@media (max-width: 620px) {
+  .escape-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
 .controls-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

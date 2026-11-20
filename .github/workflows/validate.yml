@@ -134,6 +134,13 @@ jobs:
         run: node truck-haul/tests/logic.mjs
       - name: Test shooter touch controls (стик, свайп, огонь, перезарядка)
         run: node shooter/tests/touch.mjs
+      - name: Test last-shore escape (плот, спасение, экран финала)
+        run: |
+          cd last-shore
+          npm ci
+          npm run build
+          npm run test:build
+          node tests/escape.mjs
       - name: Test road-tycoon victory (финал, сохранение, свободная игра)
         run: node road-tycoon/tests/victory.test.js
       - name: Test game endings — у каждой игры должен быть финал

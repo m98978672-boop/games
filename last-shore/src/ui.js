@@ -45,6 +45,10 @@ export class UI {
       pause: $('pause'),
       death: $('death'),
       deathText: $('death-text'),
+      escape: $('escape'),
+      escapeText: $('escape-text'),
+      escapeStats: $('escape-stats'),
+      escapeVerdict: $('escape-verdict'),
       pauseStats: $('pause-stats'),
       nogl: $('nogl'),
       fatal: $('fatal'),
@@ -548,7 +552,7 @@ export class UI {
   // ------------------------------------------------------------
 
   showScreen(name) {
-    for (const id of ['start', 'pause', 'death', 'nogl']) {
+    for (const id of ['start', 'pause', 'death', 'escape', 'nogl']) {
       this.el[id].classList.toggle('hidden', id !== name);
     }
     this.el.hud.classList.toggle('hidden', name !== null);
@@ -556,13 +560,47 @@ export class UI {
   }
 
   hideScreens() {
-    for (const id of ['start', 'pause', 'death', 'nogl', 'fatal']) this.el[id].classList.add('hidden');
+    for (const id of ['start', 'pause', 'death', 'escape', 'nogl', 'fatal']) this.el[id].classList.add('hidden');
     this.el.hud.classList.remove('hidden');
   }
 
   showDeath(days, cause) {
     this.el.deathText.textContent = `Ты продержался ${days} ${plural(days, 'день', 'дня', 'дней')}. ${cause}`;
     this.showScreen('death');
+  }
+
+  /* Финал игры: плот достроен, остров остался за кормой. Показываем не
+     абстрактное «молодец», а весь забег: сколько прожил, чем вышел. */
+  showEscape(summary, day) {
+    const s = summary || {};
+    const d = Number.isFinite(day) ? day : (s.days || 1);
+    if (this.el.escapeText) {
+      this.el.escapeText.textContent = `Ты продержался ${d} ${plural(d, 'день', 'дня', 'дней')} `
+        + `и построил плот из того, что дал остров. Берег уходит назад — впереди спасение.`;
+    }
+    if (this.el.escapeStats) {
+      const rows = [
+        ['Дней на острове', d],
+        ['Ночей пережито', s.nights || 0],
+        ['Здоровье', `${s.health == null ? 0 : s.health}%`],
+        ['Дерево', s.wood || 0],
+        ['Железо', s.iron || 0],
+        ['Камни', s.stone || 0],
+      ];
+      this.el.escapeStats.innerHTML = rows
+        .map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`)
+        .join('');
+    }
+    if (this.el.escapeVerdict) {
+      let verdict = 'Остров тебя отпустил.';
+      if (d <= 3) verdict = 'Молниеносное спасение: три дня — и ты уже на воде.';
+      else if (d >= 10) verdict = 'Долгая жизнь на острове: ты знал здесь каждый камень.';
+      else if ((s.health || 0) > 80) verdict = 'Ты ушёл почти невредимым: остров не смог тебя сломить.';
+      else if ((s.health || 0) < 35) verdict = 'Ты уплыл на последнем дыхании — но уплыл.';
+      this.el.escapeVerdict.textContent = verdict;
+    }
+    this.el.hud.classList.add('hidden');
+    this.showScreen('escape');
   }
 
   setPauseStats(text) {

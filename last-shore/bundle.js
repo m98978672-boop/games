@@ -30882,6 +30882,14 @@ void main() {
     return t * t * (3 - 2 * t);
   };
   function makeRng(seed) {
+    const glob = typeof globalThis !== "undefined" ? globalThis : null;
+    const make = glob && glob.RatCore && typeof glob.RatCore.createRng === "function" ? glob.RatCore.createRng : null;
+    if (make) {
+      const core = make(seed >>> 0);
+      return function rng() {
+        return core.next();
+      };
+    }
     let a = seed >>> 0;
     return function rng() {
       a |= 0;
@@ -35068,6 +35076,7 @@ void main() {
   // src/items.js
   var svg = (body) => `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
   var ICONS = {
+    raft: svg('<rect x="3" y="13" width="18" height="3" rx="1.4" fill="#8a6a42"/><rect x="4" y="16.5" width="16" height="2.6" rx="1.2" fill="#a3854f"/><rect x="6" y="9.5" width="2" height="4" rx=".8" fill="#b08a58"/><rect x="16" y="9.5" width="2" height="4" rx=".8" fill="#b08a58"/><path d="M11 4.5v5.5" stroke="#cfc3a3" stroke-width="1.6"/><path d="M11 4.5l4.5 2.2-4.5 2.2z" fill="#e8dcc0"/>'),
     coconut: svg('<circle cx="12" cy="13" r="7" fill="#6b4a2a"/><circle cx="9.5" cy="10.5" r="2" fill="#8a6440"/><path d="M8 6.5q4-2.5 8 0" stroke="#3f7a3a" stroke-width="1.6" fill="none"/>'),
     berries: svg('<circle cx="9" cy="14" r="3.2" fill="#b9334a"/><circle cx="15" cy="15" r="3" fill="#9d2740"/><circle cx="12" cy="9.5" r="2.8" fill="#c93c52"/><path d="M12 6.5V3" stroke="#3f7a3a" stroke-width="1.6"/>'),
     wood: svg('<rect x="4" y="9" width="16" height="6" rx="3" fill="#8a6a42" transform="rotate(-18 12 12)"/><circle cx="19" cy="8.5" r="1.6" fill="#b08a58"/>'),
@@ -35135,7 +35144,10 @@ void main() {
     // --- мастерская ---
     workbench: { id: "workbench", name: "\u0412\u0435\u0440\u0441\u0442\u0430\u043A", icon: ICONS.workbench, kind: "placeable", hotbar: true, action: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C: F" },
     grindstone: { id: "grindstone", name: "\u0422\u043E\u0447\u0438\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0430\u043D\u043E\u043A", icon: ICONS.grindstone, kind: "placeable", hotbar: true, action: "\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C: F" },
-    campfireKit: { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", icon: ICONS.campfireKit, kind: "placeable", hotbar: true }
+    campfireKit: { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", icon: ICONS.campfireKit, kind: "placeable", hotbar: true },
+    /* Плот — не «предмет в сумке ради галочки», а выход с острова: пока он
+       не построен, игра бесконечна, а после — у неё есть финал. */
+    raft: { id: "raft", name: "\u041F\u043B\u043E\u0442", icon: ICONS.raft, kind: "placeable", hotbar: true, action: "\u041F\u043E\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u043D\u0430 \u0432\u043E\u0434\u0435 \u0438 \u0443\u043F\u043B\u044B\u0442\u044C" }
   };
   var HOTBAR_SIZE = 10;
   var BAG_ORDER = [
@@ -35170,7 +35182,8 @@ void main() {
     "torch",
     "campfireKit",
     "workbench",
-    "grindstone"
+    "grindstone",
+    "raft"
   ];
   var RECIPES = [
     // --- подземелье и мастерская ---
@@ -35193,7 +35206,17 @@ void main() {
     { id: "cookedMeat", name: "\u0416\u0430\u0440\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E", need: { rawMeat: 1, wood: 1 }, gives: { cookedMeat: 1 }, needFire: true, note: "\u041D\u0443\u0436\u0435\u043D \u043A\u043E\u0441\u0442\u0451\u0440 \u0440\u044F\u0434\u043E\u043C" },
     { id: "cookedWater", name: "\u041A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430", need: { coconut: 1, wood: 1 }, gives: { cookedWater: 1 }, needFire: true, note: "\u041A\u043E\u043A\u043E\u0441\u043E\u0432\u0430\u044F \u0432\u043E\u0434\u0430 \u0441 \u043E\u0433\u043D\u044F \u2014 +38 \u0436\u0430\u0436\u0434\u044B" },
     { id: "driedMeat", name: "\u0412\u044F\u043B\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E", need: { rawMeat: 2, fiber: 1 }, gives: { driedMeat: 1 }, needFire: true, note: "\u0421\u044B\u0442\u043D\u043E \u0438 \u043D\u0435 \u043F\u043E\u0440\u0442\u0438\u0442\u0441\u044F \u0432 \u0434\u043E\u0440\u043E\u0433\u0435" },
-    { id: "brew", name: "\u042F\u0433\u043E\u0434\u043D\u044B\u0439 \u043E\u0442\u0432\u0430\u0440", need: { berries: 3, cookedWater: 1 }, gives: { brew: 1 }, note: "\u041F\u0438\u0442\u044C\u0451 \u0438 \u043B\u0435\u0447\u0435\u043D\u0438\u0435 \u0440\u0430\u0437\u043E\u043C" }
+    { id: "brew", name: "\u042F\u0433\u043E\u0434\u043D\u044B\u0439 \u043E\u0442\u0432\u0430\u0440", need: { berries: 3, cookedWater: 1 }, gives: { brew: 1 }, note: "\u041F\u0438\u0442\u044C\u0451 \u0438 \u043B\u0435\u0447\u0435\u043D\u0438\u0435 \u0440\u0430\u0437\u043E\u043C" },
+    /* Итог всей игры: чтобы уплыть, нужно по-настоящему обжиться на острове —
+       набрать дерева, скрутить верёвки, сковать железные крепления. */
+    {
+      id: "raft",
+      name: "\u041F\u043B\u043E\u0442",
+      need: { wood: 12, rope: 4, iron: 2 },
+      gives: { raft: 1 },
+      goal: true,
+      note: "\u0421\u043F\u0430\u0441\u0435\u043D\u0438\u0435: \u043F\u043E\u0441\u0442\u0430\u0432\u044C \u043F\u043B\u043E\u0442 \u0443 \u0432\u043E\u0434\u044B \u0438 \u0443\u043F\u043B\u044B\u0432\u0438 \u0441 \u043E\u0441\u0442\u0440\u043E\u0432\u0430"
+    }
   ];
 
   // src/forge.js
@@ -36672,6 +36695,10 @@ void main() {
         pause: $("pause"),
         death: $("death"),
         deathText: $("death-text"),
+        escape: $("escape"),
+        escapeText: $("escape-text"),
+        escapeStats: $("escape-stats"),
+        escapeVerdict: $("escape-verdict"),
         pauseStats: $("pause-stats"),
         nogl: $("nogl"),
         fatal: $("fatal"),
@@ -37111,19 +37138,49 @@ void main() {
     //  Экраны
     // ------------------------------------------------------------
     showScreen(name) {
-      for (const id of ["start", "pause", "death", "nogl"]) {
+      for (const id of ["start", "pause", "death", "escape", "nogl"]) {
         this.el[id].classList.toggle("hidden", id !== name);
       }
       this.el.hud.classList.toggle("hidden", name !== null);
       if (name !== null) this.closePanels();
     }
     hideScreens() {
-      for (const id of ["start", "pause", "death", "nogl", "fatal"]) this.el[id].classList.add("hidden");
+      for (const id of ["start", "pause", "death", "escape", "nogl", "fatal"]) this.el[id].classList.add("hidden");
       this.el.hud.classList.remove("hidden");
     }
     showDeath(days, cause) {
       this.el.deathText.textContent = `\u0422\u044B \u043F\u0440\u043E\u0434\u0435\u0440\u0436\u0430\u043B\u0441\u044F ${days} ${plural(days, "\u0434\u0435\u043D\u044C", "\u0434\u043D\u044F", "\u0434\u043D\u0435\u0439")}. ${cause}`;
       this.showScreen("death");
+    }
+    /* Финал игры: плот достроен, остров остался за кормой. Показываем не
+       абстрактное «молодец», а весь забег: сколько прожил, чем вышел. */
+    showEscape(summary, day) {
+      const s = summary || {};
+      const d = Number.isFinite(day) ? day : s.days || 1;
+      if (this.el.escapeText) {
+        this.el.escapeText.textContent = `\u0422\u044B \u043F\u0440\u043E\u0434\u0435\u0440\u0436\u0430\u043B\u0441\u044F ${d} ${plural(d, "\u0434\u0435\u043D\u044C", "\u0434\u043D\u044F", "\u0434\u043D\u0435\u0439")} \u0438 \u043F\u043E\u0441\u0442\u0440\u043E\u0438\u043B \u043F\u043B\u043E\u0442 \u0438\u0437 \u0442\u043E\u0433\u043E, \u0447\u0442\u043E \u0434\u0430\u043B \u043E\u0441\u0442\u0440\u043E\u0432. \u0411\u0435\u0440\u0435\u0433 \u0443\u0445\u043E\u0434\u0438\u0442 \u043D\u0430\u0437\u0430\u0434 \u2014 \u0432\u043F\u0435\u0440\u0435\u0434\u0438 \u0441\u043F\u0430\u0441\u0435\u043D\u0438\u0435.`;
+      }
+      if (this.el.escapeStats) {
+        const rows = [
+          ["\u0414\u043D\u0435\u0439 \u043D\u0430 \u043E\u0441\u0442\u0440\u043E\u0432\u0435", d],
+          ["\u041D\u043E\u0447\u0435\u0439 \u043F\u0435\u0440\u0435\u0436\u0438\u0442\u043E", s.nights || 0],
+          ["\u0417\u0434\u043E\u0440\u043E\u0432\u044C\u0435", `${s.health == null ? 0 : s.health}%`],
+          ["\u0414\u0435\u0440\u0435\u0432\u043E", s.wood || 0],
+          ["\u0416\u0435\u043B\u0435\u0437\u043E", s.iron || 0],
+          ["\u041A\u0430\u043C\u043D\u0438", s.stone || 0]
+        ];
+        this.el.escapeStats.innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("");
+      }
+      if (this.el.escapeVerdict) {
+        let verdict = "\u041E\u0441\u0442\u0440\u043E\u0432 \u0442\u0435\u0431\u044F \u043E\u0442\u043F\u0443\u0441\u0442\u0438\u043B.";
+        if (d <= 3) verdict = "\u041C\u043E\u043B\u043D\u0438\u0435\u043D\u043E\u0441\u043D\u043E\u0435 \u0441\u043F\u0430\u0441\u0435\u043D\u0438\u0435: \u0442\u0440\u0438 \u0434\u043D\u044F \u2014 \u0438 \u0442\u044B \u0443\u0436\u0435 \u043D\u0430 \u0432\u043E\u0434\u0435.";
+        else if (d >= 10) verdict = "\u0414\u043E\u043B\u0433\u0430\u044F \u0436\u0438\u0437\u043D\u044C \u043D\u0430 \u043E\u0441\u0442\u0440\u043E\u0432\u0435: \u0442\u044B \u0437\u043D\u0430\u043B \u0437\u0434\u0435\u0441\u044C \u043A\u0430\u0436\u0434\u044B\u0439 \u043A\u0430\u043C\u0435\u043D\u044C.";
+        else if ((s.health || 0) > 80) verdict = "\u0422\u044B \u0443\u0448\u0451\u043B \u043F\u043E\u0447\u0442\u0438 \u043D\u0435\u0432\u0440\u0435\u0434\u0438\u043C\u044B\u043C: \u043E\u0441\u0442\u0440\u043E\u0432 \u043D\u0435 \u0441\u043C\u043E\u0433 \u0442\u0435\u0431\u044F \u0441\u043B\u043E\u043C\u0438\u0442\u044C.";
+        else if ((s.health || 0) < 35) verdict = "\u0422\u044B \u0443\u043F\u043B\u044B\u043B \u043D\u0430 \u043F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u043C \u0434\u044B\u0445\u0430\u043D\u0438\u0438 \u2014 \u043D\u043E \u0443\u043F\u043B\u044B\u043B.";
+        this.el.escapeVerdict.textContent = verdict;
+      }
+      this.el.hud.classList.add("hidden");
+      this.showScreen("escape");
     }
     setPauseStats(text) {
       this.el.pauseStats.textContent = text;
@@ -41760,7 +41817,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-30 18:25" : "dev";
+  var BUILD = true ? "2026-11-20 10:55" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -42913,6 +42970,31 @@ void main() {
   function status2(id, ru, en) {
     get(id).textContent = tr(ru, en);
   }
+  function ask(ru, en) {
+    return new Promise((resolve) => {
+      const box2 = get("save-ask");
+      const text = get("save-ask-text");
+      if (!box2 || !text) {
+        resolve(true);
+        return;
+      }
+      const yes = get("save-ask-yes");
+      const no = get("save-ask-no");
+      text.textContent = tr(ru, en);
+      box2.classList.remove("hidden");
+      const done = (value) => {
+        box2.classList.add("hidden");
+        yes.removeEventListener("click", onYes);
+        no.removeEventListener("click", onNo);
+        resolve(value);
+      };
+      const onYes = () => done(true);
+      const onNo = () => done(false);
+      yes.addEventListener("click", onYes);
+      no.addEventListener("click", onNo);
+      no.focus();
+    });
+  }
   function renderSlots() {
     const root = get("save-slots");
     if (!root) return;
@@ -42941,7 +43023,7 @@ void main() {
         b.addEventListener("click", action);
         buttons.appendChild(b);
       };
-      button2(tr("\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C", "Save"), () => {
+      button2(tr("\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C", "Save"), async () => {
         try {
           const game = window.__game;
           if ((game == null ? void 0 : game.running) && !game.save()) throw new Error("save");
@@ -42950,7 +43032,7 @@ void main() {
             status2("save-status", "\u041D\u0435\u0442 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0438\u0433\u0440\u044B \u0438\u043B\u0438 \u0430\u0432\u0442\u043E\u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F.", "No current game or autosave.");
             return;
           }
-          if (save && !window.confirm(tr("\u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u044D\u0442\u043E\u0442 \u0441\u043B\u043E\u0442?", "Overwrite this slot?"))) return;
+          if (save && !await ask("\u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u044D\u0442\u043E\u0442 \u0441\u043B\u043E\u0442?", "Overwrite this slot?")) return;
           localStorage.setItem(slotKey(n), raw2);
           renderSlots();
           status2("save-status", "\u0418\u0433\u0440\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0430 \u0432 \u0441\u043B\u043E\u0442.", "Game saved to slot.");
@@ -42958,13 +43040,13 @@ void main() {
           status2("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C: \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430.", "Could not save: check browser storage.");
         }
       });
-      button2(tr("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C", "Load"), () => {
+      button2(tr("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C", "Load"), async () => {
         var _a, _b, _c;
         try {
           const selected = localStorage.getItem(slotKey(n));
           if (!validSave(selected)) throw new Error("invalid");
           if ((_a = window.__game) == null ? void 0 : _a.running) {
-            if (!window.confirm(tr("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0441\u043B\u043E\u0442 \u0438 \u0432\u044B\u0439\u0442\u0438 \u0438\u0437 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0438\u0433\u0440\u044B?", "Load this slot and leave the current game?"))) return;
+            if (!await ask("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0441\u043B\u043E\u0442 \u0438 \u0432\u044B\u0439\u0442\u0438 \u0438\u0437 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0438\u0433\u0440\u044B?", "Load this slot and leave the current game?")) return;
             sessionStorage.setItem("lastshore.loadPending", "1");
             try {
               localStorage.setItem(AUTO, selected);
@@ -42984,8 +43066,8 @@ void main() {
           status2("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0441\u043B\u043E\u0442.", "Could not load slot.");
         }
       }, !save);
-      button2(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C", "Delete"), () => {
-        if (!window.confirm(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435?", "Delete this save?"))) return;
+      button2(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C", "Delete"), async () => {
+        if (!await ask("\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435?", "Delete this save?")) return;
         try {
           localStorage.removeItem(slotKey(n));
           renderSlots();
@@ -43288,6 +43370,8 @@ void main() {
       } catch (e) {
       }
       this.boat = null;
+      this.escaped = false;
+      this.raft = null;
       this.sailing = false;
       this.shadowDirty = true;
       this.recipes = RECIPES;
@@ -44302,6 +44386,72 @@ void main() {
       this.ui.toast(`\u0412\u044B\u0448\u0435: \u2212${Math.abs(this.mine.level.y) | 0} \u043C`);
     }
     // ------------------------------------------------------------
+    //  Спасение: плот и отплытие
+    // ------------------------------------------------------------
+    /** Можно ли строить плот именно здесь: нужна кромка воды у берега */
+    raftSpotOk(x, z) {
+      if (this.underground) return { ok: false, why: "\u041F\u043E\u0434 \u0437\u0435\u043C\u043B\u0451\u0439 \u043F\u043B\u043E\u0442 \u043D\u0435 \u043F\u043E\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u2014 \u0432\u044B\u0445\u043E\u0434\u0438 \u043D\u0430 \u0431\u0435\u0440\u0435\u0433" };
+      const h = this.world.heightAt(x, z);
+      if (h < 0.35) return { ok: false, why: "\u0421\u043B\u0438\u0448\u043A\u043E\u043C \u0433\u043B\u0443\u0431\u043E\u043A\u043E: \u0432\u0441\u0442\u0430\u043D\u044C \u0443 \u0441\u0430\u043C\u043E\u0439 \u043A\u0440\u043E\u043C\u043A\u0438 \u0432\u043E\u0434\u044B" };
+      if (h > 1.6) return { ok: false, why: "\u041F\u043B\u043E\u0442\u0443 \u043D\u0443\u0436\u043D\u0430 \u0432\u043E\u0434\u0430: \u043F\u043E\u0434\u043E\u0439\u0434\u0438 \u043A \u0431\u0435\u0440\u0435\u0433\u0443" };
+      return { ok: true };
+    }
+    /** Построить плот на воде рядом с игроком и уплыть (финал игры) */
+    buildRaft() {
+      var _a, _b;
+      if (this.escaped) return false;
+      if (!this.running || this.paused || this.dead) return false;
+      if ((this.state.inventory.raft || 0) <= 0) {
+        this.ui.toast("\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u043E\u0431\u0435\u0440\u0438 \u043F\u043B\u043E\u0442: 12 \u043F\u0430\u043B\u043E\u043A, 4 \u0432\u0435\u0440\u0451\u0432\u043A\u0438, 2 \u0436\u0435\u043B\u0435\u0437\u0430 (C)", true);
+        return false;
+      }
+      const p = this.player.position;
+      let spot = null;
+      for (let d = 2; d <= 9 && !spot; d += 0.5) {
+        for (let a = 0; a < 8 && !spot; a++) {
+          const ang = this.player.facing + a * Math.PI / 4;
+          const x = p.x + Math.sin(ang) * d;
+          const z = p.z + Math.cos(ang) * d;
+          if (this.raftSpotOk(x, z).ok && this.world.heightAt(x, z) < 0.5) spot = { x, z };
+        }
+      }
+      if (!spot) {
+        this.ui.toast("\u041D\u0435 \u0432\u0438\u0434\u043D\u043E \u0432\u043E\u0434\u044B: \u043F\u043E\u0434\u043E\u0439\u0434\u0438 \u043A \u0431\u0435\u0440\u0435\u0433\u0443 \u0438 \u043F\u043E\u0432\u0435\u0440\u043D\u0438\u0441\u044C \u043A \u043C\u043E\u0440\u044E", true);
+        return false;
+      }
+      this.takeItem("raft", 1);
+      this.escaped = true;
+      (_b = (_a = this.audio).craft) == null ? void 0 : _b.call(_a);
+      this.ui.showEscape(this.escapeSummary(), this.sky.day);
+      this.running = false;
+      try {
+        localStorage.setItem(SAVE_KEY + ".victory", JSON.stringify({
+          day: this.sky.day,
+          cause: "raft",
+          summary: this.escapeSummary(),
+          savedAt: Date.now()
+        }));
+        localStorage.removeItem(SAVE_KEY);
+      } catch (err) {
+      }
+      if (document.pointerLockElement) document.exitPointerLock();
+      return true;
+    }
+    /** Итоги выживания для экрана спасения */
+    escapeSummary() {
+      return {
+        days: this.sky.day,
+        health: Math.round(this.state.health),
+        hunger: Math.round(this.state.hunger),
+        thirst: Math.round(this.state.thirst),
+        wood: this.state.inventory.wood || 0,
+        stone: this.state.inventory.stone || 0,
+        iron: this.state.inventory.iron || 0,
+        storms: this.state.stormsSeen || 0,
+        nights: Math.max(0, this.sky.day - 1)
+      };
+    }
+    // ------------------------------------------------------------
     //  Верстак и точильный станок
     // ------------------------------------------------------------
     placeStation(type) {
@@ -45275,6 +45425,14 @@ void main() {
       }
       for (const [id, need] of Object.entries(recipe.need)) this.takeItem(id, need);
       for (const [id, give] of Object.entries(recipe.gives)) this.addItem(id, give);
+      if (recipe.id === "raft") {
+        const spot = this.raftSpotOk(this.player.position.x, this.player.position.z);
+        if (!spot.ok) {
+          this.ui.toast(`${spot.why} \u2014 \u043F\u043B\u043E\u0442 \u0441\u0442\u0430\u0432\u0438\u0442\u0441\u044F \u0443 \u0441\u0430\u043C\u043E\u0439 \u0432\u043E\u0434\u044B`, true);
+        } else {
+          this.ui.toast("\u041F\u043B\u043E\u0442 \u0433\u043E\u0442\u043E\u0432. \u041F\u043E\u0441\u0442\u0430\u0432\u044C \u0435\u0433\u043E: F \u0443 \u0431\u0435\u0440\u0435\u0433\u0430 \u2014 \u0438 \u0443\u043F\u043B\u044B\u0432\u0430\u0439");
+        }
+      }
       (_b = (_a = this.audio).craft) == null ? void 0 : _b.call(_a);
       this.ui.toast(`\u0421\u0434\u0435\u043B\u0430\u043D\u043E: ${recipe.name}`);
       this.ui._lastCraftSig = "";
@@ -45288,6 +45446,7 @@ void main() {
       const id = this.equippedId();
       if (id === "workbench") this.placeStation("bench");
       else if (id === "grindstone") this.placeStation("grind");
+      else if (id === "raft") this.buildRaft();
       else this.placeCampfire();
     }
     /** F — поставить костёр из набора */
@@ -45648,7 +45807,7 @@ void main() {
     // ------------------------------------------------------------
     save() {
       var _a;
-      if (!this.running || this.dead) return false;
+      if (!this.running || this.dead || this.escaped) return false;
       try {
         const data = {
           v: 1,
@@ -46138,6 +46297,13 @@ void main() {
         return;
       }
       if (t.closest("#btn-restart")) {
+        try {
+          localStorage.removeItem(SAVE_KEY);
+        } catch (err) {
+        }
+        window.location.reload();
+      }
+      if (t.closest("#btn-escape-again")) {
         try {
           localStorage.removeItem(SAVE_KEY);
         } catch (err) {
