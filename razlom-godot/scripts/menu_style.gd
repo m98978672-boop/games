@@ -95,6 +95,8 @@ func open() -> void:
 	panel.show()
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	layout()
+	if not panel.get_tree().process_frame.is_connected(settle_layout):
+		panel.get_tree().process_frame.connect(settle_layout, CONNECT_ONE_SHOT)
 	panel.position.x += 42
 	panel.modulate.a = 0
 	shade.modulate.a = 0
@@ -118,3 +120,8 @@ func close() -> void:
 	tween.chain().tween_callback(func():
 		panel.hide()
 		closing = false)
+
+func settle_layout() -> void:
+	# Text shaping can update Control minimum sizes one frame after a menu changes.
+	if is_instance_valid(panel) and is_instance_valid(host):
+		layout()

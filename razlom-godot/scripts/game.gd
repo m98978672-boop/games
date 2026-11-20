@@ -43,6 +43,7 @@ var sound_playback: AudioStreamGeneratorPlayback
 var audio_rng := RandomNumberGenerator.new()
 var world_rng := RandomNumberGenerator.new()
 var elapsed := 0.0
+var web_report_time := 0.0
 var active_debris := 0
 var active_charges := 0
 var world_epoch := 0
@@ -68,7 +69,7 @@ func _ready() -> void:
 	player.game = self
 	player.process_mode = Node.PROCESS_MODE_PAUSABLE
 	player.position = Vector3(-22, 0.3, 20)
-	player.rotation.y = -0.5
+	player.rotation.y = PI
 	add_child(player)
 	setup_audio()
 	setup_hud()
@@ -583,12 +584,12 @@ func setup_hud() -> void:
 func show_menu(title: String, body: String) -> void:
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	menu_style.open()
 	modal_title.text = title
 	modal_body.text = body
 	resume_button.disabled = not FileAccess.file_exists(save_path)
 	save_button.disabled = not started or ended
-	start_button.text = "Попробовать ещё раз" if ended else ("Вернуться в мир  →" if started else "Начать путь  →")
+	start_button.text = "Попробовать ещё раз" if ended else ("Вернуться в мир" if started else "Начать путь")
+	menu_style.open()
 	start_button.grab_focus()
 
 func resume() -> void:
@@ -633,6 +634,22 @@ func _input(event: InputEvent) -> void:
 			DisplayServer.window_set_title("РАЗЛОМ / FPS %d / debris %d / blocks %d" % [Engine.get_frames_per_second(), active_debris, blocks.size()])
 
 func _process(delta: float) -> void:
+	# Read-only browser diagnostics: no RPC or mutable RatCore geometry is shared.
+	if OS.has_feature("web"):
+		web_report_time -= delta
+		if web_report_time <= 0 and is_instance_valid(player):
+			web_report_time = 0.25
+			var bridge = Engine.get_singleton("JavaScriptBridge")
+			bridge.eval("window.__razlomStatus = " + JSON.stringify({
+				"ready": true, "started": started, "paused": get_tree().paused,
+				"health": state.health, "pump": state.pump, "complete": state.complete,
+				"position": [player.position.x, player.position.y, player.position.z],
+				"saveExists": FileAccess.file_exists(save_path),
+				"saveButton": [save_button.global_position.x, save_button.global_position.y,
+					save_button.size.x, save_button.size.y],
+				"loadButton": [resume_button.global_position.x, resume_button.global_position.y,
+					resume_button.size.x, resume_button.size.y],
+				"menuRect": [modal.position.x, modal.size.x]}))
 	if not is_instance_valid(stats_label):
 		return
 	stats_label.text = "ЗДОРОВЬЕ %03d     ВОДА %03d     ЕДА %03d     СИЛЫ %03d\nМАГАЗИН %02d / %02d     ЗАРЯДЫ %d     АПТЕЧКИ %d     ДЕТАЛИ %d" % [state.health, state.water, state.hunger, state.stamina, state.ammo, state.reserve, state.charges, state.medkits, state.scrap]

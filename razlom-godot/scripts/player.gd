@@ -33,6 +33,7 @@ func _ready() -> void:
 	var model: PackedScene = load("res://assets/models/carbine.tscn")
 	gun = model.instantiate()
 	camera.add_child(gun)
+	gun.position = Vector3(0.27, -0.29, -0.48)
 	light = SpotLight3D.new()
 	light.position = Vector3(0.12, -0.1, -0.15)
 	light.light_color = Color("dce4ba")
