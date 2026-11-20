@@ -15,6 +15,7 @@ var cooldown := 0.0
 var scan := 0.0
 var home := Vector3.ZERO
 var phase := 0.0
+var weapon_motion: RazlomWeaponMotion
 var motion: RazlomActorMotion
 var visual: Node3D
 var think_label: Label3D
@@ -34,6 +35,14 @@ func _ready() -> void:
 	add_child(col)
 	visual = RazlomArt.humanoid(self)
 	motion = RazlomActorMotion.new(visual)
+	visual.get_node("Weapon").hide()
+	var weapon: Node3D = load("res://assets/models/carbine.tscn").instantiate()
+	visual.get_node("ArmRJoint/ArmR").add_child(weapon)
+	weapon.position = Vector3(-0.15, 0.09, -0.29)
+	weapon.scale = Vector3.ONE * 0.65
+	weapon.get_node("LeftHand").hide()
+	weapon.get_node("RightHand").hide()
+	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home
 	think_label = RazlomArt.sign_text(self, "", Vector3(0, 2.25, 0), 24)
@@ -162,6 +171,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 18 * delta
 	move_and_slide()
 	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
+	weapon_motion.advance(0, motion.recoil * 0.09)
 	think_label.text = "ПРОХОДИ" if game.state.passage else ("ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else "")))
 	think_label.modulate = Color("efb26a")
 

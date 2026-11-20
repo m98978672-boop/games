@@ -3,6 +3,7 @@ extends CharacterBody3D
 var game
 var camera: Camera3D
 var gun: Node3D
+var weapon_motion: RazlomWeaponMotion
 var cooldown := 0.0
 var reload_time := 0.0
 var recoil := 0.0
@@ -36,7 +37,9 @@ func _ready() -> void:
 	var model: PackedScene = load("res://assets/models/carbine.tscn")
 	gun = model.instantiate()
 	camera.add_child(gun)
-	gun.position = Vector3(0.27, -0.29, -0.48)
+	gun.scale = Vector3.ONE * 0.85
+	gun.position = Vector3(0.2, -0.21, -0.6)
+	weapon_motion = RazlomWeaponMotion.new(gun)
 	light = SpotLight3D.new()
 	light.position = Vector3(0.12, -0.1, -0.15)
 	light.light_color = Color("dce4ba")
@@ -111,11 +114,13 @@ func _physics_process(delta: float) -> void:
 		game.play_tone(85, 0.035, 0.025)
 	bob += delta * speed * input.length()
 	var reload_blend := sin(clampf(reload_time / 1.4, 0.0, 1.0) * PI)
-	var anchor := Vector3(0.12, -0.22, -0.42) if aiming else Vector3(0.27, -0.29, -0.48)
+	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.2, -0.21, -0.6)
+	anchor.y += reload_blend * 0.08
 	var breath := sin(Time.get_ticks_msec() * 0.0018) * (0.001 if aiming else 0.003)
 	gun.position = gun.position.lerp(anchor + Vector3(sin(bob) * (0.003 if aiming else 0.012) * input.length(), sin(bob * 2) * 0.009 * input.length() + breath - landing, recoil), 1.0 - exp(-delta * 14.0))
-	gun.rotation.x = lerp_angle(gun.rotation.x, -0.6 * reload_blend + recoil * 2 - (0.12 if running else 0.0), 1.0 - exp(-delta * 18.0))
-	gun.rotation.z = lerp_angle(gun.rotation.z, -0.18 * reload_blend - input.x * (0.01 if aiming else 0.035), 1.0 - exp(-delta * 12.0))
+	gun.rotation.x = lerp_angle(gun.rotation.x, 0.18 * reload_blend + recoil * 2 - (0.12 if running else 0.0), 1.0 - exp(-delta * 18.0))
+	gun.rotation.z = lerp_angle(gun.rotation.z, -0.48 * reload_blend - input.x * (0.01 if aiming else 0.035), 1.0 - exp(-delta * 12.0))
+	weapon_motion.advance(reload_time, recoil)
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
 	if Input.is_action_pressed("fire") and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
 		if game.state.ammo > 0:
