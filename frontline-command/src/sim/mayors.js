@@ -234,6 +234,11 @@ export class Mayors {
   build() {
     const game = this.game;
     const rand = makeRng(this.seed ^ 0x5eed);
+    /* Точки мира не переезжают: ссылку на точку и сектор города можно
+       найти один раз при построении, а не в каждом совете штабу. Совет
+       запрашивается на каждый сектор при каждом плане, поэтому поиски
+       по всем точкам там — лишняя работа на пустом месте. */
+    this.pointById = new Map(game.world.points.map((p) => [p.id, p]));
     const cities = game.world.points.filter((p) => p.type === 'city');
     for (const p of cities) {
       const r = rand();
@@ -264,6 +269,7 @@ export class Mayors {
         justCaptured: 0,   // 1 → только что взят, гаснет со временем
         owner: p.owner,
         underFire: false,
+        sectorId: game.world.sectorAt(p.x, p.y)?.id ?? -1,
       };
       this.list.push(mayor);
       this.byPoint.set(p.id, mayor);
@@ -301,7 +307,7 @@ export class Mayors {
     const decisions = [];
 
     for (const m of this.list) {
-      const point = game.world.points.find((p) => p.id === m.pointId);
+      const point = this.pointById?.get(m.pointId) || null;
       if (point) {
         /* Смена хозяина — событие для города: бюджет на восстановление,
            страх контрудара, настроение падает. */
@@ -401,10 +407,9 @@ export class Mayors {
     let count = 0;
     const notes = [];
     for (const m of this.list) {
-      const p = game.world.points.find((pp) => pp.id === m.pointId);
+      if (m.sectorId !== sectorId) continue;
+      const p = this.pointById?.get(m.pointId);
       if (!p) continue;
-      const sec = game.world.sectorAt(p.x, p.y);
-      if (!sec || sec.id !== sectorId) continue;
       if (p.owner !== m.home) continue;   // захваченный чужой город мэра не слушает
       const adv = advisory(m);
       attack += adv.attack;

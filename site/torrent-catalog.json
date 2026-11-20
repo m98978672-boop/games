@@ -7,7 +7,7 @@
     "storefront": 17,
     "collection": 216,
     "files": 2101,
-    "totalBytes": 51246961,
+    "totalBytes": 51247481,
     "chunks": 392,
     "blockedFiles": 5
   },
@@ -2090,8 +2090,8 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "e89ef0c8982c52871ccb5776920d78ece3ca671b11191a237a937e5b25e944d7",
-      "totalSize": 9914023,
+      "infoHash": "04fb5f46d7fd7615b761303bbdf1f70b3d872a602e9a58fb782a4fbbc8a180f9",
+      "totalSize": 9914543,
       "chunkSize": 262144,
       "chunkCount": 38,
       "fileCount": 561,
@@ -3663,8 +3663,8 @@
         },
         {
           "path": "src/sim/mayors.js",
-          "size": 22917,
-          "sha256": "7ad1afed03d67fd358474971bc82d60a9945381d9ddb4bf7a35f0ea0e1a2642e"
+          "size": 23437,
+          "sha256": "e66caaff0b8b6b278fe7e26608c85bba19d738215dc10bd5e6b101622ce849d7"
         },
         {
           "path": "src/sim/motion_wall_sweep.js",
