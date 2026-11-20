@@ -2,7 +2,7 @@
 # Independent evaluation after all 54,000 seconds of training are complete.
 set -euo pipefail
 : "${RUNNER_TEMP:?}" "${GITHUB_RUN_ID:?}" "${GH_TOKEN:?}" "${GH_REPO:?}"
-tag="frontline-learning-15h-$GITHUB_RUN_ID"
+tag="frontline-learning-15h-${TRAINING_RUN_ID:-$GITHUB_RUN_ID}"
 mkdir -p "$RUNNER_TEMP/long-data" "$RUNNER_TEMP/completed" "$RUNNER_TEMP/starting" "$RUNNER_TEMP/eval-input" "$RUNNER_TEMP/eval-output"
 gh release download "$tag" --pattern long-dataset.tar.gz --dir "$RUNNER_TEMP"
 gh release download "$tag" --pattern phase-3-complete.tar.gz --dir "$RUNNER_TEMP"

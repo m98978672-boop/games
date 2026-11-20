@@ -4,7 +4,7 @@
 set -euo pipefail
 : "${RUNNER_TEMP:?}" "${GITHUB_RUN_ID:?}" "${GH_TOKEN:?}" "${GH_REPO:?}" "${PHASE:?}"
 case "$PHASE" in 1|2|3) ;; *) echo 'Invalid phase' >&2; exit 1;; esac
-tag="frontline-learning-15h-$GITHUB_RUN_ID"
+tag="frontline-learning-15h-${TRAINING_RUN_ID:-$GITHUB_RUN_ID}"
 mkdir -p "$RUNNER_TEMP/long-data" "$RUNNER_TEMP/long-work" "$RUNNER_TEMP/slots"
 gh release download "$tag" --pattern long-dataset.tar.gz --dir "$RUNNER_TEMP"
 tar -xzf "$RUNNER_TEMP/long-dataset.tar.gz" -C "$RUNNER_TEMP/long-data"

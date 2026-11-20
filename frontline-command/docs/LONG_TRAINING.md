@@ -42,3 +42,16 @@ and evaluation succeed. The release contains `long-dataset.tar.gz`, checkpoint
 archives and finally `long-evaluation.tar.gz`; check the progress JSON for the
 actual active seconds and the evaluation summary for results. The release and
 checkpoints are research outputs and are not published into the game.
+
+### Recovery for run 44671482687
+
+If that run stops unsuccessfully, do not start another trainer while it is still
+running. A separate, dormant recovery workflow can continue the same release
+with the same optimizer, counters and data. Trigger it on the working branch by
+changing and committing `tools/training/start-recovery.flag` and pushing the
+branch. Its guard checks the original run has completed unsuccessfully; it then
+skips completed phases, resumes the newest checkpoint in the interrupted phase,
+executes remaining phases and independently evaluates. A failed recovery run
+must itself be stopped before another is triggered, to avoid concurrent writers.
+Each attempt can need a further restart if it exceeds the runner's time limit.
+The recovery workflow is not running unless explicitly triggered.
