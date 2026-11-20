@@ -80,8 +80,11 @@ function newGame({ mode = 'soldier', aiVsAi = false, difficulty = state.difficul
   const gameCfg = neutralAI ? { ...cfg, factions: cfg.factions.map(f => ({ ...f, persona: 'balanced' })) } : cfg;
   if (neutralAI) gameCfg.faction = id => gameCfg.factions[id] || gameCfg.factions[0];
   const saved = loadSave ? Save.loadWar() : null;
+  let strategicMemoryStorage = null;
+  try { strategicMemoryStorage = window.localStorage; } catch { /* continue with battle-only memory */ }
   game = new Game({
     cfg: gameCfg,
+    strategicMemoryStorage,
     seed: saved ? saved.seed : seed,
     difficulty: saved ? saved.difficultyId : difficulty,
     meta: Save.meta,
@@ -89,6 +92,7 @@ function newGame({ mode = 'soldier', aiVsAi = false, difficulty = state.difficul
     aiVsAi,
     mode,
   });
+  if (!strategicMemoryStorage) game.alertLog.push({ kind: 'refusal', text: 'Память ИИ не сохраняется: доступна только в текущем бою', t: game.time });
   if (saved && !saved.aiVsAi) {
     try {
       Save.applyWar(game, saved);

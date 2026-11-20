@@ -68,8 +68,11 @@ export class StrategicAI {
       });
       const weakness = clamp(1 - enemyPower / (ownPower + 2), 0, 1);
       const attackable = (enemyPoints.length > 0 || neutralPoints.length > 0 || adjacentEnemy) && (s.owner !== faction || enemyPoints.length > 0);
+      // Our own past retreats near this sector make it a little less attractive;
+      // fresh captures reduce that warning. This never bans a target.
+      const rememberedRisk = game.battleMemory?.attackPenalty(faction, s.id) || 0;
       const attack = attackable
-        ? (weakness * w.weakness + value * w.value - d * w.distance - (enemyPower > ownPower * 1.8 ? w.risk : 0)) * persona.attack
+        ? (weakness * w.weakness + value * w.value - d * w.distance - (enemyPower > ownPower * 1.8 ? w.risk : 0)) * persona.attack - rememberedRisk
         : -99;
       const threat = enemyPower + (s.owner === faction ? 1 : 0) + (adjacentEnemy ? 0.3 : 0);
       const defense = s.owner === faction
