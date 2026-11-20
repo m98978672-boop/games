@@ -28,6 +28,10 @@ export function ownPackageDir(root, test) {
 
 export function testsOf(project) {
   return project.tests
+    /* Собранные бандлы (*.bundle.js, .harness-bundle.js) — это выход
+       сборки, а не тест: они рассчитывают на браузер и падают
+       «window is not defined». Запускать их напрямую в Node бессмысленно. */
+    .filter((t) => !/\.bundle\.(m?js)$/i.test(t))
     .filter((t) => !/\/_[^/]+\.mjs$/.test(t))     /* _файлы — вспомогательные */
     .filter((t) => !HEAVY.test(t.slice(t.lastIndexOf('/') + 1)))
     .sort();
@@ -42,13 +46,18 @@ export async function runTests(root, project, opts = {}) {
      package.json (tools/razlom-web/test.mjs требует playwright). Тогда
      «нет node_modules» надо смотреть рядом с тестом, иначе бот падает
      ERR_MODULE_NOT_FOUND и записывает это как дефект игры. */
-  const ownPkg = list.length ? ownPackageDir(root, list[0]) : null;
-  const needsDeps = ownPkg
-    ? !existsSync(join(ownPkg, 'node_modules'))
-    : (project.hasPackage && !project.hasNodeModules);
+  /* Зависимости — вопрос отдельной папки, а не всего проекта: у проекта
+     tools одни тесты самодостаточны, а tools/razlom-web требует
+     playwright. Поэтому решаем для каждого теста отдельно, иначе один
+     тяжёлый сосед утаскивает в пропуск все остальные. */
+  const needsDepsFor = (test) => {
+    const ownPkg = ownPackageDir(root, test);
+    if (ownPkg) return !existsSync(join(ownPkg, 'node_modules'));
+    return project.hasPackage && !project.hasNodeModules;
+  };
 
   for (const test of list) {
-    if (needsDeps) { skipped.push({ test, why: 'не установлены зависимости (npm i)' }); continue; }
+    if (needsDepsFor(test)) { skipped.push({ test, why: 'не установлены зависимости (npm i)' }); continue; }
     const started = Date.now();
     try {
       /* Рабочая папка — папка самого теста, а не корень репозитория.
@@ -101,7 +110,9 @@ export async function runTests(root, project, opts = {}) {
       ran.push({ test, ms: Date.now() - started, ok: false, tail: tail(out) });
     }
   }
-  if (needsDeps && list.length) {
+  /* Отдельная строка про package.json — только если из-за зависимостей
+     не запустился ни один тест. Иначе шум: часть тестов отработала. */
+  if (list.length && !ran.length && skipped.length >= list.length) {
     skipped.push({ test: project.name + '/package.json', why: 'npm-зависимости не установлены' });
   }
   return { findings, ran, skipped };
