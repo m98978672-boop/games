@@ -6,8 +6,11 @@ var gun: Node3D
 var weapon_motion: RazlomWeaponMotion
 var left_arm: RazlomArmRig
 var right_arm: RazlomArmRig
+var shot_bloom := 0.0
+var shock_blend := 0.0
 var healing_time := 0.0
 var bandage: Node3D
+var scanner: Node3D
 var cooldown := 0.0
 var reload_time := 0.0
 var recoil := 0.0
@@ -53,6 +56,12 @@ func _ready() -> void:
 	weapon_motion = RazlomWeaponMotion.new(gun)
 	bandage = RazlomArt.box(gun.get_node("LeftHand"), Vector3(0, 0.035, 0), Vector3(0.055, 0.05, 0.09), RazlomArt.material(Color("dedbc4")))
 	bandage.hide()
+	scanner = Node3D.new()
+	gun.get_node("LeftHand").add_child(scanner)
+	RazlomArt.box(scanner, Vector3(0, 0.06, 0), Vector3(0.08, 0.12, 0.055), RazlomArt.material(Color("45554a"), "metal"))
+	RazlomArt.box(scanner, Vector3(0, 0.07, -0.03), Vector3(0.05, 0.05, 0.01), RazlomArt.material(Color("8bbfa1"), "", 0.5))
+	RazlomArt.box(scanner, Vector3(0.02, 0.15, 0), Vector3(0.008, 0.1, 0.008), RazlomArt.material(Color("555c50")))
+	scanner.hide()
 	gun.get_node("LeftHand/Sleeve").hide()
 	gun.get_node("RightHand/Sleeve").hide()
 	left_arm = RazlomArmRig.new(camera)
@@ -79,8 +88,11 @@ func _physics_process(delta: float) -> void:
 	if game.state.health < last_health - 0.1:
 		on_hurt()
 	last_health = game.state.health
+	shot_bloom = move_toward(shot_bloom, 0, delta * 0.014)
+	shock_blend = move_toward(shock_blend, 0, delta * 1.4)
 	healing_time = maxf(0, healing_time - delta)
 	bandage.visible = healing_time > 0
+	scanner.visible = game.quests.scan_time > 0
 	draw_time = maxf(0.0, draw_time - delta)
 	hurt_blend = move_toward(hurt_blend, 0.0, delta * 3.0)
 	if Input.is_action_just_pressed("crouch"):
@@ -143,9 +155,11 @@ func _physics_process(delta: float) -> void:
 	look_sway = look_sway.lerp(Vector2.ZERO, 1.0 - exp(-delta * 14.0))
 	var reload_blend := sin(clampf(reload_time / 1.4, 0.0, 1.0) * PI)
 	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.2, -0.21, -0.6)
+	if game.quests.scan_time > 0:
+		anchor.y -= 0.14
 	anchor.y -= sin(clampf(healing_time / 1.2, 0, 1) * PI) * 0.16
 	anchor.y += reload_blend * 0.08 - smoothstep(0.0, 0.35, draw_time) * 0.2
-	var tremor: float = sin(Time.get_ticks_msec() * 0.027) * game.state.pain * 0.00008
+	var tremor: float = sin(Time.get_ticks_msec() * 0.027) * game.state.pain * 0.00008 + sin(Time.get_ticks_msec() * 0.09) * shock_blend * 0.04
 	anchor.x += tremor
 	var breath := sin(Time.get_ticks_msec() * 0.0018) * (0.001 if aiming else 0.003)
 	gun.position = gun.position.lerp(anchor + Vector3(sin(bob) * (0.003 if aiming else 0.023) * movement_blend + look_sway.x, absf(cos(bob)) * (0.003 if aiming else 0.018) * movement_blend + breath - landing - hurt_blend * 0.035, recoil + hurt_blend * 0.035), 1.0 - exp(-delta * 14.0))
@@ -157,6 +171,9 @@ func _physics_process(delta: float) -> void:
 		var reach := sin(clampf(healing_time / 1.2, 0, 1) * PI)
 		weapon_motion.support_hand.position = weapon_motion.hand_rest.origin.lerp(Vector3(-0.15, -0.06, 0.1), reach)
 		weapon_motion.support_hand.rotation.z = reach * 0.8
+	if game.quests.scan_time > 0:
+		weapon_motion.support_hand.position = Vector3(-0.2, 0.08, -0.15)
+		weapon_motion.support_hand.rotation.x = -0.3 + sin(game.quests.scan_time * 4) * 0.025
 	camera.rotation.z = lerp_angle(camera.rotation.z, -input.x * 0.025 + hurt_blend * 0.045 + tremor, 1.0 - exp(-delta * 9.0))
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
 	if Input.is_action_pressed("fire") and healing_time <= 0 and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
@@ -223,6 +240,10 @@ func _process(delta: float) -> void:
 		advance_touch_look(delta)
 
 func on_shot() -> void:
+	if game.quests.scan_time > 0:
+		game.quests.scan_time = 0
+		game.notify("Замер прерван стрельбой")
+	shot_bloom = minf(0.025, shot_bloom + 0.0035)
 	recoil = 0.09
 	# Immediate response on the actual shot, not after the next physics tick.
 	gun.position.z += 0.025
@@ -255,3 +276,16 @@ func begin_heal() -> bool:
 		return false
 	healing_time = 1.2
 	return true
+
+func spread_angle() -> float:
+	var speed := Vector2(velocity.x, velocity.z).length()
+	var base := 0.0015 if aiming else 0.008
+	if crouched:
+		base *= 0.65
+	return base + speed * (0.0015 if aiming else 0.0025) + shot_bloom + game.state.pain * 0.00006
+
+func sample_shot_direction(rng: RandomNumberGenerator) -> Vector3:
+	# Uniform disk in camera tangent plane, not square independent axis offsets.
+	var radius := sqrt(rng.randf()) * tan(spread_angle())
+	var angle := rng.randf() * TAU
+	return (-camera.global_basis.z + camera.global_basis.x * cos(angle) * radius + camera.global_basis.y * sin(angle) * radius).normalized()

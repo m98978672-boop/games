@@ -36,6 +36,13 @@ try {
   assert.ok(Math.hypot(after[0]-before[0], after[2]-before[2]) > .2);
  });
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
+ await page.keyboard.press('g');
+ await page.waitForFunction(() => window.__razlomStatus.activeCharges > 0, null, {timeout:15000});
+ await page.waitForFunction(() => window.__razlomStatus.blastCount > 0, null, {timeout:20000});
+ await check('Actual charge renders a timed blast in WebGL', async () => assert.ok(await page.evaluate(() => window.__razlomStatus.blastCount) > 0));
+ await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/blast-smoke.png'});
+ await page.waitForFunction(() => window.__razlomStatus.blastCount === 0 && window.__razlomStatus.activeCharges === 0, null, {timeout:20000});
+ await check('Web blast cleans up before saving the game', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.health > 0), true));
  await page.keyboard.press('Escape');
  await page.waitForFunction(() => window.__razlomStatus?.paused);
  await check('Escape returns to pause menu', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.paused), true));
