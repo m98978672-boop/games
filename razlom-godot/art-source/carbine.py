@@ -87,15 +87,23 @@ for i in range(3):
     box('MagazineRib%d'%i,(.063,.003,.15),edge,(0,.002+i*.025,.13),parent='Magazine')
 for z in [-.16,.105]:
     cylinder('Pin'+str(z),.009,.131,edge,(0,-.015,z),rotation=(0,0,math.pi/2))
-for side,z in [('Right',.14),('Left',-.32)]:
-    hand=node(side+'Hand',(.035 if side=='Right' else -.02,-.13,z))
-    box('Sleeve',(.1,.095,.25),cloth,(.03,-.06,.17),parent=hand,rotation=(-.25,0,-.15))
-    box('Cuff',(.1,.07,.05),leather,(.012,-.01,.055),parent=hand)
-    box('Palm',(.08,.07,.1),leather,parent=hand)
+for side in ['Right','Left']:
+    right=side=='Right'
+    hand=node(side+'Hand',(.055,-.105,.115) if right else (-.005,-.075,-.33))
+    box('Sleeve',(.085,.085,.24),cloth,(.035,-.055,.16) if right else (-.035,-.035,.17),parent=hand,rotation=(-.15,0,-.18 if right else .2))
+    box('Cuff',(.085,.065,.045),leather,(0,-.01,.06),parent=hand)
+    box('Palm',(.055,.09,.085) if right else (.085,.045,.12),leather,parent=hand)
     for i in range(4):
-        box('Finger%d'%i,(.018,.04,.055),leather,(-.03+i*.02,.035,-.018),parent=hand,rotation=(.35,0,0))
-        box('Knuckle%d'%i,(.015,.008,.018),skin,(-.03+i*.02,.058,-.007),parent=hand)
-    box('Thumb',(.035,.035,.065),leather,(-.047,.012,.025),parent=hand,rotation=(0,.35,-.3))
+        if right:
+            box('Finger%d'%i,(.065,.019,.025),leather,(-.025,.045-i*.026,-.047),parent=hand)
+            box('FingerTip%d'%i,(.021,.019,.045),leather,(-.062,.045-i*.026,-.025),parent=hand)
+            box('Knuckle%d'%i,(.014,.012,.017),skin,(-.007,.047-i*.026,-.063),parent=hand)
+        else:
+            box('Finger%d'%i,(.022,.055,.021),leather,(-.045,.026,-.045+i*.029),parent=hand)
+            box('FingerTip%d'%i,(.034,.018,.021),leather,(-.035,.059,-.045+i*.029),parent=hand)
+            box('Knuckle%d'%i,(.012,.014,.017),skin,(-.06,.026,-.045+i*.029),parent=hand)
+    box('Thumb',(.028,.065,.03) if right else (.025,.065,.04),leather,(.003,.036,.04) if right else (.048,.026,.025),parent=hand,rotation=(0,0,-.4 if right else .3))
+cylinder('SpentCase',.006,.027,mat('0.65, 0.45, 0.16',.7,.4),(.08,.01,-.02),rotation=(math.pi/2,0,0))
 node('MuzzlePoint',(0,.015,-.75))
 flash_mat=resource('StandardMaterial3D','shading_mode = 0\nalbedo_color = Color(1, 0.7, 0.2, 1)\nemission_enabled = true\nemission = Color(1, 0.45, 0.08, 1)\nemission_energy_multiplier = 2.0')
 mesh('MuzzleFlash',resource('CylinderMesh','top_radius = 0.0\nbottom_radius = 0.028\nheight = 0.09\nradial_segments = 6'),flash_mat,(0,.015,-.785),rotation=(-math.pi/2,0,0))
