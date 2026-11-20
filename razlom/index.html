@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>РАЗЛОМ — Тёплая стена | Games</title>
+<meta name="description" content="РАЗЛОМ в браузере: выживание, охраняемый склад, разрушение стен и возвращение в убежище.">
+<link rel="stylesheet" href="style.css">
+<script src="../shared/engine.js"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
+</head>
+<body>
+<header><a href="../index.html">← Games</a><span class="engine-hud-slot" data-engine-badge></span></header>
+<main>
+<section class="intro"><p class="eyebrow">РУБЕЖ / ГЛАВА 01</p><h1>РАЗЛОМ<span>Тёплая стена</span></h1><p class="lead">Снаружи — холодный город.<br>Здесь ещё есть ради кого возвращаться.</p><img src="cover.svg" alt="Графическая обложка: убежище с тёплым окном в долине. Не игровой кадр."><p class="caption">Авторская графическая обложка, не скриншот игры.</p></section>
+<aside><p class="eyebrow">ПЕРВАЯ ВЫЛАЗКА</p><h2>Верни воду.<br>Вернись домой.</h2><p>Доберись до охраняемого склада, забери насос и вернись к Вере. Ищи припасы, избегай огня или пробей путь через кирпичную стену.</p>
+<div class="notice"><strong>Играть прямо в браузере</strong><p>Настоящая Web-сборка Godot: первый запуск загружает движок и ресурсы. Нужны WebGL 2, клавиатура и мышь. Полная кампания ещё в разработке.</p></div>
+<button class="button" id="launch" type="button">Начать вылазку · играть →</button>
+<p id="launch-status" role="status">Без установки. Сохранения хранятся в этом браузере; приватный режим или очистка данных могут их удалить.</p>
+<a class="secondary" href="../deliverables/razlom-first-slice-source.zip" download>Скачать проект · ZIP ↓</a>
+<a class="secondary" href="https://github.com/m98978672-boop/games/tree/main/razlom-godot">Посмотреть исходники ↗</a>
+<h3>Запуск исходников отдельно</h3><ol><li>Установи <a href="https://godotengine.org/download/">Godot 4.4.1 Standard</a> или совместимую 4.4+.</li><li>Распакуй архив и импортируй <code>razlom-godot/project.godot</code>.</li><li>Дождись импорта ресурсов, нажми F5 и «Начать путь».</li></ol>
+<p class="quiet">Выдохни. Здесь можно немного побыть в тишине.</p></aside>
+<section class="details"><article><h3>Что уже есть</h3><p>Стрельба, скрытное движение, холод и усталость, отдых, верстак, собака-компаньон, разрушаемые стены и физические обломки, сохранение мира.</p></article><article><h3>Управление</h3><p>WASD — движение · мышь — обзор · ЛКМ — огонь · E — взаимодействие · C — присесть · F — фонарь · Tab — инвентарь · Esc — меню.</p></article><article><h3>Честно о проверке</h3><p>127 целевых headless-проверок в Godot и 7 статических тестов прошли. WebGL-запуск, движение и меню проверяются в Chromium. Звук на слух, FPS на вашем ПК и прохождение человеком ещё не проверены. <a href="https://github.com/m98978672-boop/games/blob/main/docs/razlom/VERIFICATION.md">Полный отчёт ↗</a></p></article></section>
+</main>
+<section id="game-stage" class="game-stage" aria-label="Игра РАЗЛОМ" hidden>
+<div class="game-toolbar"><strong>РАЗЛОМ</strong><span>WASD · мышь · E — действие · Esc — пауза</span><button id="fullscreen" type="button">На весь экран</button><button id="close-game" type="button">Выйти</button></div>
+<iframe id="game-frame" title="РАЗЛОМ — Тёплая стена" allow="autoplay; fullscreen; gamepad" allowfullscreen></iframe>
+</section>
+<script src="launch.js" defer></script>
+<footer>РАЗЛОМ / Первая глава · Полная кампания в разработке<br>Сделано на Godot 4.4.1 · <a href="licenses/Godot-LICENSE.txt">Лицензия движка</a> · <a href="licenses/Godot-COPYRIGHT.txt">Компоненты и авторы</a></footer>
+</body></html>

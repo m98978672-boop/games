@@ -1,0 +1,80 @@
+name: Build and test Razlom Web
+on:
+  push:
+    branches: [arena/fc01a5f8-games]
+    paths:
+      - 'razlom-godot/**'
+      - 'tools/razlom-web/**'
+      - '.github/workflows/razlom-web.yml'
+permissions:
+  contents: write
+concurrency:
+  group: razlom-web-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install official Godot and Web templates
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip -o /tmp/godot.zip
+          curl -fL --retry 3 https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz -o /tmp/templates.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          unzip -q /tmp/templates.zip -d /tmp/godot
+          mkdir -p ~/.local/share/godot/export_templates/4.4.1.stable
+          cp /tmp/godot/templates/web*.zip ~/.local/share/godot/export_templates/4.4.1.stable/
+          echo /tmp/godot >> "$GITHUB_PATH"
+      - name: Import, validate and export actual Godot project
+        run: |
+          set -euo pipefail
+          python razlom-godot/tests/run_engine.py --engine /tmp/godot/Godot_v4.4.1-stable_linux.x86_64 --report /tmp/native-results.json
+          mkdir -p razlom/web
+          Godot_v4.4.1-stable_linux.x86_64 --headless --path razlom-godot --export-release Web ../razlom/web/game.html
+          test -s razlom/web/game.wasm
+          test -s razlom/web/game.pck
+      - name: Test real WebGL build in Chromium
+        run: |
+          set -euo pipefail
+          cd tools/razlom-web
+          npm ci 2>&1 | tee /tmp/razlom-web-check.log
+          npx playwright install --with-deps chromium 2>&1 | tee -a /tmp/razlom-web-check.log
+          python -m http.server 8765 --directory ../.. > /tmp/razlom-http.log 2>&1 &
+          npm test 2>&1 | tee -a /tmp/razlom-web-check.log
+      - name: Retain test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: razlom-web-evidence
+          path: |
+            docs/razlom/web-evidence/
+            /tmp/native-results.json
+      - name: Preserve failure diagnostics on this working branch
+        if: failure()
+        run: |
+          mkdir -p docs/razlom/web-evidence
+          cp /tmp/razlom-web-check.log docs/razlom/web-evidence/build-failure.txt || true
+          cp /tmp/native-results.json docs/razlom/web-evidence/native-results.json || true
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/razlom/web-evidence
+          git diff --cached --quiet && exit 0
+          git commit -m "Record Web build failure diagnostics [skip ci]"
+          git push origin HEAD:arena/fc01a5f8-games
+      - name: Commit tested Web build only to this working branch
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = arena/fc01a5f8-games
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add razlom/web docs/razlom/web-evidence
+          git diff --cached --quiet && exit 0
+          git commit -m "Build tested Razlom Web export and browser evidence [skip ci]"
+          git push origin HEAD:arena/fc01a5f8-games
