@@ -122,3 +122,27 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 	if medic:
 		box(root, Vector3(-0.15, 1.13, -0.21), Vector3(0.09, 0.035, 0.01), material(Color("e8e2c8")))
 		box(root, Vector3(-0.15, 1.13, -0.22), Vector3(0.03, 0.1, 0.01), material(Color("e8e2c8")))
+
+static func protection_pickup(parent: Node3D, helmet: bool) -> void:
+	var canvas := material(Color("606c5c"), "cloth")
+	if helmet:
+		var visual := MeshInstance3D.new()
+		var mesh := SphereMesh.new()
+		mesh.radius = 0.24
+		mesh.height = 0.44
+		mesh.is_hemisphere = true
+		mesh.radial_segments = 16
+		mesh.rings = 8
+		visual.mesh = mesh
+		visual.material_override = material(Color("69735c"), "metal")
+		parent.add_child(visual)
+		box(parent, Vector3(0, -0.02, 0), Vector3(0.5, 0.04, 0.46), canvas)
+		box(parent, Vector3(-0.18, -0.12, 0), Vector3(0.025, 0.2, 0.025), canvas)
+		box(parent, Vector3(0.18, -0.12, 0), Vector3(0.025, 0.2, 0.025), canvas)
+	else:
+		box(parent, Vector3.ZERO, Vector3(0.4, 0.46, 0.16), canvas)
+		for side in [-1, 1]:
+			box(parent, Vector3(side * 0.15, 0.27, 0), Vector3(0.08, 0.16, 0.16), canvas)
+			for y in [-0.1, 0.04]:
+				box(parent, Vector3(side * 0.1, y, -0.11), Vector3(0.16, 0.1, 0.07), canvas)
+		box(parent, Vector3(0, 0, -0.085), Vector3(0.025, 0.42, 0.02), material(Color("333f38")))

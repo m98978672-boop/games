@@ -857,6 +857,12 @@ export function createRatCoreEngine(config = {}) {
       }
       if (branch === 'bridge') {
         return {
+          exportMesh: wrapTool('bridge.exportMesh', (args) => aiTeamSuite.bridgeExportMesh({
+            mesh: args.mesh,
+            format: args.format || 'threejs',
+            name: args.name || 'ratcore-mesh',
+            vault,
+          })),
           exportScene: wrapTool('bridge.exportScene', (args) => aiTeamSuite.bridgeExportScene({
             format: args.format || 'three-json',
             worldSnapshot: buildWorldSnapshotObj(),

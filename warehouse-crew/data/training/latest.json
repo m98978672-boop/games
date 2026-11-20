@@ -1,0 +1,232 @@
+{
+  "format": "warehouse-brain-training/1",
+  "createdAt": "2026-11-20",
+  "seed": 20261120,
+  "architecture": [
+    18,
+    24,
+    16,
+    6
+  ],
+  "params": 958,
+  "population": 18,
+  "generations": 30,
+  "stepSeconds": 0.4,
+  "shiftSeconds": 260,
+  "scenarios": [
+    "будний день",
+    "аврал",
+    "спокойно",
+    "недосып"
+  ],
+  "base": {
+    "fitness": 388.61,
+    "validation": 388.61,
+    "baseline": 353.35,
+    "log": [
+      {
+        "generation": 1,
+        "best": 363.89,
+        "mean": 338.47,
+        "worst": 230.38
+      },
+      {
+        "generation": 2,
+        "best": 382.11,
+        "mean": 327.87,
+        "worst": 254.32
+      },
+      {
+        "generation": 3,
+        "best": 382.11,
+        "mean": 340.25,
+        "worst": 272.81
+      },
+      {
+        "generation": 4,
+        "best": 382.11,
+        "mean": 341.47,
+        "worst": 236.88
+      },
+      {
+        "generation": 5,
+        "best": 382.11,
+        "mean": 337.45,
+        "worst": 242.87
+      },
+      {
+        "generation": 6,
+        "best": 382.11,
+        "mean": 343.67,
+        "worst": 272.44
+      },
+      {
+        "generation": 7,
+        "best": 382.11,
+        "mean": 347.37,
+        "worst": 300.64
+      },
+      {
+        "generation": 8,
+        "best": 388.61,
+        "mean": 338.66,
+        "worst": 276.6
+      },
+      {
+        "generation": 9,
+        "best": 388.61,
+        "mean": 337.72,
+        "worst": 231.71
+      },
+      {
+        "generation": 10,
+        "best": 388.61,
+        "mean": 346.9,
+        "worst": 283.93
+      },
+      {
+        "generation": 11,
+        "best": 388.61,
+        "mean": 345.2,
+        "worst": 282.35
+      },
+      {
+        "generation": 12,
+        "best": 388.61,
+        "mean": 350.13,
+        "worst": 286.5
+      },
+      {
+        "generation": 13,
+        "best": 388.61,
+        "mean": 348.67,
+        "worst": 308.23
+      },
+      {
+        "generation": 14,
+        "best": 388.61,
+        "mean": 337.91,
+        "worst": 264.07
+      },
+      {
+        "generation": 15,
+        "best": 388.61,
+        "mean": 350.54,
+        "worst": 280.21
+      },
+      {
+        "generation": 16,
+        "best": 388.61,
+        "mean": 358.05,
+        "worst": 311.39
+      },
+      {
+        "generation": 17,
+        "best": 388.61,
+        "mean": 337.75,
+        "worst": 246.29
+      },
+      {
+        "generation": 18,
+        "best": 388.61,
+        "mean": 343.82,
+        "worst": 267.17
+      },
+      {
+        "generation": 19,
+        "best": 388.61,
+        "mean": 341.47,
+        "worst": 254.16
+      },
+      {
+        "generation": 20,
+        "best": 388.61,
+        "mean": 349.2,
+        "worst": 302.89
+      },
+      {
+        "generation": 21,
+        "best": 388.61,
+        "mean": 329.53,
+        "worst": 212.72
+      },
+      {
+        "generation": 22,
+        "best": 388.61,
+        "mean": 352.88,
+        "worst": 241.37
+      },
+      {
+        "generation": 23,
+        "best": 388.61,
+        "mean": 357.2,
+        "worst": 318.97
+      },
+      {
+        "generation": 24,
+        "best": 388.61,
+        "mean": 368.85,
+        "worst": 344.15
+      },
+      {
+        "generation": 25,
+        "best": 388.61,
+        "mean": 345.54,
+        "worst": 288.23
+      },
+      {
+        "generation": 26,
+        "best": 388.61,
+        "mean": 343.48,
+        "worst": 276.17
+      },
+      {
+        "generation": 27,
+        "best": 388.61,
+        "mean": 353.34,
+        "worst": 282.37
+      },
+      {
+        "generation": 28,
+        "best": 388.61,
+        "mean": 351.35,
+        "worst": 275.21
+      },
+      {
+        "generation": 29,
+        "best": 388.61,
+        "mean": 347.63,
+        "worst": 287.92
+      },
+      {
+        "generation": 30,
+        "best": 388.61,
+        "mean": 344.66,
+        "worst": 271.16
+      }
+    ]
+  },
+  "crew": [
+    {
+      "id": "marta",
+      "name": "Марта Ковач",
+      "fitness": 400.17,
+      "holdout": 394.33
+    },
+    {
+      "id": "grisha",
+      "name": "Гриша Волков",
+      "fitness": 461.1,
+      "holdout": 457.84
+    },
+    {
+      "id": "timur",
+      "name": "Тимур Асланов",
+      "fitness": 397.06,
+      "holdout": 399.98
+    }
+  ],
+  "durationSeconds": 153.2,
+  "datasetRows": 240,
+  "datasetBytes": 1118887
+}

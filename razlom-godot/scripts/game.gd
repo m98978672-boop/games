@@ -146,16 +146,16 @@ func build_level() -> void:
 	var metal := Art.material(Color.WHITE, "metal")
 	var wood := Art.material(Color.WHITE, "wood")
 	var ground := Art.material(Color.WHITE, "ground")
-	Art.box(world, Vector3(0, -0.6, 0), Vector3(128, 1, 128), ground, true)
+	Art.box(world, Vector3(0, -0.6, 0), Vector3(176, 1, 176), ground, true)
 	Art.box(world, Vector3(0, -0.03, 12), Vector3(10, 0.12, 95), Art.material(Color.WHITE, "asphalt"))
 	for z in range(-40, 55, 6):
 		Art.box(world, Vector3(0, 0.05, z), Vector3(0.16, 0.02, 2), Art.material(Color("b6b38a")))
 	# Explicit map boundary: large cliffs with collision, never an invisible wall.
-	for i in range(32):
+	for i in range(44):
 		for side in [-1, 1]:
 			var h := world_rng.randf_range(4, 9)
-			Art.box(world, Vector3(-62 + i * 4, h * 0.5, side * 61), Vector3(4.2, h, 5), concrete, true)
-			Art.box(world, Vector3(side * 61, h * 0.5, -62 + i * 4), Vector3(5, h, 4.2), concrete, true)
+			Art.box(world, Vector3(-86 + i * 4, h * 0.5, side * 85), Vector3(4.2, h, 5), concrete, true)
+			Art.box(world, Vector3(side * 85, h * 0.5, -86 + i * 4), Vector3(5, h, 4.2), concrete, true)
 	for i in range(52):
 		var pos := Vector3(world_rng.randf_range(-55, 55), 0, world_rng.randf_range(-53, 53))
 		if absf(pos.x) < 30 and pos.z > -28 and pos.z < 35:
@@ -214,6 +214,7 @@ func build_level() -> void:
 	spawn_loot("scrap", Vector3(-10, 1.1, -12), "Детали • +3", "scrap_01")
 	spawn_loot("scrap", Vector3(-14, 1.1, 7), "Детали • +3", "scrap_02")
 	spawn_loot("scrap", Vector3(30, 1.1, 1), "Детали • +3", "scrap_03")
+	RazlomDistrict.build(self)
 	for i in range(3):
 		var guard = EnemyScript.new()
 		guard.name = "guard_%d" % i
@@ -309,8 +310,11 @@ func spawn_loot(kind: String, pos: Vector3, title: String, id: String = "") -> v
 	world.add_child(item)
 	item.position = pos
 	var color := Color("81c2a8") if kind == "pump" else Color("c7ab6d")
-	Art.box(item, Vector3.ZERO, Vector3(0.55, 0.4, 0.4), Art.material(color, "metal"))
-	Art.box(item, Vector3(0, 0.24, 0), Vector3(0.28, 0.08, 0.15), Art.material(Color("c7c7a7")))
+	if kind in ["armor", "helmet"]:
+		Art.protection_pickup(item, kind == "helmet")
+	else:
+		Art.box(item, Vector3.ZERO, Vector3(0.55, 0.4, 0.4), Art.material(color, "metal"))
+		Art.box(item, Vector3(0, 0.24, 0), Vector3(0.28, 0.08, 0.15), Art.material(Color("c7c7a7")))
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(0.6, 0.5, 0.5)
@@ -337,7 +341,11 @@ func fire() -> void:
 		if object is RazlomEnemy:
 			combat_feedback.hit_time = 0.18
 		impact_particles(hit.position, hit.normal)
-		if object.has_method("hit"):
+		if object is RazlomBlock:
+			object.bullet_hit(hit.position, -player.camera.global_basis.z, 0.012, 36.0)
+		elif object is RazlomEnemy:
+			object.hit_at(36, hit.position, hit.normal, -player.camera.global_basis.z * 9)
+		elif object.has_method("hit"):
 			object.hit(36, -player.camera.global_basis.z * 9)
 		flash(hit.position, Color("ffce84"), 0.08, 0.09)
 	var light := OmniLight3D.new()
@@ -369,10 +377,21 @@ func enemy_fire(guard) -> void:
 	guard.motion.fire()
 	guard.weapon_motion.trigger_shot()
 	play_tone(70, 0.04, 0.06)
-	# Explicit prototype accuracy: seeded chance only after actual line of sight.
-	if world_rng.randf() < 0.55:
-		state.health = maxf(0, state.health - 9)
-		notify("Попадание! Найди укрытие • H — аптечка")
+	# Actual ray with angular dispersion: walls, other guards and posture matter.
+	var origin: Vector3 = guard.global_position + Vector3.UP * 1.5
+	var height: float = 1.16 * (0.72 if player.crouched else 1.0)
+	var target: Vector3 = player.global_position + Vector3.UP * height
+	var distance := origin.distance_to(target)
+	var spread: float = lerpf(0.025, 0.004, clampf(guard.aim_time / 2.5, 0, 1)) * distance
+	var right := (target - origin).normalized().cross(Vector3.UP).normalized()
+	target += right * world_rng.randf_range(-spread, spread) + Vector3.UP * world_rng.randf_range(-spread, spread)
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + (target - origin).normalized() * 80, 1 | 2 | 4)
+	query.exclude = [guard.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if not hit.is_empty():
+		impact_particles(hit.position, hit.normal)
+		if hit.collider == player:
+			player.receive_bullet(hit.position, origin)
 
 func throw_charge() -> void:
 	if state.charges <= 0:
@@ -438,6 +457,10 @@ func interact() -> void:
 				state.bottles += 1
 			"medkit":
 				state.medkits += 1
+			"armor":
+				state.armor = 100
+			"helmet":
+				state.helmet = 100
 			"ammo":
 				state.reserve += 18
 			"scrap":
@@ -758,16 +781,21 @@ func _process(delta: float) -> void:
 	stats_label.text = "ЗДОРОВЬЕ %03d     ВОДА %03d     ЕДА %03d     СИЛЫ %03d\nМАГАЗИН %02d / %02d     ЗАРЯДЫ %d     АПТЕЧКИ %d     ДЕТАЛИ %d" % [state.health, state.water, state.hunger, state.stamina, state.ammo, state.reserve, state.charges, state.medkits, state.scrap]
 	if mobile_mode:
 		stats_label.text = "ЗДОРОВЬЕ %d  ВОДА %d  ЕДА %d\nПАТРОНЫ %d/%d  АПТЕЧКИ %d" % [state.health, state.water, state.hunger, state.ammo, state.reserve, state.medkits]
+	stats_label.text += "\nБРОНЯ %d  ШЛЕМ %d  БОЛЬ %d" % [state.armor, state.helmet, state.pain]
 	clock_label.text = "РЕГИОН РУБЕЖ   /   %02d:%02d   /   ТЕПЛО %03d   УСТАЛОСТЬ %03d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	if mobile_mode:
 		clock_label.text = "%02d:%02d  ТЕПЛО %d  УСТАЛОСТЬ %d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	var destination := Vector3(-23, 0, 22) if state.pump else Vector3(21, 0, -20)
+	if state.complete and not state.relay_log:
+		destination = Vector3(68, 0, 22)
 	var offset: Vector3 = destination - player.global_position
 	var distance := Vector2(offset.x, offset.z).length()
 	var local_target: Vector3 = player.global_transform.basis.inverse() * offset
 	var bearing := atan2(local_target.x, -local_target.z)
 	var direction_text := "ПРЯМО" if absf(bearing) < 0.35 else ("РАЗВЕРНИСЬ" if absf(bearing) > 2.5 else ("ПОВЕРНИ НАПРАВО" if bearing > 0 else "ПОВЕРНИ НАЛЕВО"))
 	mission_label.text = "01 / ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nЗадание завершено" if state.complete else (("Убежище" if state.pump else "Насос · склад 03") + " · %d м\n" % int(distance) + direction_text))
+	if state.complete and not state.relay_shared:
+		mission_label.text = "02 / ГОЛОС В ЭФИРЕ\n" + ("Вера • убежище" if state.relay_log else "Ретранслятор 12") + " · %d м\n" % int(distance) + direction_text
 	if get_tree().paused or ended:
 		return
 	interactions.advance_people(delta)
@@ -798,7 +826,7 @@ func _process(delta: float) -> void:
 	hint_label.visible = not hint_label.text.is_empty()
 	if state.health <= 0 or player.position.y < -12:
 		ended = true
-		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
+		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n" + combat_feedback.injury_text + "\nБез шлема и бронежилета попадание в жизненно важную зону смертельно.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
 
 func save_game() -> bool:
 	if not started or ended:
@@ -820,6 +848,10 @@ func save_game() -> bool:
 	data["position"] = [player.position.x, player.position.y, player.position.z]
 	data["yaw"] = player.rotation.y
 	data["day_minutes"] = day_minutes
+	data["local_damage"] = {}
+	for id in blocks:
+		if not blocks[id].removed.is_empty():
+			data.local_damage[id] = blocks[id].removed.keys()
 	data["destroyed"] = destroyed.duplicate()
 	data["collected"] = collected.duplicate()
 	data["defeated"] = defeated.duplicate()
@@ -836,7 +868,7 @@ func save_game() -> bool:
 	data["guards"] = []
 	for guard in enemies:
 		if is_instance_valid(guard) and not guard.is_queued_for_deletion():
-			data["guards"].append({"id": String(guard.name), "health": guard.health, "position": [guard.position.x, guard.position.y, guard.position.z], "memory": guard.awareness.snapshot()})
+			data["guards"].append({"id": String(guard.name), "health": guard.health, "position": [guard.position.x, guard.position.y, guard.position.z], "memory": guard.awareness.snapshot(), "leg_wound": guard.leg_wound})
 	var file := FileAccess.open(save_path + ".tmp", FileAccess.WRITE)
 	if file == null:
 		notify("Не удалось записать сохранение")
@@ -909,6 +941,11 @@ func load_game() -> bool:
 		if destroyed.has(id):
 			blocks[id].queue_free()
 			blocks.erase(id)
+	for id in data.get("local_damage", {}):
+		if blocks.has(id):
+			for cell in data.local_damage[id]:
+				blocks[id].removed[int(cell)] = true
+			blocks[id].rebuild_damage()
 	for item in get_tree().get_nodes_in_group("loot"):
 		item.free()
 	for record in data.loot:
@@ -921,6 +958,7 @@ func load_game() -> bool:
 					found = true
 					guard.awareness.restore(record.get("memory", []))
 					guard.health = float(record.health)
+					guard.leg_wound = record.get("leg_wound", false)
 					guard.position = Vector3(record.position[0], record.position[1], record.position[2])
 			if not found:
 				guard.queue_free()
@@ -936,6 +974,11 @@ func load_game() -> bool:
 	player.rotation.y = float(data.yaw)
 	player.velocity = Vector3.ZERO
 	player.reload_time = 0
+	player.healing_time = 0
+	player.last_health = state.health
+	combat_feedback.pain = state.pain
+	combat_feedback.injury_time = 0
+	combat_feedback.hurt_time = 0
 	player.set_crouched(false)
 	ended = false
 	resume()
@@ -944,6 +987,17 @@ func load_game() -> bool:
 	return true
 
 func validate_world_save(data: Dictionary) -> bool:
+	var local_damage = data.get("local_damage", {})
+	if not local_damage is Dictionary or local_damage.size() > 32:
+		return false
+	for id in local_damage:
+		if not id is String or id.length() > 64 or not local_damage[id] is Array or local_damage[id].size() > 512:
+			return false
+		var seen: Dictionary = {}
+		for cell in local_damage[id]:
+			if not (cell is int or cell is float) or not is_finite(float(cell)) or float(cell) != floor(float(cell)) or cell < 0 or cell >= 512 or seen.has(int(cell)):
+				return false
+			seen[int(cell)] = true
 	if not validate_dog_save(data.get("dog", {"present": false})):
 		return false
 	if not (data.get("day_minutes", 462.0) is float or data.get("day_minutes", 462.0) is int):
@@ -974,9 +1028,11 @@ func validate_world_save(data: Dictionary) -> bool:
 			if not (value is float or value is int) or not is_finite(float(value)) or absf(float(value)) > 128:
 				return false
 	for record in data.loot:
-		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap", "record"] or not record.get("title") is String:
+		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap", "record", "armor", "helmet"] or not record.get("title") is String:
 			return false
 	for record in data.guards:
+		if not record.get("leg_wound", false) is bool:
+			return false
 		if not RazlomAIMemory.valid(record.get("memory", [])):
 			return false
 		if not (record.get("health") is float or record.get("health") is int):
@@ -987,7 +1043,7 @@ func validate_world_save(data: Dictionary) -> bool:
 
 func refresh_navigation() -> void:
 	navigation = AStarGrid2D.new()
-	navigation.region = Rect2i(-60, -60, 121, 121)
+	navigation.region = Rect2i(-84, -84, 169, 169)
 	navigation.cell_size = Vector2.ONE
 	navigation.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	navigation.update()
@@ -1074,3 +1130,10 @@ func impact_particles(point: Vector3, normal: Vector3) -> void:
 		tween.tween_property(chip, "position", end, 0.18)
 		tween.tween_property(chip, "scale", Vector3.ONE * 0.05, 0.22)
 		tween.chain().tween_callback(chip.queue_free)
+
+func damaged_blocks_count() -> int:
+	var total := 0
+	for block in blocks.values():
+		if not block.removed.is_empty():
+			total += 1
+	return total

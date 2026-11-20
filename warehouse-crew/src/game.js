@@ -1,0 +1,379 @@
+// Игровое ядро: движок RatCore, загрузка обученных мозгов, склад, бригада, приказы.
+window.WC = window.WC || {};
+
+WC.game = (function () {
+  'use strict';
+
+  var cfg = null;
+  var S = {
+    time: 0,
+    paused: false,
+    speed: 1,
+    shiftEnded: false,
+    autosaveClock: 0,
+    accumulator: 0,
+    totalReal: 0,
+  };
+
+  var api = {
+    state: null,
+    sim: null,
+    crew: [],
+    commands: [],
+    activeWorkerId: null,
+    engine: null,
+    brains: {},
+    baseBrain: null,
+    brainMeta: null,
+    shiftsPlayed: 0,
+    best: null,
+    engineStats: null,
+    ready: false,
+    log: [],
+    onEvent: null,
+    onShiftEnd: null,
+    lastFrame: 0,
+  };
+
+  function pushLog(text, tone) {
+    api.log.push({ t: api.sim ? api.sim.state.time : 0, text: text, tone: tone || 'info' });
+    if (api.log.length > 80) api.log.shift();
+  }
+
+  function emit(type, payload) {
+    if (typeof api.onEvent === 'function') api.onEvent(type, payload);
+  }
+
+  function loadJson(url) {
+    return fetch(url, { cache: 'no-store' }).then(function (res) {
+      if (!res.ok) throw new Error('Не удалось загрузить ' + url + ' (' + res.status + ')');
+      return res.json();
+    });
+  }
+
+  function bootEngine() {
+    var GE = window.GamesEngine;
+    if (!GE) return Promise.reject(new Error('shared/engine.js не загрузился'));
+    return GE.create({ preset: 'survival', packs: ['pack:ai-team'] }).then(function (handle) {
+      api.engine = handle.engine;
+      return api.engine;
+    });
+  }
+
+  function loadBrains() {
+    var tasks = [loadJson(cfg.brains.base), loadJson(cfg.brains.log).catch(function () { return null; })];
+    cfg.crew.forEach(function (member) {
+      tasks.push(loadJson(member.brain).catch(function () { return null; }));
+    });
+    return Promise.all(tasks).then(function (results) {
+      api.baseBrain = results[0];
+      api.brainMeta = results[1];
+      cfg.crew.forEach(function (member, i) {
+        api.brains[member.id] = results[i + 2] || api.baseBrain;
+      });
+      return api.baseBrain;
+    });
+  }
+
+  function createSim() {
+    api.sim = window.WarehouseSim.createWarehouse({
+      seed: cfg.seed,
+      shiftLength: cfg.shiftRealSeconds,
+      spawnEvery: cfg.orderSpawnEvery,
+      maxPending: cfg.maxPending,
+      firstSpawnDelay: 3,
+    });
+    api.crew = cfg.crew.map(function (member, i) {
+      return window.WarehouseWorker.createWorker({
+        id: member.id,
+        name: member.name,
+        role: member.role,
+        palette: member.palette,
+        traits: member.traits,
+        overrides: member.body,
+        model: window.WarehouseModel,
+        layout: api.sim.layout,
+        spawn: api.sim.layout.spawns[i],
+        heading: 0,
+      });
+    });
+    api.activeWorkerId = cfg.crew[0].id;
+    api.envs = {};
+    api.crew.forEach(function (worker) {
+      api.envs[worker.id] = {
+        warehouse: api.sim,
+        workers: api.crew,
+        brain: api.brains[worker.id] || api.baseBrain,
+        brainApi: window.WarehouseBrain,
+        rng: window.WarehouseSim.createRng(cfg.seed + worker.id.length * 13),
+        onDelivered: function (w, order, result) {
+          pushLog(w.name + ' закрыл ' + order.code + ' (+' + result.points + ')', result.late ? 'warn' : 'good');
+          WC.audio.delivered();
+          emit('delivered', { worker: w, order: order, result: result });
+        },
+        onDropped: function (w, order, outcome) {
+          pushLog(w.name + ' уронил ' + order.code + ' — ' + Math.round(order.damage * 100) + '% повреждений', 'bad');
+          WC.audio.drop();
+          emit('dropped', { worker: w, order: order, outcome: outcome });
+        },
+      };
+    });
+    api.state = S;
+    api.state.time = 0;
+    return api.sim;
+  }
+
+  function qualityPercent(game) {
+    var g = game || api;
+    var sum = 0;
+    var count = 0;
+    g.sim.state.orders.forEach(function (order) {
+      if (order.status === 'stored') {
+        count += 1;
+        var late = order.storedAt > order.deadline ? 0.72 : 1;
+        sum += (1 - order.damage) * late;
+      } else if (order.status === 'ruined') {
+        count += 1;
+        sum += 0;
+      }
+    });
+    if (!count) return 100;
+    return Math.round((sum / count) * 100);
+  }
+
+  function activeWorker() {
+    for (var i = 0; i < api.crew.length; i++) {
+      if (api.crew[i].id === api.activeWorkerId) return api.crew[i];
+    }
+    return api.crew[0];
+  }
+
+  function workerById(id) {
+    for (var i = 0; i < api.crew.length; i++) if (api.crew[i].id === id) return api.crew[i];
+    return null;
+  }
+
+  function selectWorker(id) {
+    api.activeWorkerId = id;
+    if (window.WC.world) WC.world.setFocus(id);
+    WC.audio.select();
+    emit('select', { id: id });
+    return api.activeWorkerId;
+  }
+
+  function command(workerId, cmd, opts) {
+    var worker = workerById(workerId);
+    if (!worker) return { ok: false, reason: 'Нет такого рабочего' };
+    var res = worker.command(cmd, api.sim, opts || {});
+    if (res.ok) {
+      pushLog(worker.state.name + ': ' + labelForCommand(cmd), 'info');
+      emit('command', { worker: worker, cmd: cmd, result: res });
+    } else {
+      pushLog(worker.state.name + ': ' + (res.reason || 'не получилось'), 'warn');
+      emit('command-failed', { worker: worker, cmd: cmd, result: res });
+    }
+    return res;
+  }
+
+  function labelForCommand(cmd) {
+    return {
+      pick: 'взять коробку',
+      store: 'нести к стеллажу',
+      rest: 'на перерыв',
+      wait: 'ждёт указаний',
+      auto: 'автономия',
+      help: 'помогает бригаде',
+    }[cmd] || cmd;
+  }
+
+  function teamCommand(kind) {
+    var results = [];
+    api.crew.forEach(function (worker) {
+      if (kind === 'intake') results.push(command(worker.id, 'pick', { keepAuto: true }));
+      else if (kind === 'store') results.push(command(worker.id, 'store', { keepAuto: true }));
+      else if (kind === 'rest') results.push(command(worker.id, 'rest', { keepAuto: true }));
+      else if (kind === 'auto') results.push(command(worker.id, 'auto'));
+    });
+    pushLog('Приказ бригаде: ' + ({ intake: 'разгрузить приёмку', store: 'все на стеллаж', rest: 'общий перерыв', auto: 'автономия' }[kind] || kind), 'info');
+    emit('team', { kind: kind, results: results });
+    return results;
+  }
+
+  function setPaused(value) {
+    S.paused = Boolean(value);
+    var flag = document.getElementById('pause-flag');
+    if (flag) flag.classList.toggle('show', S.paused);
+    var btn = document.getElementById('btn-pause');
+    if (btn) {
+      btn.textContent = S.paused ? '▶' : '⏸';
+      btn.classList.toggle('on', S.paused);
+    }
+    return S.paused;
+  }
+
+  function setSpeed(value) {
+    S.speed = value;
+    return S.speed;
+  }
+
+  function restart() {
+    api.shiftsPlayed += 1;
+    api.best = {
+      score: Math.max((api.best && api.best.score) || 0, S.score || 0),
+      delivered: Math.max((api.best && api.best.delivered) || 0, api.sim.state.stats.delivered),
+    };
+    api.log.length = 0;
+    createSim();
+    S.paused = false;
+    S.shiftEnded = false;
+    S.accumulator = 0;
+    setPaused(false);
+    pushLog('Новая смена. Бригада на месте.', 'info');
+    emit('restart', {});
+  }
+
+  function endShift() {
+    if (S.shiftEnded) return;
+    S.shiftEnded = true;
+    S.paused = true;
+    setPaused(true);
+    WC.audio.shiftEnd();
+    WC.save.save(api);
+    if (typeof api.onShiftEnd === 'function') api.onShiftEnd(summary());
+  }
+
+  function summary() {
+    var stats = api.sim.state.stats;
+    return {
+      score: Math.round(stats.score),
+      delivered: stats.delivered,
+      ruined: stats.ruined,
+      missed: stats.missed,
+      quality: qualityPercent(api),
+      bestStreak: stats.bestStreak,
+      crew: api.crew.map(function (w) {
+        return {
+          id: w.id,
+          name: w.state.name,
+          role: w.state.role,
+          delivered: w.state.stats.delivered,
+          dropped: w.state.stats.dropped,
+          metres: Math.round(w.state.stats.metres),
+          rest: Math.round(w.body.restSeconds),
+          fatigue: Math.round(w.body.fatigue * 100),
+          energy: Math.round(w.body.energy * 100),
+        };
+      }),
+    };
+  }
+
+  function detectBodyEvents(worker) {
+    var events = worker.state.events || [];
+    while (worker.state._seenEvents == null) worker.state._seenEvents = 0;
+    while (worker.state._seenEvents < events.length) {
+      var ev = events[worker.state._seenEvents++];
+      pushLog(worker.state.name + ': ' + ev.text, ev.tone === 'bad' ? 'bad' : ev.tone === 'warn' ? 'warn' : 'info');
+      emit('body-event', { worker: worker, event: ev });
+    }
+  }
+
+  function update(dtReal) {
+    if (!api.ready) return;
+    var dt = Math.min(0.1, dtReal);
+    api.state.totalReal += dt;
+    if (S.paused || S.shiftEnded) {
+      return;
+    }
+    var scaled = dt * S.speed;
+    S.accumulator += scaled;
+    var step = cfg.simStep;
+    var guard = 0;
+    var speedPerWorker = {};
+    while (S.accumulator >= step && guard < 8) {
+      S.accumulator -= step;
+      guard += 1;
+      api.sim.step(step);
+      api.crew.forEach(function (worker) {
+        worker.update(step, api.envs[worker.id]);
+        detectBodyEvents(worker);
+      });
+      if (api.sim.state.time >= cfg.shiftRealSeconds) endShift();
+    }
+    api.state.autosaveClock = (api.state.autosaveClock || 0) + dt;
+    if (api.state.autosaveClock > 25) {
+      api.state.autosaveClock = 0;
+      WC.save.save(api);
+    }
+  }
+
+  function boot() {
+    cfg = WC.CONFIG;
+    api.ready = false;
+    var loaded = WC.save.load();
+    if (loaded) {
+      api.best = { score: loaded.bestScore || 0, delivered: loaded.bestDelivered || 0 };
+      api.shiftsPlayed = loaded.shifts || 0;
+    }
+    return Promise.all([bootEngine(), loadBrains()]).then(function (results) {
+      var engine = results[0];
+      // Прогреваем рабочие инструменты движка и собираем меши
+      var meshStats = WC.meshes.buildAll(engine, palettesById());
+      api.engineStats = meshStats;
+      api.sim = createSim();
+      pushLog('Смена началась: ' + cfg.crew.length + ' рабочих, мозги загружены из файлов игры', 'good');
+      api.ready = true;
+      return api;
+    });
+  }
+
+  function palettesById() {
+    var out = {};
+    cfg.crew.forEach(function (member) { out[member.id] = member.palette; });
+    return out;
+  }
+
+  function snapshotForUi() {
+    var stats = api.sim.state.stats;
+    return {
+      time: api.sim.state.time,
+      shiftLength: cfg.shiftRealSeconds,
+      paused: S.paused,
+      speed: S.speed,
+      score: stats.score,
+      delivered: stats.delivered,
+      ruined: stats.ruined,
+      missed: stats.missed,
+      dropped: stats.dropped,
+      quality: qualityPercent(api),
+      pending: api.sim.pendingOrders().length,
+      active: api.sim.activeOrders().length,
+      ended: S.shiftEnded,
+    };
+  }
+
+  return {
+    boot: boot,
+    update: update,
+    restart: restart,
+    endShift: endShift,
+    summary: summary,
+    selectWorker: selectWorker,
+    activeWorker: activeWorker,
+    workerById: workerById,
+    command: command,
+    teamCommand: teamCommand,
+    setPaused: setPaused,
+    setSpeed: setSpeed,
+    qualityPercent: qualityPercent,
+    snapshotForUi: snapshotForUi,
+    pushLog: pushLog,
+    api: api,
+    get state() { return S; },
+  };
+})();
+
+// Совместимость с save.js: сохраняем прогресс из ядра (best/shifts/crew)
+Object.defineProperty(WC.game, 'best', { get: function () { return WC.game.api.best; } });
+Object.defineProperty(WC.game, 'shiftsPlayed', { get: function () { return WC.game.api.shiftsPlayed; } });
+Object.defineProperty(WC.game, 'crew', { get: function () { return WC.game.api.crew; } });
+Object.defineProperty(WC.game, 'sim', { get: function () { return WC.game.api.sim; } });

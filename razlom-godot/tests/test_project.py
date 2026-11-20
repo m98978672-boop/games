@@ -27,7 +27,7 @@ class ProjectChecks(unittest.TestCase):
 
     def test_textures_are_real_pngs(self):
         textures = list((ROOT / 'assets/textures').glob('*.png'))
-        self.assertEqual(len(textures), 8)
+        self.assertEqual(len(textures), 12)
         for path in textures:
             raw = path.read_bytes()
             self.assertEqual(raw[:8], b'\x89PNG\r\n\x1a\n')

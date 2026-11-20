@@ -2,6 +2,11 @@ class_name RazlomEnemy
 extends CharacterBody3D
 var game
 var health := 100.0
+var armor := 0.0
+var helmet := 0.0
+var aim_time := 0.0
+var suppression := 0.0
+var leg_wound := false
 var alert := false
 var last_seen := Vector3.ZERO
 var awareness := RazlomAIMemory.new()
@@ -16,10 +21,15 @@ var scan := 0.0
 var home := Vector3.ZERO
 var phase := 0.0
 var weapon_motion: RazlomWeaponMotion
+var left_arm: RazlomArmRig
+var right_arm: RazlomArmRig
+var carried_weapon: Node3D
 var motion: RazlomActorMotion
 var visual: Node3D
 var think_label: Label3D
 var dead := false
+var last_hit_region := "torso"
+var impact_marks: Array[Node3D] = []
 var path_timer := 0.0
 var waypoint := Vector3.ZERO
 
@@ -40,8 +50,13 @@ func _ready() -> void:
 	visual.get_node("ArmRJoint/ArmR").add_child(weapon)
 	weapon.position = Vector3(-0.15, 0.09, -0.29)
 	weapon.scale = Vector3.ONE * 0.65
-	weapon.get_node("LeftHand").hide()
-	weapon.get_node("RightHand").hide()
+	carried_weapon = weapon
+	weapon.get_node("LeftHand/Sleeve").hide()
+	weapon.get_node("RightHand/Sleeve").hide()
+	visual.get_node("ArmRJoint/ArmR/Visual").hide()
+	visual.get_node("ArmLJoint/ArmL/Visual").hide()
+	left_arm = RazlomArmRig.new(visual)
+	right_arm = RazlomArmRig.new(visual)
 	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home
@@ -53,7 +68,7 @@ func sees_player() -> bool:
 		return false
 	var eye := global_position + Vector3.UP * 1.5
 	var target: Vector3 = game.player.global_position + Vector3.UP * 1.2
-	if eye.distance_to(target) > 24:
+	if eye.distance_to(target) > 65:
 		return false
 	var to_player := (target - eye).normalized()
 	if eye.distance_to(target) > 3 and (-visual.global_basis.z).dot(to_player) < (0.0 if alert else 0.3):
@@ -127,6 +142,11 @@ func _physics_process(delta: float) -> void:
 	if dead or game.ended:
 		return
 	cooldown -= delta
+	suppression = maxf(0, suppression - delta)
+	if visible_contact and not game.state.passage:
+		aim_time = minf(2.5, aim_time + delta)
+	else:
+		aim_time = 0.0
 	report_cooldown -= delta
 	awareness.tick(delta)
 	scan -= delta
@@ -135,9 +155,10 @@ func _physics_process(delta: float) -> void:
 		visible_contact = sees_player()
 		if visible_contact and not game.state.passage:
 			remember_sighting(game.player.global_position)
-			if cooldown <= 0:
-				cooldown = 1.3
+			if cooldown <= 0 and aim_time >= 0.85 and suppression <= 0:
+				cooldown = 1.1 + global_position.distance_to(game.player.global_position) * 0.012
 				game.enemy_fire(self)
+				aim_time = 0.35
 	phase += delta
 	var target := choose_target(delta)
 	# Wounded guards withdraw only from a currently visible opponent.
@@ -153,11 +174,11 @@ func _physics_process(delta: float) -> void:
 		waypoint = game.next_waypoint(global_position, target)
 	var direction := waypoint - global_position
 	direction.y = 0
-	var stop_range := 4.0 if behavior == "engage" else 0.8
+	var stop_range := 28.0 if behavior == "engage" else 0.8
 	if direction.length() > 0.25 and global_position.distance_to(target) > stop_range:
 		direction = direction.normalized()
-		velocity.x = direction.x * (2.7 if alert else 1.1)
-		velocity.z = direction.z * (2.7 if alert else 1.1)
+		velocity.x = direction.x * (2.7 if alert else 1.1) * (0.6 if leg_wound else 1.0)
+		velocity.z = direction.z * (2.7 if alert else 1.1) * (0.6 if leg_wound else 1.0)
 		visual.rotation.y = atan2(-direction.x, -direction.z)
 	else:
 		velocity.x = 0
@@ -171,8 +192,20 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 18 * delta
 	move_and_slide()
 	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
+	if visible_contact:
+		var offset: Vector3 = game.player.camera.global_position - (global_position + Vector3.UP * 1.4)
+		var pitch := atan2(offset.y, Vector2(offset.x, offset.z).length())
+		motion.joints.ArmR.rotation.x = -0.65 - motion.recoil * 0.2 - clampf(pitch, -0.5, 0.5) - motion.flinch * 0.65
+		visual.get_node("Head").rotation.x = -clampf(pitch, -0.5, 0.5)
+	if leg_wound:
+		visual.rotation.z = motion.flinch * 0.28 + sin(phase * 7.0) * 0.045
 	weapon_motion.advance(0, motion.recoil * 0.09, delta)
-	think_label.text = "ПРОХОДИ" if game.state.passage else ("ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else "")))
+	left_arm.solve(Vector3(-0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("LeftHand").global_position), -1.0)
+	right_arm.solve(Vector3(0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("RightHand").global_position), 1.0)
+	if visible_contact and aim_time < 0.85:
+		think_label.text = "ЦЕЛИТСЯ"
+	else:
+		think_label.text = "ПРОХОДИ" if game.state.passage else ("ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else "")))
 	think_label.modulate = Color("efb26a")
 
 func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
@@ -184,6 +217,8 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		game.state.passage_broken = true
 		game.notify("Договор нарушен: охрана снова враждебна")
 	motion.hurt()
+	suppression = 0.65
+	aim_time = 0.0
 	# A hit is evidence of danger, not a magical coordinate of an unseen shooter.
 	if sees_player():
 		remember_sighting(game.player.global_position)
@@ -203,3 +238,46 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		fall.tween_interval(2.0)
 		fall.tween_callback(visual.queue_free)
 		queue_free()
+
+func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) -> void:
+	if dead:
+		return
+	# Project the capsule contact onto visible mesh bounds to avoid floating marks.
+	var direction := impulse.normalized()
+	var nearest := INF
+	var contact: Variant = null
+	for part in visual.find_children("*", "MeshInstance3D", true, false):
+		if not part.is_visible_in_tree() or part.get_parent().has_meta("impact_mark"):
+			continue
+		var from: Vector3 = part.to_local(point - direction * 0.6)
+		var to: Vector3 = part.to_local(point + direction * 1.0)
+		var intersection: Variant = part.get_aabb().intersects_segment(from, to)
+		if intersection is Vector3:
+			var candidate: Vector3 = part.to_global(intersection)
+			var distance: float = candidate.distance_to(point - direction * 0.6)
+			if distance < nearest:
+				nearest = distance
+				contact = candidate
+	if contact is Vector3:
+		point = contact
+	var local := visual.to_local(point)
+	last_hit_region = "head" if local.y > 1.45 else ("left_arm" if local.x < -0.28 else ("right_arm" if local.x > 0.28 else "torso"))
+	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual
+	var mark := RazlomArt.box(host, Vector3.ZERO, Vector3(0.035, 0.035, 0.006), RazlomArt.material(Color("423c34")))
+	mark.set_meta("impact_mark", true)
+	mark.visible = contact is Vector3
+	mark.global_position = point + normal * 0.012
+	mark.look_at(mark.global_position + normal, Vector3.RIGHT if absf(normal.y) > 0.95 else Vector3.UP)
+	impact_marks.append(mark)
+	if impact_marks.size() > 4:
+		impact_marks.pop_front().queue_free()
+	var zone := RazlomBallistics.region(to_local(point))
+	var result := RazlomBallistics.resolve(zone, amount, helmet if zone == "head" else armor)
+	if zone == "head":
+		helmet = maxf(0, helmet - float(result.wear))
+	else:
+		armor = maxf(0, armor - float(result.wear))
+	if zone == "legs":
+		leg_wound = true
+	hit(float(result.damage), impulse)
+	motion.hit_region = last_hit_region

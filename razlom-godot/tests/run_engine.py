@@ -34,6 +34,8 @@ with tempfile.TemporaryDirectory(prefix='razlom-runtime-') as runtime:
         ('touch-camera', ['--script', 'res://tests/touch_camera.gd'], 'failures: 0', 60),
         ('weapon-viewmodel', ['--script', 'res://tests/weapon_viewmodel.gd'], 'failures: 0', 60),
         ('combat-animation', ['--script', 'res://tests/combat_animation.gd'], 'failures: 0', 60),
+        ('ballistics', ['--script', 'res://tests/ballistics.gd'], 'failures: 0', 90),
+        ('local-damage', ['--script', 'res://tests/local_damage.gd'], 'failures: 0', 60),
     ]
     for name, flags, marker, timeout in jobs:
         command = [engine, '--headless', '--path', str(ROOT), *flags]
