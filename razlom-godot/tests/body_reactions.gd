@@ -68,6 +68,10 @@ func run_tests() -> void:
 	game.player.set_physics_process(false)
 	for actor in game.enemies: actor.set_physics_process(false)
 	check(get_nodes_in_group("corpses").size() == 1 and get_nodes_in_group("corpses")[0].settled, "Loaded corpse is settled, not a resurrected actor")
+	var corpse = get_nodes_in_group("corpses")[0]
+	check(corpse.collision_layer == 8, "Settled body receives ballistic collision without blocking walking")
+	corpse.hit_at(36, corpse.to_global(Vector3(0.8, 0.1, 0)), Vector3.UP, Vector3.DOWN)
+	check(corpse.settled and get_nodes_in_group("blood_fx").size() > 0, "Corpse impacts react and bleed without reviving AI")
 	check(not RazlomCorpse.valid([{"position": [0, 0, 0], "yaw": INF, "zone": "head", "player": false}]), "Nonfinite corpse data rejected")
 	player = game.player
 	game.state.helmet = 0

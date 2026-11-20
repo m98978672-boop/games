@@ -344,7 +344,7 @@ func fire() -> void:
 	player.on_shot()
 	noise(player.global_position, 24)
 	play_tone(95, 0.07, 0.22)
-	var query := PhysicsRayQueryParameters3D.create(player.camera.global_position, player.camera.global_position + last_shot_direction * 80, 1 | 4 | 16)
+	var query := PhysicsRayQueryParameters3D.create(player.camera.global_position, player.camera.global_position + last_shot_direction * 80, 1 | 4 | 8 | 16)
 	query.exclude = [player.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
@@ -355,6 +355,8 @@ func fire() -> void:
 		if object is RazlomBlock:
 			object.bullet_hit(hit.position, last_shot_direction, 0.012, 36.0)
 		elif object is RazlomEnemy:
+			object.hit_at(36, hit.position, hit.normal, last_shot_direction * 9)
+		elif object.has_method("hit_at"):
 			object.hit_at(36, hit.position, hit.normal, last_shot_direction * 9)
 		elif object.has_method("hit"):
 			object.hit(36, -player.camera.global_basis.z * 9)
@@ -396,7 +398,7 @@ func enemy_fire(guard) -> void:
 	var spread: float = lerpf(0.025, 0.004, clampf(guard.aim_time / 2.5, 0, 1)) * distance
 	var right := (target - origin).normalized().cross(Vector3.UP).normalized()
 	target += right * world_rng.randf_range(-spread, spread) + Vector3.UP * world_rng.randf_range(-spread, spread)
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + (target - origin).normalized() * 80, 1 | 2 | 4)
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + (target - origin).normalized() * 80, 1 | 2 | 4 | 8)
 	query.exclude = [guard.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
@@ -1190,6 +1192,7 @@ func damaged_blocks_count() -> int:
 
 func spawn_corpse(point: Vector3, angle: float, zone: String, player_body: bool = false, model: Node3D = null, instant: bool = false) -> RazlomCorpse:
 	var body := RazlomCorpse.new()
+	body.game = self
 	world.add_child(body)
 	body.player_body = player_body
 	var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.4, point + Vector3.DOWN * 4, 1)
