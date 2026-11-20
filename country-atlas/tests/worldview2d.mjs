@@ -178,8 +178,28 @@ ok('углы не залиты чистым чёрным', corners.every((c) => 
 // в самом центре — крестик своей столицы, поэтому растительность смотрим рядом
 const center = at(600, 300);
 ok('рядом с центром — суша, а не море', center[1] > center[2], JSON.stringify(center));
-ok('суша светлее моря', lum(center) > lum(corners[0]) + 20, lum(center).toFixed(0) + ' vs ' + lum(corners[0]).toFixed(0));
-ok('суша не чёрная и не белая', lum(center) > 40 && lum(center) < 220, lum(center).toFixed(0));
+/* «Суша светлее моря» нельзя проверять по одному пикселю: на другой
+   растеризации канвы в эту точку попадает дорога, река или край
+   подписи, и палитра «вдруг» становится тёмной (на CI было 64 vs 63
+   при живых цветах вокруг). Берём медиану яркости пятна суши у центра
+   и пятна моря в углу — смысл проверки тот же (палитра), а судьба её
+   не зависит от одного пикселя. */
+const patchLums = (cx, cy, r, landOnly) => {
+  const vals = [];
+  for (let y = cy - r; y <= cy + r; y += 2) {
+    for (let x = cx - r; x <= cx + r; x += 2) {
+      const c = at(x, y);
+      if (landOnly && !(c[1] > c[2] + 4)) continue;
+      vals.push(lum(c));
+    }
+  }
+  vals.sort((a, b) => a - b);
+  return vals.length ? vals[Math.floor(vals.length / 2)] : NaN;
+};
+const landLum = patchLums(600, 300, 24, true);
+const seaLum = patchLums(30, 30, 20, false);
+ok('суша светлее моря', landLum > seaLum + 20, landLum.toFixed(0) + ' vs ' + seaLum.toFixed(0));
+ok('суша не чёрная и не белая', landLum > 40 && landLum < 220, landLum.toFixed(0));
 // доля суши в кадре: континент занимает заметную часть, но не весь экран
 let landPx = 0, seaPx = 0, bright = 0;
 for (let y = 4; y < 700; y += 4) {
