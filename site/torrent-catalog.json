@@ -5,7 +5,7 @@
   "stats": {
     "games": 17,
     "files": 1241,
-    "totalBytes": 37460905,
+    "totalBytes": 37463666,
     "chunks": 152,
     "blockedFiles": 3
   },
@@ -4957,8 +4957,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "6381078365ea56a3002a78e61af0d30e4463e2bea45faba137520b764f9a9274",
-      "totalSize": 1436594,
+      "infoHash": "4c6f9d7e33c2f92299e2617f08bdc2059a8a1e0349bed1d7727685c76e6ccebd",
+      "totalSize": 1439355,
       "chunkSize": 262144,
       "chunkCount": 6,
       "fileCount": 28,
@@ -5010,8 +5010,8 @@
         },
         {
           "path": "index.html",
-          "size": 7296,
-          "sha256": "10f33c430a45f609e3c5c36ef0e178a85b2a14b5d23cfe7b4c5bfa60c4ef0b67"
+          "size": 7487,
+          "sha256": "7eeaeddad39e3b322e92512b1e3126939194263ea77846dd524c58f2a0b77579"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5030,8 +5030,8 @@
         },
         {
           "path": "src/game.js",
-          "size": 14444,
-          "sha256": "3520920ebbebc9052470bc515cc3e8be1e4470d595d0cd80d8821a814edbc0ce"
+          "size": 15048,
+          "sha256": "02e6145d35875c172e846b32dc971739d2e73ad450da020731dde1c7c8fdb436"
         },
         {
           "path": "src/main.js",
@@ -5080,8 +5080,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 34477,
-          "sha256": "71c858984417c3be52cb13bca872a2082d3f0ca952217bb4897b29be57222483"
+          "size": 35032,
+          "sha256": "6caa5918ede6c96cdd6a42f2b2cd528e8f545b265f25bad455898872200fbe70"
         },
         {
           "path": "src/util.js",
@@ -5090,8 +5090,8 @@
         },
         {
           "path": "style.css",
-          "size": 17530,
-          "sha256": "19a254428a02414b3f5658073d262e4ad7ef5c2b13f5c5d5d341cbc555ae4e50"
+          "size": 18941,
+          "sha256": "05ae0050b37f7572a69bcdf426f497566127a5db538624c2c7095de5486a366b"
         },
         {
           "path": "tools/embed-brains.mjs",

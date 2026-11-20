@@ -53,10 +53,18 @@ WC.game = (function () {
 
   function bootEngine() {
     var GE = window.GamesEngine;
-    if (!GE) return Promise.reject(new Error('shared/engine.js не загрузился'));
-    return GE.create({ preset: 'survival', packs: ['pack:ai-team'] }).then(function (handle) {
-      api.engine = handle.engine;
-      return api.engine;
+    if (!GE || typeof GE.create !== 'function') {
+      return Promise.reject(new Error('shared/engine.js не загрузился: нет GamesEngine.create'));
+    }
+    // ВАЖНО: GamesEngine.create() возвращает НЕ промис, а holder
+    // {engine, ready, promise, onReady()}. Движок в нём появляется асинхронно.
+    var holder = GE.create({ preset: 'survival', packs: ['pack:ai-team'] });
+    var wait = holder && holder.promise ? holder.promise : Promise.resolve(holder);
+    return Promise.resolve(wait).then(function (resolved) {
+      var engine = (resolved && resolved.engine) || (holder && holder.engine) || resolved;
+      if (!engine || !engine.tools) throw new Error('RatCore вернул пустой экземпляр движка');
+      api.engine = engine;
+      return engine;
     });
   }
 

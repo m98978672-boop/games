@@ -38,6 +38,12 @@ ok(html.includes('../ratcore/ratcore.bundle.js'), 'подключён RatCore');
 ok(html.includes('../shooter/three.min.js'), 'подключён локальный Three.js');
 ok(html.indexOf('shared/engine.js') < html.indexOf('src/main.js'), 'движок подключён до игровых скриптов');
 
+// 2б. Контракт движка: GamesEngine.create() отдаёт «держатель» (holder), а не промис.
+// Обратный код ронял игру на телефоне: «GE.create(...).then is not a function».
+const gameSrc = readFileSync(join(root, 'src/game.js'), 'utf8');
+ok(!/GamesEngine\s*\.\s*create\s*\([^;]*?\)\s*\.\s*then/.test(gameSrc), 'GamesEngine.create() не используется как промис');
+ok(/\.promise|onReady/.test(gameSrc), 'bootEngine ждёт holder.promise / onReady');
+
 // 3. style.css наследует общую тему
 const css = readFileSync(join(root, 'style.css'), 'utf8');
 ok(/^@import url\("\.\.\/shared\/theme\.css"\);/.test(css.trimStart()), 'style.css начинается с @import ../shared/theme.css');
