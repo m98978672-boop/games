@@ -7,7 +7,7 @@
     "storefront": 17,
     "collection": 216,
     "files": 2085,
-    "totalBytes": 51141466,
+    "totalBytes": 51141973,
     "chunks": 392,
     "blockedFiles": 3
   },
@@ -5631,8 +5631,8 @@
       "play": "last-shore/index.html",
       "cover": "site/assets/last-shore.webp",
       "dir": "last-shore",
-      "infoHash": "0fd92d0937ad5c6a8b19dfc1a3ca4d05a00917618ac8ba8beafc6798b5151388",
-      "totalSize": 2915051,
+      "infoHash": "f19170b83ec82f6da428793348ab82781c6132520324e1275849f00e71179568",
+      "totalSize": 2915558,
       "chunkSize": 262144,
       "chunkCount": 12,
       "fileCount": 43,
@@ -5784,8 +5784,8 @@
         },
         {
           "path": "src/shells.js",
-          "size": 18736,
-          "sha256": "4a6171ffacc365eb96e94cfd60933acc3d95030f0b877036c8efc6806c949b7c"
+          "size": 19243,
+          "sha256": "8a0914746689cd6f18b4b967e6a64fa33bc9fdfd8581ed5c0e7e9627b59bf5c2"
         },
         {
           "path": "src/sky.js",
