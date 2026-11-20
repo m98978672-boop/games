@@ -174,7 +174,7 @@ func vera_dialog() -> void:
 			game.resume()
 			game.complete_mission()})
 	choices.append({"text": "Помоги с ранами • 2 детали", "action": func():
-		if game.state.scrap >= 2 and game.state.health < 100:
+		if game.state.scrap >= 2 and (game.state.health < 100 or game.state.leg_wound > 0 or game.state.left_arm_wound > 0 or game.state.right_arm_wound > 0):
 			game.state.scrap -= 2
 			game.state.health = 100
 			game.state.pain = 0

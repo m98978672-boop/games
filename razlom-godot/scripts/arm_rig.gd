@@ -60,7 +60,7 @@ func place(segment: Node3D, start: Vector3, finish: Vector3) -> void:
 	segment.position = (start + finish) * 0.5
 	var direction := (finish - start).normalized()
 	var up := Vector3.UP if absf(direction.dot(Vector3.UP)) < 0.95 else Vector3.FORWARD
-	segment.basis = Basis.looking_at(direction, up).scaled(Vector3(1, 1, maxf(0.001, start.distance_to(finish))))
+	segment.basis = Basis.looking_at(direction, up) * Basis.from_scale(Vector3(1, 1, maxf(0.001, start.distance_to(finish))))
 func set_visible(value: bool) -> void:
 	for segment in segments: segment.visible = value
 	joint.visible = value

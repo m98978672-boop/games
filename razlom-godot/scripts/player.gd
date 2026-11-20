@@ -278,7 +278,8 @@ func receive_bullet(point: Vector3, source: Vector3, power: float = 36.0) -> voi
 		game.state.set(arm_key, minf(100, float(game.state.get(arm_key)) + 40))
 		reflex_time = 0.7
 		reload_time = 0
-	RazlomBloodFX.spawn(game, point, (source - point).normalized())
+	if float(result.wear) == 0:
+		RazlomBloodFX.spawn(game, point, (source - point).normalized())
 	if zone == "legs":
 		game.state.leg_wound = minf(100, game.state.leg_wound + 35)
 	on_hurt()
