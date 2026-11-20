@@ -21,7 +21,7 @@ func run_tests() -> void:
 	var guard = game.enemies[0]
 	guard.position = Vector3(3, 0.3, 35)
 	player.position = Vector3(3, 0.3, 40)
-	player.camera.look_at(guard.position + Vector3.UP * 1.1)
+	player.camera.look_at(guard.position + Vector3.UP * 0.92)
 	await physics_frame
 	await physics_frame
 	var gun_position: Vector3 = player.gun.position

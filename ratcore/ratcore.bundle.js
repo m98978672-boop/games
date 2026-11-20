@@ -3661,6 +3661,66 @@ class AiTeamSuite {
   }
 
   // -------------------- 5. tools.bridge.* (BridgeGuard: экспорт в Three.js / Godot / Canvas 2D / RCW2) --------------------
+  // Мост BRIDGE.md §2.1: read-only экспорт ОДНОГО запечатанного меша наружу.
+  // Живые буферы AssetVault не отдаются — только безопасные копии с конвертацией
+  // осей RatCore (X, h, -Y) -> Three.js / Godot 4 (X-up right-handed).
+  bridgeExportMesh({ mesh, format = 'threejs', name = 'ratcore-mesh', vault } = {}) {
+    const entry = vault.readSealedMesh(mesh, 'bridge.exportMesh');
+    const positions = entry.buffers.positions;
+    const normals = entry.buffers.normals;
+    const colors = entry.buffers.colors;
+    const indices = entry.buffers.indices;
+
+    if (format === 'rat-recipe') {
+      return {
+        format: 'rat-recipe',
+        meshId: entry.id,
+        triCount: entry.triCount,
+        recipe: entry.provenance && entry.provenance.recipe ? entry.provenance.recipe : null,
+      };
+    }
+
+    const pos = new Array(positions.length);
+    const nrm = normals ? new Array(normals.length) : null;
+    const col = colors ? new Array(colors.length) : null;
+    for (let i = 0; i < positions.length; i += 3) {
+      // worldToScene: (x, h, -y) — Y вверх, правая система координат
+      pos[i] = positions[i];
+      pos[i + 1] = positions[i + 1];
+      pos[i + 2] = -positions[i + 2];
+      if (nrm) {
+        nrm[i] = normals[i];
+        nrm[i + 1] = normals[i + 1];
+        nrm[i + 2] = -normals[i + 2];
+      }
+    }
+    if (col) {
+      for (let i = 0; i < colors.length; i++) {
+        const packed = colors[i] >>> 0;
+        col[i * 4 + 0] = (packed & 255) / 255;
+        col[i * 4 + 1] = ((packed >> 8) & 255) / 255;
+        col[i * 4 + 2] = ((packed >> 16) & 255) / 255;
+        col[i * 4 + 3] = ((packed >> 24) & 255) / 255;
+      }
+    }
+
+    return {
+      format: format === 'godot4' ? 'godot4' : 'threejs',
+      name,
+      meshId: entry.id,
+      triCount: entry.triCount,
+      vertexCount: entry.vertexCount,
+      bounds: { ...entry.bounds },
+      payload: {
+        positions: pos,
+        normals: nrm,
+        colors: col,
+        index: Array.from(indices),
+      },
+      provenance: { ...entry.provenance, format: format === 'godot4' ? 'godot4' : 'threejs' },
+    };
+  }
+
   bridgeExportScene({ format = 'three-json', worldSnapshot, vault, entities = [] } = {}) {
     if (format === 'three-json') {
       const children = entities.map((e) => {
@@ -8515,6 +8575,12 @@ function createRatCoreEngine(config = {}) {
       }
       if (branch === 'bridge') {
         return {
+          exportMesh: wrapTool('bridge.exportMesh', (args) => aiTeamSuite.bridgeExportMesh({
+            mesh: args.mesh,
+            format: args.format || 'threejs',
+            name: args.name || 'ratcore-mesh',
+            vault,
+          })),
           exportScene: wrapTool('bridge.exportScene', (args) => aiTeamSuite.bridgeExportScene({
             format: args.format || 'three-json',
             worldSnapshot: buildWorldSnapshotObj(),

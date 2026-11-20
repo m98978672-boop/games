@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Северный узел — склад с живыми рабочими</title>
+<meta name="description" content="Склад-симулятор на движке RatCore: три рабочих с обученными нейросетями-мозгами, органами и гормонами. Управляй бригадой с пульта: 3D-вид от третьего лица и тактический вид сверху, инспектор тела с разрезом." />
+<meta name="theme-color" content="#0b0d0c" />
+<link rel="icon" href="cover.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<!-- Игровое поле -->
+<div id="stage">
+  <canvas id="scene" aria-label="Склад: стеллажи, приёмка и трое рабочих"></canvas>
+  <div id="markers" class="markers" aria-hidden="true"></div>
+  <div id="tactical-grid" class="tactical-grid" aria-hidden="true"></div>
+</div>
+
+<!-- Верхняя панель -->
+<header class="topbar">
+  <a class="brand" href="../index.html" title="Все игры">
+    <span class="logo">СУ</span>
+    <span class="brand-text"><b>СЕВЕРНЫЙ УЗЕЛ</b><i>склад · бригада · мозги</i></span>
+  </a>
+
+  <div class="top-stats">
+    <div class="stat accent"><span>Очки</span><b id="hud-score">0</b></div>
+    <div class="stat"><span>Заказы</span><b id="hud-orders">0</b></div>
+    <div class="stat"><span>Качество</span><b id="hud-quality">100 %</b></div>
+    <div class="stat"><span>Смена</span><b id="hud-time">08:00</b></div>
+  </div>
+
+  <div class="top-actions">
+    <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
+    <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза">⏸</button>
+    <button id="btn-camera" class="icon-btn" title="Сменить вид (C)" aria-label="Сменить вид">🎥</button>
+    <button id="btn-inspector" class="icon-btn" title="Инспектор тела (I)" aria-label="Инспектор тела">🫀</button>
+    <button id="btn-sound" class="icon-btn" title="Звук (M)" aria-label="Звук">🔊</button>
+    <button id="btn-save" class="icon-btn" title="Сохранить (S)" aria-label="Сохранить">💾</button>
+    <button id="btn-help" class="icon-btn" title="Как играть (H)" aria-label="Помощь">?</button>
+  </div>
+</header>
+
+<div id="save-indicator">● автосохранение</div>
+
+<!-- Пульт управления: главный способ управлять бригадой -->
+<aside class="panel tools" id="control-panel" aria-label="Пульт управления бригадой">
+  <div class="panel-head">
+    <h3>Пульт управления</h3>
+    <span id="ctl-tick" class="ctl-tick">60 Гц</span>
+  </div>
+
+  <div class="ctl-group">
+    <div class="ctl-label">Выбранный рабочий</div>
+    <div id="crew-tabs" class="tabs" role="tablist"></div>
+    <div id="selected-card" class="selected-card"></div>
+  </div>
+
+  <div class="ctl-group">
+    <div class="ctl-label">Приказы рабочему</div>
+    <div class="cmd-grid">
+      <button class="cmd" data-command="pick"><b>Взять коробку</b><i>ближайший заказ с приёмки</i></button>
+      <button class="cmd" data-command="store"><b>Нести к стеллажу</b><i>уложить в ячейку</i></button>
+      <button class="cmd" data-command="rest"><b>Отправить на перерыв</b><i>восстановить силы</i></button>
+      <button class="cmd" data-command="wait"><b>Ждать указаний</b><i>освободить заказ</i></button>
+      <button class="cmd" data-command="auto"><b>Автономия</b><i>решает нейросеть</i></button>
+      <button class="cmd" data-command="help"><b>Помочь бригаде</b><i>срочные заказы</i></button>
+    </div>
+  </div>
+
+  <div class="ctl-group">
+    <div class="ctl-label">Приказы бригаде</div>
+    <div class="cmd-row">
+      <button class="cmd wide" data-team="intake"><b>Разгрузить приёмку</b><i>все на приёмку</i></button>
+      <button class="cmd wide" data-team="store"><b>Все на стеллаж</b><i>доставить взятое</i></button>
+    </div>
+    <div class="cmd-row">
+      <button class="cmd wide" data-team="rest"><b>Общий перерыв</b><i>смена сил</i></button>
+      <button class="cmd wide" data-team="auto"><b>Вся бригада на авто</b><i>мозги работают</i></button>
+    </div>
+  </div>
+
+  <div class="ctl-group">
+    <div class="ctl-label">Вид и наблюдение</div>
+    <div class="seg" id="camera-seg" role="group" aria-label="Режим камеры">
+      <button data-view="third" class="on">3-е лицо</button>
+      <button data-view="top">Сверху</button>
+    </div>
+    <div class="seg" id="speed-seg" role="group" aria-label="Скорость времени">
+      <button data-speed="1" class="on">1×</button>
+      <button data-speed="2">2×</button>
+      <button data-speed="4">4×</button>
+    </div>
+  </div>
+
+  <div class="ctl-group">
+    <div class="ctl-label">Очередь заказов <span id="queue-count" class="queue-count">0</span></div>
+    <div id="order-list" class="order-list"></div>
+  </div>
+</aside>
+
+<!-- Состояние бригады -->
+<aside class="panel side" id="side" aria-label="Состояние бригады"></aside>
+
+<div class="bottom-bar">
+  <div id="hint" class="chip hint">Пульт слева: выбери рабочего и жми приказ. C — вид, I — тело, Пробел — пауза.</div>
+  <div id="news" class="chip news"></div>
+</div>
+
+<div id="pause-flag" class="pause-flag">ПАУЗА · ПРОБЕЛ</div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="modal-root" class="modal-root"></div>
+
+<noscript><p style="color:#f2ecdf;padding:24px">Для игры нужен JavaScript.</p></noscript>
+
+<script src="../shared/engine.js"></script>
+<script src="../shooter/three.min.js"></script>
+<script src="../ratcore/ratcore.bundle.js"></script>
+<script src="src/sim/model.js"></script>
+<script src="src/ai/brain-net.js"></script>
+<script src="src/sim/warehouse.js"></script>
+<script src="src/sim/worker.js"></script>
+<script src="src/config.js"></script>
+<script src="src/util.js"></script>
+<script src="src/save.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/render/meshes.js"></script>
+<script src="src/render/world.js"></script>
+<script src="src/render/bodyview.js"></script>
+<script src="src/render.js"></script>
+<script src="src/game.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/main.js"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
+</body>
+</html>
