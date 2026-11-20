@@ -43,6 +43,13 @@ window.WC = window.WC || {};
       bootPromise = Promise.reject(new Error('Нет GamesEngine'));
       return bootPromise;
     }
+    // Сторож: если через 8 секунд склад так и не поднялся — показываем причину,
+    // а не пустой экран
+    window.__wcWatchdog = setTimeout(function () {
+      if (document.body.classList.contains('ready')) return;
+      showFatal('Игра не дошла до первого кадра за 8 секунд. Откройте консоль браузера (F12) — там будет ошибка. ' +
+        'Чаще всего помогает открыть папку целиком и запустить локальный сервер: python3 -m http.server 8000');
+    }, 8000);
     bootPromise = GE.ready()
       .then(function () { return global.WC.game.boot(); })
       .then(function () {
@@ -61,6 +68,7 @@ window.WC = window.WC || {};
           global.WC.save.save(global.WC.game);
         });
         document.body.classList.add('ready');
+        if (window.__wcWatchdog) { clearTimeout(window.__wcWatchdog); window.__wcWatchdog = null; }
       })
       .catch(function (err) {
         console.error('[warehouse-crew] запуск не удался:', err);
