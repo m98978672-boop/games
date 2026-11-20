@@ -91,7 +91,7 @@ func _input(event: InputEvent) -> void:
 					Input.action_press(action)
 				queue_redraw()
 				return
-		if event.position.x < get_viewport_rect().size.x * 0.42 and move_id == -1:
+		if event.position.x < get_viewport_rect().size.x * 0.42 and event.position.y > get_viewport_rect().size.y * 0.5 and move_id == -1:
 			move_id = event.index
 			update_move(event.position)
 		elif look_id == -1:
@@ -115,7 +115,7 @@ func _draw() -> void:
 	draw_circle(move_origin, 72, Color(0.08, 0.14, 0.12, 0.55))
 	draw_arc(move_origin, 72, 0, TAU, 48, Color(0.8, 0.9, 0.73, 0.6), 2)
 	draw_circle(move_knob, 28, Color(0.7, 0.8, 0.62, 0.7))
-	var names := {"fire": "ОГОНЬ", "interact": "ВЗЯТЬ", "jump": "ПРЫЖОК", "reload": "МАГАЗИН", "aim": "ПРИЦЕЛ", "crouch": "ПРИСЕСТЬ", "heal": "ЛЕЧИТЬ", "flashlight": "ФОНАРЬ", "menu": "МЕНЮ", "inventory": "РЮКЗАК"}
+	var names := {"fire": "ОГОНЬ", "interact": "ДЕЙСТВИЕ", "jump": "ПРЫЖОК", "reload": "ПЕРЕЗАР.", "aim": "ПРИЦЕЛ", "crouch": "ПРИСЕСТЬ", "heal": "ЛЕЧИТЬ", "flashlight": "ФОНАРЬ", "menu": "МЕНЮ", "inventory": "РЮКЗАК"}
 	var font := ThemeDB.fallback_font
 	for action in zones:
 		var rect: Rect2 = zones[action]

@@ -6,6 +6,7 @@ var column: VBoxContainer
 var scroll: ScrollContainer
 var scroll_finger := -1
 var medic_motion: RazlomActorMotion
+var courier_motion: RazlomActorMotion
 
 func spawn_shelter(parent: Node3D) -> void:
 	var doctor := StaticBody3D.new()
@@ -17,7 +18,25 @@ func spawn_shelter(parent: Node3D) -> void:
 	var model: PackedScene = load("res://assets/models/medic.tscn")
 	var visual := model.instantiate() as Node3D
 	doctor.add_child(visual)
+	RazlomArt.dress_actor(visual, true)
 	medic_motion = RazlomActorMotion.new(visual)
+	var courier := StaticBody3D.new()
+	courier.name = "Pavel"
+	courier.set_meta("use", "courier")
+	courier.set_meta("title", "Павел • поговорить о складе")
+	parent.add_child(courier)
+	courier.position = Vector3(-10, 0.2, 12)
+	var courier_model := RazlomArt.humanoid(courier)
+	courier_motion = RazlomActorMotion.new(courier_model)
+	courier_model.rotation.y = PI * 0.5
+	var courier_col := CollisionShape3D.new()
+	var courier_shape := CapsuleShape3D.new()
+	courier_shape.radius = 0.35
+	courier_shape.height = 1.8
+	courier_col.shape = courier_shape
+	courier_col.position.y = 0.9
+	courier.add_child(courier_col)
+	RazlomArt.sign_text(courier, "ПАВЕЛ / СВЯЗНОЙ", Vector3(0, 2.15, 0), 22)
 	var col := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.35
@@ -110,6 +129,8 @@ func try_interact(hit: Dictionary) -> bool:
 	match str(hit.collider.get_meta("use")):
 		"dog":
 			hit.collider.befriend()
+		"courier":
+			courier_dialog()
 		"vera":
 			vera_dialog()
 		"bed":
@@ -119,7 +140,8 @@ func try_interact(hit: Dictionary) -> bool:
 	return true
 
 func vera_dialog() -> void:
-	var body := "«Нужен насос со склада 03, за дорогой. Блок зелёный, с ручкой.\nРада кипятит последнюю бутылку для сына. Верни насос до ночи.\nРаньше эти люди охраняли наши конвои. Теперь не подпускают нас.\nНе лезь под огонь. В кладке сбоку есть слабые места»."
+	medic_motion.greet()
+	var body := "«Нужен насос со склада 03, за дорогой. Блок зелёный, с ручкой.\nРада кипятит последнюю бутылку для сына. Верни насос до ночи.\nРаньше эти люди охраняли наши конвои. Теперь не подпускают нас.\nНе лезь под огонь. У дороги сидит Павел, связной конвоя. Он может знать, как пройти без боя. В кладке сбоку есть слабые места»."
 	if game.state.complete:
 		body = "«Вода пошла. Теперь можно думать о следующем дне.\nПо старой накладной этот груз вообще должен был уйти из долины.\nКому они возят воду, пока мы считаем каждую бутылку?»"
 	elif game.state.pump:
@@ -202,8 +224,12 @@ func reveal_manifest() -> void:
 
 func journal() -> void:
 	var s = game.state
-	var body := "ТЁПЛАЯ СТЕНА\nРада отдаёт последнюю чистую воду сыну. Вера просит вернуть насос со склада 03. Охрана склада раньше сопровождала конвои убежища.\n\n"
+	var body := "ТЁПЛАЯ СТЕНА\nРада отдаёт последнюю чистую воду сыну. Вера просит вернуть насос со склада 03. Охрана склада раньше сопровождала конвои убежища. Павел у дороги предлагает путь через переговоры; вода для него — твой собственный запас.\n\n"
 	body += "Насос установлен: у Очага снова есть вода." if s.complete else ("Насос найден. Вернись к Вере." if s.pump else "Задача: найти зелёный насосный блок в дальней части склада и вернуться в убежище.")
+	if s.passage_broken:
+		body += "\n\nДоговор с Павлом нарушен нападением на охрану. Повторно договориться нельзя."
+	if s.passage:
+		body += "\n\nПавел договорился о проходе: охрана не атакует, пока ты не нарушишь договор. Его свидетельство: приказ Ильи звучал на фоне аварийной сирены."
 	if s.manifest:
 		body += "\n\nНАКЛАДНАЯ № 17\nНасос перенаправили намеренно. Под приказом подпись Ильи Лесного, которого Вера считала погибшим."
 		body += "\nРешение: приказ обнародован; Вера ищет объяснение подписи." if s.truth_shared else "\nРешение пока открыто: показать документ Вере или сохранить его при себе."
@@ -216,3 +242,25 @@ func diagnostics() -> Dictionary:
 			buttons.append({"text": child.text, "rect": [child.global_position.x, child.global_position.y, child.size.x, child.size.y]})
 	return {"visible": panel.visible, "rect": [panel.global_position.x, panel.global_position.y, panel.size.x, panel.size.y],
 		"title": column.get_child(0).text if column.get_child_count() > 0 else "", "buttons": buttons}
+
+func courier_dialog() -> void:
+	courier_motion.greet()
+	var body := """Павел прячет перебинтованную руку. На его куртке такой же знак, как у охраны склада.
+«Я вёл последний конвой Очага. Приказ задержать насос пришёл с голоса Ильи. Но на фоне работала сирена — может, он говорил под принуждением.
+Мои люди не знают, что насос нужен ребёнку. Дай бутылку раненому связному — передам по рации, чтобы тебя пропустили. Только не стреляй. Один удар — и договору конец»."""
+	var choices: Array = []
+	if not game.state.passage and not game.state.passage_broken:
+		choices.append({"text": "Отдать 1 бутылку воды • договориться о проходе", "action": func():
+			if game.state.bottles > 0:
+				game.state.bottles -= 1
+				game.state.passage = true
+				game.notify("Павел передал приказ: охрана пропустит. Не нападай на неё")
+			else:
+				game.notify("В рюкзаке нет бутылки. Воду можно найти в убежище")
+			game.resume()})
+	else:
+		body = "«Слово держим. Забирай насос. И найди накладную — без неё никто не поверит, что приказ был подменён. Если нападёшь на охрану, я больше не смогу тебя прикрыть»."
+	if game.state.passage_broken:
+		body = "Павел отворачивается: «Я поручился за тебя, а ты напал на моих людей. Второго слова по рации не будет. Насос всё ещё нужен Очагу — но теперь ищи другой путь»."
+	choices.append({"text": "Я сам выберу путь", "action": game.resume})
+	open("ПАВЕЛ / ПОСЛЕДНИЙ КОНВОЙ", body, choices)

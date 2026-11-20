@@ -49,6 +49,10 @@ for index, (name, base) in enumerate(PALETTE.items()):
             elif name == 'rust':
                 detail = 8 * math.sin(x * math.tau / 32) * math.cos(y * math.tau / 16)
             elif name == 'cloth':
+                if x % 128 < 3 or y % 128 < 3:
+                    value -= 12
+                elif (x % 128 < 7 or y % 128 < 7) and (x + y) % 8 < 4:
+                    value += 10
                 detail = 3 * math.sin(x * math.tau / 4) * math.cos(y * math.tau / 4)
             elif name == 'brick' and not seam:
                 detail = 2 * math.sin(x * math.tau / 8) * math.cos(y * math.tau / 8)
