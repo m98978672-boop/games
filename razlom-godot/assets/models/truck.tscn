@@ -1,13 +1,23 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource type="Texture2D" path="res://assets/textures/metal.png" id="metal"]
+[ext_resource type="Texture2D" path="res://assets/textures/surface/metal_normal.png" id="metal_normal"]
+[ext_resource type="Texture2D" path="res://assets/textures/surface/metal_roughness.png" id="metal_roughness"]
 
 [ext_resource type="Texture2D" path="res://assets/textures/wood.png" id="wood"]
+[ext_resource type="Texture2D" path="res://assets/textures/surface/wood_normal.png" id="wood_normal"]
+[ext_resource type="Texture2D" path="res://assets/textures/surface/wood_roughness.png" id="wood_roughness"]
 
 [sub_resource type="StandardMaterial3D" id="mat0"]
 albedo_color = Color(1.0, 1.0, 1.0, 1)
 roughness = 0.88
 albedo_texture = ExtResource("metal")
+normal_enabled = true
+normal_scale = 0.45
+normal_texture = ExtResource("metal_normal")
+roughness_texture = ExtResource("metal_roughness")
+roughness_texture_channel = 0
+texture_filter = 4
 
 [sub_resource type="BoxMesh" id="mesh0"]
 size = Vector3(2.2, 0.4, 4.4)
@@ -19,6 +29,12 @@ size = Vector3(2.2, 0.4, 4.4)
 albedo_color = Color(1.0, 1.0, 1.0, 1)
 roughness = 0.88
 albedo_texture = ExtResource("metal")
+normal_enabled = true
+normal_scale = 0.45
+normal_texture = ExtResource("metal_normal")
+roughness_texture = ExtResource("metal_roughness")
+roughness_texture_channel = 0
+texture_filter = 4
 
 [sub_resource type="BoxMesh" id="mesh1"]
 size = Vector3(2.1, 1.3, 1.7)
@@ -37,6 +53,12 @@ size = Vector3(1.7, 0.6, 0.04)
 albedo_color = Color(1.0, 1.0, 1.0, 1)
 roughness = 0.88
 albedo_texture = ExtResource("wood")
+normal_enabled = true
+normal_scale = 0.45
+normal_texture = ExtResource("wood_normal")
+roughness_texture = ExtResource("wood_roughness")
+roughness_texture_channel = 0
+texture_filter = 4
 
 [sub_resource type="BoxMesh" id="mesh3"]
 size = Vector3(1.9, 0.5, 1.8)

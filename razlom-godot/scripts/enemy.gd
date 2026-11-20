@@ -158,6 +158,7 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	if dead:
 		return
 	health -= amount
+	motion.hurt()
 	# A hit is evidence of danger, not a magical coordinate of an unseen shooter.
 	if sees_player():
 		remember_sighting(game.player.global_position)
