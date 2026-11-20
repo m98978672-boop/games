@@ -16,6 +16,8 @@ WC.world = (function () {
   var boxViews = new Map();
   var slotMarkers = new Map();
   var lamps = [];
+  var halo = null;
+  var clock = 0;
 
   var view = {
     mode: 'third',
@@ -44,8 +46,11 @@ WC.world = (function () {
     canvas = canvasEl;
     meshes = WC.meshes;
 
-    renderer = new THREE_NS.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // Телефон: мягче сглаживание и меньше пикселей — важнее стабильные 60 кадров,
+    // чем идеальная картинка. Десктоп получает полное качество.
+    var lowPower = Boolean(WC.layout && WC.layout.state.device === 'phone');
+    renderer = new THREE_NS.WebGLRenderer({ canvas: canvas, antialias: !lowPower, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPower ? 1.75 : 2));
     renderer.setSize(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight, false);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE_NS.PCFSoftShadowMap;
@@ -64,11 +69,33 @@ WC.world = (function () {
 
     addLights();
     buildWarehouse();
+    buildHalo();
     resize();
     window.addEventListener('resize', resize);
     attachOrbit();
     state.ready = true;
     return state;
+  }
+
+  // Круг-подсветка под выбранным рабочим: мягкое золотое пятно + пульс.
+  function buildHalo() {
+    var holder = meshes.mesh(engine, 'halo', null, {
+      castShadow: false,
+      receiveShadow: false,
+      material: meshes.makeMaterial({
+        color: '#e8b45a',
+        emissive: '#e8b45a',
+        emissiveIntensity: 0.85,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        roughness: 0.6,
+      }),
+    });
+    holder.position.y = 0.02;
+    holder.renderOrder = 2;
+    scene.add(holder);
+    halo = holder;
   }
 
   function aspect() {
@@ -77,10 +104,19 @@ WC.world = (function () {
     return Math.max(0.4, w / Math.max(1, h));
   }
 
+  // Портрет на телефоне: по горизонтали кадр узкий, поэтому поднимаем FOV,
+  // иначе рабочий и коробка обрезаются по бокам.
+  function fitFov(base) {
+    var a = aspect();
+    if (a >= 1) return base;
+    return base + (1 - a) * 26;
+  }
+
   function resize() {
     if (!renderer || !canvas) return;
     var w = canvas.clientWidth || window.innerWidth;
     var h = canvas.clientHeight || window.innerHeight;
+    if (w < 2 || h < 2) return;
     renderer.setSize(w, h, false);
     camera.aspect = Math.max(0.35, w / Math.max(1, h));
     camera.updateProjectionMatrix();
@@ -93,7 +129,8 @@ WC.world = (function () {
     var sun = new THREE_NS.DirectionalLight(0xffe3b8, 1.05);
     sun.position.set(-9, 16, 9);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
+    var lowPower = Boolean(WC.layout && WC.layout.state.device === 'phone');
+    sun.shadow.mapSize.set(lowPower ? 512 : 1024, lowPower ? 512 : 1024);
     sun.shadow.camera.left = -18;
     sun.shadow.camera.right = 18;
     sun.shadow.camera.top = 16;
@@ -467,18 +504,56 @@ WC.world = (function () {
     view.focusId = workerId;
   }
 
+  // Толчок камеры: сила 0…1.4, гаснет за доли секунды.
+  function kick(amount) {
+    view.shake = Math.min(1.4, view.shake + (amount || 0.5));
+    return view.shake;
+  }
+
   function attachOrbit() {
     var dragging = false;
     var lastX = 0;
     var lastY = 0;
+    var pointers = new Map();
+    var pinchStart = 0;
+    var pinchBase = 1;
+
+    function spread() {
+      var list = [];
+      pointers.forEach(function (p) { list.push(p); });
+      if (list.length < 2) return 0;
+      var dx = list[0].x - list[1].x;
+      var dy = list[0].y - list[1].y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
     canvas.addEventListener('pointerdown', function (e) {
       if (e.button !== 0 && e.button !== 2) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size === 2) {
+        // Два пальца — щипок для приближения (телефон)
+        pinchStart = spread();
+        pinchBase = view.distance;
+        dragging = false;
+        return;
+      }
       dragging = true;
       lastX = e.clientX;
       lastY = e.clientY;
       canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
     });
+
     canvas.addEventListener('pointermove', function (e) {
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pointers.size >= 2) {
+        var now = spread();
+        if (pinchStart > 12 && now > 12) {
+          var ratio = now / pinchStart;
+          // Пальцы врозь — ближе; вместе — дальше
+          view.distance = WC.util.clamp(pinchBase / Math.max(0.4, ratio), 0.55, 2.4);
+        }
+        return;
+      }
       if (!dragging) return;
       var dx = e.clientX - lastX;
       var dy = e.clientY - lastY;
@@ -487,8 +562,16 @@ WC.world = (function () {
       view.yaw -= dx * 0.006;
       view.pitch = WC.util.clamp(view.pitch + dy * 0.004, -0.15, 0.95);
     });
-    canvas.addEventListener('pointerup', function () { dragging = false; });
-    canvas.addEventListener('pointercancel', function () { dragging = false; });
+
+    function release(e) {
+      pointers.delete(e.pointerId);
+      if (pointers.size < 2) pinchStart = 0;
+      if (pointers.size === 0) dragging = false;
+    }
+    canvas.addEventListener('pointerup', release);
+    canvas.addEventListener('pointercancel', release);
+    canvas.addEventListener('pointerleave', release);
+
     canvas.addEventListener('wheel', function (e) {
       e.preventDefault();
       view.distance = WC.util.clamp(view.distance + (e.deltaY > 0 ? 0.12 : -0.12), 0.55, 2.4);
@@ -535,11 +618,20 @@ WC.world = (function () {
       }
       var desired = new THREE_NS.Vector3(fx + Math.sin(yaw) * dist, height, fz + Math.cos(yaw) * dist);
       var lookTarget = new THREE_NS.Vector3(fx, 1.15, fz);
+      // Живая камера: еле заметное дыхание кадра и толчок от событий (уронил коробку)
+      desired.x += Math.sin(clock * 0.71) * 0.035;
+      desired.y += Math.sin(clock * 1.13) * 0.022;
+      if (view.shake > 0.002) {
+        desired.x += Math.sin(clock * 47.3) * 0.075 * view.shake;
+        desired.y += Math.sin(clock * 58.9) * 0.055 * view.shake;
+        lookTarget.x += Math.sin(clock * 41.1) * 0.05 * view.shake;
+        view.shake = Math.max(0, view.shake - dt * 2.4);
+      }
       state.cameraPos.lerp(desired, Math.min(1, dt * 5.5));
       state.lookAt.lerp(lookTarget, Math.min(1, dt * 7));
       camera.position.copy(state.cameraPos);
       camera.lookAt(state.lookAt);
-      camera.fov += (WC.CONFIG.camera.third.fov - camera.fov) * Math.min(1, dt * 3);
+      camera.fov += (fitFov(WC.CONFIG.camera.third.fov) - camera.fov) * Math.min(1, dt * 3);
       camera.updateProjectionMatrix();
     } else {
       var topDist = 27 * view.distance;
@@ -553,7 +645,7 @@ WC.world = (function () {
       state.lookAt.lerp(targetTop, Math.min(1, dt * 5));
       camera.position.copy(state.cameraPos);
       camera.lookAt(state.lookAt);
-      camera.fov += (WC.CONFIG.camera.top.fov - camera.fov) * Math.min(1, dt * 3);
+      camera.fov += (fitFov(WC.CONFIG.camera.top.fov) - camera.fov) * Math.min(1, dt * 3);
       camera.updateProjectionMatrix();
     }
   }
@@ -591,12 +683,39 @@ WC.world = (function () {
     });
   }
 
+  function updateAtmosphere(dt, game) {
+    clock += dt;
+    // Лампы живут: лёгкое мерцание тёплого света
+    lamps.forEach(function (lamp, i) {
+      var base = lamp.userData.base || (lamp.userData.base = lamp.intensity || 6.5);
+      lamp.intensity = base * (0.94 + 0.06 * Math.sin(clock * 1.7 + i * 2.1) + 0.03 * Math.sin(clock * 11 + i));
+    });
+    // Подсветка выбранного рабочего
+    if (halo) {
+      var focus = null;
+      for (var i = 0; i < game.api.crew.length; i++) {
+        if (game.api.crew[i].id === view.focusId) focus = game.api.crew[i];
+      }
+      if (!focus) focus = game.api.crew[0];
+      if (focus) {
+        halo.position.x += (focus.state.pos.x - halo.position.x) * Math.min(1, dt * 12);
+        halo.position.z += (focus.state.pos.y - halo.position.z) * Math.min(1, dt * 12);
+        var pulse = 1 + 0.05 * Math.sin(clock * 2.6);
+        halo.scale.set(pulse, 1, pulse);
+        if (halo.material && 'opacity' in halo.material) {
+          halo.material.opacity = 0.34 + 0.14 * (0.5 + 0.5 * Math.sin(clock * 2.6));
+        }
+      }
+    }
+  }
+
   function render(dt, game) {
     if (!state.ready) return;
     var sim = game.sim;
     updateCrew(dt, game);
     updateBoxes(sim);
     updateSlotMarkers(sim);
+    updateAtmosphere(dt, game);
     updateCamera(dt, game);
     updateMarkers(game, game.api.activeWorkerId);
     renderer.render(scene, camera);
@@ -611,6 +730,8 @@ WC.world = (function () {
     resize: resize,
     setMode: setMode,
     setFocus: setFocus,
+    kick: kick,
+    fitFov: fitFov,
     getMode: function () { return view.mode; },
     createCrewView: createCrewView,
     attachCrew: attachCrew,

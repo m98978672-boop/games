@@ -52,6 +52,8 @@ WC.meshes = (function () {
     benchLeg: { parts: [{ shape: 'box', sx: 0.1, sy: 0.45, sz: 0.1, offset: [0, 0, 0], color: '#4a3c2a' }] },
     lamp: { parts: [{ shape: 'box', sx: 1.5, sy: 0.08, sz: 0.26, offset: [0, 0, 0], color: '#ffe6b0' }] },
     cone: { parts: [{ shape: 'cone', radius: 0.16, height: 0.42, segments: 8, offset: [0, 0, 0], color: '#e2604f' }] },
+    // Подсветка выбранного рабочего: тонкий блин на полу под ногами
+    halo: { parts: [{ shape: 'cylinder', radius: 0.62, height: 0.015, segments: 24, offset: [0, 0, 0], color: '#e8b45a' }] },
     desk: { parts: [{ shape: 'box', sx: 1.9, sy: 0.08, sz: 0.8, offset: [0, 0.78, 0], color: '#4c5a63' }] },
     monitor: { parts: [{ shape: 'box', sx: 0.6, sy: 0.36, sz: 0.04, offset: [0, 1.10, 0], color: '#10171a' }] },
     screen: { parts: [{ shape: 'box', sx: 0.52, sy: 0.28, sz: 0.02, offset: [0, 1.14, -0.03], color: '#5aa9e6' }] },
