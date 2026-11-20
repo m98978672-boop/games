@@ -116,6 +116,24 @@ jobs:
             --adapter "$RUNNER_TEMP/model-out/adapter" \
             --out "$RUNNER_TEMP/bug-eval.json" 2>&1 | tee "$RUNNER_TEMP/eval.log"
 
+      - name: Итог проверки «находит баги»
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = process.env.RUNNER_TEMP + "/bug-eval.json";
+            if (!fs.existsSync(p)) { console.log("::warning::проверки багов нет"); process.exit(0); }
+            const r = JSON.parse(fs.readFileSync(p, "utf8"));
+            for (const [name, v] of Object.entries(r)) {
+              if (name === "method" || name === "bench" || !v.score) continue;
+              const s = v.score;
+              // Аннотация видна всегда, даже когда артефакты недоступны снаружи.
+              console.log(`::notice::${name}: точность ${(s.accuracy*100).toFixed(1)}% (${s.correct}/${s.total}), `
+                + `полнота ${(s.recall*100).toFixed(1)}%, ложных тревог ${s.falseAlarms} `
+                + `(${(s.falseAlarmRate*100).toFixed(1)}%), не разобрано ${s.unparsed}`);
+            }
+          '
+
       - name: Итог
         if: always()
         run: |
