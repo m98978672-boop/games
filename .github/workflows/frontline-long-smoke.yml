@@ -50,7 +50,7 @@ jobs:
           run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/restart" --resume "$RUNNER_TEMP/one/snapshot" --phase 1 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
           run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/two" --resume "$RUNNER_TEMP/restart/snapshot" --phase 2 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
           run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/three" --resume "$RUNNER_TEMP/two/snapshot" --phase 3 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
-          python - <<'PY'
+          python - 2>&1 <<'PY' | tee "$RUNNER_TEMP/smoke-assert.log"
           import json,os
           t=os.environ['RUNNER_TEMP']; paths=['one','restart','two','three']
           rows=[json.load(open(f'{t}/{x}/snapshot/progress.json')) for x in paths]
@@ -67,7 +67,7 @@ jobs:
           python - <<'PY'
           import json,os,pathlib
           root=pathlib.Path(os.environ['RUNNER_TEMP'])
-          for path in ['smoke-last.log','one/snapshot/progress.json','restart/snapshot/progress.json','two/snapshot/progress.json','three/snapshot/progress.json']:
+          for path in ['smoke-last.log','smoke-assert.log','one/snapshot/progress.json','restart/snapshot/progress.json','two/snapshot/progress.json','three/snapshot/progress.json']:
               file=root/path
               text=file.read_text(errors='replace')[-7000:] if file.exists() else 'MISSING'
               print('::notice title=Smoke '+path+'::'+text.replace('%','%25').replace('\r','%0D').replace('\n','%0A'),flush=True)
