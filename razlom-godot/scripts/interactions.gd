@@ -179,6 +179,8 @@ func vera_dialog() -> void:
 			game.state.health = 100
 			game.state.pain = 0
 			game.state.leg_wound = 0
+			game.state.left_arm_wound = 0
+			game.state.right_arm_wound = 0
 			medic_motion.greet("treat")
 			game.notify("Вера обработала раны")
 		else:

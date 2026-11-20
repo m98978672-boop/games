@@ -6,6 +6,8 @@ var gun: Node3D
 var weapon_motion: RazlomWeaponMotion
 var left_arm: RazlomArmRig
 var right_arm: RazlomArmRig
+var reflex_time := 0.0
+var death_tween: Tween
 var shot_bloom := 0.0
 var shock_blend := 0.0
 var healing_time := 0.0
@@ -77,7 +79,7 @@ func _ready() -> void:
 	camera.add_child(light)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and not game.mobile_mode and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if not game.ended and event is InputEventMouseMotion and not game.mobile_mode and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		look_sway += Vector2(-event.relative.x, event.relative.y).limit_length(25.0) * 0.0002
 		rotate_y(-event.relative.x * game.sensitivity * game.look_scale)
 		camera.rotation.x = clampf(camera.rotation.x - event.relative.y * game.sensitivity * game.look_scale, -1.45, 1.45)
@@ -88,6 +90,7 @@ func _physics_process(delta: float) -> void:
 	if game.state.health < last_health - 0.1:
 		on_hurt()
 	last_health = game.state.health
+	reflex_time = maxf(0, reflex_time - delta)
 	shot_bloom = move_toward(shot_bloom, 0, delta * 0.014)
 	shock_blend = move_toward(shock_blend, 0, delta * 1.4)
 	healing_time = maxf(0, healing_time - delta)
@@ -103,7 +106,7 @@ func _physics_process(delta: float) -> void:
 		else:
 			game.notify("Недостаточно места, чтобы встать")
 	camera.position.y = move_toward(camera.position.y, 1.03 if crouched else 1.6, delta * 4)
-	if Input.is_action_just_pressed("reload") and reload_time <= 0 and game.state.ammo < 18 and game.state.reserve > 0:
+	if Input.is_action_just_pressed("reload") and game.state.left_arm_wound < 30 and reflex_time <= 0 and reload_time <= 0 and game.state.ammo < 18 and game.state.reserve > 0:
 		reload_time = 1.4
 	cooldown = maxf(0, cooldown - delta)
 	recoil = move_toward(recoil, 0, delta * 0.8)
@@ -114,7 +117,7 @@ func _physics_process(delta: float) -> void:
 	var input := Input.get_vector("left", "right", "forward", "back")
 	if game.mobile_mode and is_instance_valid(game.touch_ui):
 		input = (input + game.touch_ui.movement).limit_length(1)
-	aiming = Input.is_action_pressed("aim")
+	aiming = Input.is_action_pressed("aim") and game.state.left_arm_wound < 30 and reflex_time <= 0
 	var running: bool = (Input.is_action_pressed("sprint") or (game.mobile_mode and input.length() > 0.95)) and input.length() > 0.1 and game.state.stamina > 5 and not aiming and not crouched
 	var speed := 6.6 if running else 3.8
 	if aiming:
@@ -174,9 +177,15 @@ func _physics_process(delta: float) -> void:
 	if game.quests.scan_time > 0:
 		weapon_motion.support_hand.position = Vector3(-0.2, 0.08, -0.15)
 		weapon_motion.support_hand.rotation.x = -0.3 + sin(game.quests.scan_time * 4) * 0.025
+	if game.state.left_arm_wound >= 30:
+		weapon_motion.support_hand.position += Vector3(-0.12, -0.25, 0.1)
+		weapon_motion.support_hand.rotation.z = -0.7 + sin(bob * 2) * 0.04
+	if game.state.right_arm_wound >= 30:
+		gun.rotation.z += sin(Time.get_ticks_msec() * 0.018) * 0.008
+		gun.position.y -= 0.025
 	camera.rotation.z = lerp_angle(camera.rotation.z, -input.x * 0.025 + hurt_blend * 0.045 + tremor, 1.0 - exp(-delta * 9.0))
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
-	if Input.is_action_pressed("fire") and healing_time <= 0 and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
+	if Input.is_action_pressed("fire") and can_fire() and healing_time <= 0 and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
 		if game.state.ammo > 0:
 			game.state.ammo -= 1
 			cooldown = 0.19
@@ -264,6 +273,12 @@ func receive_bullet(point: Vector3, source: Vector3, power: float = 36.0) -> voi
 	game.state.set(key, maxf(0, float(game.state.get(key)) - float(result.wear)))
 	game.state.health = maxf(0, game.state.health - float(result.damage))
 	game.state.pain = minf(100, game.state.pain + float(result.damage) * 1.5)
+	if zone == "arms":
+		var arm_key := "left_arm_wound" if to_local(point).x < 0 else "right_arm_wound"
+		game.state.set(arm_key, minf(100, float(game.state.get(arm_key)) + 40))
+		reflex_time = 0.7
+		reload_time = 0
+	RazlomBloodFX.spawn(game, point, (source - point).normalized())
 	if zone == "legs":
 		game.state.leg_wound = minf(100, game.state.leg_wound + 35)
 	on_hurt()
@@ -282,10 +297,31 @@ func spread_angle() -> float:
 	var base := 0.0015 if aiming else 0.008
 	if crouched:
 		base *= 0.65
-	return base + speed * (0.0015 if aiming else 0.0025) + shot_bloom + game.state.pain * 0.00006
+	return base + (game.state.left_arm_wound + game.state.right_arm_wound) * 0.00008 + speed * (0.0015 if aiming else 0.0025) + shot_bloom + game.state.pain * 0.00006
 
 func sample_shot_direction(rng: RandomNumberGenerator) -> Vector3:
 	# Uniform disk in camera tangent plane, not square independent axis offsets.
 	var radius := sqrt(rng.randf()) * tan(spread_angle())
 	var angle := rng.randf() * TAU
 	return (-camera.global_basis.z + camera.global_basis.x * cos(angle) * radius + camera.global_basis.y * sin(angle) * radius).normalized()
+
+func can_fire() -> bool:
+	return not game.ended and reflex_time <= 0 and game.state.right_arm_wound < 60
+
+func begin_death() -> void:
+	gun.hide()
+	left_arm.set_visible(false)
+	right_arm.set_visible(false)
+	if death_tween != null: death_tween.kill()
+	death_tween = create_tween().set_parallel(true)
+	death_tween.tween_property(camera, "position", Vector3(0.18, 0.24, 0), 0.4)
+	death_tween.tween_property(camera, "rotation:z", 1.3, 0.4)
+
+func reset_death_pose() -> void:
+	if death_tween != null: death_tween.kill()
+	camera.position = Vector3(0, 1.6, 0)
+	camera.rotation.z = 0
+	gun.show()
+	left_arm.set_visible(true)
+	right_arm.set_visible(true)
+	reflex_time = 0
