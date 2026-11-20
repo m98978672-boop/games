@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       steps:
-        description: 'Шагов обучения (520 ≈ 75 мин на 2 CPU; 256 ≈ 40 мин)'
+        description: 'Шагов обучения (1040 ≈ 2.5 ч на 2 CPU; 520 ≈ 75 мин)'
         required: false
-        default: '520'
+        default: '1040'
       game_rows:
         description: 'Сколько боевых состояний собрать (900 ≈ 3 мин симуляции)'
         required: false
@@ -55,11 +55,12 @@ jobs:
           node tools/training/build-knowledge.mjs \
             --out "$RUNNER_TEMP/knowledge" \
             --game "${{ inputs.game_rows || '900' }}" \
-            --bug 400 --code 40 --play 60 --readme 20
+            --bug 400 --code 40 --play 60 --readme 20 \
+            --codes 1200 --law 40 --defect 40 --balance 30 --edge 40 --engine 30
           node -e '
             const m = require(process.env.RUNNER_TEMP + "/knowledge/manifest.json");
             console.log("::notice::Датасет: " + JSON.stringify(m.counts));
-            if (m.counts.train < 100) { console.error("слишком мало данных"); process.exit(1); }
+            if (m.counts.train < 1000) { console.error("слишком мало данных для обучения"); process.exit(1); }
           '
 
       - name: Собрать бенчмарк «найди баг»
@@ -79,7 +80,7 @@ jobs:
           python -u tools/training/finetune.py \
             --data "$RUNNER_TEMP/knowledge" \
             --out "$RUNNER_TEMP/model-out" \
-            --steps "${{ inputs.steps || '520' }}" \
+            --steps "${{ inputs.steps || '1040' }}" \
             --rank 16 --eval-count 8 2>&1 | tee "$RUNNER_TEMP/train.log"
           status=$?
           if [ "$status" -ne 0 ]; then

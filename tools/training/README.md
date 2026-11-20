@@ -31,14 +31,15 @@ GitHub Actions, где сеть открыта.
 
 ```bash
 # 1. Собрать знания из репозитория (это делает CI и облако)
-node tools/training/build-knowledge.mjs \
-  --out knowledge --game 400 --bug 400 --code 40 --play 60 --readme 20
+node tools/training/build-knowledge.mjs --out knowledge \
+  --game 900 --bug 400 --code 40 --play 60 --readme 20 \
+  --codes 1200 --law 40 --defect 40 --balance 30 --edge 40 --engine 30
 
 # 2. Проверить данные: нет дублей, ответы принимает игра, есть «как играть»
 node tools/training/test-build-knowledge.mjs
 
 # 3. Обучить LoRA (нужны torch, transformers, peft)
-python tools/training/finetune.py --data knowledge --out model-out --steps 256
+python tools/training/finetune.py --data knowledge --out model-out --steps 1040
 
 # 4. Собрать бенчмарк «найди баг» на настоящих файлах с известными дефектами
 node tools/training/make-bug-bench.mjs --out bug-bench
@@ -56,13 +57,24 @@ python tools/training/eval-bugs.py --bench bug-bench \
 
 | Тип | Откуда | Сколько |
 |---|---|---|
-| `game-decision` | живые бои Frontline: снимок, который видит командир, и допустимое действие | до 900 |
-| `bug-rule` | каталог правил баг-искателя (32 раздела, только именованные правила) | 115 |
+| `game-decision` | живые бои Frontline: снимок, который видит командир, и допустимое действие | **900** |
+| `game-edge` | граничные ситуации по правилам игры (порог 70%, инженер, индексы) — проверены `validateProposal` | 12 |
+| `game-rule` | правила решений словами: почему supply раньше стройки | 10 |
+| `bug-code` | таблица 1000 кодов баг-искателя: 920 содержательных проверок | 920 |
+| `bug-code-reverse` | обратная задача: по описанию найти код | 120 |
+| `bug-code-section` | границы разделов 000–900 и сколько в них проверок | 10 |
+| `bug-rule` | каталог правил баг-искателя, 32 раздела | 115 |
 | `bug-severity` | уровни опасности: критично / важно / мелочь | 10 |
+| `defect-analysis` | разбор реальных дефектов: причина → последствие → решение | 13 |
+| `balance` | числа баланса и следствия: почему пулемёт давит, танк дорог | 13 |
+| `engine-arch` | устройство игры: три уровня ИИ, координаты, пороги приёмки | 13 |
+| `repo-law` | законы репозитория с историей (`dawn.exr`, `stratum`, `info_hash`) | 14 |
 | `play-guide` | разделы «Как играть» из настоящих README игр | 19 |
 | `play-frontline` | правила и смысл Frontline из `docs/GDD.md` и кода | 7 |
-| `code-*` | реальные исправления: NaN в игровом цикле, alert, пути, безопасность | 6 |
+| `code-*` | реальные исправления: NaN в цикле, alert, пути, безопасность | 6 |
 | `repo-rule` | правила репозитория: статический сайт, порядок скриптов, сохранения | 5 |
+
+Итого **2190 примеров** (1971 обучение / 219 проверка), **2.4 млн символов**, 21 тип.
 
 Каждый пример — `{system, user, assistant, kind, source}`. У каждого указан
 источник: по нему видно, что модель не выдумывает, а учится на файлах.

@@ -37,6 +37,7 @@ async function main() {
   await run('node', [
     'tools/training/build-knowledge.mjs',
     '--out', TMP, '--game', '30', '--bug', '60', '--code', '20', '--play', '20', '--readme', '10',
+    '--codes', '200', '--law', '20', '--defect', '20', '--balance', '20', '--edge', '30', '--engine', '20',
   ], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 });
 
   const train = await load(join(TMP, 'train.jsonl'));
@@ -101,6 +102,47 @@ async function main() {
 
   check('в данных есть правила баг-искателя', all.some((r) => r.kind === 'bug-rule'));
 
+  // Новые базы: таблица кодов, законы, разбор дефектов, баланс, граничные
+  // случаи, устройство игры. Каждая должна давать примеры, иначе база пустая.
+  for (const [kind, name] of [
+    ['bug-code', 'таблица кодов баг-искателя'],
+    ['repo-law', 'законы репозитория'],
+    ['defect-analysis', 'разбор дефектов'],
+    ['balance', 'баланс игры'],
+    ['game-edge', 'граничные ситуации'],
+    ['game-rule', 'правила решений'],
+    ['engine-arch', 'устройство игры'],
+  ]) {
+    check('есть база: ' + name, all.some((r) => r.kind === kind), 'тип ' + kind + ' не найден');
+  }
+
+  // Коды в таблице должны быть уникальными и в диапазоне 000-999.
+  const codes = all.filter((r) => r.kind === 'bug-code')
+    .map((r) => Number((r.user.match(/код (\d+)/) || [])[1]))
+    .filter(Number.isInteger);
+  check('коды баг-искателя уникальны и в диапазоне 000-999',
+    codes.length > 0 && new Set(codes).size === codes.length && codes.every((c) => c >= 0 && c <= 999),
+    `кодов=${codes.length}, уникальных=${new Set(codes).size}`);
+
+  // Каждый граничный случай обязан проходить игру — как и боевые.
+  const edgeRows = all.filter((r) => r.kind === 'game-edge');
+  if (edgeRows.length) {
+    const { validateProposal } = await import(join(ROOT, 'frontline-command/src/sim/neutral_commander.js'));
+    let okEdge = 0;
+    for (const row of edgeRows) {
+      const input = JSON.parse(row.user);
+      const snap = {
+        squads: input.squads.map((q, i) => ({ id: i, ...q })),
+        points: input.points.map((q, i) => ({ id: i, ...q })),
+        builds: input.builds.map((q, i) => ({ id: i, ...q })),
+        input,
+      };
+      if (validateProposal(row.assistant, snap)) okEdge++;
+    }
+    check('все граничные случаи принимает игра', okEdge === edgeRows.length,
+      `${okEdge} из ${edgeRows.length}`);
+  }
+
   check('манифест совпадает по счёту',
     manifest.counts.total === all.length
       && manifest.counts.train === train.length
@@ -117,6 +159,7 @@ async function main() {
   await run('node', [
     'tools/training/build-knowledge.mjs',
     '--out', again, '--game', '30', '--bug', '60', '--code', '20', '--play', '20', '--readme', '10',
+    '--codes', '200', '--law', '20', '--defect', '20', '--balance', '20', '--edge', '30', '--engine', '20',
   ], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 });
   const trainAgain = await readFile(join(again, 'train.jsonl'), 'utf8');
   check('один seed даёт один и тот же датасет',
