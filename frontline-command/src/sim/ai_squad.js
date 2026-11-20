@@ -1,7 +1,7 @@
 // Тактический ИИ отряда: FSM «Двигаться → Занять → Подавить → Штурмовать → Отступить → Перегруппироваться»,
 // фазы алгоритма директивы, формации, перекаты, фланги.
 import { clamp, dist, angleTo, lerp } from '../core/mathx.js';
-import { squadNearObjective } from './arrival.js';
+import { squadNearObjective, clearFinalApproach } from './arrival.js';
 
 const PHASE_STATE = {
   attack: 'assault', hold: 'suppress', avoid: 'retreat',
@@ -33,6 +33,7 @@ export class SquadAI {
     const units = sq.units();
     const c = sq.centroid();
     sq.contact = units.some((u) => u.perception.hasContact);
+    if (sq._assemblyWait && (sq.state === 'hold' || sq.contact || sq._assemblyWait.objective !== sq.objective)) sq._assemblyWait=null;
     const hp = sq.hpRatio();
     const ammo = sq.ammoRatio();
     const morale = sq.morale();
@@ -118,7 +119,7 @@ export class SquadAI {
       const t = game.unitById(sq.objective.targetUnitId);
       if (!t || !t.alive) this.completeObjective(sq, null);
     }
-    if (sq.objective && squadNearObjective(game, sq, sq.objective, 90, c)) {
+    if (sq.objective && squadNearObjective(game, sq, sq.objective, 90, c) && assembleBeforeHold(game,sq)) {
       if (sq.objective.type === 'move' || sq.objective.type === 'retreat') {
         sq.state = 'hold';
         sq.stateLabel = 'на позиции';
@@ -256,4 +257,22 @@ export class SquadAI {
     if (this.journal.length > 120) this.journal.shift();
     this.journal.push({ t: this.game.time, squad: sq.name, faction: sq.faction, text });
   }
+}
+
+// A group approaching an indoor move/hold order should not stop when its
+// centroid and one member are near while others remain behind a wall.
+// Combat and a bounded timeout still take precedence over perfect assembly.
+function assembleBeforeHold(game,sq) {
+  const o=sq.objective;
+  if (!o || sq.state==='hold' || !['move','hold'].includes(o.type) || sq.contact || !game.walls?.enabled() ||
+      !game.cfg.flag('pathing_v2',false) || !game.cfg.flag('wall_collision_v2',false) ||
+      !game.walls.buildingAtPoint(o.x,o.y)) {sq._assemblyWait=null;return true;}
+  const units=sq.units().filter(u=>!u.isVehicle && !u.playerControlled);
+  if (units.length<3) {sq._assemblyWait=null;return true;}
+  let wait=sq._assemblyWait;
+  if(!wait || wait.objective!==o || wait.x!==o.x || wait.y!==o.y || wait.type!==o.type)
+    wait=sq._assemblyWait={objective:o,x:o.x,y:o.y,type:o.type,since:game.time};
+  if(game.time-wait.since>=20) {sq._assemblyWait=null;return true;}
+  if(units.every(u=>Math.hypot(u.x-o.x,u.y-o.y)<150 && clearFinalApproach(game,u,o.x,o.y))) {sq._assemblyWait=null;return true;}
+  return false;
 }
