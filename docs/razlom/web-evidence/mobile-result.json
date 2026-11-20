@@ -7,6 +7,8 @@
     "Right-side drag turns the camera",
     "Touch fire consumes actual ammunition",
     "Finger release stops automatic fire",
+    "Touch reload drives the visible moving-parts animation",
+    "Reload completes and restores actual ammunition",
     "Phone inventory dialog fits the portrait viewport",
     "Touch scrolling opens the real story journal",
     "Closing the journal restores phone gameplay",
