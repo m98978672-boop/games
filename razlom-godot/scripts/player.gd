@@ -72,7 +72,7 @@ func _physics_process(delta: float) -> void:
 	if game.mobile_mode and is_instance_valid(game.touch_ui):
 		input = (input + game.touch_ui.movement).limit_length(1)
 	aiming = Input.is_action_pressed("aim")
-	var running: bool = Input.is_action_pressed("sprint") and input.length() > 0.1 and game.state.stamina > 5 and not aiming and not crouched
+	var running: bool = (Input.is_action_pressed("sprint") or (game.mobile_mode and input.length() > 0.95)) and input.length() > 0.1 and game.state.stamina > 5 and not aiming and not crouched
 	var speed := 6.6 if running else 3.8
 	if aiming:
 		speed = 2.1

@@ -118,3 +118,10 @@ func _draw() -> void:
 		var active: bool = action in held.values()
 		draw_style_box(RazlomMenuStyle.surface(Color(0.3, 0.44, 0.34, 0.9) if active else Color(0.05, 0.13, 0.1, 0.7), Color(0.6, 0.75, 0.55, 0.5), 14), rect)
 		draw_string(font, rect.position + Vector2(4, 36), names[action], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 8, 12, Color("edf2dc"))
+
+func diagnostics() -> Dictionary:
+	var result: Dictionary = {}
+	for action in zones:
+		var rect: Rect2 = zones[action]
+		result[action] = [rect.position.x, rect.position.y, rect.size.x, rect.size.y]
+	return {"zones": result, "origin": [move_origin.x, move_origin.y], "movement": [movement.x, movement.y], "visible": visible}
