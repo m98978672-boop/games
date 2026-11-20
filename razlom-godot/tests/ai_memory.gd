@@ -82,6 +82,17 @@ func run_tests() -> void:
 	guard.choose_target(0.1)
 	check(not guard.alert, "Unsuccessful local search ends instead of chasing forever")
 	check(guard.awareness.events[0].cleared, "Searched episode remains in history marked checked")
+	guard.awareness.observe(Vector3(20, 0.3, 20), "sound", 0.65)
+	guard.search_step = 2
+	guard.behavior = "search"
+	var fresh_target: Vector3 = guard.choose_target(0.1)
+	check(guard.behavior == "investigate" and guard.search_step == 0, "New evidence elsewhere resets an old search route")
+	check(fresh_target == Vector3(20, 0.3, 20), "New search heads to observed evidence rather than the hidden player")
+	guard.position = fresh_target
+	guard.choose_target(0.1)
+	guard.position += Vector3(2.0, 0, 0)
+	guard.choose_target(0.1)
+	check(guard.behavior == "search", "First search leg does not oscillate back to the evidence centre")
 	guard.awareness.events.clear()
 	guard.hit(1)
 	check(guard.awareness.focus().source == "damage", "Unseen damage is recorded as danger evidence")

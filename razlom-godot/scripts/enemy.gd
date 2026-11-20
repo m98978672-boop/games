@@ -10,6 +10,7 @@ var visible_contact := false
 var report_cooldown := 0.0
 var search_step := 0
 var search_time := 0.0
+var search_origin := Vector3.ZERO
 var cooldown := 0.0
 var scan := 0.0
 var home := Vector3.ZERO
@@ -69,6 +70,7 @@ func remember_sighting(point: Vector3) -> void:
 	awareness.observe(point, "sight", 1.0)
 	search_step = 0
 	search_time = 0
+	search_origin = point
 	alert = true
 	if report_cooldown <= 0:
 		report_cooldown = 4.0
@@ -83,6 +85,11 @@ func choose_target(delta: float) -> Vector3:
 	if not contact.is_empty():
 		alert = true
 		last_seen = contact.point
+		if search_origin.distance_to(last_seen) > 2.0:
+			search_origin = last_seen
+			search_step = 0
+			search_time = 0
+			behavior = "investigate"
 		if global_position.distance_to(last_seen) > 1.8 and search_step == 0 and behavior != "search":
 			behavior = "investigate"
 			return last_seen
