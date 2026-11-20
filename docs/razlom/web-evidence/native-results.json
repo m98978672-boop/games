@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 39.907,
+  "elapsedSeconds": 45.727,
   "checks": [
     {
       "name": "import",
@@ -37,8 +37,8 @@
     },
     {
       "name": "mission",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -47,9 +47,18 @@
         "--script",
         "res://tests/mission.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nIntegration checks: 45; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nIntegration checks: 45; failures: 8\nFAIL: Older checkpoint loads\nFAIL: Older checkpoint restores destroyed blocks\nFAIL: Older checkpoint restores quest flags\nFAIL: Older checkpoint restores exactly one pump\nFAIL: Older checkpoint restores player health\nFAIL: Save accepts settled physical rubble\nFAIL: Rubble checkpoint loads\nFAIL: Exactly one settled rubble object survives reload\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Older checkpoint loads",
+        "FAIL: Older checkpoint restores destroyed blocks",
+        "FAIL: Older checkpoint restores quest flags",
+        "FAIL: Older checkpoint restores exactly one pump",
+        "FAIL: Older checkpoint restores player health",
+        "FAIL: Save accepts settled physical rubble",
+        "FAIL: Rubble checkpoint loads",
+        "FAIL: Exactly one settled rubble object survives reload"
+      ]
     },
     {
       "name": "perception",
@@ -69,8 +78,8 @@
     },
     {
       "name": "destruction",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -79,9 +88,13 @@
         "--script",
         "res://tests/destruction.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nDestruction checks: 35; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nDestruction checks: 36; failures: 3\nFAIL: Ruins checkpoint loads\nFAIL: Can return to a safe older snapshot\nFAIL: Reload restores charge inventory\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Ruins checkpoint loads",
+        "FAIL: Can return to a safe older snapshot",
+        "FAIL: Reload restores charge inventory"
+      ]
     },
     {
       "name": "presentation",
@@ -101,8 +114,8 @@
     },
     {
       "name": "ai-memory",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -111,14 +124,16 @@
         "--script",
         "res://tests/ai_memory.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nAI memory checks: 34; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nAI memory checks: 34; failures: 1\nFAIL: Checkpoint with AI memory loads\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Checkpoint with AI memory loads"
+      ]
     },
     {
       "name": "mobile-story",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -127,14 +142,16 @@
         "--script",
         "res://tests/mobile_story.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nMobile/story checks: 21; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nMobile/story checks: 21; failures: 1\nFAIL: Story checkpoint loads\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Story checkpoint loads"
+      ]
     },
     {
       "name": "character-story",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -143,9 +160,11 @@
         "--script",
         "res://tests/character_story.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nCharacter/story checks: 20; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nCharacter/story checks: 35; failures: 1\nFAIL: Vera directly offers her medical side quest\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Vera directly offers her medical side quest"
+      ]
     },
     {
       "name": "touch-camera",
@@ -197,8 +216,8 @@
     },
     {
       "name": "body-reactions",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": -6,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -207,14 +226,16 @@
         "--script",
         "res://tests/body_reactions.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 28; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nFAIL: Checkpoint preserves persistent body\n\n================================================================\nhandle_crash: Program crashed with signal 11\nEngine version: Godot Engine v4.4.1.stable.official (49a5bc7b616bd04689a2c89e89bda41f50241464)\nDumping the backtrace. Please include this when reporting the bug to the project developer.\n[1] /lib/x86_64-linux-gnu/libc.so.6(+0x45330) [0x7fb4f8845330] (??:0)\n-- END OF BACKTRACE --\n================================================================\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Checkpoint preserves persistent body"
+      ]
     },
     {
       "name": "quests",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -223,9 +244,11 @@
         "--script",
         "res://tests/quests.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nQuest/effects checks: 35; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nQuest/effects checks: 38; failures: 1\nFAIL: Extended quest world saves and loads\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Extended quest world saves and loads"
+      ]
     },
     {
       "name": "ballistics",
@@ -245,8 +268,8 @@
     },
     {
       "name": "local-damage",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -255,12 +278,14 @@
         "--script",
         "res://tests/local_damage.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nLocal damage checks: 17; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nLocal damage checks: 17; failures: 1\nFAIL: Checkpoint with local damage loads\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Checkpoint with local damage loads"
+      ]
     }
   ],
-  "passed": true,
+  "passed": false,
   "limitations": [
     "Headless dummy renderer; no image/audio validation",
     "Automated mission uses teleportation and frozen enemy ticks for isolation",
