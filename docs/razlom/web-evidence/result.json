@@ -7,6 +7,9 @@
     "Player moves under browser keyboard input",
     "Escape returns to pause menu",
     "Shelter save writes inside browser user storage",
+    "Save survives a complete page reload through IndexedDB",
+    "Saved game loads from the browser start menu",
+    "Games launcher opens the real game inside its iframe",
     "No script or WASM runtime errors"
   ],
   "errors": [],
