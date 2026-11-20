@@ -36,6 +36,8 @@ func run_tests() -> void:
 		check(rig.elbow.is_finite() and rig.segments[0].basis.is_finite(), "Degenerate and vertical targets remain finite")
 	check(rig.wrist.distance_to(shoulder) <= 1.011, "Unreachable targets cannot infinitely stretch sleeve")
 	var player = game.player
+	player._process(0)
+	check(player.left_arm.wrist.distance_to(player.camera.to_local(player.gun.get_node("LeftHand").global_position)) < 0.005, "Actual viewmodel support wrist remains attached within reach")
 	player.rotation = Vector3.ZERO
 	player.receive_bullet(player.to_global(Vector3(0.29, 1.0, 0)), Vector3.ZERO)
 	check(game.state.right_arm_wound == 40 and not player.can_fire(), "Right arm hit triggers protective reflex and shot lock")

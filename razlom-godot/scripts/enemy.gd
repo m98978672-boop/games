@@ -259,11 +259,13 @@ func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) ->
 				contact = candidate
 	if contact is Vector3:
 		point = contact
-	var local := visual.to_local(point)
-	last_hit_region = "head" if local.y > 1.45 else ("left_arm" if local.x < -0.28 else ("right_arm" if local.x > 0.28 else "torso"))
+	var local := to_local(point)
+	var zone := RazlomBallistics.region(local)
+	last_hit_region = ("left_arm" if local.x < 0 else "right_arm") if zone == "arms" else zone
 	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual
 	if last_hit_region == "left_arm": host = visual.get_node("ArmLJoint/ArmL")
 	elif last_hit_region == "right_arm": host = visual.get_node("ArmRJoint/ArmR")
+	elif zone == "legs": host = visual.get_node("LegLJoint/LegL" if local.x < 0 else "LegRJoint/LegR")
 	var mark := RazlomArt.box(host, Vector3.ZERO, Vector3(0.065, 0.055, 0.007), RazlomArt.material(Color("84251e")))
 	mark.set_meta("impact_mark", true)
 	mark.visible = contact is Vector3
@@ -272,8 +274,7 @@ func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) ->
 	impact_marks.append(mark)
 	if impact_marks.size() > 4:
 		impact_marks.pop_front().queue_free()
-	var zone := RazlomBallistics.region(to_local(point))
-	if zone in ["legs", "vitals"]: last_hit_region = zone
+
 	var result := RazlomBallistics.resolve(zone, amount, helmet if zone == "head" else armor)
 	if zone == "head":
 		helmet = maxf(0, helmet - float(result.wear))

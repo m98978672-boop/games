@@ -243,8 +243,8 @@ func advance_touch_look(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	if is_instance_valid(gun):
-		left_arm.solve(Vector3(-0.24, -0.26, 0.12), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
-		right_arm.solve(Vector3(0.24, -0.26, 0.12), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
+		left_arm.solve(Vector3(-0.18, -0.28, 0.02), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
+		right_arm.solve(Vector3(0.22, -0.28, 0.04), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
 	if game.mobile_mode and not game.ended:
 		advance_touch_look(delta)
 
