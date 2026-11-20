@@ -558,6 +558,16 @@ func setup_hud() -> void:
 	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	message_label.position = Vector2(-340, -199)
 	root.add_child(message_label)
+	for readable in [stats_label, hint_label, message_label]:
+		readable.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.02, 0.95))
+		readable.add_theme_constant_override("outline_size", 5)
+	var hint_style := StyleBoxFlat.new()
+	hint_style.bg_color = Color(0.02, 0.055, 0.045, 0.92)
+	hint_style.content_margin_left = 10
+	hint_style.content_margin_right = 10
+	hint_style.content_margin_top = 6
+	hint_style.content_margin_bottom = 6
+	hint_label.add_theme_stylebox_override("normal", hint_style)
 	var controls := ui_label("WASD  ДВИЖЕНИЕ    /    ЛКМ  ОГОНЬ    /    E  ВЗЯТЬ    /    R  МАГАЗИН    /    G  ЗАРЯД    /    ESC  МЕНЮ", 12, Color("a5b6a5"))
 	controls.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	controls.position = Vector2(36, -32)
@@ -626,13 +636,21 @@ func setup_hud() -> void:
 		mission_label.add_theme_font_size_override("font_size", 13)
 		controls.hide()
 		message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		message_label.position = Vector2(-150, -50)
+		message_label.offset_left = -150
+		message_label.offset_right = 150
+		message_label.offset_top = -80
+		message_label.offset_bottom = 10
 		message_label.custom_minimum_size.x = 300
 		message_label.size = Vector2(300, 90)
 		message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		message_label.add_theme_font_size_override("font_size", 13)
 		hint_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		hint_label.position = Vector2(-140, 32)
+		hint_label.offset_left = -150
+		hint_label.offset_right = 150
+		hint_label.offset_top = 32
+		hint_label.offset_bottom = 80
+		hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		for label in [brand, clock_label, stats_label, hint_label, message_label]:
 			label.add_theme_color_override("font_outline_color", Color(0.01, 0.04, 0.02, 0.85))
 			label.add_theme_constant_override("outline_size", 3)
@@ -729,7 +747,7 @@ func _process(delta: float) -> void:
 	var distance := Vector2(offset.x, offset.z).length()
 	var local_target: Vector3 = player.global_transform.basis.inverse() * offset
 	var bearing := atan2(local_target.x, -local_target.z)
-	var direction_text := "ПРЯМО" if absf(bearing) < 0.35 else ("РАЗВЕРНИСЬ" if absf(bearing) > 2.5 else ("СПРАВА →" if bearing > 0 else "← СЛЕВА"))
+	var direction_text := "ПРЯМО" if absf(bearing) < 0.35 else ("РАЗВЕРНИСЬ" if absf(bearing) > 2.5 else ("ПОВЕРНИ НАПРАВО" if bearing > 0 else "ПОВЕРНИ НАЛЕВО"))
 	mission_label.text = "01 / ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nЗадание завершено" if state.complete else (("Убежище" if state.pump else "Насос · склад 03") + " · %d м\n" % int(distance) + direction_text))
 	if get_tree().paused or ended:
 		return
@@ -757,6 +775,7 @@ func _process(delta: float) -> void:
 		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + str(hit.collider.get_meta("title"))
 	elif is_sheltered(player.global_position):
 		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + ("Установить насос" if state.pump and not state.complete else "Убежище · верстак")
+	hint_label.visible = not hint_label.text.is_empty()
 	if state.health <= 0 or player.position.y < -12:
 		ended = true
 		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
