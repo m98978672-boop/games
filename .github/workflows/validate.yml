@@ -134,6 +134,8 @@ jobs:
         run: node truck-haul/tests/logic.mjs
       - name: Test shooter touch controls (стик, свайп, огонь, перезарядка)
         run: node shooter/tests/touch.mjs
+      - name: Test road-tycoon victory (финал, сохранение, свободная игра)
+        run: node road-tycoon/tests/victory.test.js
       - name: Test game endings — у каждой игры должен быть финал
         run: |
           # Раньше у этих игр не было концовки ни в каком виде: рейсы и

@@ -647,8 +647,11 @@
       if (S.dailyTimer <= 0) $('daily').classList.add('hidden');
     }
 
-    if (s.won && !S.winShown) {
-      S.winShown = true;
+    /* Экран финала показываем по флагу из сейва: после перезагрузки
+       победа не потеряется, а после «Продолжить развитие» больше не
+       всплывёт. Раньше флаг жил только в памяти модуля. */
+    if (s.won && !s.winShown) {
+      s.winShown = true;
       showVictory();
     }
   };
@@ -741,6 +744,11 @@
           S.app.reset();
           S.winShown = false;
         }, { danger: true, yes: 'Новая игра' });
+      } else if (act === 'free-mode') {
+        Sim.startFreeMode(S.app.state);
+        UI.closeModal();
+        toast('Свободная игра: стройте и зарабатывайте без целей', 'info');
+        S.app.save();
       } else if (act === 'save') {
         S.app.save();
       } else if (act === 'start') {
@@ -863,23 +871,34 @@
 
   function showVictory() {
     const s = S.app.state;
+    const r = Sim.campaignSummary(s);
+    const rankText = {
+      'безупречная': 'Безупречная кампания: сеть, сервис и деньги сошлись вместе.',
+      'образцовая': 'Образцовая кампания: редкие сбои, но своя дорога построена до конца.',
+      'крепкая': 'Крепкая кампания: цель взята, хотя пришлось потрудиться.',
+      'трудовая': 'Трудовая кампания: целей добились, но экономика держалась на пределе.',
+    }[r.rank] || 'Кампания пройдена.';
     openModal(`
       <div class="modal-hero victory">
         <span class="hero-badge">кампания пройдена</span>
         <h1>ДОРОЖНАЯ ИМПЕРИЯ</h1>
         <p class="hero-sub">Все цели выполнены. Компания «Трасса» связала города, построила сервис и заработала миллион на мелочах.</p>
+        <p class="hero-note">${rankText}</p>
       </div>
       <div class="stat-grid wide-grid">
-        <div><span>Капитал</span><b>${U.money(Sim.companyValue(s))}</b></div>
+        <div><span>Капитал</span><b>${U.money(r.value)}</b></div>
         <div><span>Дней в игре</span><b>${U.dayNumber(s.time)}</b></div>
-        <div><span>Дорог</span><b>${Math.round(s.roads.reduce((a, x) => a + (x.open ? x.totalKm : 0), 0))} км</b></div>
-        <div><span>Объектов</span><b>${s.facilities.length}</b></div>
-        <div><span>Сервисов оказано</span><b>${U.num(s.stats.totalServices)}</b></div>
-        <div><span>Заработано</span><b>${U.money(s.stats.totalIncome)}</b></div>
+        <div><span>Дорог</span><b>${r.roadsKm} км</b></div>
+        <div><span>Городов в сети</span><b>${r.cities} из ${r.totalCities}</b></div>
+        <div><span>Объектов</span><b>${r.facilities}</b></div>
+        <div><span>Сервисов оказано</span><b>${U.num(r.services)}</b></div>
+        <div><span>Заработано</span><b>${U.money(r.income)}</b></div>
+        <div><span>Уровень компании</span><b>${r.level}</b></div>
       </div>
+      <p class="modal-text">После финала цели кончаются, но игра — нет: сеть можно достраивать в свободном режиме.</p>
       <div class="modal-actions">
         <button class="btn ghost" data-modal="reset">Новая игра</button>
-        <button class="btn primary" data-modal="close">Продолжить развитие</button>
+        <button class="btn primary" data-modal="free-mode">Свободная игра</button>
       </div>
     `, { wide: true });
   }

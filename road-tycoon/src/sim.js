@@ -44,7 +44,9 @@
       xp: 0,
       level: 1,
       won: false,
-      winShown: false,
+      winShown: false,   // экран финала уже показан (живёт в сейве)
+      wonDay: 0,         // в какой день взята последняя цель
+      freeMode: false,   // после финала игра продолжается свободно
       cities: C.cities.map((c, i) => ({ id: i, pop: c.pop, sat: 1, acc: 0, ruined: false, alarm: 0 })),
       villages: [],
       cityVersion: 1,
@@ -1124,10 +1126,56 @@
       s.objIndex = idx;
       if (s.objDone.length >= C.objectives.length && !s.won) {
         s.won = true;
+        s.wonDay = U.dayNumber(s.time);
+        s.winShown = false;   // экран финала ещё предстоит показать
+        s.freeMode = false;
         Sim.notice(s, 'win', 'Дорожная империя построена! Вы можете продолжать развивать сеть.');
       }
     }
   }
+
+  /* После финала цели кончились — но игра не обязана кончаться. Свободный
+     режим убирает экран итогов и оставляет экономику, города и стройку:
+     можно достраивать сеть, зарабатывать и смотреть, куда всё придёт. */
+  Sim.startFreeMode = function (s) {
+    if (!s) return false;
+    s.freeMode = true;
+    s.winShown = true;
+    Sim.notice(s, 'info', 'Свободная игра: целей больше нет, дорога остаётся.');
+    Sim.addNews(s, 'info', 'Компания «Трасса» переходит к свободному развитию сети.');
+    return true;
+  };
+
+  /* Итоги кампании для экрана финала. Считаются по состоянию игры, а не
+     по таймеру, поэтому их можно показать и после перезагрузки. */
+  Sim.campaignSummary = function (s) {
+    if (!s) return null;
+    const roadsKm = s.roads.reduce((a, x) => a + (x.open ? x.totalKm : 0), 0);
+    const cities = Sim.connectedCityCount(s);
+    const days = s.wonDay || U.dayNumber(s.time);
+    const value = Sim.companyValue(s);
+    let rank = 'крепкая';
+    if (value >= 2000000 && s.stats.totalServices >= 4000) rank = 'безупречная';
+    else if (value >= 1500000) rank = 'образцовая';
+    else if (value < 900000) rank = 'трудовая';
+    return {
+      days,
+      cities,
+      totalCities: C.cities.length,
+      roadsKm: Math.round(roadsKm),
+      facilities: s.facilities.filter((f) => f.ready).length,
+      services: s.stats.totalServices,
+      income: s.stats.totalIncome,
+      value,
+      level: s.level,
+      rank,
+      freeMode: !!s.freeMode,
+    };
+  };
+
+  /* Наружу — чтобы проверять финал без прокрутки игровых часов: цель,
+     взятая мгновенно, должна давать ровно тот же итог. */
+  Sim.checkObjectives = checkObjectives;
 
   Sim.currentObjective = function (s) {
     for (const o of C.objectives) if (!s.objDone.includes(o.id)) return o;
@@ -1474,6 +1522,13 @@
       data.cityList.forEach((c) => C.cities.push(Object.assign({}, c)));
     }
     if (!s.villages) s.villages = [];
+    /* Старые сейвы не знают про финал. Победу не теряем: если все цели
+       закрыты, игра уже пройдена — но экран покажем один раз после
+       загрузки, а не молча. */
+    if (typeof s.won !== 'boolean') s.won = false;
+    if (typeof s.winShown !== 'boolean') s.winShown = false;
+    if (typeof s.freeMode !== 'boolean') s.freeMode = false;
+    if (typeof s.wonDay !== 'number') s.wonDay = s.won ? U.dayNumber(s.time) : 0;
     s.vehicles = [];
     s.notices = [];
     s.floats = [];
