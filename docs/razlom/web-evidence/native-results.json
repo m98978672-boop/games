@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 33.303,
+  "elapsedSeconds": 35.31,
   "checks": [
     {
       "name": "import",
@@ -117,8 +117,8 @@
     },
     {
       "name": "mobile-story",
-      "exitCode": 1,
-      "passed": false,
+      "exitCode": 0,
+      "passed": true,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -127,11 +127,9 @@
         "--script",
         "res://tests/mobile_story.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nMobile/story checks: 21; failures: 1\nFAIL: Second finger rotates view independently\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nMobile/story checks: 21; failures: 0\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": [
-        "FAIL: Second finger rotates view independently"
-      ]
+      "unexpectedDiagnostics": []
     },
     {
       "name": "character-story",
@@ -166,7 +164,7 @@
       "unexpectedDiagnostics": []
     }
   ],
-  "passed": false,
+  "passed": true,
   "limitations": [
     "Headless dummy renderer; no image/audio validation",
     "Automated mission uses teleportation and frozen enemy ticks for isolation",
