@@ -47,6 +47,13 @@ try{
  await page.waitForTimeout(500);
  await check('Finger release stops automatic fire',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.ammo),released));
  await page.screenshot({path:'../../docs/razlom/web-evidence/phone-play.png',timeout:60000});
+ await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.reload));
+ await page.waitForFunction(()=>window.__razlomStatus.weapon.reload>0 && window.__razlomStatus.weapon.phase!=='ready',null,{timeout:10000});
+ await check('Touch reload drives the visible moving-parts animation',async()=>assert.notEqual(await page.evaluate(()=>window.__razlomStatus.weapon.phase),'ready'));
+ await page.screenshot({path:'../../docs/razlom/web-evidence/weapon-reload.png',timeout:60000});
+ await page.waitForFunction(()=>window.__razlomStatus.weapon.phase==='ready' && window.__razlomStatus.ammo===18,null,{timeout:20000});
+ await check('Reload completes and restores actual ammunition',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.ammo),18));
+
  await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.inventory));
  await page.waitForFunction(()=>window.__razlomStatus.dialog.visible);
  await check('Phone inventory dialog fits the portrait viewport',async()=>{const s=await page.evaluate(()=>window.__razlomStatus);const r=s.dialog.rect;assert.ok(r[0]>=0 && r[1]>=0 && r[0]+r[2]<=s.view[0]+1 && r[1]+r[3]<=s.view[1]+1);});
