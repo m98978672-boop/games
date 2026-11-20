@@ -134,6 +134,8 @@ func try_interact(hit: Dictionary) -> bool:
 			hit.collider.befriend()
 		"courier":
 			courier_dialog()
+		"relay":
+			relay_dialog()
 		"vera":
 			vera_dialog()
 		"bed":
@@ -151,7 +153,17 @@ func vera_dialog() -> void:
 		body = "«Нашёл? Давай сюда. Я подключу питание.\nЕсли заработает, к утру будет запас на весь Очаг»."
 	if game.state.truth_shared:
 		body += "\n\n«Ты решил не прятать накладную. Я скажу людям, что подпись моего брата стоит под приказом. Но подпись ещё не доказывает, что он выбрал это сам»."
+	if game.state.complete:
+		body += "\n\nНа восток идёт дорога к ретранслятору 12. Там должны храниться записи конвоя. Найди, кто отдавал приказы Илье."
+	if game.state.relay_shared:
+		body += "\n\n«На записи Илья спорит с диспетчером. Он не бросил нас добровольно. Ищи северный шлюз — туда ушёл последний конвой»."
 	var choices: Array = []
+	if game.state.relay_log and not game.state.relay_shared:
+		choices.append({"text": "Передать Вере запись конвоя", "action": func():
+			game.state.relay_shared = true
+			game.state.medkits += 1
+			game.notify("Вера: «Он пытался вернуться. Северный шлюз — наша следующая зацепка». +1 аптечка")
+			game.resume()})
 	if game.state.pump and not game.state.complete:
 		choices.append({"text": "Отдать насосный блок", "action": func():
 			game.resume()
@@ -160,6 +172,8 @@ func vera_dialog() -> void:
 		if game.state.scrap >= 2 and game.state.health < 100:
 			game.state.scrap -= 2
 			game.state.health = 100
+			game.state.pain = 0
+			game.state.leg_wound = 0
 			medic_motion.greet("treat")
 			game.notify("Вера обработала раны")
 		else:
@@ -302,3 +316,10 @@ func advance_people(delta: float) -> void:
 			motion.model.rotation.y = lerp_angle(motion.model.rotation.y, atan2(-direction.x, -direction.z), 1.0 - exp(-delta * 3.0))
 	if attention_timer <= 0:
 		attention_timer = 0.25
+
+func relay_dialog() -> void:
+	if not game.state.complete:
+		open("РЕТРАНСЛЯТОР 12", "Резервного питания хватает только на архив. Сначала верни насос: люди ждут воду, а Вера поможет разобраться в записях.", [{"text": "Вернуться к поиску насоса", "action": game.resume}])
+		return
+	game.state.relay_log = true
+	open("02 / ГОЛОС В ЭФИРЕ", "Запись 06:14. Диспетчер: «Конвой уходит к северному шлюзу. Груз не вскрывать».\nИлья: «В Очаге дети. Я оставляю насос, остальное везите сами».\nТреск помех. Другой голос: «Водитель не выбирает маршрут».\n\nЭто не оправдание подписи в накладной, но теперь понятно: Илья спорил с приказом. Верни запись Вере.", [{"text": "Забрать запись и вернуться к Вере", "action": game.resume}])

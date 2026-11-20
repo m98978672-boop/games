@@ -105,6 +105,7 @@ func _physics_process(delta: float) -> void:
 		speed = 1.9
 	if game.state.fatigue > 85 or game.state.warmth < 10:
 		speed *= 0.72
+	speed *= 1.0 - game.state.leg_wound * 0.004
 	var direction := transform.basis * Vector3(input.x, 0, input.y)
 	velocity.x = move_toward(velocity.x, direction.x * speed, delta * 24)
 	velocity.z = move_toward(velocity.z, direction.z * speed, delta * 24)
@@ -137,12 +138,15 @@ func _physics_process(delta: float) -> void:
 	var reload_blend := sin(clampf(reload_time / 1.4, 0.0, 1.0) * PI)
 	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.2, -0.21, -0.6)
 	anchor.y += reload_blend * 0.08 - smoothstep(0.0, 0.35, draw_time) * 0.2
+	var tremor := sin(Time.get_ticks_msec() * 0.027) * game.state.pain * 0.00008
+	anchor.x += tremor
 	var breath := sin(Time.get_ticks_msec() * 0.0018) * (0.001 if aiming else 0.003)
 	gun.position = gun.position.lerp(anchor + Vector3(sin(bob) * (0.003 if aiming else 0.023) * movement_blend + look_sway.x, absf(cos(bob)) * (0.003 if aiming else 0.018) * movement_blend + breath - landing - hurt_blend * 0.035, recoil + hurt_blend * 0.035), 1.0 - exp(-delta * 14.0))
 	gun.rotation.x = lerp_angle(gun.rotation.x, 0.18 * reload_blend + recoil * 2.4 - (0.3 if running else 0.0) + hurt_blend * 0.1 + look_sway.y, 1.0 - exp(-delta * 18.0))
 	gun.rotation.z = lerp_angle(gun.rotation.z, -0.48 * reload_blend - input.x * (0.01 if aiming else 0.065) + sin(bob) * movement_blend * 0.02 + hurt_blend * 0.09, 1.0 - exp(-delta * 12.0))
 	motion_state = "draw" if draw_time > 0 else ("hurt" if hurt_blend > 0.1 else ("reload" if reload_time > 0 else ("shoot" if recoil > 0.02 else ("run" if running else ("walk" if movement_blend > 0.1 else ("aim" if aiming else "idle"))))))
 	weapon_motion.advance(reload_time, recoil, delta)
+	camera.rotation.z = lerp_angle(camera.rotation.z, -input.x * 0.025 + hurt_blend * 0.045 + tremor, 1.0 - exp(-delta * 9.0))
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
 	if Input.is_action_pressed("fire") and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
 		if game.state.ammo > 0:
@@ -218,3 +222,19 @@ func on_hurt() -> void:
 	hurt_blend = 1.0
 	if is_instance_valid(game.combat_feedback):
 		game.combat_feedback.hurt_time = 0.35
+
+func receive_bullet(point: Vector3, source: Vector3, power: float = 36.0) -> void:
+	if game.ended or game.state.health <= 0:
+		return
+	var zone := RazlomBallistics.region(to_local(point), crouched)
+	var key := "helmet" if zone == "head" else "armor"
+	var result := RazlomBallistics.resolve(zone, power, float(game.state.get(key)))
+	game.state.set(key, maxf(0, float(game.state.get(key)) - float(result.wear)))
+	game.state.health = maxf(0, game.state.health - float(result.damage))
+	game.state.pain = minf(100, game.state.pain + float(result.damage) * 1.5)
+	if zone == "legs":
+		game.state.leg_wound = minf(100, game.state.leg_wound + 35)
+	on_hurt()
+	last_health = game.state.health
+	game.combat_feedback.injury(zone, to_local(source), game.state.pain, result.fatal)
+	game.notify("Смертельное ранение: " + zone if result.fatal else ("Попадание: " + zone + " • H — аптечка, ищи укрытие"))

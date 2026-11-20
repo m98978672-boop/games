@@ -1,8 +1,12 @@
 class_name RazlomState
 extends RefCounted
 const SAVE_VERSION := 2
-const NUMERIC_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "ammo", "reserve", "medkits", "food", "bottles", "charges", "scrap", "kills"]
-const METER_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue"]
+const NUMERIC_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "ammo", "reserve", "medkits", "food", "bottles", "charges", "scrap", "kills", "armor", "helmet", "pain", "leg_wound"]
+const METER_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "armor", "helmet", "pain", "leg_wound"]
+var armor := 0.0
+var helmet := 0.0
+var pain := 0.0
+var leg_wound := 0.0
 var health := 100.0
 var hunger := 82.0
 var water := 76.0
@@ -22,11 +26,14 @@ var manifest := false
 var truth_shared := false
 var passage := false
 var passage_broken := false
+var relay_log := false
+var relay_shared := false
 var kills := 0
 
 func tick(delta: float, sprinting: bool, indoors: bool = false) -> void:
 	if not is_finite(delta) or delta < 0:
 		return
+	pain = maxf(0, pain - delta * 4.0)
 	hunger = maxf(0, hunger - delta * 0.055)
 	water = maxf(0, water - delta * 0.085)
 	stamina = clampf(stamina + delta * (-18.0 if sprinting else 12.0), 0, 100)
@@ -69,6 +76,8 @@ func use_item(kind: String) -> bool:
 				return false
 			medkits -= 1
 			health = minf(100, health + 45)
+			leg_wound = 0
+			pain *= 0.3
 		"food":
 			if food <= 0 or hunger >= 100:
 				return false
@@ -90,7 +99,7 @@ func reload_gun() -> int:
 	return amount
 
 func snapshot() -> Dictionary:
-	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken}
+	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken, "relay_log": relay_log, "relay_shared": relay_shared}
 	for key in NUMERIC_KEYS:
 		result[key] = get(key)
 	return result
@@ -103,6 +112,9 @@ func restore(source: Dictionary) -> bool:
 		data["fatigue"] = 12.0
 	if data.get("version", 0) != SAVE_VERSION:
 		return false
+	for key in ["armor", "helmet", "pain", "leg_wound"]:
+		if not data.has(key):
+			data[key] = 0.0
 	for key in NUMERIC_KEYS:
 		if not (data.get(key) is float or data.get(key) is int):
 			return false
@@ -111,10 +123,12 @@ func restore(source: Dictionary) -> bool:
 			return false
 		if not METER_KEYS.has(key) and value != floor(value):
 			return false
-	for key in ["manifest", "truth_shared", "passage", "passage_broken"]:
+	for key in ["manifest", "truth_shared", "passage", "passage_broken", "relay_log", "relay_shared"]:
 		if not data.get(key, false) is bool:
 			return false
 		data[key] = data.get(key, false)
+	if data.relay_shared and not data.relay_log:
+		return false
 	if data.passage and data.passage_broken:
 		return false
 	if data.truth_shared and not data.manifest:
@@ -128,6 +142,6 @@ func restore(source: Dictionary) -> bool:
 	if data["ammo"] > 18:
 		return false
 	# Commit only after all checks: failed restore must not mutate live state.
-	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken"]:
+	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken", "relay_log", "relay_shared"]:
 		set(key, data[key])
 	return true
