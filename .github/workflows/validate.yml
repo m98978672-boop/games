@@ -165,7 +165,10 @@ jobs:
           npm run test:build
           node tests/escape.mjs
       - name: Test truck-showroom model details (трубы, LED-оптика, габариты)
-        run: node truck-showroom/tests/details.mjs
+        run: |
+          cd truck-showroom
+          npm ci --no-audit --no-fund
+          node tests/details.mjs
       - name: Test road-tycoon victory (финал, сохранение, свободная игра)
         run: node road-tycoon/tests/victory.test.js
       - name: Guard finale coverage (у каждой игры есть конец, и он закреплён тестом)
