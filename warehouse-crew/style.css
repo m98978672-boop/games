@@ -281,6 +281,9 @@ body.view-top .tactical-grid { opacity: 1; animation: gridDrift 42s linear infin
   overflow: hidden;
 }
 .qb-who b { color: var(--ink); letter-spacing: 0.04em; }
+.qb-who .qb-next { color: var(--accent); font-size: calc(13px * var(--ui)); line-height: 1; margin-left: 1px; }
+.qb-who:active { transform: scale(0.97); }
+.qb-who:active .qb-dot { animation: none; opacity: 1; }
 .qb-who .qb-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px rgba(232, 180, 90, 0.8); animation: dotPulse 2s infinite; }
 .qb-who #qb-state { color: var(--ink-faint); text-transform: lowercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes dotPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -310,8 +313,14 @@ body.view-top .tactical-grid { opacity: 1; animation: gridDrift 42s linear infin
 /* шторка спрятана — быстрые приказы поднимаются над «язычком» */
 body[data-sheet="hidden"] .quickbar { bottom: calc(36px * var(--ui) + var(--safe-b)); }
 
+/* !important — потому что у quickbar есть анимация появления с fill-mode */
 body[data-sheet="half"] .quickbar,
-body[data-sheet="full"] .quickbar { opacity: 0; transform: translateY(10px); pointer-events: none; }
+body[data-sheet="full"] .quickbar {
+  opacity: 0 !important;
+  transform: translateY(10px) !important;
+  pointer-events: none;
+  animation: none !important;
+}
 
 /* -------------------------------- пульт -------------------------------- */
 

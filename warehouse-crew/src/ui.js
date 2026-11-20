@@ -865,6 +865,18 @@ window.WC = window.WC || {};
       });
     });
 
+    // Плашка с именем в quickbar переключает рабочего — без открытия шторма
+    var cycleButton = q('qb-cycle');
+    if (cycleButton) {
+      cycleButton.addEventListener('click', function () {
+        var crew = game.api.crew;
+        var index = 0;
+        for (var i = 0; i < crew.length; i++) if (crew[i].id === game.api.activeWorkerId) index = i;
+        var next = crew[(index + 1) % crew.length];
+        if (next) { select(next.id); buzz(8); }
+      });
+    }
+
     // Тап по метке над рабочим = выбрать его (мышью и пальцем одинаково)
     var markersHost = document.getElementById('markers');
     if (markersHost) {
