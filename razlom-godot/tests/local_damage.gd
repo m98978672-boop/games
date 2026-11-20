@@ -49,6 +49,20 @@ func run_tests() -> void:
 	check(game.save_game(), "Checkpoint saves local material damage")
 	check(game.load_game(), "Checkpoint with local damage loads")
 	check(game.blocks[id].removed.size() == count, "Removed material survives rebuilding the level")
+	var saved: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(game.save_path))
+	var malformed: Dictionary = saved.duplicate(true)
+	malformed.local_damage[id] = [0, 0]
+	check(not game.validate_world_save(malformed), "Duplicate damaged cell IDs are rejected")
+	malformed = saved.duplicate(true)
+	malformed.local_damage[id] = [512]
+	check(not game.validate_world_save(malformed), "Out-of-range damaged cells are rejected")
+	malformed = saved.duplicate(true)
+	malformed.erase("local_damage")
+	check(game.validate_world_save(malformed), "Legacy world saves remain valid")
+	var guard = game.enemies[0]
+	guard.set_physics_process(false)
+	guard.hit_at(1, guard.visual.to_global(Vector3(0, 1.65, -0.3)), Vector3.FORWARD, Vector3.BACK)
+	check(guard.last_hit_region == "head" and guard.impact_marks.size() == 1, "Model hit location selects head reaction and bounded mark")
 	var rig := RazlomArmRig.new(game.player.camera)
 	var shoulder := Vector3(-0.24, -0.26, 0.12)
 	var wrist := Vector3(-0.15, -0.3, -0.7)
