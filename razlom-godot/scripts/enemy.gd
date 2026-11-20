@@ -286,7 +286,7 @@ func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) ->
 		if to_local(point).x < 0: arm_wounds.x = minf(100, arm_wounds.x + 40)
 		else: arm_wounds.y = minf(100, arm_wounds.y + 40)
 	motion.react(zone, to_local(point))
-	if float(result.wear) == 0:
+	if float(result.wear) < amount:
 		RazlomBloodFX.spawn(game, point, normal)
 	hit(float(result.damage), impulse)
 	motion.hit_region = last_hit_region

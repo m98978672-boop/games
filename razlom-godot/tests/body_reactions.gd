@@ -77,6 +77,7 @@ func run_tests() -> void:
 	game.state.helmet = 0
 	game.state.health = 100
 	player.receive_bullet(player.to_global(Vector3(0, 1.65, 0)), Vector3.ZERO)
+	check(not player.can_fire(), "Lethal hit disables trigger even before death menu frame")
 	game._process(0.016)
 	check(game.ended and not paused and get_nodes_in_group("corpses").size() == 2, "Player head death creates body before death menu pauses world")
 	await create_timer(0.5).timeout

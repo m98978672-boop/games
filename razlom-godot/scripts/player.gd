@@ -85,7 +85,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		camera.rotation.x = clampf(camera.rotation.x - event.relative.y * game.sensitivity * game.look_scale, -1.45, 1.45)
 
 func _physics_process(delta: float) -> void:
-	if game.ended:
+	if game.ended or game.state.health <= 0:
 		return
 	if game.state.health < last_health - 0.1:
 		on_hurt()
@@ -278,7 +278,7 @@ func receive_bullet(point: Vector3, source: Vector3, power: float = 36.0) -> voi
 		game.state.set(arm_key, minf(100, float(game.state.get(arm_key)) + 40))
 		reflex_time = 0.7
 		reload_time = 0
-	if float(result.wear) == 0:
+	if float(result.wear) < power:
 		RazlomBloodFX.spawn(game, point, (source - point).normalized())
 	if zone == "legs":
 		game.state.leg_wound = minf(100, game.state.leg_wound + 35)
@@ -307,7 +307,7 @@ func sample_shot_direction(rng: RandomNumberGenerator) -> Vector3:
 	return (-camera.global_basis.z + camera.global_basis.x * cos(angle) * radius + camera.global_basis.y * sin(angle) * radius).normalized()
 
 func can_fire() -> bool:
-	return not game.ended and reflex_time <= 0 and game.state.right_arm_wound < 60
+	return not game.ended and game.state.health > 0 and reflex_time <= 0 and game.state.right_arm_wound < 60
 
 func begin_death() -> void:
 	gun.hide()
