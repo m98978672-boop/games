@@ -12,6 +12,7 @@
     "three": "0.186.1"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "^1.1.1",
     "esbuild": "0.28.2"
   }
 }

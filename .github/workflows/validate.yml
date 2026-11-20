@@ -132,6 +132,8 @@ jobs:
         run: node tools/tests/frame-dt.mjs
       - name: Test truck-haul logic (contracts, gearbox, wear, payouts, init order)
         run: node truck-haul/tests/logic.mjs
+      - name: Test shooter touch controls (стик, свайп, огонь, перезарядка)
+        run: node shooter/tests/touch.mjs
       - name: Test game endings — у каждой игры должен быть финал
         run: |
           # Раньше у этих игр не было концовки ни в каком виде: рейсы и
@@ -139,6 +141,14 @@ jobs:
           node truck-haul/tests/career.mjs
           node night-taxi/tests/finale.mjs
           node euro-haul/tests/career-end.mjs
+      - name: Test country-atlas (карта, реки, дороги, ИИ, старт) — 33 набора
+        run: |
+          # Раньше этот раздел не проверялся в CI вовсе, и `npm test` падал с
+          # чистой установки: тесты требовали @napi-rs/canvas, которого не было
+          # в зависимостях. Теперь зависимость объявлена и прогон обязателен.
+          cd country-atlas
+          npm ci --no-audit --no-fund
+          npm test
       - name: Test Folder OS (apps, terminal, disk export)
         run: node folder-os/tests/smoke.mjs
       - name: Test the bug-hunting bot keeps distinguishing real NaN from library limits

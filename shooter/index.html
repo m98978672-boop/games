@@ -43,6 +43,33 @@
   @keyframes loaderShine { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
   #loader .pct { margin-top:16px; font-size:16px; color:#ffd966; font-weight:bold; }
   #loader .hint { margin-top:34px; font-size:12.5px; color:#666; letter-spacing:0.4px; text-transform:uppercase; }
+
+/* Тач-управление. Раньше шутер требовал мышь с захватом курсора:
+   на телефоне игра не запускалась вообще. Теперь слева стик ходьбы,
+   справа свайп обзора, кнопки огня и перезарядки под большие пальцы. */
+#touch-ui { position: fixed; inset: 0; pointer-events: none; z-index: 60; display: none; }
+body.touch #touch-ui { display: block; }
+#touch-stick {
+  position: absolute; left: 22px; bottom: 26px; width: 132px; height: 132px;
+  border-radius: 50%; border: 2px solid rgba(255,255,255,.22);
+  background: rgba(8,14,12,.34); pointer-events: auto; touch-action: none;
+}
+#touch-knob {
+  position: absolute; left: 50%; top: 50%; width: 56px; height: 56px;
+  margin: -28px 0 0 -28px; border-radius: 50%;
+  background: rgba(230,240,235,.5); border: 2px solid rgba(255,255,255,.6);
+}
+.touch-btn {
+  position: absolute; pointer-events: auto; touch-action: none;
+  border-radius: 50%; border: 2px solid rgba(255,255,255,.28);
+  background: rgba(8,14,12,.42); color: #eaf3ee; font: 600 12px/1.15 system-ui, sans-serif;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  user-select: none; -webkit-user-select: none;
+}
+.touch-btn:active { background: rgba(120,200,160,.42); }
+#touch-fire { right: 24px; bottom: 96px; width: 96px; height: 96px; }
+#touch-reload { right: 30px; bottom: 30px; width: 66px; height: 66px; font-size: 11px; }
+#touch-jump { right: 132px; bottom: 40px; width: 66px; height: 66px; font-size: 11px; }
 </style>
 </head>
 <body>
@@ -156,10 +183,26 @@ window.addEventListener('resize', onResize);
 document.getElementById('startBtn').addEventListener('click', () => {
   state.menu = false;
   startGame();
-  canvas.requestPointerLock();
+  // Захват курсора — только там, где есть мышь. На телефоне requestPointerLock
+  // либо отсутствует, либо сразу снимается, и игра оставалась без обзора.
+  var touch = ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0;
+  if (!touch && canvas.requestPointerLock) canvas.requestPointerLock();
 });
 
-function togglePause(){ if(!state.active) return; state.paused = !state.paused; document.getElementById('overlay').classList.toggle('hidden', !state.paused); document.getElementById('overlay').querySelector('h2').textContent = state.paused?'ПАУЗА':'ОПЕРАЦИЯ «Точка»'; document.getElementById('overlay').querySelector('p').textContent = state.paused?'Игра приостановлена. Нажмите P, чтобы продолжить.':'Шутер от первого лица. Уничтожайте боевиков, выполняйте миссии.'; document.getElementById('overlay').querySelector('.btn').textContent = state.paused?'ПРОДОЛЖИТЬ':'НАЧАТЬ ИГРУ'; document.getElementById('overlay').querySelector('.btn').onclick = state.paused ? togglePause : null; if(!state.paused) canvas.requestPointerLock(); else document.exitPointerLock(); }
+/* Мост для тач-управления (touch.js). Игра не знает, мышью или пальцем
+   в неё играют: мост отдаёт наружу те же флаги и действия. Без этого
+   на телефоне шутер был мёртвым — курсор не захватить, свайп не работал. */
+window.__shooterKeys = keys;
+window.__shooterLook = function (dx, dy) {
+  yaw -= dx * 2.2;
+  pitch -= dy * 2.2;
+  pitch = Math.max(-Math.PI / 2 + 0.02, Math.min(Math.PI / 2 - 0.02, pitch));
+};
+window.__shooterReload = function () { if (state.active && !state.reloading) startReload(); };
+window.__shooterPause = function () { togglePause(); };
+
+function togglePause(){ if(!state.active) return; state.paused = !state.paused; document.getElementById('overlay').classList.toggle('hidden', !state.paused); document.getElementById('overlay').querySelector('h2').textContent = state.paused?'ПАУЗА':'ОПЕРАЦИЯ «Точка»'; document.getElementById('overlay').querySelector('p').textContent = state.paused?'Игра приостановлена. Нажмите P, чтобы продолжить.':'Шутер от первого лица. Уничтожайте боевиков, выполняйте миссии.'; document.getElementById('overlay').querySelector('.btn').textContent = state.paused?'ПРОДОЛЖИТЬ':'НАЧАТЬ ИГРУ'; document.getElementById('overlay').querySelector('.btn').onclick = state.paused ? togglePause : null; if(touchDevice()){ if(state.paused) document.exitPointerLock&&document.exitPointerLock(); } else if(!state.paused) canvas.requestPointerLock(); else document.exitPointerLock(); }
+function touchDevice(){ return ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0; }
 
 // --- Модель (риг) из примитивов ---
 function buildBodyPart(shape, color, sx,sy,sz, x,y,z, rx,ry,rz) {
@@ -1308,5 +1351,12 @@ window.addEventListener('mouseup', e => { if (e.button === 0) keys['MouseDown'] 
 initThree();
 </script>
 <script src="../shared/engine-bootstrap.js" defer></script>
+<div id="touch-ui" aria-hidden="true">
+  <div id="touch-stick"><div id="touch-knob"></div></div>
+  <div class="touch-btn" id="touch-fire">ОГОНЬ</div>
+  <div class="touch-btn" id="touch-reload">ПЕРЕЗАРЯД</div>
+  <div class="touch-btn" id="touch-jump">ПРЫЖОК</div>
+</div>
+<script src="touch.js"></script>
 </body>
 </html>
