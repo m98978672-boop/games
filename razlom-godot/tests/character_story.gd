@@ -56,6 +56,19 @@ func run_tests() -> void:
 	check(not s.passage, "Attacking a guard breaks agreement")
 	game.interactions.courier_dialog()
 	check(game.interactions.column.get_child_count() == 3 and s.passage_broken, "Broken agreement cannot be repurchased")
+	guard.health = 30
+	guard.visible_contact = true
+	guard.scan = 1.0
+	guard.last_seen = guard.global_position + Vector3(4, 0, 0)
+	guard._physics_process(0.016)
+	check(guard.behavior == "withdraw", "Wounded guard withdraws from visible contact")
+	guard.visible_contact = false
+	guard._physics_process(0.016)
+	check(guard.behavior != "withdraw", "Withdrawal does not track an unseen player")
+	for button in game.find_children("*", "Button", true, false):
+		if button.text.begins_with("Обзор ·"):
+			button.pressed.emit()
+	check(is_equal_approx(game.look_scale, 1.4), "Sensitivity menu changes actual input multiplier")
 	game.interactions.journal()
 	check(game.interactions.panel.visible, "Journal remains available after broken agreement")
 	game.queue_free()
