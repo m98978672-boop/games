@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 29.071,
+  "elapsedSeconds": 32.3,
   "checks": [
     {
       "name": "import",
@@ -111,7 +111,7 @@
         "--script",
         "res://tests/ai_memory.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nAI memory checks: 31; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nAI memory checks: 34; failures: 0\n",
       "acceptedBuildLimitations": [],
       "unexpectedDiagnostics": []
     }
