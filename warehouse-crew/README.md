@@ -155,6 +155,7 @@ node tests/brain.test.mjs  # обученная сеть > необученно�
 |---|---|
 | От третьего лица (рабочий с коробкой) | `screenshots/stage-third.png` |
 | Тактический сверху | `screenshots/stage-top.png` |
+| Рабочий крупным планом (в цеху) | `screenshots/stage-portrait.png` |
 | Три персонажа в ряд | `screenshots/rig-lineup.png` |
 | 3D-разрез тела | `screenshots/stage-body.png` |
 

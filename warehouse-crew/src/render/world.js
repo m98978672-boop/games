@@ -270,7 +270,8 @@ WC.world = (function () {
     var legR = makeLeg(-1);
 
     var carryAnchor = new THREE_NS.Group();
-    carryAnchor.position.set(0, 0.16, 0.36);
+    carryAnchor.position.set(0, 0.02, 0.34);
+    carryAnchor.scale.setScalar(0.82);
     torso.add(carryAnchor);
 
     scene.add(root);
