@@ -756,16 +756,38 @@ async function buildPlayRows(limit) {
     const title = (text.match(/^#\s+(.+)$/m) || [null, ent.name])[1].replace(/[*_`]/g, '').trim();
     // Раздел «как играть» — до следующего заголовка того же уровня.
     const play = text.match(/^##\s+(?:Как играть|How to play|Управление|Gameplay)[^\n]*\n([\s\S]*?)(?=^##\s|\Z)/m);
-    const body = (play ? play[1] : text.split(/^##\s/m)[1] || '').replace(/\s+/g, ' ').trim();
-    if (body.length < 90) continue;
+    const full = (play ? play[1] : text.split(/^##\s/m)[1] || '').replace(/\s+/g, ' ').trim();
+    if (full.length < 90) continue;
 
-    rows.push({
-      system,
-      user: `Как играть в «${title}» и в чём смысл?`,
-      assistant: body.slice(0, 1400),
-      kind: 'play-guide',
-      source: `${ent.name}/README.md`,
-    });
+    /* Длинное руководство режем по границе предложения: обрывок посреди
+       слова учит модели обрезать ответ. Остаток уходит отдельным примером
+       с пометкой «продолжение», чтобы ничего не потерялось. */
+    const LIMIT = 1900;
+    const parts = [];
+    if (full.length <= LIMIT) parts.push(full);
+    else {
+      let rest = full;
+      while (rest.length && parts.length < 3) {
+        let cut = rest.lastIndexOf('. ', LIMIT);
+        if (cut < LIMIT * 0.5) cut = rest.lastIndexOf(' ', LIMIT);
+        if (cut <= 0) cut = Math.min(LIMIT, rest.length);
+        parts.push(rest.slice(0, cut + 1).trim());
+        rest = rest.slice(cut + 1).trim();
+      }
+    }
+
+    for (let p = 0; p < parts.length; p++) {
+      rows.push({
+        system,
+        user: p === 0
+          ? `Как играть в «${title}» и в чём смысл?`
+          : `Продолжи руководство по «${title}» (часть ${p + 1}).`,
+        assistant: parts[p],
+        kind: 'play-guide',
+        source: `${ent.name}/README.md`,
+      });
+      if (rows.length >= limit) return rows;
+    }
   }
   return rows;
 }
