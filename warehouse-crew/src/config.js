@@ -13,10 +13,13 @@ WC.CONFIG = {
   shiftHours: 8,                // но по табелю это 8 часов
   orderSpawnEvery: 12,
   maxPending: 10,
+  truckEvery: 120,              // как часто подходит фура (секунды симуляции)
+  firstTruckDelay: 40,
 
   // Камера
   camera: {
     third: { distance: 4.2, height: 3.35, lookAhead: 0.45, fov: 56 },
+    follow: { height: 12.5, distance: 5.4, fov: 50 },
     top: { height: 22, fov: 42, tilt: 0.92, distance: 9 },
   },
 
