@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 38.732,
+  "elapsedSeconds": 42.987,
   "checks": [
     {
       "name": "import",
@@ -117,8 +117,8 @@
     },
     {
       "name": "mobile-story",
-      "exitCode": 1,
-      "passed": false,
+      "exitCode": 0,
+      "passed": true,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -127,16 +127,9 @@
         "--script",
         "res://tests/mobile_story.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nMobile/story checks: 21; failures: 6\nFAIL: Evidence unlocks a new Vera conversation\nFAIL: Giving Vera time does not secretly publish evidence\nFAIL: Publishing is an explicit persistent choice\nFAIL: Journal reflects the player's choice\nFAIL: Evidence and disclosure survive reload\nFAIL: Epilogue changes to match disclosed evidence\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nMobile/story checks: 21; failures: 0\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": [
-        "FAIL: Evidence unlocks a new Vera conversation",
-        "FAIL: Giving Vera time does not secretly publish evidence",
-        "FAIL: Publishing is an explicit persistent choice",
-        "FAIL: Journal reflects the player's choice",
-        "FAIL: Evidence and disclosure survive reload",
-        "FAIL: Epilogue changes to match disclosed evidence"
-      ]
+      "unexpectedDiagnostics": []
     },
     {
       "name": "character-story",
@@ -251,7 +244,7 @@
       "unexpectedDiagnostics": []
     }
   ],
-  "passed": false,
+  "passed": true,
   "limitations": [
     "Headless dummy renderer; no image/audio validation",
     "Automated mission uses teleportation and frozen enemy ticks for isolation",
