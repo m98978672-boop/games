@@ -4,7 +4,7 @@ import Logic from './logic.js';
 const $ = id => document.getElementById(id);
 const SAVE='dalnoboy-3d-save-v1';
 const regions=['Северо-Запад','Поволжье','Юг','Урал и Сибирь','Север'];
-const defaultState={money:24000,fuel:420,oil:100,temp:82,condition:100,engine:100,brakes:100,suspension:100,tires:100,fatigue:0,odometer:0,completed:0,reputation:0,region:0,jobs:[],active:null,speed:0,lateral:0,day:1,minute:500,firstPerson:false,gear:1,gearboxAuto:true,rpm:750};
+const defaultState={money:24000,fuel:420,oil:100,temp:82,condition:100,engine:100,brakes:100,suspension:100,tires:100,fatigue:0,odometer:0,completed:0,reputation:0,region:0,jobs:[],active:null,finalDone:false,endless:false,careerBest:0,speed:0,lateral:0,day:1,minute:500,firstPerson:false,gear:1,gearboxAuto:true,rpm:750};
 // Чистая логика игры подключается до первого использования:
 // const-биндинги не поднимаются, как function, и порядок здесь важен.
 const cities=Logic.CITIES;
@@ -89,11 +89,79 @@ function ask(text,onYes,opts){opts=opts||{};window.__askYes=onYes;openModal(opts
 document.addEventListener('click',e=>{const b=e.target.closest('[data-ask]');if(!b)return;const yes=b.dataset.ask==='yes';const run=window.__askYes;window.__askYes=null;closeModal();if(yes&&run)run();});
 function openModal(title,sub,html,eyebrow='ДИСПЕТЧЕРСКАЯ'){$('modal-title').textContent=title;$('modal-sub').textContent=sub;$('modal-eyebrow').textContent=eyebrow;$('modal-content').innerHTML=html;$('modal-backdrop').classList.remove('hidden')}
 function closeModal(){$('modal-backdrop').classList.add('hidden')}
-function showJobs(){if(S.active){toast('Сначала заверши текущий рейс');return}if(!S.jobs.some(j=>j.status==='available'))S.jobs.push(...makeJobs(250,S.completed+251));modalRegion=S.region;openModal(`Доступные заказы · ${S.jobs.filter(j=>j.status==='available').length}`,`${S.completed} доставлено · каталог из 250+ контрактов`,regions.map((r,i)=>`<button data-region="${i}" class="${i===modalRegion?'active':''}">${r}</button>`).join('')+'<div class="job-list" id="job-list"></div>');renderJobs()}
+function showJobs(){if(S.active){toast('Сначала заверши текущий рейс');return}if(!S.jobs.some(j=>j.status==='available'))S.jobs.push(...makeJobs(250,S.completed+251));modalRegion=S.region;
+  const careerLen=S.endless||S.finalDone?`${S.completed} доставлено · бесконечные рейсы`:`${S.completed} из ${CAREER_LENGTH} доставок до конца карьеры`;
+  openModal(`Доступные заказы · ${S.jobs.filter(j=>j.status==='available').length}`,careerLen,regions.map((r,i)=>`<button data-region="${i}" class="${i===modalRegion?'active':''}">${r}</button>`).join('')+'<div class="job-list" id="job-list"></div>');renderJobs()}
 function renderJobs(){const target=$('job-list');if(!target)return;const jobs=S.jobs.filter(j=>j.status==='available'&&j.region===modalRegion).slice(0,18);target.innerHTML=jobs.length?jobs.map(j=>`<article class="job-card"><div><h3>${j.from} <span style="color:#9cac80">→</span> ${j.to}</h3><div class="job-meta">${j.distance} км · ${j.load} т · срок ${j.deadline} ч · ${regions[j.region]}</div><div class="job-tags"><span>${j.cargo}</span>${j.urgent?'<span>СРОЧНО</span>':''}${j.fragile?'<span>ХРУПКИЙ ГРУЗ</span>':''}</div></div><div><div class="job-reward">${cash(j.reward)}</div><button data-accept="${j.id}">ВЗЯТЬ ГРУЗ</button></div></article>`).join(''):'<div class="empty-state">В регионе нет доступных предложений. Посмотри другие регионы.</div>'}
 function accept(id){const j=S.jobs.find(x=>x.id===id);if(!j||S.active)return;j.status='active';j.progress=0;j.broken=0;j.startMinute=S.minute;S.active=j;S.region=j.region;S.minute+=10;closeModal();toast('Заказ принят. Тронься с места, чтобы начать рейс.');save();ui()}
 function service(type){if(S.active){toast('Сначала доставь текущий груз');return}const jobs={oil:[1200,()=>S.oil=100,'Масло заменено'],coolant:[850,()=>S.temp=82,'Охлаждающая жидкость обновлена'],repair:[Math.ceil((100-S.condition)*120+(100-S.engine)*220+(100-S.brakes)*100+(100-S.suspension)*130+(100-S.tires)*90),()=>{S.condition=S.engine=S.brakes=S.suspension=S.tires=100},'Тягач отремонтирован'],fuel:[Math.ceil((420-S.fuel)*62),()=>S.fuel=420,'Бак заправлен']}[type];if(!jobs||jobs[0]===0){toast('Обслуживание не требуется');return}if(S.money<jobs[0]){toast('Недостаточно средств');return}S.money-=jobs[0];jobs[1]();save();ui();toast(jobs[2])}
-function finish(){const j=S.active;if(!j)return;const late=S.minute>j.startMinute+j.deadline*60,damage=Math.round(j.broken*j.reward*.5);let pay=Math.max(0,j.reward-damage-(late?Math.round(j.reward*.2):0));S.money+=pay;S.completed++;S.reputation=clamp(S.reputation+(late?-1:2),0,100);j.status='completed';S.active=null;S.speed=0;toast(`${late?'Доставка с опозданием':'Доставка принята'} · ${cash(pay)}`);save();ui()}
+function finish(){const j=S.active;if(!j)return;const late=S.minute>j.startMinute+j.deadline*60,damage=Math.round(j.broken*j.reward*.5);let pay=Math.max(0,j.reward-damage-(late?Math.round(j.reward*.2):0));S.money+=pay;S.completed++;S.reputation=clamp(S.reputation+(late?-1:2),0,100);j.status='completed';S.active=null;S.speed=0;toast(`${late?'Доставка с опозданием':'Доставка принята'} · ${cash(pay)}`);save();ui();if(j.final){showCareerEnd()}else if(S.completed>=CAREER_LENGTH&&!S.finalDone&&!S.endless&&!hasFinalJob()){offerFinalContract()}}
+
+/* ---------------------------------------------- концовка карьеры
+   Игра была бесконечной: рейсы шли один за другим, и «конца» не было
+   ни в каком виде. Теперь у карьеры есть финал. После 25 доставок
+   диспетчерская предлагает последний, особый контракт. Он выдаётся один
+   раз, не сгорает по сроку и оплачивается по полной. После него
+   показывается итог смены с числами, и есть выбор: остаться в игре
+   в режиме бесконечных рейсов или начать карьеру заново. */
+const CAREER_LENGTH=25;
+
+function hasFinalJob(){return S.jobs.some(j=>j.final&&j.status!=='completed')}
+
+function offerFinalContract(){
+  // CITIES — массив регионов, каждый регион — массив названий городов.
+  // Берём первый город первого региона и последний город последнего.
+  const from=(Logic.CITIES[0]&&Logic.CITIES[0][0])||'Санкт-Петербург';
+  const lastRegion=Logic.CITIES[Logic.CITIES.length-1]||[];
+  const to=lastRegion[lastRegion.length-1]||'Онега';
+  const job={
+    id:'final-contract', final:true, from, to,
+    region:regions.length-1,
+    cargo:'Сборный гуманитарный груз',
+    distance:1480, load:18, deadline:48, reward:180000,
+    urgent:false, fragile:true, status:'available',
+    route:makeRoute(424242), progress:0, broken:0, startMinute:0,
+  };
+  S.jobs.push(job);
+  openModal('Последний контракт','Диспетчерская · особое задание',
+    `<div class="notice"><b>${from} → ${to}</b><br>${job.distance} км · ${job.load} т · срок ${job.deadline} ч<br>
+     Оплата ${cash(job.reward)} — это больше, чем любой обычный рейс.<br><br>
+     Это последняя доставка карьеры. Отказаться можно, но другого такого заказа не будет.</div>
+     <button class="modal-action" id="take-final">ВЗЯТЬ ПОСЛЕДНИЙ ГРУЗ</button>`,
+    'КАРЬЕРА');
+  setTimeout(()=>{
+    const b=document.getElementById('take-final');
+    if(b)b.addEventListener('click',()=>{closeModal();accept('final-contract')});
+  },0);
+}
+
+function showCareerEnd(){
+  S.finalDone=true;
+  S.careerBest=Math.max(S.careerBest||0,S.completed);
+  const days=S.day, km=Math.floor(S.odometer), money=cash(S.money), rep=Math.round(S.reputation);
+  const verdict=rep>=70?'Надёжный перевозчик: диспетчеры ставят вас первым в очередь.'
+    :rep>=40?'Опытный водитель: работа есть всегда, но до легенды далеко.'
+    :'Водитель без репутации: были опоздания и битый груз.';
+  openModal('Карьера пройдена',`${S.completed} доставок · день ${days}`,`
+    <div class="notice">
+      <b>Последний рейс принят.</b><br><br>
+      Доставок: <b>${S.completed}</b><br>
+      Пробег: <b>${km.toLocaleString('ru-RU')} км</b><br>
+      Дней в пути: <b>${days}</b><br>
+      Репутация: <b>${rep}/100</b><br>
+      На счету: <b>${money}</b><br><br>
+      ${verdict}
+    </div>
+    <button class="modal-action" id="endless-btn">ОСТАТЬСЯ · БЕСКОНЕЧНЫЕ РЕЙСЫ</button>
+    <button class="modal-action" id="restart-btn" style="margin-left:7px;background:#3c2d2a;color:#f4b6a9">НАЧАТЬ ЗАНОВО</button>`,
+    'ИТОГ КАРЬЕРЫ');
+  setTimeout(()=>{
+    const e=document.getElementById('endless-btn');
+    if(e)e.addEventListener('click',()=>{S.endless=true;closeModal();save();ui();toast('Режим бесконечных рейсов включён')});
+    const r=document.getElementById('restart-btn');
+    if(r)r.addEventListener('click',()=>{localStorage.removeItem(SAVE);location.reload()});
+  },0);
+}
 function rest(){if(S.active){toast('Сначала доставь груз');return}if(S.money<500){toast('Не хватает денег');return}S.money-=500;S.fatigue=0;S.minute+=480;S.day+=Math.floor(S.minute/1440);S.minute%=1440;S.temp=82;save();ui();toast('Отдых 8 часов')}
 
 let cruise=false;S.cruise=false;const gearRatios=[0,2.8,2.1,1.68,1.4,1.2,1.05,.93,.82,.73,.65,.57,.5],shiftUp=[0,10,18,27,37,47,58,69,81,93,105,114,124];

@@ -116,6 +116,17 @@
     <button id="btn-death-restart" class="dd-btn danger">Начать заново</button>
   </div>
 </div>
+<!-- Экран победы: раньше у игры был только экран смерти, то есть выиграть
+     в неё было нельзя. Здесь финал выживания — эвакуация на седьмой день. -->
+<div id="win-overlay" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <h2>ЭВАКУАЦИЯ</h2>
+    <p id="win-reason">Вы дожили до эвакуации.</p>
+    <p id="win-stats" class="muted"></p>
+    <button id="btn-win-endless" class="dd-btn">Остаться в районе</button>
+    <button id="btn-win-restart" class="dd-btn danger">Новый район</button>
+  </div>
+</div>
 
 <div id="f3-overlay" class="modal-overlay" hidden>
   <div class="f3-shell">

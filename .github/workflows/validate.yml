@@ -115,6 +115,7 @@ jobs:
           node dead-district/tests/interaction-targets.mjs
           node dead-district/tests/storage.mjs
           node dead-district/tests/model-views.mjs
+          node dead-district/tests/evacuation.mjs
           node dead-district/tests/isometric-textures.mjs
           node dead-district/tools/static_gd_check.mjs
       - name: Test PLAYBRIDGE backend
@@ -131,6 +132,13 @@ jobs:
         run: node tools/tests/frame-dt.mjs
       - name: Test truck-haul logic (contracts, gearbox, wear, payouts, init order)
         run: node truck-haul/tests/logic.mjs
+      - name: Test game endings — у каждой игры должен быть финал
+        run: |
+          # Раньше у этих игр не было концовки ни в каком виде: рейсы и
+          # истории шли по кругу, а выживалка умела только убивать.
+          node truck-haul/tests/career.mjs
+          node night-taxi/tests/finale.mjs
+          node euro-haul/tests/career-end.mjs
       - name: Test Folder OS (apps, terminal, disk export)
         run: node folder-os/tests/smoke.mjs
       - name: Test the bug-hunting bot keeps distinguishing real NaN from library limits
