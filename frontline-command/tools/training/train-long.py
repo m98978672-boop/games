@@ -175,9 +175,9 @@ def main():
                 time.sleep(10*(attempt+1))
         print('checkpoint',json.dumps({'phase':args.phase,'step':step,'active_seconds':active,'file':name,'uploaded':bool(args.release),'complete':final}),flush=True)
     if best_score is None:update_best()
-    goal=phase_start+args.active_seconds;target=attempt_target(active,phase_start,args.active_seconds,args.attempt_active_seconds);next_ckpt=active+args.checkpoint_every;next_eval=active+args.eval_every;initial_step=step
+    goal=phase_start+args.active_seconds;attempt_goal=attempt_target(active,phase_start,args.active_seconds,args.attempt_active_seconds);next_ckpt=active+args.checkpoint_every;next_eval=active+args.eval_every;initial_step=step
     checkpoint(slot=slot);slot=1-slot;model.train()
-    while active<target and (not args.max_steps or step-initial_step<args.max_steps):
+    while active<attempt_goal and (not args.max_steps or step-initial_step<args.max_steps):
         # 25% imitation of isolated strategic snapshots, 75% waypoint decisions.
         if random.random()<.25:
             prefix,target=random.choice(comm_train);kind='commander'
@@ -190,12 +190,12 @@ def main():
         if step%20==0:print('training',json.dumps({'phase':args.phase,'step':step,'active_seconds':round(active,2),'kind':kind,'loss':float(loss.detach())}),flush=True)
         if active>=next_eval:update_best();next_eval=active+args.eval_every
         if active>=next_ckpt:checkpoint(slot=slot);slot=1-slot;next_ckpt=active+args.checkpoint_every
-    result=attempt_result(active,phase_start,args.active_seconds,target)
+    result=attempt_result(active,phase_start,args.active_seconds,attempt_goal)
     if result=='partial' and args.attempt_active_seconds:
         # Preserve the current adapter, optimizer and RNG for the next job;
         # never label a partial attempt as a completed five-hour phase.
         checkpoint(slot=slot)
-        print('attempt partial',json.dumps({'phase':args.phase,'steps':step,'active_seconds':active,'phase_goal':goal,'attempt_target':target}),flush=True)
+        print('attempt partial',json.dumps({'phase':args.phase,'steps':step,'active_seconds':active,'phase_goal':goal,'attempt_target':attempt_goal}),flush=True)
         return
     if not args.max_steps and result!='complete':raise RuntimeError('phase ended before reaching requested training time')
     update_best();checkpoint(final=True)
