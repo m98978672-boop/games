@@ -20,7 +20,7 @@ async function tapDialogButton(text){
   const b=d.buttons.find(b=>b.text.includes(text));
   assert.ok(b,`Missing dialog button: ${text}`);
   const r=d.rect;
-  if(b.rect[1]>=r[1]+20 && b.rect[1]+b.rect[3]<=r[1]+r[3]-20){await tapRect(b.rect);return;}
+  if(b.rect[1]+b.rect[3]/2>=r[1]+12 && b.rect[1]+b.rect[3]/2<=r[1]+r[3]-12){await tapRect(b.rect);return;}
   const x=r[0]+r[2]*.5, y=r[1]+r[3]*.65;
   const sign=b.rect[1]<r[1] ? 1 : -1;
   await dispatch('touchStart',[await point(x,y)]);

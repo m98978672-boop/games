@@ -8,6 +8,7 @@ var ring: MeshInstance3D
 var light: OmniLight3D
 static var sphere: SphereMesh
 static var torus: TorusMesh
+static var smoke_quad: QuadMesh
 func _ready() -> void:
 	add_to_group("blast_fx")
 	var effects := get_tree().get_nodes_in_group("blast_fx").filter(func(effect): return not effect.is_queued_for_deletion())
@@ -17,6 +18,8 @@ func _ready() -> void:
 		sphere = SphereMesh.new()
 		sphere.radial_segments = 12
 		sphere.rings = 6
+		smoke_quad = QuadMesh.new()
+		smoke_quad.size = Vector2.ONE * 2
 		torus = TorusMesh.new()
 		torus.inner_radius = 0.92
 		torus.outer_radius = 1.0
@@ -30,7 +33,15 @@ func _ready() -> void:
 	ring.material_override = make_material(Color("c7a275"), false)
 	add_child(ring)
 	for i in range(6):
-		var puff := orb(Color("645e52"), false)
+		var puff := MeshInstance3D.new()
+		puff.mesh = smoke_quad
+		var mat := make_material(Color("645e52"), false)
+		mat.albedo_texture = preload("res://assets/effects/smoke.png")
+		mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		puff.material_override = mat
+		add_child(puff)
 		puff.position = Vector3(cos(i * 2.4), 0.2, sin(i * 2.4)) * 0.55
 		smoke.append(puff)
 	light = OmniLight3D.new()
