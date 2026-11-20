@@ -97,7 +97,7 @@ for side,z in [('Right',.14),('Left',-.32)]:
         box('Knuckle%d'%i,(.015,.008,.018),skin,(-.03+i*.02,.058,-.007),parent=hand)
     box('Thumb',(.035,.035,.065),leather,(-.047,.012,.025),parent=hand,rotation=(0,.35,-.3))
 node('MuzzlePoint',(0,.015,-.75))
-flash_mat=resource('StandardMaterial3D','shading_mode = 0\nalbedo_color = Color(1, 0.7, 0.2, 1)\nemission_enabled = true\nemission = Color(1, 0.45, 0.08)\nemission_energy_multiplier = 2.0')
+flash_mat=resource('StandardMaterial3D','shading_mode = 0\nalbedo_color = Color(1, 0.7, 0.2, 1)\nemission_enabled = true\nemission = Color(1, 0.45, 0.08, 1)\nemission_energy_multiplier = 2.0')
 mesh('MuzzleFlash',resource('CylinderMesh','top_radius = 0.0\nbottom_radius = 0.028\nheight = 0.09\nradial_segments = 6'),flash_mat,(0,.015,-.785),rotation=(-math.pi/2,0,0))
 ext='\n'.join(f'[ext_resource type="ArrayMesh" path="res://assets/models/parts/{name}.obj" id="{name}"]' for name in ['receiver','stock','handguard','magazine'])
 (OUT/'carbine.tscn').write_text(f'[gd_scene load_steps={len(resources)+5} format=3]\n\n'+ext+'\n\n'+'\n\n'.join(resources)+'\n\n'+'\n\n'.join(nodes)+'\n')
