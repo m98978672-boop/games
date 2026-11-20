@@ -310,8 +310,11 @@ func spawn_loot(kind: String, pos: Vector3, title: String, id: String = "") -> v
 	world.add_child(item)
 	item.position = pos
 	var color := Color("81c2a8") if kind == "pump" else Color("c7ab6d")
-	Art.box(item, Vector3.ZERO, Vector3(0.55, 0.4, 0.4), Art.material(color, "metal"))
-	Art.box(item, Vector3(0, 0.24, 0), Vector3(0.28, 0.08, 0.15), Art.material(Color("c7c7a7")))
+	if kind in ["armor", "helmet"]:
+		Art.protection_pickup(item, kind == "helmet")
+	else:
+		Art.box(item, Vector3.ZERO, Vector3(0.55, 0.4, 0.4), Art.material(color, "metal"))
+		Art.box(item, Vector3(0, 0.24, 0), Vector3(0.28, 0.08, 0.15), Art.material(Color("c7c7a7")))
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(0.6, 0.5, 0.5)
