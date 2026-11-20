@@ -189,7 +189,16 @@ jobs:
           # в зависимостях. Теперь зависимость объявлена и прогон обязателен.
           cd country-atlas
           npm ci --no-audit --no-fund
-          npm test
+          # Лог шага недоступен снаружи, поэтому при падении хвост вывода
+          # уезжает в аннотацию — как уже сделано для багханта выше.
+          set +e
+          npm test > "$RUNNER_TEMP/country-atlas.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/country-atlas.log"
+          if [ "$status" -ne 0 ]; then
+            python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"country-atlas.log"); s="".join(open(p,errors="replace").readlines()[-60:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit $status
       - name: Test Folder OS (apps, terminal, disk export)
         run: node folder-os/tests/smoke.mjs
       - name: Test the bug-hunting bot keeps distinguishing real NaN from library limits
