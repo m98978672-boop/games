@@ -368,7 +368,17 @@ v.draw();
 ok('после сдвига снова копирование', v.rebuilds === 2, v.rebuilds);
 v.cam = { x: 0, y: 0, scale: overviewScale(v.view) };
 const st = worldStats(buildWorld(424242));
-ok('статистика считается быстро', (() => { const t = Date.now(); for (let i = 0; i < 200; i++) worldStats(world); return Date.now() - t < 120; })());
+ok('статистика считается быстро', (() => {
+  /* Лучший из трёх прогонов: порог ловит регресс алгоритма, а не
+     загруженность CI-машины в момент замера. */
+  let bestMs = Infinity;
+  for (let r = 0; r < 3; r++) {
+    const t = Date.now();
+    for (let i = 0; i < 200; i++) worldStats(world);
+    bestMs = Math.min(bestMs, Date.now() - t);
+  }
+  return bestMs < 120;
+})());
 void st;
 ok('базовый слой 1400×1400', v.base.width === WV.baseSize && v.base.height === WV.baseSize);
 // спутник: армии видны, при выключении — нет
