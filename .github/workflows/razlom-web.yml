@@ -61,6 +61,7 @@ jobs:
         run: |
           mkdir -p docs/razlom/web-evidence
           cp /tmp/razlom-web-check.log docs/razlom/web-evidence/build-failure.txt || true
+          cp /tmp/native-results.json docs/razlom/web-evidence/native-results.json || true
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add docs/razlom/web-evidence
