@@ -192,6 +192,13 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 18 * delta
 	move_and_slide()
 	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
+	if visible_contact:
+		var offset: Vector3 = game.player.camera.global_position - (global_position + Vector3.UP * 1.4)
+		var pitch := atan2(offset.y, Vector2(offset.x, offset.z).length())
+		motion.joints.ArmR.rotation.x -= clampf(pitch, -0.5, 0.5)
+		visual.get_node("Head").rotation.x = -clampf(pitch, -0.5, 0.5)
+	if leg_wound:
+		visual.rotation.z += sin(phase * 7.0) * 0.045
 	weapon_motion.advance(0, motion.recoil * 0.09, delta)
 	left_arm.solve(Vector3(-0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("LeftHand").global_position), -1.0)
 	right_arm.solve(Vector3(0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("RightHand").global_position), 1.0)

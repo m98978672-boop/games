@@ -35,7 +35,8 @@ func run_tests() -> void:
 	check(game.state.health > 0 and game.state.health < 100, "Leg hit wounds rather than instant death")
 	check(game.state.leg_wound > 0 and game.state.pain > 0, "Leg wound and pain persist")
 	check(game.combat_feedback.injury_time > 0 and game.combat_feedback.injury_text.contains("НОГА"), "Location-aware pain HUD activates")
-	game.state.use_item("heal")
+	check(player.begin_heal() and player.healing_time > 0, "First aid starts a dedicated weapon-lowering animation")
+	check(not player.begin_heal(), "First aid cannot stack while animating")
 	check(game.state.leg_wound == 0, "First aid treats movement wound")
 	game.state.helmet = 100
 	player.receive_bullet(player.to_global(Vector3(0, 1.65, 0)), Vector3.ZERO)

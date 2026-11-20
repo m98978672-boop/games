@@ -6,6 +6,8 @@ var gun: Node3D
 var weapon_motion: RazlomWeaponMotion
 var left_arm: RazlomArmRig
 var right_arm: RazlomArmRig
+var healing_time := 0.0
+var bandage: Node3D
 var cooldown := 0.0
 var reload_time := 0.0
 var recoil := 0.0
@@ -49,6 +51,8 @@ func _ready() -> void:
 	gun.scale = Vector3.ONE * 0.85
 	gun.position = Vector3(0.2, -0.21, -0.6)
 	weapon_motion = RazlomWeaponMotion.new(gun)
+	bandage = RazlomArt.box(gun.get_node("LeftHand"), Vector3(0, 0.035, 0), Vector3(0.055, 0.05, 0.09), RazlomArt.material(Color("dedbc4")))
+	bandage.hide()
 	gun.get_node("LeftHand/Sleeve").hide()
 	gun.get_node("RightHand/Sleeve").hide()
 	left_arm = RazlomArmRig.new(camera)
@@ -75,6 +79,8 @@ func _physics_process(delta: float) -> void:
 	if game.state.health < last_health - 0.1:
 		on_hurt()
 	last_health = game.state.health
+	healing_time = maxf(0, healing_time - delta)
+	bandage.visible = healing_time > 0
 	draw_time = maxf(0.0, draw_time - delta)
 	hurt_blend = move_toward(hurt_blend, 0.0, delta * 3.0)
 	if Input.is_action_just_pressed("crouch"):
@@ -137,6 +143,7 @@ func _physics_process(delta: float) -> void:
 	look_sway = look_sway.lerp(Vector2.ZERO, 1.0 - exp(-delta * 14.0))
 	var reload_blend := sin(clampf(reload_time / 1.4, 0.0, 1.0) * PI)
 	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.2, -0.21, -0.6)
+	anchor.y -= sin(clampf(healing_time / 1.2, 0, 1) * PI) * 0.16
 	anchor.y += reload_blend * 0.08 - smoothstep(0.0, 0.35, draw_time) * 0.2
 	var tremor := sin(Time.get_ticks_msec() * 0.027) * game.state.pain * 0.00008
 	anchor.x += tremor
@@ -146,9 +153,13 @@ func _physics_process(delta: float) -> void:
 	gun.rotation.z = lerp_angle(gun.rotation.z, -0.48 * reload_blend - input.x * (0.01 if aiming else 0.065) + sin(bob) * movement_blend * 0.02 + hurt_blend * 0.09, 1.0 - exp(-delta * 12.0))
 	motion_state = "draw" if draw_time > 0 else ("hurt" if hurt_blend > 0.1 else ("reload" if reload_time > 0 else ("shoot" if recoil > 0.02 else ("run" if running else ("walk" if movement_blend > 0.1 else ("aim" if aiming else "idle"))))))
 	weapon_motion.advance(reload_time, recoil, delta)
+	if healing_time > 0:
+		var reach := sin(clampf(healing_time / 1.2, 0, 1) * PI)
+		weapon_motion.support_hand.position = weapon_motion.hand_rest.origin.lerp(Vector3(-0.15, -0.06, 0.1), reach)
+		weapon_motion.support_hand.rotation.z = reach * 0.8
 	camera.rotation.z = lerp_angle(camera.rotation.z, -input.x * 0.025 + hurt_blend * 0.045 + tremor, 1.0 - exp(-delta * 9.0))
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
-	if Input.is_action_pressed("fire") and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
+	if Input.is_action_pressed("fire") and healing_time <= 0 and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
 		if game.state.ammo > 0:
 			game.state.ammo -= 1
 			cooldown = 0.19
@@ -162,7 +173,7 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("charge"):
 		game.throw_charge()
 	if Input.is_action_just_pressed("heal"):
-		game.state.use_item("heal")
+		begin_heal()
 	if Input.is_action_just_pressed("eat"):
 		game.state.use_item("food")
 	if Input.is_action_just_pressed("drink"):
@@ -238,3 +249,9 @@ func receive_bullet(point: Vector3, source: Vector3, power: float = 36.0) -> voi
 	last_health = game.state.health
 	game.combat_feedback.injury(zone, to_local(source), game.state.pain, result.fatal)
 	game.notify("Смертельное ранение: " + zone if result.fatal else ("Попадание: " + zone + " • H — аптечка, ищи укрытие"))
+
+func begin_heal() -> bool:
+	if healing_time > 0 or reload_time > 0 or not game.state.use_item("heal"):
+		return false
+	healing_time = 1.2
+	return true
