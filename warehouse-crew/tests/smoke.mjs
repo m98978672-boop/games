@@ -44,6 +44,22 @@ const gameSrc = readFileSync(join(root, 'src/game.js'), 'utf8');
 ok(!/GamesEngine\s*\.\s*create\s*\([^;]*?\)\s*\.\s*then/.test(gameSrc), 'GamesEngine.create() не используется как промис');
 ok(/\.promise|onReady/.test(gameSrc), 'bootEngine ждёт holder.promise / onReady');
 
+// 2в. Автомасштаб и мобильная раскладка: всё, что обещали телефону.
+ok(html.includes('src/layout.js'), 'подключён src/layout.js (автомасштаб)');
+ok(html.indexOf('src/layout.js') < html.indexOf('src/main.js'), 'layout.js подключён до main.js');
+ok(html.includes('id="quickbar"'), 'есть панель быстрых приказов #quickbar');
+ok(html.includes('id="sheet-handle"'), 'есть ручка нижней шторки #sheet-handle');
+ok(html.includes('id="shift-fill"'), 'есть полоска смены #shift-fill');
+ok(html.includes('viewport-fit=cover'), 'мета-вьюпорт учитывает вырез экрана');
+const layoutSrc = readFileSync(join(root, 'src/layout.js'), 'utf8');
+ok(/--ui/.test(layoutSrc) && /visualViewport|innerWidth/.test(layoutSrc), 'layout.js считает масштаб и следит за viewport');
+const gameCss = readFileSync(join(root, 'style.css'), 'utf8');
+const sheetCss = /data-sheet="hidden"/.test(html) && /--sheet-h/.test(gameCss);
+ok(sheetCss, 'в CSS есть состояния шторки и переменная --sheet-h');
+ok(/env\(safe-area-inset-bottom/.test(gameCss), 'учтён безопасный отступ снизу (safe-area)');
+ok(/prefers-reduced-motion/.test(gameCss), 'анимации уважают prefers-reduced-motion');
+ok(existsSync(join(root, 'tests/boot-jsdom.mjs')), 'есть запуск игры в jsdom (tests/boot-jsdom.mjs)');
+
 // 3. style.css наследует общую тему
 const css = readFileSync(join(root, 'style.css'), 'utf8');
 ok(/^@import url\("\.\.\/shared\/theme\.css"\);/.test(css.trimStart()), 'style.css начинается с @import ../shared/theme.css');
