@@ -148,6 +148,8 @@ jobs:
           node tests/escape.mjs
       - name: Test road-tycoon victory (финал, сохранение, свободная игра)
         run: node road-tycoon/tests/victory.test.js
+      - name: Guard finale coverage (у каждой игры есть конец, и он закреплён тестом)
+        run: node tools/tests/finale-coverage.mjs
       - name: Test game endings — у каждой игры должен быть финал
         run: |
           # Раньше у этих игр не было концовки ни в каком виде: рейсы и
