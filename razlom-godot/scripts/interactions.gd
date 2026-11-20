@@ -134,6 +134,11 @@ func try_interact(hit: Dictionary) -> bool:
 			hit.collider.befriend()
 		"courier":
 			courier_dialog()
+		"quest":
+			if hit.collider.get_meta("quest") == "board":
+				game.quests.board()
+			else:
+				game.quests.use_station(hit.collider.get_meta("quest"))
 		"relay":
 			relay_dialog()
 		"vera":
@@ -179,6 +184,7 @@ func vera_dialog() -> void:
 		else:
 			game.notify("Нужны 2 детали, а лечение имеет смысл только при ранении")
 		game.resume()})
+	choices.append({"text": "Дела Очага • помощь и вылазки", "action": game.quests.board})
 	choices.append({"text": "Я вернусь", "action": game.resume})
 	if game.state.manifest and not game.state.truth_shared:
 		choices.append({"text": "Показать накладную с подписью Ильи", "action": reveal_manifest})
@@ -256,7 +262,8 @@ func journal() -> void:
 	if s.manifest:
 		body += "\n\nНАКЛАДНАЯ № 17\nНасос перенаправили намеренно. Под приказом подпись Ильи Лесного, которого Вера считала погибшим."
 		body += "\nРешение: приказ обнародован; Вера ищет объяснение подписи." if s.truth_shared else "\nРешение пока открыто: показать документ Вере или сохранить его при себе."
-	open("ЖУРНАЛ / ОЧАГ", body, [{"text": "Вернуться в мир", "action": game.resume}])
+	body += game.quests.journal_text()
+	open("ЖУРНАЛ / ОЧАГ", body, [{"text": "Вернуться в мир", "action": game.resume}, {"text": "Дела Очага • выбрать задание", "action": game.quests.board}])
 
 func diagnostics() -> Dictionary:
 	var buttons: Array = []

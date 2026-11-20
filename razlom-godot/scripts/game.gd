@@ -9,6 +9,9 @@ const InteractionsScript = preload("res://scripts/interactions.gd")
 const DogScript = preload("res://scripts/dog.gd")
 var state = StateScript.new()
 var interactions = InteractionsScript.new()
+var quests := RazlomQuests.new()
+var shot_rng := RandomNumberGenerator.new()
+var last_shot_direction := Vector3.FORWARD
 var mobile_mode := false
 var touch_ui: RazlomTouchControls
 var day_minutes := 462.0
@@ -63,6 +66,8 @@ func _ready() -> void:
 	world_rng.seed = 7301
 	audio_rng.seed = 8201
 	interactions.game = self
+	quests.game = self
+	shot_rng.randomize()
 	bind_keys()
 	mobile_mode = DisplayServer.is_touchscreen_available()
 	if mobile_mode:
@@ -215,6 +220,7 @@ func build_level() -> void:
 	spawn_loot("scrap", Vector3(-14, 1.1, 7), "Детали • +3", "scrap_02")
 	spawn_loot("scrap", Vector3(30, 1.1, 1), "Детали • +3", "scrap_03")
 	RazlomDistrict.build(self)
+	RazlomQuestLocations.build(self)
 	for i in range(3):
 		var guard = EnemyScript.new()
 		guard.name = "guard_%d" % i
@@ -332,19 +338,23 @@ func ray(distance: float = 65.0) -> Dictionary:
 	return get_world_3d().direct_space_state.intersect_ray(query)
 
 func fire() -> void:
+	# Compute dispersion before adding this shot to recoil/bloom.
+	last_shot_direction = player.sample_shot_direction(shot_rng)
 	player.on_shot()
 	noise(player.global_position, 24)
 	play_tone(95, 0.07, 0.22)
-	var hit := ray()
+	var query := PhysicsRayQueryParameters3D.create(player.camera.global_position, player.camera.global_position + last_shot_direction * 80, 1 | 4 | 16)
+	query.exclude = [player.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
 		var object: Object = hit.collider
 		if object is RazlomEnemy:
 			combat_feedback.hit_time = 0.18
 		impact_particles(hit.position, hit.normal)
 		if object is RazlomBlock:
-			object.bullet_hit(hit.position, -player.camera.global_basis.z, 0.012, 36.0)
+			object.bullet_hit(hit.position, last_shot_direction, 0.012, 36.0)
 		elif object is RazlomEnemy:
-			object.hit_at(36, hit.position, hit.normal, -player.camera.global_basis.z * 9)
+			object.hit_at(36, hit.position, hit.normal, last_shot_direction * 9)
 		elif object.has_method("hit"):
 			object.hit(36, -player.camera.global_basis.z * 9)
 		flash(hit.position, Color("ffce84"), 0.08, 0.09)
@@ -419,7 +429,11 @@ func throw_charge() -> void:
 func explode(pos: Vector3) -> void:
 	noise(pos, 48)
 	play_tone(40, 0.3, 0.28)
-	flash(pos, Color("ffc26c"), 2.6, 0.3)
+	var effect := RazlomBlastFX.new()
+	world.add_child(effect)
+	effect.global_position = pos
+	if is_instance_valid(player):
+		player.shock_blend = maxf(player.shock_blend, maxf(0, 1 - player.global_position.distance_to(pos) / 18.0) * blast_exposure(pos, player.global_position + Vector3.UP))
 	for block in blocks.values().duplicate():
 		if is_instance_valid(block):
 			var offset: Vector3 = block.global_position - pos
@@ -798,6 +812,7 @@ func _process(delta: float) -> void:
 		mission_label.text = "02 / ГОЛОС В ЭФИРЕ\n" + ("Вера • убежище" if state.relay_log else "Ретранслятор 12") + " · %d м\n" % int(distance) + direction_text
 	if get_tree().paused or ended:
 		return
+	quests.advance(delta)
 	interactions.advance_people(delta)
 	elapsed += delta
 	day_minutes += delta * 0.2
@@ -980,6 +995,9 @@ func load_game() -> bool:
 	combat_feedback.injury_time = 0
 	combat_feedback.hurt_time = 0
 	player.set_crouched(false)
+	quests.scan_time = 0
+	player.shot_bloom = 0
+	player.shock_blend = 0
 	ended = false
 	resume()
 	notify("Сохранение загружено")
