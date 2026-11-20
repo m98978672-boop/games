@@ -1,0 +1,31 @@
+name: Evaluate remembered battle risk
+on:
+  push:
+    branches: [arena/11f06075-games]
+    paths: [.github/workflows/frontline-memory-battle-audit.yml]
+permissions:
+  contents: read
+jobs:
+  battle:
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [11, 23, 37, 45]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Paired full battles with frozen side-local history
+        run: |
+          set -o pipefail
+          node frontline-command/tests/battle-memory-candidate.mjs '${{ matrix.seed }}' 1200 31 4 | tee "$RUNNER_TEMP/battles-${{ matrix.seed }}.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: battle-risk-${{ matrix.seed }}
+          path: ${{ runner.temp }}/battles-${{ matrix.seed }}.log
+          if-no-files-found: warn
+          retention-days: 30
