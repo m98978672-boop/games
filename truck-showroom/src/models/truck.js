@@ -488,6 +488,21 @@ export function buildTruck(unit, M) {
     box(roof, 0.02, 0.34, 0.02, M.darkSteel, -0.95, roofY + roofAccent + 0.2, cabRearZ - 0.55);
     anchors.push({ pos: [0.52, roofY + roofAccent + 0.1, cabRearZ - 0.75], label: 'Люк кабины' });
   }
+  /* Светодиодная оптика: узкая полоса дневных ходовых огней под лобовым
+     стеклом и две фары-«полоски» внизу. Флаг led был у Orion X, но
+     никакой оптики, кроме обычных фар, модель не получала. */
+  if (unit.led) {
+    // дневная полоса во всю ширину кабины
+    box(root, cabW - 0.42, 0.045, 0.05, M.headlight, 0, wsBottom - 0.02, cabFront - 0.02);
+    for (const side of [-1, 1]) {
+      // фары-полоски в бампере
+      box(root, 0.34, 0.06, 0.05, M.headlight, side * 0.62, frameY - 0.22, cabFront - 0.04);
+      // поворотник-«клык» по краю
+      box(root, 0.05, 0.2, 0.05, M.amber, side * (cabW / 2 - 0.12), frameY - 0.12, cabFront - 0.03);
+    }
+    anchors.push({ pos: [0, wsBottom - 0.02, cabFront - 0.02], label: 'Дневные ходовые огни' });
+  }
+
   // габаритные огни на крыше
   for (const x of [-0.95, -0.5, 0.5, 0.95]) {
     const lamp = sphere(roof, 0.035, M.amber, x, roofY + roofAccent + 0.12, cabFront + 0.48, 8);
@@ -514,6 +529,26 @@ export function buildTruck(unit, M) {
         box(root, 0.085, 0.022, len - 0.16, accent, side * 1.225, 0.92, (z0 + z1) / 2);
         box(root, 0.085, 0.5, 0.03, paint2, side * 1.22, 0.72, z1 + 0.01);
       }
+    }
+  }
+
+  // ---------------------------------------------- выхлопные трубы (stacks)
+  /* Два вертикальных хромированных ствола за кабиной, с жарозащитным
+     кожухом и косым срезом — как на американских тягачах. В данных
+     флаг stacks стоял у Vulcan Titan, но сама деталь не строилась. */
+  if (unit.stacks) {
+    const pipeH = 2.15;
+    const pipeZ = cabRearZ - 0.18;
+    for (const side of [-1, 1]) {
+      const pipe = cyl(root, 0.085, 0.095, pipeH, M.chrome, side * (HALF_W - 0.14), frameY + pipeH / 2, pipeZ, 16);
+      // жарозащитный кожух
+      cyl(root, 0.13, 0.13, 0.9, M.chromeDark, side * (HALF_W - 0.14), frameY + 0.62, pipeZ, 16);
+      // косой срез: короткий наклонный цилиндр поверх трубы
+      const tip = cyl(root, 0.086, 0.086, 0.1, M.darkSteel, side * (HALF_W - 0.14), frameY + pipeH + 0.03, pipeZ, 16);
+      tip.rotation.z = side * 0.12;
+      // хомут крепления к кабине
+      box(root, 0.06, 0.05, 0.22, M.steel, side * (HALF_W - 0.14), frameY + pipeH - 0.45, pipeZ + 0.12);
+      anchors.push({ pos: [side * (HALF_W - 0.14), frameY + pipeH, pipeZ], label: 'Выхлопная труба' });
     }
   }
 
