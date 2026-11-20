@@ -7,7 +7,7 @@
     "storefront": 18,
     "collection": 216,
     "files": 2142,
-    "totalBytes": 52835011,
+    "totalBytes": 52835014,
     "chunks": 398,
     "blockedFiles": 5
   },
@@ -4989,8 +4989,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "2c49ca70209ca8d9c6e65512f2e977b14375544313397e27c24db26efa59604a",
-      "totalSize": 1550295,
+      "infoHash": "d0e993be3aba11d20c2cdbdfbdfccd2ccacb1905fd2b283b33257da4fffbe31f",
+      "totalSize": 1550298,
       "chunkSize": 262144,
       "chunkCount": 6,
       "fileCount": 29,
@@ -5107,8 +5107,8 @@
         },
         {
           "path": "src/sim/warehouse.js",
-          "size": 22524,
-          "sha256": "bddd4aeb82c3676b513b5d02c6343a3fe7112e9ddd0c5d0b7c791d77bb8bbf9a"
+          "size": 22527,
+          "sha256": "0f67fde9e7b9ddad90553b0447e6ec0277d4d7c5dffe4a9eb79734c9faf0f978"
         },
         {
           "path": "src/sim/worker.js",
