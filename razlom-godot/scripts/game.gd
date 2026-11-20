@@ -52,6 +52,8 @@ var world_epoch := 0
 var navigation := AStarGrid2D.new()
 var nav_dirty := false
 var sensitivity := 0.0022
+var look_scale := 1.0
+var sensitivity_step := 1
 var low_quality := false
 var ambience: WorldEnvironment
 
@@ -357,7 +359,7 @@ func share_contact(sender, point: Vector3) -> void:
 			guard.receive_report(point)
 
 func enemy_fire(guard) -> void:
-	if not guard.sees_player():
+	if state.passage or not guard.sees_player():
 		return
 	guard.motion.fire()
 	play_tone(70, 0.04, 0.06)
@@ -453,7 +455,7 @@ func complete_mission() -> void:
 	state.bottles += 2
 	notify("Вера: «Вода пошла. Значит, утро у нас будет». Глава завершена")
 	var checkpoint := save_game()
-	show_menu("ВОДА ВЕРНУЛАСЬ", "ГЛАВА 01 ЗАВЕРШЕНА\n\nВера запускает насос. Впервые за много дней вода не пахнет железом.\n«Ты вернулся. Это важнее, чем ты думаешь».\n\nПрипасы: +2 еды, +2 воды.\n" + ("Прогресс сохранён в убежище." if checkpoint else "Автосохранение пока недоступно. Сохранись в убежище, когда стихнет тревога.") + "\n\n" + ("Накладная обнародована. Жители узнают, кто перекрыл воду; Вера всё ещё надеется найти брата." if state.truth_shared else ("Подпись Ильи осталась между тобой и Верой. Правда может расколоть убежище, но молчание тоже имеет цену." if state.manifest else "На складе осталась накладная. Вера просит узнать, почему насос так и не дошёл до Очага.")) + "\n\nМожно продолжить исследование. Следующие главы ещё в разработке.")
+	show_menu("ВОДА ВЕРНУЛАСЬ", "ГЛАВА 01 ЗАВЕРШЕНА\n\nВера запускает насос. Впервые за много дней вода не пахнет железом.\n«Ты вернулся. Это важнее, чем ты думаешь».\n\nПрипасы: +2 еды, +2 воды.\n" + ("Прогресс сохранён в убежище." if checkpoint else "Автосохранение пока недоступно. Сохранись в убежище, когда стихнет тревога.") + "\n\n" + ("Накладная обнародована. Жители узнают, кто перекрыл воду; Вера всё ещё надеется найти брата." if state.truth_shared else ("Подпись Ильи осталась между тобой и Верой. Правда может расколоть убежище, но молчание тоже имеет цену." if state.manifest else "На складе осталась накладная. Вера просит узнать, почему насос так и не дошёл до Очага.")) + "\n\n" + ("Павел сдержал слово: насос вернулся без нового боя. Его рассказ об аварийной сирене даёт Вере первую зацепку." if state.passage else "") + "\n\nМожно продолжить исследование. Следующие главы ещё в разработке.")
 
 func is_sheltered(pos: Vector3) -> bool:
 	return absf(pos.x + 23) < 4.8 and pos.z > 17.5 and pos.z < 26.5 and pos.y < 3.5
@@ -604,6 +606,14 @@ func setup_hud() -> void:
 	music_button.text = "Тихая музыка · вкл / выкл"
 	music_button.pressed.connect(toggle_music)
 	column.add_child(music_button)
+	var sensitivity_button := Button.new()
+	sensitivity_button.text = "Обзор · чувствительность: обычная"
+	sensitivity_button.pressed.connect(func():
+		sensitivity_step = (sensitivity_step + 1) % 3
+		look_scale = [0.65, 1.0, 1.4][sensitivity_step]
+		sensitivity_button.text = "Обзор · чувствительность: " + ["низкая", "обычная", "высокая"][sensitivity_step])
+	column.add_child(sensitivity_button)
+	menu_style.button(sensitivity_button, false)
 	var tips := ui_label("H — лечение   •   1 — еда   •   2 — вода   •   F5 / F9 — сохранить / загрузить\nПКМ — прицел   •   Shift — бег   •   Space — прыжок   •   C — присесть   •   F — фонарь   •   F2 — FPS", 13, Color("a8bca6"))
 	column.add_child(tips)
 	menu_style.label(modal_title, 46)
@@ -753,6 +763,8 @@ func _process(delta: float) -> void:
 		return
 	if interactions.medic_motion != null:
 		interactions.medic_motion.advance(delta, 0.0)
+	if interactions.courier_motion != null:
+		interactions.courier_motion.advance(delta, 0.0)
 	elapsed += delta
 	day_minutes += delta * 0.2
 	var hour := fmod(day_minutes / 60.0, 24.0)

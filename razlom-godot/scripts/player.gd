@@ -48,8 +48,8 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and not game.mobile_mode and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * game.sensitivity)
-		camera.rotation.x = clampf(camera.rotation.x - event.relative.y * game.sensitivity, -1.45, 1.45)
+		rotate_y(-event.relative.x * game.sensitivity * game.look_scale)
+		camera.rotation.x = clampf(camera.rotation.x - event.relative.y * game.sensitivity * game.look_scale, -1.45, 1.45)
 
 func _physics_process(delta: float) -> void:
 	if game.ended:
@@ -154,5 +154,5 @@ func can_stand() -> bool:
 
 func touch_look(relative: Vector2) -> void:
 	if game.mobile_mode and not get_tree().paused:
-		rotate_y(-relative.x * 0.004)
-		camera.rotation.x = clampf(camera.rotation.x - relative.y * 0.004, -1.45, 1.45)
+		rotate_y(-relative.x * 0.004 * game.look_scale)
+		camera.rotation.x = clampf(camera.rotation.x - relative.y * 0.004 * game.look_scale, -1.45, 1.45)

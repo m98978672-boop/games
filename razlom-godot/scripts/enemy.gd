@@ -78,6 +78,10 @@ func remember_sighting(point: Vector3) -> void:
 
 func choose_target(delta: float) -> Vector3:
 	var contact := awareness.focus()
+	if game.state.passage:
+		alert = false
+		behavior = "stand_down"
+		return home
 	if visible_contact:
 		behavior = "engage"
 		alert = true
@@ -120,13 +124,20 @@ func _physics_process(delta: float) -> void:
 	if scan <= 0:
 		scan = 0.22
 		visible_contact = sees_player()
-		if visible_contact:
+		if visible_contact and not game.state.passage:
 			remember_sighting(game.player.global_position)
 			if cooldown <= 0:
 				cooldown = 1.3
 				game.enemy_fire(self)
 	phase += delta
 	var target := choose_target(delta)
+	# Wounded guards withdraw only from a currently visible opponent.
+	if visible_contact and health < 35 and not game.state.passage:
+		var away: Vector3 = global_position - last_seen
+		away.y = 0
+		if away.length() > 0.1:
+			target = global_position + away.normalized() * 5.0
+			behavior = "withdraw"
 	path_timer -= delta
 	if path_timer <= 0:
 		path_timer = 0.45
@@ -158,6 +169,10 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	if dead:
 		return
 	health -= amount
+	if amount > 0 and game.state.passage:
+		game.state.passage = false
+		game.state.passage_broken = true
+		game.notify("Договор нарушен: охрана снова враждебна")
 	motion.hurt()
 	# A hit is evidence of danger, not a magical coordinate of an unseen shooter.
 	if sees_player():

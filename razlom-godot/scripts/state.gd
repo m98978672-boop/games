@@ -20,6 +20,8 @@ var pump := false
 var complete := false
 var manifest := false
 var truth_shared := false
+var passage := false
+var passage_broken := false
 var kills := 0
 
 func tick(delta: float, sprinting: bool, indoors: bool = false) -> void:
@@ -88,7 +90,7 @@ func reload_gun() -> int:
 	return amount
 
 func snapshot() -> Dictionary:
-	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared}
+	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken}
 	for key in NUMERIC_KEYS:
 		result[key] = get(key)
 	return result
@@ -109,10 +111,12 @@ func restore(source: Dictionary) -> bool:
 			return false
 		if not METER_KEYS.has(key) and value != floor(value):
 			return false
-	for key in ["manifest", "truth_shared"]:
+	for key in ["manifest", "truth_shared", "passage", "passage_broken"]:
 		if not data.get(key, false) is bool:
 			return false
 		data[key] = data.get(key, false)
+	if data.passage and data.passage_broken:
+		return false
 	if data.truth_shared and not data.manifest:
 		return false
 	for key in ["pump", "complete"]:
@@ -124,6 +128,6 @@ func restore(source: Dictionary) -> bool:
 	if data["ammo"] > 18:
 		return false
 	# Commit only after all checks: failed restore must not mutate live state.
-	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared"]:
+	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken"]:
 		set(key, data[key])
 	return true

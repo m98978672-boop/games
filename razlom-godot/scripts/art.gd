@@ -69,6 +69,7 @@ static func humanoid(parent: Node3D) -> Node3D:
 	var scene: PackedScene = load("res://assets/models/guard.tscn")
 	var root: Node3D = scene.instantiate()
 	parent.add_child(root)
+	dress_actor(root)
 	return root
 
 static func tree(parent: Node3D, pos: Vector3, height: float) -> void:
@@ -82,3 +83,29 @@ static func truck(parent: Node3D, pos: Vector3) -> void:
 	var root: Node3D = scene.instantiate()
 	parent.add_child(root)
 	root.position = pos
+
+static func dress_actor(root: Node3D, medic: bool = false) -> void:
+	if root.has_meta("detailed"):
+		return
+	root.set_meta("detailed", true)
+	var head := root.get_node_or_null("Head") as Node3D
+	if head != null:
+		var eye_mat := material(Color("253632"))
+		for side in [-1, 1]:
+			var eye := box(head, Vector3(side * 0.085, 0.015, -0.178), Vector3(0.065, 0.035, 0.018), material(Color("e5ded0")))
+			eye.name = "EyeL" if side < 0 else "EyeR"
+			box(eye, Vector3(0, 0, -0.012), Vector3(0.026, 0.027, 0.012), eye_mat)
+			box(head, Vector3(side * 0.085, 0.065, -0.18), Vector3(0.085, 0.018, 0.018), material(Color("574533")))
+			box(head, Vector3(side * 0.18, -0.005, 0), Vector3(0.035, 0.075, 0.07), material(Color("b99978")))
+		box(head, Vector3(0, -0.025, -0.19), Vector3(0.045, 0.065, 0.045), material(Color("b99978")))
+		box(head, Vector3(0, -0.09, -0.18), Vector3(0.095, 0.018, 0.018), material(Color("795447")))
+		box(head, Vector3(0, 0.14, 0.015), Vector3(0.35, 0.065, 0.34), material(Color("544435")))
+	var fabric := material(Color("b9c1a9") if medic else Color("768575"), "cloth")
+	for side in [-1, 1]:
+		box(root, Vector3(side * 0.15, 1.1, -0.17), Vector3(0.16, 0.17, 0.065), fabric)
+		box(root, Vector3(side * 0.19, 1.25, -0.17), Vector3(0.035, 0.39, 0.035), material(Color("473f33"), "wood"))
+	box(root, Vector3(0, 0.86, 0), Vector3(0.58, 0.055, 0.33), material(Color("454337")))
+	box(root, Vector3(0, 1.13, 0.22), Vector3(0.38, 0.45, 0.18), fabric)
+	if medic:
+		box(root, Vector3(-0.15, 1.13, -0.21), Vector3(0.09, 0.035, 0.01), material(Color("e8e2c8")))
+		box(root, Vector3(-0.15, 1.13, -0.22), Vector3(0.03, 0.1, 0.01), material(Color("e8e2c8")))
