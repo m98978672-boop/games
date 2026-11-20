@@ -1,4 +1,5 @@
 import { unsafeRest, safeRestGoal } from './rest_positions.js';
+import { clearFinalApproach } from './arrival.js';
 import { motionWallSweepFree } from './motion_wall_sweep.js';
 // Юнит: данные, движение, Perception, урон и стрельба. Один код для игрока, ботов и врага.
 import {
@@ -684,7 +685,8 @@ export function updateTimers(game, u, dt) {
     const arrivedAtCurrentGoal = (game.cfg.flag('arrival_stuck_guard_v1', false) || game.cfg.flag('movement_occupancy_v1', false)) && u.arrived && u.goal &&
       dist(u.x,u.y,u.goal.x,u.goal.y) < (game.walls && game.walls.enabled()
         ? (game.cfg.navBudget?.arriveRadius?.walls ?? 34) : (game.cfg.navBudget?.arriveRadius?.legacy ?? 24)) &&
-      (!u._crowdActive || !u._crowdPoint || dist(u.x,u.y,u._crowdPoint.x,u._crowdPoint.y)<2);
+      (!u._crowdActive || !u._crowdPoint || dist(u.x,u.y,u._crowdPoint.x,u._crowdPoint.y)<2) &&
+      clearFinalApproach(game,u,u.goal.x,u.goal.y);
     const wait=u._occupancyWait, blocker=wait&&game.units.get(wait.blockerId);
     const waitingForUnit=game.cfg.flag('movement_occupancy_v1',false) && game.cfg.flag('movement_queue_wait_v1',true) && !u.playerControlled && !u.perception.hasContact &&
       u.goal && wait && wait.goalX===u.goal.x && wait.goalY===u.goal.y && game.time-wait.lastBlocked<=0.5 &&
@@ -792,7 +794,8 @@ export function moveAlongFlow(game, u, dt) {
   const arrive = game.cfg.navBudget?.arriveRadius || { legacy: 24, walls: 34 };
   const arriveD = game.walls && game.walls.enabled() ? arrive.walls : arrive.legacy;
   const inPassage = !u.playerControlled && unsafeRest(game, u.x, u.y, u.radius);
-  if (d < arriveD && !inPassage && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2)) {
+  if (d < arriveD && !inPassage && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2) &&
+      clearFinalApproach(game,u,u.goal.x,u.goal.y)) {
     // A unit can reach its goal while its incremental search is still active.
     // Release that job immediately; otherwise another unit may wait six seconds.
     if (u._smartRoute || game._smartRouteState?.active?.unit === u) cancelSelectedSmartRoute(game,u);
