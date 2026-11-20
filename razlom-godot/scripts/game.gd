@@ -786,6 +786,8 @@ func _process(delta: float) -> void:
 	if mobile_mode:
 		clock_label.text = "%02d:%02d  ТЕПЛО %d  УСТАЛОСТЬ %d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	var destination := Vector3(-23, 0, 22) if state.pump else Vector3(21, 0, -20)
+	if state.complete and not state.relay_log:
+		destination = Vector3(68, 0, 22)
 	var offset: Vector3 = destination - player.global_position
 	var distance := Vector2(offset.x, offset.z).length()
 	var local_target: Vector3 = player.global_transform.basis.inverse() * offset
@@ -793,7 +795,7 @@ func _process(delta: float) -> void:
 	var direction_text := "ПРЯМО" if absf(bearing) < 0.35 else ("РАЗВЕРНИСЬ" if absf(bearing) > 2.5 else ("ПОВЕРНИ НАПРАВО" if bearing > 0 else "ПОВЕРНИ НАЛЕВО"))
 	mission_label.text = "01 / ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nЗадание завершено" if state.complete else (("Убежище" if state.pump else "Насос · склад 03") + " · %d м\n" % int(distance) + direction_text))
 	if state.complete and not state.relay_shared:
-		mission_label.text = "02 / ГОЛОС В ЭФИРЕ\n" + ("Архив найден • вернись к Вере" if state.relay_log else "Ретранслятор 12 • восточная дорога")
+		mission_label.text = "02 / ГОЛОС В ЭФИРЕ\n" + ("Вера • убежище" if state.relay_log else "Ретранслятор 12") + " · %d м\n" % int(distance) + direction_text
 	if get_tree().paused or ended:
 		return
 	interactions.advance_people(delta)
@@ -972,6 +974,11 @@ func load_game() -> bool:
 	player.rotation.y = float(data.yaw)
 	player.velocity = Vector3.ZERO
 	player.reload_time = 0
+	player.healing_time = 0
+	player.last_health = state.health
+	combat_feedback.pain = state.pain
+	combat_feedback.injury_time = 0
+	combat_feedback.hurt_time = 0
 	player.set_crouched(false)
 	ended = false
 	resume()

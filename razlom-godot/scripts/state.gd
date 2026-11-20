@@ -72,7 +72,7 @@ func craft(recipe: String) -> bool:
 func use_item(kind: String) -> bool:
 	match kind:
 		"heal":
-			if medkits <= 0 or health >= 100:
+			if medkits <= 0 or (health >= 100 and leg_wound <= 0 and pain <= 0):
 				return false
 			medkits -= 1
 			health = minf(100, health + 45)

@@ -66,6 +66,13 @@ func run_tests() -> void:
 	wall.queue_free()
 	guard.hit(1)
 	check(guard.suppression > 0 and guard.aim_time == 0, "Taking fire interrupts guard aim")
+	guard.visible_contact = true
+	guard.cooldown = 100
+	guard.position = Vector3(45, 0.3, -5)
+	player.position.y = 2.0
+	for i in range(60):
+		guard._physics_process(1.0 / 60)
+	check(absf(guard.motion.joints.ArmR.rotation.x) < 1.6, "Vertical aim stays bounded instead of accumulating rotation")
 	check(game.world.has_node("RelayYard/RelayRadio"), "Explorable relay and interactive archive exist")
 	check(game.navigation.region.has_point(Vector2i(70, 20)), "Expanded district included in navigation")
 	game.state.complete = true
