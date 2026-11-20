@@ -81,7 +81,7 @@ func _ready() -> void:
 	setup_hud()
 	if mobile_mode:
 		toggle_quality()
-	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nСыну Рады осталось воды на одну ночь.\nИ кому-то было приказано не пускать нас на склад».\n\nДоберись до склада, забери блок и вернись к убежищу.\nМожно пройти через ворота или пробить кирпичную стену.")
+	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nСыну Рады осталось воды на одну ночь.\nИ кому-то было приказано не пускать нас на склад».\n\n1. Выйди из убежища.\n2. Следуй направлению и расстоянию слева сверху.\n3. Найди насос на складе и верни его сюда.\n\nНе обязательно вступать в бой: можно обойти охрану.\nУправление: " + ("левый круг — идти, справа проведи пальцем — осмотреться. Кнопка ВЗЯТЬ — действие." if mobile_mode else "WASD — идти, мышь — смотреть, E — взять предмет. Esc — пауза.") + "")
 
 func fit_mobile() -> void:
 	var pixels := get_window().size
@@ -558,6 +558,16 @@ func setup_hud() -> void:
 	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	message_label.position = Vector2(-340, -199)
 	root.add_child(message_label)
+	for readable in [stats_label, hint_label, message_label]:
+		readable.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.02, 0.95))
+		readable.add_theme_constant_override("outline_size", 5)
+	var hint_style := StyleBoxFlat.new()
+	hint_style.bg_color = Color(0.02, 0.055, 0.045, 0.92)
+	hint_style.content_margin_left = 10
+	hint_style.content_margin_right = 10
+	hint_style.content_margin_top = 6
+	hint_style.content_margin_bottom = 6
+	hint_label.add_theme_stylebox_override("normal", hint_style)
 	var controls := ui_label("WASD  ДВИЖЕНИЕ    /    ЛКМ  ОГОНЬ    /    E  ВЗЯТЬ    /    R  МАГАЗИН    /    G  ЗАРЯД    /    ESC  МЕНЮ", 12, Color("a5b6a5"))
 	controls.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	controls.position = Vector2(36, -32)
@@ -626,13 +636,21 @@ func setup_hud() -> void:
 		mission_label.add_theme_font_size_override("font_size", 13)
 		controls.hide()
 		message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		message_label.position = Vector2(-150, -50)
+		message_label.offset_left = -150
+		message_label.offset_right = 150
+		message_label.offset_top = -80
+		message_label.offset_bottom = 10
 		message_label.custom_minimum_size.x = 300
 		message_label.size = Vector2(300, 90)
 		message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		message_label.add_theme_font_size_override("font_size", 13)
 		hint_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		hint_label.position = Vector2(-140, 32)
+		hint_label.offset_left = -150
+		hint_label.offset_right = 150
+		hint_label.offset_top = 32
+		hint_label.offset_bottom = 80
+		hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		for label in [brand, clock_label, stats_label, hint_label, message_label]:
 			label.add_theme_color_override("font_outline_color", Color(0.01, 0.04, 0.02, 0.85))
 			label.add_theme_constant_override("outline_size", 3)
@@ -724,7 +742,13 @@ func _process(delta: float) -> void:
 	clock_label.text = "РЕГИОН РУБЕЖ   /   %02d:%02d   /   ТЕПЛО %03d   УСТАЛОСТЬ %03d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	if mobile_mode:
 		clock_label.text = "%02d:%02d  ТЕПЛО %d  УСТАЛОСТЬ %d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
-	mission_label.text = "01  /  ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nМожно продолжить исследование" if state.complete else ("Вернись в убежище\nСдай насосный блок • E" if state.pump else "Найди насосный блок\nСклад 03 · северо-восток"))
+	var destination := Vector3(-23, 0, 22) if state.pump else Vector3(21, 0, -20)
+	var offset: Vector3 = destination - player.global_position
+	var distance := Vector2(offset.x, offset.z).length()
+	var local_target: Vector3 = player.global_transform.basis.inverse() * offset
+	var bearing := atan2(local_target.x, -local_target.z)
+	var direction_text := "ПРЯМО" if absf(bearing) < 0.35 else ("РАЗВЕРНИСЬ" if absf(bearing) > 2.5 else ("ПОВЕРНИ НАПРАВО" if bearing > 0 else "ПОВЕРНИ НАЛЕВО"))
+	mission_label.text = "01 / ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nЗадание завершено" if state.complete else (("Убежище" if state.pump else "Насос · склад 03") + " · %d м\n" % int(distance) + direction_text))
 	if get_tree().paused or ended:
 		return
 	elapsed += delta
@@ -746,11 +770,12 @@ func _process(delta: float) -> void:
 	hint_label.text = ""
 	var hit := ray(3.2)
 	if not hit.is_empty() and hit.collider.has_meta("loot"):
-		hint_label.text = "E  /  " + str(hit.collider.get_meta("title"))
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + str(hit.collider.get_meta("title"))
 	elif not hit.is_empty() and hit.collider.has_meta("use"):
-		hint_label.text = "E  /  " + str(hit.collider.get_meta("title"))
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + str(hit.collider.get_meta("title"))
 	elif is_sheltered(player.global_position):
-		hint_label.text = "E  /  " + ("Установить насос" if state.pump and not state.complete else "Убежище · верстак")
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + ("Установить насос" if state.pump and not state.complete else "Убежище · верстак")
+	hint_label.visible = not hint_label.text.is_empty()
 	if state.health <= 0 or player.position.y < -12:
 		ended = true
 		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")

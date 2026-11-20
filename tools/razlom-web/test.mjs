@@ -24,7 +24,7 @@ try {
   const rect = await page.evaluate(() => window.__razlomStatus.menuRect);
   assert.ok(rect[0] > 700 && rect[0] + rect[1] <= 1441, JSON.stringify(rect));
  });
- await page.screenshot({path:'../../docs/razlom/web-evidence/menu.png'});
+ await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/menu.png'});
  await page.keyboard.press('Enter');
  await page.waitForFunction(() => window.__razlomStatus?.started && !window.__razlomStatus.paused);
  await check('Start button resumes world through keyboard focus', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.started), true));
@@ -35,7 +35,7 @@ try {
   const after = await page.evaluate(() => window.__razlomStatus.position);
   assert.ok(Math.hypot(after[0]-before[0], after[2]-before[2]) > .2);
  });
- await page.screenshot({path:'../../docs/razlom/web-evidence/play.png'});
+ await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
  await page.keyboard.press('Escape');
  await page.waitForFunction(() => window.__razlomStatus?.paused);
  await check('Escape returns to pause menu', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.paused), true));
