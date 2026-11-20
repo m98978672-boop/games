@@ -136,6 +136,8 @@ WC.game = (function () {
       spawnEvery: cfg.orderSpawnEvery,
       maxPending: cfg.maxPending,
       firstSpawnDelay: 3,
+      truckEvery: cfg.truckEvery,
+      firstTruckDelay: cfg.firstTruckDelay,
     });
     api.crew = cfg.crew.map(function (member, i) {
       return window.WarehouseWorker.createWorker({
@@ -164,6 +166,21 @@ WC.game = (function () {
           pushLog(w.name + ' закрыл ' + order.code + ' (+' + result.points + ')', result.late ? 'warn' : 'good');
           WC.audio.delivered();
           emit('delivered', { worker: w, order: order, result: result });
+        },
+        onInjury: function (w, injury) {
+          pushLog(w.state.name + ' травмирован: ' + injury.text, 'bad');
+          if (WC.audio && WC.audio.drop) WC.audio.drop();
+          if (WC.world && WC.world.kick) WC.world.kick(0.5);
+          emit('injury', { worker: w, injury: injury });
+        },
+        onRefused: function (w, order, reason) {
+          pushLog(w.state.name + ' отказался от ' + order.code + ': ' + reason, 'warn');
+          emit('refused', { worker: w, order: order, reason: reason });
+        },
+        onLoaded: function (w, order, result) {
+          pushLog(w.state.name + ' загрузил ' + order.code + ' в фуру (+' + result.points + ')', 'good');
+          if (WC.audio && WC.audio.delivered) WC.audio.delivered();
+          emit('loaded', { worker: w, order: order, result: result });
         },
         onDropped: function (w, order, outcome) {
           pushLog(w.name + ' уронил ' + order.code + ' — ' + Math.round(order.damage * 100) + '% повреждений', 'bad');
@@ -305,6 +322,10 @@ WC.game = (function () {
       missed: stats.missed,
       quality: qualityPercent(api),
       bestStreak: stats.bestStreak,
+      loaded: stats.loaded,
+      unloaded: stats.unloaded,
+      truckShifts: stats.truckShifts,
+      injuries: api.crew.reduce(function (sum, w) { return sum + (w.state.safety ? w.state.safety.injuries : 0); }, 0),
       crew: api.crew.map(function (w) {
         return {
           id: w.id,
@@ -316,6 +337,12 @@ WC.game = (function () {
           rest: Math.round(w.body.restSeconds),
           fatigue: Math.round(w.body.fatigue * 100),
           energy: Math.round(w.body.energy * 100),
+          loaded: w.state.stats.loaded || 0,
+          refusals: w.state.safety ? w.state.safety.refusals : 0,
+          injuries: (w.body.injuries || []).map(function (inj) {
+            return (window.WarehouseModel.BODY_PARTS[inj.part] || inj.part) + ' ' + Math.round(inj.severity * 100) + '%';
+          }),
+          compliance: window.WarehouseModel.ruleCompliance(w.body),
         };
       }),
     };

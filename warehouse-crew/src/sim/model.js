@@ -31,6 +31,57 @@
     { id: 'shoulders', name: 'Плечи', share: 0.18 },
   ];
 
+  // Части тела, по которым считаются травмы
+  var BODY_PARTS = {
+    back: 'спина',
+    shoulder: 'плечо',
+    knee: 'колено',
+    wrist: 'кисть',
+    ankle: 'стопа',
+    head: 'голова',
+  };
+
+  var INJURY_TYPES = {
+    muscle: { label: 'мышца', healRate: 0.012, speed: 0.22, capacity: 0.35, craft: 0.15 },
+    limb: { label: 'сустав', healRate: 0.008, speed: 0.34, capacity: 0.18, craft: 0.3 },
+    brain: { label: 'голова', healRate: 0.004, speed: 0.1, capacity: 0.0, craft: 0.35 },
+  };
+
+  // Техника безопасности склада. Рабочий старается не нарушать эти правила:
+  // нарушение — не «штраф в никуда», а реальный риск травмы.
+  var RULES = [
+    {
+      id: 'r-lift', title: 'Тяжесть — вдвоём',
+      text: 'Коробку тяжелее 85 % предела не поднимают в одиночку: нужен напарник или тележка.',
+      type: 'muscle', part: 'back',
+    },
+    {
+      id: 'r-run', title: 'С грузом — шагом',
+      text: 'С коробкой в руках не бегут: споткнулся — порвал связку или уронил груз.',
+      type: 'limb', part: 'knee',
+    },
+    {
+      id: 'r-twist', title: 'Не разворачиваться резко',
+      text: 'С грузом нельзя резко крутиться на месте: поясница не любит скручивание под нагрузкой.',
+      type: 'muscle', part: 'back',
+    },
+    {
+      id: 'r-rest', title: 'Устал — передохни',
+      text: 'На износе выше 80 % мышцы не держат: перерыв дешевле, чем растяжение.',
+      type: 'muscle', part: 'shoulder',
+    },
+    {
+      id: 'r-grip', title: 'Хват на вытянутых руках',
+      text: 'Тяжёлую коробку берут корпусом, а не кистями на вытянутых руках.',
+      type: 'limb', part: 'wrist',
+    },
+    {
+      id: 'r-head', title: 'Береги голову',
+      text: 'Уронил коробку на себя или упал в обморок — ушиб головы и туман в решениях.',
+      type: 'brain', part: 'head',
+    },
+  ];
+
   var TRAITS = [
     { id: 'endurance', label: 'Выносливость', hint: 'аэробная ёмкость, меньше лактата' },
     { id: 'strength', label: 'Сила', hint: 'предельная масса коробки' },
@@ -116,6 +167,10 @@
       restSeconds: 0,
       workSeconds: 0,
       collapsed: false,
+      injuries: [],           // [{ type, part, severity, at, cause }]
+      mobility: 1,            // 0..1 — сколько осталось от подвижности
+      ruleViolations: {},     // id правила -> сколько раз нарушено (для «пытается соблюдать»)
+      ruleStrikes: 0,
       events: [],
     };
     if (overrides.energy != null) body.energy = clamp01(overrides.energy);
@@ -133,7 +188,166 @@
   function carryCapacity(body) {
     var t = body.traits;
     var base = 18 + 42 * t.strength;
-    return base * (0.72 + 0.28 * (1 - body.fatigue)) * (0.85 + 0.15 * body.energy);
+    var damage = 1 - 0.42 * injuryOf(body, 'back') - 0.22 * injuryOf(body, 'shoulder');
+    return base * (0.72 + 0.28 * (1 - body.fatigue)) * (0.85 + 0.15 * body.energy) * clamp(damage, 0.35, 1);
+  }
+
+  // Безопасный вес по технике безопасности: 85 % предела, минус травмы
+  function safeLift(body) {
+    return carryCapacity(body) * 0.85;
+  }
+
+  // ------------------------------------------------------------------ травмы
+  function injuryOf(body, part) {
+    if (!body.injuries || !body.injuries.length) return 0;
+    var total = 0;
+    for (var i = 0; i < body.injuries.length; i++) {
+      if (body.injuries[i].part === part) total += body.injuries[i].severity;
+    }
+    return clamp01(total);
+  }
+
+  function injuryLevel(body) {
+    if (!body.injuries || !body.injuries.length) return 0;
+    var total = 0;
+    for (var i = 0; i < body.injuries.length; i++) total += body.injuries[i].severity;
+    return clamp01(total / 1.6);
+  }
+
+  function worstInjury(body) {
+    if (!body.injuries || !body.injuries.length) return null;
+    var worst = body.injuries[0];
+    for (var i = 1; i < body.injuries.length; i++) {
+      if (body.injuries[i].severity > worst.severity) worst = body.injuries[i];
+    }
+    return worst;
+  }
+
+  // Нанести травму. Одинаковые травмы одной части тела складываются, но не в бесконечность.
+  function addInjury(body, injury) {
+    injury = injury || {};
+    var type = INJURY_TYPES[injury.type] ? injury.type : 'muscle';
+    var part = BODY_PARTS[injury.part] ? injury.part : 'back';
+    var severity = clamp(injury.severity == null ? 0.3 : injury.severity, 0.05, 1);
+    var existing = null;
+    for (var i = 0; i < body.injuries.length; i++) {
+      if (body.injuries[i].part === part && body.injuries[i].type === type) existing = body.injuries[i];
+    }
+    if (existing) {
+      existing.severity = clamp(existing.severity + severity * 0.85, 0, 1);
+      existing.at = body.workSeconds + body.restSeconds;
+      existing.cause = injury.cause || existing.cause;
+      existing.count = (existing.count || 1) + 1;
+    } else {
+      body.injuries.push({
+        type: type,
+        part: part,
+        severity: severity,
+        at: body.workSeconds + body.restSeconds,
+        cause: injury.cause || 'неудачное движение',
+        count: 1,
+      });
+    }
+    body.pain = clamp01(body.pain + 0.22 + 0.3 * severity);
+    body.stress = clamp01(body.stress + 0.1 + 0.18 * severity);
+    if (type === 'brain') {
+      body.cognition = clamp01(body.cognition - 0.35 * severity);
+      body.vision = clamp01(body.vision - 0.12 * severity);
+    }
+    var label = 'Травма: ' + BODY_PARTS[part] + ' (' + INJURY_TYPES[type].label + '), ' +
+      Math.round(severity * 100) + '% — ' + (injury.cause || 'неудачное движение');
+    pushEvent(body, label, 'bad');
+    return { type: type, part: part, severity: severity, text: label };
+  }
+
+  function healInjuries(body, dt, resting) {
+    if (!body.injuries.length) return 0;
+    var healed = 0;
+    for (var i = body.injuries.length - 1; i >= 0; i--) {
+      var injury = body.injuries[i];
+      var preset = INJURY_TYPES[injury.type] || INJURY_TYPES.muscle;
+      var rate = preset.healRate * (resting ? 2.6 : 1) * (0.6 + 0.9 * body.traits.recovery);
+      injury.severity = Math.max(0, injury.severity - rate * dt);
+      if (injury.severity <= 0.02) {
+        body.injuries.splice(i, 1);
+        healed += 1;
+      }
+    }
+    return healed;
+  }
+
+  // Сколько подвижности осталось: колено/стопа бьют по скорости, спина — по грузу
+  function mobilityOf(body) {
+    var knee = injuryOf(body, 'knee') + injuryOf(body, 'ankle');
+    var back = injuryOf(body, 'back');
+    var head = injuryOf(body, 'head');
+    return clamp(1 - 0.38 * knee - 0.18 * back - 0.12 * head, 0.35, 1);
+  }
+
+  // Правило нарушено? Возвращает описание нарушения или null.
+  // action: { mass, pace, turnRate, lifting, carrying, fatigue }
+  function ruleBreach(body, action) {
+    action = action || {};
+    var safe = safeLift(body);
+    var mass = action.mass || 0;
+    if (mass > safe) {
+      return {
+        rule: 'r-lift', part: 'back', type: 'muscle',
+        severity: 0.16 + 0.3 * clamp((mass - safe) / Math.max(6, safe), 0, 1.5),
+        risk: 0.008 + 0.02 * clamp((mass - safe) / Math.max(6, safe), 0, 1.5),
+        cause: 'поднял ' + Math.round(mass) + ' кг при пределе ' + Math.round(safe) + ' кг',
+      };
+    }
+    if (action.carrying && (action.pace || 0) > 0.72) {
+      var runOver = clamp(((action.pace || 0) - 0.72) / 0.28, 0, 1);
+      return {
+        rule: 'r-run', part: 'knee', type: 'limb',
+        severity: 0.12 + 0.22 * runOver,
+        risk: 0.004 + 0.013 * runOver,
+        cause: 'побежал с коробкой в руках',
+      };
+    }
+    if (action.carrying && (action.turnRate || 0) > 2.2) {
+      return {
+        rule: 'r-twist', part: 'back', type: 'muscle',
+        severity: 0.12 + 0.2 * clamp(((action.turnRate || 0) - 2.2) / 2, 0, 1),
+        risk: 0.005 + 0.015 * clamp(((action.turnRate || 0) - 2.2) / 2, 0, 1),
+        cause: 'резко развернулся с грузом',
+      };
+    }
+    if (!action.carrying && !action.lifting && body.fatigue > 0.8 && (action.working !== false)) {
+      return {
+        rule: 'r-rest', part: 'shoulder', type: 'muscle',
+        severity: 0.1 + 0.2 * clamp((body.fatigue - 0.8) / 0.2, 0, 1),
+        risk: 0.004 + 0.012 * clamp((body.fatigue - 0.8) / 0.2, 0, 1),
+        cause: 'работает на износе ' + Math.round(body.fatigue * 100) + '%',
+      };
+    }
+    if (action.lifting && mass > safe * 0.75 && (action.precision || 0.5) < 0.4) {
+      return {
+        rule: 'r-grip', part: 'wrist', type: 'limb',
+        severity: 0.1,
+        risk: 0.004,
+        cause: 'взял тяжёлое кистями на вытянутых руках',
+      };
+    }
+    return null;
+  }
+
+  function noteViolation(body, breach) {
+    if (!breach) return;
+    body.ruleViolations[breach.rule] = (body.ruleViolations[breach.rule] || 0) + 1;
+    body.ruleStrikes = (body.ruleStrikes || 0) + 1;
+  }
+
+  function ruleCompliance(body) {
+    var strikes = body.ruleStrikes || 0;
+    return clamp01(1 / (1 + strikes * 0.12));
+  }
+
+  function ruleById(id) {
+    for (var i = 0; i < RULES.length; i++) if (RULES[i].id === id) return RULES[i];
+    return null;
   }
 
   // Интенсивность 0..1+ по метаболизму: скорость, груз, наклон
@@ -252,6 +466,16 @@
         pushEvent(body, 'Пришёл в себя после обморока', 'warn');
       }
     }
+
+    // --- Травмы: боль держится, заживление идёт медленно, в покое быстрее ---
+    healInjuries(body, dt, resting);
+    if (body.injuries.length) {
+      var worst = worstInjury(body);
+      var floorPain = 0.16 * injuryLevel(body) + 0.1 * worst.severity;
+      if (body.pain < floorPain) body.pain = approach(body.pain, floorPain, 0.8, dt);
+    }
+    body.mobility = approach(body.mobility == null ? 1 : body.mobility, mobilityOf(body), 0.5, dt);
+
     return body;
   }
 
@@ -266,7 +490,8 @@
     var t = body.traits;
     var pace = decision ? decision.pace : 0.5;
     var caution = decision ? decision.caution : 0.5;
-    var health = clamp(1 - 0.35 * body.fatigue - 0.25 * body.pain - 0.2 * body.injury, 0.3, 1);
+    var health = clamp(1 - 0.35 * body.fatigue - 0.25 * body.pain - 0.2 * body.injury, 0.3, 1) *
+      clamp(body.mobility == null ? mobilityOf(body) : body.mobility, 0.35, 1);
     var drive = 0.6 + 0.75 * pace * (0.7 + 0.4 * t.paceTrait);
     return clamp(health * drive * (1 - 0.18 * caution), 0.25, 1.55);
   }
@@ -274,13 +499,17 @@
   function pickTime(body, decision) {
     var precision = decision ? decision.precision : 0.5;
     var t = body.traits;
-    return WORK.pickBase * (1.5 - 0.55 * precision - 0.3 * t.precision) / clamp(0.55 + 0.6 * body.cognition, 0.4, 1.3);
+    var wrist = injuryOf(body, 'wrist');
+    return WORK.pickBase * (1.5 - 0.55 * precision - 0.3 * t.precision) * (1 + 0.9 * wrist) /
+      clamp(0.55 + 0.6 * body.cognition, 0.4, 1.3);
   }
 
   function placeTime(body, decision) {
     var precision = decision ? decision.precision : 0.5;
     var t = body.traits;
-    return WORK.placeBase * (1.4 - 0.5 * precision - 0.25 * t.precision) / clamp(0.55 + 0.6 * body.cognition, 0.4, 1.3);
+    var wrist = injuryOf(body, 'wrist');
+    return WORK.placeBase * (1.4 - 0.5 * precision - 0.25 * t.precision) * (1 + 0.8 * wrist) /
+      clamp(0.55 + 0.6 * body.cognition, 0.4, 1.3);
   }
 
   // Риск уронить груз за секунду переноски
@@ -293,7 +522,8 @@
     var speedTerm = 0.25 + 2.6 * pace * pace;
     var grip = clamp(1 - caution, 0, 1) * (1.25 - 0.55 * precision) * (1.2 - 0.4 * t.precision);
     var loadTerm = 0.45 + 1.35 * clamp(loadKg / Math.max(1, carryCapacity(body)), 0, 1.4);
-    var stateTerm = 1 + 0.7 * body.stress + 0.6 * body.fatigue + 0.8 * body.pain + 0.5 * (1 - body.vision);
+    var stateTerm = 1 + 0.7 * body.stress + 0.6 * body.fatigue + 0.8 * body.pain + 0.5 * (1 - body.vision) +
+      1.4 * injuryOf(body, 'wrist') + 0.5 * injuryOf(body, 'knee');
     return base * speedTerm * grip * loadTerm * stateTerm / clamp(0.6 + 0.8 * t.caution, 0.4, 1.6);
   }
 
@@ -313,6 +543,7 @@
     body.injury = clamp01(body.injury + 0.12 * (damage || 0.5));
     body.muscles.back.microDamage = clamp01(body.muscles.back.microDamage + 0.12);
     pushEvent(body, damage > 0.45 ? 'Коробка упала и разбилась' : 'Коробка упала, помялась', 'bad');
+    return damage || 0.5;
   }
 
   // ------------------------------------------------------------------ признаки
@@ -377,6 +608,20 @@
     dropRisk: dropRisk,
     deliverReward: deliverReward,
     dropPenalty: dropPenalty,
+    safeLift: safeLift,
+    injuryOf: injuryOf,
+    injuryLevel: injuryLevel,
+    worstInjury: worstInjury,
+    addInjury: addInjury,
+    healInjuries: healInjuries,
+    mobilityOf: mobilityOf,
+    ruleBreach: ruleBreach,
+    noteViolation: noteViolation,
+    ruleCompliance: ruleCompliance,
+    ruleById: ruleById,
+    RULES: RULES,
+    BODY_PARTS: BODY_PARTS,
+    INJURY_TYPES: INJURY_TYPES,
     featuresOf: featuresOf,
     vitals: vitals,
     clamp: clamp,

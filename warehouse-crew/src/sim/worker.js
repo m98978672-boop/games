@@ -9,13 +9,18 @@
 
   var RECTS = []; // препятствия: стеллажи + приёмка, заполняется buildObstacles()
 
+  // Длина вытянутой руки: дальше этого коробку не взять, надо подойти.
+  var ARM_REACH = 1.45;
+
   function buildObstacles(layout) {
     RECTS = [];
     for (var i = 0; i < layout.racks.length; i++) {
       RECTS.push({ x1: layout.racks[i].x - 0.62, x2: layout.racks[i].x + 0.62, y1: -5.9, y2: 5.9, id: 'rack-' + layout.racks[i].id });
     }
-    RECTS.push({ x1: layout.intake[0].x - 0.95, x2: layout.intake[0].x + 0.95, y1: -6.6, y2: 6.6, id: 'intake' });
-    RECTS.push({ x1: 9.8, x2: 11.4, y1: -6.0, y2: 6.0, id: 'despatch' });
+    // Паллеты приёмки: препятствие по габариту поддона, а не на весь проход
+    RECTS.push({ x1: layout.intake[0].x - 0.62, x2: layout.intake[0].x + 0.62, y1: -6.6, y2: 6.6, id: 'intake' });
+    // Стол отгрузки — компактный, чтобы не перекрывать док загрузки
+    RECTS.push({ x1: 10.0, x2: 11.2, y1: -2.6, y2: 2.6, id: 'despatch' });
     // зона отдыха — свободный пятачок у стены, препятствием не считается
     return RECTS;
   }
@@ -252,6 +257,9 @@
       decisionClock: 0,
       anim: { phase: 0, walk: 0, lean: 0, armSwing: 0, breath: 0 },
       elapsed: 0,
+      turnRate: 0,
+      lastHeading: opts.heading || 0,
+      safety: { fear: 0, strikes: 0, injuries: 0, grace: 0, lastRule: null, refusals: 0, lastRefusalAt: -99 },
     };
     buildObstacles(layout);
     buildGrid(layout);
@@ -281,13 +289,53 @@
       return null;
     }
 
+    // Куда нести коробку: в ячейку (приёмка) или в фуру (отгрузка)
+    function carryingPoint(warehouse, order) {
+      if (order.truckId && order.direction === 'out') {
+        var truck = warehouse.truckById ? warehouse.truckById(order.truckId) : null;
+        if (truck) return { x: truck.stand.x, y: truck.stand.y };
+        return { x: order.x, y: order.y };
+      }
+      var slot = slotOf(warehouse, order);
+      return slot ? slotPoint(slot) : null;
+    }
+
     function targetPoint(warehouse, order) {
       if (!order) return null;
-      if (w.carryingId) {
-        var slot = slotOf(warehouse, order);
-        return slot ? slotPoint(slot) : null;
-      }
+      if (w.carryingId) return carryingPoint(warehouse, order);
+      if (order.stand) return { x: order.stand.x, y: order.stand.y };
       return interactionPoint(order.x, order.y);
+    }
+
+    // Насколько далеко коробка от рук: расстояние минус половина габарита
+    function reachGap(order) {
+      var pad = order.reachPad || 0;
+      return Math.hypot(order.x - w.pos.x, order.y - w.pos.y) - pad;
+    }
+
+    function slotGap(slot) {
+      if (!slot) return 99;
+      return Math.hypot(slot.x - w.pos.x, slot.y - w.pos.y) - 0.55;
+    }
+
+    // Предел подъёма: после травм рабочий держится за безопасный вес
+    function liftLimit() {
+      var hard = model.carryCapacity(body);
+      var safe = model.safeLift(body);
+      var fear = model.clamp01(w.safety.fear);
+      return hard - (hard - safe) * (0.2 + 0.8 * fear);
+    }
+
+    function checkLift(order) {
+      var limit = liftLimit();
+      if (order.mass > limit) {
+        return {
+          ok: false,
+          reason: 'Тяжело: ' + Math.round(order.mass) + ' кг, а предел сейчас ' + Math.round(limit) +
+            ' кг — нужен напарник или тележка',
+        };
+      }
+      return { ok: true, over: Math.max(0, order.mass - model.safeLift(body)) };
     }
 
     function slotPoint(slot) {
@@ -297,9 +345,10 @@
 
     // Точка, откуда удобно дотянуться до коробки/ячейки: сбоку, не внутри препятствия
     function interactionPoint(x, y) {
+      // Вплотную: 1.1 м — это «рукой подать» с учётом габарита коробки
       var candidates = [
-        { x: x + 1.25, y: y }, { x: x, y: y + 1.25 }, { x: x, y: y - 1.25 }, { x: x - 1.25, y: y },
-        { x: x + 1.95, y: y }, { x: x, y: y + 1.95 }, { x: x, y: y - 1.95 }, { x: x - 1.95, y: y },
+        { x: x + 1.1, y: y }, { x: x, y: y + 1.1 }, { x: x - 1.1, y: y }, { x: x, y: y - 1.1 },
+        { x: x + 1.55, y: y }, { x: x, y: y + 1.55 }, { x: x - 1.55, y: y }, { x: x, y: y - 1.55 },
       ];
       for (var i = 0; i < candidates.length; i++) {
         var c = candidates[i];
@@ -312,7 +361,19 @@
         if (pathBlocked({ x: c.x, y: c.y + 0.01 }, { x: c.x, y: c.y - 0.01 })) continue;
         return { x: c.x, y: c.y };
       }
-      return { x: x + 1.6, y: y };
+      // Резерв: ближайшая свободная точка, а не «в стену»
+      for (var ring = 1; ring <= 4; ring++) {
+        for (var a = 0; a < 8; a++) {
+          var ang = (a / 8) * Math.PI * 2;
+          var px = x + Math.cos(ang) * (0.9 + ring * 0.35);
+          var py = y + Math.sin(ang) * (0.9 + ring * 0.35);
+          if (Math.abs(px) > layout.width / 2 - 0.7 || Math.abs(py) > layout.depth / 2 - 0.7) continue;
+          var hit = false;
+          for (var ri = 0; ri < RECTS.length; ri++) if (pointInRect(px, py, RECTS[ri], 0.38)) { hit = true; break; }
+          if (!hit) return { x: px, y: py };
+        }
+      }
+      return { x: x + 1.1, y: y };
     }
 
     function setGoal(point, key) {
@@ -326,6 +387,14 @@
       var planned = GRID ? findPath(from, to) : null;
       if (planned && planned.length) return planned;
       return [{ x: to.x, y: to.y }];
+    }
+
+    // Поворот не мгновенный: с грузом корпус разворачивается медленнее
+    function turnTowards(angle, dt, rate) {
+      var delta = Math.atan2(Math.sin(angle - w.heading), Math.cos(angle - w.heading));
+      var maxStep = (rate || 5) * dt;
+      w.heading += Math.max(-maxStep, Math.min(maxStep, delta));
+      return w.heading;
     }
 
     function stepTowards(dt, warehouse, speedMul) {
@@ -352,12 +421,13 @@
       var base = 1.25 + 0.55 * w.traits.paceTrait;
       var factor = model.speedFactor(body, w.decision) * speedMul;
       if (w.carryingId) factor *= 0.82;
+      if (w.timers.stun > 0) factor *= 0.45;
       if (body.collapsed) factor *= 0.25;
       var speed = Math.min(dist / Math.max(dt, 1e-6), base * factor);
       var step = speed * dt;
       w.pos.x += (dx / dist) * step;
       w.pos.y += (dy / dist) * step;
-      w.heading = Math.atan2(dy, dx);
+      turnTowards(Math.atan2(dy, dx), dt, w.carryingId ? 3.2 : 6);
       w.speedNow = speed;
       w.stats.metres += step;
       return speed;
@@ -371,6 +441,26 @@
       }
       w.orderId = null;
       setGoal(null);
+    }
+
+    // Отказ от работы: по правилам безопаснее не брать вовсе
+    function refuseOrder(warehouse, order, reason) {
+      if (order) {
+        order.refusedBy = order.refusedBy || {};
+        order.refusedBy[w.id] = warehouse.state.time;
+        if (order.status === 'claimed' || order.status === 'carried') {
+          order.status = 'pending';
+          order.carrier = null;
+        }
+      }
+      w.orderId = null;
+      w.carryingId = null;
+      w.safety.refusals += 1;
+      w.safety.lastRefusalAt = warehouse.state.time;
+      setState('idle');
+      setGoal(null);
+      emit('Отказ: ' + reason, 'warn');
+      return { ok: false, state: w.state, reason: reason };
     }
 
     // ---------------------------------------------------------- восприятие
@@ -430,6 +520,84 @@
       }
     }
 
+    // ------------------------------------------------ техника безопасности
+    function safetyStep(dt, warehouse, order, carrying, rng, env) {
+      var mass = carrying && order ? order.mass : 0;
+      var breach = model.ruleBreach(body, {
+        mass: mass,
+        pace: w.decision.pace,
+        carrying: carrying,
+        turnRate: w.turnRate,
+        lifting: w.state === 'toPick' && w.timers.pick > 0,
+        working: w.state !== 'rest' && w.state !== 'idle' && w.state !== 'down',
+        precision: w.decision.precision,
+      });
+      if (breach) {
+        if (w.safety.lastRule !== breach.rule) {
+          w.safety.lastRule = breach.rule;
+          w.safety.strikes += 1;
+          model.noteViolation(body, breach);
+          emit('Нарушение: ' + breach.cause, 'warn');
+        }
+        var grace = w.safety.grace > 0;
+        var chance = breach.risk * dt * (0.7 + 0.8 * model.injuryLevel(body)) * (grace ? 0.15 : 1);
+        if (rng.next() < chance) {
+          var injury = model.addInjury(body, {
+            type: breach.type,
+            part: breach.part,
+            severity: breach.severity * (0.75 + 0.5 * rng.next()),
+            cause: breach.cause,
+          });
+          w.safety.injuries += 1;
+          w.safety.grace = 18;
+          w.safety.fear = model.clamp01(w.safety.fear + 0.3 + 0.35 * injury.severity);
+          w.timers.stun = 1.4 + 2.4 * injury.severity;
+          emit('Травма: ' + injury.text, 'bad');
+          if (carrying && order && injury.severity > 0.4 && rng.next() < 0.55) {
+            // не удержал — коробка падает
+            var dmg = 0.22 + 0.4 * rng.next();
+            var outcome = warehouse.drop(order, dmg, w.pos.x, w.pos.y);
+            model.dropPenalty(body, dmg);
+            w.carryingId = null;
+            w.stats.dropped += 1;
+            if (outcome === 'ruined') { w.orderId = null; setState('idle'); setGoal(null); }
+            else { setState('toPick'); setGoal(targetPoint(warehouse, order), 'pick:' + order.id); }
+            emit('От боли выронил коробку', 'bad');
+          }
+          if (env && env.onInjury) env.onInjury(w, injury);
+        }
+      } else {
+        w.safety.lastRule = null;
+      }
+      // Страх держится, пока болит; без травм медленно проходит
+      w.safety.grace = Math.max(0, (w.safety.grace || 0) - dt);
+      w.safety.fear = Math.max(model.injuryLevel(body) * 0.85, w.safety.fear - dt * 0.008);
+      w.safety.fear = model.clamp01(w.safety.fear);
+    }
+
+    // Правила поверх нейросети: после травм рабочий сам себя ограничивает
+    function applySafety(order) {
+      var safe = model.safeLift(body);
+      var fear = model.clamp01(w.safety.fear);
+      var mass = w.carryingId && order ? order.mass : 0;
+      var over = mass > 0 ? model.clamp((mass - safe * 0.7) / Math.max(6, safe * 0.6), 0, 1) : 0;
+      if (mass > 0) {
+        w.decision.pace = Math.min(w.decision.pace, 0.92 - 0.5 * fear - 0.3 * over);
+        w.decision.caution = Math.max(w.decision.caution, 0.3 + 0.35 * over + 0.25 * fear);
+        w.decision.precision = Math.max(w.decision.precision, 0.3 + 0.2 * over);
+      }
+      if (body.fatigue > 0.78) {
+        w.decision.rest = Math.max(w.decision.rest, 0.2 + 0.5 * fear + 0.3 * (body.fatigue - 0.78) * 5);
+        w.decision.pace = Math.min(w.decision.pace, 0.7);
+      }
+      var level = model.injuryLevel(body);
+      if (level > 0.02) {
+        w.decision.pace = Math.min(w.decision.pace, 1 - 0.35 * level);
+        w.decision.caution = Math.max(w.decision.caution, 0.35 + 0.45 * level);
+      }
+      if (body.cognition < 0.5) w.decision.caution = Math.max(w.decision.caution, 0.5);
+    }
+
     // ---------------------------------------------------------- команды панели
     function command(cmd, warehouse, opts2) {
       opts2 = opts2 || {};
@@ -456,6 +624,11 @@
             return { ok: true, state: w.state, orderId: w.orderId };
           }
           if (!order) return { ok: false, reason: 'Нет свободных заказов на приёмке' };
+          var liftCheck = checkLift(order);
+          if (!liftCheck.ok) {
+            refuseOrder(warehouse, order, liftCheck.reason);
+            return { ok: false, reason: liftCheck.reason };
+          }
           var claimed = warehouse.claim(order.id, w.id);
           if (!claimed) return { ok: false, reason: 'Заказ уже занят' };
           w.orderId = order.id;
@@ -541,6 +714,15 @@
         setGoal(null);
       }
       var carrying = Boolean(w.carryingId);
+
+      // 2b. Правила техники безопасности поверх решений сети + травмы
+      var headingDelta = Math.atan2(Math.sin(w.heading - w.lastHeading), Math.cos(w.heading - w.lastHeading));
+      w.turnRate = Math.abs(headingDelta) / Math.max(dt, 1e-4);
+      w.lastHeading = w.heading;
+      if (w.timers.stun > 0) w.timers.stun = Math.max(0, w.timers.stun - dt);
+      applySafety(order);
+      safetyStep(dt, warehouse, order, carrying, rng, env);
+
       var speedNorm = w.speedNow / 1.8;
       var intensity = model.intensityOf(body, {
         speed: Math.min(1, speedNorm),
@@ -571,6 +753,15 @@
           w.carryingId = null;
         }
         emit('Упал без сил', 'bad');
+        if (rng.next() < 0.3) {
+          var hit = model.addInjury(body, {
+            type: 'brain', part: 'head', severity: 0.15 + 0.25 * rng.next(), cause: 'упал в обморок и ударился головой',
+          });
+          w.safety.injuries += 1;
+          w.safety.grace = 12;
+          emit('Травма: ' + hit.text, 'bad');
+          if (env.onInjury) env.onInjury(w, hit);
+        }
       }
 
       // 4. Автономия: решения о задачах
@@ -647,13 +838,26 @@
           if (!order) { setState('idle'); w.orderId = null; break; }
           if (order.status !== 'claimed' && order.status !== 'pending') { w.orderId = null; setState('idle'); break; }
           if (order.status === 'pending') warehouse.claim(order.id, w.id);
+          // Тяжёлое не берём: правило техники безопасности, а не «сила есть — тяни»
+          var lift = checkLift(order);
+          if (!lift.ok) {
+            refuseOrder(warehouse, order, lift.reason);
+            if (env.onRefused) env.onRefused(w, order, lift.reason);
+            break;
+          }
           var pickPoint = targetPoint(warehouse, order);
-          setGoal(pickPoint, 'pick:' + order.id);
-          if (w.goal) stepTowards(dt, warehouse, 1);
           var d = pickPoint ? Math.hypot(pickPoint.x - w.pos.x, pickPoint.y - w.pos.y) : 99;
-          if (!w.goal || d < 0.9) {
+          if (d > 0.3) setGoal(pickPoint, 'pick:' + order.id);
+          else setGoal(null);
+          if (w.goal) {
+            stepTowards(dt, warehouse, 1);
+            d = pickPoint ? Math.hypot(pickPoint.x - w.pos.x, pickPoint.y - w.pos.y) : 99;
+          }
+          // Достаём только вплотную: коробка должна быть в пределах вытянутой руки
+          var gap = reachGap(order);
+          if (d < 0.45 && gap <= ARM_REACH) {
             w.speedNow = 0;
-            w.heading = Math.atan2(order.y - w.pos.y, order.x - w.pos.x);
+            turnTowards(Math.atan2(order.y - w.pos.y, order.x - w.pos.x), dt, 4);
             w.timers.pick += dt;
             var need = model.pickTime(body, w.decision) * (1 + Math.max(0, order.mass - 22) / 60);
             if (w.timers.pick >= need) {
@@ -661,37 +865,79 @@
               w.carryingId = order.id;
               warehouse.markCarried(order, w.id);
               w.stats.picked += 1;
-              body.unitsDelivered = body.unitsDelivered; // не считается доставкой
+              if (order.mass > model.safeLift(body)) {
+                emit('Поднял ' + Math.round(order.mass) + ' кг — выше безопасного предела', 'warn');
+              }
               setState('toDrop');
-              setGoal(targetPoint(warehouse, order));
+              setGoal(carryingPoint(warehouse, order));
               emit('Коробка ' + order.code + ' в руках', 'info');
             }
+          } else if (d < 0.45 && gap > ARM_REACH) {
+            // Стоим рядом, но не дотягиваемся — отказываемся, а не тянемся «резиновой рукой»
+            w.timers.reach = (w.timers.reach || 0) + dt;
+            if (w.timers.reach > 2.5) {
+              w.timers.reach = 0;
+              var why = 'Коробка вне досягаемости (' + gap.toFixed(1) + ' м) — подойти не получилось';
+              refuseOrder(warehouse, order, why);
+              if (env.onRefused) env.onRefused(w, order, why);
+            }
+          } else {
+            w.timers.reach = 0;
           }
           break;
         }
         case 'toDrop': {
           order = activeOrder(warehouse);
           if (!order) { setState('idle'); w.orderId = null; w.carryingId = null; break; }
-          var dropPoint = targetPoint(warehouse, order);
-          setGoal(dropPoint, 'drop:' + order.id);
-          if (w.goal) stepTowards(dt, warehouse, 1);
+          var truck = order.truckId && warehouse.truckById ? warehouse.truckById(order.truckId) : null;
+          if (order.truckId && (!truck || truck.status !== 'working') && w.carryingId) {
+            // Фура уже уехала — коробку возвращаем на полку
+            if (warehouse.restock) warehouse.restock(order);
+            w.orderId = null;
+            w.carryingId = null;
+            setState('idle');
+            setGoal(null);
+            emit('Фура уехала, коробка возвращена на место', 'warn');
+            break;
+          }
+          var outbound = Boolean(truck) && order.direction === 'out';
+          var dropPoint = outbound ? { x: truck.stand.x, y: truck.stand.y } : carryingPoint(warehouse, order);
           var slot = slotOf(warehouse, order);
           var reach = dropPoint ? Math.hypot(dropPoint.x - w.pos.x, dropPoint.y - w.pos.y) : 99;
-          if (!w.goal || reach < 0.9) {
+          if (reach > 0.3) setGoal(dropPoint, 'drop:' + order.id);
+          else setGoal(null);
+          if (w.goal) {
+            stepTowards(dt, warehouse, 1);
+            reach = dropPoint ? Math.hypot(dropPoint.x - w.pos.x, dropPoint.y - w.pos.y) : 99;
+          }
+          var placeGap = outbound ? reach : slotGap(slot);
+          if (reach < 0.45 && placeGap <= ARM_REACH + 0.25) {
             w.speedNow = 0;
-            w.heading = Math.atan2(slot.y - w.pos.y, slot.x - w.pos.x);
+            var aim = outbound ? truck.handle : (slot || { x: order.x, y: order.y });
+            turnTowards(Math.atan2(aim.y - w.pos.y, aim.x - w.pos.x), dt, 4);
             w.timers.place += dt;
-            var placeNeed = model.placeTime(body, w.decision) * (1 + slot.h * 0.25);
+            var placeNeed = model.placeTime(body, w.decision) * (outbound ? 1.05 : 1 + ((slot && slot.h) || 0.25) * 0.25);
             if (w.timers.place >= placeNeed) {
               w.timers.place = 0;
-              var res = warehouse.store(order, w.id);
-              w.orderId = null;
-              w.carryingId = null;
-              w.stats.delivered += 1;
-              model.deliverReward(body, order.priority + 0.4);
-              setState('idle');
-              setGoal(null);
-              if (env.onDelivered) env.onDelivered(w, order, res);
+              if (outbound) {
+                var loadRes = warehouse.loadTruck(order, w.id);
+                w.orderId = null;
+                w.carryingId = null;
+                w.stats.loaded = (w.stats.loaded || 0) + 1;
+                model.deliverReward(body, order.priority + 0.5);
+                setState('idle');
+                setGoal(null);
+                if (env.onLoaded) env.onLoaded(w, order, loadRes);
+              } else {
+                var res = warehouse.store(order, w.id);
+                w.orderId = null;
+                w.carryingId = null;
+                w.stats.delivered += 1;
+                model.deliverReward(body, order.priority + 0.4);
+                setState('idle');
+                setGoal(null);
+                if (env.onDelivered) env.onDelivered(w, order, res);
+              }
             }
           }
           // Риск уронить коробку
@@ -703,6 +949,15 @@
             model.dropPenalty(body, dmg);
             w.stats.dropped += 1;
             w.carryingId = null;
+            if (dmg > 0.4 && rng.next() < 0.28) {
+              var smash = model.addInjury(body, {
+                type: 'brain', part: 'head', severity: 0.12 + 0.2 * rng.next(), cause: 'коробка упала и задела голову',
+              });
+              w.safety.injuries += 1;
+              w.safety.grace = 10;
+              emit('Травма: ' + smash.text, 'bad');
+              if (env.onInjury) env.onInjury(w, smash);
+            }
             if (outcome === 'ruined') {
               w.orderId = null;
               setState('idle');
@@ -755,13 +1010,23 @@
       var coop = Math.min(1, w.decision.coop + (w.coopBoost || 0));
       var best = null;
       var bestScore = -Infinity;
+      var limit = liftLimit();
       for (var i = 0; i < pending.length; i++) {
         var o = pending[i];
+        // Не берём то, что уже отказались брать, и то, что не поднять по правилам
+        if (o.refusedBy && o.refusedBy[w.id] && warehouse.state.time - o.refusedBy[w.id] < 30) continue;
+        if (o.mass > limit) continue;
+        if (o.truckId) {
+          var tr = warehouse.truckById ? warehouse.truckById(o.truckId) : null;
+          if (!tr || tr.status !== 'working') continue;
+        }
         var dist = Math.hypot(o.x - w.pos.x, o.y - w.pos.y);
         var timeLeft = Math.max(0, o.deadline - warehouse.state.time);
         var urgencyScore = (1 - Math.min(1, timeLeft / 100)) * (0.6 + 1.8 * urgency);
         var massScore = -Math.max(0, o.mass - model.carryCapacity(body)) * 0.12;
         var s = urgencyScore * 6 + o.priority * (1 + 2 * urgency) - dist * 0.14 - o.damage * 2 + massScore;
+        if (o.truckId) s += 1.8; // фуру не заставишь ждать
+        if (o.mass > model.safeLift(body)) s -= 2.5; // тяжесть — только если больше некому
         // Кооперация: помогаем напарнику, чей заказ почти просрочен
         if (coop > 0.55) {
           for (var k = 0; k < allWorkers.length; k++) {

@@ -163,6 +163,37 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
     result.crewCardsAfter = doc.querySelectorAll('.crew-card').length;
     const selectedCard = doc.getElementById('selected-card');
     result.selectedChildren = selectedCard ? selectedCard.children.length : 0;
+    // Три камеры: 3-е лицо → сверху за рабочим → весь цех
+    result.cameraButtons = doc.querySelectorAll('#camera-seg button').length;
+    result.truckPanel = Boolean(doc.getElementById('truck-list'));
+    result.truckButton = Boolean(doc.getElementById('btn-truck'));
+    if (window.WC.world && window.WC.world.cycleMode) {
+      const first = window.WC.world.cycleMode();
+      const second = window.WC.world.cycleMode();
+      result.cameraCycle = [first, second];
+      window.WC.world.setMode('third');
+    }
+    if (window.WC.ui && window.WC.ui.setCamera) {
+      window.WC.ui.setCamera('follow');
+      result.followMode = window.WC.world.getMode();
+      result.followClass = body.classList.contains('view-follow');
+      window.WC.ui.setCamera('third');
+    }
+    // Фуры: вызов фуры из пульта создаёт её на доке
+    if (window.WC.game && window.WC.game.sim) {
+      const truck = window.WC.game.sim.spawnTruck('unload');
+      result.truckSpawned = Boolean(truck);
+      result.truckOrders = truck ? truck.total : 0;
+      // Кадр с фурой: меши фуры обязаны собраться движком без ошибок
+      try {
+        window.WC.world.render(1 / 30, window.WC.game);
+        result.truckRendered = true;
+        result.truckMeshes = window.WC.world.scene.children.length;
+      } catch (err) {
+        result.truckRendered = false;
+        result.truckError = String(err && err.message);
+      }
+    }
     // Плашка имени в quickbar должна переключать рабочего одним тапом
     const cycle = doc.getElementById('qb-cycle');
     if (cycle) {
@@ -206,7 +237,13 @@ for (const mode of modes) {
   check(r.cycleWorks !== false, 'тап по имени в quickbar переключает рабочего');
   check(r.crewCards === 3 && r.crewCardsAfter === 3, 'три карточки бригады без дублей', { n: r.crewCards, after: r.crewCardsAfter });
   check(r.cardStable, 'карточки не пересобираются при обновлении HUD');
-  check(r.selectedChildren === 8, 'карточка рабочего собрана один раз (3 строки + 4 полоски + характеры)', { children: r.selectedChildren });
+  check(r.selectedChildren === 9, 'карточка рабочего собрана один раз (3 строки + 4 полоски + характеры + травмы)', { children: r.selectedChildren });
+  check(r.cameraButtons === 3, 'в пульте три режима камеры', { n: r.cameraButtons });
+  check(r.truckPanel && r.truckButton, 'есть блок фур и кнопка вызова');
+  check(Array.isArray(r.cameraCycle) && r.cameraCycle[0] === 'follow' && r.cameraCycle[1] === 'top', 'C переключает 3-е лицо → сверху за ним → весь цех', { cycle: r.cameraCycle });
+  check(r.followMode === 'follow' && r.followClass, 'камера «сверху за рабочим» включается', { mode: r.followMode });
+  check(r.truckSpawned && r.truckOrders > 0, 'фура приезжает на док с грузом', { orders: r.truckOrders });
+  check(r.truckRendered === true, 'фура рисуется мешами движка без ошибок', { err: r.truckError });
   if (mode.touch) {
     check(r.device === 'phone', 'layout.js распознал телефон', { device: r.device });
     check(Number(r.uiVar) > 0.8 && Number(r.uiVar) < 1.3, '--ui посчитан', { ui: r.uiVar });

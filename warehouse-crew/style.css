@@ -517,8 +517,73 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
   transition: color 0.16s, background 0.2s;
 }
 .seg button.on { background: rgba(232, 180, 90, 0.16); color: var(--accent-2); }
+.seg.seg-3 button { font-size: calc(9.5px * var(--ui)); padding-left: 4px; padding-right: 4px; }
 .seg button:not(.on):hover { color: var(--ink); }
 .seg button:active { transform: scale(0.97); }
+
+/* травмы и правила в карточке рабочего */
+.sc-health {
+  display: flex; gap: calc(10px * var(--ui)); flex-wrap: wrap;
+  font-family: var(--mono); font-size: calc(9px * var(--ui)); color: var(--ink-faint);
+  border-top: 1px dashed var(--line); padding-top: calc(5px * var(--ui));
+}
+.sc-health b { color: var(--ink-dim); }
+.sc-health.bad b { color: #ff8f6b; }
+.sc-health .warn b { color: var(--accent-2); }
+
+/* доки и фуры */
+.truck-list { display: grid; gap: calc(5px * var(--ui)); margin-bottom: calc(6px * var(--ui)); }
+.truck {
+  border: 1px solid var(--line); border-left: 2px solid var(--accent-2);
+  border-radius: var(--radius-sm); background: var(--panel-2);
+  padding: calc(6px * var(--ui)) calc(8px * var(--ui));
+  display: grid; gap: calc(3px * var(--ui));
+  transition: border-color 0.25s, background 0.25s;
+  animation: rowIn 0.3s var(--ease-out) both;
+}
+.truck.live { border-left-color: var(--accent); background: rgba(232, 180, 90, 0.07); }
+.truck.load { border-left-color: #5aa9e6; }
+.truck.empty { border-left-color: var(--line); color: var(--ink-faint); font-size: calc(10px * var(--ui)); }
+.truck .t-head { display: flex; justify-content: space-between; align-items: baseline; }
+.truck .t-head b { font-size: calc(10.5px * var(--ui)); letter-spacing: 0.04em; }
+.truck .t-plate { font-family: var(--mono); font-size: calc(9px * var(--ui)); color: var(--accent-2); letter-spacing: 0.08em; }
+.truck .t-line { display: flex; justify-content: space-between; font-size: calc(9px * var(--ui)); color: var(--ink-faint); }
+.truck .t-num { font-family: var(--mono); color: var(--ink-dim); }
+.truck .track { height: calc(4px * var(--ui)); border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.truck .track i {
+  display: block; height: 100%; width: 0; border-radius: 3px;
+  background: linear-gradient(90deg, #6fbf8b, #a9e6b8);
+  transition: width 0.5s var(--ease);
+}
+.truck .t-state { font-size: calc(9px * var(--ui)); color: var(--ink-faint); }
+
+/* травмы и правила в инспекторе */
+.injuries { display: grid; gap: calc(5px * var(--ui)); }
+.injury {
+  display: grid; gap: calc(3px * var(--ui));
+  border-left: 2px solid var(--red);
+  background: rgba(226, 96, 79, 0.09);
+  border-radius: var(--radius-sm);
+  padding: calc(5px * var(--ui)) calc(7px * var(--ui));
+}
+.injury b { font-size: calc(10px * var(--ui)); color: #ff8f6b; }
+.injury span { font-size: calc(9px * var(--ui)); color: var(--ink-dim); }
+.injury .track { height: calc(4px * var(--ui)); border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.injury .track i { display: block; height: 100%; background: linear-gradient(90deg, #e2604f, #ff8f6b); }
+.inj-clean { font-size: calc(10px * var(--ui)); color: #6fbf8b; }
+.rule-list { display: grid; gap: calc(3px * var(--ui)); margin-top: calc(6px * var(--ui)); }
+.rule {
+  display: grid; grid-template-columns: 8px 1fr auto; gap: calc(6px * var(--ui));
+  align-items: start; font-size: calc(9.5px * var(--ui)); color: var(--ink-faint);
+}
+.rule .r-dot {
+  width: 6px; height: 6px; border-radius: 50%; margin-top: 4px;
+  background: #6fbf8b;
+}
+.rule.hit .r-dot { background: var(--red); }
+.rule.hit .r-text { color: #ff8f6b; }
+.rule b { font-family: var(--mono); color: var(--ink-dim); }
+.rule-note { margin-top: calc(5px * var(--ui)); font-family: var(--mono); font-size: calc(9px * var(--ui)); color: var(--accent-2); }
 
 /* очередь заказов */
 .queue-count {
