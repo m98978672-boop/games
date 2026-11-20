@@ -248,7 +248,7 @@ func receive_bullet(point: Vector3, source: Vector3, power: float = 36.0) -> voi
 	on_hurt()
 	last_health = game.state.health
 	game.combat_feedback.injury(zone, to_local(source), game.state.pain, result.fatal)
-	game.notify("Смертельное ранение: " + zone if result.fatal else ("Попадание: " + zone + " • H — аптечка, ищи укрытие"))
+	game.notify(game.combat_feedback.injury_text + ("" if result.fatal else " • H — аптечка, ищи укрытие"))
 
 func begin_heal() -> bool:
 	if healing_time > 0 or reload_time > 0 or not game.state.use_item("heal"):

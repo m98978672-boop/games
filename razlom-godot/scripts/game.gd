@@ -383,7 +383,8 @@ func enemy_fire(guard) -> void:
 	var target: Vector3 = player.global_position + Vector3.UP * height
 	var distance := origin.distance_to(target)
 	var spread: float = lerpf(0.025, 0.004, clampf(guard.aim_time / 2.5, 0, 1)) * distance
-	target += Vector3(world_rng.randf_range(-spread, spread), world_rng.randf_range(-spread, spread), 0)
+	var right := (target - origin).normalized().cross(Vector3.UP).normalized()
+	target += right * world_rng.randf_range(-spread, spread) + Vector3.UP * world_rng.randf_range(-spread, spread)
 	var query := PhysicsRayQueryParameters3D.create(origin, origin + (target - origin).normalized() * 80, 1 | 2 | 4)
 	query.exclude = [guard.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
@@ -823,7 +824,7 @@ func _process(delta: float) -> void:
 	hint_label.visible = not hint_label.text.is_empty()
 	if state.health <= 0 or player.position.y < -12:
 		ended = true
-		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
+		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n" + combat_feedback.injury_text + "\nБез шлема и бронежилета попадание в жизненно важную зону смертельно.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
 
 func save_game() -> bool:
 	if not started or ended:
