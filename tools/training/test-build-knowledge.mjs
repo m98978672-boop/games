@@ -50,6 +50,7 @@ async function main() {
     'tools/training/build-knowledge.mjs',
     '--out', TMP, '--game', '30', '--bug', '60', '--code', '20', '--play', '20', '--readme', '10',
     '--codes', '200', '--law', '20', '--defect', '20', '--balance', '20', '--edge', '30', '--engine', '20',
+    '--realcode', '30', '--bench', '60',
   ], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 });
 
   const train = await load(join(TMP, 'train.jsonl'));
@@ -76,9 +77,13 @@ async function main() {
       + new Set(evalRows.map((r) => hash(r.user))).size - new Set(all.map((r) => hash(r.user))).size === 0,
     'входы из eval не должны встречаться в train');
 
-  check('в данных нет строки null вместо смысла',
-    all.every((r) => !/:\s*null\b|\bnull\b/.test(r.assistant)),
-    'пример: ' + (all.find((r) => /\bnull\b/.test(r.assistant))?.user || '').slice(0, 60));
+  /* «null вместо смысла» — это когда в ОТВЕТЕ стоит null из-за незаполненного
+     поля каталога. В коде, который показывают модели, null встречается
+     законно (JSON.parse возвращает null), поэтому код не проверяем. */
+  check('в ответах нет null вместо смысла',
+    all.filter((r) => !r.kind.startsWith('code-'))
+      .every((r) => !/:\s*null\b/.test(r.assistant)),
+    'пример: ' + (all.find((r) => !r.kind.startsWith('code-') && /:\s*null\b/.test(r.assistant))?.user || '').slice(0, 60));
 
   // Ответы командира обязаны проходить игровой валидатор — иначе модель
   // выучит ответы, которые игра не примет.
@@ -124,6 +129,9 @@ async function main() {
     ['game-edge', 'граничные ситуации'],
     ['game-rule', 'правила решений'],
     ['engine-arch', 'устройство игры'],
+    ['code-defect', 'дефекты в реальном коде'],
+    ['code-bench-broken', 'пары «сломано» из бенчмарка'],
+    ['code-bench-clean', 'пары «чисто» из бенчмарка'],
   ]) {
     check('есть база: ' + name, all.some((r) => r.kind === kind), 'тип ' + kind + ' не найден');
   }
@@ -161,6 +169,22 @@ async function main() {
       && manifest.counts.eval === evalRows.length,
     `манифест=${manifest.counts.total}, факт=${all.length}`);
 
+  /* Примеры «найди баг» обязаны идти с тем же промптом, что и в оценке:
+     иначе модель учит один ответ, а её меряют по другому формату. */
+  const prompts = JSON.parse(await readFile(join(ROOT, 'tools/training/prompts.json'), 'utf8'));
+  const benchRows = all.filter((r) => r.kind === 'code-bench-broken' || r.kind === 'code-bench-clean');
+  check('примеры «найди баг» используют единый промпт из prompts.json',
+    benchRows.length === 0 || benchRows.every((r) => r.system === prompts.bugCheck.system),
+    'промпт разъехался с prompts.json');
+
+  check('есть и битые, и чистые примеры для поиска багов',
+    all.some((r) => r.kind === 'code-bench-broken') && all.some((r) => r.kind === 'code-bench-clean'),
+    'без чистых примеров модель будет кричать «баг» всегда');
+
+  check('чистые примеры отвечают ровно {"bug":false}',
+    all.filter((r) => r.kind === 'code-bench-clean' || r.kind === 'code-clean')
+      .every((r) => r.assistant === '{"bug":false}' || r.assistant === 'чисто'));
+
   check('манифест фиксирует хэши файлов',
     manifest.files.train.sha256 === hash(await readFile(join(TMP, 'train.jsonl'), 'utf8'))
     || manifest.files.train.sha256.length === 64);
@@ -172,6 +196,7 @@ async function main() {
     'tools/training/build-knowledge.mjs',
     '--out', again, '--game', '30', '--bug', '60', '--code', '20', '--play', '20', '--readme', '10',
     '--codes', '200', '--law', '20', '--defect', '20', '--balance', '20', '--edge', '30', '--engine', '20',
+    '--realcode', '30', '--bench', '60',
   ], { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 });
   const trainAgain = await readFile(join(again, 'train.jsonl'), 'utf8');
   check('один seed даёт один и тот же датасет',

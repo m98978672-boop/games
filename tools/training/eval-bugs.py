@@ -25,12 +25,19 @@ from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, Auto
 MODEL = 'Qwen/Qwen3.5-0.8B'
 REVISION = '2fc06364715b967f1860aea9cf38778875588b17'
 
-PROMPT = (
-    'Ты проверяешь файл из репозитория браузерных игр на дефекты. '
-    'Ответь одним JSON-объектом и ничем больше:\n'
-    '{"bug": true} — если файл сломан, или {"bug": false} — если всё в порядке. '
-    'Не объясняй. Не добавляй текст вокруг JSON.'
-)
+def load_prompt():
+    """Промпт берём из prompts.json — того же файла, что читает обучение.
+
+    Раньше он был прописан здесь отдельно, и форматы разъехались: модель
+    училась отвечать с полями code и why, а оценка ждала голый {"bug":true}.
+    """
+    path = Path(__file__).resolve().parent / 'prompts.json'
+    data = json.loads(path.read_text(encoding='utf-8'))
+    check = data['bugCheck']
+    return check['system'], check['userPrefix']
+
+
+PROMPT, USER_PREFIX = load_prompt()
 
 MAX_CHARS = 6000
 
@@ -38,11 +45,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from answers import parse_answer  # noqa: E402
 
 
-def build_ids(tok, text, system):
+def build_ids(tok, text, system, file_hint='file.js'):
     """Тот же формат, что и при обучении: иначе оценка мерит не то."""
     msgs = [
         {'role': 'system', 'content': system},
-        {'role': 'user', 'content': text},
+        {'role': 'user', 'content': USER_PREFIX.replace('{file}', file_hint) + text},
     ]
     base = dict(tokenize=False, add_generation_prompt=True)
     for kwargs in ({'enable_thinking': False}, {}):
@@ -65,7 +72,7 @@ def run(model, tok, cases, bench_dir, limit_chars=MAX_CHARS):
         text = (bench_dir / case['name']).read_text(encoding='utf-8', errors='replace')
         if len(text) > limit_chars:
             text = text[:limit_chars]
-        ids = build_ids(tok, text, PROMPT)
+        ids = build_ids(tok, text, PROMPT, case.get('file', 'file.js'))
         # У тестовых чекпойнтов словарь крошечный: токены вне его дали бы
         # IndexError. На настоящей модели это условие ничего не меняет.
         vocab = getattr(model.config, 'vocab_size', None) or len(tok)

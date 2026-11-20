@@ -84,6 +84,69 @@ const SCENARIOS = [
     what: 'Исполнение строки как кода — дыра в безопасности.',
     break: (src) => src.replace(/\n/, '\nconst unsafe = new Function("return 1");\n'),
   },
+{
+    id: 'storage-no-try',
+    file: 'road-tycoon/src/sim.js',
+    rule: 'хранилище-без-защиты',
+    code: '402',
+    severity: 'мелочь',
+    what: 'localStorage без try: в приватном режиме браузера это исключение и игра падает при сохранении.',
+    break: (src) => src.replace(/\n/, '\nwindow.__unsafeSave = () => localStorage.setItem("x", "1");\n'),
+  },
+  {
+    id: 'empty-catch',
+    file: 'folder-os/index.html',
+    rule: 'пустой-catch',
+    code: '303',
+    severity: 'мелочь',
+    what: 'Ошибка поймана и выброшена: причину сбоя не найти ни игроку, ни разработчику.',
+    break: (src) => src.replace(/<body([^>]*)>/, '<body$1>\n<script>try { null.x; } catch (e) {}</script>'),
+  },
+  {
+    id: 'missing-json-field',
+    file: 'site/community-games.json',
+    rule: 'пустое-поле-данных',
+    code: '103',
+    severity: 'важно',
+    what: 'У записи пропало обязательное поле title — карточка в каталоге останется без названия.',
+    break: (src) => src.replace(/"title"\s*:\s*"[^"]*",/, ''),
+  },
+  {
+    id: 'self-closing-script',
+    file: 'truck-haul/index.html',
+    rule: 'разметка',
+    code: '700',
+    severity: 'критично',
+    what: 'Самозакрывающийся тег script: браузер не исполнит скрипт, игра не запустится.',
+    break: (src) => src.replace(/<script([^>]*)><\/script>/, '<script$1 />'),
+  },
+{
+    id: 'async-without-await',
+    file: 'road-tycoon/src/sim.js',
+    rule: 'обещание-без-обработки',
+    code: '610',
+    severity: 'важно',
+    what: 'Промис создан без await и без catch: ошибка внутри потеряется, а вызывающий код продолжит работу, будто всё хорошо.',
+    break: (src) => src.replace(/\n/, '\nconst lost = Promise.reject(new Error("x"));\n'),
+  },
+  {
+    id: 'hardcoded-port',
+    file: 'tools/p2p-server/server.mjs',
+    rule: 'жёсткий-адрес',
+    code: '801',
+    severity: 'важно',
+    what: 'Порт вшит числом: на хостинге порт выдаёт платформа, и сервер не поднимется.',
+    break: (src) => src.replace(/const PORT = [^;]+;/, 'const PORT = 8080;'),
+  },
+  {
+    id: 'missing-return',
+    file: 'shared/p2p/torrentfile.js',
+    rule: 'функция-ничего-не-возвращает',
+    code: '601',
+    severity: 'важно',
+    what: 'Функция считает значение, но не возвращает его: вызывающий получает undefined и падает дальше по цепочке.',
+    break: (src) => src.replace(/\n(\s+)return (P2P\.sha256Hex\(bytes\));/, '\n$1void ($2);'),
+  },
   {
     id: 'broken-json',
     file: 'site/community-games.json',
@@ -126,6 +189,15 @@ async function main() {
     try { broken = sc.break(original); } catch (e) { broken = null; }
     if (!broken || broken === original) {
       console.log('пропуск (порча не применилась):', sc.id);
+      continue;
+    }
+
+    /* Проверка, что порча именно сломала файл, а не «переставила байты»:
+       файл должен отличаться, но остаться того же порядка длины. Иначе
+       дефект мог стереть весь файл, и чистый/битый станут несравнимы. */
+    const delta = Math.abs(broken.length - original.length);
+    if (delta > Math.max(400, original.length * 0.1)) {
+      console.log('пропуск (порча изменила слишком много):', sc.id, 'delta', delta);
       continue;
     }
 

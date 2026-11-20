@@ -56,7 +56,8 @@ jobs:
             --out "$RUNNER_TEMP/knowledge" \
             --game "${{ inputs.game_rows || '900' }}" \
             --bug 400 --code 40 --play 60 --readme 20 \
-            --codes 1200 --law 40 --defect 40 --balance 30 --edge 40 --engine 30
+            --codes 400 --law 40 --defect 40 --balance 30 --edge 40 --engine 30 \
+            --realcode 60 --bench 200
           node -e '
             const m = require(process.env.RUNNER_TEMP + "/knowledge/manifest.json");
             console.log("::notice::Датасет: " + JSON.stringify(m.counts));

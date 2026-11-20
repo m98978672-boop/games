@@ -27,6 +27,8 @@ import { createHash } from 'node:crypto';
 import { join, resolve, relative, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 const require = createRequire(import.meta.url);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -34,10 +36,11 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 /* ------------------------------------------------------------ утилиты */
 
 const sha256 = (s) => createHash('sha256').update(s).digest('hex');
+const execFileAsync = promisify(execFile);
 
 function parseArgs(argv) {
   const out = {
-    out: 'knowledge-data', game: 0, code: 0, bug: 0, readme: 0, play: 0, codes: 0, law: 0, defect: 0, balance: 0, edge: 0, engine: 0,
+    out: 'knowledge-data', game: 0, code: 0, bug: 0, readme: 0, play: 0, codes: 0, law: 0, defect: 0, balance: 0, edge: 0, engine: 0, realcode: 0, bench: 0,
     seed: 7, quiet: false, maxFileKb: 64,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -54,6 +57,8 @@ function parseArgs(argv) {
     else if (a === '--balance') out.balance = Number(argv[++i]) || 0;
     else if (a === '--edge') out.edge = Number(argv[++i]) || 0;
     else if (a === '--engine') out.engine = Number(argv[++i]) || 0;
+    else if (a === '--realcode') out.realcode = Number(argv[++i]) || 0;
+    else if (a === '--bench') out.bench = Number(argv[++i]) || 0;
     else if (a === '--seed') out.seed = Number(argv[++i]) || 7;
     else if (a === '--max-file-kb') out.maxFileKb = Number(argv[++i]) || 64;
     else if (a === '--quiet') out.quiet = true;
@@ -714,6 +719,223 @@ async function buildEngineRows(limit) {
   return rows;
 }
 
+/* ---------- 12. Реальный код: найди дефект в настоящем файле ---------- */
+
+/* Слабое место прошлой версии: из 2200 примеров только 9 учили искать баги
+   в коде, хотя именно это измеряет бенчмарк. Здесь берём НАСТОЯЩИЕ места
+   из настоящих файлов репозитория — те, что находит бот-багоискатель, — и
+   строим примеры в его же формате: код, фрагмент, объяснение, как чинить.
+
+   Ответ всегда с фрагментом: модель должна научиться показывать место, а не
+   отвечать «где-то есть проблема». */
+const CODE_DEFECTS = [
+  {
+    rule: 'eval', code: '600', severity: 'важно',
+    file: 'tools/torrent/build-catalog.mjs',
+    pattern: /new Function\(/,
+    why: 'Строка превращается в исполняемый код. Если в неё попадёт текст из сохранения, URL или файла игрока, он выполнится с правами страницы.',
+    fix: 'Разбирать данные (JSON.parse с проверкой полей) и сверять с явным списком разрешённых действий — не исполнять текст.',
+  },
+  {
+    rule: 'разбор-без-защиты', code: '401', severity: 'мелочь',
+    file: 'tools/p2p-server/server.mjs',
+    pattern: /JSON\.parse\(/,
+    why: 'Битый JSON бросает исключение. В обработчике это роняет запрос, в игре — сохранение: игрок теряет прогресс в самый заметный момент.',
+    fix: 'Обернуть в try/catch и вернуть понятную ошибку: try { return JSON.parse(t) } catch { return null } — и пусть вызывающий решает, что делать с null.',
+  },
+  {
+    rule: 'пустой-catch', code: '303', severity: 'мелочь',
+    file: 'tools/p2p-server/server.mjs',
+    pattern: /catch\s*(\([^)]*\))?\s*\{\s*\}/,
+    why: 'Ошибка ловится и молча выбрасывается: причина сбоя исчезает, и починить его потом невозможно — в журнале пусто.',
+    fix: 'Записать ошибку в журнал (console.warn с контекстом) или вернуть её вызывающему. Молча глотать можно только то, что действительно неважно, и это надо писать в комментарии.',
+  },
+{
+    rule: 'хранилище-без-защиты', code: '402', severity: 'мелочь',
+    file: 'road-tycoon/src/sim.js',
+    pattern: /localStorage\.(getItem|setItem|removeItem)\s*\(/,
+    why: 'В приватном режиме браузера и при переполнении хранилища localStorage бросает исключение. Если это не поймать, игра падает в момент сохранения — самый заметный для игрока момент.',
+    fix: 'Обернуть доступ в try/catch: сохранение должно либо пройти, либо тихо не пройти, но игра обязана продолжить работать.',
+  },
+  {
+    rule: 'внешний-запрос', code: '800', severity: 'мелочь',
+    file: 'site/scripts/auto-post-news.mjs',
+    pattern: /https?:\/\/(?!localhost|127\.0\.0\.1)[a-z0-9.-]+/i,
+    why: 'Внешний адрес в коде игры означает запрос наружу: сайт должен работать статически и офлайн. Если это не ссылка-источник, а настоящий запрос, игра не запустится без сети.',
+    fix: 'Для источника новости — оставить как ссылку с пометкой. Для ресурса — положить файл в репозиторий и обращаться по относительному пути.',
+  },
+  {
+    rule: 'пустой-catch', code: '303', severity: 'мелочь',
+    file: 'folder-os/index.html',
+    pattern: /catch\s*(\([^)]*\))?\s*\{\s*\}/,
+    why: 'Ошибка поймана и выброшена: в журнале пусто, причину сбоя не найти. Игрок видит «не работает», разработчик — ничего.',
+    fix: 'Записать ошибку с контекстом или вернуть её вызывающему; молчаливое проглатывание допустимо только с комментарием, почему это безопасно.',
+  },
+  {
+    rule: 'отладочный-лог', code: '313', severity: 'мелочь',
+    file: 'truck-haul/src/main.js',
+    pattern: /console\.log\(/,
+    why: 'Отладочные логи в игровом коде засоряют журнал: настоящую ошибку среди них не видно, а на слабом телефоне они ещё и тормозят.',
+    fix: 'Убрать или спрятать за флагом отладки, который выключен по умолчанию.',
+  },
+];
+
+async function buildRealCodeRows(limit) {
+  const rows = [];
+  let text;
+  const sources = new Map();
+  const system = 'Ты ищешь дефекты в настоящем коде браузерных игр. Отвечай так: '
+    + 'сначала код находки из таблицы баг-искателя, потом фрагмент строки, потом почему это плохо и как правильно. '
+    + 'Если дефекта нет — так и скажи: «чисто».';
+
+  for (const d of CODE_DEFECTS) {
+    let src;
+    try { src = await readFile(join(ROOT, d.file), 'utf8'); }
+    catch (e) { continue; }
+    sources.set(d.file, src);
+
+    const lines = src.split('\n');
+    const hits = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (d.pattern.test(lines[i])) hits.push(i + 1);
+      if (hits.length >= 3) break;
+    }
+    if (!hits.length) { log('  нет вхождений в', d.file, '—', d.rule); continue; }
+
+    for (const lineNo of hits) {
+      if (rows.length >= limit) return rows;
+      // Контекст ±2 строки: по одной строке модель не поймёт окружение.
+      const from = Math.max(0, lineNo - 3);
+      const to = Math.min(lines.length, lineNo + 2);
+      const snippet = lines.slice(from, to)
+        .map((l, i) => `${String(from + i + 1).padStart(4)} | ${l}`)
+        .join('\n');
+      rows.push({
+        system,
+        user: `Файл ${d.file}. Найди дефект в этом фрагменте:\n\n${snippet}`,
+        assistant: `Код ${d.code} (${d.rule}), уровень: ${d.severity}.\n`
+          + `Место: ${d.file}:${lineNo}.\n\n`
+          + `Почему это плохо: ${d.why}\n\n`
+          + `Как исправить: ${d.fix}`,
+        kind: 'code-defect',
+        source: `${d.file}:${lineNo}`,
+      });
+    }
+  }
+
+  /* Отрицательные примеры: тот же файл, но чистое место. Без них модель
+     учится кричать «баг» на любой код — это видно по метрике ложных тревог. */
+  const CLEAN = [
+    { file: 'shared/p2p/torrentfile.js', what: 'разбор данных с проверкой' },
+    { file: 'site/scripts/auto-post-news.mjs', what: 'сборка обложки' },
+    { file: 'tools/p2p-server/server.mjs', what: 'маршрутизация запросов' },
+  ];
+  for (const c of CLEAN) {
+    if (rows.length >= limit) return rows;
+    let src;
+    try { src = await readFile(join(ROOT, c.file), 'utf8'); } catch (e) { continue; }
+    const lines = src.split('\n');
+    // Берём функцию целиком: там нет известных дефектов по нашим правилам.
+    const start = lines.findIndex((l) => /^(export\s+)?(async\s+)?function\s+\w+/.test(l));
+    if (start < 0) continue;
+    let end = start + 24;
+    for (let i = start + 1; i < Math.min(lines.length, start + 60); i++) {
+      if (lines[i] === '}') { end = i + 1; break; }
+    }
+    const snippet = lines.slice(start, end)
+      .map((l, i) => `${String(start + i + 1).padStart(4)} | ${l}`)
+      .join('\n');
+    rows.push({
+      system,
+      user: `Файл ${c.file}. Найди дефект в этом фрагменте:\n\n${snippet}`,
+      assistant: 'чисто',
+      kind: 'code-clean',
+      source: c.file,
+    });
+  }
+  return rows;
+}
+
+/* ---------- 13. Пары «чисто / сломано» из бенчмарка багов ---------- */
+
+/* Бенчмарк (make-bug-bench.mjs) уже умеет аккуратно ломать настоящие файлы,
+   и у каждого дефекта известен код правила. Это готовый источник пар
+   «так правильно — так сломано». Обучаем на парах: модель видит обе версии
+   одного файла и учится отличать дефект от нормы, а не угадывать. */
+async function buildBenchRows(limit) {
+  const rows = [];
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  let dir;
+  try {
+    dir = await mkdtemp(join(tmpdir(), 'bugbench-'));
+    await execFileAsync('node', [
+      join(ROOT, 'tools/training/make-bug-bench.mjs'), '--out', dir,
+    ], { cwd: ROOT, maxBuffer: 16 * 1024 * 1024 });
+    const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8'));
+    const byScenario = new Map();
+    for (const c of manifest.cases) {
+      if (!byScenario.has(c.scenario)) byScenario.set(c.scenario, {});
+      byScenario.get(c.scenario)[c.hasBug ? 'broken' : 'clean'] = c;
+    }
+
+    const prompts = await loadPrompts();
+    const system = prompts.bugCheck.system;
+    const userPrefix = prompts.bugCheck.userPrefix;
+
+    for (const [scenario, pair] of byScenario) {
+      if (rows.length >= limit) break;
+      if (!pair.broken || !pair.clean) continue;
+      const broken = pair.broken;
+      // Фрагмент вокруг дефекта: ищем строку, которой нет в чистой версии.
+      const brokenText = await readFile(join(dir, broken.name), 'utf8');
+      const cleanText = await readFile(join(dir, pair.clean.name), 'utf8');
+      const bLines = brokenText.split('\n');
+      const cLines = cleanText.split('\n');
+      let at = 0;
+      while (at < Math.min(bLines.length, cLines.length) && bLines[at] === cLines[at]) at++;
+      const from = Math.max(0, at - 2);
+      const to = Math.min(bLines.length, at + 3);
+      const snippet = bLines.slice(from, to)
+        .map((l, i) => `${String(from + i + 1).padStart(4)} | ${l}`)
+        .join('\n');
+
+      rows.push({
+        system,
+        user: userPrefix.replace('{file}', broken.file) + snippet,
+        assistant: JSON.stringify({
+          bug: true,
+          code: broken.code,
+          why: broken.what,
+        }, null, 0),
+        kind: 'code-bench-broken',
+        source: `бенчмарк: ${scenario}`,
+      });
+
+      /* Чистая версия — чтобы модель не кричала «баг» на любой файл.
+         Показываем тот же участок, но из настоящего, несломанного файла:
+         подменять строки на «...» нельзя — тогда учить нечего. */
+      if (rows.length < limit) {
+        const cleanSnippet = cLines.slice(from, to)
+          .map((l, i) => `${String(from + i + 1).padStart(4)} | ${l}`)
+          .join('\n');
+        rows.push({
+          system,
+          user: userPrefix.replace('{file}', pair.clean.file) + cleanSnippet,
+          assistant: prompts.bugCheck.cleanAnswer,
+          kind: 'code-bench-clean',
+          source: `бенчмарк: ${scenario}`,
+        });
+      }
+    }
+  } catch (e) {
+    log('  бенчмарк недоступен:', e.message);
+  } finally {
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
+  return rows;
+}
+
 /* ------------------------------------------ 4. Общие правила репозитория */
 
 /* «Как играть и в чём смысл» — по каждому настоящему README игры и по GDD
@@ -821,6 +1043,16 @@ async function buildReadmeRows(limit) {
 
 /* ------------------------------------------------------------------ сбор */
 
+/* Промпты берём из prompts.json — того же файла, что читает оценка.
+   Иначе обучение и проверка расходятся, и метрики мерят не то. */
+let PROMPTS = null;
+async function loadPrompts() {
+  if (PROMPTS) return PROMPTS;
+  const raw = await readFile(join(ROOT, 'tools/training/prompts.json'), 'utf8');
+  PROMPTS = JSON.parse(raw);
+  return PROMPTS;
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const outDir = resolve(ROOT, opts.out);
@@ -918,6 +1150,22 @@ async function main() {
     const engine = await buildEngineRows(engineLimit);
     console.log('   получено', engine.length);
     rows.push(...engine);
+  }
+
+  const realcodeLimit = opts.realcode || 0;
+  if (realcodeLimit > 0) {
+    console.log('  реальный код: дефекты в настоящих файлах, до', realcodeLimit, '…');
+    const real = await buildRealCodeRows(realcodeLimit);
+    console.log('   получено', real.length);
+    rows.push(...real);
+  }
+
+  const benchLimit = opts.bench || 0;
+  if (benchLimit > 0) {
+    console.log('  пары «чисто / сломано» из бенчмарка: до', benchLimit, '…');
+    const bench = await buildBenchRows(benchLimit);
+    console.log('   получено', bench.length);
+    rows.push(...bench);
   }
 
   const readmeLimit = opts.readme || 0;
