@@ -118,7 +118,7 @@ func _physics_process(delta: float) -> void:
 	anchor.y += reload_blend * 0.08
 	var breath := sin(Time.get_ticks_msec() * 0.0018) * (0.001 if aiming else 0.003)
 	gun.position = gun.position.lerp(anchor + Vector3(sin(bob) * (0.003 if aiming else 0.012) * input.length(), sin(bob * 2) * 0.009 * input.length() + breath - landing, recoil), 1.0 - exp(-delta * 14.0))
-	gun.rotation.x = lerp_angle(gun.rotation.x, -0.25 * reload_blend + recoil * 2 - (0.12 if running else 0.0), 1.0 - exp(-delta * 18.0))
+	gun.rotation.x = lerp_angle(gun.rotation.x, 0.18 * reload_blend + recoil * 2 - (0.12 if running else 0.0), 1.0 - exp(-delta * 18.0))
 	gun.rotation.z = lerp_angle(gun.rotation.z, -0.48 * reload_blend - input.x * (0.01 if aiming else 0.035), 1.0 - exp(-delta * 12.0))
 	weapon_motion.advance(reload_time, recoil)
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
