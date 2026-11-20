@@ -7,7 +7,8 @@
     "builder": "ratcore/tools/build-browser-bundle.mjs",
     "bridge": "shared/engine.js",
     "bootstrap": "shared/engine-bootstrap.js",
-    "modules": 48
+    "modules": 48,
+    "sections": 23
   },
   "rules": [
     "Каждый раздел Games подключает движок через ../shared/engine.js (или shared/engine.js в корне).",
@@ -167,6 +168,14 @@
       "kind": "game",
       "engine": "../shared/engine.js",
       "badge": "topbar"
+    },
+    {
+      "id": "mesh-studio",
+      "path": "mesh-studio/index.html",
+      "kind": "tool",
+      "engine": "../shared/engine.js",
+      "badge": "topbar",
+      "note": "Редактор 3D-моделей на движке RatCore: примитивы, вращение, экструзия, воксели, сохранение проекта"
     },
     {
       "id": "torrent",

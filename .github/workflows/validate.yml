@@ -43,6 +43,13 @@ jobs:
           fi
           node tools/torrent/test.mjs
           node tools/p2p-server/test.mjs
+      - name: Test MESH STUDIO — редактор моделей на движке (ядро, стык, собранный бандл)
+        run: |
+          # Редактор живёт на том же движке, поэтому его стык проверяется здесь
+          # же. Браузера в CI нет — бандл запускается на минимальной странице.
+          node mesh-studio/tests/core.mjs
+          node mesh-studio/tests/engine.mjs
+          node mesh-studio/tests/browser.mjs
       - name: Test bridges between RatCore and other engines (route-engine, «Переплёт»)
         run: |
           (cd route-engine && npm test)

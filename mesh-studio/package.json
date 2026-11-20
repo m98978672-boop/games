@@ -1,0 +1,14 @@
+{
+  "name": "mesh-studio",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "MESH STUDIO — редактор 3D-моделей на движке RatCore: примитивы, тела вращения, экструзия, воксели",
+  "scripts": {
+    "build": "esbuild studio.js --bundle --minify --format=iife --target=es2019 --outfile=studio.bundle.js",
+    "test": "node tests/core.mjs && node tests/engine.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

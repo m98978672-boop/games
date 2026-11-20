@@ -3,12 +3,12 @@
   "generatedAt": "2026-11-18T00:00:00.000Z",
   "chunkSize": 262144,
   "stats": {
-    "games": 232,
-    "storefront": 16,
+    "games": 233,
+    "storefront": 17,
     "collection": 216,
-    "files": 2077,
-    "totalBytes": 50920342,
-    "chunks": 391,
+    "files": 2084,
+    "totalBytes": 51008901,
+    "chunks": 392,
     "blockedFiles": 3
   },
   "games": [
@@ -5227,6 +5227,62 @@
           "path": "tools/sides.mjs",
           "size": 8735,
           "sha256": "6b5d11c2bccd3be652b174cdcb9578b05f92dc1867b7f68fe2df04f2ef2da919"
+        }
+      ],
+      "blocked": [],
+      "blockedCount": 0,
+      "blockedBytes": 0,
+      "addedAt": "2026-11-18T00:00:00.000Z"
+    },
+    {
+      "gameId": "mesh-studio",
+      "title": "MESH STUDIO",
+      "subtitle": "Наш редактор 3D-моделей на движке RatCore",
+      "accent": "#5ea9e8",
+      "version": "v1.0",
+      "play": "mesh-studio/index.html",
+      "cover": "site/assets/truck-showroom.webp",
+      "dir": "mesh-studio",
+      "infoHash": "e7f3fa446031c0d9d1bb86fa4220da39d89ec07930cd489ffadf254c0e6b02a3",
+      "totalSize": 88559,
+      "chunkSize": 262144,
+      "chunkCount": 1,
+      "fileCount": 7,
+      "files": [
+        {
+          "path": "core.js",
+          "size": 9169,
+          "sha256": "60745d0063edd8a707f3f488d177f023e202fb2e8243bd6e4b421ebe35e15e98"
+        },
+        {
+          "path": "engine-adapter.js",
+          "size": 10898,
+          "sha256": "a8289eafe1cc28cfacc3ec0359b729892d9d16336a0ae8c96c57b3c96036f13f"
+        },
+        {
+          "path": "index.html",
+          "size": 7440,
+          "sha256": "638634e307a7fb766282eaa2a016b100aa1c1c0559e3b8f10a64be1e350ab360"
+        },
+        {
+          "path": "package.json",
+          "size": 510,
+          "sha256": "a5991d5df245f5c2586f319f1ec15ca4ef2471c2b7f83fdcba7ced5d28173070"
+        },
+        {
+          "path": "studio.bundle.js",
+          "size": 26118,
+          "sha256": "da21485f7345ff0b2a7d3bcd188670e04339d3a4605fe7b55d94b49f6ce2266e"
+        },
+        {
+          "path": "studio.css",
+          "size": 9706,
+          "sha256": "5e55af4bc89fb38b524cb4b2852f8d5eb3b866eab3e6813d42bcf05340f5d37c"
+        },
+        {
+          "path": "studio.js",
+          "size": 24718,
+          "sha256": "e003eb7c70481d8a7e30eac613931502b88f17994fbefe5b942237d71483fbc2"
         }
       ],
       "blocked": [],
