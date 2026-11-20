@@ -11,8 +11,13 @@ func _init(host: Node3D) -> void:
 		var segment := Node3D.new()
 		host.add_child(segment)
 		var visual := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.075, 0.075, 1)
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.034
+		mesh.bottom_radius = 0.043
+		mesh.height = 1.0
+		mesh.radial_segments = 8
+		mesh.rings = 1
+		visual.rotation.x = PI * 0.5
 		visual.mesh = mesh
 		visual.material_override = RazlomArt.material(Color("65756b"), "cloth")
 		segment.add_child(visual)

@@ -78,7 +78,7 @@ func rebuild_damage() -> void:
 	visual.mesh = surface.commit()
 	visual.material_override = RazlomArt.material(Color.WHITE, "brick")
 	add_child(visual)
-	# Merge surviving cells into X-runs: at most 64 collision shapes, not 512 bodies.
+	# Merge surviving cells into X-runs: one shape per surviving run, no per-cell rigid bodies.
 	for z in range(GRID):
 		for y in range(GRID):
 			var x := 0
