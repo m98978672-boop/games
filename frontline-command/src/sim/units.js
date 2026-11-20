@@ -128,8 +128,9 @@ export function updatePerception(game, u, dt) {
   p.memory = Math.max(0, p.memory - dt);
   if (u.downed || !u.alive) { p.hasContact = false; p.enemies.length = 0; return; }
   const cone = degToRad(game.cfg.ai.perception.coneDeg);
-  // Opt-in: all directions within the existing vision radius, with actual LOS.
+  // All directions within the existing vision radius, with actual LOS.
   // Existing hearing and memory remain separate; this is not x-ray vision.
+  // The flag retains the previous cone as a reproducible comparison fallback.
   const surround = game.cfg.flag('bot_surround_vision_v1', false);
   const enemies = game.nearbyEnemies(u, u.vision + 60);
   let best = null, bestScore = -Infinity;

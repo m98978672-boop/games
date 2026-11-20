@@ -5,7 +5,7 @@
   "stats": {
     "games": 16,
     "files": 1206,
-    "totalBytes": 36001027,
+    "totalBytes": 36001120,
     "chunks": 146,
     "blockedFiles": 3
   },
@@ -2088,8 +2088,8 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "1eee786e19c4a50908b566d66c0cf92800cb99bd0061848f01bd92ed737c0fc1",
-      "totalSize": 9882484,
+      "infoHash": "61d970ebc1a407a684074dec475b2e8b3844c00cd1f502325c427f2d681732b4",
+      "totalSize": 9882577,
       "chunkSize": 262144,
       "chunkCount": 38,
       "fileCount": 560,
@@ -3351,8 +3351,8 @@
         },
         {
           "path": "data/feature_flags.json",
-          "size": 15637,
-          "sha256": "d9f5d0e16b1e19c388b75ee8025fab59e8c944366755a02405efd961ccd96dbc"
+          "size": 15590,
+          "sha256": "a04cf8abc708c1e49eb30e6e2b4a744dd23350d2e03cc30a7c7f21e81d23b49c"
         },
         {
           "path": "data/game_audit_contract.json",
@@ -3481,8 +3481,8 @@
         },
         {
           "path": "package.json",
-          "size": 14753,
-          "sha256": "5150f1f9eb22faead5b0835b88d296a74c4a1413b1fc6592feab3f65a07c2526"
+          "size": 14825,
+          "sha256": "1b16bd29b22b664a4561286ed48286cde0bfe57f81228b7f1307ef2b0ddd2831"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3521,8 +3521,8 @@
         },
         {
           "path": "src/core/build-info.js",
-          "size": 843,
-          "sha256": "ead3d7f83c2d2cbf4afaaf57f4d07fdab709bcbbd4b667304378abf9b2498d9c"
+          "size": 840,
+          "sha256": "663255a352231d321c55895c91461aa90432c49c0c79fe40184dd04a004b329a"
         },
         {
           "path": "src/core/config.js",
@@ -3711,8 +3711,8 @@
         },
         {
           "path": "src/sim/units.js",
-          "size": 45049,
-          "sha256": "3e775be50662be445b45dd7895e995c0d74505a0918ed7d62edd6eb52801ee4d"
+          "size": 45120,
+          "sha256": "eb54104669743892cdd74c4737a19232f2acdaff24baaccec343478025be103c"
         },
         {
           "path": "src/sim/vision_nav_policy.js",
