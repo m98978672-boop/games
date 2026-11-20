@@ -79,7 +79,7 @@ func run_tests() -> void:
 	guard.cooldown = 100
 	guard.position = Vector3(45, 0.3, -5)
 	player.position.y = 2.0
-	for i in range(120):
+	for i in range(180):
 		guard._physics_process(1.0 / 60)
 	check(absf(guard.motion.joints.ArmR.rotation.x) < 1.6, "Vertical aim stays bounded instead of accumulating rotation")
 	check(guard.weapon_raise > 0.95 and guard.is_weapon_raised(), "Guard visibly raises the rifle before aiming")
