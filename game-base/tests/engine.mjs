@@ -155,7 +155,9 @@ ok(!/ratcore\/src\//.test(siteHtml), 'витрина не тянет внутр�
 // Поэтому: theme.css — только игры-шаблоны по HUD-скелету (белый список),
 // все остальные берут только токены, а правила темы не должны
 // переопределять одноимённые классы разделов.
-const HUD_SKELETON = new Set(['1in8b', 'frontline-command', 'game-base', 'truck-showroom']);
+// warehouse-crew собран ровно по HUD-скелету game-base: .topbar + .panel + .bottom-bar
+// + .modal-root + .toasts + .pause-flag + #save-indicator (это проверяет его smoke-тест)
+const HUD_SKELETON = new Set(['1in8b', 'frontline-command', 'game-base', 'truck-showroom', 'warehouse-crew']);
 const themeCss = read('shared/theme.css');
 const tokensCss = read('shared/tokens.css');
 

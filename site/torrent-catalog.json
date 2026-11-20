@@ -3,10 +3,10 @@
   "generatedAt": "2026-11-18T00:00:00.000Z",
   "chunkSize": 262144,
   "stats": {
-    "games": 16,
-    "files": 1206,
-    "totalBytes": 36001120,
-    "chunks": 146,
+    "games": 17,
+    "files": 1232,
+    "totalBytes": 37364401,
+    "chunks": 152,
     "blockedFiles": 3
   },
   "games": [
@@ -4911,6 +4911,157 @@
       ],
       "blockedCount": 2,
       "blockedBytes": 6852,
+      "addedAt": "2026-11-18T00:00:00.000Z"
+    },
+    {
+      "gameId": "warehouse-crew",
+      "title": "СЕВЕРНЫЙ УЗЕЛ",
+      "subtitle": "Склад с живыми рабочими и обученными мозгами",
+      "accent": "#e8b45a",
+      "version": "v1.0",
+      "play": "warehouse-crew/index.html",
+      "cover": "site/assets/warehouse-crew.webp",
+      "dir": "warehouse-crew",
+      "infoHash": "72791ec563c50752e57524d1193ae6cd0b45519f685b8c046275877ae2838977",
+      "totalSize": 1363281,
+      "chunkSize": 262144,
+      "chunkCount": 6,
+      "fileCount": 26,
+      "files": [
+        {
+          "path": "cover.svg",
+          "size": 9522,
+          "sha256": "9141e3bf4d64ded27c72448663bcebf9576fbe8a5372ca6f6a2a91824ad95e22"
+        },
+        {
+          "path": "data/brain_dataset.json",
+          "size": 1088645,
+          "sha256": "21c05a528aa845e2269bc2021fb1d2ecc114832b2d379ec6271f8d7eba798ff4"
+        },
+        {
+          "path": "data/brain_training_log.json",
+          "size": 3906,
+          "sha256": "df226ae7b83ec724b4384f22aa4a82f0c3a9d613452e5fce55fd16e2e24d59ac"
+        },
+        {
+          "path": "data/brain_weights.json",
+          "size": 8736,
+          "sha256": "0f629cccc9a8b8720ea5642baf0272f9588b03550889ac9eb704930288fcf6ac"
+        },
+        {
+          "path": "data/brains/grisha.json",
+          "size": 8050,
+          "sha256": "6ffff7339b2fcc9c04079f7296da60ad398a6e01ec2c61373df3754e810418f5"
+        },
+        {
+          "path": "data/brains/marta.json",
+          "size": 8030,
+          "sha256": "1a02acc62a76ed098fb94d7234a6299cc18b23e8e5357f114354f614a9e8ca91"
+        },
+        {
+          "path": "data/brains/timur.json",
+          "size": 8042,
+          "sha256": "27dec782a27ab13e708b6c62c260016e4fac756f372a5a7f78bf3e4e90d26c49"
+        },
+        {
+          "path": "data/training/latest.json",
+          "size": 3906,
+          "sha256": "df226ae7b83ec724b4384f22aa4a82f0c3a9d613452e5fce55fd16e2e24d59ac"
+        },
+        {
+          "path": "index.html",
+          "size": 7119,
+          "sha256": "1b246e5c9c1780c90b432ac4676222c877f558caec94f9418cdf0993275820e2"
+        },
+        {
+          "path": "src/ai/brain-net.js",
+          "size": 5510,
+          "sha256": "dc09ac52479dc9dcc11796d30769d181242099d33ce408f6c244eafabda340ef"
+        },
+        {
+          "path": "src/audio.js",
+          "size": 3514,
+          "sha256": "ebcc5160f5d7812e10aca436c314f5eab49502a135b720ee72f6040a2dbf7d12"
+        },
+        {
+          "path": "src/config.js",
+          "size": 3478,
+          "sha256": "4d4453aa408333298a545aa9b0a2d72aa4e38e0f92477d15a0617b18a91f2d65"
+        },
+        {
+          "path": "src/game.js",
+          "size": 12075,
+          "sha256": "bf3da9e0207777dee1bc18a5ee2bec704fc0d6f80649d830f0d780b3e819519b"
+        },
+        {
+          "path": "src/main.js",
+          "size": 2616,
+          "sha256": "c3420d814159c7c791fdeaab34ab16637382af8c3f100552a1239fbbfc6833a9"
+        },
+        {
+          "path": "src/render.js",
+          "size": 2108,
+          "sha256": "32849157b569ac11b90bb49b2f7f24013c583b207541376621e59fd886475fce"
+        },
+        {
+          "path": "src/render/bodyview.js",
+          "size": 12985,
+          "sha256": "9171aab32dcf1cd53003ec9e74d8329a3c60b3df081f446066eeb7cd0a99162b"
+        },
+        {
+          "path": "src/render/meshes.js",
+          "size": 13432,
+          "sha256": "1b9b398c2a34724da0d9a67a1ba77f596ec3946aea2aca968b2e9e090d0eb968"
+        },
+        {
+          "path": "src/render/world.js",
+          "size": 23714,
+          "sha256": "827342dae0e6524717554508f73f7a5f70b6cf1a2ae795045f866eba3a96aaef"
+        },
+        {
+          "path": "src/save.js",
+          "size": 3041,
+          "sha256": "88d0e07194873a5597f76b005a65e69d3a89d6d6464a5e0f0f7e2d2cf44b42a5"
+        },
+        {
+          "path": "src/sim/model.js",
+          "size": 17118,
+          "sha256": "f5ae93b9a6b1ee69206de7322034b11a339d7dbd439ed7643ac24c047858357a"
+        },
+        {
+          "path": "src/sim/warehouse.js",
+          "size": 12340,
+          "sha256": "2cf9fb0139a90e22f66f27dd97c12cb4b3f9554584b0bf9b1e077077376f960d"
+        },
+        {
+          "path": "src/sim/worker.js",
+          "size": 32506,
+          "sha256": "e7c865bc21a8ae98a4f8e1b0e660cf3e6c1cf384ae395936300056561d8c2297"
+        },
+        {
+          "path": "src/ui.js",
+          "size": 34477,
+          "sha256": "71c858984417c3be52cb13bca872a2082d3f0ca952217bb4897b29be57222483"
+        },
+        {
+          "path": "src/util.js",
+          "size": 3608,
+          "sha256": "c8babb8850051c1b6aed368c8e7689c9c15181d5a570986b7c7e0bf946a8048e"
+        },
+        {
+          "path": "style.css",
+          "size": 17530,
+          "sha256": "19a254428a02414b3f5658073d262e4ad7ef5c2b13f5c5d5d341cbc555ae4e50"
+        },
+        {
+          "path": "training/train-brain.mjs",
+          "size": 17273,
+          "sha256": "b90ff7a3c2125ded8de37b52e7707d089b730c270bc9b23c3b0b95e654edac27"
+        }
+      ],
+      "blocked": [],
+      "blockedCount": 0,
+      "blockedBytes": 0,
       "addedAt": "2026-11-18T00:00:00.000Z"
     },
     {

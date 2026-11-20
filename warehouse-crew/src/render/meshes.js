@@ -1,0 +1,208 @@
+// Библиотека мешей. Вся геометрия рождается внутри RatCore:
+// engine.tools.build.fromRecipe() → запечатанный меш → engine.tools.bridge.exportMesh().
+// Игра только заливает полученные буферы в контейнер Three.js, ничего не считая руками.
+window.WC = window.WC || {};
+
+WC.meshes = (function () {
+  'use strict';
+
+  var cache = new Map();
+  var stats = { meshes: 0, triangles: 0, sealed: [] };
+
+  // Рецепты в «костном пространстве»: начало координат — сустав.
+  // Формат: { parts: [{ shape, size, radius, height, offset, color }] }
+  var RECIPES = {
+    // --- человек (R16-модель из примитивов, читаемая в 3-м лице) ---
+    pelvis: { parts: [{ shape: 'box', sx: 0.32, sy: 0.22, sz: 0.23, offset: [0, -0.22, 0], color: 'pants' }] },
+    torso: { parts: [{ shape: 'box', sx: 0.36, sy: 0.40, sz: 0.22, offset: [0, 0, 0], color: 'shirt' }] },
+    vest: { parts: [{ shape: 'box', sx: 0.375, sy: 0.26, sz: 0.235, offset: [0, 0.09, 0], color: 'vest' }] },
+    belt: { parts: [{ shape: 'box', sx: 0.335, sy: 0.055, sz: 0.235, offset: [0, -0.05, 0], color: 'boots' }] },
+    neck: { parts: [{ shape: 'cylinder', radius: 0.05, height: 0.085, segments: 8, offset: [0, 0, 0], color: 'skin' }] },
+    head: { parts: [{ shape: 'box', sx: 0.195, sy: 0.205, sz: 0.20, offset: [0, 0, 0], color: 'skin' }] },
+    hair: { parts: [{ shape: 'box', sx: 0.205, sy: 0.075, sz: 0.21, offset: [0, 0.135, 0], color: 'hair' }] },
+    hairBack: { parts: [{ shape: 'box', sx: 0.20, sy: 0.13, sz: 0.045, offset: [0, 0.035, -0.09], color: 'hair' }] },
+    eye: { parts: [{ shape: 'box', sx: 0.045, sy: 0.038, sz: 0.02, offset: [0, 0.056, 0.096], color: '#f6f2e9' }] },
+    pupil: { parts: [{ shape: 'box', sx: 0.02, sy: 0.026, sz: 0.014, offset: [0, 0.054, 0.104], color: '#20262a' }] },
+    brow: { parts: [{ shape: 'box', sx: 0.062, sy: 0.016, sz: 0.012, offset: [0, 0.092, 0.101], color: 'hair' }] },
+    nose: { parts: [{ shape: 'box', sx: 0.04, sy: 0.05, sz: 0.035, offset: [0, 0.012, 0.108], color: 'skin' }] },
+    mouth: { parts: [{ shape: 'box', sx: 0.055, sy: 0.013, sz: 0.012, offset: [0, -0.032, 0.101], color: '#8a5a4a' }] },
+    upperArm: { parts: [{ shape: 'cylinder', radius: 0.052, height: 0.27, segments: 8, offset: [0, -0.27, 0], color: 'shirt' }] },
+    forearm: { parts: [{ shape: 'cylinder', radius: 0.044, height: 0.25, segments: 8, offset: [0, -0.25, 0], color: 'skin' }] },
+    hand: { parts: [{ shape: 'box', sx: 0.08, sy: 0.10, sz: 0.065, offset: [0, -0.10, 0], color: 'gloves' }] },
+    thigh: { parts: [{ shape: 'box', sx: 0.145, sy: 0.38, sz: 0.16, offset: [0, -0.38, 0], color: 'pants' }] },
+    shin: { parts: [{ shape: 'box', sx: 0.115, sy: 0.34, sz: 0.13, offset: [0, -0.34, 0], color: 'pantsDark' }] },
+    foot: { parts: [{ shape: 'box', sx: 0.13, sy: 0.07, sz: 0.235, offset: [0, -0.07, 0.045], color: 'boots' }] },
+    badge: { parts: [{ shape: 'box', sx: 0.075, sy: 0.045, sz: 0.018, offset: [0.095, 0.20, 0.116], color: '#f2ecdf' }] },
+    strap: { parts: [{ shape: 'box', sx: 0.33, sy: 0.035, sz: 0.012, offset: [0, 0.145, 0.122], color: '#f4e6b8' }] },
+
+    // --- склад ---
+    floor: { parts: [{ shape: 'box', sx: 26, sy: 0.2, sz: 17, offset: [0, -0.2, 0], color: '#262b2c' }] },
+    floorStripe: { parts: [{ shape: 'box', sx: 26, sy: 0.02, sz: 0.18, offset: [0, 0, 0], color: '#6a5a38' }] },
+    wall: { parts: [{ shape: 'box', sx: 26, sy: 3.4, sz: 0.2, offset: [0, 0, 0], color: '#1b2022' }] },
+    wallSide: { parts: [{ shape: 'box', sx: 0.2, sy: 3.4, sz: 17, offset: [0, 0, 0], color: '#191e20' }] },
+    shelfBeam: { parts: [{ shape: 'box', sx: 0.09, sy: 2.35, sz: 0.09, offset: [0, 0, 0], color: '#4f6577' }] },
+    shelfBoard: { parts: [{ shape: 'box', sx: 1.15, sy: 0.06, sz: 11.4, offset: [0, 0, 0], color: '#7d8f9c' }] },
+    shelfSlat: { parts: [{ shape: 'box', sx: 0.25, sy: 0.05, sz: 11.4, offset: [0, 0, 0], color: '#8697a3' }] },
+    shelfLip: { parts: [{ shape: 'box', sx: 0.035, sy: 0.11, sz: 11.4, offset: [0, 0, 0], color: '#5c7182' }] },
+    pallet: { parts: [{ shape: 'box', sx: 1.2, sy: 0.12, sz: 1.0, offset: [0, 0, 0], color: '#8a6a41' }] },
+    palletEdge: { parts: [{ shape: 'box', sx: 1.2, sy: 0.04, sz: 0.12, offset: [0, 0.12, 0.44], color: '#a5814f' }] },
+    despatch: { parts: [{ shape: 'box', sx: 1.5, sy: 0.95, sz: 3.2, offset: [0, 0, 0], color: '#3c4a52' }] },
+    despatchTop: { parts: [{ shape: 'box', sx: 1.62, sy: 0.07, sz: 3.3, offset: [0, 0.95, 0], color: '#93a4ad' }] },
+    bench: { parts: [{ shape: 'box', sx: 1.8, sy: 0.12, sz: 0.55, offset: [0, 0.45, 0], color: '#6f5a3d' }] },
+    benchLeg: { parts: [{ shape: 'box', sx: 0.1, sy: 0.45, sz: 0.1, offset: [0, 0, 0], color: '#4a3c2a' }] },
+    lamp: { parts: [{ shape: 'box', sx: 1.5, sy: 0.08, sz: 0.26, offset: [0, 0, 0], color: '#ffe6b0' }] },
+    cone: { parts: [{ shape: 'cone', radius: 0.16, height: 0.42, segments: 8, offset: [0, 0, 0], color: '#e2604f' }] },
+    desk: { parts: [{ shape: 'box', sx: 1.9, sy: 0.08, sz: 0.8, offset: [0, 0.78, 0], color: '#4c5a63' }] },
+    monitor: { parts: [{ shape: 'box', sx: 0.6, sy: 0.36, sz: 0.04, offset: [0, 1.10, 0], color: '#10171a' }] },
+    screen: { parts: [{ shape: 'box', sx: 0.52, sy: 0.28, sz: 0.02, offset: [0, 1.14, -0.03], color: '#5aa9e6' }] },
+
+    // --- коробки (картон + скотч + ярлык) ---
+    boxSmall: { parts: [{ shape: 'box', sx: 0.42, sy: 0.30, sz: 0.34, offset: [0, 0, 0], color: '#b98a54' }] },
+    boxMedium: { parts: [{ shape: 'box', sx: 0.52, sy: 0.40, sz: 0.42, offset: [0, 0, 0], color: '#ad7f4c' }] },
+    boxBig: { parts: [{ shape: 'box', sx: 0.62, sy: 0.52, sz: 0.50, offset: [0, 0, 0], color: '#a2763f' }] },
+    tape: { parts: [{ shape: 'box', sx: 0.10, sy: 0.012, sz: 0.44, offset: [0, 0.001, 0], color: '#e6d9bd' }] },
+    label: { parts: [{ shape: 'box', sx: 0.18, sy: 0.01, sz: 0.13, offset: [0, 0.002, 0], color: '#f2ecdf' }] },
+
+    // --- анатомия для инспектора ---
+    skinTorso: { parts: [{ shape: 'box', sx: 0.40, sy: 0.52, sz: 0.24, offset: [0, -0.26, 0], color: '#d9a982' }] },
+    skinPelvis: { parts: [{ shape: 'box', sx: 0.34, sy: 0.22, sz: 0.24, offset: [0, -0.22, 0], color: '#c99a72' }] },
+    plate: { parts: [{ shape: 'box', sx: 0.18, sy: 0.24, sz: 0.035, offset: [0, 0, 0], color: '#e3b48c' }] },
+    brainOrgan: { parts: [{ shape: 'sphere', radius: 0.088, segments: 12, offset: [0, 0, 0], color: '#e7b3c7' }] },
+    heartOrgan: { parts: [{ shape: 'sphere', radius: 0.058, segments: 12, offset: [0, 0, 0], color: '#c0392b' }] },
+    lungOrgan: { parts: [{ shape: 'sphere', radius: 0.075, segments: 10, offset: [0, 0, 0], color: '#e08585' }] },
+    stomachOrgan: { parts: [{ shape: 'sphere', radius: 0.062, segments: 10, offset: [0, 0, 0], color: '#c48a63' }] },
+    liverOrgan: { parts: [{ shape: 'box', sx: 0.18, sy: 0.09, sz: 0.13, offset: [0, 0, 0], color: '#7e3f34' }] },
+    kidneyOrgan: { parts: [{ shape: 'sphere', radius: 0.042, segments: 8, offset: [0, 0, 0], color: '#8e4a54' }] },
+    intestine: { parts: [{ shape: 'box', sx: 0.30, sy: 0.055, sz: 0.16, offset: [0, 0, 0], color: '#c97c6b' }] },
+    boneLong: { parts: [{ shape: 'box', sx: 0.045, sy: 0.34, sz: 0.045, offset: [0, 0, 0], color: '#e8e2d2' }] },
+    ribBone: { parts: [{ shape: 'box', sx: 0.018, sy: 0.17, sz: 0.018, offset: [0, 0, 0], color: '#ded8c6' }] },
+    vertebra: { parts: [{ shape: 'box', sx: 0.07, sy: 0.045, sz: 0.07, offset: [0, 0, 0], color: '#d6d0bf' }] },
+    muscleBelly: { parts: [{ shape: 'box', sx: 0.30, sy: 0.34, sz: 0.16, offset: [0, 0, 0], color: '#a8483f' }] },
+    cutPlane: { parts: [{ shape: 'box', sx: 0.44, sy: 0.78, sz: 0.26, offset: [0, -0.39, 0], color: '#e8b45a' }] },
+  };
+
+  function resolveColor(name, palette) {
+    if (!palette) return name;
+    if (palette[name]) return palette[name];
+    if (name === 'pantsDark') return WC.util.shade(palette.pants, 0.78);
+    return name;
+  }
+
+  function recipeKey(name, palette) {
+    return name + '|' + (palette ? palette.shirt + palette.skin : 'neutral');
+  }
+
+  function toOps(name, palette) {
+    var recipe = RECIPES[name];
+    if (!recipe) throw new Error('Нет рецепта меша: ' + name);
+    return recipe.parts.map(function (part) {
+      var args = {
+        shape: part.shape,
+        sx: part.sx, sy: part.sy, sz: part.sz,
+        radius: part.radius, height: part.height,
+        segments: part.segments,
+        color: resolveColor(part.color, palette),
+      };
+      Object.keys(args).forEach(function (key) { if (args[key] == null) delete args[key]; });
+      return { tool: 'build.primitive', args: args, offset: part.offset || [0, 0, 0] };
+    });
+  }
+
+  function geometryFromPayload(payload) {
+    // Контейнер — Three.PlaneGeometry (правила RatCore запрещают создавать
+    // BufferGeometry/BoxGeometry напрямую); вершины берём ТОЛЬКО из моста движка.
+    var geom = new THREE.PlaneGeometry(1, 1);
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(payload.positions, 3));
+    if (payload.normals) geom.setAttribute('normal', new THREE.Float32BufferAttribute(payload.normals, 3));
+    if (payload.colors) geom.setAttribute('color', new THREE.Float32BufferAttribute(payload.colors, 4));
+    geom.setIndex(payload.index);
+    geom.computeBoundingSphere();
+    geom.computeBoundingBox();
+    return geom;
+  }
+
+  function buildOne(engine, name, palette, THREE_NS) {
+    var key = recipeKey(name, palette);
+    if (cache.has(key)) return cache.get(key);
+    var recipe = toOps(name, palette);
+    // fromRecipe применяет offset только при объединении нескольких примитивов,
+    // поэтому для рецепта из одной детали смещение переносим на сам объект.
+    var singleOffset = recipe.length === 1 ? recipe[0].offset : null;
+    var built = engine.tools.build.fromRecipe({ modelId: 'wc-' + name, ops: recipe });
+    if (!built.ok) throw new Error('fromRecipe(' + name + '): ' + built.error.message);
+    var exported = engine.tools.bridge.exportMesh({ mesh: built.data, format: 'threejs', name: name });
+    if (!exported.ok) throw new Error('bridge.exportMesh(' + name + '): ' + exported.error.message);
+    var entry = {
+      name: name,
+      key: key,
+      geometry: geometryFromPayload(exported.data.payload),
+      triCount: exported.data.triCount,
+      meshId: exported.data.meshId,
+      vertexCount: exported.data.vertexCount,
+      bounds: exported.data.bounds,
+      offset: singleOffset,
+      palette: palette ? palette.shirt : null,
+    };
+    cache.set(key, entry);
+    stats.meshes += 1;
+    stats.triangles += exported.data.triCount;
+    stats.sealed.push({ name: name, meshId: exported.data.meshId, triCount: exported.data.triCount });
+    return entry;
+  }
+
+  function makeMaterial(opts) {
+    opts = opts || {};
+    return new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      flatShading: true,
+      roughness: opts.roughness == null ? 0.82 : opts.roughness,
+      metalness: opts.metalness == null ? 0.06 : opts.metalness,
+      emissive: opts.emissive ? new THREE.Color(opts.emissive) : new THREE.Color(0x000000),
+      emissiveIntensity: opts.emissiveIntensity || 0,
+      side: opts.side || THREE.FrontSide,
+      transparent: Boolean(opts.transparent),
+      opacity: opts.opacity == null ? 1 : opts.opacity,
+      depthWrite: opts.depthWrite == null ? true : opts.depthWrite,
+    });
+  }
+
+  // Создаёт THREE.Mesh из меша движка
+  function mesh(engine, name, palette, opts) {
+    lastEngine = engine || lastEngine;
+    opts = opts || {};
+    var entry = buildOne(engine, name, palette || null);
+    var m = new THREE.Mesh(entry.geometry, opts.material || makeMaterial(opts));
+    if (entry.offset) m.position.set(entry.offset[0], entry.offset[1], entry.offset[2]);
+    m.castShadow = opts.castShadow !== false;
+    m.receiveShadow = opts.receiveShadow !== false;
+    m.userData.meshId = entry.meshId;
+    m.userData.triCount = entry.triCount;
+    return m;
+  }
+
+  function buildAll(engine, palettes) {
+    var names = Object.keys(RECIPES).filter(function (n) { return n.indexOf('box') !== 0 && n !== 'tape' && n !== 'label'; });
+    names.forEach(function (name) { buildOne(engine, name, null); });
+    ['boxSmall', 'boxMedium', 'boxBig', 'tape', 'label'].forEach(function (name) { buildOne(engine, name, null); });
+    Object.keys(palettes || {}).forEach(function (id) {
+      var palette = palettes[id];
+      ['pelvis', 'torso', 'vest', 'belt', 'strap', 'neck', 'head', 'hair', 'hairBack', 'eye', 'pupil', 'brow', 'nose', 'mouth', 'upperArm', 'forearm', 'hand', 'thigh', 'shin', 'foot', 'badge'].forEach(function (name) {
+        buildOne(engine, name, palette);
+      });
+    });
+    return stats;
+  }
+
+  var lastEngine = null;
+
+  return {
+    engineRef: function () { return lastEngine; },
+    RECIPES: RECIPES,
+    stats: stats,
+    mesh: mesh,
+    makeMaterial: makeMaterial,
+    buildAll: buildAll,
+    get: function (name, palette) { return cache.get(recipeKey(name, palette || null)); },
+    clear: function () { cache.clear(); stats.meshes = 0; stats.triangles = 0; stats.sealed.length = 0; },
+  };
+})();
