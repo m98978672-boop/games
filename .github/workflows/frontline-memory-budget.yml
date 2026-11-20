@@ -1,0 +1,38 @@
+name: Verify neural memory context budget
+on:
+  push:
+    branches: [arena/03bf5b1a-games]
+    paths: [.github/workflows/frontline-memory-budget.yml]
+permissions:
+  contents: read
+jobs:
+  tokenizer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate bounded input fixture
+        run: node frontline-command/tools/training/memory-context-budget.mjs "$RUNNER_TEMP/memory-context.json"
+      - name: Install tokenizer and check context
+        env:
+          HF_HUB_DISABLE_XET: '1'
+        run: |
+          python -m pip install 'transformers==5.5.4'
+          python - <<'PY'
+          import json,os
+          from transformers import AutoTokenizer
+          tok=AutoTokenizer.from_pretrained('Qwen/Qwen3.5-0.8B',revision='2fc06364715b967f1860aea9cf38778875588b17')
+          cases=json.load(open(os.path.join(os.environ['RUNNER_TEMP'],'memory-context.json')))['cases']
+          for x in cases:
+              messages=[{'role':'system','content':x['prompt']},{'role':'user','content':json.dumps(x['input'],separators=(',',':'))}]
+              text=tok.apply_chat_template(messages,tokenize=False,add_generation_prompt=True,enable_thinking=False)
+              tokens=len(tok.encode(text,add_special_tokens=False))
+              print('::notice::MEMORY_CONTEXT '+json.dumps({'knowledge':x['knowledge'],'transformersInputTokens':tokens,'outputReserve':96,'limit':1024},separators=(',',':')))
+              if tokens+96>1024:raise ValueError('bounded memory fixture exceeds token budget')
+          PY

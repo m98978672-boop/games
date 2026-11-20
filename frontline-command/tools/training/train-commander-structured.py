@@ -60,9 +60,25 @@ def select(rows,count):
         if not added:break
     return selected
 
+def select_memory_pairs(rows,count):
+    if count%2:raise ValueError('paired-memory count must be even')
+    groups={}
+    for row in rows:
+        base={k:v for k,v in row['input'].items() if k!='memory'}
+        key=json.dumps(base,sort_keys=True,separators=(',',':'))
+        action=json.loads(row['response'])['action']
+        if action in ('hold','none'):groups.setdefault(key,{}).setdefault(action,row)
+    pairs=[g for g in groups.values() if 'hold' in g and 'none' in g]
+    # Cover independent seeds before repeating any one.
+    selected=[];used=set()
+    while pairs and len(selected)<count:
+        i=next((i for i,g in enumerate(pairs) if (g['hold']['seed'],g['hold']['swapSides']) not in used),0)
+        g=pairs.pop(i);selected.extend((g['hold'],g['none']));used.add((g['hold']['seed'],g['hold']['swapSides']))
+    return selected
+
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--data',type=Path,required=True);p.add_argument('--adapter',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--steps',type=int,default=12);p.add_argument('--count',type=int,default=16);a=p.parse_args()
-    if not 1<=a.steps<=128 or not 4<=a.count<=64:raise ValueError('bad schedule')
+    p=argparse.ArgumentParser();p.add_argument('--data',type=Path,required=True);p.add_argument('--adapter',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--steps',type=int,default=12);p.add_argument('--count',type=int,default=16);p.add_argument('--paired-memory',action='store_true');a=p.parse_args()
+    if not 1<=a.steps<=128 or not 4<=a.count<=64 or (a.paired_memory and a.count%2):raise ValueError('bad schedule')
     a.out.mkdir(parents=True,exist_ok=True);torch.set_num_threads(int(os.getenv('OMP_NUM_THREADS','2')));torch.manual_seed(97533);random.seed(97533)
     manifest,data=read_data(a.data)
     weights=hf_hub_download(h.MODEL,'model.safetensors-00001-of-00001.safetensors',revision=h.REVISION);d=hashlib.sha256()
@@ -79,7 +95,8 @@ def main():
         prefix=tok.encode(text,add_special_tokens=False)
         if len(prefix)+96>1024:raise ValueError('input exceeds safe token budget')
         return torch.tensor([prefix],dtype=torch.long)
-    dev=select(data['dev'],a.count);test=select(data['test'],a.count)
+    selector=select_memory_pairs if a.paired_memory else select
+    dev=selector(data['dev'],a.count);test=selector(data['test'],a.count)
     pools={label:[r for r in data['train'] if json.loads(r['response'])['action']==label and len(candidates(r['input']))>1] for label in ACTIONS}
     train_actions=[label for label in ACTIONS if pools[label]]
     if not train_actions or len(dev)<a.count or len(test)<a.count:raise ValueError('insufficient varied training/evaluation data')
@@ -119,6 +136,18 @@ def main():
             'selection':'Choose trained weights only when dev exact is strictly higher; test not used for selection.',
             'training':{'steps':a.steps,'elapsed_seconds':time.monotonic()-started,'losses':losses},'dev':{'initial':metrics(before_dev),'trained':metrics(after_dev)},
             'test':{'initial':metrics(before),'selected':metrics(after),'selected_weights':chosen},'initial_test_rows':before,'selected_test_rows':after}
+    if a.paired_memory:
+        def paired(rows):
+            if len(rows)%2:raise ValueError('unpaired evaluation rows')
+            correct=reacted=0
+            for i in range(0,len(rows),2):
+                x,y=rows[i:i+2]
+                if {k:v for k,v in x['input'].items() if k!='memory'}!={k:v for k,v in y['input'].items() if k!='memory'}:raise ValueError('different paired observations')
+                if (x['teacher']['action'],y['teacher']['action'])!=('hold','none'):raise ValueError('unexpected memory labels')
+                correct+=int(x['correct'] and y['correct']);reacted+=int(x['prediction']['action']!=y['prediction']['action'])
+            return {'total':len(rows)//2,'both_correct':correct,'changed_decision':reacted}
+        report['pairedMemory']={'initial':paired(before),'selected':paired(after)}
     (a.out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
-    print('::notice::STRUCTURED_COMMANDER '+json.dumps({k:report[k] for k in ('method','selection','training','dev','test')},separators=(',',':')),flush=True)
+    fields=('method','selection','training','dev','test')+ (('pairedMemory',) if a.paired_memory else ())
+    print('::notice::STRUCTURED_COMMANDER '+json.dumps({k:report[k] for k in fields},separators=(',',':')),flush=True)
 if __name__=='__main__':main()

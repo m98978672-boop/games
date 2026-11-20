@@ -22,7 +22,7 @@ for(const swapSides of [false,true]){
 {
  const g=new Game({cfg,seed:7,aiVsAi:true});g.api.orders=[];let w;const statuses=[];
  const client=new NeutralCommanderClient(g,{workerFactory:()=>w={postMessage(m){this.sent=(this.sent||[]).concat([m]);},terminate(){this.terminated=true;}},onStatus:t=>statuses.push(t)});
- client.start();assert.equal(w.sent[0].type,'init');w.onmessage({data:{type:'ready'}});client.tick();assert.equal(w.sent[1].type,'pair');assert.deepEqual(Object.keys(w.sent[1].inputs[0]).sort(),['builds','points','squads']);
+ client.start();assert.equal(w.sent[0].type,'init');w.onmessage({data:{type:'ready'}});client.tick();assert.equal(w.sent[1].type,'pair');assert.deepEqual(Object.keys(w.sent[1].inputs[0]).sort(),['builds','memory','points','squads']);
  assert.equal(w.sent[1].first,0);w.onmessage({data:{type:'result',id:99,texts:['{}','{}']}});assert.ok(client.pending,'ignore old response');
  const hold='{"action":"hold","squad":0,"point":0}';w.onmessage({data:{type:'result',id:1,texts:[hold,hold]}});assert.equal(g.api.orders.filter(o=>o.source==='neutralAI').length,2);
  g.time=26;client.tick();assert.equal(w.sent[2].first,1,'inference priority alternates');
