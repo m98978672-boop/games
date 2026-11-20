@@ -59,7 +59,8 @@ try {
  landing.on('pageerror', e => errors.push(String(e)));
  await landing.goto(new URL('../', base).href);
  await landing.locator('#launch').click();
- const embedded = await landing.locator('#game-frame').contentFrame();
+ const embeddedElement = await landing.locator('#game-frame').elementHandle();
+ const embedded = await embeddedElement.contentFrame();
  await embedded.waitForFunction(() => window.__razlomStatus?.ready, null, {timeout:120000});
  await check('Games launcher opens the real game inside its iframe', async () => assert.equal(await landing.locator('#game-stage').isVisible(), true));
  await landing.screenshot({path:'../../docs/razlom/web-evidence/launcher.png'});
