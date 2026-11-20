@@ -106,9 +106,12 @@ func run_tests() -> void:
 	game.player.velocity = Vector3.ZERO
 	game.complete_mission()
 	check(game.state.complete, "Delivery completes the first mission")
+	check(paused and game.modal_title.text == "ВОДА ВЕРНУЛАСЬ", "Mission ends with a real paused epilogue")
 	var reward_food: int = game.state.food
 	game.complete_mission()
 	check(game.state.food == reward_food, "Delivery reward cannot repeat")
+	game.resume()
+	check(not paused and game.state.complete, "Epilogue can resume exploration without resetting progress")
 	# Return to an older checkpoint must RESTORE already-collected objects.
 	var file := FileAccess.open(test_save, FileAccess.WRITE)
 	file.store_string(initial)

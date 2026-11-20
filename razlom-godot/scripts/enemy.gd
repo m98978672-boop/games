@@ -83,7 +83,7 @@ func choose_target(delta: float) -> Vector3:
 	if not contact.is_empty():
 		alert = true
 		last_seen = contact.point
-		if global_position.distance_to(last_seen) > 1.8 and search_step == 0:
+		if global_position.distance_to(last_seen) > 1.8 and search_step == 0 and behavior != "search":
 			behavior = "investigate"
 			return last_seen
 		behavior = "search"
