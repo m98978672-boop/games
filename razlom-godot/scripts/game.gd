@@ -778,6 +778,7 @@ func _process(delta: float) -> void:
 				"ready": true, "started": started, "paused": get_tree().paused,
 				"dialog": interactions.diagnostics(),
 				"quests": state.quests, "trackedQuest": state.tracked_quest,
+				"blastCount": get_tree().get_nodes_in_group("blast_fx").size(), "activeCharges": active_charges,
 				"touch": touch_ui.diagnostics() if is_instance_valid(touch_ui) else {},
 				"startButton": [start_button.global_position.x, start_button.global_position.y, start_button.size.x, start_button.size.y],
 				"mobile": mobile_mode, "ammo": state.ammo, "yaw": player.rotation.y,
