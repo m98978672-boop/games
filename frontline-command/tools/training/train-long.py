@@ -21,6 +21,7 @@ import torch.nn.functional as F
 from peft import PeftModel
 from transformers import AutoModelForImageTextToText,AutoTokenizer
 from huggingface_hub import hf_hub_download
+from long_schedule import attempt_target,attempt_result
 
 spec=importlib.util.spec_from_file_location('helpers',Path(__file__).with_name('train-qwen.py'))
 helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
@@ -75,9 +76,9 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--data',type=Path,required=True);p.add_argument('--work',type=Path,required=True)
     p.add_argument('--initial-adapter',type=Path);p.add_argument('--resume',type=Path)
     p.add_argument('--active-seconds',type=float,required=True);p.add_argument('--phase',type=int,required=True)
-    p.add_argument('--checkpoint-every',type=float,default=900);p.add_argument('--eval-every',type=float,default=2700)
+    p.add_argument('--checkpoint-every',type=float,default=900);p.add_argument('--eval-every',type=float,default=2700);p.add_argument('--attempt-active-seconds',type=float,default=0)
     p.add_argument('--release');p.add_argument('--max-steps',type=int,default=0);p.add_argument('--eval-commands',type=int,default=6);p.add_argument('--eval-token-budget',type=int,default=48);args=p.parse_args()
-    if not (0<args.active_seconds<=18000) or args.phase not in (1,2,3) or args.checkpoint_every<=0 or args.eval_every<=0 or not 1<=args.eval_commands<=6 or not 1<=args.eval_token_budget<=96:raise ValueError('bad schedule')
+    if not (0<args.active_seconds<=18000) or not (0<=args.attempt_active_seconds<=18000) or args.phase not in (1,2,3) or args.checkpoint_every<=0 or args.eval_every<=0 or not 1<=args.eval_commands<=6 or not 1<=args.eval_token_budget<=96:raise ValueError('bad schedule')
     if (args.initial_adapter is None)==(args.resume is None):raise ValueError('provide initial adapter OR resume')
     torch.set_num_threads(int(os.getenv('OMP_NUM_THREADS','2')));torch.manual_seed(97531);random.seed(97531)
     wm,nav,cm,commander,datahash=read_data(args.data)
@@ -174,9 +175,9 @@ def main():
                 time.sleep(10*(attempt+1))
         print('checkpoint',json.dumps({'phase':args.phase,'step':step,'active_seconds':active,'file':name,'uploaded':bool(args.release),'complete':final}),flush=True)
     if best_score is None:update_best()
-    goal=phase_start+args.active_seconds;next_ckpt=active+args.checkpoint_every;next_eval=active+args.eval_every;initial_step=step
+    goal=phase_start+args.active_seconds;target=attempt_target(active,phase_start,args.active_seconds,args.attempt_active_seconds);next_ckpt=active+args.checkpoint_every;next_eval=active+args.eval_every;initial_step=step
     checkpoint(slot=slot);slot=1-slot;model.train()
-    while active<goal and (not args.max_steps or step-initial_step<args.max_steps):
+    while active<target and (not args.max_steps or step-initial_step<args.max_steps):
         # 25% imitation of isolated strategic snapshots, 75% waypoint decisions.
         if random.random()<.25:
             prefix,target=random.choice(comm_train);kind='commander'
@@ -189,7 +190,14 @@ def main():
         if step%20==0:print('training',json.dumps({'phase':args.phase,'step':step,'active_seconds':round(active,2),'kind':kind,'loss':float(loss.detach())}),flush=True)
         if active>=next_eval:update_best();next_eval=active+args.eval_every
         if active>=next_ckpt:checkpoint(slot=slot);slot=1-slot;next_ckpt=active+args.checkpoint_every
-    if not args.max_steps and active<goal:raise RuntimeError('phase ended before reaching requested training time')
+    result=attempt_result(active,phase_start,args.active_seconds,target)
+    if result=='partial' and args.attempt_active_seconds:
+        # Preserve the current adapter, optimizer and RNG for the next job;
+        # never label a partial attempt as a completed five-hour phase.
+        checkpoint(slot=slot)
+        print('attempt partial',json.dumps({'phase':args.phase,'steps':step,'active_seconds':active,'phase_goal':goal,'attempt_target':target}),flush=True)
+        return
+    if not args.max_steps and result!='complete':raise RuntimeError('phase ended before reaching requested training time')
     update_best();checkpoint(final=True)
     print('phase complete',json.dumps({'phase':args.phase,'steps':step,'active_seconds':active,'requested_additional_seconds':args.active_seconds,'best':best_metrics}),flush=True)
 if __name__=='__main__':main()

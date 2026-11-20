@@ -43,6 +43,7 @@ print(max(candidates)[2] if candidates else '')
 PY
 )
 args=(--data "$RUNNER_TEMP/long-data" --work "$RUNNER_TEMP/long-work" --phase "$PHASE" --active-seconds 18000 --release "$tag")
+if [[ -n "${ATTEMPT_ACTIVE_SECONDS:-}" ]]; then args+=(--attempt-active-seconds "$ATTEMPT_ACTIVE_SECONDS"); fi
 if [[ -n "$best" ]]; then
   echo "Resuming phase $PHASE from its latest durable checkpoint."
   args+=(--resume "$best")
@@ -60,3 +61,7 @@ else
   args+=(--initial-adapter "$RUNNER_TEMP/source/adapter")
 fi
 python -u frontline-command/tools/training/train-long.py "${args[@]}"
+if [[ "${EXPECT_PHASE_COMPLETE:-0}" == 1 && ! -f "$RUNNER_TEMP/long-work/$complete" ]]; then
+  echo "Phase $PHASE did not reach its complete target" >&2
+  exit 1
+fi
