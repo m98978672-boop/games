@@ -1,8 +1,19 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=20 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/cloth.png" id="cloth"]
+[ext_resource type="Texture2D" path="res://assets/textures/surface/cloth_normal.png" id="cloth_normal"]
+[ext_resource type="Texture2D" path="res://assets/textures/surface/cloth_roughness.png" id="cloth_roughness"]
 
 [sub_resource type="StandardMaterial3D" id="mat0"]
 albedo_color = Color(0.47843137254901963, 0.6823529411764706, 0.6392156862745098, 1)
 roughness = 0.88
+albedo_texture = ExtResource("cloth")
+normal_enabled = true
+normal_scale = 0.35
+normal_texture = ExtResource("cloth_normal")
+roughness_texture = ExtResource("cloth_roughness")
+roughness_texture_channel = 0
+texture_filter = 4
 
 [sub_resource type="BoxMesh" id="mesh0"]
 size = Vector3(0.55, 0.65, 0.3)
@@ -31,6 +42,13 @@ size = Vector3(0.21, 0.76, 0.24)
 [sub_resource type="StandardMaterial3D" id="mat4"]
 albedo_color = Color(0.47843137254901963, 0.6823529411764706, 0.6392156862745098, 1)
 roughness = 0.88
+albedo_texture = ExtResource("cloth")
+normal_enabled = true
+normal_scale = 0.35
+normal_texture = ExtResource("cloth_normal")
+roughness_texture = ExtResource("cloth_roughness")
+roughness_texture_channel = 0
+texture_filter = 4
 
 [sub_resource type="BoxMesh" id="mesh4"]
 size = Vector3(0.18, 0.55, 0.22)
@@ -38,6 +56,13 @@ size = Vector3(0.18, 0.55, 0.22)
 [sub_resource type="StandardMaterial3D" id="mat5"]
 albedo_color = Color(0.47843137254901963, 0.6823529411764706, 0.6392156862745098, 1)
 roughness = 0.88
+albedo_texture = ExtResource("cloth")
+normal_enabled = true
+normal_scale = 0.35
+normal_texture = ExtResource("cloth_normal")
+roughness_texture = ExtResource("cloth_roughness")
+roughness_texture_channel = 0
+texture_filter = 4
 
 [sub_resource type="BoxMesh" id="mesh5"]
 size = Vector3(0.18, 0.55, 0.22)
