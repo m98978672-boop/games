@@ -105,6 +105,31 @@ try{
     }return results;
   });
   assert.ok(groups.every(x=>x.arrived===5&&!x.overlap&&!x.wall&&x.group),'open shared-goal group reaches distinct positions on the real map');
+  const traffic=await page.evaluate(async()=>{
+    const {Game}=await import('/src/sim/game.js');const results=[];
+    for(const faction of [0,1]) {
+      const g=new Game({cfg:window.__frontline.cfg,seed:7,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.occupancyGrid.clear();g.squads.clear();
+      for(const s of [g.squadAI,...g.strategic,g.autopilot,g.rules,g.logistics,g.build,g.influence,g.api])s.update=()=>{};g.checkVictory=()=>{};g._trafficEscapeMetrics={chosen:0};
+      const dir=faction?-1:1,goal={x:900,y:500},us=Array.from({length:8},(_,i)=>{const u=g.spawnUnit(faction,'infantry',goal.x-dir*(125+i*23),goal.y);u.goal={...goal};u.activity='advance';u.arrived=false;u.thinkTimer=1000;return u});let overlap=false,wall=false,speed=false;
+      for(let t=0;t<1200;t++){const before=us.map(u=>({x:u.x,y:u.y,terrain:g.world.speedAt(u.x,u.y)}));g.step(.05);for(let i=0;i<us.length;i++){const u=us[i],p=before[i],d=Math.hypot(u.x-p.x,u.y-p.y);if(d>1e-6&&g.walls.blocksMoveSweep(p.x,p.y,u.x,u.y,u.radius,u))wall=true;if(d>Math.max(u.speed*p.terrain,30)*.05*1.5+1e-8)speed=true;}
+        overlap ||= us.some((a,i)=>us.slice(i+1).some(b=>Math.hypot(a.x-b.x,a.y-b.y)<a.radius+b.radius-1e-6));if(us.every(u=>u.arrived||u.pathFailed))break;}
+      results.push({arrived:us.filter(u=>u.arrived&&!u.pathFailed).length,overlap,wall,speed,escapes:g._trafficEscapeMetrics.chosen});
+    }return results;
+  });
+  assert.ok(traffic.every(x=>x.arrived>=4&&x.escapes>0&&!x.overlap&&!x.wall&&!x.speed),JSON.stringify(traffic));
+  const assembly=await page.evaluate(async()=>{
+    const {Game}=await import('/src/sim/game.js'),{Squad}=await import('/src/sim/squads.js');const results=[];
+    for(const faction of [0,1]){
+      const g=new Game({cfg:window.__frontline.cfg,seed:7,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.occupancyGrid.clear();g.squads.clear();
+      const b=g.world.buildings.find(b=>b.type==='hq'&&b.faction===faction&&g.walls.state(b)),seg=g.walls.state(b).outline.segments.find(s=>s.length>=80&&s.blocksMove);
+      const [[ax,ay],[bx,by]]=seg.points,len=Math.hypot(bx-ax,by-ay),nx=-(by-ay)/len,ny=(bx-ax)/len,tx=(bx-ax)/len,ty=(by-ay)/len,mx=b.x+(ax+bx)/2,my=b.y+(ay+by)/2;
+      const sign=g.walls.buildingAtPoint(mx+nx*35,my+ny*35)===b?1:-1,goal={x:mx+sign*nx*35,y:my+sign*ny*35};
+      const sq=new Squad(g,{faction});g.squads.set(sq.id,sq);sq.retreatTier='never';sq.strategyId='rush';
+      for(const [x,y] of [[goal.x,goal.y],[goal.x+tx*22,goal.y+ty*22],[mx-sign*nx*30,my-sign*ny*30]])sq.addUnit(g.spawnUnit(faction,'infantry',x,y));
+      sq.objective={...goal,type:'move'};sq.state='advance';g.squadAI.think(sq);const waiting=sq.state==='advance';g.time=21;g.squadAI.think(sq);results.push({waiting,timeout:sq.state==='hold'});
+    }return results;
+  });
+  assert.ok(assembly.every(x=>x.waiting&&x.timeout),'squad does not abandon a laggard across a wall, but waiting is bounded');
   await page.evaluate(()=>window.__frontline.newGame({seed:1,aiVsAi:true}));
   await page.waitForFunction(()=>window.__frontline.game?.time>0.1,{timeout:30000});
   assert.deepEqual(errors,[]);console.log('Chromium: default-on U detour, collision/speed check, live game ticks, no page errors');

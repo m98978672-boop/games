@@ -133,15 +133,22 @@
 
     <div class="ctl-group">
       <div class="ctl-label">Вид и наблюдение</div>
-      <div class="seg" id="camera-seg" role="group" aria-label="Режим камеры">
+      <div class="seg seg-3" id="camera-seg" role="group" aria-label="Режим камеры">
         <button data-view="third" class="on">3-е лицо</button>
-        <button data-view="top">Сверху</button>
+        <button data-view="follow">Сверху за ним</button>
+        <button data-view="top">Весь цех</button>
       </div>
       <div class="seg" id="speed-seg" role="group" aria-label="Скорость времени">
         <button data-speed="1" class="on">1×</button>
         <button data-speed="2">2×</button>
         <button data-speed="4">4×</button>
       </div>
+    </div>
+
+    <div class="ctl-group">
+      <div class="ctl-label">Доки и фуры <span id="truck-count" class="queue-count">0</span></div>
+      <div id="truck-list" class="truck-list"></div>
+      <button class="cmd wide" id="btn-truck" type="button"><b>Позвать фуру</b><i>разгрузка или загрузка</i></button>
     </div>
 
     <div class="ctl-group">
@@ -155,7 +162,7 @@
 <aside class="panel side" id="side" aria-label="Состояние бригады"></aside>
 
 <div class="bottom-bar">
-  <div id="hint" class="chip hint">Пульт: выбери рабочего и жми приказ. C — вид, I — тело, Пробел — пауза, F — полный экран.</div>
+  <div id="hint" class="chip hint">Пульт: выбери рабочего и жми приказ. C — три вида камеры, I — тело и травмы, Пробел — пауза, F — полный экран.</div>
   <div id="news" class="chip news"></div>
 </div>
 

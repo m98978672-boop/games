@@ -33,6 +33,29 @@ var last_hit_region := "torso"
 var impact_marks: Array[Node3D] = []
 var path_timer := 0.0
 var waypoint := Vector3.ZERO
+## Human weapon handling: 0 = carried low, 1 = shouldered and aimed.
+var weapon_raise := 0.0
+var startle_time := 0.0
+var shots_fired := 0
+var shots_hit := 0
+var near_misses := 0
+var weapon_raised_pos := Vector3(-0.15, 0.09, -0.29)
+var weapon_raised_rot := Vector3.ZERO
+var weapon_lowered_pos := Vector3(0.06, -0.30, 0.06)
+var weapon_lowered_rot := Vector3(-0.35, 0.15, 0.20)
+const RAISE_TIME := 0.65
+const LOWER_TIME := 0.45
+const AIM_REQUIRED := 0.85
+
+func is_weapon_raised() -> bool:
+	return weapon_raise >= 0.95
+
+func suppress(amount: float) -> void:
+	# A bullet cracking past or a hit makes a person duck and lose the sight picture.
+	suppression = maxf(suppression, amount)
+	startle_time = maxf(startle_time, 0.30)
+	motion.duck = 1.0
+	aim_time *= 0.25
 
 func _ready() -> void:
 	collision_layer = 4
@@ -49,7 +72,8 @@ func _ready() -> void:
 	visual.get_node("Weapon").hide()
 	var weapon: Node3D = load("res://assets/models/carbine.tscn").instantiate()
 	visual.get_node("ArmRJoint/ArmR").add_child(weapon)
-	weapon.position = Vector3(-0.15, 0.09, -0.29)
+	weapon.position = weapon_lowered_pos
+	weapon.rotation = weapon_lowered_rot
 	weapon.scale = Vector3.ONE * 0.65
 	carried_weapon = weapon
 	weapon.get_node("LeftHand/Sleeve").hide()
@@ -144,10 +168,13 @@ func _physics_process(delta: float) -> void:
 		return
 	cooldown -= delta
 	suppression = maxf(0, suppression - delta)
-	if visible_contact and not game.state.passage:
+	startle_time = maxf(0.0, startle_time - delta)
+	var wants_weapon_up: bool = alert and not game.state.passage and suppression <= 0.0 and startle_time <= 0.0
+	weapon_raise = move_toward(weapon_raise, 1.0 if wants_weapon_up else 0.0, delta / (RAISE_TIME if wants_weapon_up else LOWER_TIME))
+	if visible_contact and not game.state.passage and weapon_raise >= 0.95 and suppression <= 0:
 		aim_time = minf(2.5, aim_time + delta)
 	else:
-		aim_time = 0.0
+		aim_time = maxf(0.0, aim_time - delta * 2.0)
 	report_cooldown -= delta
 	awareness.tick(delta)
 	scan -= delta
@@ -156,7 +183,7 @@ func _physics_process(delta: float) -> void:
 		visible_contact = sees_player()
 		if visible_contact and not game.state.passage:
 			remember_sighting(game.player.global_position)
-			if cooldown <= 0 and aim_time >= 0.85 and suppression <= 0 and arm_wounds.y < 60:
+			if cooldown <= 0 and aim_time >= AIM_REQUIRED and weapon_raise >= 0.95 and suppression <= 0 and arm_wounds.y < 60:
 				cooldown = 1.1 + global_position.distance_to(game.player.global_position) * 0.012
 				game.enemy_fire(self)
 				aim_time = 0.35
@@ -192,12 +219,23 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= 18 * delta
 	move_and_slide()
-	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
+	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), smoothstep(0.0, 0.9, weapon_raise))
+	# Deliberate low-ready -> shoulder raise -> sight picture animation. The elbows
+	# follow the rifle, and the muzzle settles gradually rather than snapping on target.
+	var raise_blend := smoothstep(0.0, 1.0, weapon_raise)
+	var aim_blend := smoothstep(0.55, 1.0, weapon_raise) * (1.0 if visible_contact else 0.0)
+	var sight_sway := sin(phase * 2.1) * 0.012 * aim_blend + sin(phase * 0.7) * 0.008 * aim_blend
+	carried_weapon.position = weapon_lowered_pos.lerp(weapon_raised_pos, raise_blend)
+	carried_weapon.rotation = weapon_lowered_rot.lerp(weapon_raised_rot, raise_blend)
+	carried_weapon.rotation.x += sight_sway + motion.recoil * 0.025
 	if visible_contact:
 		var offset: Vector3 = game.player.camera.global_position - (global_position + Vector3.UP * 1.4)
 		var pitch := atan2(offset.y, Vector2(offset.x, offset.z).length())
-		motion.joints.ArmR.rotation.x = -0.65 - motion.recoil * 0.2 - clampf(pitch, -0.5, 0.5) - motion.flinch * 0.65
-		visual.get_node("Head").rotation.x = -clampf(pitch, -0.5, 0.5)
+		var target_arm_pitch := lerpf(-0.12, -0.65 - clampf(pitch, -0.5, 0.5), aim_blend)
+		motion.joints.ArmR.rotation.x = lerp_angle(motion.joints.ArmR.rotation.x, target_arm_pitch - motion.recoil * 0.2 - motion.flinch * 0.65, 1.0 - exp(-delta * 7.0))
+		motion.joints.ArmL.rotation.x = lerp_angle(motion.joints.ArmL.rotation.x, lerpf(0.05, -0.45, aim_blend), 1.0 - exp(-delta * 6.0))
+		var head: Node3D = visual.get_node("Head")
+		head.rotation.x = lerp_angle(head.rotation.x, -clampf(pitch, -0.5, 0.5) * aim_blend, 1.0 - exp(-delta * 5.0))
 	if leg_wound:
 		visual.rotation.z = motion.flinch * 0.28 + sin(phase * 7.0) * 0.045
 	if arm_wounds.y >= 30:
@@ -207,10 +245,14 @@ func _physics_process(delta: float) -> void:
 		carried_weapon.get_node("LeftHand").position += Vector3(-0.12, -0.3, 0.1)
 	left_arm.solve(Vector3(-0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("LeftHand").global_position), -1.0)
 	right_arm.solve(Vector3(0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("RightHand").global_position), 1.0)
-	if visible_contact and aim_time < 0.85:
+	if game.state.passage:
+		think_label.text = "ПРОХОДИ"
+	elif visible_contact and weapon_raise < 0.55:
+		think_label.text = "ПОДНИМАЕТ"
+	elif visible_contact and aim_time < AIM_REQUIRED:
 		think_label.text = "ЦЕЛИТСЯ"
 	else:
-		think_label.text = "ПРОХОДИ" if game.state.passage else ("ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else "")))
+		think_label.text = "ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else ""))
 	think_label.modulate = Color("efb26a")
 
 func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
@@ -222,7 +264,7 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		game.state.passage_broken = true
 		game.notify("Договор нарушен: охрана снова враждебна")
 	motion.hurt()
-	suppression = 0.65
+	suppress(0.65)
 	aim_time = 0.0
 	# A hit is evidence of danger, not a magical coordinate of an unseen shooter.
 	if sees_player():

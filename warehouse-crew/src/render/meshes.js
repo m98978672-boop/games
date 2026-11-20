@@ -81,6 +81,21 @@ WC.meshes = (function () {
     vertebra: { parts: [{ shape: 'box', sx: 0.07, sy: 0.045, sz: 0.07, offset: [0, 0, 0], color: '#d6d0bf' }] },
     muscleBelly: { parts: [{ shape: 'box', sx: 0.30, sy: 0.34, sz: 0.16, offset: [0, 0, 0], color: '#a8483f' }] },
     cutPlane: { parts: [{ shape: 'box', sx: 0.44, sy: 0.78, sz: 0.26, offset: [0, -0.39, 0], color: '#e8b45a' }] },
+
+    // --- двор и фуры (доки снаружи цеха) ---
+    yard: { parts: [{ shape: 'box', sx: 42, sy: 0.2, sz: 26, offset: [0, -0.24, 0], color: '#1d2224' }] },
+    yardLine: { parts: [{ shape: 'box', sx: 12, sy: 0.02, sz: 0.16, offset: [0, 0, 0], color: '#585c46' }] },
+    dockPlate: { parts: [{ shape: 'box', sx: 1.5, sy: 0.06, sz: 2.6, offset: [0, 0, 0], color: '#6d7a82' }] },
+    dockFrame: { parts: [{ shape: 'box', sx: 0.24, sy: 3.0, sz: 0.22, offset: [0, 0, 0], color: '#3b4a52' }] },
+    dockLamp: { parts: [{ shape: 'sphere', radius: 0.13, segments: 8, offset: [0, 0, 0], color: '#e2604f' }] },
+    truckTrailer: { parts: [{ shape: 'box', sx: 5.2, sy: 2.5, sz: 2.45, offset: [0, 1.95, 0], color: '#d6dade' }] },
+    truckStripe: { parts: [{ shape: 'box', sx: 5.24, sy: 0.34, sz: 2.48, offset: [0, 1.05, 0], color: '#2f6f63' }] },
+    truckCab: { parts: [{ shape: 'box', sx: 1.9, sy: 1.85, sz: 2.3, offset: [0, 1.42, 0], color: '#7d3b34' }] },
+    truckGlass: { parts: [{ shape: 'box', sx: 0.1, sy: 0.7, sz: 1.9, offset: [0, 1.85, 0], color: '#3d5560' }] },
+    truckDoor: { parts: [{ shape: 'box', sx: 0.14, sy: 2.3, sz: 2.3, offset: [0, 1.9, 0], color: '#b9c0c4' }] },
+    truckWheel: { parts: [{ shape: 'cylinder', radius: 0.46, height: 0.3, segments: 12, offset: [0, 0, 0], color: '#191d1f' }] },
+    truckChassis: { parts: [{ shape: 'box', sx: 6.4, sy: 0.24, sz: 2.1, offset: [0, 0.78, 0], color: '#2b3236' }] },
+    cargoStack: { parts: [{ shape: 'box', sx: 1.0, sy: 0.9, sz: 1.6, offset: [0, 1.1, 0], color: '#9d7240' }] },
   };
 
   function resolveColor(name, palette) {

@@ -55,6 +55,8 @@ window.WC = window.WC || {};
     dom.news = q('news');
     dom.ctlTick = q('ctl-tick');
     dom.cameraSeg = q('camera-seg');
+    dom.truckList = q('truck-list');
+    dom.truckCount = q('truck-count');
     dom.speedSeg = q('speed-seg');
     dom.qbName = q('qb-name');
     dom.qbState = q('qb-state');
@@ -275,6 +277,13 @@ window.WC = window.WC || {};
       dom.selectedCard.appendChild(bar.parentNode.parentNode);
     });
     dom.selectedCard.appendChild(U.el('div', { class: 'trait-row' }, nodes.traits.map(function (t) { return t.chip; })));
+    nodes.injuries = U.el('b', { text: 'нет' });
+    nodes.rules = U.el('b', { text: '100%' });
+    nodes.healthRow = U.el('div', { class: 'sc-health' }, [
+      U.el('span', { class: 'sc-inj' }, [U.el('span', { text: 'травмы: ' }), nodes.injuries]),
+      U.el('span', { class: 'sc-rule' }, [U.el('span', { text: 'правила: ' }), nodes.rules]),
+    ]);
+    dom.selectedCard.appendChild(nodes.healthRow);
 
     dom.selectedCard.classList.remove('swap');
     void dom.selectedCard.offsetWidth;
@@ -306,6 +315,17 @@ window.WC = window.WC || {};
     setBar(n.fatigue, n.fatigueVal, body.fatigue, U.pct(body.fatigue));
     setBar(n.stress, n.stressVal, body.stress, U.pct(body.stress));
     setBar(n.oxygen, n.oxygenVal, body.oxygen, U.pct(body.oxygen));
+    var injuries = body.injuries || [];
+    if (n.injuries) {
+      var Parts = global.WarehouseModel.BODY_PARTS;
+      n.injuries.textContent = injuries.length
+        ? injuries.map(function (inj) { return (Parts[inj.part] || inj.part) + ' ' + U.pctNum(inj.severity); }).join(', ')
+        : 'нет';
+      n.healthRow.classList.toggle('bad', injuries.length > 0);
+      var compliance = Math.round(global.WarehouseModel.ruleCompliance(body) * 100);
+      n.rules.textContent = compliance + '%' + (st.safety && st.safety.fear > 0.15 ? ' · осторожен' : '');
+      n.rules.parentNode.classList.toggle('warn', compliance < 85);
+    }
     var traitValues = [st.traits.strength, st.traits.precision, st.traits.endurance, st.traits.coop];
     n.traits.forEach(function (trait, i) { trait.value.textContent = U.pctNum(traitValues[i]); });
 
@@ -319,6 +339,42 @@ window.WC = window.WC || {};
     }
     U.$$('.qb').forEach(function (button) {
       button.classList.toggle('on', st.mode === 'auto' && button.getAttribute('data-quick') === 'auto');
+    });
+  }
+
+  function renderTrucks() {
+    if (!dom.truckList) return;
+    var trucks = (game.sim.state.trucks || []).slice(-3).reverse();
+    var active = (game.sim.state.trucks || []).filter(function (t) { return t.status === 'working'; });
+    if (dom.truckCount) dom.truckCount.textContent = String(active.length);
+    var key = trucks.map(function (t) {
+      return t.id + ':' + t.done + '/' + t.total + ':' + t.status;
+    }).join('|');
+    if (uiState.truckKey === key) return;
+    uiState.truckKey = key;
+    dom.truckList.innerHTML = '';
+    if (!trucks.length) {
+      dom.truckList.appendChild(U.el('div', { class: 'truck empty', text: 'Доки свободны — ждём фуру' }));
+      return;
+    }
+    trucks.forEach(function (truck) {
+      var total = truck.total || 1;
+      var progress = Math.round((truck.done / total) * 100);
+      var unloading = truck.kind === 'unload';
+      dom.truckList.appendChild(U.el('div', {
+        class: 'truck ' + (unloading ? 'unload' : 'load') + (truck.status === 'working' ? ' live' : ''),
+      }, [
+        U.el('div', { class: 't-head' }, [
+          U.el('b', { text: unloading ? 'Разгрузка' : 'Загрузка' }),
+          U.el('span', { class: 't-plate', text: truck.plate }),
+        ]),
+        U.el('div', { class: 't-line' }, [
+          U.el('span', { text: unloading ? 'из фуры → стеллаж' : 'стеллаж → в фуру' }),
+          U.el('span', { class: 't-num', text: truck.done + '/' + truck.total }),
+        ]),
+        U.el('div', { class: 'track' }, [U.el('i', { style: 'width:' + progress + '%' })]),
+        U.el('div', { class: 't-state', text: truck.status === 'working' ? 'у дока, работают' : 'уехала' }),
+      ]));
     });
   }
 
@@ -663,6 +719,29 @@ window.WC = window.WC || {};
           organRow('Инсулин', body.insulin),
         ]),
       ]));
+      content.appendChild(U.el('div', { class: 'insp-section' }, [
+        U.el('h4', { text: 'Травмы и техника безопасности' }),
+        U.el('div', { class: 'injuries' }, (body.injuries || []).length
+          ? body.injuries.map(function (inj) {
+            var preset = global.WarehouseModel.INJURY_TYPES[inj.type] || { label: 'ткани' };
+            return U.el('div', { class: 'injury' }, [
+              U.el('b', { text: (global.WarehouseModel.BODY_PARTS[inj.part] || inj.part) + ' · ' + preset.label }),
+              U.el('span', { text: U.pctNum(inj.severity) + ' · ' + inj.cause }),
+              U.el('div', { class: 'track' }, [U.el('i', { class: 'bad', style: 'width:' + Math.round(U.clamp01(inj.severity) * 100) + '%' })]),
+            ]);
+          })
+          : [U.el('div', { class: 'inj-clean', text: 'Травм нет — тело целое' })]),
+        U.el('div', { class: 'rule-list' }, global.WarehouseModel.RULES.map(function (rule) {
+          var hits = (body.ruleViolations || {})[rule.id] || 0;
+          return U.el('div', { class: 'rule' + (hits ? ' hit' : '') }, [
+            U.el('span', { class: 'r-dot' }),
+            U.el('span', { class: 'r-text', text: rule.title + ' — ' + rule.text }),
+            U.el('b', { text: hits ? String(hits) : '✓' }),
+          ]);
+        })),
+        U.el('div', { class: 'rule-note', text: 'Соблюдение правил: ' + Math.round(global.WarehouseModel.ruleCompliance(body) * 100) +
+          '% · страх после травм ' + U.pctNum(st.safety ? st.safety.fear : 0) }),
+      ]));
       content.appendChild(eventsBlock(st));
     } else if (uiState.inspectorTab === 'organs') {
       content.appendChild(U.el('div', { class: 'insp-section' }, [
@@ -849,6 +928,13 @@ window.WC = window.WC || {};
       });
     });
     q('btn-pause').addEventListener('click', function () { game.setPaused(!game.state.paused); });
+    if (q('btn-truck')) {
+      q('btn-truck').addEventListener('click', function () {
+        var truck = game.sim.spawnTruck();
+        if (!truck) U.toast('Док занят — дождись, пока фура уедет', 'info', 2000);
+        else U.toast('Фура ' + truck.plate + ' подходит к доку: ' + (truck.kind === 'unload' ? 'разгрузка' : 'загрузка'), 'good', 2400);
+      });
+    }
     q('btn-camera').addEventListener('click', function () { setCamera(WC.world.getMode() === 'third' ? 'top' : 'third'); });
     q('btn-inspector').addEventListener('click', function () { openInspector(); });
     q('btn-help').addEventListener('click', openHelp);
@@ -940,16 +1026,24 @@ window.WC = window.WC || {};
     }
   }
 
+  var VIEW_HINTS = {
+    third: 'Вид от третьего лица: работа руками',
+    follow: 'Сверху за рабочим: следи за ним и бригадой',
+    top: 'Тактический вид: весь цех и приказы бригаде',
+  };
+
   function setCamera(mode) {
-    WC.world.setMode(mode);
+    var applied = WC.world.setMode(mode);
     U.$$('#camera-seg button').forEach(function (button) {
-      button.classList.toggle('on', button.getAttribute('data-view') === mode);
+      button.classList.toggle('on', button.getAttribute('data-view') === applied);
     });
-    document.body.classList.toggle('view-top', mode === 'top');
-    document.body.classList.toggle('view-third', mode === 'third');
+    document.body.classList.toggle('view-top', applied === 'top');
+    document.body.classList.toggle('view-third', applied === 'third');
+    document.body.classList.toggle('view-follow', applied === 'follow');
     flashView();
     buzz(8);
-    U.toast(mode === 'top' ? 'Тактический вид: приказы бригаде' : 'Вид от третьего лица', 'good', 1600);
+    U.toast(VIEW_HINTS[applied] || VIEW_HINTS.third, 'good', 1600);
+    return applied;
   }
 
   function toggleSound() {
@@ -967,7 +1061,7 @@ window.WC = window.WC || {};
         event.preventDefault();
         game.setPaused(!game.state.paused);
       } else if (key === 'c') {
-        setCamera(WC.world.getMode() === 'third' ? 'top' : 'third');
+        setCamera(WC.world.cycleMode ? WC.world.cycleMode() : 'third');
       } else if (key === 'i') {
         if (uiState.inspectorOpen) closeModal(); else openInspector();
       } else if (key === 'h') {
@@ -1047,6 +1141,7 @@ window.WC = window.WC || {};
     uiState.lastUiAt = now;
     renderHud();
     renderSelected();
+    renderTrucks();
     renderOrders();
     renderNews(false);
     if (uiState.inspectorOpen) renderInspector();

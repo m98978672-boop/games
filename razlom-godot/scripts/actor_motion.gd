@@ -15,6 +15,8 @@ var is_quadruped := false
 var blink_clock := 0.0
 var gesture := 0.0
 var gesture_kind := "greet"
+## Duck/crouch reaction (0..1): set to 1 on a hit or a near miss, decays in advance().
+var duck := 0.0
 
 func _init(root: Node3D, quadruped: bool = false) -> void:
 	model = root
@@ -62,12 +64,14 @@ func react(zone: String, local_point: Vector3, strength: float = 1.0) -> void:
 func fire() -> void:
 	recoil = 1.0
 
-func advance(delta: float, speed: float, aiming: bool = false) -> void:
+func advance(delta: float, speed: float, aiming: Variant = false) -> void:
+	var aim_amount := float(aiming) if typeof(aiming) == TYPE_BOOL else clampf(float(aiming), 0.0, 1.0)
 	for part in reactions.keys():
 		reactions[part] = maxf(0, float(reactions[part]) - delta * 2.2)
 	blink_clock += delta
 	gesture = maxf(0.0, gesture - delta)
 	flinch = move_toward(flinch, 0.0, delta * 2.5)
+	duck = move_toward(duck, 0.0, delta * 1.7)
 	clock += delta * (speed * 3.4 + 0.4)
 	blend = move_toward(blend, clampf(speed / 2.5, 0, 1), delta * 6)
 	recoil = move_toward(recoil, 0, delta * 7)
@@ -75,8 +79,8 @@ func advance(delta: float, speed: float, aiming: bool = false) -> void:
 		var joint: Node3D = joints[part]
 		var alternate: bool = part in ["LegR", "ArmL", "LegFR", "LegBL"]
 		var swing := sin(clock + (PI if alternate else 0.0)) * blend * 0.5
-		if part.begins_with("Arm") and aiming:
-			swing = -0.65 - recoil * 0.2
+		if part.begins_with("Arm"):
+			swing = lerpf(swing, -0.65 - recoil * 0.2, aim_amount)
 		if part.begins_with("Arm"):
 			swing -= flinch * (0.95 if (part == "ArmL" and hit_region == "left_arm") or (part == "ArmR" and hit_region == "right_arm") else 0.65)
 		if part == "ArmR" and gesture > 0.0:
@@ -86,13 +90,14 @@ func advance(delta: float, speed: float, aiming: bool = false) -> void:
 		swing += float(reactions.get(part, 0)) * (0.65 if part.begins_with("Leg") else -0.8)
 		joint.rotation.z = float(reactions.get(part, 0)) * (0.25 if alternate else -0.25)
 		if knees.has(part):
-			knees[part].rotation.x = maxf(0, -sin(clock + (PI if alternate else 0.0))) * blend * 0.7 + float(reactions.get(part, 0)) * 0.6
+			knees[part].rotation.x = maxf(0, -sin(clock + (PI if alternate else 0.0))) * blend * 0.7 + float(reactions.get(part, 0)) * 0.6 + duck * 0.55
 		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))
-	model.position.y = lerpf(model.position.y, rest_height + (1.0 - cos(clock * 2.0)) * blend * 0.009 + sin(clock * 2.0) * (1.0 - blend) * 0.004, 1.0 - exp(-delta * 10.0))
+	model.position.y = lerpf(model.position.y, rest_height + (1.0 - cos(clock * 2.0)) * blend * 0.009 + sin(clock * 2.0) * (1.0 - blend) * 0.004 - duck * 0.20, 1.0 - exp(-delta * 10.0))
 	model.rotation.z = lerp_angle(model.rotation.z, flinch * 0.28, 1.0 - exp(-delta * 18.0))
+	model.rotation.x = lerp_angle(model.rotation.x, duck * 0.18, 1.0 - exp(-delta * 10.0))
 	var coat := model.get_node_or_null("Coat") as Node3D
 	if coat != null:
-		coat.rotation.x = sin(clock * 0.6) * 0.012 + float(reactions.get("Coat", 0)) * 0.3
+		coat.rotation.x = sin(clock * 0.6) * 0.012 + float(reactions.get("Coat", 0)) * 0.3 + duck * 0.22
 	var head := model.get_node_or_null("Head") as Node3D
 	if head != null:
 		for eye_name in ["EyeL", "EyeR"]:
@@ -100,9 +105,9 @@ func advance(delta: float, speed: float, aiming: bool = false) -> void:
 			if eye != null:
 				eye.scale.y = 0.08 if fmod(blink_clock, 4.3) > 4.16 else 1.0
 		head.rotation.z = float(reactions.get("Head", 0)) * 0.22
-		var idle := (1.0 - blend) * (0.0 if aiming else 1.0)
+		var idle := (1.0 - blend) * (1.0 - aim_amount)
 		head.rotation.y = lerp_angle(head.rotation.y, sin(clock * 0.7) * idle * (0.32 if is_quadruped else 0.12), 1.0 - exp(-delta * 5.0))
-		head.rotation.x = lerp_angle(head.rotation.x, (sin(clock * 1.1) * idle * 0.05 if is_quadruped else 0.0) - flinch * 0.3 + (sin(gesture * 6.0) * 0.07 if gesture > 0.0 else 0.0), 1.0 - exp(-delta * 10.0))
+		head.rotation.x = lerp_angle(head.rotation.x, (sin(clock * 1.1) * idle * 0.05 if is_quadruped else 0.0) - flinch * 0.3 - duck * 0.18 + (sin(gesture * 6.0) * 0.07 if gesture > 0.0 else 0.0), 1.0 - exp(-delta * 10.0))
 	var tail := model.get_node_or_null("Tail") as Node3D
 	if tail != null:
 		tail.rotation.y = sin(clock * 1.5) * 0.3

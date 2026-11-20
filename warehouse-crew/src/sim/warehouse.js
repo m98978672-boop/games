@@ -60,6 +60,31 @@
     ],
   };
 
+  // Доки для фур: слева разгрузка (у приёмки), справа загрузка (у отгрузки).
+  // handle — куда реально подают коробку (порог фуры), stand — где стоит рабочий.
+  var DOCKS = {
+    unload: {
+      kind: 'unload',
+      title: 'Фура на разгрузку',
+      plate: 'А 236 МР',
+      carrier: 'СеверТранс',
+      x: -14.6, y: 0, yaw: 0,
+      door: { x: -12.15, y: 0 },
+      handle: { x: -11.85, y: 0 },
+      stand: { x: -11.0, y: 0 },
+    },
+    load: {
+      kind: 'load',
+      title: 'Фура на загрузку',
+      plate: 'О 417 КН',
+      carrier: 'Узел-Логистик',
+      x: 14.6, y: 0, yaw: Math.PI,
+      door: { x: 12.15, y: 0 },
+      handle: { x: 12.15, y: 0 },
+      stand: { x: 11.35, y: 0 },
+    },
+  };
+
   // Ячейка стеллажа: 3 ряда по 4 уровня
   var RACK_LEVELS = [
     { level: 'низ', height: 0.25 },
@@ -108,8 +133,15 @@
         dropped: 0,
         perfectStreak: 0,
         bestStreak: 0,
+        loaded: 0,
+        unloaded: 0,
+        truckShifts: 0,
       },
       log: [],
+      trucks: [],
+      truckSeq: 1,
+      truckTimer: options.firstTruckDelay || 40,
+      truckEvery: options.truckEvery || 120,
     };
 
     function note(text, tone) {
@@ -209,6 +241,8 @@
       order.carrier = null;
       order.x = x;
       order.y = y;
+      order.stand = null;
+      order.reachPad = 0;
       order.damage = Math.min(1, order.damage + damage);
       order.drops += 1;
       state.stats.dropped += 1;
@@ -236,6 +270,7 @@
       var points = Math.max(1, base - damagePenalty - latePenalty);
       state.stats.delivered += 1;
       state.stats.score += points;
+      state.stats.loaded += 1;
       state.stats.forWorker = state.stats.forWorker || {};
       state.stats.forWorker[workerId] = (state.stats.forWorker[workerId] || 0) + points;
       if (order.damage < 0.05 && !late) {
@@ -248,6 +283,194 @@
       return { points: points, late: late, damage: order.damage };
     }
 
+    // ------------------------------------------------------------ фуры
+    function truckById(id) {
+      for (var i = 0; i < state.trucks.length; i++) if (state.trucks[i].id === id) return state.trucks[i];
+      return null;
+    }
+
+    function activeTruck(kind) {
+      for (var i = state.trucks.length - 1; i >= 0; i--) {
+        var t = state.trucks[i];
+        if (t.status === 'working' && (!kind || t.kind === kind)) return t;
+      }
+      return null;
+    }
+
+    function ordersOfTruck(truck) {
+      if (!truck) return [];
+      return state.orders.filter(function (o) { return o.truckId === truck.id; });
+    }
+
+    function truckProgress(truck) {
+      var list = ordersOfTruck(truck);
+      var done = 0;
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].status === 'stored' || list[i].status === 'loaded' || list[i].status === 'ruined' || list[i].status === 'missed') done += 1;
+      }
+      return { done: done, total: list.length };
+    }
+
+    function spawnTruck(kind) {
+      var order = ['load', 'unload'];
+      if (!kind) {
+        kind = state.truckTurn || 'unload';
+        state.truckTurn = kind === 'load' ? 'unload' : 'load';
+      }
+      if (activeTruck(kind)) return null;
+      var dock = DOCKS[kind];
+      var count = 3 + rng.int(0, 2);
+      var truck = {
+        id: 'truck-' + (state.truckSeq++),
+        kind: kind,
+        title: dock.title,
+        plate: dock.plate,
+        carrier: dock.carrier,
+        x: dock.x, y: dock.y, yaw: dock.yaw,
+        door: { x: dock.door.x, y: dock.door.y },
+        handle: { x: dock.handle.x, y: dock.handle.y },
+        stand: { x: dock.stand.x, y: dock.stand.y },
+        status: 'working',
+        arrivedAt: state.time,
+        departedAt: null,
+        total: 0,
+        done: 0,
+      };
+
+      if (kind === 'unload') {
+        // Из фуры выгружаем count коробок на приёмку и раскладываем по ячейкам
+        for (var i = 0; i < count; i++) {
+          var slot = freeSlot(dock.handle);
+          if (!slot) break;
+          var priority = Math.round(rng.next() * 100) / 100;
+          var mass = Math.round(rng.range(6, 37));
+          var ord = {
+            id: 'ord-' + (state.orderSeq++),
+            code: 'WMS-' + String(1000 + state.orderSeq * 7).slice(-4),
+            customer: rng.pick(CUSTOMERS),
+            goods: rng.pick(GOODS),
+            priority: priority,
+            urgent: priority > 0.78,
+            mass: mass,
+            size: mass > 24 ? 'big' : mass > 13 ? 'medium' : 'small',
+            intake: null,
+            source: 'truck',
+            direction: 'in',
+            truckId: truck.id,
+            x: dock.handle.x,
+            y: dock.handle.y + (i - (count - 1) / 2) * 0.8,
+            stand: { x: dock.stand.x, y: dock.stand.y + (i - (count - 1) / 2) * 0.8 },
+            reachPad: 0,
+            slotId: slot.id,
+            rack: slot.rack,
+            damage: 0,
+            status: 'pending',
+            carrier: null,
+            createdAt: state.time,
+            deadline: state.time + 135 + i * 15,
+            pickedAt: null,
+            storedAt: null,
+            drops: 0,
+          };
+          slot.occupied = true;
+          slot.orderId = ord.id;
+          state.orders.push(ord);
+          state.stats.unloaded += 1;
+        }
+        if (!truck.total) truck.total = count;
+      } else {
+        // На загрузку собираем то, что уже лежит на стеллажах
+        var stored = state.orders.filter(function (o) { return o.status === 'stored'; });
+        stored.sort(function (a, b) { return (b.priority || 0) - (a.priority || 0); });
+        for (var k = 0; k < stored.length && k < count; k++) {
+          var so = stored[k];
+          var sl = null;
+          for (var q = 0; q < state.slots.length; q++) if (state.slots[q].id === so.slotId) sl = state.slots[q];
+          if (!sl) continue;
+          so.status = 'pending';
+          so.carrier = null;
+          so.direction = 'out';
+          so.source = 'rack';
+          so.truckId = truck.id;
+          so.x = sl.x;
+          so.y = sl.y;
+          so.stand = null;
+          so.reachPad = 0.62;
+          so.deadline = state.time + 150 + k * 12;
+          so.pickedAt = null;
+          so.storedAt = null;
+          state.stats.loaded += 0; // засчитаем на погрузке
+        }
+      }
+
+      if (!ordersOfTruck(truck).length) {
+        note('Фура ' + truck.plate + ' уехала пустой — груза не нашлось', 'warn');
+        return null;
+      }
+      truck.total = ordersOfTruck(truck).length;
+      state.trucks.push(truck);
+      if (state.trucks.length > 6) state.trucks.shift();
+      note(kind === 'unload'
+        ? 'Прибыла фура ' + truck.plate + ' (' + truck.carrier + '): разгрузить ' + truck.total + ' мест'
+        : 'Прибыла фура ' + truck.plate + ' (' + truck.carrier + '): загрузить ' + truck.total + ' мест', 'warn');
+      if (typeof state.onTruck === 'function') state.onTruck(truck);
+      return truck;
+    }
+
+    // Погрузка: коробку ставят в фуру
+    function loadTruck(order, workerId) {
+      var truck = order.truckId ? truckById(order.truckId) : null;
+      order.status = 'loaded';
+      order.carrier = null;
+      order.loadedAt = state.time;
+      releaseSlot(order);
+      var late = state.time > order.deadline;
+      var base = 15 + Math.round(order.priority * 12);
+      var points = Math.max(1, base - Math.round(order.damage * 18) - (late ? 6 : 0));
+      state.stats.score += points;
+      state.stats.forWorker = state.stats.forWorker || {};
+      state.stats.forWorker[workerId] = (state.stats.forWorker[workerId] || 0) + points;
+      note('Коробка ' + order.code + ' ушла в фуру' + (truck ? ' ' + truck.plate : '') + ' (+' + points + ')', 'good');
+      if (truck) {
+        var prog = truckProgress(truck);
+        truck.done = prog.done;
+        if (prog.done >= prog.total && truck.status === 'working') {
+          truck.status = 'done';
+          truck.departedAt = state.time;
+          state.stats.score += 10;
+          state.stats.truckShifts += 1;
+          note('Фура ' + truck.plate + ' загружена и уехала (+10)', 'good');
+        }
+      }
+      return { points: points, late: late, truck: truck };
+    }
+
+    function departTruck(truck, reason) {
+      if (!truck || truck.status !== 'working') return;
+      truck.status = 'done';
+      truck.departedAt = state.time;
+      state.stats.truckShifts += 1;
+      note('Фура ' + truck.plate + ' уехала: ' + (reason || 'окно закрылось'), 'warn');
+    }
+
+    // Вернуть коробку на полку (например, фура уехала без неё)
+    function restock(order) {
+      order.status = 'stored';
+      order.carrier = null;
+      order.truckId = null;
+      order.direction = null;
+      order.stand = null;
+      for (var i = 0; i < state.slots.length; i++) {
+        if (state.slots[i].id !== order.slotId) continue;
+        state.slots[i].occupied = true;
+        state.slots[i].orderId = order.id;
+        order.x = state.slots[i].x;
+        order.y = state.slots[i].y;
+      }
+      note('Коробка ' + order.code + ' вернулась на место', 'warn');
+      return order;
+    }
+
     function step(dt) {
       state.time += dt;
       state.spawnTimer -= dt;
@@ -255,13 +478,33 @@
         spawnOrder();
         state.spawnTimer = state.spawnEvery * (0.72 + rng.next() * 0.6);
       }
+
+      // --- Фуры: приезд, погрузка/разгрузка, отъезд ---
+      state.truckTimer -= dt;
+      if (state.truckTimer <= 0) {
+        var made = spawnTruck();
+        state.truckTimer = made ? state.truckEvery * (0.85 + rng.next() * 0.4) : 18;
+      }
+      for (var ti = 0; ti < state.trucks.length; ti++) {
+        var truck = state.trucks[ti];
+        if (truck.status !== 'working') continue;
+        var prog = truckProgress(truck);
+        truck.done = prog.done;
+        truck.total = prog.total;
+        if (prog.done >= prog.total && prog.total > 0) {
+          departTruck(truck, 'все места обработаны');
+          state.stats.score += 8;
+        } else if (state.time - truck.arrivedAt > 165) {
+          departTruck(truck, 'окно погрузки закрылось');
+        }
+      }
       for (var i = 0; i < state.orders.length; i++) {
         var o = state.orders[i];
         if (o.status === 'missed' || o.status === 'stored' || o.status === 'ruined') continue;
         if (state.time > o.deadline + 35) {
           o.status = 'missed';
           o.carrier = null;
-          releaseSlot(o);
+          if (o.direction !== 'out') releaseSlot(o);
           state.stats.missed += 1;
           state.stats.perfectStreak = 0;
           state.stats.score -= 6;
@@ -313,6 +556,16 @@
             deadline: Math.round(o.deadline), createdAt: Math.round(o.createdAt),
           };
         }),
+        trucks: state.trucks.map(function (t) {
+          var prog = truckProgress(t);
+          return {
+            id: t.id, kind: t.kind, title: t.title, plate: t.plate, carrier: t.carrier,
+            x: t.x, y: t.y, yaw: t.yaw, status: t.status,
+            done: prog.done, total: prog.total,
+            arrivedAt: Math.round(t.arrivedAt * 10) / 10,
+            departedAt: t.departedAt == null ? null : Math.round(t.departedAt * 10) / 10,
+          };
+        }),
         slots: state.slots.map(function (s) {
           return { id: s.id, x: s.x, y: s.y, h: s.h, occupied: s.occupied, orderId: s.orderId, levelLabel: s.levelLabel };
         }),
@@ -336,6 +589,14 @@
       snapshot: snapshot,
       freeSlot: freeSlot,
       note: note,
+      spawnTruck: spawnTruck,
+      loadTruck: loadTruck,
+      restock: restock,
+      departTruck: departTruck,
+      activeTruck: activeTruck,
+      truckById: truckById,
+      truckProgress: truckProgress,
+      ordersOfTruck: ordersOfTruck,
     };
   }
 
@@ -343,6 +604,7 @@
     createRng: createRng,
     createWarehouse: createWarehouse,
     LAYOUT: LAYOUT,
+    DOCKS: DOCKS,
     RACK_SLOTS: RACK_SLOTS,
     RACK_LEVELS: RACK_LEVELS,
     CUSTOMERS: CUSTOMERS,

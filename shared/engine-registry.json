@@ -194,6 +194,14 @@
       "note": "Страница исходного Godot-прототипа; не браузерная игра"
     },
     {
+      "id": "boris",
+      "path": "boris/index.html",
+      "kind": "department",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Видеосериал про кота Бориса: страница эпизода и голосования зрителей"
+    },
+    {
       "id": "warehouse-crew",
       "path": "warehouse-crew/index.html",
       "kind": "game",

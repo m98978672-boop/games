@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 43.008,
+  "elapsedSeconds": 39.907,
   "checks": [
     {
       "name": "import",
@@ -207,7 +207,7 @@
         "--script",
         "res://tests/body_reactions.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 27; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 28; failures: 0\n",
       "acceptedBuildLimitations": [],
       "unexpectedDiagnostics": []
     },
@@ -239,7 +239,7 @@
         "--script",
         "res://tests/ballistics.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBallistics checks: 30; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBallistics checks: 33; failures: 0\n",
       "acceptedBuildLimitations": [],
       "unexpectedDiagnostics": []
     },

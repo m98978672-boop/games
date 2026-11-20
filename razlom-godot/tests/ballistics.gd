@@ -53,9 +53,17 @@ func run_tests() -> void:
 	await physics_frame
 	check(guard.sees_player(), "Guard detects an unobstructed opponent 45 metres away")
 	var before: float = game.state.health
+	var damage_observed := false
 	guard.aim_time = 2.5
-	game.enemy_fire(guard)
-	check(game.state.health < before, "Aimed distant shot uses actual ray and damages player")
+	game.world_rng.seed = 20261119
+	for i in range(60):
+		game.state.health = 100
+		game.state.armor = 100
+		game.state.helmet = 100
+		game.enemy_fire(guard)
+		damage_observed = damage_observed or game.state.health < 100
+	check(guard.shots_hit > 0 and damage_observed and game.state.health <= before, "Distant fire can hit through an actual ray")
+	check(guard.near_misses > 0 and guard.shots_hit < guard.shots_fired, "Long-range guard fire lands close and sometimes misses")
 	var wall := RazlomArt.box(game.world, Vector3(45, 1.7, 30), Vector3(4, 3.5, 0.5), RazlomArt.material(Color.WHITE), true)
 	await physics_frame
 	await physics_frame
@@ -71,9 +79,11 @@ func run_tests() -> void:
 	guard.cooldown = 100
 	guard.position = Vector3(45, 0.3, -5)
 	player.position.y = 2.0
-	for i in range(60):
+	for i in range(180):
 		guard._physics_process(1.0 / 60)
 	check(absf(guard.motion.joints.ArmR.rotation.x) < 1.6, "Vertical aim stays bounded instead of accumulating rotation")
+	check(guard.weapon_raise > 0.95 and guard.is_weapon_raised(), "Guard visibly raises the rifle before aiming")
+	check(guard.aim_time >= guard.AIM_REQUIRED, "Sight picture settles only after the weapon raise")
 	check(game.world.has_node("RelayYard/RelayRadio"), "Explorable relay and interactive archive exist")
 	check(game.navigation.region.has_point(Vector2i(70, 20)), "Expanded district included in navigation")
 	game.state.complete = true

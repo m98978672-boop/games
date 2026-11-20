@@ -170,6 +170,8 @@ WC.world = (function () {
   }
 
   function buildWarehouse() {
+    // Двор под фурами: асфальт вокруг цеха
+    addStatic('yard', 0, 0, 0, { castShadow: false, receiveShadow: false });
     // Пол и разметка
     addStatic('floor', 0, 0, 0, { castShadow: false });
     [-7.8, -2.6, 2.6, 7.8].forEach(function (z) {
@@ -178,8 +180,21 @@ WC.world = (function () {
     // Стены
     addStatic('wall', 0, 0, -8.55, { castShadow: false });
     addStatic('wall', 0, 0, 8.55, { castShadow: false });
-    addStatic('wallSide', -13.05, 0, 0, { castShadow: false });
-    addStatic('wallSide', 13.05, 0, 0, { castShadow: false });
+    // Боковые стены с проёмами под доки (по 1.6 м ворот с каждой стороны)
+    [-13.05, 13.05].forEach(function (x) {
+      [-5.05, 5.05].forEach(function (z) {
+        var seg = addStatic('wallSide', x, 0, z, { castShadow: false });
+        seg.scale.z = 6.9 / 17;
+      });
+      [-1.6, 1.6].forEach(function (z) {
+        addStatic('dockFrame', x, 1.5, z, { castShadow: false, receiveShadow: false });
+      });
+      addStatic('dockLamp', x, 3.15, 0, { castShadow: false, receiveShadow: false });
+      addStatic('dockPlate', x + (x < 0 ? 0.7 : -0.7), 0.03, 0, { castShadow: false });
+    });
+    // Разметка двора под фуры
+    addStatic('yardLine', -16.6, 0.01, 0, { castShadow: false, receiveShadow: false });
+    addStatic('yardLine', 16.6, 0.01, 0, { castShadow: false, receiveShadow: false });
 
     // Стеллажи: 3 ряда по 3 уровня
     var rackX = [-1.6, 2.2, 6.0];
@@ -424,6 +439,58 @@ WC.world = (function () {
     return Math.atan2(Math.cos(heading), Math.sin(heading));
   }
 
+  // Пределы подвижности суставов: мышца не тянется бесконечно и не выгибается
+  // в обратную сторону — как у живого человека, а не у резиновой куклы.
+  var JOINT_LIMITS = {
+    hips: { x: [-0.22, 0.35], z: [-0.12, 0.12] },
+    torso: { x: [-0.12, 0.5], y: [-0.45, 0.45], z: [-0.2, 0.2] },
+    neck: { x: [-0.45, 0.5], y: [-1.0, 1.0] },
+    head: { x: [-0.4, 0.45], y: [-0.75, 0.75], z: [-0.3, 0.3] },
+  };
+  var LIMB_LIMITS = {
+    hip: { x: [-1.2, 1.35], y: [-0.3, 0.3], z: [-0.3, 0.3] },
+    knee: { x: [0, 2.1], y: [0, 0], z: [0, 0] },
+    ankle: { x: [-0.45, 0.5], y: [-0.2, 0.2], z: [-0.15, 0.15] },
+    shoulder: { x: [-2.3, 1.5], y: [-0.9, 0.9], z: [-1.15, 1.15] },
+    elbow: { x: [-2.3, 0.05], y: [-0.1, 0.1], z: [0, 0] },
+    wrist: { x: [-0.7, 0.7], y: [-0.4, 0.4], z: [-0.35, 0.35] },
+  };
+
+  function clampJoint(bone, limits) {
+    if (!bone || !limits) return;
+    ['x', 'y', 'z'].forEach(function (axis) {
+      var range = limits[axis];
+      if (!range) return;
+      if (bone.rotation[axis] < range[0]) bone.rotation[axis] = range[0];
+      if (bone.rotation[axis] > range[1]) bone.rotation[axis] = range[1];
+    });
+  }
+
+  function clampRig(entry) {
+    ['hips', 'torso', 'neck', 'head'].forEach(function (name) {
+      clampJoint(entry[name], JOINT_LIMITS[name]);
+    });
+    [entry.legL, entry.legR].forEach(function (leg) {
+      if (!leg) return;
+      clampJoint(leg.hip, LIMB_LIMITS.hip);
+      clampJoint(leg.knee, LIMB_LIMITS.knee);
+      clampJoint(leg.ankle, LIMB_LIMITS.ankle);
+    });
+    [entry.armL, entry.armR].forEach(function (arm) {
+      if (!arm) return;
+      clampJoint(arm.shoulder, LIMB_LIMITS.shoulder);
+      clampJoint(arm.elbow, LIMB_LIMITS.elbow);
+      if (arm.wrist) clampJoint(arm.wrist, LIMB_LIMITS.wrist);
+    });
+  }
+
+  function injuryOn(body, part) {
+    var list = (body && body.injuries) || [];
+    var total = 0;
+    for (var i = 0; i < list.length; i++) if (list[i].part === part) total += list[i].severity;
+    return Math.min(1, total);
+  }
+
   function updateCrew(dt, game) {
     game.api.crew.forEach(function (worker) {
       var viewEntry = crewViews.get(worker.id);
@@ -490,14 +557,110 @@ WC.world = (function () {
       if (!down) {
         root.position.y = 0;
       }
+
+      // Травмы видно по позе: хромает, берегёт плечо, держит голову
+      var limp = Math.max(injuryOn(body, 'knee'), injuryOn(body, 'ankle'));
+      if (limp > 0.05 && walk > 0.15 && !down) {
+        var hobble = Math.sin(phase) * 0.6 * limp;
+        viewEntry.legL.hip.rotation.x -= hobble;
+        viewEntry.legR.hip.rotation.x += hobble;
+        viewEntry.legR.knee.rotation.x = Math.max(viewEntry.legR.knee.rotation.x, 0.5 * limp * walk);
+        root.rotation.z = Math.sin(phase * 2) * 0.07 * limp * walk;
+        root.position.y += Math.abs(Math.sin(phase)) * 0.035 * limp * walk;
+      }
+      var shoulder = injuryOn(body, 'shoulder');
+      if (shoulder > 0.12 && !carrying && !down) {
+        viewEntry.armR.shoulder.rotation.x = -0.3;
+        viewEntry.armR.shoulder.rotation.z = 0.32;
+        viewEntry.armR.elbow.rotation.x = -1.25;
+      }
+      var headHurt = injuryOn(body, 'head');
+      if (headHurt > 0.05 && !down) {
+        viewEntry.head.rotation.x += 0.12 * headHurt;
+        viewEntry.neck.rotation.y += Math.sin(clock * 0.9) * 0.05 * headHurt;
+      }
+      var fear = s.safety ? s.safety.fear : 0;
+      if (fear > 0.1 && !down) {
+        // после травмы двигается осторожнее, чуть пригнувшись
+        viewEntry.torso.rotation.x += 0.05 * fear;
+      }
+
+      // Жёсткий предел растяжения: суставы не выгибаются дальше анатомии
+      clampRig(viewEntry);
+    });
+  }
+
+  // ---------------------------------------------------------------- фуры
+  var truckViews = new Map();
+
+  function makeTruckView() {
+    var group = new THREE_NS.Group();
+    function part(name, x, y, z, rx) {
+      var m = meshes.mesh(engine, name, null, { castShadow: true, receiveShadow: true });
+      m.position.set(x, y, z);
+      if (rx) m.rotation.x = rx;
+      group.add(m);
+      return m;
+    }
+    part('truckChassis', 0, 0, 0);
+    part('truckTrailer', 0, 0, 0);
+    part('truckStripe', 0, 0, 0);
+    part('truckCab', 3.55, 0, 0);
+    part('truckGlass', 4.3, 0, 0);
+    part('truckDoor', -2.62, 0, 0);
+    [[-1.75, 1.0], [-1.75, -1.0], [2.95, 1.0], [2.95, -1.0]].forEach(function (w) {
+      part('truckWheel', w[0], 0.46, w[1], Math.PI / 2);
+    });
+    group.userData.cargo = part('cargoStack', 0.9, 0, 0);
+    return group;
+  }
+
+  function updateTrucks(sim, dt) {
+    var trucks = (sim && sim.state && sim.state.trucks) || [];
+    var alive = {};
+    trucks.forEach(function (truck) {
+      alive[truck.id] = true;
+      var entry = truckViews.get(truck.id);
+      if (!entry) {
+        entry = { group: makeTruckView(), kind: truck.kind, baseX: truck.kind === 'unload' ? -15.45 : 15.45, dir: truck.kind === 'unload' ? -1 : 1 };
+        entry.group.rotation.y = truck.kind === 'unload' ? Math.PI : 0;
+        entry.group.position.set(entry.baseX + entry.dir * 8, 0, 0);
+        scene.add(entry.group);
+        truckViews.set(truck.id, entry);
+      }
+      var now = sim.state.time;
+      var inT = Math.min(1, Math.max(0, (now - truck.arrivedAt) / 2.6));
+      var easeIn = 1 - Math.pow(1 - inT, 3);
+      var outT = truck.departedAt == null ? 0 : Math.min(1, Math.max(0, (now - truck.departedAt) / 2.4));
+      var easeOut = outT * outT;
+      var offset = entry.dir * (8 * (1 - easeIn) + 9 * easeOut);
+      entry.group.position.x = entry.baseX + offset;
+      entry.group.position.y = Math.sin(inT * Math.PI * 0.5) * 0.02;
+      entry.group.visible = outT < 1;
+      entry.group.userData.cargo.visible = truck.done < truck.total;
+      // Немного качаем подвеску при погрузке
+      entry.group.position.y += Math.sin(clock * 2.1 + truck.x) * 0.004;
+    });
+    truckViews.forEach(function (entry, id) {
+      if (alive[id]) return;
+      scene.remove(entry.group);
+      truckViews.delete(id);
     });
   }
 
   // ---------------------------------------------------------------- камера
   function setMode(mode) {
-    view.mode = mode;
-    document.body.classList.toggle('view-top', mode === 'top');
+    var modes = ['third', 'follow', 'top'];
+    view.mode = modes.indexOf(mode) >= 0 ? mode : 'third';
+    document.body.classList.toggle('view-top', view.mode === 'top');
+    document.body.classList.toggle('view-follow', view.mode === 'follow');
     return view.mode;
+  }
+
+  function cycleMode() {
+    var modes = ['third', 'follow', 'top'];
+    var next = modes[(modes.indexOf(view.mode) + 1) % modes.length];
+    return setMode(next);
   }
 
   function setFocus(workerId) {
@@ -633,6 +796,26 @@ WC.world = (function () {
       camera.lookAt(state.lookAt);
       camera.fov += (fitFov(WC.CONFIG.camera.third.fov) - camera.fov) * Math.min(1, dt * 3);
       camera.updateProjectionMatrix();
+    } else if (view.mode === 'follow') {
+      // Второй вид сверху: камера висит над выбранным рабочим и едет за ним,
+      // поэтому бригаду видно сверху и не теряешь, кто где.
+      var conf = WC.CONFIG.camera.follow;
+      var ffx = focus.state.pos.x;
+      var ffz = focus.state.pos.y;
+      var fHeight = conf.height * (0.75 + 0.25 * view.distance);
+      var backZ = conf.distance * view.distance;
+      var desiredFollow = new THREE_NS.Vector3(
+        ffx + Math.sin(view.yaw) * backZ * 0.25,
+        fHeight,
+        ffz + backZ + Math.cos(view.yaw) * backZ * 0.25
+      );
+      var lookFollow = new THREE_NS.Vector3(ffx, 0.6, ffz + 0.6);
+      state.cameraPos.lerp(desiredFollow, Math.min(1, dt * 3.2));
+      state.lookAt.lerp(lookFollow, Math.min(1, dt * 5));
+      camera.position.copy(state.cameraPos);
+      camera.lookAt(state.lookAt);
+      camera.fov += (fitFov(conf.fov) - camera.fov) * Math.min(1, dt * 3);
+      camera.updateProjectionMatrix();
     } else {
       var topDist = 27 * view.distance;
       var desiredTop = new THREE_NS.Vector3(
@@ -713,6 +896,7 @@ WC.world = (function () {
     if (!state.ready) return;
     var sim = game.sim;
     updateCrew(dt, game);
+    updateTrucks(sim, dt);
     updateBoxes(sim);
     updateSlotMarkers(sim);
     updateAtmosphere(dt, game);
@@ -729,6 +913,7 @@ WC.world = (function () {
     render: render,
     resize: resize,
     setMode: setMode,
+    cycleMode: cycleMode,
     setFocus: setFocus,
     kick: kick,
     fitFov: fitFov,
