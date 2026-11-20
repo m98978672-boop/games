@@ -2,7 +2,7 @@ name: Verify neural memory context budget
 on:
   push:
     branches: [arena/03bf5b1a-games]
-    paths: [.github/workflows/frontline-memory-budget.yml]
+    paths: [.github/workflows/frontline-memory-budget.yml, frontline-command/src/ai/commander-prompts.js, frontline-command/tools/training/memory-context-budget.mjs]
 permissions:
   contents: read
 jobs:
