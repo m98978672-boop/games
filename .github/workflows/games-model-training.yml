@@ -22,7 +22,7 @@ on:
         required: false
         default: 'true'
 permissions:
-  contents: read
+  contents: write  # нужно, чтобы опубликовать релиз с адаптером
 jobs:
   train:
     if: github.repository == 'm98978672-boop/games'
@@ -146,6 +146,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 90
 
+      - name: Упаковать адаптер, отчёт и датасет
+        if: success()
+        run: |
+          set -eu
+          cp "$RUNNER_TEMP/model-out/report.json" "$RUNNER_TEMP/model-out/adapter/" 2>/dev/null || true
+          tar -C "$RUNNER_TEMP/model-out" -czf "$RUNNER_TEMP/games-model-adapter.tar.gz" adapter
+          ls -la "$RUNNER_TEMP/games-model-adapter.tar.gz"
+
       - name: Опубликовать релиз с адаптером
         if: success()
         uses: softprops/action-gh-release@v2
@@ -159,7 +167,7 @@ jobs:
             Это адаптер, а не готовая браузерная модель. Метрики — в report.json
             внутри архива. Датасет собран из настоящих файлов репозитория.
           files: |
-            ${{ runner.temp }}/model-out/report.json
+            ${{ runner.temp }}/games-model-adapter.tar.gz
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
