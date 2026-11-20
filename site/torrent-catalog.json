@@ -6,8 +6,8 @@
     "games": 234,
     "storefront": 18,
     "collection": 216,
-    "files": 2129,
-    "totalBytes": 52651639,
+    "files": 2135,
+    "totalBytes": 52707600,
     "chunks": 398,
     "blockedFiles": 5
   },
@@ -2090,11 +2090,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "53ef31a250e539307d54da8b66321186c206fd9a4c0d09f6974c92ab413e25cb",
-      "totalSize": 9923089,
+      "infoHash": "fb2cd5d7ed7601cc301d60891ddbea645c83de0fda41e119ccbac3c02ac8d3a8",
+      "totalSize": 9934179,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 563,
+      "fileCount": 567,
       "files": [
         {
           "path": ".gitattributes",
@@ -3478,8 +3478,8 @@
         },
         {
           "path": "package.json",
-          "size": 15105,
-          "sha256": "a963484fb73d58ea1c11891200b75d75d2bcfe42dd1c89b0fc6b932a63c1088b"
+          "size": 15179,
+          "sha256": "5fc7849f45e0bca19bdb6b20e2ad0c20c61f3a7fd5ccad560c3301ab4cfdb9c0"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3519,7 +3519,7 @@
         {
           "path": "src/core/build-info.js",
           "size": 843,
-          "sha256": "72a7923f6693ce095052f5e45e20435c4f0d0888d0626ab79c6f3280bae12b6f"
+          "sha256": "d033be3bd2f919eb2a4dd16f01489bf6703176763ce12473c9d101a088ea1922"
         },
         {
           "path": "src/core/config.js",
@@ -3623,8 +3623,8 @@
         },
         {
           "path": "src/sim/crowd_nav.js",
-          "size": 10640,
-          "sha256": "eab39133290e5665ea30c9ceb0a2918ac0466137f4097711e6799e62386a499e"
+          "size": 12226,
+          "sha256": "e72631fde076ba1a6f62818c3ee4e899c4bc677ce1856ba62f722cfd2754043a"
         },
         {
           "path": "src/sim/door_courtesy.js",
@@ -3718,8 +3718,8 @@
         },
         {
           "path": "src/sim/units.js",
-          "size": 45365,
-          "sha256": "6654443e4faa02db85725c8a0a03b4c0106968c57c238bf212b6021ba86ddf94"
+          "size": 45437,
+          "sha256": "4b5a6ac828c58fa0cc5895196e29ba0b3f9a30df5c6434faabcf0c40acab7a27"
         },
         {
           "path": "src/sim/vision_nav_policy.js",
@@ -4122,6 +4122,11 @@
           "sha256": "867153cbff1b77b345a3ccde3befedc776fc7935aa371caadc76167310225cf1"
         },
         {
+          "path": "tools/crowd-battles.mjs",
+          "size": 1767,
+          "sha256": "98d2eb7710cb5a513d5fd413b1aa091d690a6b7a1b91e29963892e3eaf120832"
+        },
+        {
           "path": "tools/crowd-fixes-combat.mjs",
           "size": 4128,
           "sha256": "251d967370576db9d14bc3d07c7aca6d8368cf6a589b6fd7311c1f648a135d2c"
@@ -4130,6 +4135,16 @@
           "path": "tools/crowd-fixes-group-step.mjs",
           "size": 4740,
           "sha256": "9280bdd80d38bd06f65c549f8313112669e25508a5f1b04027c4583be6bb9f57"
+        },
+        {
+          "path": "tools/crowd-open-realmap.mjs",
+          "size": 2580,
+          "sha256": "c3f4fc42e37f93e856ed1242fb2455b15d94e5e26e97606e006327ff776d9767"
+        },
+        {
+          "path": "tools/crowd-order-probe.mjs",
+          "size": 2444,
+          "sha256": "96e95804b8c4ec5b7372a75b328e513aa8b140b59e21ea5a020f3215ace03978"
         },
         {
           "path": "tools/crowd-slot-column.mjs",
@@ -4155,6 +4170,11 @@
           "path": "tools/crowd-slot-regression-probe.mjs",
           "size": 4229,
           "sha256": "bdea3216c5dee0b9587cc4333bc0d9012cca7ec8b5b59396404a14a948a6187b"
+        },
+        {
+          "path": "tools/crowd-u-probe.mjs",
+          "size": 2567,
+          "sha256": "ce2d0462deba76ff4a1dcd73f4991322decbd85e7bc557748216c49d2fbbe79e"
         },
         {
           "path": "tools/diagnose-column-variants.mjs",
@@ -4939,16 +4959,21 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "3e1b785aadec5dc2e7a301251fb60a67f3aae2ddd1fba215d214b670d9c9a411",
-      "totalSize": 1395612,
+      "infoHash": "4b80d2611b86c882b72c745536cbfe3bf873e7c106310da8118b13f161e08f87",
+      "totalSize": 1440483,
       "chunkSize": 262144,
       "chunkCount": 6,
-      "fileCount": 26,
+      "fileCount": 28,
       "files": [
         {
           "path": "cover.svg",
           "size": 9522,
           "sha256": "9141e3bf4d64ded27c72448663bcebf9576fbe8a5372ca6f6a2a91824ad95e22"
+        },
+        {
+          "path": "data/brain-data.js",
+          "size": 35695,
+          "sha256": "8ef6043680b330dd65ef02f9219d40cf994fde123dd5f3960f8efa420a5e9565"
         },
         {
           "path": "data/brain_dataset.json",
@@ -4987,8 +5012,8 @@
         },
         {
           "path": "index.html",
-          "size": 7119,
-          "sha256": "1b246e5c9c1780c90b432ac4676222c877f558caec94f9418cdf0993275820e2"
+          "size": 7487,
+          "sha256": "7eeaeddad39e3b322e92512b1e3126939194263ea77846dd524c58f2a0b77579"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5007,18 +5032,18 @@
         },
         {
           "path": "src/game.js",
-          "size": 12075,
-          "sha256": "bf3da9e0207777dee1bc18a5ee2bec704fc0d6f80649d830f0d780b3e819519b"
+          "size": 15048,
+          "sha256": "02e6145d35875c172e846b32dc971739d2e73ad450da020731dde1c7c8fdb436"
         },
         {
           "path": "src/main.js",
-          "size": 2616,
-          "sha256": "c3420d814159c7c791fdeaab34ab16637382af8c3f100552a1239fbbfc6833a9"
+          "size": 4412,
+          "sha256": "592d6e253afa747c553ab6eab6d7b67958c3c96240ed01e845745ae8627bd245"
         },
         {
           "path": "src/render.js",
-          "size": 2108,
-          "sha256": "32849157b569ac11b90bb49b2f7f24013c583b207541376621e59fd886475fce"
+          "size": 2575,
+          "sha256": "896607c69176f9aa72205b0c0daea2a42fc8b8f169700aae10b60cc245980152"
         },
         {
           "path": "src/render/bodyview.js",
@@ -5057,8 +5082,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 35605,
-          "sha256": "3349d36d36ad5a35c3c9c7651417022a44cc62bc3b1c30faf73e178febe515cf"
+          "size": 36160,
+          "sha256": "fdaa73b322e9a6325db22bad207fb4b48954668b8742fd3a0843dc8e46b8f2d7"
         },
         {
           "path": "src/util.js",
@@ -5067,8 +5092,13 @@
         },
         {
           "path": "style.css",
-          "size": 17530,
-          "sha256": "19a254428a02414b3f5658073d262e4ad7ef5c2b13f5c5d5d341cbc555ae4e50"
+          "size": 18941,
+          "sha256": "05ae0050b37f7572a69bcdf426f497566127a5db538624c2c7095de5486a366b"
+        },
+        {
+          "path": "tools/embed-brains.mjs",
+          "size": 1606,
+          "sha256": "a85cc9c3ccc787dd4a220f7e47dfe0e1dd8903b5e26871babb5e7c2b4fe33583"
         },
         {
           "path": "training/train-brain.mjs",

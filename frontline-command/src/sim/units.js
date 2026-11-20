@@ -684,7 +684,7 @@ export function updateTimers(game, u, dt) {
     // current goal and any crowd slot; a stale `arrived` flag is not enough.
     const arrivedAtCurrentGoal = (game.cfg.flag('arrival_stuck_guard_v1', false) || game.cfg.flag('movement_occupancy_v1', false)) && u.arrived && u.goal &&
       dist(u.x,u.y,u.goal.x,u.goal.y) < (game.walls && game.walls.enabled()
-        ? (game.cfg.navBudget?.arriveRadius?.walls ?? 34) : (game.cfg.navBudget?.arriveRadius?.legacy ?? 24)) &&
+        ? (u._crowdOpenGroup ? 50 : (game.cfg.navBudget?.arriveRadius?.walls ?? 34)) : (game.cfg.navBudget?.arriveRadius?.legacy ?? 24)) &&
       (!u._crowdActive || !u._crowdPoint || dist(u.x,u.y,u._crowdPoint.x,u._crowdPoint.y)<2) &&
       clearFinalApproach(game,u,u.goal.x,u.goal.y);
     const wait=u._occupancyWait, blocker=wait&&game.units.get(wait.blockerId);
@@ -792,7 +792,7 @@ export function moveAlongFlow(game, u, dt) {
   // Радиус прибытия: со стенами чуть больше (юнит стоит у стены, а не в центре точки),
   // с выключенным флагом — прежние 24 px, чтобы поведение не менялось.
   const arrive = game.cfg.navBudget?.arriveRadius || { legacy: 24, walls: 34 };
-  const arriveD = game.walls && game.walls.enabled() ? arrive.walls : arrive.legacy;
+  const arriveD = game.walls && game.walls.enabled() ? (u._crowdActive && u._crowdOpenGroup ? 50 : arrive.walls) : arrive.legacy;
   const inPassage = !u.playerControlled && unsafeRest(game, u.x, u.y, u.radius);
   if (d < arriveD && !inPassage && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2) &&
       clearFinalApproach(game,u,u.goal.x,u.goal.y)) {

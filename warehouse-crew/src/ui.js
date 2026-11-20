@@ -591,6 +591,15 @@ window.WC = window.WC || {};
       U.toast(ok ? 'Смена сохранена' : 'Не удалось сохранить', ok ? 'good' : 'bad', 1800);
     });
     q('btn-sound').addEventListener('click', function () { toggleSound(); });
+    // Телефон: пульт занимает пол-экрана — кнопка в шапке сворачивает его до заголовка.
+    var collapseButton = document.getElementById('btn-panel-collapse');
+    if (collapseButton) {
+      collapseButton.addEventListener('click', function () {
+        var collapsed = document.body.classList.toggle('panel-collapsed');
+        collapseButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        collapseButton.textContent = collapsed ? '▸' : '▾';
+      });
+    }
   }
 
   function setCamera(mode) {

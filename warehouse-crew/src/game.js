@@ -53,25 +53,79 @@ WC.game = (function () {
 
   function bootEngine() {
     var GE = window.GamesEngine;
-    if (!GE) return Promise.reject(new Error('shared/engine.js не загрузился'));
-    return GE.create({ preset: 'survival', packs: ['pack:ai-team'] }).then(function (handle) {
-      api.engine = handle.engine;
-      return api.engine;
+    if (!GE || typeof GE.create !== 'function') {
+      return Promise.reject(new Error('shared/engine.js не загрузился: нет GamesEngine.create'));
+    }
+    // ВАЖНО: GamesEngine.create() возвращает НЕ промис, а holder
+    // {engine, ready, promise, onReady()}. Движок в нём появляется асинхронно.
+    var holder = GE.create({ preset: 'survival', packs: ['pack:ai-team'] });
+    var wait = holder && holder.promise ? holder.promise : Promise.resolve(holder);
+    return Promise.resolve(wait).then(function (resolved) {
+      var engine = (resolved && resolved.engine) || (holder && holder.engine) || resolved;
+      if (!engine || !engine.tools) throw new Error('RatCore вернул пустой экземпляр движка');
+      api.engine = engine;
+      return engine;
     });
   }
 
+  // Запасной мозг, если данные вообще недоступны (архив, file://, битые файлы):
+  // детерминированные веса, чтобы смена всё равно началась.
+  function syntheticBrain(seed) {
+    var s = (seed || 20261120) >>> 0;
+    function rnd() {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return (s / 4294967296) * 2 - 1;
+    }
+    var sizes = [18, 24, 16, 6];
+    var layers = [];
+    for (var l = 1; l < sizes.length; l++) {
+      var fanIn = sizes[l - 1];
+      var fanOut = sizes[l];
+      var w = [];
+      var b = [];
+      var scale = Math.sqrt(2 / (fanIn + fanOut));
+      for (var o = 0; o < fanOut; o++) {
+        for (var i = 0; i < fanIn; i++) w.push(Number((rnd() * scale).toFixed(4)));
+        b.push(Number((rnd() * 0.05).toFixed(4)));
+      }
+      layers.push({ in: fanIn, out: fanOut, activation: l === sizes.length - 1 ? 'sigmoid' : 'tanh', w: w, b: b });
+    }
+    return { format: 'warehouse-brain/1', layers: layers, synthetic: true };
+  }
+
+  function applyBrains(base, meta, perCrew) {
+    api.baseBrain = base;
+    api.brainMeta = meta || null;
+    cfg.crew.forEach(function (member) {
+      api.brains[member.id] = (perCrew && perCrew[member.id]) || base;
+    });
+    return api.baseBrain;
+  }
+
   function loadBrains() {
+    // 1. Мозги «в коде» — работают всегда, в том числе с диска (file://),
+    //    где fetch() для локальных JSON браузеры блокируют.
+    var inline = typeof window !== 'undefined' ? window.WC_BRAINS : null;
+    if (inline && inline.base && inline.base.layers) {
+      api.brainSource = 'inline';
+      return Promise.resolve(applyBrains(inline.base, inline.log, inline.brains));
+    }
+    // 2. Обычная загрузка по сети (GitHub Pages, локальный сервер).
     var tasks = [loadJson(cfg.brains.base), loadJson(cfg.brains.log).catch(function () { return null; })];
     cfg.crew.forEach(function (member) {
       tasks.push(loadJson(member.brain).catch(function () { return null; }));
     });
     return Promise.all(tasks).then(function (results) {
-      api.baseBrain = results[0];
-      api.brainMeta = results[1];
-      cfg.crew.forEach(function (member, i) {
-        api.brains[member.id] = results[i + 2] || api.baseBrain;
-      });
-      return api.baseBrain;
+      var perCrew = {};
+      cfg.crew.forEach(function (member, i) { perCrew[member.id] = results[i + 2]; });
+      api.brainSource = 'fetch';
+      return applyBrains(results[0], results[1], perCrew);
+    }).catch(function (err) {
+      // 3. Последний рубеж — синтетический мозг, чтобы игра не падала.
+      console.warn('[warehouse-crew] мозги не загрузились, играю на запасном:', err && err.message);
+      api.brainSource = 'synthetic';
+      pushLog('Мозги не загрузились — включён запасной режим', 'warn');
+      return applyBrains(syntheticBrain(cfg.seed), null, null);
     });
   }
 

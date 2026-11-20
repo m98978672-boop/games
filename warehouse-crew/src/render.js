@@ -59,7 +59,15 @@ WC.render = (function () {
   function initStage() {
     var canvas = document.getElementById('scene');
     if (!canvas) throw new Error('Нет canvas#scene');
-    WC.world.init(canvas, WC.game.api.engine);
+    try {
+      WC.world.init(canvas, WC.game.api.engine);
+    } catch (err) {
+      // Самая частая причина — браузер не дал контекст WebGL
+      if (/webgl|context/i.test(String(err && err.message))) {
+        throw new Error('Браузер не дал WebGL (' + err.message + '). Включите аппаратное ускорение в настройках браузера или откройте игру в Chrome/Edge/Firefox.');
+      }
+      throw err;
+    }
     WC.world.attachCrew(WC.game);
     WC.world.setFocus(WC.game.api.activeWorkerId);
     WC.world.setMode('third');

@@ -1,7 +1,10 @@
 import { solidUnitMoveFree } from './solid_units.js';
+import { clearFinalApproach } from './arrival.js';
+import { unsafeRest } from './rest_positions.js';
 
-// Эксперимент для небольших групп пехоты с общей целью внутри здания.
-// Не является решением всех встречных потоков и выключен по умолчанию.
+// Небольшая выровненная группа пехоты с общей целью получает места у цели.
+// В открытой местности применяется с включённым movement_occupancy_v1;
+// это не универсальное решение встречных потоков или скоплений в бою.
 const MAX_GROUP = 10;
 const SLOT_ORDER = [0, 1, -1, 2, -2, null, 3, -3, 4, -4];
 
@@ -12,6 +15,7 @@ export function clearCrowdState(u) {
   u._crowdDetour = null;
   u._crowdGroupGoal = null;
   u._crowdAssigned = null;
+  u._crowdOpenGroup = false;
   if ('_crowdPairManaged' in u) delete u._crowdPairManaged;
 }
 
@@ -29,7 +33,9 @@ export function prepareCrowdNavigation(game, u, distance, maxMembers=MAX_GROUP, 
     // Сначала дешёвая проверка соседа: одиночные юниты не сканируют здания.
     const near = game.unitGrid.queryRange(u.x,u.y,160).some(o => o !== u && o.alive && !o.downed &&
       !o.isVehicle && o.faction === u.faction && sameGoal(o) && Math.hypot(o.x-u.x,o.y-u.y) < 160);
-    if (near && game.walls?.buildingAtPoint?.(u.goal.x,u.goal.y)) {
+    if (near) {
+      const openGoal = !game.walls?.buildingAtPoint?.(u.goal.x,u.goal.y);
+      if (openGoal && (!occupancy || !game.walls?.enabled())) return;
       const members=game.unitGrid.queryRange(u.x,u.y,450).filter(o => o.alive && !o.downed && !o.isVehicle &&
         !o.playerControlled && !o.perception.hasContact && o.faction === u.faction && sameGoal(o) &&
         Math.hypot(o.x-u.x,o.y-u.y) < 450)
@@ -40,13 +46,32 @@ export function prepareCrowdNavigation(game, u, distance, maxMembers=MAX_GROUP, 
       // Не переназначаем уже сформированную группу из-за опоздавшего бойца.
       const unassigned=members.every(o => !o._crowdGroupGoal || Math.hypot(o._crowdGroupGoal.x-u.goal.x,o._crowdGroupGoal.y-u.goal.y) >= 1);
       const minimum = allowPair && game.cfg.flag('group_nav_pair_v1', false) ? 2 : (occupancy || game.cfg.flag('group_nav_3to5_v1', false)) ? 3 : 6;
-      if (members.length >= minimum && members.length <= Math.min(MAX_GROUP,maxMembers) && aligned && unassigned) {
+      // Check the actual planned slots, not just points sampled on the ring.
+      // Never reorganise parked allies, use this for large radii, or create a
+      // fresh pair. Limit the open-ground extension to 3–5: larger crowds are
+      // not reliably handled by these reservations. Building logic is unchanged.
+      let openSafe=true;
+      if (openGoal && members.length >= minimum && members.length <= Math.min(MAX_GROUP,maxMembers) && aligned && unassigned) {
+        const r=Math.max(...members.map(o=>o.radius));
+        openSafe=members.length>=3 && members.length<=5 && members.every(o=>!o.arrived && o.radius<=12) &&
+          !unsafeRest(game,u.goal.x,u.goal.y,r);
+        for(let i=0;openSafe && i<members.length;i++) {
+          const k=SLOT_ORDER[i], a=(k??0)*2*Math.PI/9, cs=Math.cos(a),sn=Math.sin(a);
+          const x=u.goal.x-(k===null?0:45*(nx*cs-ny*sn)), y=u.goal.y-(k===null?0:45*(nx*sn+ny*cs));
+          const p={x,y,radius:r,isVehicle:false};
+          openSafe=!game.walls.buildingAtPoint?.(x,y) && !unsafeRest(game,x,y,r) &&
+            clearFinalApproach(game,p,u.goal.x,u.goal.y);
+        }
+      }
+      if (members.length >= minimum && members.length <= Math.min(MAX_GROUP,maxMembers) && aligned && unassigned && openSafe) {
         for (let i=0;i<members.length;i++) {
           const k=SLOT_ORDER[i]; let point={...u.goal};
           if (k !== null) {
             const angle=k*2*Math.PI/9, cs=Math.cos(angle), sn=Math.sin(angle);
-            point={x:u.goal.x-30*(nx*cs-ny*sn),y:u.goal.y-30*(nx*sn+ny*cs)};
+            const r=openGoal?45:30;
+            point={x:u.goal.x-r*(nx*cs-ny*sn),y:u.goal.y-r*(nx*sn+ny*cs)};
           }
+          members[i]._crowdOpenGroup=openGoal;
           members[i]._crowdGroupGoal={...u.goal};
           members[i]._crowdAssigned=point;
           if (game.cfg.flag('group_nav_pair_v1', false) && members.length===2) members[i]._crowdPairManaged=true;
@@ -85,9 +110,9 @@ export function adjustBlockedCrowdSlot(game,u) {
     return ox*ox+oy*oy>=r*r && (ox+dx*t)**2+(oy+dy*t)**2<r*r;
   });
   if (!blockedSlot && !blockedPath) return false;
-  const radius=(game.cfg.navBudget?.arriveRadius?.walls ?? 34)-1;
+  const radius=u._crowdOpenGroup ? 49 : (game.cfg.navBudget?.arriveRadius?.walls ?? 34)-1;
   let best=null,bestDistance=Infinity;
-  for(let r=0;r<=30 && r<radius;r+=6)for(let k=0;k<(r===0?1:16);k++) {
+  for(let r=0;r<radius;r+=6)for(let k=0;k<(r===0?1:16);k++) {
     const angle=k*Math.PI/8,x=goal.x+r*Math.cos(angle),y=goal.y+r*Math.sin(angle),q={x,y};
     if(x-u.radius<0||y-u.radius<0||x+u.radius>w.W||y+u.radius>w.H||
        !w.isBaseWalkable(x,y)||!w.isBaseWalkable(x-u.radius,y-u.radius)||!w.isBaseWalkable(x+u.radius,y-u.radius)||
