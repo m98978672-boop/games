@@ -527,8 +527,12 @@ export function wheel(M, opts = {}) {
   const rimR = radius * 0.58;
   const face = new THREE.Mesh(new THREE.CylinderGeometry(rimR, rimR, width * 0.9, 30), stdMetal(rimColor));
   inner.add(face);
+  // Обод диска: тор должен лежать в плоскости колеса, то есть смотреть вдоль
+  // оси X. Тор по умолчанию лежит в плоскости XY, и поворот вокруг X его не
+  // разворачивает: вместо кольца вокруг диска получалась плоская «лопата»
+  // шириной в диаметр, торчащая из арки выше и ниже шины. Разворот — вокруг Y.
   const lip = new THREE.Mesh(new THREE.TorusGeometry(rimR * 0.99, radius * 0.022, 8, 30), stdMetal(rimColor));
-  lip.rotation.x = HALF;
+  lip.rotation.y = HALF;
   lip.position.y = hw * 0.86;
   inner.add(lip);
 
