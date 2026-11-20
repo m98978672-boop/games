@@ -67,6 +67,7 @@ func run_tests() -> void:
 	guard.hit(1)
 	check(guard.suppression > 0 and guard.aim_time == 0, "Taking fire interrupts guard aim")
 	guard.visible_contact = true
+	guard.scan = 100 # isolate animation from the cadence of physics-server contact updates
 	guard.cooldown = 100
 	guard.position = Vector3(45, 0.3, -5)
 	player.position.y = 2.0
