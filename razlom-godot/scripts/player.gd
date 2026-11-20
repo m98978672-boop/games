@@ -4,6 +4,8 @@ var game
 var camera: Camera3D
 var gun: Node3D
 var weapon_motion: RazlomWeaponMotion
+var left_arm: RazlomArmRig
+var right_arm: RazlomArmRig
 var cooldown := 0.0
 var reload_time := 0.0
 var recoil := 0.0
@@ -47,6 +49,10 @@ func _ready() -> void:
 	gun.scale = Vector3.ONE * 0.85
 	gun.position = Vector3(0.2, -0.21, -0.6)
 	weapon_motion = RazlomWeaponMotion.new(gun)
+	gun.get_node("LeftHand/Sleeve").hide()
+	gun.get_node("RightHand/Sleeve").hide()
+	left_arm = RazlomArmRig.new(camera)
+	right_arm = RazlomArmRig.new(camera)
 	light = SpotLight3D.new()
 	light.position = Vector3(0.12, -0.1, -0.15)
 	light.light_color = Color("dce4ba")
@@ -195,6 +201,9 @@ func advance_touch_look(delta: float) -> void:
 		pending_look = Vector2.ZERO
 
 func _process(delta: float) -> void:
+	if is_instance_valid(gun):
+		left_arm.solve(Vector3(-0.24, -0.26, 0.12), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
+		right_arm.solve(Vector3(0.24, -0.26, 0.12), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
 	if game.mobile_mode and not game.ended:
 		advance_touch_look(delta)
 

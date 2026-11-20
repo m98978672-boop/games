@@ -337,7 +337,11 @@ func fire() -> void:
 		if object is RazlomEnemy:
 			combat_feedback.hit_time = 0.18
 		impact_particles(hit.position, hit.normal)
-		if object.has_method("hit"):
+		if object is RazlomBlock:
+			object.bullet_hit(hit.position, -player.camera.global_basis.z, 0.012, 36.0)
+		elif object is RazlomEnemy:
+			object.hit_at(36, hit.position, hit.normal, -player.camera.global_basis.z * 9)
+		elif object.has_method("hit"):
 			object.hit(36, -player.camera.global_basis.z * 9)
 		flash(hit.position, Color("ffce84"), 0.08, 0.09)
 	var light := OmniLight3D.new()
@@ -820,6 +824,10 @@ func save_game() -> bool:
 	data["position"] = [player.position.x, player.position.y, player.position.z]
 	data["yaw"] = player.rotation.y
 	data["day_minutes"] = day_minutes
+	data["local_damage"] = {}
+	for id in blocks:
+		if not blocks[id].removed.is_empty():
+			data.local_damage[id] = blocks[id].removed.keys()
 	data["destroyed"] = destroyed.duplicate()
 	data["collected"] = collected.duplicate()
 	data["defeated"] = defeated.duplicate()
@@ -909,6 +917,11 @@ func load_game() -> bool:
 		if destroyed.has(id):
 			blocks[id].queue_free()
 			blocks.erase(id)
+	for id in data.get("local_damage", {}):
+		if blocks.has(id):
+			for cell in data.local_damage[id]:
+				blocks[id].removed[int(cell)] = true
+			blocks[id].rebuild_damage()
 	for item in get_tree().get_nodes_in_group("loot"):
 		item.free()
 	for record in data.loot:
@@ -944,6 +957,17 @@ func load_game() -> bool:
 	return true
 
 func validate_world_save(data: Dictionary) -> bool:
+	var local_damage = data.get("local_damage", {})
+	if not local_damage is Dictionary or local_damage.size() > 32:
+		return false
+	for id in local_damage:
+		if not id is String or id.length() > 64 or not local_damage[id] is Array or local_damage[id].size() > 512:
+			return false
+		var seen: Dictionary = {}
+		for cell in local_damage[id]:
+			if not (cell is int or cell is float) or not is_finite(float(cell)) or float(cell) != floor(float(cell)) or cell < 0 or cell >= 512 or seen.has(int(cell)):
+				return false
+			seen[int(cell)] = true
 	if not validate_dog_save(data.get("dog", {"present": false})):
 		return false
 	if not (data.get("day_minutes", 462.0) is float or data.get("day_minutes", 462.0) is int):
@@ -1074,3 +1098,10 @@ func impact_particles(point: Vector3, normal: Vector3) -> void:
 		tween.tween_property(chip, "position", end, 0.18)
 		tween.tween_property(chip, "scale", Vector3.ONE * 0.05, 0.22)
 		tween.chain().tween_callback(chip.queue_free)
+
+func damaged_blocks_count() -> int:
+	var total := 0
+	for block in blocks.values():
+		if not block.removed.is_empty():
+			total += 1
+	return total
