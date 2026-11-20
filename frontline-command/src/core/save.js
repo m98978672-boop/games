@@ -282,6 +282,7 @@ export const Save = {
         type: b.type, faction: b.faction, x: b.x, y: b.y, pointId: b.pointId || null,
       })),
       stock: game.logistics.stock,
+      battleMemoryRecent: game.battleMemory?.saveRecent() || null,
       squads, units,
     };
     // Расширение необязательно: старый формат и ветка с выключенным флагом не меняются.
@@ -493,6 +494,7 @@ export const Save = {
     // пересоздания. Это сохраняет поток, но не заменяет полное состояние игры.
     if (ext && Number.isInteger(ext.rngState) && ext.rngState >= 0 && ext.rngState <= 0xffffffff) game.rng.s = ext.rngState;
     game.time = ext && Number.isFinite(ext.exactTime) && ext.exactTime >= 0 ? ext.exactTime : data.time || 0;
+    game.battleMemory?.restoreRecent(data.battleMemoryRecent);
     game.stats = data.stats || game.stats;
     return true;
   },

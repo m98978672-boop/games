@@ -9,6 +9,8 @@ const InteractionsScript = preload("res://scripts/interactions.gd")
 const DogScript = preload("res://scripts/dog.gd")
 var state = StateScript.new()
 var interactions = InteractionsScript.new()
+var mobile_mode := false
+var touch_ui: RazlomTouchControls
 var day_minutes := 462.0
 var save_path := "user://razlom-save.json"
 var player
@@ -59,6 +61,10 @@ func _ready() -> void:
 	audio_rng.seed = 8201
 	interactions.game = self
 	bind_keys()
+	mobile_mode = DisplayServer.is_touchscreen_available()
+	if mobile_mode:
+		get_window().size_changed.connect(fit_mobile)
+		fit_mobile()
 	setup_environment()
 	world = Node3D.new()
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -73,7 +79,15 @@ func _ready() -> void:
 	add_child(player)
 	setup_audio()
 	setup_hud()
-	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nБез него до утра у нас не будет воды».\n\nДоберись до склада, забери блок и вернись к убежищу.\nМожно пройти через ворота или пробить кирпичную стену.")
+	if mobile_mode:
+		toggle_quality()
+	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nСыну Рады осталось воды на одну ночь.\nИ кому-то было приказано не пускать нас на склад».\n\nДоберись до склада, забери блок и вернись к убежищу.\nМожно пройти через ворота или пробить кирпичную стену.")
+
+func fit_mobile() -> void:
+	var pixels := get_window().size
+	var base := Vector2i(390, 700) if pixels.y > pixels.x else Vector2i(844, 390)
+	if get_window().content_scale_size != base:
+		get_window().content_scale_size = base
 
 func bind_keys() -> void:
 	var keys := {"forward": KEY_W, "back": KEY_S, "left": KEY_A, "right": KEY_D,
@@ -190,6 +204,7 @@ func build_level() -> void:
 	for pos in [Vector3(-14, 0.4, 7), Vector3(-10, 0.4, -12), Vector3(30, 0.4, 1)]:
 		Art.box(world, pos, Vector3(2.1, 0.8, 1.5), Art.material(Color.WHITE, "rust"), true)
 	spawn_loot("pump", Vector3(21, 1.4, -20), "НАСОСНЫЙ БЛОК", "mission_pump")
+	spawn_loot("record", Vector3(11, 1.4, -12), "НАКЛАДНАЯ / прочитать", "warehouse_manifest")
 	spawn_loot("food", Vector3(-25, 1.2, 19), "Консервы • +1", "shelter_food")
 	spawn_loot("water", Vector3(-20, 1.5, 19), "Вода • +1", "shelter_water")
 	spawn_loot("medkit", Vector3(11, 1.4, -20), "Аптечка • +1", "warehouse_med")
@@ -335,6 +350,12 @@ func noise(pos: Vector3, radius: float) -> void:
 			var occluded := not get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 			guard.hear(pos, radius * (0.45 if occluded else 1.0))
 
+func share_contact(sender, point: Vector3) -> void:
+	# One-hop local warning; recipients do not rebroadcast reports or get live tracking.
+	for guard in enemies:
+		if is_instance_valid(guard) and guard != sender and not guard.dead and guard.global_position.distance_to(sender.global_position) <= 18:
+			guard.receive_report(point)
+
 func enemy_fire(guard) -> void:
 	if not guard.sees_player():
 		return
@@ -400,6 +421,9 @@ func interact() -> void:
 		match kind:
 			"pump":
 				state.pump = true
+			"record":
+				state.manifest = true
+				interactions.read_manifest()
 			"food":
 				state.food += 1
 			"water":
@@ -428,7 +452,8 @@ func complete_mission() -> void:
 	state.food += 2
 	state.bottles += 2
 	notify("Вера: «Вода пошла. Значит, утро у нас будет». Глава завершена")
-	save_game()
+	var checkpoint := save_game()
+	show_menu("ВОДА ВЕРНУЛАСЬ", "ГЛАВА 01 ЗАВЕРШЕНА\n\nВера запускает насос. Впервые за много дней вода не пахнет железом.\n«Ты вернулся. Это важнее, чем ты думаешь».\n\nПрипасы: +2 еды, +2 воды.\n" + ("Прогресс сохранён в убежище." if checkpoint else "Автосохранение пока недоступно. Сохранись в убежище, когда стихнет тревога.") + "\n\n" + ("Накладная обнародована. Жители узнают, кто перекрыл воду; Вера всё ещё надеется найти брата." if state.truth_shared else ("Подпись Ильи осталась между тобой и Верой. Правда может расколоть убежище, но молчание тоже имеет цену." if state.manifest else "На складе осталась накладная. Вера просит узнать, почему насос так и не дошёл до Очага.")) + "\n\nМожно продолжить исследование. Следующие главы ещё в разработке.")
 
 func is_sheltered(pos: Vector3) -> bool:
 	return absf(pos.x + 23) < 4.8 and pos.z > 17.5 and pos.z < 26.5 and pos.y < 3.5
@@ -580,6 +605,40 @@ func setup_hud() -> void:
 	for item in [start_button, resume_button, save_button, quality_button, music_button]:
 		menu_style.button(item, item == start_button)
 	interactions.setup_ui(root)
+	if mobile_mode:
+		brand.add_theme_font_size_override("font_size", 18)
+		brand.position = Vector2(16, 12)
+		clock_label.position = Vector2(16, 42)
+		clock_label.add_theme_font_size_override("font_size", 11)
+		stats_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		stats_label.position = Vector2(16, 65)
+		stats_label.add_theme_font_size_override("font_size", 12)
+		mission_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+		mission_panel.position = Vector2(12, 110)
+		mission_panel.custom_minimum_size = Vector2(260, 76)
+		mission_panel.size = Vector2(260, 76)
+		var compact_style := panel_style()
+		compact_style.content_margin_left = 12
+		compact_style.content_margin_right = 12
+		compact_style.content_margin_top = 10
+		compact_style.content_margin_bottom = 10
+		mission_panel.add_theme_stylebox_override("panel", compact_style)
+		mission_label.add_theme_font_size_override("font_size", 13)
+		controls.hide()
+		message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+		message_label.position = Vector2(-150, -50)
+		message_label.custom_minimum_size.x = 300
+		message_label.size = Vector2(300, 90)
+		message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		message_label.add_theme_font_size_override("font_size", 13)
+		hint_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+		hint_label.position = Vector2(-140, 32)
+		for label in [brand, clock_label, stats_label, hint_label, message_label]:
+			label.add_theme_color_override("font_outline_color", Color(0.01, 0.04, 0.02, 0.85))
+			label.add_theme_constant_override("outline_size", 3)
+		touch_ui = RazlomTouchControls.new()
+		touch_ui.game = self
+		root.add_child(touch_ui)
 
 func show_menu(title: String, body: String) -> void:
 	get_tree().paused = true
@@ -601,7 +660,7 @@ func resume() -> void:
 	menu_style.close()
 	interactions.panel.hide()
 	get_tree().paused = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if mobile_mode else Input.MOUSE_MODE_CAPTURED
 
 func toggle_music() -> void:
 	music_enabled = not music_enabled
@@ -616,6 +675,8 @@ func toggle_quality() -> void:
 	notify("Низкое качество" if low_quality else "Стандартное качество")
 
 func _input(event: InputEvent) -> void:
+	if mobile_mode and interactions != null:
+		interactions.handle_touch(event)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE and started and not ended:
 			if get_tree().paused:
@@ -642,6 +703,11 @@ func _process(delta: float) -> void:
 			var bridge = Engine.get_singleton("JavaScriptBridge")
 			bridge.eval("window.__razlomStatus = " + JSON.stringify({
 				"ready": true, "started": started, "paused": get_tree().paused,
+				"dialog": interactions.diagnostics(),
+				"touch": touch_ui.diagnostics() if is_instance_valid(touch_ui) else {},
+				"startButton": [start_button.global_position.x, start_button.global_position.y, start_button.size.x, start_button.size.y],
+				"mobile": mobile_mode, "ammo": state.ammo, "yaw": player.rotation.y,
+				"view": [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y],
 				"health": state.health, "pump": state.pump, "complete": state.complete,
 				"position": [player.position.x, player.position.y, player.position.z],
 				"saveExists": FileAccess.file_exists(save_path),
@@ -653,7 +719,11 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(stats_label):
 		return
 	stats_label.text = "ЗДОРОВЬЕ %03d     ВОДА %03d     ЕДА %03d     СИЛЫ %03d\nМАГАЗИН %02d / %02d     ЗАРЯДЫ %d     АПТЕЧКИ %d     ДЕТАЛИ %d" % [state.health, state.water, state.hunger, state.stamina, state.ammo, state.reserve, state.charges, state.medkits, state.scrap]
+	if mobile_mode:
+		stats_label.text = "ЗДОРОВЬЕ %d  ВОДА %d  ЕДА %d\nПАТРОНЫ %d/%d  АПТЕЧКИ %d" % [state.health, state.water, state.hunger, state.ammo, state.reserve, state.medkits]
 	clock_label.text = "РЕГИОН РУБЕЖ   /   %02d:%02d   /   ТЕПЛО %03d   УСТАЛОСТЬ %03d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
+	if mobile_mode:
+		clock_label.text = "%02d:%02d  ТЕПЛО %d  УСТАЛОСТЬ %d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	mission_label.text = "01  /  ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nМожно продолжить исследование" if state.complete else ("Вернись в убежище\nСдай насосный блок • E" if state.pump else "Найди насосный блок\nСклад 03 · северо-восток"))
 	if get_tree().paused or ended:
 		return
@@ -721,7 +791,7 @@ func save_game() -> bool:
 	data["guards"] = []
 	for guard in enemies:
 		if is_instance_valid(guard) and not guard.is_queued_for_deletion():
-			data["guards"].append({"id": String(guard.name), "health": guard.health, "position": [guard.position.x, guard.position.y, guard.position.z]})
+			data["guards"].append({"id": String(guard.name), "health": guard.health, "position": [guard.position.x, guard.position.y, guard.position.z], "memory": guard.awareness.snapshot()})
 	var file := FileAccess.open(save_path + ".tmp", FileAccess.WRITE)
 	if file == null:
 		notify("Не удалось записать сохранение")
@@ -804,6 +874,7 @@ func load_game() -> bool:
 			for record in data.guards:
 				if record.id == String(guard.name):
 					found = true
+					guard.awareness.restore(record.get("memory", []))
 					guard.health = float(record.health)
 					guard.position = Vector3(record.position[0], record.position[1], record.position[2])
 			if not found:
@@ -858,9 +929,11 @@ func validate_world_save(data: Dictionary) -> bool:
 			if not (value is float or value is int) or not is_finite(float(value)) or absf(float(value)) > 128:
 				return false
 	for record in data.loot:
-		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap"] or not record.get("title") is String:
+		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap", "record"] or not record.get("title") is String:
 			return false
 	for record in data.guards:
+		if not RazlomAIMemory.valid(record.get("memory", [])):
+			return false
 		if not (record.get("health") is float or record.get("health") is int):
 			return false
 		if not is_finite(float(record.health)) or float(record.health) < 0 or float(record.health) > 100:

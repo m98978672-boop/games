@@ -1,0 +1,41 @@
+name: Preserve trained commander weights
+on:
+  push:
+    branches: [arena/03bf5b1a-games]
+    paths: [.github/workflows/frontline-commander-preserve.yml]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  preserve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: structured-commander-results
+          run-id: 44703132936
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/artifact
+      - name: Verify result and preserve complete research bundle
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,hashlib
+          root=os.path.join(os.environ['RUNNER_TEMP'],'artifact');p=os.path.join(root,'output','report.json')
+          r=json.load(open(p));assert r['test']['selected_weights']=='trained'
+          assert r['gameValidator']['selected']['valid']==r['gameValidator']['selected']['total']==16
+          assert r['dev']['trained']['exact']>r['dev']['initial']['exact']
+          weights=os.path.join(root,'output','best','adapter_model.safetensors')
+          digest=hashlib.sha256(open(weights,'rb').read()).hexdigest()
+          summary={k:r[k] for k in ('method','selection','training','dev','test','gameValidator')};summary['adapterSha256']=digest
+          open(os.path.join(root,'summary.json'),'w').write(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
+          print('::notice::PRESERVED_COMMANDER '+json.dumps(summary,separators=(',',':')))
+          PY
+          tar -C "$RUNNER_TEMP/artifact" -czf "$RUNNER_TEMP/frontline-commander-structured.tar.gz" output/best output/report.json data/manifest.json snapshot/progress.json summary.json
+          tag=frontline-commander-structured-44703132936
+          gh release create "$tag" --target "$GITHUB_SHA" --title 'Frontline structured commander research' --notes 'Offline PEFT adapter and report. Sixteen held-out-seed rule-imitation examples, constrained action mask and deterministic argument selection; not free Qwen output, real battle evidence, WebLLM or a deployed game model.'
+          gh release upload "$tag" "$RUNNER_TEMP/frontline-commander-structured.tar.gz" "$RUNNER_TEMP/artifact/summary.json"

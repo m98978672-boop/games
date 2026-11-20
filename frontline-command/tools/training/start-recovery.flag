@@ -1,0 +1,2 @@
+resume after timeout; split active budget per job
+retry after smoke fixed variable shadowing

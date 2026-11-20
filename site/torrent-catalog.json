@@ -6,10 +6,10 @@
     "games": 233,
     "storefront": 17,
     "collection": 216,
-    "files": 2085,
-    "totalBytes": 51145227,
+    "files": 2099,
+    "totalBytes": 51211765,
     "chunks": 392,
-    "blockedFiles": 3
+    "blockedFiles": 5
   },
   "games": [
     {
@@ -2090,11 +2090,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "8fa17ab2361c3df114805eae2057670d2f7a1c569f69120e43f99f53d947bad8",
-      "totalSize": 9813173,
+      "infoHash": "4bbc3374b9afc913ea053e67fd5020edd76230196ecf602a224a544394044e18",
+      "totalSize": 9879711,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 545,
+      "fileCount": 559,
       "files": [
         {
           "path": ".gitattributes",
@@ -3478,23 +3478,23 @@
         },
         {
           "path": "package.json",
-          "size": 14607,
-          "sha256": "a33beac3618dfc56fa785d7d78be89620986336a243a9f784015b8a5eb5e56d6"
+          "size": 14753,
+          "sha256": "5150f1f9eb22faead5b0835b88d296a74c4a1413b1fc6592feab3f65a07c2526"
         },
         {
           "path": "src/ai/commander-prompts.js",
-          "size": 1823,
-          "sha256": "b29ad40b91cd5f2f29a599f96065043f71fe1565e4a41ca539deb4658003b1e2"
+          "size": 3377,
+          "sha256": "20ebae0956b142f8c2d3836360d0d78cfa10fb21af10535165c79f96af82edac"
         },
         {
           "path": "src/ai/commander-worker-entry.js",
-          "size": 2091,
-          "sha256": "aefcabd35dab77f2515f793243538edbecbce0bfdc156323672329466097e951"
+          "size": 2115,
+          "sha256": "9e072674026ff566cfcac97d9c8333f7b16a4ddf52c463da14d3c3fc26d832a8"
         },
         {
           "path": "src/ai/commander-worker.bundle.js",
-          "size": 6133018,
-          "sha256": "ad0ec8e0f8e3c858306fb907185c139f965a56ae27954364792f425cc5a7dff5"
+          "size": 6133212,
+          "sha256": "03ef511491d0939b3affa1d2742894796c49c073c9070915b810ae9c3dffd908"
         },
         {
           "path": "src/ai/licenses/LOGLEVEL-MIT.txt",
@@ -3518,8 +3518,8 @@
         },
         {
           "path": "src/core/build-info.js",
-          "size": 842,
-          "sha256": "5355e4e38126bb95a80faa1c657dd1fd244ff3899b666a9c46350fb2029a07c4"
+          "size": 843,
+          "sha256": "ead3d7f83c2d2cbf4afaaf57f4d07fdab709bcbbd4b667304378abf9b2498d9c"
         },
         {
           "path": "src/core/config.js",
@@ -3553,8 +3553,8 @@
         },
         {
           "path": "src/core/save.js",
-          "size": 27331,
-          "sha256": "3738647938b784818c520fbf3a0195d44ee0e77fb699c655ccac8951f39187e2"
+          "size": 27461,
+          "sha256": "b1b459fbe6f1ebe3a452c49d87c4f69459eba60fab3380516922d236f459e98f"
         },
         {
           "path": "src/core/spatial.js",
@@ -3568,8 +3568,8 @@
         },
         {
           "path": "src/main.js",
-          "size": 30817,
-          "sha256": "5007afe96bc784a797b920409164873015be1d31409572cd27d912c6978e1996"
+          "size": 31184,
+          "sha256": "25cc951970fd75f50d3a6e0759d0662480e0d364bdfb10ba16c7681df62d16d1"
         },
         {
           "path": "src/render/renderer.js",
@@ -3588,13 +3588,18 @@
         },
         {
           "path": "src/sim/ai_strategic.js",
-          "size": 15300,
-          "sha256": "c58954cd622709ac54279c07e38de1df24ffd673409841595debfc50d0ef740b"
+          "size": 15553,
+          "sha256": "6b18456c7201646355085a743c337a47ab841df22dc145a01ea91c0d6e215e13"
         },
         {
           "path": "src/sim/autopilot.js",
           "size": 5939,
           "sha256": "a5f0ec8b5ef142faf3e4efae93cb7aa651a6601ce39c5a427f4332af8c5424db"
+        },
+        {
+          "path": "src/sim/battle_memory.js",
+          "size": 6494,
+          "sha256": "35c0abb57704ab4423b265eab9b26ceef501adff17bb7715cbe1db6794736a23"
         },
         {
           "path": "src/sim/build.js",
@@ -3605,6 +3610,11 @@
           "path": "src/sim/command_api.js",
           "size": 6800,
           "sha256": "5ed555b03fc8fa011bac112a02987869924fa8ef470087cc475da636eece062a"
+        },
+        {
+          "path": "src/sim/commander_memory.js",
+          "size": 6373,
+          "sha256": "3730c0a17fc7f057f389ed6a70289d13e29b74b4de5b98285eb26947c626ffd7"
         },
         {
           "path": "src/sim/crowd_nav.js",
@@ -3628,8 +3638,8 @@
         },
         {
           "path": "src/sim/game.js",
-          "size": 49808,
-          "sha256": "582c0a2a3d7bd9b15dc50efdf550d9311fcfc93456a1b0e7969c733e797bcfd9"
+          "size": 50232,
+          "sha256": "e9c7e2a8cc9053ec9888f606e76e8c258b5df62d6a3cd352d2344adb36f4ed8a"
         },
         {
           "path": "src/sim/incremental_route.js",
@@ -3663,8 +3673,8 @@
         },
         {
           "path": "src/sim/neutral_commander_client.js",
-          "size": 3677,
-          "sha256": "5c71822007587f722fad10dc9c262eb190b903c820432730ac1e9d8999973565"
+          "size": 4515,
+          "sha256": "174e48c6a167e43c5234eafd6c9baa3b9160892e473ef0be8691c3a7e8fe8d6d"
         },
         {
           "path": "src/sim/rest_positions.js",
@@ -3825,6 +3835,11 @@
           "path": "tools/baselines/block123-pre-turn.patch",
           "size": 2151,
           "sha256": "8acfc2d2b428b0b9b14e2a601a86af0f3c599b1be2ed10839b1cb64c460ab9f8"
+        },
+        {
+          "path": "tools/battle-memory-paired.mjs",
+          "size": 3011,
+          "sha256": "b867bf58eafcade0f8912815039d7370fb2e43c8a94c1e22ea9cbfea831695c0"
         },
         {
           "path": "tools/battlefield-withdraw-wars.mjs",
@@ -4542,9 +4557,24 @@
           "sha256": "782e9d504db6d51a6babb4ace75b9a3bd0d3b356a3279447c5f0290033640784"
         },
         {
+          "path": "tools/training/collect-commander-balanced.mjs",
+          "size": 4016,
+          "sha256": "4d0e454aebeb2c9e836d0fb1a87c79292b15d5a19a9bd761734ee339cb55bebe"
+        },
+        {
+          "path": "tools/training/collect-commander-memory.mjs",
+          "size": 4929,
+          "sha256": "a0d9ba52e84a424a9fa86ef429e005ff1b6f0f21b6e1f5429534602863b1e0d9"
+        },
+        {
           "path": "tools/training/collect-commander.mjs",
           "size": 4337,
           "sha256": "8456545dd248cbf1ce3e56ab9e3365f9fa415182a974ec7de3728ca331312647"
+        },
+        {
+          "path": "tools/training/collect-long-training.mjs",
+          "size": 5855,
+          "sha256": "5481ddf51056a16abb3d97797ddbe1f3df2a5e5047c05aedf95acb6e395638ca"
         },
         {
           "path": "tools/training/collect-obstacle-game.mjs",
@@ -4557,9 +4587,29 @@
           "sha256": "ac9abac69da5d235885ecd785be0cfb9c5651470bfe7145bb031faedef301f79"
         },
         {
+          "path": "tools/training/commander-memory.mjs",
+          "size": 449,
+          "sha256": "14debc000efbaf48f9473acbab8ef7924a7666bc48d49be6d40db04a9f7e71d4"
+        },
+        {
           "path": "tools/training/eval-qwen.py",
           "size": 3932,
           "sha256": "ea37e7e63c8e5f516e832066a01e472fa9634f0d80a2c190eb67a1f8e62a6126"
+        },
+        {
+          "path": "tools/training/long_schedule.py",
+          "size": 702,
+          "sha256": "11a7c6612ceefc83d9e4b6fce02dc41bcca0007419715370bca180b08eda5c40"
+        },
+        {
+          "path": "tools/training/make-long-eval-data.py",
+          "size": 2092,
+          "sha256": "8285f868b183a0d61489595b0e3e7d5675446c6323779bdffcc88b0a41e16f2c"
+        },
+        {
+          "path": "tools/training/memory-context-budget.mjs",
+          "size": 1085,
+          "sha256": "a54c45c88438803dc4b86d23bc8535da05153985624b2a7443672b1a87f42969"
         },
         {
           "path": "tools/training/obstacle-eval.py",
@@ -4597,6 +4647,16 @@
           "sha256": "421e0640e7f1f29e4553113390f02496fc1131b4e278499f763ca5c91fbfa933"
         },
         {
+          "path": "tools/training/score-structured.mjs",
+          "size": 1131,
+          "sha256": "b9c050240cfd4b60a5e043f2c241065494392f07fbb8b77927d65d179f976a0b"
+        },
+        {
+          "path": "tools/training/start-recovery.flag",
+          "size": 93,
+          "sha256": "b13659bf9566f326b564cef8fe300c9d2353c273aa450b5e54c016e1e1662a0d"
+        },
+        {
           "path": "tools/training/study-qwen.py",
           "size": 5857,
           "sha256": "84fa4ce72ddc84c32dda312dd9ecc37e80933595d2bf344f00f51a96d6f71cee"
@@ -4605,6 +4665,16 @@
           "path": "tools/training/summarize-obstacle-v2.mjs",
           "size": 2164,
           "sha256": "6103d3f2525b4ee5014003bf8fc02d9b4d8975a03192fe76faad88c8b88cfde3"
+        },
+        {
+          "path": "tools/training/train-commander-structured.py",
+          "size": 11060,
+          "sha256": "f35f87a85205605b626c99334bfc235c5f1f34d36006ced693a187c19f15fe9f"
+        },
+        {
+          "path": "tools/training/train-long.py",
+          "size": 15317,
+          "sha256": "652a69580e82f06027c24b5eca500207a83143833c8071ad7c64c8d15b398460"
         },
         {
           "path": "tools/training/train-obstacle-game.py",
@@ -4822,9 +4892,22 @@
           "sha256": "66936c6557f2fe2bb32d7a4b12ad5b5b76b43774de9c935f693fc1877144f310"
         }
       ],
-      "blocked": [],
-      "blockedCount": 0,
-      "blockedBytes": 0,
+      "blocked": [
+        {
+          "path": "tools/training/evaluate-long.sh",
+          "rule": "исполняемый .sh",
+          "kind": "executable",
+          "size": 3458
+        },
+        {
+          "path": "tools/training/run-long-phase.sh",
+          "rule": "исполняемый .sh",
+          "kind": "executable",
+          "size": 3394
+        }
+      ],
+      "blockedCount": 2,
+      "blockedBytes": 6852,
       "addedAt": "2026-11-18T00:00:00.000Z"
     },
     {

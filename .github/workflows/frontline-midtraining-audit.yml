@@ -1,0 +1,102 @@
+name: Check current training snapshot
+on:
+  push:
+    branches: [arena/03bf5b1a-games]
+    paths: [.github/workflows/frontline-midtraining-audit.yml]
+permissions:
+  contents: read
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Freeze most recent published snapshot
+        run: |
+          set -euo pipefail
+          tag=frontline-learning-15h-44671482687
+          mkdir -p "$RUNNER_TEMP/checkpoints" "$RUNNER_TEMP/dataset"
+          gh release download "$tag" --pattern long-dataset.tar.gz --dir "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/long-dataset.tar.gz" -C "$RUNNER_TEMP/dataset"
+          for file in phase-1-slot-0.tar.gz phase-1-slot-1.tar.gz phase-1-complete.tar.gz; do
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$file"; then
+              gh release download "$tag" --pattern "$file" --dir "$RUNNER_TEMP/checkpoints"
+              mkdir "$RUNNER_TEMP/checkpoints/$file.dir"
+              tar -xzf "$RUNNER_TEMP/checkpoints/$file" -C "$RUNNER_TEMP/checkpoints/$file.dir"
+            fi
+          done
+          python - <<'PY'
+          import glob,json,os,shutil
+          root=os.environ['RUNNER_TEMP'];paths=glob.glob(root+'/checkpoints/*.dir/checkpoint/progress.json')
+          if not paths:raise RuntimeError('No checkpoint available')
+          paths.sort(key=lambda p:(json.load(open(p))['active_seconds'],json.load(open(p))['steps']))
+          selected=os.path.dirname(paths[-1]);shutil.copytree(selected,root+'/snapshot')
+          print('::notice::AUDITED_SNAPSHOT '+json.dumps(json.load(open(paths[-1])),separators=(',',':')))
+          PY
+      - name: Prepare previously reported benchmark and check training separation
+        run: |
+          node frontline-command/tools/training/obstacle-holdout.mjs "$RUNNER_TEMP/holdout-input.json"
+          python - <<'PY'
+          import json,os
+          r=os.environ['RUNNER_TEMP']; hold=json.load(open(r+'/holdout-input.json'))['rows'];m=json.load(open(r+'/dataset/waypoint/manifest.json'))
+          # The benchmark was reported before this run and is reused for comparison;
+          # it is not the separate reserved final test.
+          seeds={x['spec']['seed'] for x in hold};sizes={(x['spec']['width'],x['spec']['height']) for x in hold}
+          for split in ('train','dev','test'):
+              assert not seeds.intersection(m['settings']['SEEDS'][split])
+              assert not sizes.intersection(map(tuple,m['settings']['SIZES'][split]))
+          old=json.load(open('frontline-command/docs/OBSTACLE_V2_HOLDOUT_RESULTS.json'))
+          assert {x['spec']['id'] for x in hold}=={x['id'] for x in old['rows']}
+          PY
+      - name: Install CPU inference dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Compare current weights on previous benchmark
+        run: |
+          set -o pipefail
+          if python -u frontline-command/tools/training/obstacle-holdout-infer.py --data "$RUNNER_TEMP/holdout-input.json" --adapter "$RUNNER_TEMP/snapshot/adapter" --output "$RUNNER_TEMP/holdout-inference.json" 2>&1 | tee "$RUNNER_TEMP/infer.log"; then exit 0; fi
+          python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"infer.log"),errors="replace").read()[-5000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          exit 1
+      - name: Replay physically in Game.step
+        run: node frontline-command/tools/training/replay-obstacle-holdout.mjs "$RUNNER_TEMP/holdout-inference.json" "$RUNNER_TEMP/holdout-replay.json"
+      - name: Report comparison
+        run: |
+          python - <<'PY'
+          import json,os
+          root=os.environ['RUNNER_TEMP'];cur=json.load(open(root+'/holdout-replay.json'));old=json.load(open('frontline-command/docs/OBSTACLE_V2_HOLDOUT_RESULTS.json'));snap=json.load(open(root+'/snapshot/progress.json'))
+          oldrows={r['id']:r for r in old['rows']};newrows={r['id']:r for r in cur['rows']}
+          assert set(oldrows)==set(newrows)
+          assert all(oldrows[k]['baseline']==newrows[k]['baseline']['success'] for k in oldrows)
+          changed=sum(oldrows[k]['choices']['adapter']!=newrows[k]['choices']['adapter'] for k in oldrows)
+          summary={'scope':'Previously reported synthetic U-wall benchmark; same held-out layouts, not a battle or reserved final test','snapshot':{'steps':snap['steps'],'active_seconds':snap['active_seconds']},'old_adapter':old['summary']['metrics']['adapter'],'new_adapter':cur['summary']['metrics']['adapter'],'baseline':cur['summary']['metrics']['baseline'],'base':cur['summary']['metrics']['base'],'changed_choices':changed}
+          open(root+'/comparison.json','w').write(json.dumps(summary,ensure_ascii=False,indent=2)+'\n')
+          print('::notice::CURRENT_COMPARISON '+json.dumps(summary,separators=(',',':')))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: midtraining-waypoint-audit
+          path: |
+            ${{ runner.temp }}/snapshot/progress.json
+            ${{ runner.temp }}/holdout-input.json
+            ${{ runner.temp }}/holdout-inference.json
+            ${{ runner.temp }}/holdout-replay.json
+            ${{ runner.temp }}/comparison.json
+            ${{ runner.temp }}/infer.log
+          if-no-files-found: warn
+          retention-days: 30
+
+# Compare the newest recovery checkpoint on the established benchmark.

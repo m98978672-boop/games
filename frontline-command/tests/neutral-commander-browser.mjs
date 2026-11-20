@@ -24,12 +24,21 @@ try{
  const mock=page,mockErrors=errors;await mock.evaluate(()=>{window.__frontline.game.paused=true;});
  await mock.addInitScript(()=>{window.Worker=class {constructor(){window.__fakeWorker=this;this.sent=[];}postMessage(m){this.sent.push(m);if(m.type==='pair')setTimeout(()=>this.onmessage({data:{type:'result',id:m.id,texts:['{"action":"hold","squad":0,"point":0}','{"action":"hold","squad":0,"point":0}']}}),0);}terminate(){this.terminated=true;}};});
  await mock.goto(`http://127.0.0.1:${server.address().port}/frontline-command/index.html`,{waitUntil:'load'});await mock.waitForFunction(()=>!!window.__frontline);
- await mock.evaluate(()=>window.__frontline.newGame({mode:'commander',aiVsAi:true,neutralAI:true}));
+ await mock.evaluate(()=>window.__frontline.newGame({mode:'commander',aiVsAi:true,neutralAI:true,seed:7}));
  await mock.evaluate(()=>{const g=window.__frontline.game;g.api.orders=[];for(const s of g.strategic)s.update=()=>{};window.__fakeWorker.onmessage({data:{type:'ready'}});});
  await mock.waitForFunction(()=>window.__frontline.game.api.orders.filter(o=>o.source==='neutralAI').length===2,null,{timeout:10000});
  const issued=await mock.evaluate(()=>window.__frontline.game.api.orders.filter(o=>o.source==='neutralAI').map(o=>({faction:o.faction,type:o.type})));
  assert.deepEqual(issued.map(o=>o.faction).sort(),[0,1]);assert.ok(issued.every(o=>o.type==='hold'));
  await mock.waitForFunction(()=>window.__frontline.game.api.orders.filter(o=>o.source==='neutralAI'&&o.status==='accepted').length===2,null,{timeout:15000});
+ await mock.waitForFunction(()=>localStorage.getItem('frontline.neural-memory.v1.side-0')&&localStorage.getItem('frontline.neural-memory.v1.side-1'),null,{timeout:10000});
+ const saved=await mock.evaluate(()=>[0,1].map(f=>JSON.parse(localStorage.getItem(`frontline.neural-memory.v1.side-${f}`))));
+ assert.ok(saved.every(x=>x.version===1&&x.entries.some(e=>e.accepted>=1)),'actual radio outcomes persisted for both sides');
+ await mock.evaluate(()=>{window.__frontline.game.paused=true;});
+ await mock.reload({waitUntil:'load'});await mock.waitForFunction(()=>!!window.__frontline);
+ await mock.evaluate(()=>{window.__frontline.newGame({mode:'commander',aiVsAi:true,neutralAI:true,seed:7});const g=window.__frontline.game;g.api.orders=[];for(const s of g.strategic)s.update=()=>{};window.__fakeWorker.onmessage({data:{type:'ready'}});});
+ await mock.waitForFunction(()=>window.__fakeWorker.sent.some(m=>m.type==='pair'),null,{timeout:10000});
+ const remembered=await mock.evaluate(()=>window.__fakeWorker.sent.find(m=>m.type==='pair').inputs);
+ assert.ok(remembered.every(x=>x.memory.recent.length===0&&x.memory.experience.some(e=>e.accepted>=1)),'new battle receives durable experience but not old unit orders');
  assert.deepEqual(mockErrors,[]);
  // Reuse the mocked page to avoid running several game simulations at once.
  const knowledge=mock;await knowledge.evaluate(()=>{window.__frontline.game.paused=true;});
