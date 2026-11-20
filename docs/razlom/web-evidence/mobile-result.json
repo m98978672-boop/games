@@ -12,6 +12,8 @@
     "Phone inventory dialog fits the portrait viewport",
     "Touch scrolling opens the real story journal",
     "Closing the journal restores phone gameplay",
+    "Phone quest board exposes five distinct authored jobs",
+    "Touch quest acceptance persists stage and selects HUD objective",
     "Touch pause clears stick state and hides controls",
     "Orientation change refits drawer without horizontal clipping",
     "Landscape action buttons remain inside screen",

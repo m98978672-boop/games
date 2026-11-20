@@ -2,19 +2,44 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Северный узел — склад с живыми рабочими</title>
 <meta name="description" content="Склад-симулятор на движке RatCore: три рабочих с обученными нейросетями-мозгами, органами и гормонами. Управляй бригадой с пульта: 3D-вид от третьего лица и тактический вид сверху, инспектор тела с разрезом." />
 <meta name="theme-color" content="#0b0d0c" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="icon" href="cover.svg" type="image/svg+xml" />
 <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body data-sheet="hidden">
+<!-- Иконки: одна спрайт-карта на всю страницу (никаких CDN и шрифтов) -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="7" y="5" width="3.4" height="14" rx="1.2"/><rect x="13.6" y="5" width="3.4" height="14" rx="1.2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2 19 12 8 18.8z"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M3 8.4A2.4 2.4 0 0 1 5.4 6h2l1.2-2h6.8l1.2 2h2A2.4 2.4 0 0 1 21 8.4v8.2A2.4 2.4 0 0 1 18.6 19H5.4A2.4 2.4 0 0 1 3 16.6z"/><circle cx="12" cy="12.4" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.4S3.6 15 3.6 9.3A4.4 4.4 0 0 1 12 6.6a4.4 4.4 0 0 1 8.4 2.7c0 5.7-8.4 11.1-8.4 11.1z"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/><path d="M15.4 9a4.2 4.2 0 0 1 0 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18.2 6.6a7.6 7.6 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/><path d="M16 9.4l4.6 5.2M20.6 9.4 16 14.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4.6h11L20 8.6v10.8A1.6 1.6 0 0 1 18.4 21H5.6A1.6 1.6 0 0 1 4 19.4V6.2A1.6 1.6 0 0 1 5 4.6z"/><rect x="8" y="4.8" width="8" height="5.4" rx="1" fill="#0b0d0c"/><rect x="7.4" y="13" width="9.2" height="6" rx="1.2" fill="#0b0d0c"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><path d="M12 3.4a8.6 8.6 0 1 0 0 17.2 8.6 8.6 0 0 0 0-17.2zm0 13.1a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4zm.1-9.3c2 0 3.3 1.1 3.3 2.7 0 1.3-.8 1.9-1.7 2.5-.7.5-.9.8-.9 1.5v.4h-1.9v-.5c0-1.2.5-1.8 1.5-2.4.7-.4 1.1-.8 1.1-1.4 0-.6-.5-1-1.3-1s-1.4.5-1.5 1.4H9.2c.1-1.9 1.3-3.2 2.9-3.2z"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4.6h4.6M20 9V4.6h-4.6M4 15v4.4h4.6M20 15v4.4h-4.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3.2 20 7v10l-8 3.8L4 17V7z"/><path d="M4 7l8 3.8L20 7M12 10.8V20.8" fill="none" stroke="#0b0d0c" stroke-width="1.5" opacity="0.55"/></symbol>
+  <symbol id="i-shelf" viewBox="0 0 24 24"><rect x="4" y="4.4" width="16" height="3" rx="0.9"/><rect x="4" y="10.5" width="16" height="3" rx="0.9"/><rect x="4" y="16.6" width="16" height="3" rx="0.9"/></symbol>
+  <symbol id="i-cup" viewBox="0 0 24 24"><path d="M5 8h11v5.4A5.6 5.6 0 0 1 10.5 19 5.6 5.6 0 0 1 5 13.4z"/><path d="M16 9.2h1.6a2.6 2.6 0 0 1 0 5.2H16" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 4.4c0 1.2 1 1.4 1 2.6M11 4.4c0 1.2 1 1.4 1 2.6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity="0.75"/></symbol>
+  <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9.4 4.2a3 3 0 0 0-3 3 2.7 2.7 0 0 0-1.1 5 2.9 2.9 0 0 0 1.7 4.9 2.8 2.8 0 0 0 5.2-1V5.9a2.8 2.8 0 0 0-2.8-1.7z"/><path d="M14.6 4.2a3 3 0 0 1 3 3 2.7 2.7 0 0 1 1.1 5 2.9 2.9 0 0 1-1.7 4.9 2.8 2.8 0 0 1-5.2-1V5.9a2.8 2.8 0 0 1 2.8-1.7z"/><path d="M12 5.4v13.4" fill="none" stroke="#0b0d0c" stroke-width="1.4" opacity="0.5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2"/></symbol>
+</svg>
+
 <!-- Игровое поле -->
 <div id="stage">
   <canvas id="scene" aria-label="Склад: стеллажи, приёмка и трое рабочих"></canvas>
-  <div id="markers" class="markers" aria-hidden="true"></div>
   <div id="tactical-grid" class="tactical-grid" aria-hidden="true"></div>
+  <div id="vignette" class="vignette" aria-hidden="true"></div>
+  <div id="markers" class="markers" aria-hidden="true"></div>
+  <div id="view-flash" class="view-flash" aria-hidden="true"></div>
 </div>
 
 <!-- Верхняя панель -->
@@ -33,71 +58,96 @@
 
   <div class="top-actions">
     <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
-    <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза">⏸</button>
-    <button id="btn-camera" class="icon-btn" title="Сменить вид (C)" aria-label="Сменить вид">🎥</button>
-    <button id="btn-inspector" class="icon-btn" title="Инспектор тела (I)" aria-label="Инспектор тела">🫀</button>
-    <button id="btn-sound" class="icon-btn" title="Звук (M)" aria-label="Звук">🔊</button>
-    <button id="btn-save" class="icon-btn" title="Сохранить (S)" aria-label="Сохранить">💾</button>
-    <button id="btn-help" class="icon-btn" title="Как играть (H)" aria-label="Помощь">?</button>
+    <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза"><svg class="ico"><use href="#i-pause"/></svg></button>
+    <button id="btn-camera" class="icon-btn" title="Сменить вид (C)" aria-label="Сменить вид"><svg class="ico"><use href="#i-camera"/></svg></button>
+    <button id="btn-inspector" class="icon-btn" title="Инспектор тела (I)" aria-label="Инспектор тела"><svg class="ico"><use href="#i-heart"/></svg></button>
+    <button id="btn-sound" class="icon-btn" title="Звук (M)" aria-label="Звук"><svg class="ico"><use href="#i-sound"/></svg></button>
+    <button id="btn-save" class="icon-btn" title="Сохранить (S)" aria-label="Сохранить"><svg class="ico"><use href="#i-save"/></svg></button>
+    <button id="btn-fullscreen" class="icon-btn icon-btn-wide" title="Во весь экран (F)" aria-label="Во весь экран"><svg class="ico"><use href="#i-expand"/></svg></button>
+    <button id="btn-help" class="icon-btn" title="Как играть (H)" aria-label="Помощь"><svg class="ico"><use href="#i-help"/></svg></button>
   </div>
+
+  <div class="shift-line" aria-hidden="true"><i id="shift-fill"></i></div>
 </header>
 
 <div id="save-indicator">● автосохранение</div>
 
+<!-- Быстрые приказы в один тап (телефон и планшет) -->
+<nav id="quickbar" class="quickbar" aria-label="Быстрые приказы выбранному рабочему">
+  <button class="qb-who" id="qb-cycle" type="button" aria-label="Переключить рабочего">
+    <span class="qb-dot"></span>
+    <b id="qb-name">Марта</b>
+    <span id="qb-state">идёт</span>
+    <span class="qb-next" aria-hidden="true">›</span>
+  </button>
+  <div class="qb-actions">
+    <button class="qb" data-quick="pick" type="button" aria-label="Взять коробку"><svg class="ico"><use href="#i-box"/></svg><span>Взять</span></button>
+    <button class="qb" data-quick="store" type="button" aria-label="Нести к стеллажу"><svg class="ico"><use href="#i-shelf"/></svg><span>Нести</span></button>
+    <button class="qb" data-quick="rest" type="button" aria-label="На перерыв"><svg class="ico"><use href="#i-cup"/></svg><span>Перерыв</span></button>
+    <button class="qb" data-quick="auto" type="button" aria-label="Автономия"><svg class="ico"><use href="#i-brain"/></svg><span>Авто</span></button>
+  </div>
+</nav>
+
 <!-- Пульт управления: главный способ управлять бригадой -->
 <aside class="panel tools" id="control-panel" aria-label="Пульт управления бригадой">
+  <button id="sheet-handle" class="sheet-handle" type="button" aria-label="Развернуть или свернуть пульт" aria-expanded="false">
+    <span class="sh-label">Пульт</span>
+    <span class="grip" aria-hidden="true"></span>
+  </button>
   <div class="panel-head">
     <h3>Пульт управления</h3>
     <span id="ctl-tick" class="ctl-tick">60 Гц</span>
-    <button id="btn-panel-collapse" class="panel-collapse" aria-label="Свернуть пульт" title="Свернуть/развернуть пульт" aria-expanded="true">▾</button>
+    <button id="btn-panel-collapse" class="panel-collapse" aria-label="Свернуть пульт" title="Свернуть/развернуть пульт" aria-expanded="true"><svg class="ico"><use href="#i-chevron"/></svg></button>
   </div>
 
-  <div class="ctl-group">
-    <div class="ctl-label">Выбранный рабочий</div>
-    <div id="crew-tabs" class="tabs" role="tablist"></div>
-    <div id="selected-card" class="selected-card"></div>
-  </div>
+  <div class="ctl-scroll">
+    <div class="ctl-group">
+      <div class="ctl-label">Выбранный рабочий</div>
+      <div id="crew-tabs" class="tabs" role="tablist"></div>
+      <div id="selected-card" class="selected-card"></div>
+    </div>
 
-  <div class="ctl-group">
-    <div class="ctl-label">Приказы рабочему</div>
-    <div class="cmd-grid">
-      <button class="cmd" data-command="pick"><b>Взять коробку</b><i>ближайший заказ с приёмки</i></button>
-      <button class="cmd" data-command="store"><b>Нести к стеллажу</b><i>уложить в ячейку</i></button>
-      <button class="cmd" data-command="rest"><b>Отправить на перерыв</b><i>восстановить силы</i></button>
-      <button class="cmd" data-command="wait"><b>Ждать указаний</b><i>освободить заказ</i></button>
-      <button class="cmd" data-command="auto"><b>Автономия</b><i>решает нейросеть</i></button>
-      <button class="cmd" data-command="help"><b>Помочь бригаде</b><i>срочные заказы</i></button>
+    <div class="ctl-group">
+      <div class="ctl-label">Приказы рабочему</div>
+      <div class="cmd-grid">
+        <button class="cmd" data-command="pick"><b>Взять коробку</b><i>ближайший заказ с приёмки</i></button>
+        <button class="cmd" data-command="store"><b>Нести к стеллажу</b><i>уложить в ячейку</i></button>
+        <button class="cmd" data-command="rest"><b>Отправить на перерыв</b><i>восстановить силы</i></button>
+        <button class="cmd" data-command="wait"><b>Ждать указаний</b><i>освободить заказ</i></button>
+        <button class="cmd" data-command="auto"><b>Автономия</b><i>решает нейросеть</i></button>
+        <button class="cmd" data-command="help"><b>Помочь бригаде</b><i>срочные заказы</i></button>
+      </div>
     </div>
-  </div>
 
-  <div class="ctl-group">
-    <div class="ctl-label">Приказы бригаде</div>
-    <div class="cmd-row">
-      <button class="cmd wide" data-team="intake"><b>Разгрузить приёмку</b><i>все на приёмку</i></button>
-      <button class="cmd wide" data-team="store"><b>Все на стеллаж</b><i>доставить взятое</i></button>
+    <div class="ctl-group">
+      <div class="ctl-label">Приказы бригаде</div>
+      <div class="cmd-row">
+        <button class="cmd wide" data-team="intake"><b>Разгрузить приёмку</b><i>все на приёмку</i></button>
+        <button class="cmd wide" data-team="store"><b>Все на стеллаж</b><i>доставить взятое</i></button>
+      </div>
+      <div class="cmd-row">
+        <button class="cmd wide" data-team="rest"><b>Общий перерыв</b><i>смена сил</i></button>
+        <button class="cmd wide" data-team="auto"><b>Вся бригада на авто</b><i>мозги работают</i></button>
+      </div>
     </div>
-    <div class="cmd-row">
-      <button class="cmd wide" data-team="rest"><b>Общий перерыв</b><i>смена сил</i></button>
-      <button class="cmd wide" data-team="auto"><b>Вся бригада на авто</b><i>мозги работают</i></button>
-    </div>
-  </div>
 
-  <div class="ctl-group">
-    <div class="ctl-label">Вид и наблюдение</div>
-    <div class="seg" id="camera-seg" role="group" aria-label="Режим камеры">
-      <button data-view="third" class="on">3-е лицо</button>
-      <button data-view="top">Сверху</button>
+    <div class="ctl-group">
+      <div class="ctl-label">Вид и наблюдение</div>
+      <div class="seg" id="camera-seg" role="group" aria-label="Режим камеры">
+        <button data-view="third" class="on">3-е лицо</button>
+        <button data-view="top">Сверху</button>
+      </div>
+      <div class="seg" id="speed-seg" role="group" aria-label="Скорость времени">
+        <button data-speed="1" class="on">1×</button>
+        <button data-speed="2">2×</button>
+        <button data-speed="4">4×</button>
+      </div>
     </div>
-    <div class="seg" id="speed-seg" role="group" aria-label="Скорость времени">
-      <button data-speed="1" class="on">1×</button>
-      <button data-speed="2">2×</button>
-      <button data-speed="4">4×</button>
-    </div>
-  </div>
 
-  <div class="ctl-group">
-    <div class="ctl-label">Очередь заказов <span id="queue-count" class="queue-count">0</span></div>
-    <div id="order-list" class="order-list"></div>
+    <div class="ctl-group">
+      <div class="ctl-label">Очередь заказов <span id="queue-count" class="queue-count">0</span></div>
+      <div id="order-list" class="order-list"></div>
+    </div>
   </div>
 </aside>
 
@@ -105,7 +155,7 @@
 <aside class="panel side" id="side" aria-label="Состояние бригады"></aside>
 
 <div class="bottom-bar">
-  <div id="hint" class="chip hint">Пульт слева: выбери рабочего и жми приказ. C — вид, I — тело, Пробел — пауза.</div>
+  <div id="hint" class="chip hint">Пульт: выбери рабочего и жми приказ. C — вид, I — тело, Пробел — пауза, F — полный экран.</div>
   <div id="news" class="chip news"></div>
 </div>
 
@@ -126,6 +176,7 @@
 <script src="src/sim/worker.js"></script>
 <script src="src/config.js"></script>
 <script src="src/util.js"></script>
+<script src="src/layout.js"></script>
 <script src="src/save.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/render/meshes.js"></script>
@@ -135,6 +186,5 @@
 <script src="src/game.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/main.js"></script>
-<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>

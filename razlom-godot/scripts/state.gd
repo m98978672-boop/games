@@ -1,12 +1,14 @@
 class_name RazlomState
 extends RefCounted
 const SAVE_VERSION := 2
-const NUMERIC_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "ammo", "reserve", "medkits", "food", "bottles", "charges", "scrap", "kills", "armor", "helmet", "pain", "leg_wound"]
-const METER_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "armor", "helmet", "pain", "leg_wound"]
+const NUMERIC_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "ammo", "reserve", "medkits", "food", "bottles", "charges", "scrap", "kills", "armor", "helmet", "pain", "leg_wound", "left_arm_wound", "right_arm_wound"]
+const METER_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "armor", "helmet", "pain", "leg_wound", "left_arm_wound", "right_arm_wound"]
 var armor := 0.0
 var helmet := 0.0
 var pain := 0.0
 var leg_wound := 0.0
+var left_arm_wound := 0.0
+var right_arm_wound := 0.0
 var health := 100.0
 var hunger := 82.0
 var water := 76.0
@@ -28,6 +30,8 @@ var passage := false
 var passage_broken := false
 var relay_log := false
 var relay_shared := false
+var quests: Dictionary = {}
+var tracked_quest := ""
 var kills := 0
 
 func tick(delta: float, sprinting: bool, indoors: bool = false) -> void:
@@ -72,11 +76,13 @@ func craft(recipe: String) -> bool:
 func use_item(kind: String) -> bool:
 	match kind:
 		"heal":
-			if medkits <= 0 or (health >= 100 and leg_wound <= 0 and pain <= 0):
+			if medkits <= 0 or (health >= 100 and leg_wound <= 0 and pain <= 0 and left_arm_wound <= 0 and right_arm_wound <= 0):
 				return false
 			medkits -= 1
 			health = minf(100, health + 45)
 			leg_wound = 0
+			left_arm_wound = 0
+			right_arm_wound = 0
 			pain *= 0.3
 		"food":
 			if food <= 0 or hunger >= 100:
@@ -100,6 +106,8 @@ func reload_gun() -> int:
 
 func snapshot() -> Dictionary:
 	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken, "relay_log": relay_log, "relay_shared": relay_shared}
+	result["tracked_quest"] = tracked_quest
+	result["quests"] = quests.duplicate(true)
 	for key in NUMERIC_KEYS:
 		result[key] = get(key)
 	return result
@@ -112,7 +120,7 @@ func restore(source: Dictionary) -> bool:
 		data["fatigue"] = 12.0
 	if data.get("version", 0) != SAVE_VERSION:
 		return false
-	for key in ["armor", "helmet", "pain", "leg_wound"]:
+	for key in ["armor", "helmet", "pain", "leg_wound", "left_arm_wound", "right_arm_wound"]:
 		if not data.has(key):
 			data[key] = 0.0
 	for key in NUMERIC_KEYS:
@@ -141,7 +149,18 @@ func restore(source: Dictionary) -> bool:
 			return false
 	if data["ammo"] > 18:
 		return false
+	if not data.get("tracked_quest", "") is String or (data.get("tracked_quest", "") != "" and not RazlomQuests.LIMITS.has(data.tracked_quest)):
+		return false
+	if not RazlomQuests.valid(data.get("quests", {})):
+		return false
+	var quest_data: Dictionary = data.get("quests", {})
+	if quest_data.get("gate", 0) > 0 and quest_data.get("power", 0) != 3:
+		return false
+	if quest_data.get("power", 0) > 0 and not data.relay_shared:
+		return false
 	# Commit only after all checks: failed restore must not mutate live state.
 	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken", "relay_log", "relay_shared"]:
 		set(key, data[key])
+	quests = quest_data.duplicate(true)
+	tracked_quest = data.get("tracked_quest", "")
 	return true

@@ -1,7 +1,7 @@
 name: Build and test Razlom Web
 on:
   push:
-    branches: [arena/592197b0-games]
+    branches: [arena/b225a60c-games]
     paths:
       - 'razlom-godot/**'
       - 'tools/razlom-web/**'
@@ -67,15 +67,15 @@ jobs:
           git add docs/razlom/web-evidence
           git diff --cached --quiet && exit 0
           git commit -m "Record Web build failure diagnostics [skip ci]"
-          git push origin HEAD:arena/592197b0-games
+          git push origin HEAD:arena/b225a60c-games
       - name: Commit tested Web build only to this working branch
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = arena/592197b0-games
+          test "$GITHUB_REF_NAME" = arena/b225a60c-games
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           cp /tmp/native-results.json docs/razlom/web-evidence/native-results.json
           git add razlom/web docs/razlom/web-evidence
           git diff --cached --quiet && exit 0
           git commit -m "Build tested Razlom Web export and browser evidence [skip ci]"
-          git push origin HEAD:arena/592197b0-games
+          git push origin HEAD:arena/b225a60c-games

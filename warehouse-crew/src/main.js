@@ -50,6 +50,7 @@ window.WC = window.WC || {};
       showFatal('Игра не дошла до первого кадра за 8 секунд. Откройте консоль браузера (F12) — там будет ошибка. ' +
         'Чаще всего помогает открыть папку целиком и запустить локальный сервер: python3 -m http.server 8000');
     }, 8000);
+    if (global.WC.layout) global.WC.layout.init();
     bootPromise = GE.ready()
       .then(function () { return global.WC.game.boot(); })
       .then(function () {
@@ -66,6 +67,15 @@ window.WC = window.WC || {};
         });
         window.addEventListener('beforeunload', function () {
           global.WC.save.save(global.WC.game);
+        });
+        // Смена размера (поворот телефона, адресная строка) — пересчитываем камеру
+        if (global.WC.layout) {
+          global.WC.layout.onChange(function () {
+            if (global.WC.world && global.WC.world.state && global.WC.world.state.ready) global.WC.world.resize();
+          });
+        }
+        window.addEventListener('orientationchange', function () {
+          setTimeout(function () { if (global.WC.world && global.WC.world.state.ready) global.WC.world.resize(); }, 320);
         });
         document.body.classList.add('ready');
         if (window.__wcWatchdog) { clearTimeout(window.__wcWatchdog); window.__wcWatchdog = null; }

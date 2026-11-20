@@ -24,6 +24,8 @@ window.WC = window.WC || {};
     lastUiAt: 0,
     newsIndex: 0,
     orderRows: new Map(),
+    nums: {},
+    sheet: 'half',
   };
 
   var NEWS = [
@@ -54,7 +56,158 @@ window.WC = window.WC || {};
     dom.ctlTick = q('ctl-tick');
     dom.cameraSeg = q('camera-seg');
     dom.speedSeg = q('speed-seg');
+    dom.qbName = q('qb-name');
+    dom.qbState = q('qb-state');
+    dom.shiftFill = q('shift-fill');
+    dom.sheetHandle = q('sheet-handle');
+    dom.viewFlash = q('view-flash');
+    dom.panel = q('control-panel');
   }
+
+  // --------------------------------------------------- мелочи «на ощупь»
+  function buzz(pattern) {
+    if (!document.body.classList.contains('is-touch')) return;
+    if (navigator && typeof navigator.vibrate === 'function') {
+      try { navigator.vibrate(pattern); } catch (err) { /* iOS не умеет — молчим */ }
+    }
+  }
+
+  // Волна от точки нажатия: работает на любом button/.cmd/.qb/.tab
+  var rippleSelector = 'button, .cmd, .qb, .tab, .cc-actions button, .o-take';
+  function wireRipple() {
+    document.addEventListener('pointerdown', function (event) {
+      var target = event.target && event.target.closest ? event.target.closest(rippleSelector) : null;
+      if (!target || target.disabled) return;
+      var rect = target.getBoundingClientRect();
+      if (!rect.width) return;
+      var size = Math.max(rect.width, rect.height) * 0.9;
+      var wave = document.createElement('span');
+      wave.className = 'ripple';
+      wave.style.width = wave.style.height = size + 'px';
+      wave.style.left = (event.clientX - rect.left - size / 2) + 'px';
+      wave.style.top = (event.clientY - rect.top - size / 2) + 'px';
+      if (getComputedStyle(target).position === 'static') target.style.position = 'relative';
+      target.appendChild(wave);
+      setTimeout(function () { if (wave.parentNode) wave.parentNode.removeChild(wave); }, 600);
+    }, { passive: true });
+  }
+
+  function flashView() {
+    if (!dom.viewFlash) return;
+    dom.viewFlash.classList.remove('go');
+    // перезапуск анимации: читаем layout принудительно
+    void dom.viewFlash.offsetWidth;
+    dom.viewFlash.classList.add('go');
+  }
+
+  // Плавные числа: каждый кадр интерфейса (110 мс) подтягиваем к цели.
+  function stepNumber(key, target) {
+    var current = uiState.nums[key];
+    if (current == null) current = target;
+    var diff = target - current;
+    if (Math.abs(diff) < 1) current = target;
+    else current += diff * 0.42;
+    uiState.nums[key] = current;
+    return Math.round(current);
+  }
+
+  function bump(node, down) {
+    if (!node) return;
+    var host = node.parentNode;
+    if (!host) return;
+    host.classList.remove('bump', 'down');
+    void host.offsetWidth;
+    host.classList.add(down ? 'down' : 'bump');
+    clearTimeout(host.__bumpTimer);
+    host.__bumpTimer = setTimeout(function () { host.classList.remove('bump', 'down'); }, 700);
+  }
+
+  // ------------------------------------------------------- нижняя шторка
+  // Три положения: hidden (только язычок), half (пол-экрана), full (почти весь).
+  // На десктопе шторки нет — панель просто стоит слева, CSS это учитывает.
+  var sheet = {
+    heights: { half: 380, full: 620 },
+    min: 120,
+    init: function () {
+      var self = this;
+      this.measure();
+      var isPhone = document.body.classList.contains('is-phone');
+      this.set(isPhone ? 'hidden' : 'half', true);
+      if (WC.layout) {
+        WC.layout.onChange(function () {
+          self.measure();
+          if (uiState.sheet !== 'hidden') self.set(uiState.sheet, true);
+        });
+      }
+      var handle = dom.sheetHandle;
+      if (!handle) return;
+      var drag = null;
+      handle.addEventListener('pointerdown', function (event) {
+        if (!document.body.classList.contains('is-phone') && !document.body.classList.contains('is-tablet')) return;
+        drag = { y: event.clientY, h: self.currentHeight(), moved: 0 };
+        dom.panel.classList.add('dragging');
+        handle.setPointerCapture && handle.setPointerCapture(event.pointerId);
+      });
+      handle.addEventListener('pointermove', function (event) {
+        if (!drag) return;
+        var dy = drag.y - event.clientY;
+        drag.moved = Math.max(drag.moved, Math.abs(dy));
+        var next = Math.max(self.min, Math.min(self.heights.full, drag.h + dy));
+        self.applyHeight(next);
+        document.body.setAttribute('data-sheet', next > self.heights.half * 0.72 ? 'full' : 'half');
+      });
+      var finish = function () {
+        if (!drag) return;
+        dom.panel.classList.remove('dragging');
+        var wasDrag = drag.moved > 6;
+        var h = self.currentHeight();
+        drag = null;
+        if (!wasDrag) {
+          self.set(uiState.sheet === 'hidden' ? 'half' : 'hidden');
+          return;
+        }
+        if (h < self.heights.half * 0.72) self.set(h < self.heights.half * 0.45 ? 'hidden' : 'half');
+        else self.set('full');
+      };
+      handle.addEventListener('pointerup', finish);
+      handle.addEventListener('pointercancel', finish);
+      handle.addEventListener('pointerleave', function () { if (!drag) return; });
+    },
+    measure: function () {
+      var box = WC.layout ? WC.layout.sheetHeights() : null;
+      var h = WC.layout ? WC.layout.state.h : window.innerHeight;
+      this.heights.half = box ? box.half : Math.round(h * 0.56);
+      this.heights.full = box ? box.full : Math.round(h - 70);
+      this.min = Math.round(120 * (WC.layout ? WC.layout.state.ui : 1));
+      if (uiState.sheet !== 'hidden') this.applyHeight(this.heights[uiState.sheet] || this.heights.half);
+    },
+    currentHeight: function () {
+      if (dom.panel && dom.panel.getBoundingClientRect) {
+        var h = dom.panel.getBoundingClientRect().height;
+        if (h > 0) return h;
+      }
+      return this.heights[uiState.sheet] || this.heights.half;
+    },
+    applyHeight: function (px) {
+      document.documentElement.style.setProperty('--sheet-h', Math.round(px) + 'px');
+    },
+    set: function (name, silent) {
+      uiState.sheet = name;
+      document.body.setAttribute('data-sheet', name);
+      if (name !== 'hidden') this.applyHeight(this.heights[name] || this.heights.half);
+      var collapse = document.getElementById('btn-panel-collapse');
+      var handle = dom.sheetHandle;
+      if (collapse) collapse.setAttribute('aria-expanded', name === 'hidden' ? 'false' : 'true');
+      if (handle) handle.setAttribute('aria-expanded', name === 'hidden' ? 'false' : 'true');
+      if (!silent) {
+        buzz(8);
+        if (name === 'hidden') U.toast('Пульт свёрнут — приказы в панели снизу', 'info', 1800);
+      }
+    },
+    toggle: function () {
+      this.set(uiState.sheet === 'hidden' ? 'half' : 'hidden');
+    },
+  };
 
   // ------------------------------------------------------------------ пульт
   function buildCrewTabs() {
@@ -66,7 +219,7 @@ window.WC = window.WC || {};
         type: 'button',
         onclick: function () { select(worker.id); },
       }, [
-        U.el('span', { class: 'dot' }),
+        U.el('span', { class: 'dot', style: 'background:' + worker.state.palette.vest }),
         U.el('span', { text: worker.state.name.split(' ')[0] }),
         U.el('span', { class: 'key', text: String(index + 1) }),
       ]);
@@ -89,37 +242,83 @@ window.WC = window.WC || {};
     ]);
   }
 
+  // Карточка выбранного рабочего собирается ОДИН раз и потом только
+  // обновляется: иначе переходы полосок и анимации перезапускались бы
+  // каждые 110 мс и выглядели бы дёргано.
+  var selected = { id: null, nodes: null };
+
+  function buildSelectedCard(st) {
+    var nodes = {};
+    nodes.name = U.el('b', { text: st.name });
+    nodes.role = U.el('span', { text: st.role });
+    nodes.mode = U.el('b', { text: '' });
+    nodes.state = U.el('b', { text: '' });
+    nodes.energy = metric('Энергия', 0, 'energy', '0%').querySelector('i');
+    nodes.energyVal = nodes.energy.parentNode.parentNode.querySelector('.val');
+    nodes.fatigue = metric('Усталость', 0, 'fatigue', '0%').querySelector('i');
+    nodes.fatigueVal = nodes.fatigue.parentNode.parentNode.querySelector('.val');
+    nodes.stress = metric('Стресс', 0, 'stress', '0%').querySelector('i');
+    nodes.stressVal = nodes.stress.parentNode.parentNode.querySelector('.val');
+    nodes.oxygen = metric('Кислород', 0, 'oxygen', '0%').querySelector('i');
+    nodes.oxygenVal = nodes.oxygen.parentNode.parentNode.querySelector('.val');
+    nodes.traits = ['сила', 'точность', 'выносл.', 'командн.'].map(function (label) {
+      var value = U.el('b', { text: '0' });
+      var chip = U.el('span', { class: 'trait-chip' }, [U.el('span', { text: label + ' ' }), value]);
+      return { chip: chip, value: value };
+    });
+
+    dom.selectedCard.innerHTML = '';
+    dom.selectedCard.appendChild(U.el('div', { class: 'sc-top' }, [nodes.name, nodes.role]));
+    dom.selectedCard.appendChild(U.el('div', { class: 'sc-mode' }, [U.el('span', { text: 'режим: ' }), nodes.mode]));
+    dom.selectedCard.appendChild(U.el('div', { class: 'sc-state' }, [U.el('span', { text: 'сейчас: ' }), nodes.state]));
+    [nodes.energy, nodes.fatigue, nodes.stress, nodes.oxygen].forEach(function (bar) {
+      dom.selectedCard.appendChild(bar.parentNode.parentNode);
+    });
+    dom.selectedCard.appendChild(U.el('div', { class: 'trait-row' }, nodes.traits.map(function (t) { return t.chip; })));
+
+    dom.selectedCard.classList.remove('swap');
+    void dom.selectedCard.offsetWidth;
+    dom.selectedCard.classList.add('swap');
+    return nodes;
+  }
+
+  function setBar(bar, valNode, value, text) {
+    if (!bar) return;
+    bar.style.width = Math.round(U.clamp01(value) * 100) + '%';
+    if (valNode) valNode.textContent = text;
+  }
+
   function renderSelected() {
     var worker = game.activeWorker();
     if (!worker) return;
     var body = worker.body;
     var st = worker.state;
     var stateLabel = cfg.stateLabels[st.state] || st.state;
-    dom.selectedCard.innerHTML = '';
-    dom.selectedCard.appendChild(U.el('div', { class: 'sc-top' }, [
-      U.el('b', { text: st.name }),
-      U.el('span', { text: st.role }),
-    ]));
-    dom.selectedCard.appendChild(U.el('div', { class: 'sc-mode' }, [
-      U.el('span', { text: 'режим: ' }),
-      U.el('b', { text: st.mode === 'auto' ? 'автономия (нейросеть)' : 'ручной (пульт)' }),
-    ]));
-    dom.selectedCard.appendChild(U.el('div', { class: 'sc-state' }, [
-      U.el('span', { text: 'сейчас: ' }),
-      U.el('b', { text: st.carryingId ? 'несёт коробку' : stateLabel }),
-    ]));
-    dom.selectedCard.appendChild(metric('Энергия', body.energy, 'energy', U.pct(body.energy)));
-    dom.selectedCard.appendChild(metric('Усталость', body.fatigue, 'fatigue', U.pct(body.fatigue)));
-    dom.selectedCard.appendChild(metric('Стресс', body.stress, 'stress', U.pct(body.stress)));
-    dom.selectedCard.appendChild(metric('Кислород', body.oxygen, 'oxygen', U.pct(body.oxygen)));
-    dom.selectedCard.appendChild(U.el('div', { class: 'trait-row' }, [
-      U.el('span', { class: 'trait-chip' }, [U.el('span', { text: 'сила ' }), U.el('b', { text: U.pctNum(st.traits.strength) })]),
-      U.el('span', { class: 'trait-chip' }, [U.el('span', { text: 'точность ' }), U.el('b', { text: U.pctNum(st.traits.precision) })]),
-      U.el('span', { class: 'trait-chip' }, [U.el('span', { text: 'выносл. ' }), U.el('b', { text: U.pctNum(st.traits.endurance) })]),
-      U.el('span', { class: 'trait-chip' }, [U.el('span', { text: 'командн. ' }), U.el('b', { text: U.pctNum(st.traits.coop) })]),
-    ]));
+
+    if (selected.id !== st.id) {
+      selected.nodes = buildSelectedCard(st);
+      selected.id = st.id;
+    }
+    var n = selected.nodes;
+    n.mode.textContent = st.mode === 'auto' ? 'автономия (нейросеть)' : 'ручной (пульт)';
+    n.state.textContent = st.carryingId ? 'несёт коробку' : stateLabel;
+    setBar(n.energy, n.energyVal, body.energy, U.pct(body.energy));
+    setBar(n.fatigue, n.fatigueVal, body.fatigue, U.pct(body.fatigue));
+    setBar(n.stress, n.stressVal, body.stress, U.pct(body.stress));
+    setBar(n.oxygen, n.oxygenVal, body.oxygen, U.pct(body.oxygen));
+    var traitValues = [st.traits.strength, st.traits.precision, st.traits.endurance, st.traits.coop];
+    n.traits.forEach(function (trait, i) { trait.value.textContent = U.pctNum(traitValues[i]); });
+
     U.$$('.tabs .tab', dom.crewTabs).forEach(function (tab) {
       tab.classList.toggle('on', tab.getAttribute('data-worker') === st.id);
+    });
+    if (dom.qbName) dom.qbName.textContent = st.name.split(' ')[0];
+    if (dom.qbState) {
+      dom.qbState.textContent = (st.carryingId ? 'несёт коробку' : stateLabel) +
+        ' · ' + (st.mode === 'auto' ? 'авто' : 'ручной');
+    }
+    U.$$('.qb').forEach(function (button) {
+      button.classList.toggle('on', st.mode === 'auto' && button.getAttribute('data-quick') === 'auto');
     });
   }
 
@@ -180,15 +379,30 @@ window.WC = window.WC || {};
     return worker ? worker.state.name.split(' ')[0] : '—';
   }
 
-  function renderSide() {
+  // Правая колонка: карточки бригады и журнал. Собираются один раз —
+  // иначе анимация появления карточек играла бы заново каждую секунду.
+  var side = { built: false, cards: new Map(), logLen: -1, logBox: null };
+
+  function buildSide() {
     dom.side.innerHTML = '';
     dom.side.appendChild(U.el('h3', { text: 'Бригада' }));
     game.api.crew.forEach(function (worker) {
       var st = worker.state;
-      var body = worker.body;
-      var stateLabel = cfg.stateLabels[st.state] || st.state;
+      var nodes = {
+        state: U.el('b', { text: '' }),
+        mode: U.el('span', { text: '' }),
+        energy: U.el('b', { text: '0' }),
+        fatigue: U.el('b', { text: '0' }),
+        delivered: U.el('b', { text: '0' }),
+        auto: null,
+      };
+      var autoButton = U.el('button', {
+        type: 'button', text: 'авто',
+        onclick: function (event) { event.stopPropagation(); quick(st.id, 'auto'); },
+      });
+      nodes.auto = autoButton;
       var card = U.el('div', {
-        class: 'crew-card' + (st.id === game.api.activeWorkerId ? ' active' : '') + (body.energy < 0.22 || body.pain > 0.4 ? ' alarm' : ''),
+        class: 'crew-card',
         onclick: function () { select(st.id); },
       }, [
         U.el('div', { class: 'cc-head' }, [
@@ -198,34 +412,57 @@ window.WC = window.WC || {};
             U.el('div', { class: 'cc-role', text: st.role }),
           ]),
         ]),
-        U.el('div', { class: 'cc-state' }, [
-          U.el('b', { text: st.carryingId ? 'несёт коробку' : stateLabel }),
-          U.el('span', { text: st.mode === 'auto' ? 'авто' : 'ручной' }),
-        ]),
+        U.el('div', { class: 'cc-state' }, [nodes.state, nodes.mode]),
         U.el('div', { class: 'cc-mini' }, [
-          U.el('div', {}, [U.el('span', { text: 'энергия' }), U.el('b', { text: U.pctNum(body.energy) })]),
-          U.el('div', {}, [U.el('span', { text: 'устал.' }), U.el('b', { text: U.pctNum(body.fatigue) })]),
-          U.el('div', {}, [U.el('span', { text: 'сдал' }), U.el('b', { text: String(st.stats.delivered) })]),
+          U.el('div', {}, [U.el('span', { text: 'энергия' }), nodes.energy]),
+          U.el('div', {}, [U.el('span', { text: 'устал.' }), nodes.fatigue]),
+          U.el('div', {}, [U.el('span', { text: 'сдал' }), nodes.delivered]),
         ]),
         U.el('div', { class: 'cc-actions' }, [
-          U.el('button', { type: 'button', text: 'взять', onclick: function (e) { e.stopPropagation(); quick(st.id, 'pick'); } }),
-          U.el('button', { type: 'button', text: 'нести', onclick: function (e) { e.stopPropagation(); quick(st.id, 'store'); } }),
-          U.el('button', { type: 'button', text: 'перерыв', onclick: function (e) { e.stopPropagation(); quick(st.id, 'rest'); } }),
-          U.el('button', { type: 'button', text: 'авто', class: st.mode === 'auto' ? 'on' : '', onclick: function (e) { e.stopPropagation(); quick(st.id, 'auto'); } }),
+          U.el('button', { type: 'button', text: 'взять', onclick: function (event) { event.stopPropagation(); quick(st.id, 'pick'); } }),
+          U.el('button', { type: 'button', text: 'нести', onclick: function (event) { event.stopPropagation(); quick(st.id, 'store'); } }),
+          U.el('button', { type: 'button', text: 'перерыв', onclick: function (event) { event.stopPropagation(); quick(st.id, 'rest'); } }),
+          autoButton,
         ]),
       ]);
       dom.side.appendChild(card);
+      side.cards.set(st.id, { card: card, nodes: nodes });
     });
-
     dom.side.appendChild(U.el('h3', { text: 'Журнал смены' }));
-    var logBox = U.el('div', { class: 'log' });
-    game.api.log.slice(-14).reverse().forEach(function (entry) {
-      logBox.appendChild(U.el('div', {}, [
-        U.el('time', { text: U.clockLabel(entry.t, cfg.shiftRealSeconds, cfg.shiftHours) }),
-        U.el('span', { class: entry.tone, text: entry.text }),
-      ]));
+    side.logBox = U.el('div', { class: 'log' });
+    dom.side.appendChild(side.logBox);
+    side.built = true;
+    side.logLen = -1;
+  }
+
+  function renderSide() {
+    if (!dom.side) return;
+    if (!side.built) buildSide();
+    game.api.crew.forEach(function (worker) {
+      var entry = side.cards.get(worker.state.id);
+      if (!entry) return;
+      var st = worker.state;
+      var body = worker.body;
+      var stateLabel = cfg.stateLabels[st.state] || st.state;
+      entry.nodes.state.textContent = st.carryingId ? 'несёт коробку' : stateLabel;
+      entry.nodes.mode.textContent = st.mode === 'auto' ? 'авто' : 'ручной';
+      entry.nodes.energy.textContent = U.pctNum(body.energy);
+      entry.nodes.fatigue.textContent = U.pctNum(body.fatigue);
+      entry.nodes.delivered.textContent = String(st.stats.delivered);
+      entry.nodes.auto.classList.toggle('on', st.mode === 'auto');
+      entry.card.classList.toggle('active', st.id === game.api.activeWorkerId);
+      entry.card.classList.toggle('alarm', body.energy < 0.22 || body.pain > 0.4);
     });
-    dom.side.appendChild(logBox);
+    if (side.logLen !== game.api.log.length) {
+      side.logLen = game.api.log.length;
+      side.logBox.innerHTML = '';
+      game.api.log.slice(-14).reverse().forEach(function (entry) {
+        side.logBox.appendChild(U.el('div', {}, [
+          U.el('time', { text: U.clockLabel(entry.t, cfg.shiftRealSeconds, cfg.shiftHours) }),
+          U.el('span', { class: entry.tone, text: entry.text }),
+        ]));
+      });
+    }
   }
 
   function quick(id, cmd) {
@@ -237,11 +474,38 @@ window.WC = window.WC || {};
 
   function renderHud() {
     var snap = game.snapshotForUi();
-    dom.score.textContent = U.money(snap.score);
-    dom.orders.textContent = snap.delivered + (snap.missed ? ' / −' + snap.missed : '');
+    var score = stepNumber('score', snap.score);
+    if (uiState.lastScore != null && snap.score > uiState.lastScore) bump(dom.score, false);
+    if (uiState.lastScore != null && snap.score < uiState.lastScore) bump(dom.score, true);
+    uiState.lastScore = snap.score;
+    dom.score.textContent = U.money(score);
+
+    var delivered = stepNumber('delivered', snap.delivered);
+    if (uiState.lastDelivered != null && snap.delivered > uiState.lastDelivered) bump(dom.orders, false);
+    uiState.lastDelivered = snap.delivered;
+    dom.orders.textContent = delivered + (snap.missed ? ' / −' + snap.missed : '');
+    if (uiState.lastQuality != null && snap.quality < uiState.lastQuality) bump(dom.quality, true);
+    uiState.lastQuality = snap.quality;
     dom.quality.textContent = snap.quality + ' %';
     dom.time.textContent = U.clockLabel(snap.time, snap.shiftLength, cfg.shiftHours);
-    dom.ctlTick.textContent = WC.world && WC.world.state ? (WC.meshes.stats.meshes + ' мешей · ' + WC.meshes.stats.triangles + ' тр.') : '';
+
+    if (dom.shiftFill) {
+      var progress = U.clamp01(snap.time / Math.max(1, snap.shiftLength));
+      dom.shiftFill.style.width = (progress * 100).toFixed(1) + '%';
+    }
+    if (dom.ctlTick) {
+      dom.ctlTick.textContent = WC.meshes && WC.meshes.stats
+        ? (WC.meshes.stats.meshes + ' мешей · ' + WC.meshes.stats.triangles + ' тр.')
+        : '';
+    }
+    var pauseBtn = document.getElementById('btn-pause');
+    if (pauseBtn) {
+      var use = pauseBtn.querySelector('use');
+      if (use) use.setAttribute('href', snap.paused ? '#i-play' : '#i-pause');
+      pauseBtn.classList.toggle('on', Boolean(snap.paused));
+      pauseBtn.setAttribute('aria-label', snap.paused ? 'Продолжить' : 'Пауза');
+    }
+    if (dom.pauseFlag) dom.pauseFlag.classList.toggle('show', Boolean(snap.paused));
   }
 
   function renderNews(force) {
@@ -277,7 +541,7 @@ window.WC = window.WC || {};
         U.el('h2', { text: 'Как управлять складом' }),
         U.el('span', { class: 'who', text: 'Клавиатура — помощник, пульт — главный' }),
         U.el('span', { class: 'spacer' }),
-        U.el('button', { class: 'icon-btn', type: 'button', text: '✕', onclick: closeModal, 'aria-label': 'Закрыть' }),
+        U.el('button', { class: 'icon-btn', type: 'button', html: '<svg class="ico"><use href="#i-close"/></svg>', onclick: closeModal, 'aria-label': 'Закрыть' }),
       ]),
       U.el('div', { class: 'help-doc' }, [
         U.el('h3', { text: 'Пульт управления' }),
@@ -289,8 +553,10 @@ window.WC = window.WC || {};
         U.el('p', { html: 'Каждый рабочий думает <b>своей обученной нейросетью</b> (18 признаков → 24 → 16 → 6 решений). Она учитывает энергию, боль, стресс, груз и срочность заказа.' }),
         U.el('h3', { text: 'Что приносит очки' }),
         U.el('p', { html: 'Коробка доставлена в ячейку вовремя и без повреждений — плюс. Упала и разбилась — минус и травма у рабочего. Просроченный заказ — тоже минус.' }),
+        U.el('h3', { text: 'На телефоне' }),
+        U.el('p', { html: 'Пульт — <b>нижняя шторка</b>: потяни за «язычок» вверх или тапни по нему. Снизу всегда висят <b>быстрые приказы</b> (Взять · Нести · Перерыв · Авто) — один тап, без меню. Тап по <b>метке над рабочим</b> выбирает его. Кнопка <b>⤢</b> разворачивает игру на весь экран.' }),
         U.el('h3', { text: 'Клавиши' }),
-        U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
+        U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
         U.el('h3', { text: 'Движок' }),
         U.el('p', { text: 'Игра работает на RatCore v1.0.0: логика, ГПСЧ, время и вся геометрия (меши запечатаны ToolGuard и экспортированы мостом bridge.exportMesh) — из движка. Ни одного внешнего CDN.' }),
       ]),
@@ -332,7 +598,7 @@ window.WC = window.WC || {};
         U.el('h2', { text: 'Инспектор тела · R16' }),
         U.el('span', { class: 'who', id: 'insp-who', text: worker.state.name + ' · ' + worker.state.role }),
         U.el('span', { class: 'spacer' }),
-        U.el('button', { class: 'icon-btn', type: 'button', text: '✕', onclick: closeModal, 'aria-label': 'Закрыть' }),
+        U.el('button', { class: 'icon-btn', type: 'button', html: '<svg class="ico"><use href="#i-close"/></svg>', onclick: closeModal, 'aria-label': 'Закрыть' }),
       ]),
       U.el('div', { class: 'insp-body' }, [
         U.el('div', { class: 'insp-stage', id: 'insp-stage' }, [
@@ -521,7 +787,7 @@ window.WC = window.WC || {};
         U.el('h2', { text: 'Смена закрыта' }),
         U.el('span', { class: 'who', text: 'склад «Северный узел»' }),
         U.el('span', { class: 'spacer' }),
-        U.el('button', { class: 'icon-btn', type: 'button', text: '✕', onclick: closeModal, 'aria-label': 'Закрыть' }),
+        U.el('button', { class: 'icon-btn', type: 'button', html: '<svg class="ico"><use href="#i-close"/></svg>', onclick: closeModal, 'aria-label': 'Закрыть' }),
       ]),
       U.el('div', { class: 'insp-side', style: 'max-height:60vh' }, [
         U.el('div', { class: 'vitals-grid' }, [
@@ -591,14 +857,86 @@ window.WC = window.WC || {};
       U.toast(ok ? 'Смена сохранена' : 'Не удалось сохранить', ok ? 'good' : 'bad', 1800);
     });
     q('btn-sound').addEventListener('click', function () { toggleSound(); });
-    // Телефон: пульт занимает пол-экрана — кнопка в шапке сворачивает его до заголовка.
+
     var collapseButton = document.getElementById('btn-panel-collapse');
-    if (collapseButton) {
-      collapseButton.addEventListener('click', function () {
-        var collapsed = document.body.classList.toggle('panel-collapsed');
-        collapseButton.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-        collapseButton.textContent = collapsed ? '▸' : '▾';
+    if (collapseButton) collapseButton.addEventListener('click', function () { sheet.toggle(); });
+
+    var fullscreenButton = q('btn-fullscreen');
+    if (fullscreenButton) fullscreenButton.addEventListener('click', toggleFullscreen);
+
+    // Быстрые приказы в один тап (телефон/планшет)
+    U.$$('.qb').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var cmd = button.getAttribute('data-quick');
+        var res = game.command(game.api.activeWorkerId, cmd);
+        if (!res.ok) {
+          U.toast(res.reason || 'Приказ не выполнен', 'bad', 1800);
+          buzz([12, 40, 12]);
+        } else {
+          buzz(10);
+        }
+        renderSelected();
+        renderSide();
       });
+    });
+
+    // Плашка с именем в quickbar переключает рабочего — без открытия шторма
+    var cycleButton = q('qb-cycle');
+    if (cycleButton) {
+      cycleButton.addEventListener('click', function () {
+        var crew = game.api.crew;
+        var index = 0;
+        for (var i = 0; i < crew.length; i++) if (crew[i].id === game.api.activeWorkerId) index = i;
+        var next = crew[(index + 1) % crew.length];
+        if (next) { select(next.id); buzz(8); }
+      });
+    }
+
+    // Тап по метке над рабочим = выбрать его (мышью и пальцем одинаково)
+    var markersHost = document.getElementById('markers');
+    if (markersHost) {
+      markersHost.addEventListener('click', function (event) {
+        var node = event.target && event.target.closest ? event.target.closest('.marker') : null;
+        if (!node) return;
+        var id = String(node.id || '').replace('marker-', '');
+        if (!id) return;
+        select(id);
+        buzz(6);
+      });
+    }
+
+    // На телефоне касание сцены закрывает шторку, чтобы видеть склад
+    var stage = document.getElementById('stage');
+    if (stage) {
+      stage.addEventListener('pointerdown', function (event) {
+        if (event.target && event.target.id === 'scene' && document.body.classList.contains('is-phone') && uiState.sheet === 'full') {
+          sheet.set('half');
+        }
+      });
+    }
+  }
+
+  function toggleFullscreen() {
+    var doc = document;
+    var el = doc.documentElement;
+    var isFull = doc.fullscreenElement || doc.webkitFullscreenElement;
+    if (isFull) {
+      var exit = doc.exitFullscreen || doc.webkitExitFullscreen;
+      if (exit) exit.call(doc);
+      return;
+    }
+    var request = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!request) {
+      U.toast('Браузер не умеет полный экран — сверните адресную строку вручную', 'info', 2400);
+      return;
+    }
+    try {
+      var result = request.call(el, { navigationUI: 'hide' });
+      if (result && result.catch) result.catch(function () {
+        U.toast('Полный экран не разрешён браузером', 'info', 2000);
+      });
+    } catch (err) {
+      U.toast('Полный экран не разрешён браузером', 'info', 2000);
     }
   }
 
@@ -609,6 +947,8 @@ window.WC = window.WC || {};
     });
     document.body.classList.toggle('view-top', mode === 'top');
     document.body.classList.toggle('view-third', mode === 'third');
+    flashView();
+    buzz(8);
     U.toast(mode === 'top' ? 'Тактический вид: приказы бригаде' : 'Вид от третьего лица', 'good', 1600);
   }
 
@@ -634,6 +974,8 @@ window.WC = window.WC || {};
         if (uiState.helpOpen) closeModal(); else openHelp();
       } else if (key === 'm') {
         toggleSound();
+      } else if (key === 'f') {
+        toggleFullscreen();
       } else if (key === 's') {
         WC.save.save(game);
         U.toast('Смена сохранена', 'good', 1600);
@@ -649,6 +991,9 @@ window.WC = window.WC || {};
 
   function init() {
     cacheDom();
+    if (WC.layout) WC.layout.init();
+    sheet.init();
+    wireRipple();
     buildCrewTabs();
     wireControls();
     wireKeys();
@@ -664,14 +1009,27 @@ window.WC = window.WC || {};
         var points = payload.result.points;
         U.toast('+' + points + ' · ' + payload.order.code + ' уложен', 'good', 1800);
         if (payload.order.urgent) WC.audio.urgent();
+        if (WC.world && WC.world.kick) WC.world.kick(0.18);
+        buzz(12);
       } else if (type === 'dropped') {
         U.toast('Уронил ' + payload.order.code + ' — брак ' + Math.round(payload.order.damage * 100) + '%', 'bad', 2200);
+        if (WC.world && WC.world.kick) WC.world.kick(0.85);
+        buzz([24, 50, 24]);
       } else if (type === 'body-event') {
         U.toast(payload.worker.state.name.split(' ')[0] + ': ' + payload.event.text, payload.event.tone === 'bad' ? 'bad' : 'info', 2000);
       }
     };
     game.api.onShiftEnd = function (summary) { openShiftEnd(summary); };
-    U.toast('Смена началась. Пульт слева.', 'info', 2600);
+    startToast();
+  }
+
+  function startToast() {
+    var touch = document.body.classList.contains('is-phone') || document.body.classList.contains('is-tablet');
+    if (touch) {
+      U.toast('Смена началась. Приказы — на панели снизу, потяни «пульт» вверх.', 'info', 3200);
+    } else {
+      U.toast('Смена началась. Пульт слева.', 'info', 2600);
+    }
   }
 
   function frame(dt) {
@@ -709,6 +1067,7 @@ window.WC = window.WC || {};
     renderSide: renderSide,
     renderSelected: renderSelected,
     state: uiState,
+    sheet: sheet,
     toggleSound: toggleSound,
     setCamera: setCamera,
   };

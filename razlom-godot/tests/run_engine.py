@@ -34,6 +34,8 @@ with tempfile.TemporaryDirectory(prefix='razlom-runtime-') as runtime:
         ('touch-camera', ['--script', 'res://tests/touch_camera.gd'], 'failures: 0', 60),
         ('weapon-viewmodel', ['--script', 'res://tests/weapon_viewmodel.gd'], 'failures: 0', 60),
         ('combat-animation', ['--script', 'res://tests/combat_animation.gd'], 'failures: 0', 60),
+        ('body-reactions', ['--script', 'res://tests/body_reactions.gd'], 'failures: 0', 90),
+        ('quests', ['--script', 'res://tests/quests.gd'], 'failures: 0', 90),
         ('ballistics', ['--script', 'res://tests/ballistics.gd'], 'failures: 0', 90),
         ('local-damage', ['--script', 'res://tests/local_damage.gd'], 'failures: 0', 60),
     ]

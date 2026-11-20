@@ -134,6 +134,11 @@ func try_interact(hit: Dictionary) -> bool:
 			hit.collider.befriend()
 		"courier":
 			courier_dialog()
+		"quest":
+			if hit.collider.get_meta("quest") == "board":
+				game.quests.board()
+			else:
+				game.quests.use_station(hit.collider.get_meta("quest"))
 		"relay":
 			relay_dialog()
 		"vera":
@@ -169,11 +174,13 @@ func vera_dialog() -> void:
 			game.resume()
 			game.complete_mission()})
 	choices.append({"text": "Помоги с ранами • 2 детали", "action": func():
-		if game.state.scrap >= 2 and game.state.health < 100:
+		if game.state.scrap >= 2 and (game.state.health < 100 or game.state.leg_wound > 0 or game.state.left_arm_wound > 0 or game.state.right_arm_wound > 0):
 			game.state.scrap -= 2
 			game.state.health = 100
 			game.state.pain = 0
 			game.state.leg_wound = 0
+			game.state.left_arm_wound = 0
+			game.state.right_arm_wound = 0
 			medic_motion.greet("treat")
 			game.notify("Вера обработала раны")
 		else:
@@ -189,6 +196,9 @@ func vera_dialog() -> void:
 	elif game.state.passage_broken:
 		body += "\n\n«По рации говорят о сорванном договоре. Я не знаю, что случилось у ворот. Но после нас здесь останутся люди, которым придётся жить рядом. Не забудь об этом»."
 	choices.append({"text": "Вера, кем ты была до аварии?", "action": vera_past})
+	if game.quests.phase("medicine") == 2:
+		choices.append({"text": "Передать Вере медицинский ящик", "action": func(): game.quests.offer("medicine")})
+	choices.append({"text": "Дела Очага • помощь и вылазки", "action": game.quests.board})
 	open("ВЕРА ЛЕСНАЯ", body, choices)
 
 func bed_dialog() -> void:
@@ -256,7 +266,8 @@ func journal() -> void:
 	if s.manifest:
 		body += "\n\nНАКЛАДНАЯ № 17\nНасос перенаправили намеренно. Под приказом подпись Ильи Лесного, которого Вера считала погибшим."
 		body += "\nРешение: приказ обнародован; Вера ищет объяснение подписи." if s.truth_shared else "\nРешение пока открыто: показать документ Вере или сохранить его при себе."
-	open("ЖУРНАЛ / ОЧАГ", body, [{"text": "Вернуться в мир", "action": game.resume}])
+	body += game.quests.journal_text()
+	open("ЖУРНАЛ / ОЧАГ", body, [{"text": "Вернуться в мир", "action": game.resume}, {"text": "Дела Очага • выбрать задание", "action": game.quests.board}])
 
 func diagnostics() -> Dictionary:
 	var buttons: Array = []
@@ -285,6 +296,8 @@ func courier_dialog() -> void:
 		body = "«Слово держим. Забирай насос. И найди накладную — без неё никто не поверит, что приказ был подменён. Если нападёшь на охрану, я больше не смогу тебя прикрыть»."
 	if game.state.passage_broken:
 		body = "Павел отворачивается: «Я поручился за тебя, а ты напал на моих людей. Второго слова по рации не будет. Насос всё ещё нужен Очагу — но теперь ищи другой путь»."
+	if game.quests.phase("gate") >= 3:
+		body += "\n\n" + game.quests.outcome("gate")
 	choices.append({"text": "Я сам выберу путь", "action": game.resume})
 	open("ПАВЕЛ / ПОСЛЕДНИЙ КОНВОЙ", body, choices)
 
