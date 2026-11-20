@@ -647,6 +647,8 @@ func _process(delta: float) -> void:
 				"saveExists": FileAccess.file_exists(save_path),
 				"saveButton": [save_button.global_position.x, save_button.global_position.y,
 					save_button.size.x, save_button.size.y],
+				"loadButton": [resume_button.global_position.x, resume_button.global_position.y,
+					resume_button.size.x, resume_button.size.y],
 				"menuRect": [modal.position.x, modal.size.x]}))
 	if not is_instance_valid(stats_label):
 		return

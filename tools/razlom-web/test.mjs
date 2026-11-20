@@ -44,6 +44,26 @@ try {
  await page.mouse.click(saveRect[0] + saveRect[2]/2, saveRect[1] + saveRect[3]/2);
  await page.waitForFunction(() => window.__razlomStatus?.saveExists, null, {timeout:15000});
  await check('Shelter save writes inside browser user storage', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.saveExists), true));
+ await page.waitForTimeout(1600);
+ await page.reload();
+ await page.waitForFunction(() => window.__razlomStatus?.ready, null, {timeout:120000});
+ await check('Save survives a complete page reload through IndexedDB', async () => {
+  assert.equal(await page.evaluate(() => window.__razlomStatus.saveExists), true);
+ });
+ await page.waitForTimeout(800);
+ const loadRect = await page.evaluate(() => window.__razlomStatus.loadButton);
+ await page.mouse.click(loadRect[0] + loadRect[2]/2, loadRect[1] + loadRect[3]/2);
+ await page.waitForFunction(() => window.__razlomStatus?.started && !window.__razlomStatus.paused);
+ await check('Saved game loads from the browser start menu', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.health > 0), true));
+ const landing = await browser.newPage({viewport:{width:1440,height:900}});
+ landing.on('pageerror', e => errors.push(String(e)));
+ await landing.goto(new URL('../', base).href);
+ await landing.locator('#launch').click();
+ const embedded = await landing.locator('#game-frame').contentFrame();
+ await embedded.waitForFunction(() => window.__razlomStatus?.ready, null, {timeout:120000});
+ await check('Games launcher opens the real game inside its iframe', async () => assert.equal(await landing.locator('#game-stage').isVisible(), true));
+ await landing.screenshot({path:'../../docs/razlom/web-evidence/launcher.png'});
+ await landing.close();
  await check('No script or WASM runtime errors', async () => assert.deepEqual(errors, []));
  await writeFile('../../docs/razlom/web-evidence/result.json', JSON.stringify({passed:true,checks,errors,limits:['Software WebGL on Chromium; not a human campaign playthrough','Sound is not auditioned','Only desktop keyboard controls tested']},null,2)+'\n');
 } catch(e) {
