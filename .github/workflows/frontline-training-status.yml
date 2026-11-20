@@ -18,11 +18,14 @@ jobs:
           set -euo pipefail
           tag=frontline-learning-15h-44671482687
           mkdir "$RUNNER_TEMP/saved"
-          for file in phase-1-slot-0.tar.gz phase-1-slot-1.tar.gz phase-1-complete.tar.gz; do
-            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$file"; then
-              gh release download "$tag" --pattern "$file" --dir "$RUNNER_TEMP/saved"
-              tar -xOzf "$RUNNER_TEMP/saved/$file" checkpoint/progress.json > "$RUNNER_TEMP/saved/$file.json"
-            fi
+          assets=$(gh release view "$tag" --json assets --jq '.assets[].name')
+          for phase in 1 2 3; do
+            for file in "phase-$phase-slot-0.tar.gz" "phase-$phase-slot-1.tar.gz" "phase-$phase-complete.tar.gz"; do
+              if grep -Fxq "$file" <<< "$assets"; then
+                gh release download "$tag" --pattern "$file" --dir "$RUNNER_TEMP/saved"
+                tar -xOzf "$RUNNER_TEMP/saved/$file" checkpoint/progress.json > "$RUNNER_TEMP/saved/$file.json"
+              fi
+            done
           done
           python - <<'PY'
           import glob,json,os
