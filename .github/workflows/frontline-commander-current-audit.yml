@@ -30,6 +30,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/checkpoints" "$RUNNER_TEMP/olddata"
           gh release download "$tag" --pattern long-dataset.tar.gz --dir "$RUNNER_TEMP"
           tar -xzf "$RUNNER_TEMP/long-dataset.tar.gz" -C "$RUNNER_TEMP/olddata"
+          gh release download frontline-obstacle-v2-44626512571 --pattern frontline-obstacle-v2.tar.gz --dir "$RUNNER_TEMP"
+          echo "ba79aaf92c5c4bf11dbb22b3a0b324a834b2aa2f4fa0f376d6d498a02087f4d6  $RUNNER_TEMP/frontline-obstacle-v2.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/starting"
+          tar -xzf "$RUNNER_TEMP/frontline-obstacle-v2.tar.gz" -C "$RUNNER_TEMP/starting" adapter
           for phase in 1 2 3; do
             for file in "phase-$phase-slot-0.tar.gz" "phase-$phase-slot-1.tar.gz" "phase-$phase-complete.tar.gz"; do
               if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$file"; then
@@ -84,13 +88,21 @@ jobs:
           python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
       - name: Compare free generated commands and game validator
         run: |
-          set -o pipefail
+          set -eo pipefail
           if python -u frontline-command/tools/training/eval-qwen.py --data "$RUNNER_TEMP/fresh" --adapter "$RUNNER_TEMP/snapshot/best" --output "$RUNNER_TEMP/command-audit.json" --count 8 2>&1 | tee "$RUNNER_TEMP/infer.log"; then
             node frontline-command/tools/training/score-generated.mjs "$RUNNER_TEMP/command-audit.json"
+            if ! python -u frontline-command/tools/training/eval-qwen.py --data "$RUNNER_TEMP/fresh" --adapter "$RUNNER_TEMP/starting/adapter" --output "$RUNNER_TEMP/starting-audit.json" --count 8 2>&1 | tee "$RUNNER_TEMP/starting.log"; then
+              python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"starting.log"),errors="replace").read()[-6000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+              exit 1
+            fi
+            node frontline-command/tools/training/score-generated.mjs "$RUNNER_TEMP/starting-audit.json"
             python - <<'PY'
           import json,os
-          root=os.environ['RUNNER_TEMP'];r=json.load(open(root+'/command-audit.json'));p=json.load(open(root+'/snapshot/progress.json'))
-          print('::notice::FRESH_COMMAND_AUDIT '+json.dumps({'snapshot':{'steps':p['steps'],'active_seconds':p['active_seconds']},'scope':'8 fresh held-out-seed snapshots; weak heuristic labels and game parser, not real battles or WebLLM','scores':r['scores']},separators=(',',':')))
+          root=os.environ['RUNNER_TEMP'];r=json.load(open(root+'/command-audit.json'));old=json.load(open(root+'/starting-audit.json'));p=json.load(open(root+'/snapshot/progress.json'))
+          assert len(r['results'])==len(old['results'])==8
+          assert all(a['input']==b['input'] and a['teacher']==b['teacher'] for a,b in zip(r['results'],old['results']))
+          changed=sum(a['adapter']!=b['adapter'] for a,b in zip(r['results'],old['results']))
+          print('::notice::FRESH_COMMAND_AUDIT '+json.dumps({'snapshot':{'steps':p['steps'],'active_seconds':p['active_seconds']},'scope':'8 fresh held-out-seed snapshots; weak heuristic labels and game parser, not real battles or WebLLM','base':r['scores']['base'],'selected':r['scores']['adapter'],'starting':old['scores']['adapter'],'changedOutputs':changed},separators=(',',':')))
           PY
             exit 0
           fi
@@ -102,7 +114,9 @@ jobs:
           name: fresh-commander-audit
           path: |
             ${{ runner.temp }}/command-audit.json
+            ${{ runner.temp }}/starting-audit.json
             ${{ runner.temp }}/infer.log
+            ${{ runner.temp }}/starting.log
             ${{ runner.temp }}/snapshot/progress.json
             ${{ runner.temp }}/fresh/
           if-no-files-found: warn

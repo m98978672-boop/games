@@ -1,4 +1,4 @@
-# Refresh the latest durable checkpoint without stopping the active trainer.
+# Refresh the latest durable checkpoint after phase 2 without stopping the trainer.
 name: Check active Frontline training progress
 on:
   push:
