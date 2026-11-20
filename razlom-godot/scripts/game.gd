@@ -17,6 +17,7 @@ var player
 var dog
 var world: Node3D
 var hud: CanvasLayer
+var combat_feedback: RazlomCombatFeedback
 var stats_label: Label
 var mission_label: Label
 var clock_label: Label
@@ -327,11 +328,15 @@ func ray(distance: float = 65.0) -> Dictionary:
 	return get_world_3d().direct_space_state.intersect_ray(query)
 
 func fire() -> void:
+	player.on_shot()
 	noise(player.global_position, 24)
 	play_tone(95, 0.07, 0.22)
 	var hit := ray()
 	if not hit.is_empty():
 		var object: Object = hit.collider
+		if object is RazlomEnemy:
+			combat_feedback.hit_time = 0.18
+		impact_particles(hit.position, hit.normal)
 		if object.has_method("hit"):
 			object.hit(36, -player.camera.global_basis.z * 9)
 		flash(hit.position, Color("ffce84"), 0.08, 0.09)
@@ -362,6 +367,7 @@ func enemy_fire(guard) -> void:
 	if state.passage or not guard.sees_player():
 		return
 	guard.motion.fire()
+	guard.weapon_motion.trigger_shot()
 	play_tone(70, 0.04, 0.06)
 	# Explicit prototype accuracy: seeded chance only after actual line of sight.
 	if world_rng.randf() < 0.55:
@@ -530,6 +536,8 @@ func setup_hud() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(root)
+	combat_feedback = RazlomCombatFeedback.new()
+	root.add_child(combat_feedback)
 	var brand := ui_label("Р А З Л О М   /   Р У Б Е Ж", 24)
 	brand.position = Vector2(36, 28)
 	root.add_child(brand)
@@ -735,7 +743,7 @@ func _process(delta: float) -> void:
 				"touch": touch_ui.diagnostics() if is_instance_valid(touch_ui) else {},
 				"startButton": [start_button.global_position.x, start_button.global_position.y, start_button.size.x, start_button.size.y],
 				"mobile": mobile_mode, "ammo": state.ammo, "yaw": player.rotation.y,
-				"weapon": {"phase": player.weapon_motion.phase, "reload": player.reload_time, "magazineY": player.weapon_motion.magazine.position.y, "handY": player.weapon_motion.support_hand.position.y},
+				"weapon": {"motion": player.motion_state, "phase": player.weapon_motion.phase, "reload": player.reload_time, "magazineY": player.weapon_motion.magazine.position.y, "handY": player.weapon_motion.support_hand.position.y},
 				"view": [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y],
 				"health": state.health, "pump": state.pump, "complete": state.complete,
 				"position": [player.position.x, player.position.y, player.position.z],
@@ -1053,3 +1061,16 @@ func _exit_tree() -> void:
 		shot_sound.stop()
 		shot_sound.stream = null
 	sound_playback = null
+
+func impact_particles(point: Vector3, normal: Vector3) -> void:
+	# Four short-lived visual chips; no collision bodies and no persistent decals.
+	for i in range(4):
+		var chip := Art.box(world, point + normal * 0.04, Vector3(0.025, 0.025, 0.06), Art.material(Color("d5b278")))
+		var tangent := normal.cross(Vector3.UP)
+		if tangent.length_squared() < 0.01:
+			tangent = Vector3.RIGHT
+		var end := chip.position + normal * 0.22 + tangent.normalized() * (float(i) - 1.5) * 0.11 + Vector3.UP * (0.08 + i * 0.025)
+		var tween := chip.create_tween().set_parallel(true)
+		tween.tween_property(chip, "position", end, 0.18)
+		tween.tween_property(chip, "scale", Vector3.ONE * 0.05, 0.22)
+		tween.chain().tween_callback(chip.queue_free)

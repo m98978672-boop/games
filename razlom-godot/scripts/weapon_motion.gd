@@ -5,6 +5,8 @@ var magazine: Node3D
 var support_hand: Node3D
 var bolt: Node3D
 var flash: Node3D
+var shell: Node3D
+var shot_age := 10.0
 var magazine_rest: Transform3D
 var hand_rest: Transform3D
 var bolt_rest: Transform3D
@@ -16,16 +18,28 @@ func _init(model: Node3D) -> void:
 	bolt = model.get_node("Bolt")
 	flash = model.get_node("MuzzleFlash")
 	flash.hide()
+	shell = model.get_node("SpentCase")
+	shell.hide()
 	magazine_rest = magazine.transform
 	hand_rest = support_hand.transform
 	bolt_rest = bolt.transform
 
-func advance(reload_remaining: float, recoil: float) -> void:
+func trigger_shot() -> void:
+	shot_age = 0.0
+	flash.show()
+	shell.show()
+
+func advance(reload_remaining: float, recoil: float, delta: float = 0.016667) -> void:
+	shot_age += delta
+	shell.visible = shot_age < 0.28
+	if shell.visible:
+		shell.position = Vector3(0.08 + shot_age * 0.6, 0.01 + shot_age * 0.45 - shot_age * shot_age * 3.5, -0.02 + shot_age * 0.15)
+		shell.rotation = Vector3(shot_age * 12.0, shot_age * 18.0, 0)
 	magazine.transform = magazine_rest
 	support_hand.transform = hand_rest
 	bolt.transform = bolt_rest
 	phase = "ready"
-	flash.visible = reload_remaining <= 0.0 and recoil > 0.07
+	flash.visible = reload_remaining <= 0.0 and (recoil > 0.07 or shot_age < 0.055)
 	if reload_remaining > 0.0:
 		var t := clampf(1.0 - reload_remaining / 1.4, 0.0, 1.0)
 		var reach := smoothstep(0.0, 0.16, t) * (1.0 - smoothstep(0.76, 1.0, t))

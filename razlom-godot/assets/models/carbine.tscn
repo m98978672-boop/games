@@ -1,4 +1,4 @@
-[gd_scene load_steps=69 format=3]
+[gd_scene load_steps=79 format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/parts/receiver.obj" id="receiver"]
 [ext_resource type="ArrayMesh" path="res://assets/models/parts/stock.obj" id="stock"]
@@ -149,85 +149,120 @@ height = 0.131
 radial_segments = 12
 
 [sub_resource type="BoxMesh" id="r38"]
-size = Vector3(0.1, 0.095, 0.25)
+size = Vector3(0.085, 0.085, 0.24)
 
 [sub_resource type="BoxMesh" id="r39"]
-size = Vector3(0.1, 0.07, 0.05)
+size = Vector3(0.085, 0.065, 0.045)
 
 [sub_resource type="BoxMesh" id="r40"]
-size = Vector3(0.08, 0.07, 0.1)
+size = Vector3(0.055, 0.09, 0.085)
 
 [sub_resource type="BoxMesh" id="r41"]
-size = Vector3(0.018, 0.04, 0.055)
+size = Vector3(0.065, 0.019, 0.025)
 
 [sub_resource type="BoxMesh" id="r42"]
-size = Vector3(0.015, 0.008, 0.018)
+size = Vector3(0.021, 0.019, 0.045)
 
 [sub_resource type="BoxMesh" id="r43"]
-size = Vector3(0.018, 0.04, 0.055)
+size = Vector3(0.014, 0.012, 0.017)
 
 [sub_resource type="BoxMesh" id="r44"]
-size = Vector3(0.015, 0.008, 0.018)
+size = Vector3(0.065, 0.019, 0.025)
 
 [sub_resource type="BoxMesh" id="r45"]
-size = Vector3(0.018, 0.04, 0.055)
+size = Vector3(0.021, 0.019, 0.045)
 
 [sub_resource type="BoxMesh" id="r46"]
-size = Vector3(0.015, 0.008, 0.018)
+size = Vector3(0.014, 0.012, 0.017)
 
 [sub_resource type="BoxMesh" id="r47"]
-size = Vector3(0.018, 0.04, 0.055)
+size = Vector3(0.065, 0.019, 0.025)
 
 [sub_resource type="BoxMesh" id="r48"]
-size = Vector3(0.015, 0.008, 0.018)
+size = Vector3(0.021, 0.019, 0.045)
 
 [sub_resource type="BoxMesh" id="r49"]
-size = Vector3(0.035, 0.035, 0.065)
+size = Vector3(0.014, 0.012, 0.017)
 
 [sub_resource type="BoxMesh" id="r50"]
-size = Vector3(0.1, 0.095, 0.25)
+size = Vector3(0.065, 0.019, 0.025)
 
 [sub_resource type="BoxMesh" id="r51"]
-size = Vector3(0.1, 0.07, 0.05)
+size = Vector3(0.021, 0.019, 0.045)
 
 [sub_resource type="BoxMesh" id="r52"]
-size = Vector3(0.08, 0.07, 0.1)
+size = Vector3(0.014, 0.012, 0.017)
 
 [sub_resource type="BoxMesh" id="r53"]
-size = Vector3(0.018, 0.04, 0.055)
+size = Vector3(0.028, 0.065, 0.03)
 
 [sub_resource type="BoxMesh" id="r54"]
-size = Vector3(0.015, 0.008, 0.018)
+size = Vector3(0.085, 0.085, 0.24)
 
 [sub_resource type="BoxMesh" id="r55"]
-size = Vector3(0.018, 0.04, 0.055)
+size = Vector3(0.085, 0.065, 0.045)
 
 [sub_resource type="BoxMesh" id="r56"]
-size = Vector3(0.015, 0.008, 0.018)
+size = Vector3(0.085, 0.045, 0.12)
 
 [sub_resource type="BoxMesh" id="r57"]
-size = Vector3(0.018, 0.04, 0.055)
+size = Vector3(0.022, 0.055, 0.021)
 
 [sub_resource type="BoxMesh" id="r58"]
-size = Vector3(0.015, 0.008, 0.018)
+size = Vector3(0.034, 0.018, 0.021)
 
 [sub_resource type="BoxMesh" id="r59"]
-size = Vector3(0.018, 0.04, 0.055)
+size = Vector3(0.012, 0.014, 0.017)
 
 [sub_resource type="BoxMesh" id="r60"]
-size = Vector3(0.015, 0.008, 0.018)
+size = Vector3(0.022, 0.055, 0.021)
 
 [sub_resource type="BoxMesh" id="r61"]
-size = Vector3(0.035, 0.035, 0.065)
+size = Vector3(0.034, 0.018, 0.021)
 
-[sub_resource type="StandardMaterial3D" id="r62"]
+[sub_resource type="BoxMesh" id="r62"]
+size = Vector3(0.012, 0.014, 0.017)
+
+[sub_resource type="BoxMesh" id="r63"]
+size = Vector3(0.022, 0.055, 0.021)
+
+[sub_resource type="BoxMesh" id="r64"]
+size = Vector3(0.034, 0.018, 0.021)
+
+[sub_resource type="BoxMesh" id="r65"]
+size = Vector3(0.012, 0.014, 0.017)
+
+[sub_resource type="BoxMesh" id="r66"]
+size = Vector3(0.022, 0.055, 0.021)
+
+[sub_resource type="BoxMesh" id="r67"]
+size = Vector3(0.034, 0.018, 0.021)
+
+[sub_resource type="BoxMesh" id="r68"]
+size = Vector3(0.012, 0.014, 0.017)
+
+[sub_resource type="BoxMesh" id="r69"]
+size = Vector3(0.025, 0.065, 0.04)
+
+[sub_resource type="StandardMaterial3D" id="r70"]
+albedo_color = Color(0.65, 0.45, 0.16, 1)
+metallic = 0.7
+roughness = 0.4
+
+[sub_resource type="CylinderMesh" id="r71"]
+top_radius = 0.006
+bottom_radius = 0.006
+height = 0.027
+radial_segments = 12
+
+[sub_resource type="StandardMaterial3D" id="r72"]
 shading_mode = 0
 albedo_color = Color(1, 0.7, 0.2, 1)
 emission_enabled = true
 emission = Color(1, 0.45, 0.08, 1)
 emission_energy_multiplier = 2.0
 
-[sub_resource type="CylinderMesh" id="r63"]
+[sub_resource type="CylinderMesh" id="r73"]
 top_radius = 0.0
 bottom_radius = 0.028
 height = 0.09
@@ -524,11 +559,11 @@ material_override = SubResource("r1")
 cast_shadow = 0
 
 [node name="RightHand" type="Node3D" parent="."]
-position = Vector3(0.035, -0.13, 0.14)
+position = Vector3(0.055, -0.105, 0.115)
 
 [node name="Sleeve" type="Node3D" parent="RightHand"]
-position = Vector3(0.03, -0.06, 0.17)
-rotation = Vector3(-0.25, 0, -0.15)
+position = Vector3(0.035, -0.055, 0.16)
+rotation = Vector3(-0.15, 0, -0.18)
 
 [node name="Visual" type="MeshInstance3D" parent="RightHand/Sleeve"]
 mesh = SubResource("r38")
@@ -536,7 +571,7 @@ material_override = SubResource("r4")
 cast_shadow = 0
 
 [node name="Cuff" type="Node3D" parent="RightHand"]
-position = Vector3(0.012, -0.01, 0.055)
+position = Vector3(0, -0.01, 0.06)
 
 [node name="Visual" type="MeshInstance3D" parent="RightHand/Cuff"]
 mesh = SubResource("r39")
@@ -552,99 +587,127 @@ material_override = SubResource("r5")
 cast_shadow = 0
 
 [node name="Finger0" type="Node3D" parent="RightHand"]
-position = Vector3(-0.03, 0.035, -0.018)
-rotation = Vector3(0.35, 0, 0)
+position = Vector3(-0.025, 0.045, -0.047)
 
 [node name="Visual" type="MeshInstance3D" parent="RightHand/Finger0"]
 mesh = SubResource("r41")
 material_override = SubResource("r5")
 cast_shadow = 0
 
+[node name="FingerTip0" type="Node3D" parent="RightHand"]
+position = Vector3(-0.062, 0.045, -0.025)
+
+[node name="Visual" type="MeshInstance3D" parent="RightHand/FingerTip0"]
+mesh = SubResource("r42")
+material_override = SubResource("r5")
+cast_shadow = 0
+
 [node name="Knuckle0" type="Node3D" parent="RightHand"]
-position = Vector3(-0.03, 0.058, -0.007)
+position = Vector3(-0.007, 0.047, -0.063)
 
 [node name="Visual" type="MeshInstance3D" parent="RightHand/Knuckle0"]
-mesh = SubResource("r42")
+mesh = SubResource("r43")
 material_override = SubResource("r6")
 cast_shadow = 0
 
 [node name="Finger1" type="Node3D" parent="RightHand"]
-position = Vector3(-0.009999999999999998, 0.035, -0.018)
-rotation = Vector3(0.35, 0, 0)
+position = Vector3(-0.025, 0.019, -0.047)
 
 [node name="Visual" type="MeshInstance3D" parent="RightHand/Finger1"]
-mesh = SubResource("r43")
+mesh = SubResource("r44")
 material_override = SubResource("r5")
 cast_shadow = 0
 
-[node name="Knuckle1" type="Node3D" parent="RightHand"]
-position = Vector3(-0.009999999999999998, 0.058, -0.007)
+[node name="FingerTip1" type="Node3D" parent="RightHand"]
+position = Vector3(-0.062, 0.019, -0.025)
 
-[node name="Visual" type="MeshInstance3D" parent="RightHand/Knuckle1"]
-mesh = SubResource("r44")
-material_override = SubResource("r6")
-cast_shadow = 0
-
-[node name="Finger2" type="Node3D" parent="RightHand"]
-position = Vector3(0.010000000000000002, 0.035, -0.018)
-rotation = Vector3(0.35, 0, 0)
-
-[node name="Visual" type="MeshInstance3D" parent="RightHand/Finger2"]
+[node name="Visual" type="MeshInstance3D" parent="RightHand/FingerTip1"]
 mesh = SubResource("r45")
 material_override = SubResource("r5")
 cast_shadow = 0
 
-[node name="Knuckle2" type="Node3D" parent="RightHand"]
-position = Vector3(0.010000000000000002, 0.058, -0.007)
+[node name="Knuckle1" type="Node3D" parent="RightHand"]
+position = Vector3(-0.007, 0.021, -0.063)
 
-[node name="Visual" type="MeshInstance3D" parent="RightHand/Knuckle2"]
+[node name="Visual" type="MeshInstance3D" parent="RightHand/Knuckle1"]
 mesh = SubResource("r46")
 material_override = SubResource("r6")
 cast_shadow = 0
 
-[node name="Finger3" type="Node3D" parent="RightHand"]
-position = Vector3(0.03, 0.035, -0.018)
-rotation = Vector3(0.35, 0, 0)
+[node name="Finger2" type="Node3D" parent="RightHand"]
+position = Vector3(-0.025, -0.006999999999999999, -0.047)
 
-[node name="Visual" type="MeshInstance3D" parent="RightHand/Finger3"]
+[node name="Visual" type="MeshInstance3D" parent="RightHand/Finger2"]
 mesh = SubResource("r47")
 material_override = SubResource("r5")
 cast_shadow = 0
 
+[node name="FingerTip2" type="Node3D" parent="RightHand"]
+position = Vector3(-0.062, -0.006999999999999999, -0.025)
+
+[node name="Visual" type="MeshInstance3D" parent="RightHand/FingerTip2"]
+mesh = SubResource("r48")
+material_override = SubResource("r5")
+cast_shadow = 0
+
+[node name="Knuckle2" type="Node3D" parent="RightHand"]
+position = Vector3(-0.007, -0.0049999999999999975, -0.063)
+
+[node name="Visual" type="MeshInstance3D" parent="RightHand/Knuckle2"]
+mesh = SubResource("r49")
+material_override = SubResource("r6")
+cast_shadow = 0
+
+[node name="Finger3" type="Node3D" parent="RightHand"]
+position = Vector3(-0.025, -0.033, -0.047)
+
+[node name="Visual" type="MeshInstance3D" parent="RightHand/Finger3"]
+mesh = SubResource("r50")
+material_override = SubResource("r5")
+cast_shadow = 0
+
+[node name="FingerTip3" type="Node3D" parent="RightHand"]
+position = Vector3(-0.062, -0.033, -0.025)
+
+[node name="Visual" type="MeshInstance3D" parent="RightHand/FingerTip3"]
+mesh = SubResource("r51")
+material_override = SubResource("r5")
+cast_shadow = 0
+
 [node name="Knuckle3" type="Node3D" parent="RightHand"]
-position = Vector3(0.03, 0.058, -0.007)
+position = Vector3(-0.007, -0.031, -0.063)
 
 [node name="Visual" type="MeshInstance3D" parent="RightHand/Knuckle3"]
-mesh = SubResource("r48")
+mesh = SubResource("r52")
 material_override = SubResource("r6")
 cast_shadow = 0
 
 [node name="Thumb" type="Node3D" parent="RightHand"]
-position = Vector3(-0.047, 0.012, 0.025)
-rotation = Vector3(0, 0.35, -0.3)
+position = Vector3(0.003, 0.036, 0.04)
+rotation = Vector3(0, 0, -0.4)
 
 [node name="Visual" type="MeshInstance3D" parent="RightHand/Thumb"]
-mesh = SubResource("r49")
+mesh = SubResource("r53")
 material_override = SubResource("r5")
 cast_shadow = 0
 
 [node name="LeftHand" type="Node3D" parent="."]
-position = Vector3(-0.02, -0.13, -0.32)
+position = Vector3(-0.005, -0.075, -0.33)
 
 [node name="Sleeve" type="Node3D" parent="LeftHand"]
-position = Vector3(0.03, -0.06, 0.17)
-rotation = Vector3(-0.25, 0, -0.15)
+position = Vector3(-0.035, -0.035, 0.17)
+rotation = Vector3(-0.15, 0, 0.2)
 
 [node name="Visual" type="MeshInstance3D" parent="LeftHand/Sleeve"]
-mesh = SubResource("r50")
+mesh = SubResource("r54")
 material_override = SubResource("r4")
 cast_shadow = 0
 
 [node name="Cuff" type="Node3D" parent="LeftHand"]
-position = Vector3(0.012, -0.01, 0.055)
+position = Vector3(0, -0.01, 0.06)
 
 [node name="Visual" type="MeshInstance3D" parent="LeftHand/Cuff"]
-mesh = SubResource("r51")
+mesh = SubResource("r55")
 material_override = SubResource("r5")
 cast_shadow = 0
 
@@ -652,85 +715,122 @@ cast_shadow = 0
 position = Vector3(0, 0, 0)
 
 [node name="Visual" type="MeshInstance3D" parent="LeftHand/Palm"]
-mesh = SubResource("r52")
+mesh = SubResource("r56")
 material_override = SubResource("r5")
 cast_shadow = 0
 
 [node name="Finger0" type="Node3D" parent="LeftHand"]
-position = Vector3(-0.03, 0.035, -0.018)
-rotation = Vector3(0.35, 0, 0)
+position = Vector3(-0.045, 0.026, -0.045)
 
 [node name="Visual" type="MeshInstance3D" parent="LeftHand/Finger0"]
-mesh = SubResource("r53")
-material_override = SubResource("r5")
-cast_shadow = 0
-
-[node name="Knuckle0" type="Node3D" parent="LeftHand"]
-position = Vector3(-0.03, 0.058, -0.007)
-
-[node name="Visual" type="MeshInstance3D" parent="LeftHand/Knuckle0"]
-mesh = SubResource("r54")
-material_override = SubResource("r6")
-cast_shadow = 0
-
-[node name="Finger1" type="Node3D" parent="LeftHand"]
-position = Vector3(-0.009999999999999998, 0.035, -0.018)
-rotation = Vector3(0.35, 0, 0)
-
-[node name="Visual" type="MeshInstance3D" parent="LeftHand/Finger1"]
-mesh = SubResource("r55")
-material_override = SubResource("r5")
-cast_shadow = 0
-
-[node name="Knuckle1" type="Node3D" parent="LeftHand"]
-position = Vector3(-0.009999999999999998, 0.058, -0.007)
-
-[node name="Visual" type="MeshInstance3D" parent="LeftHand/Knuckle1"]
-mesh = SubResource("r56")
-material_override = SubResource("r6")
-cast_shadow = 0
-
-[node name="Finger2" type="Node3D" parent="LeftHand"]
-position = Vector3(0.010000000000000002, 0.035, -0.018)
-rotation = Vector3(0.35, 0, 0)
-
-[node name="Visual" type="MeshInstance3D" parent="LeftHand/Finger2"]
 mesh = SubResource("r57")
 material_override = SubResource("r5")
 cast_shadow = 0
 
+[node name="FingerTip0" type="Node3D" parent="LeftHand"]
+position = Vector3(-0.035, 0.059, -0.045)
+
+[node name="Visual" type="MeshInstance3D" parent="LeftHand/FingerTip0"]
+mesh = SubResource("r58")
+material_override = SubResource("r5")
+cast_shadow = 0
+
+[node name="Knuckle0" type="Node3D" parent="LeftHand"]
+position = Vector3(-0.06, 0.026, -0.045)
+
+[node name="Visual" type="MeshInstance3D" parent="LeftHand/Knuckle0"]
+mesh = SubResource("r59")
+material_override = SubResource("r6")
+cast_shadow = 0
+
+[node name="Finger1" type="Node3D" parent="LeftHand"]
+position = Vector3(-0.045, 0.026, -0.015999999999999997)
+
+[node name="Visual" type="MeshInstance3D" parent="LeftHand/Finger1"]
+mesh = SubResource("r60")
+material_override = SubResource("r5")
+cast_shadow = 0
+
+[node name="FingerTip1" type="Node3D" parent="LeftHand"]
+position = Vector3(-0.035, 0.059, -0.015999999999999997)
+
+[node name="Visual" type="MeshInstance3D" parent="LeftHand/FingerTip1"]
+mesh = SubResource("r61")
+material_override = SubResource("r5")
+cast_shadow = 0
+
+[node name="Knuckle1" type="Node3D" parent="LeftHand"]
+position = Vector3(-0.06, 0.026, -0.015999999999999997)
+
+[node name="Visual" type="MeshInstance3D" parent="LeftHand/Knuckle1"]
+mesh = SubResource("r62")
+material_override = SubResource("r6")
+cast_shadow = 0
+
+[node name="Finger2" type="Node3D" parent="LeftHand"]
+position = Vector3(-0.045, 0.026, 0.013000000000000005)
+
+[node name="Visual" type="MeshInstance3D" parent="LeftHand/Finger2"]
+mesh = SubResource("r63")
+material_override = SubResource("r5")
+cast_shadow = 0
+
+[node name="FingerTip2" type="Node3D" parent="LeftHand"]
+position = Vector3(-0.035, 0.059, 0.013000000000000005)
+
+[node name="Visual" type="MeshInstance3D" parent="LeftHand/FingerTip2"]
+mesh = SubResource("r64")
+material_override = SubResource("r5")
+cast_shadow = 0
+
 [node name="Knuckle2" type="Node3D" parent="LeftHand"]
-position = Vector3(0.010000000000000002, 0.058, -0.007)
+position = Vector3(-0.06, 0.026, 0.013000000000000005)
 
 [node name="Visual" type="MeshInstance3D" parent="LeftHand/Knuckle2"]
-mesh = SubResource("r58")
+mesh = SubResource("r65")
 material_override = SubResource("r6")
 cast_shadow = 0
 
 [node name="Finger3" type="Node3D" parent="LeftHand"]
-position = Vector3(0.03, 0.035, -0.018)
-rotation = Vector3(0.35, 0, 0)
+position = Vector3(-0.045, 0.026, 0.04200000000000001)
 
 [node name="Visual" type="MeshInstance3D" parent="LeftHand/Finger3"]
-mesh = SubResource("r59")
+mesh = SubResource("r66")
+material_override = SubResource("r5")
+cast_shadow = 0
+
+[node name="FingerTip3" type="Node3D" parent="LeftHand"]
+position = Vector3(-0.035, 0.059, 0.04200000000000001)
+
+[node name="Visual" type="MeshInstance3D" parent="LeftHand/FingerTip3"]
+mesh = SubResource("r67")
 material_override = SubResource("r5")
 cast_shadow = 0
 
 [node name="Knuckle3" type="Node3D" parent="LeftHand"]
-position = Vector3(0.03, 0.058, -0.007)
+position = Vector3(-0.06, 0.026, 0.04200000000000001)
 
 [node name="Visual" type="MeshInstance3D" parent="LeftHand/Knuckle3"]
-mesh = SubResource("r60")
+mesh = SubResource("r68")
 material_override = SubResource("r6")
 cast_shadow = 0
 
 [node name="Thumb" type="Node3D" parent="LeftHand"]
-position = Vector3(-0.047, 0.012, 0.025)
-rotation = Vector3(0, 0.35, -0.3)
+position = Vector3(0.048, 0.026, 0.025)
+rotation = Vector3(0, 0, 0.3)
 
 [node name="Visual" type="MeshInstance3D" parent="LeftHand/Thumb"]
-mesh = SubResource("r61")
+mesh = SubResource("r69")
 material_override = SubResource("r5")
+cast_shadow = 0
+
+[node name="SpentCase" type="Node3D" parent="."]
+position = Vector3(0.08, 0.01, -0.02)
+rotation = Vector3(1.5707963267948966, 0, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="SpentCase"]
+mesh = SubResource("r71")
+material_override = SubResource("r70")
 cast_shadow = 0
 
 [node name="MuzzlePoint" type="Node3D" parent="."]
@@ -741,6 +841,6 @@ position = Vector3(0, 0.015, -0.785)
 rotation = Vector3(-1.5707963267948966, 0, 0)
 
 [node name="Visual" type="MeshInstance3D" parent="MuzzleFlash"]
-mesh = SubResource("r63")
-material_override = SubResource("r62")
+mesh = SubResource("r73")
+material_override = SubResource("r72")
 cast_shadow = 0
