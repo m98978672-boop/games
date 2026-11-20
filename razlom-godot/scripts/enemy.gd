@@ -162,7 +162,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 18 * delta
 	move_and_slide()
 	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
-	think_label.text = "!" if behavior == "engage" else ("?" if alert else "")
+	think_label.text = "ПРОХОДИ" if game.state.passage else ("ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else "")))
 	think_label.modulate = Color("efb26a")
 
 func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
