@@ -19,7 +19,7 @@ const files = ['index.html', 'style.css', 'cover.svg', 'README.md', 'PLAN.md', '
   'src/config.js', 'src/util.js', 'src/save.js', 'src/audio.js', 'src/game.js', 'src/render.js',
   'src/ui.js', 'src/main.js', 'src/ai/brain-net.js', 'src/sim/model.js', 'src/sim/warehouse.js',
   'src/sim/worker.js', 'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
-  'training/train-brain.mjs', 'data/brain_weights.json', 'data/brain_dataset.json',
+  'training/train-brain.mjs', 'data/brain_weights.json', 'data/brain_dataset.json', 'data/brain-data.js',
   'data/brain_training_log.json', 'data/brains/marta.json', 'data/brains/grisha.json',
   'data/brains/timur.json'];
 for (const f of files) ok(existsSync(join(root, f)), 'есть файл ' + f);
@@ -73,7 +73,18 @@ for (const team of ['intake', 'store', 'rest', 'auto']) {
 ok(html.includes('data-view="third"') && html.includes('data-view="top"'), 'оба режима камеры на пульте');
 for (const speed of ['1', '2', '4']) ok(html.includes('data-speed="' + speed + '"'), 'скорость ×' + speed);
 
-// 7. Мозг и данные
+// 7. Мозги «в коде» — чтобы игра шла и без fetch (file://, архив)
+const inlineSrc = readFileSync(join(root, 'data/brain-data.js'), 'utf8');
+ok(inlineSrc.includes('window.WC_BRAINS'), 'data/brain-data.js объявляет window.WC_BRAINS');
+ok(html.indexOf('data/brain-data.js') > 0, 'index.html подключает data/brain-data.js');
+ok(html.indexOf('data/brain-data.js') < html.indexOf('src/game.js'), 'мозги подключены до игрового ядра');
+const bundle = JSON.parse(inlineSrc.slice(inlineSrc.indexOf('{'), inlineSrc.lastIndexOf('}') + 1));
+ok(bundle.base && bundle.base.architecture && bundle.base.architecture.join('-') === '18-24-16-6', 'в brain-data.js базовая сеть 18-24-16-6');
+ok(Object.keys(bundle.brains || {}).length === 3, 'в brain-data.js три личных мозга');
+const jsonBase = JSON.parse(readFileSync(join(root, 'data/brain_weights.json'), 'utf8'));
+ok(JSON.stringify(bundle.base.layers) === JSON.stringify(jsonBase.layers), 'brain-data.js совпадает с data/brain_weights.json (нужен пересбор: node tools/embed-brains.mjs)');
+
+// 8. Мозг и данные
 const weights = JSON.parse(readFileSync(join(root, 'data/brain_weights.json'), 'utf8'));
 ok(weights.architecture && weights.architecture.join('-') === '18-24-16-6', 'сеть 18-24-16-6');
 ok(weights.layers && weights.layers.length === 3, 'три весовых слоя');
@@ -88,7 +99,7 @@ const log = JSON.parse(readFileSync(join(root, 'data/brain_training_log.json'), 
 ok(log.architecture && log.architecture.join('-') === '18-24-16-6', 'в логе обучения та же архитектура');
 ok(log.base && Number.isFinite(log.base.fitness), 'в логе есть фитнес обученной модели');
 
-// 8. Модели через RatCore: в рендере нет ручной геометрии (Барьер 4)
+// 9. Модели через RatCore: в рендере нет ручной геометрии (Барьер 4)
 const meshesSrc = readFileSync(join(root, 'src/render/meshes.js'), 'utf8');
 ok(!/new THREE\.(BufferGeometry|BoxGeometry|SphereGeometry|CylinderGeometry)/.test(meshesSrc), 'в meshes.js нет запрещённых конструкторов геометрии');
 ok(meshesSrc.includes('fromRecipe'), 'модели строятся через tools.build.fromRecipe');
@@ -101,7 +112,7 @@ ok(!/Math\.random\(/.test(logicSrc.replace(/\/\/.*$/gm, '')), 'в логике �
 const allSrc = jsFiles.map((f) => readFileSync(join(root, f), 'utf8')).join('\n');
 ok(!/getContext\(['"]2d['"]\)/.test(allSrc), 'нет 2D-канваса (Барьер 4)');
 
-// 9. Скриншоты
+// 10. Скриншоты
 for (const shot of ['stage-third.png', 'stage-top.png', 'stage-body.png', 'rig-lineup.png']) {
   ok(existsSync(join(root, 'screenshots', shot)), 'есть скриншот screenshots/' + shot);
 }
