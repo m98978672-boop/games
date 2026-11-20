@@ -1,0 +1,34 @@
+name: Inspect active Frontline training
+on:
+  push:
+    branches: [arena/03bf5b1a-games]
+    paths: [.github/workflows/frontline-training-status.yml]
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Read preserved training checkpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=frontline-learning-15h-44671482687
+          mkdir "$RUNNER_TEMP/saved"
+          for file in phase-1-slot-0.tar.gz phase-1-slot-1.tar.gz phase-1-complete.tar.gz; do
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$file"; then
+              gh release download "$tag" --pattern "$file" --dir "$RUNNER_TEMP/saved"
+              tar -xOzf "$RUNNER_TEMP/saved/$file" checkpoint/progress.json > "$RUNNER_TEMP/saved/$file.json"
+            fi
+          done
+          python - <<'PY'
+          import glob,json,os
+          paths=glob.glob(os.path.join(os.environ['RUNNER_TEMP'],'saved','*.json'))
+          if not paths: raise RuntimeError('No preserved checkpoint available')
+          rows=[json.load(open(p)) for p in paths]
+          best=max(rows,key=lambda x:(x['active_seconds'],x['steps']))
+          print('::notice::ACTUAL_PROGRESS '+json.dumps(best,separators=(',',':')),flush=True)
+          PY
