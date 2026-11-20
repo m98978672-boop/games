@@ -1,5 +1,6 @@
 // Отряд: состав, стойки, формации, приём приказов и отказ с причиной.
 import { clamp, dist, angleTo, TAU, normAngle } from '../core/mathx.js';
+import { squadNearObjective } from './arrival.js';
 
 const NAMES = ['Альфа', 'Браво', 'Чарли', 'Дельта', 'Эхо', 'Фокстрот', 'Гольф', 'Хотэл', 'Индия', 'Джульет', 'Кило', 'Лима', 'Майк', 'Ноябрь', 'Оскар', 'Папа', 'Квебек', 'Ромео', 'Сьерра', 'Танго'];
 
@@ -293,7 +294,7 @@ export class Squad {
         break;
       case 'hold': {
         this.objective = { x, y, pointId, sectorId, type: 'hold' };
-        const c = this.centroid(), atTarget = !this.game.cfg.flag('squad_orders_fix_v1', true) || dist(c.x, c.y, x, y) < 90;
+        const atTarget = !this.game.cfg.flag('squad_orders_fix_v1', true) || squadNearObjective(this.game, this, {x,y}, 90);
         this.behavior = atTarget ? 'hold' : 'attack';
         this.state = atTarget ? 'hold' : 'advance';
         this.stateLabel = atTarget ? 'держит позицию' : 'выдвигается на позицию';

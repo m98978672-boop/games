@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 16,
-    "files": 1206,
-    "totalBytes": 36001120,
+    "files": 1207,
+    "totalBytes": 36004675,
     "chunks": 146,
     "blockedFiles": 3
   },
@@ -2088,11 +2088,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "61d970ebc1a407a684074dec475b2e8b3844c00cd1f502325c427f2d681732b4",
-      "totalSize": 9882577,
+      "infoHash": "32dbeb19f21b59997efe683d85b058a7884b4d56e04a0efb9ba455b8949809a2",
+      "totalSize": 9886132,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 560,
+      "fileCount": 561,
       "files": [
         {
           "path": ".gitattributes",
@@ -3481,8 +3481,8 @@
         },
         {
           "path": "package.json",
-          "size": 14825,
-          "sha256": "1b16bd29b22b664a4561286ed48286cde0bfe57f81228b7f1307ef2b0ddd2831"
+          "size": 14971,
+          "sha256": "f15c159c8cdd4d682763b763b4f9e4ffbacf8bd593b8c5c4ccc23f4d9c39feea"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3521,8 +3521,8 @@
         },
         {
           "path": "src/core/build-info.js",
-          "size": 840,
-          "sha256": "663255a352231d321c55895c91461aa90432c49c0c79fe40184dd04a004b329a"
+          "size": 843,
+          "sha256": "7ea72ad35b8722a3d263c4d337ea8afa2724ff6d4c1fd528e55bace9812ffc34"
         },
         {
           "path": "src/core/config.js",
@@ -3581,18 +3581,23 @@
         },
         {
           "path": "src/sim/ai_soldier.js",
-          "size": 27838,
-          "sha256": "cc3365aeebcce51c7787bcc40ac7582458ca48f880270b28ce0d98990c842949"
+          "size": 28671,
+          "sha256": "e717d464c85700f88d5a7aaf819786e5e92387e568b0fcec6d60dd67c77321e4"
         },
         {
           "path": "src/sim/ai_squad.js",
-          "size": 11262,
-          "sha256": "3e5c95751622207e8cd685a13b59a9c80327af17d382931cf76193c1d76cb3d4"
+          "size": 11317,
+          "sha256": "3781c74e34d2ca0b46f0cdbb4ac16523aedbe4ce02d2aa26ab33ce293317c441"
         },
         {
           "path": "src/sim/ai_strategic.js",
           "size": 15553,
           "sha256": "6b18456c7201646355085a743c337a47ab841df22dc145a01ea91c0d6e215e13"
+        },
+        {
+          "path": "src/sim/arrival.js",
+          "size": 1607,
+          "sha256": "4b95f8d152f0e3a12c82b809ee0e6e2cabf8540b3dc7e0aa89f6435df8de50a8"
         },
         {
           "path": "src/sim/autopilot.js",
@@ -3681,8 +3686,8 @@
         },
         {
           "path": "src/sim/rest_positions.js",
-          "size": 3277,
-          "sha256": "51bf8e781e9465920daa3752f78748dfd87241ce652525e80c188f24e00907d5"
+          "size": 3978,
+          "sha256": "f01060e8bc03375066c8ded408f1c4ee0aed7cf3cde4b3d1bb0873ed151e3722"
         },
         {
           "path": "src/sim/rules.js",
@@ -3706,13 +3711,13 @@
         },
         {
           "path": "src/sim/squads.js",
-          "size": 14872,
-          "sha256": "09d8099f46d618c03804a3ca939c2bc55efba9f4ae2d1f52ef1f65f1c7c9ef25"
+          "size": 14923,
+          "sha256": "b041adecb3fb80dbd0caf7d8ea593ee5c37ffa7fdf46e68a2b5613cec954d32b"
         },
         {
           "path": "src/sim/units.js",
-          "size": 45120,
-          "sha256": "eb54104669743892cdd74c4737a19232f2acdaff24baaccec343478025be103c"
+          "size": 45279,
+          "sha256": "c9c2bb8df23ece0b2ec832653354be3391f5facca55de19f1070f706415982aa"
         },
         {
           "path": "src/sim/vision_nav_policy.js",
