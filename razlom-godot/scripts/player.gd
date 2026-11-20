@@ -145,7 +145,7 @@ func _physics_process(delta: float) -> void:
 	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.2, -0.21, -0.6)
 	anchor.y -= sin(clampf(healing_time / 1.2, 0, 1) * PI) * 0.16
 	anchor.y += reload_blend * 0.08 - smoothstep(0.0, 0.35, draw_time) * 0.2
-	var tremor := sin(Time.get_ticks_msec() * 0.027) * game.state.pain * 0.00008
+	var tremor: float = sin(Time.get_ticks_msec() * 0.027) * game.state.pain * 0.00008
 	anchor.x += tremor
 	var breath := sin(Time.get_ticks_msec() * 0.0018) * (0.001 if aiming else 0.003)
 	gun.position = gun.position.lerp(anchor + Vector3(sin(bob) * (0.003 if aiming else 0.023) * movement_blend + look_sway.x, absf(cos(bob)) * (0.003 if aiming else 0.018) * movement_blend + breath - landing - hurt_blend * 0.035, recoil + hurt_blend * 0.035), 1.0 - exp(-delta * 14.0))
