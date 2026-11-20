@@ -16,6 +16,9 @@ var scan := 0.0
 var home := Vector3.ZERO
 var phase := 0.0
 var weapon_motion: RazlomWeaponMotion
+var left_arm: RazlomArmRig
+var right_arm: RazlomArmRig
+var carried_weapon: Node3D
 var motion: RazlomActorMotion
 var visual: Node3D
 var think_label: Label3D
@@ -40,8 +43,13 @@ func _ready() -> void:
 	visual.get_node("ArmRJoint/ArmR").add_child(weapon)
 	weapon.position = Vector3(-0.15, 0.09, -0.29)
 	weapon.scale = Vector3.ONE * 0.65
-	weapon.get_node("LeftHand").hide()
-	weapon.get_node("RightHand").hide()
+	carried_weapon = weapon
+	weapon.get_node("LeftHand/Sleeve").hide()
+	weapon.get_node("RightHand/Sleeve").hide()
+	visual.get_node("ArmRJoint/ArmR/Visual").hide()
+	visual.get_node("ArmLJoint/ArmL/Visual").hide()
+	left_arm = RazlomArmRig.new(visual)
+	right_arm = RazlomArmRig.new(visual)
 	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home
@@ -172,6 +180,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
 	weapon_motion.advance(0, motion.recoil * 0.09, delta)
+	left_arm.solve(Vector3(-0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("LeftHand").global_position), -1.0)
+	right_arm.solve(Vector3(0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("RightHand").global_position), 1.0)
 	think_label.text = "ПРОХОДИ" if game.state.passage else ("ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else "")))
 	think_label.modulate = Color("efb26a")
 
