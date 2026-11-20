@@ -6,3 +6,7 @@ truck-showroom/preview.png
 tools/bughunt/report.md
 tools/bughunt/report.json
 _shots/
+
+# Local Godot source build and Python development environment
+/.cache/
+/.venv/

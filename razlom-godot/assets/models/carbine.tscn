@@ -1,0 +1,76 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/wood.png" id="wood"]
+
+[sub_resource type="StandardMaterial3D" id="mat0"]
+albedo_color = Color(0.15294117647058825, 0.23137254901960785, 0.2235294117647059, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(0.14, 0.18, 0.55)
+
+[sub_resource type="StandardMaterial3D" id="mat1"]
+albedo_color = Color(0.15294117647058825, 0.23137254901960785, 0.2235294117647059, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh1"]
+size = Vector3(0.065, 0.07, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="mat2"]
+albedo_color = Color(1.0, 1.0, 1.0, 1)
+roughness = 0.88
+albedo_texture = ExtResource("wood")
+
+[sub_resource type="BoxMesh" id="mesh2"]
+size = Vector3(0.09, 0.26, 0.13)
+
+[sub_resource type="StandardMaterial3D" id="mat3"]
+albedo_color = Color(0.15294117647058825, 0.23137254901960785, 0.2235294117647059, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh3"]
+size = Vector3(0.03, 0.05, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="mat4"]
+albedo_color = Color(0.6862745098039216, 0.596078431372549, 0.47058823529411764, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh4"]
+size = Vector3(0.18, 0.19, 0.32)
+
+[node name="carbine" type="Node3D"]
+
+[node name="Receiver" type="Node3D" parent="."]
+position = Vector3(0, 0, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="Receiver"]
+mesh = SubResource("mesh0")
+material_override = SubResource("mat0")
+
+[node name="Barrel" type="Node3D" parent="."]
+position = Vector3(0, 0.04, -0.42)
+
+[node name="Visual" type="MeshInstance3D" parent="Barrel"]
+mesh = SubResource("mesh1")
+material_override = SubResource("mat1")
+
+[node name="Grip" type="Node3D" parent="."]
+position = Vector3(0, -0.17, 0.05)
+
+[node name="Visual" type="MeshInstance3D" parent="Grip"]
+mesh = SubResource("mesh2")
+material_override = SubResource("mat2")
+
+[node name="Sight" type="Node3D" parent="."]
+position = Vector3(0, 0.13, -0.15)
+
+[node name="Visual" type="MeshInstance3D" parent="Sight"]
+mesh = SubResource("mesh3")
+material_override = SubResource("mat3")
+
+[node name="Hand" type="Node3D" parent="."]
+position = Vector3(0.04, -0.14, 0.2)
+
+[node name="Visual" type="MeshInstance3D" parent="Hand"]
+mesh = SubResource("mesh4")
+material_override = SubResource("mat4")
