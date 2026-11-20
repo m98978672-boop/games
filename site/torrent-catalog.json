@@ -5,7 +5,7 @@
   "stats": {
     "games": 17,
     "files": 1248,
-    "totalBytes": 37591077,
+    "totalBytes": 37591080,
     "chunks": 152,
     "blockedFiles": 3
   },
@@ -4987,8 +4987,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "1e36e57c39a3171fa63f92e0090680a3c27cab2f1e7ab5f9347421490ec5bd18",
-      "totalSize": 1549167,
+      "infoHash": "392899f2aa43c2c966b699323b56d06e00c22c6b0056119d727b64e272e6c9a8",
+      "totalSize": 1549170,
       "chunkSize": 262144,
       "chunkCount": 6,
       "fileCount": 29,
@@ -5105,8 +5105,8 @@
         },
         {
           "path": "src/sim/warehouse.js",
-          "size": 22524,
-          "sha256": "bddd4aeb82c3676b513b5d02c6343a3fe7112e9ddd0c5d0b7c791d77bb8bbf9a"
+          "size": 22527,
+          "sha256": "0f67fde9e7b9ddad90553b0447e6ec0277d4d7c5dffe4a9eb79734c9faf0f978"
         },
         {
           "path": "src/sim/worker.js",
