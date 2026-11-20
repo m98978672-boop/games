@@ -81,7 +81,7 @@ func _ready() -> void:
 	setup_hud()
 	if mobile_mode:
 		toggle_quality()
-	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nСыну Рады осталось воды на одну ночь.\nИ кому-то было приказано не пускать нас на склад».\n\nДоберись до склада, забери блок и вернись к убежищу.\nМожно пройти через ворота или пробить кирпичную стену.")
+	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nСыну Рады осталось воды на одну ночь.\nИ кому-то было приказано не пускать нас на склад».\n\n1. Выйди из убежища.\n2. Следуй направлению и расстоянию слева сверху.\n3. Найди насос на складе и верни его сюда.\n\nНе обязательно вступать в бой: можно обойти охрану.\nУправление: " + ("левый круг — идти, справа проведи пальцем — осмотреться. Кнопка ВЗЯТЬ — действие." if mobile_mode else "WASD — идти, мышь — смотреть, E — взять предмет. Esc — пауза.") + "")
 
 func fit_mobile() -> void:
 	var pixels := get_window().size
@@ -725,9 +725,9 @@ func _process(delta: float) -> void:
 	if mobile_mode:
 		clock_label.text = "%02d:%02d  ТЕПЛО %d  УСТАЛОСТЬ %d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	var destination := Vector3(-23, 0, 22) if state.pump else Vector3(21, 0, -20)
-	var offset := destination - player.global_position
+	var offset: Vector3 = destination - player.global_position
 	var distance := Vector2(offset.x, offset.z).length()
-	var local_target := player.global_transform.basis.inverse() * offset
+	var local_target: Vector3 = player.global_transform.basis.inverse() * offset
 	var bearing := atan2(local_target.x, -local_target.z)
 	var direction_text := "ПРЯМО" if absf(bearing) < 0.35 else ("РАЗВЕРНИСЬ" if absf(bearing) > 2.5 else ("СПРАВА →" if bearing > 0 else "← СЛЕВА"))
 	mission_label.text = "01 / ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nЗадание завершено" if state.complete else (("Убежище" if state.pump else "Насос · склад 03") + " · %d м\n" % int(distance) + direction_text))
