@@ -153,6 +153,9 @@ jobs:
       - name: Test euro-haul smoke (карьера, рейс, сохранение) — без флака
         run: |
           cd euro-haul
+          # Зависимости (jsdom) нужны самому тесту: без npm ci шаг падал
+          # на импорте, а выглядел как провал игры.
+          npm ci --no-audit --no-fund
           node tests/smoke.mjs
       - name: Test last-shore escape (плот, спасение, экран финала)
         run: |
