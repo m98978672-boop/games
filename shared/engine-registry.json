@@ -175,6 +175,14 @@
       "engine": "../shared/engine.js",
       "badge": "auto",
       "note": "Вкладка «Торрент» — P2P-раздача игр (трекер, сигналинг, автоудаление плохих файлов)"
+    },
+    {
+      "id": "razlom",
+      "path": "razlom/index.html",
+      "kind": "portal",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Страница исходного Godot-прототипа; не браузерная игра"
     }
   ],
   "excluded": [

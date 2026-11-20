@@ -1,0 +1,120 @@
+[gd_scene load_steps=18 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/cloth.png" id="cloth"]
+
+[sub_resource type="StandardMaterial3D" id="mat0"]
+albedo_color = Color(1.0, 1.0, 1.0, 1)
+roughness = 0.88
+albedo_texture = ExtResource("cloth")
+
+[sub_resource type="BoxMesh" id="mesh0"]
+size = Vector3(0.55, 0.65, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="mat1"]
+albedo_color = Color(0.7843137254901961, 0.6549019607843137, 0.5137254901960784, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh1"]
+size = Vector3(0.34, 0.35, 0.34)
+
+[sub_resource type="StandardMaterial3D" id="mat2"]
+albedo_color = Color(0.2235294117647059, 0.27450980392156865, 0.25882352941176473, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh2"]
+size = Vector3(0.4, 0.13, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="mat3"]
+albedo_color = Color(0.2235294117647059, 0.27450980392156865, 0.25882352941176473, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh3"]
+size = Vector3(0.21, 0.76, 0.24)
+
+[sub_resource type="StandardMaterial3D" id="mat4"]
+albedo_color = Color(0.2235294117647059, 0.27450980392156865, 0.25882352941176473, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh4"]
+size = Vector3(0.21, 0.76, 0.24)
+
+[sub_resource type="StandardMaterial3D" id="mat5"]
+albedo_color = Color(1.0, 1.0, 1.0, 1)
+roughness = 0.88
+albedo_texture = ExtResource("cloth")
+
+[sub_resource type="BoxMesh" id="mesh5"]
+size = Vector3(0.18, 0.55, 0.22)
+
+[sub_resource type="StandardMaterial3D" id="mat6"]
+albedo_color = Color(1.0, 1.0, 1.0, 1)
+roughness = 0.88
+albedo_texture = ExtResource("cloth")
+
+[sub_resource type="BoxMesh" id="mesh6"]
+size = Vector3(0.18, 0.55, 0.22)
+
+[sub_resource type="StandardMaterial3D" id="mat7"]
+albedo_color = Color(0.14901960784313725, 0.20392156862745098, 0.19215686274509805, 1)
+roughness = 0.88
+
+[sub_resource type="BoxMesh" id="mesh7"]
+size = Vector3(0.12, 0.14, 0.65)
+
+[node name="guard" type="Node3D"]
+
+[node name="Coat" type="Node3D" parent="."]
+position = Vector3(0, 1.12, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="Coat"]
+mesh = SubResource("mesh0")
+material_override = SubResource("mat0")
+
+[node name="Head" type="Node3D" parent="."]
+position = Vector3(0, 1.64, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="Head"]
+mesh = SubResource("mesh1")
+material_override = SubResource("mat1")
+
+[node name="Cap" type="Node3D" parent="."]
+position = Vector3(0, 1.82, 0.01)
+
+[node name="Visual" type="MeshInstance3D" parent="Cap"]
+mesh = SubResource("mesh2")
+material_override = SubResource("mat2")
+
+[node name="LegL" type="Node3D" parent="."]
+position = Vector3(-0.15, 0.43, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="LegL"]
+mesh = SubResource("mesh3")
+material_override = SubResource("mat3")
+
+[node name="LegR" type="Node3D" parent="."]
+position = Vector3(0.15, 0.43, 0)
+
+[node name="Visual" type="MeshInstance3D" parent="LegR"]
+mesh = SubResource("mesh4")
+material_override = SubResource("mat4")
+
+[node name="ArmL" type="Node3D" parent="."]
+position = Vector3(-0.4, 1.05, -0.13)
+
+[node name="Visual" type="MeshInstance3D" parent="ArmL"]
+mesh = SubResource("mesh5")
+material_override = SubResource("mat5")
+
+[node name="ArmR" type="Node3D" parent="."]
+position = Vector3(0.4, 1.05, -0.13)
+
+[node name="Visual" type="MeshInstance3D" parent="ArmR"]
+mesh = SubResource("mesh6")
+material_override = SubResource("mat6")
+
+[node name="Weapon" type="Node3D" parent="."]
+position = Vector3(0.25, 1.14, -0.42)
+
+[node name="Visual" type="MeshInstance3D" parent="Weapon"]
+mesh = SubResource("mesh7")
+material_override = SubResource("mat7")
