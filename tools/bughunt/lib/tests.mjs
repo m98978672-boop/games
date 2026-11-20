@@ -13,6 +13,19 @@ const run = promisify(execFile);
    картинки-эталоны или сеть */
 const HEAVY = /(browser|render|preview|shot|screenshot|perf|view|texview|dashview|cabview|softview|diag|benchmark|device|autopilot|seams|covers|phone-features|shaderlog|site-check|robust)/i;
 
+/* Папка с package.json рядом с тестом: subir до первого найденного,
+   но не выше корня репозитория. */
+export function ownPackageDir(root, test) {
+  let dir = dirname(join(root, test));
+  for (let i = 0; i < 3; i++) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const up = dirname(dir);
+    if (!up.startsWith(root) || up === dir) break;
+    dir = up;
+  }
+  return null;
+}
+
 export function testsOf(project) {
   return project.tests
     .filter((t) => !/\/_[^/]+\.mjs$/.test(t))     /* _файлы — вспомогательные */
@@ -25,7 +38,14 @@ export async function runTests(root, project, opts = {}) {
   const ran = [];
   const skipped = [];
   const list = testsOf(project);
-  const needsDeps = project.hasPackage && !project.hasNodeModules;
+  /* Тест может лежать не в корне проекта, а в собственной папке со своим
+     package.json (tools/razlom-web/test.mjs требует playwright). Тогда
+     «нет node_modules» надо смотреть рядом с тестом, иначе бот падает
+     ERR_MODULE_NOT_FOUND и записывает это как дефект игры. */
+  const ownPkg = list.length ? ownPackageDir(root, list[0]) : null;
+  const needsDeps = ownPkg
+    ? !existsSync(join(ownPkg, 'node_modules'))
+    : (project.hasPackage && !project.hasNodeModules);
 
   for (const test of list) {
     if (needsDeps) { skipped.push({ test, why: 'не установлены зависимости (npm i)' }); continue; }
