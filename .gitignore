@@ -10,3 +10,7 @@ _shots/
 # Local Godot source build and Python development environment
 /.cache/
 /.venv/
+
+# сборка раздачи для Dropbox (не в git)
+/warehouse-crew.zip
+/START-HERE.txt
