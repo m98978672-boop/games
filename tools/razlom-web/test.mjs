@@ -18,6 +18,7 @@ try {
   assert.ok(await page.locator('canvas').count());
  });
  await mkdir('../../docs/razlom/web-evidence', {recursive:true});
+ await page.waitForTimeout(1000);
  await page.screenshot({path:'../../docs/razlom/web-evidence/menu.png'});
  await page.keyboard.press('Enter');
  await page.waitForFunction(() => window.__razlomStatus?.started && !window.__razlomStatus.paused);
@@ -33,8 +34,10 @@ try {
  await page.keyboard.press('Escape');
  await page.waitForFunction(() => window.__razlomStatus?.paused);
  await check('Escape returns to pause menu', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.paused), true));
- // The unavailable load button is disabled; Tab from Start focuses Save.
- await page.keyboard.press('Tab'); await page.keyboard.press('Enter');
+ // Click the actual Godot-rendered Save button, not an HTML stand-in.
+ await page.waitForTimeout(600);
+ const saveRect = await page.evaluate(() => window.__razlomStatus.saveButton);
+ await page.mouse.click(saveRect[0] + saveRect[2]/2, saveRect[1] + saveRect[3]/2);
  await page.waitForFunction(() => window.__razlomStatus?.saveExists, null, {timeout:15000});
  await check('Shelter save writes inside browser user storage', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.saveExists), true));
  await check('No script or WASM runtime errors', async () => assert.deepEqual(errors, []));
