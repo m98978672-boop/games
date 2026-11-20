@@ -7,7 +7,7 @@ var durability := 70.0
 var block_id := ""
 var falling := false
 var game
-var tint: Color
+var tint := Color.WHITE
 var removed: Dictionary = {}
 
 func hit(amount: float, impulse: Vector3 = Vector3.ZERO) -> void:
@@ -76,7 +76,7 @@ func rebuild_damage() -> void:
 				surface.add_vertex(corners[vertex])
 	var visual := MeshInstance3D.new()
 	visual.mesh = surface.commit()
-	visual.material_override = RazlomArt.material(Color.WHITE, "brick")
+	visual.material_override = RazlomArt.material(tint, "brick")
 	add_child(visual)
 	# Merge surviving cells into X-runs: one shape per surviving run, no per-cell rigid bodies.
 	for z in range(GRID):

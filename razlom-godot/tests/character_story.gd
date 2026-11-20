@@ -8,6 +8,12 @@ func check(ok: bool, label: String) -> void:
 	if not ok:
 		failures += 1
 		printerr("FAIL: " + label)
+func press_named(game, prefix: String) -> bool:
+	for child in game.interactions.column.get_children():
+		if child is Button and child.text.begins_with(prefix):
+			child.pressed.emit()
+			return true
+	return false
 func run_tests() -> void:
 	var game = load("res://scenes/main.tscn").instantiate()
 	root.add_child(game)
@@ -69,6 +75,35 @@ func run_tests() -> void:
 		if button.text.begins_with("Обзор ·"):
 			button.pressed.emit()
 	check(is_equal_approx(game.look_scale, 1.4), "Sensitivity menu changes actual input multiplier")
+	s.complete = true
+	s.relay_log = true
+	s.relay_shared = true
+	game.interactions.vera_dialog()
+	check(press_named(game, "Дело Веры • медицинский") and game.interactions.column.get_child(1).text.contains("медицинский"), "Vera directly offers her medical side quest")
+	check(press_named(game, "Взяться за дело") and game.quests.phase("medicine") == 1, "Medical quest can be accepted directly through Vera")
+	game.interactions.vera_dialog()
+	check(press_named(game, "Дело Веры • раненый электрик"), "Same character offers a separate rescue quest")
+	check(press_named(game, "Взяться за дело") and game.quests.phase("engineer") == 1, "Vera's second quest can be active alongside the first")
+	game.interactions.vera_dialog()
+	check(press_named(game, "Дело Веры • запитать северный шлюз"), "After returning the archive, Vera offers a third technical quest")
+	game.resume()
+	game.interactions.vera_dialog()
+	check(press_named(game, "Спросить Веру"), "Mutual romance conversation only unlocks after the main rescue")
+	check(game.state.vera_bond == 0 and game.interactions.panel.visible, "Romance does not advance before the player's answer")
+	check(press_named(game, "Предложить узнать"), "Vera has a clear, optional consent choice")
+	check(game.state.vera_bond == 1, "Vera accepts a slow mutual courtship")
+	game.refresh_world_state()
+	check(game.world.has_node("ShelterImprovements/EveningTable"), "A relationship milestone changes the shelter scene")
+	game.interactions.vera_dialog()
+	check(press_named(game, "Обсудить, какими"), "Second relationship step requires the shared relay story")
+	check(press_named(game, "Да. Давай попробуем"), "Both characters explicitly choose the relationship")
+	check(game.state.vera_bond == 2, "Chosen relationship reaches the saved committed stage")
+	var romance_save: Dictionary = s.snapshot()
+	var restored_romance := RazlomState.new()
+	check(restored_romance.restore(romance_save) and restored_romance.vera_bond == 2, "Romance choice survives save serialization")
+	var older_romance: Dictionary = romance_save.duplicate(true)
+	older_romance.erase("vera_bond")
+	check(restored_romance.restore(older_romance) and restored_romance.vera_bond == 0, "Older saves migrate without a romance flag")
 	game.interactions.journal()
 	check(game.interactions.panel.visible, "Journal remains available after broken agreement")
 	game.queue_free()

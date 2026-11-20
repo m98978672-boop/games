@@ -38,6 +38,7 @@ func run_tests() -> void:
 	var player = game.player
 	player._process(0)
 	check(player.left_arm.wrist.distance_to(player.camera.to_local(player.gun.get_node("LeftHand").global_position)) < 0.005, "Actual viewmodel support wrist remains attached within reach")
+	check(player.left_arm.hand.has_node("Finger0") and player.left_arm.hand.has_node("Cuff") and player.right_arm.hand.has_node("Finger3"), "Detailed glove, cuff and articulated fingers are attached to both IK wrists")
 	player.rotation = Vector3.ZERO
 	player.receive_bullet(player.to_global(Vector3(0.29, 1.0, 0)), Vector3.ZERO)
 	check(game.state.right_arm_wound == 40 and not player.can_fire(), "Right arm hit triggers protective reflex and shot lock")
