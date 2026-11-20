@@ -40,6 +40,18 @@ func run_tests() -> void:
 	for i in range(60):
 		dog_motion.advance(1.0 / 60, 0)
 	check(absf(dog_motion.joints.LegFL.rotation.x) < 0.001, "Waiting dog settles its gait")
+	motion.hurt()
+	motion.advance(0.04, 0, false)
+	check(motion.model.rotation.z > 0.001, "Hit reaction tilts the guard visually")
+	for i in range(120):
+		motion.advance(1.0 / 60, 0, false)
+	check(absf(motion.model.rotation.z) < 0.001, "Hit reaction settles without lasting tilt")
+	check(absf(motion.model.get_node("Head").rotation.y) > 0.001, "Idle guard looks around")
+	check(absf(dog_motion.model.get_node("Head").rotation.y) > 0.001, "Waiting dog scans with its head")
+	check(game.interactions.medic_motion != null, "Vera has an idle animation driver")
+	var surface := RazlomArt.material(Color.WHITE, "brick")
+	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")
+	check(surface.roughness_texture != null, "Surface roughness map is bound")
 	var track: AudioStreamWAV = game.music.stream
 	check(is_equal_approx(track.get_length(), 32.0), "Original music stream is 32 seconds")
 	check(track.loop_mode == AudioStreamWAV.LOOP_FORWARD and track.loop_end == 705600, "Music has full-sample loop bounds")

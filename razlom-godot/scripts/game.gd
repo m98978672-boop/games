@@ -751,6 +751,8 @@ func _process(delta: float) -> void:
 	mission_label.text = "01 / ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nЗадание завершено" if state.complete else (("Убежище" if state.pump else "Насос · склад 03") + " · %d м\n" % int(distance) + direction_text))
 	if get_tree().paused or ended:
 		return
+	if interactions.medic_motion != null:
+		interactions.medic_motion.advance(delta, 0.0)
 	elapsed += delta
 	day_minutes += delta * 0.2
 	var hour := fmod(day_minutes / 60.0, 24.0)

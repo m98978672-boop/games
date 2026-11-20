@@ -7,6 +7,8 @@ var cooldown := 0.0
 var reload_time := 0.0
 var recoil := 0.0
 var bob := 0.0
+var landing := 0.0
+var grounded_last := true
 var aiming := false
 var light: SpotLight3D
 var footstep := 0.0
@@ -87,7 +89,12 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= delta * 18
 	elif Input.is_action_just_pressed("jump"):
 		velocity.y = 5.5
+	var falling_speed := velocity.y
 	move_and_slide()
+	if is_on_floor() and not grounded_last:
+		landing = clampf(-falling_speed * 0.009, 0.0, 0.08)
+	grounded_last = is_on_floor()
+	landing = move_toward(landing, 0.0, delta * 0.24)
 	for i in range(get_slide_collision_count()):
 		var collision := get_slide_collision(i)
 		var object: Object = collision.get_collider()
@@ -104,9 +111,10 @@ func _physics_process(delta: float) -> void:
 	bob += delta * speed * input.length()
 	var reload_blend := sin(clampf(reload_time / 1.4, 0.0, 1.0) * PI)
 	var anchor := Vector3(0.12, -0.22, -0.42) if aiming else Vector3(0.27, -0.29, -0.48)
-	gun.position = gun.position.lerp(anchor + Vector3(0, sin(bob * 2) * 0.009 * input.length(), recoil), 1.0 - exp(-delta * 14.0))
-	gun.rotation.x = lerp_angle(gun.rotation.x, -0.6 * reload_blend + recoil * 2, 1.0 - exp(-delta * 18.0))
-	gun.rotation.z = lerp_angle(gun.rotation.z, -0.18 * reload_blend, 1.0 - exp(-delta * 12.0))
+	var breath := sin(Time.get_ticks_msec() * 0.0018) * (0.001 if aiming else 0.003)
+	gun.position = gun.position.lerp(anchor + Vector3(sin(bob) * (0.003 if aiming else 0.012) * input.length(), sin(bob * 2) * 0.009 * input.length() + breath - landing, recoil), 1.0 - exp(-delta * 14.0))
+	gun.rotation.x = lerp_angle(gun.rotation.x, -0.6 * reload_blend + recoil * 2 - (0.12 if running else 0.0), 1.0 - exp(-delta * 18.0))
+	gun.rotation.z = lerp_angle(gun.rotation.z, -0.18 * reload_blend - input.x * (0.01 if aiming else 0.035), 1.0 - exp(-delta * 12.0))
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
 	if Input.is_action_pressed("fire") and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
 		if game.state.ammo > 0:

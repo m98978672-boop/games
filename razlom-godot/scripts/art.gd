@@ -13,6 +13,11 @@ static func material(color: Color, texture: String = "", glow: float = 0.0) -> S
 	mat.roughness = 0.88
 	if not texture.is_empty():
 		mat.albedo_texture = load("res://assets/textures/" + texture + ".png")
+		mat.normal_enabled = true
+		mat.normal_texture = load("res://assets/textures/surface/" + texture + "_normal.png")
+		mat.normal_scale = 0.45
+		mat.roughness_texture = load("res://assets/textures/surface/" + texture + "_roughness.png")
+		mat.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_RED
 		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 		mat.uv1_triplanar = true
 		mat.uv1_scale = Vector3.ONE * 0.65

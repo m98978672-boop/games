@@ -6,9 +6,14 @@ var clock := 0.0
 var blend := 0.0
 var recoil := 0.0
 var joints: Dictionary = {}
+var flinch := 0.0
+var rest_height := 0.0
+var is_quadruped := false
 
 func _init(root: Node3D, quadruped: bool = false) -> void:
 	model = root
+	rest_height = model.position.y
+	is_quadruped = quadruped
 	var parts := ["LegFL", "LegFR", "LegBL", "LegBR"] if quadruped else ["LegL", "LegR", "ArmL", "ArmR"]
 	for part in parts:
 		var limb := model.get_node_or_null(NodePath(part)) as Node3D
@@ -22,10 +27,14 @@ func _init(root: Node3D, quadruped: bool = false) -> void:
 		limb.reparent(pivot, true)
 		joints[part] = pivot
 
+func hurt() -> void:
+	flinch = 1.0
+
 func fire() -> void:
 	recoil = 1.0
 
 func advance(delta: float, speed: float, aiming: bool = false) -> void:
+	flinch = move_toward(flinch, 0.0, delta * 3.0)
 	clock += delta * (speed * 3.4 + 0.4)
 	blend = move_toward(blend, clampf(speed / 2.5, 0, 1), delta * 6)
 	recoil = move_toward(recoil, 0, delta * 7)
@@ -35,8 +44,16 @@ func advance(delta: float, speed: float, aiming: bool = false) -> void:
 		var swing := sin(clock + (PI if alternate else 0.0)) * blend * 0.5
 		if part.begins_with("Arm") and aiming:
 			swing = -0.65 - recoil * 0.2
+		if part.begins_with("Arm"):
+			swing -= flinch * 0.3
 		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))
-	model.position.y = lerpf(model.position.y, (1.0 - cos(clock * 2.0)) * blend * 0.009, 1.0 - exp(-delta * 10.0))
+	model.position.y = lerpf(model.position.y, rest_height + (1.0 - cos(clock * 2.0)) * blend * 0.009 + sin(clock * 2.0) * (1.0 - blend) * 0.004, 1.0 - exp(-delta * 10.0))
+	model.rotation.z = lerp_angle(model.rotation.z, flinch * 0.12, 1.0 - exp(-delta * 18.0))
+	var head := model.get_node_or_null("Head") as Node3D
+	if head != null:
+		var idle := (1.0 - blend) * (0.0 if aiming else 1.0)
+		head.rotation.y = lerp_angle(head.rotation.y, sin(clock * 0.7) * idle * (0.32 if is_quadruped else 0.12), 1.0 - exp(-delta * 5.0))
+		head.rotation.x = lerp_angle(head.rotation.x, (sin(clock * 1.1) * idle * 0.05 if is_quadruped else 0.0) - flinch * 0.18, 1.0 - exp(-delta * 10.0))
 	var tail := model.get_node_or_null("Tail") as Node3D
 	if tail != null:
 		tail.rotation.y = sin(clock * 1.5) * 0.3

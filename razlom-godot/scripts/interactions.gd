@@ -5,6 +5,7 @@ var panel: PanelContainer
 var column: VBoxContainer
 var scroll: ScrollContainer
 var scroll_finger := -1
+var medic_motion: RazlomActorMotion
 
 func spawn_shelter(parent: Node3D) -> void:
 	var doctor := StaticBody3D.new()
@@ -14,7 +15,9 @@ func spawn_shelter(parent: Node3D) -> void:
 	parent.add_child(doctor)
 	doctor.position = Vector3(-25.5, 0.25, 24)
 	var model: PackedScene = load("res://assets/models/medic.tscn")
-	doctor.add_child(model.instantiate())
+	var visual := model.instantiate() as Node3D
+	doctor.add_child(visual)
+	medic_motion = RazlomActorMotion.new(visual)
 	var col := CollisionShape3D.new()
 	var shape := CapsuleShape3D.new()
 	shape.radius = 0.35
