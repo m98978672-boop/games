@@ -43,6 +43,7 @@ var sound_playback: AudioStreamGeneratorPlayback
 var audio_rng := RandomNumberGenerator.new()
 var world_rng := RandomNumberGenerator.new()
 var elapsed := 0.0
+var web_report_time := 0.0
 var active_debris := 0
 var active_charges := 0
 var world_epoch := 0
@@ -633,6 +634,17 @@ func _input(event: InputEvent) -> void:
 			DisplayServer.window_set_title("РАЗЛОМ / FPS %d / debris %d / blocks %d" % [Engine.get_frames_per_second(), active_debris, blocks.size()])
 
 func _process(delta: float) -> void:
+	# Read-only browser diagnostics: no RPC or mutable RatCore geometry is shared.
+	if OS.has_feature("web"):
+		web_report_time -= delta
+		if web_report_time <= 0 and is_instance_valid(player):
+			web_report_time = 0.25
+			var bridge = Engine.get_singleton("JavaScriptBridge")
+			bridge.eval("window.__razlomStatus = " + JSON.stringify({
+				"ready": true, "started": started, "paused": get_tree().paused,
+				"health": state.health, "pump": state.pump, "complete": state.complete,
+				"position": [player.position.x, player.position.y, player.position.z],
+				"saveExists": FileAccess.file_exists(save_path)}))
 	if not is_instance_valid(stats_label):
 		return
 	stats_label.text = "ЗДОРОВЬЕ %03d     ВОДА %03d     ЕДА %03d     СИЛЫ %03d\nМАГАЗИН %02d / %02d     ЗАРЯДЫ %d     АПТЕЧКИ %d     ДЕТАЛИ %d" % [state.health, state.water, state.hunger, state.stamina, state.ammo, state.reserve, state.charges, state.medkits, state.scrap]
