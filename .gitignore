@@ -14,3 +14,7 @@ _shots/
 # сборка раздачи для Dropbox (не в git)
 /warehouse-crew.zip
 /START-HERE.txt
+
+# промежуточные файлы сборки видео «Борис»
+/boris/build/
+/boris/audio/*.wav

@@ -40,6 +40,7 @@ var defeated: Array = []
 var enemies: Array = []
 var loot_index := 0
 var ended := false
+var death_age := -1.0
 var started := false
 var message_time := 0.0
 var music: AudioStreamPlayer
@@ -343,7 +344,7 @@ func fire() -> void:
 	player.on_shot()
 	noise(player.global_position, 24)
 	play_tone(95, 0.07, 0.22)
-	var query := PhysicsRayQueryParameters3D.create(player.camera.global_position, player.camera.global_position + last_shot_direction * 80, 1 | 4 | 16)
+	var query := PhysicsRayQueryParameters3D.create(player.camera.global_position, player.camera.global_position + last_shot_direction * 80, 1 | 4 | 8 | 16)
 	query.exclude = [player.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty():
@@ -354,6 +355,8 @@ func fire() -> void:
 		if object is RazlomBlock:
 			object.bullet_hit(hit.position, last_shot_direction, 0.012, 36.0)
 		elif object is RazlomEnemy:
+			object.hit_at(36, hit.position, hit.normal, last_shot_direction * 9)
+		elif object.has_method("hit_at"):
 			object.hit_at(36, hit.position, hit.normal, last_shot_direction * 9)
 		elif object.has_method("hit"):
 			object.hit(36, -player.camera.global_basis.z * 9)
@@ -382,26 +385,48 @@ func share_contact(sender, point: Vector3) -> void:
 			guard.receive_report(point)
 
 func enemy_fire(guard) -> void:
-	if state.passage or not guard.sees_player():
+	if state.passage or guard.dead or guard.arm_wounds.y >= 60 or not guard.sees_player():
 		return
+	guard.shots_fired += 1
 	guard.motion.fire()
 	guard.weapon_motion.trigger_shot()
 	play_tone(70, 0.04, 0.06)
-	# Actual ray with angular dispersion: walls, other guards and posture matter.
+	# A practiced guard settles better, but never becomes a distant hitscan sniper.
+	# Triangular jitter approximates a human shot distribution without a hard accuracy lock.
 	var origin: Vector3 = guard.global_position + Vector3.UP * 1.5
 	var height: float = 1.16 * (0.72 if player.crouched else 1.0)
 	var target: Vector3 = player.global_position + Vector3.UP * height
+	var aim_direction := (target - origin).normalized()
 	var distance := origin.distance_to(target)
-	var spread: float = lerpf(0.025, 0.004, clampf(guard.aim_time / 2.5, 0, 1)) * distance
-	var right := (target - origin).normalized().cross(Vector3.UP).normalized()
-	target += right * world_rng.randf_range(-spread, spread) + Vector3.UP * world_rng.randf_range(-spread, spread)
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + (target - origin).normalized() * 80, 1 | 2 | 4)
+	var quality := clampf(guard.aim_time / 2.5, 0.0, 1.0)
+	var deviation := (0.28 + distance * 0.024) * lerpf(1.0, 0.62, quality)
+	var right := aim_direction.cross(Vector3.UP).normalized()
+	if right.length_squared() < 0.01:
+		right = Vector3.RIGHT
+	var up := right.cross(aim_direction).normalized()
+	var jitter_x := (world_rng.randf() + world_rng.randf() + world_rng.randf() - 1.5) * deviation * 1.9
+	var jitter_y := (world_rng.randf() + world_rng.randf() + world_rng.randf() - 1.5) * deviation * 1.9
+	var shot_direction := (aim_direction + right * (jitter_x / maxf(distance, 1.0)) + up * (jitter_y / maxf(distance, 1.0))).normalized()
+	var ray_end := origin + shot_direction * 80.0
+	var query := PhysicsRayQueryParameters3D.create(origin, ray_end, 1 | 2 | 4 | 8)
 	query.exclude = [guard.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	var impact_point: Vector3 = hit.position if not hit.is_empty() else ray_end
 	if not hit.is_empty():
 		impact_particles(hit.position, hit.normal)
 		if hit.collider == player:
+			guard.shots_hit += 1
 			player.receive_bullet(hit.position, origin)
+	# Close cracks make a visible body duck, interrupt aim, and alert nearby guards.
+	var player_center: Vector3 = player.global_position + Vector3.UP * height
+	var travel := clampf((player_center - origin).dot(shot_direction), 0.0, origin.distance_to(impact_point))
+	var closest := origin + shot_direction * travel
+	if closest.distance_to(player_center) < 1.35 and (hit.is_empty() or hit.collider != player):
+		guard.near_misses += 1
+		noise(impact_point, 14.0)
+		for other in enemies:
+			if is_instance_valid(other) and other != guard and not other.dead and other.global_position.distance_to(impact_point) < 14.0:
+				other.suppress(0.45)
 
 func throw_charge() -> void:
 	if state.charges <= 0:
@@ -792,6 +817,11 @@ func _process(delta: float) -> void:
 				"loadButton": [resume_button.global_position.x, resume_button.global_position.y,
 					resume_button.size.x, resume_button.size.y],
 				"menuRect": [modal.position.x, modal.size.x]}))
+	if ended and death_age >= 0 and not get_tree().paused:
+		death_age += delta
+		if death_age >= 1.0:
+			death_age = -1
+			finish_death_menu()
 	if not is_instance_valid(stats_label):
 		return
 	stats_label.text = "ЗДОРОВЬЕ %03d     ВОДА %03d     ЕДА %03d     СИЛЫ %03d\nМАГАЗИН %02d / %02d     ЗАРЯДЫ %d     АПТЕЧКИ %d     ДЕТАЛИ %d" % [state.health, state.water, state.hunger, state.stamina, state.ammo, state.reserve, state.charges, state.medkits, state.scrap]
@@ -848,7 +878,12 @@ func _process(delta: float) -> void:
 	hint_label.visible = not hint_label.text.is_empty()
 	if state.health <= 0 or player.position.y < -12:
 		ended = true
-		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n" + combat_feedback.injury_text + "\nБез шлема и бронежилета попадание в жизненно важную зону смертельно.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
+		death_age = 0
+		spawn_corpse(player.global_position, player.rotation.y, "head" if combat_feedback.injury_text.contains("ГОЛОВА") else "torso", true)
+		player.begin_death()
+
+func finish_death_menu() -> void:
+	show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n" + combat_feedback.injury_text + "\nБез шлема и бронежилета попадание в жизненно важную зону смертельно.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
 
 func save_game() -> bool:
 	if not started or ended:
@@ -883,6 +918,9 @@ func save_game() -> bool:
 			continue
 		data["loot"].append({"kind": item.get_meta("loot"), "title": item.get_meta("title"), "id": item.get_meta("id"), "position": [item.position.x, item.position.y, item.position.z]})
 	data["dog"] = dog.snapshot() if is_instance_valid(dog) and not dog.is_queued_for_deletion() else {"present": false}
+	data["corpses"] = []
+	for body in get_tree().get_nodes_in_group("corpses"):
+		if not body.is_queued_for_deletion(): data.corpses.append(body.snapshot())
 	data["rubble"] = []
 	for piece in get_tree().get_nodes_in_group("rubble"):
 		if not piece.is_queued_for_deletion():
@@ -890,7 +928,7 @@ func save_game() -> bool:
 	data["guards"] = []
 	for guard in enemies:
 		if is_instance_valid(guard) and not guard.is_queued_for_deletion():
-			data["guards"].append({"id": String(guard.name), "health": guard.health, "position": [guard.position.x, guard.position.y, guard.position.z], "memory": guard.awareness.snapshot(), "leg_wound": guard.leg_wound})
+			data["guards"].append({"id": String(guard.name), "health": guard.health, "position": [guard.position.x, guard.position.y, guard.position.z], "memory": guard.awareness.snapshot(), "leg_wound": guard.leg_wound, "arm_wounds": [guard.arm_wounds.x, guard.arm_wounds.y]})
 	var file := FileAccess.open(save_path + ".tmp", FileAccess.WRITE)
 	if file == null:
 		notify("Не удалось записать сохранение")
@@ -981,6 +1019,8 @@ func load_game() -> bool:
 					guard.awareness.restore(record.get("memory", []))
 					guard.health = float(record.health)
 					guard.leg_wound = record.get("leg_wound", false)
+					var wounds: Array = record.get("arm_wounds", [0, 0])
+					guard.arm_wounds = Vector2(wounds[0], wounds[1])
 					guard.position = Vector3(record.position[0], record.position[1], record.position[2])
 			if not found:
 				guard.queue_free()
@@ -989,6 +1029,8 @@ func load_game() -> bool:
 			dog.restore(data.dog)
 		else:
 			dog.queue_free()
+	for body in data.get("corpses", []):
+		spawn_corpse(Vector3(body.position[0], body.position[1], body.position[2]), body.yaw, body.zone, body.player, null, true)
 	for piece in data.get("rubble", []):
 		spawn_settled_rubble(Vector3(piece.position[0], piece.position[1], piece.position[2]), Vector3(piece.rotation[0], piece.rotation[1], piece.rotation[2]))
 	refresh_navigation()
@@ -1002,6 +1044,8 @@ func load_game() -> bool:
 	combat_feedback.injury_time = 0
 	combat_feedback.hurt_time = 0
 	player.set_crouched(false)
+	player.reset_death_pose()
+	death_age = -1
 	quests.scan_time = 0
 	player.shot_bloom = 0
 	player.shock_blend = 0
@@ -1012,6 +1056,7 @@ func load_game() -> bool:
 	return true
 
 func validate_world_save(data: Dictionary) -> bool:
+	if not RazlomCorpse.valid(data.get("corpses", [])): return false
 	var local_damage = data.get("local_damage", {})
 	if not local_damage is Dictionary or local_damage.size() > 32:
 		return false
@@ -1056,6 +1101,10 @@ func validate_world_save(data: Dictionary) -> bool:
 		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap", "record", "armor", "helmet"] or not record.get("title") is String:
 			return false
 	for record in data.guards:
+		var wounds: Variant = record.get("arm_wounds", [0, 0])
+		if not wounds is Array or wounds.size() != 2: return false
+		for wound in wounds:
+			if not (wound is int or wound is float) or not is_finite(float(wound)) or wound < 0 or wound > 100: return false
 		if not record.get("leg_wound", false) is bool:
 			return false
 		if not RazlomAIMemory.valid(record.get("memory", [])):
@@ -1162,3 +1211,19 @@ func damaged_blocks_count() -> int:
 		if not block.removed.is_empty():
 			total += 1
 	return total
+
+func spawn_corpse(point: Vector3, angle: float, zone: String, player_body: bool = false, model: Node3D = null, instant: bool = false) -> RazlomCorpse:
+	var body := RazlomCorpse.new()
+	body.game = self
+	world.add_child(body)
+	body.player_body = player_body
+	var query := PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.4, point + Vector3.DOWN * 4, 1)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	body.global_position = (hit.position if not hit.is_empty() else point) + Vector3.UP * 0.23
+	if model == null:
+		model = Art.humanoid(body)
+		RazlomActorMotion.new(model)
+		model.get_node("Weapon").hide()
+	body.configure(model, angle, zone, instant)
+	RazlomBloodFX.pool(world, body.global_position + body.basis.x * 0.6 - Vector3.UP * 0.22)
+	return body

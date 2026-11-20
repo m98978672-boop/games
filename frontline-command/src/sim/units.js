@@ -12,6 +12,7 @@ import { courtesyYield } from './door_courtesy.js';
 import { chooseVisionNavigation } from './vision_nav_policy.js';
 import { wallSafeGoal } from './wall_goal.js';
 import { clearCrowdState, prepareCrowdNavigation, setCrowdDetour, crowdPositionFree } from './crowd_nav.js';
+import { trafficEscape } from './traffic_escape.js';
 
 export const NEAR_RADIUS = 40;
 // Счётчики для debug-оверлея (F3) и тестов баланса.
@@ -525,6 +526,8 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
     const detour=occupiedDetour(game,u,dx,dy,game.occupancyGrid,occupancyNeighbors);
     if (detour) { dx=detour.x;dy=detour.y; }
   }
+  const escape=occupancy && !yieldPoint && !doorLane && !u._crowdActive ? trafficEscape(game,u,dx,dy) : null;
+  if (escape) { dx=escape.x-u.x;dy=escape.y-u.y; }
   const len = Math.hypot(dx, dy);
   if (len > 1) { dx /= len; dy /= len; }
   // расталкивание (steering separation)
