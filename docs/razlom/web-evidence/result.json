@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "checks": [
+    "Real WASM game reaches start menu",
+    "Right menu stays inside viewport after text shaping",
+    "Start button resumes world through keyboard focus",
+    "Player moves under browser keyboard input",
+    "Escape returns to pause menu",
+    "Shelter save writes inside browser user storage",
+    "No script or WASM runtime errors"
+  ],
+  "errors": [],
+  "limits": [
+    "Software WebGL on Chromium; not a human campaign playthrough",
+    "Sound is not auditioned",
+    "Only desktop keyboard controls tested"
+  ]
+}
