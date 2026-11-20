@@ -139,6 +139,15 @@ jobs:
           cd cascade-hydro
           npm ci
           node tests/finale.mjs
+      - name: Test last-shore rocks and animals (переступание, звери не застревают)
+        run: |
+          cd last-shore
+          npm run test:build
+          node tests/v018.mjs
+      - name: Test euro-haul smoke (карьера, рейс, сохранение) — без флака
+        run: |
+          cd euro-haul
+          node tests/smoke.mjs
       - name: Test last-shore escape (плот, спасение, экран финала)
         run: |
           cd last-shore
