@@ -54,6 +54,9 @@ func run_tests() -> void:
 	guard.motion.react("head", Vector3(0, 1.6, 0))
 	guard.motion.advance(0.1, 0)
 	check(absf(guard.visual.get_node("Head").rotation.z) > 0.1, "Head has separate impact reaction")
+	guard.aim_time = 2.0
+	guard.suppress(0.45)
+	check(guard.motion.duck == 1.0 and guard.aim_time == 0.5, "Suppression makes guard duck and lose the sight picture")
 	guard.hit_at(36, guard.to_global(Vector3(0, 1.65, -0.2)), Vector3.FORWARD, Vector3.BACK)
 	check(guard.dead, "Unprotected lethal head hit stops actor")
 	await process_frame

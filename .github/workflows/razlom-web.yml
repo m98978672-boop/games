@@ -1,7 +1,12 @@
 name: Build and test Razlom Web
 on:
   push:
-    branches: [arena/b225a60c-games]
+    branches: ['arena/**']
+    paths:
+      - 'razlom-godot/**'
+      - 'tools/razlom-web/**'
+      - '.github/workflows/razlom-web.yml'
+  pull_request:
     paths:
       - 'razlom-godot/**'
       - 'tools/razlom-web/**'
@@ -13,12 +18,11 @@ concurrency:
   cancel-in-progress: true
 jobs:
   web:
+    if: github.event_name == 'push' || startsWith(github.head_ref, 'arena/')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -57,7 +61,7 @@ jobs:
             docs/razlom/web-evidence/
             /tmp/native-results.json
       - name: Preserve failure diagnostics on this working branch
-        if: failure()
+        if: failure() && github.event_name == 'push'
         run: |
           mkdir -p docs/razlom/web-evidence
           cp /tmp/razlom-web-check.log docs/razlom/web-evidence/build-failure.txt || true
@@ -67,15 +71,15 @@ jobs:
           git add docs/razlom/web-evidence
           git diff --cached --quiet && exit 0
           git commit -m "Record Web build failure diagnostics [skip ci]"
-          git push origin HEAD:arena/b225a60c-games
+          git push origin "HEAD:$GITHUB_REF_NAME"
       - name: Commit tested Web build only to this working branch
+        if: github.event_name == 'push'
         run: |
           set -euo pipefail
-          test "$GITHUB_REF_NAME" = arena/b225a60c-games
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           cp /tmp/native-results.json docs/razlom/web-evidence/native-results.json
           git add razlom/web docs/razlom/web-evidence
           git diff --cached --quiet && exit 0
           git commit -m "Build tested Razlom Web export and browser evidence [skip ci]"
-          git push origin HEAD:arena/b225a60c-games
+          git push origin "HEAD:$GITHUB_REF_NAME"
