@@ -4,6 +4,7 @@
 import { JSDOM } from 'jsdom';
 import fs from 'node:fs';
 import path from 'node:path';
+import { waitReady } from './wait-ready.mjs';
 
 const dir = path.resolve(import.meta.dirname, '..');
 const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
@@ -20,7 +21,7 @@ window.requestAnimationFrame = globalThis.requestAnimationFrame;
 new Function(fs.readFileSync(path.join(dir, 'tests/.harness-bundle.js'), 'utf8'))();
 window.document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
 window.document.getElementById('btn-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-await new Promise((r) => setTimeout(r, 300));
+await waitReady(window);
 
 const game = window.__game;
 const w = game.world;
