@@ -219,10 +219,30 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) -> void:
 	if dead:
 		return
+	# Project the capsule contact onto visible mesh bounds to avoid floating marks.
+	var direction := impulse.normalized()
+	var nearest := INF
+	var contact: Variant = null
+	for part in visual.find_children("*", "MeshInstance3D", true, false):
+		if not part.is_visible_in_tree() or part.get_parent().has_meta("impact_mark"):
+			continue
+		var from: Vector3 = part.to_local(point - direction * 0.6)
+		var to: Vector3 = part.to_local(point + direction * 1.0)
+		var intersection: Variant = part.get_aabb().intersects_segment(from, to)
+		if intersection is Vector3:
+			var candidate: Vector3 = part.to_global(intersection)
+			var distance: float = candidate.distance_to(point - direction * 0.6)
+			if distance < nearest:
+				nearest = distance
+				contact = candidate
+	if contact is Vector3:
+		point = contact
 	var local := visual.to_local(point)
 	last_hit_region = "head" if local.y > 1.45 else ("left_arm" if local.x < -0.28 else ("right_arm" if local.x > 0.28 else "torso"))
 	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual
 	var mark := RazlomArt.box(host, Vector3.ZERO, Vector3(0.035, 0.035, 0.006), RazlomArt.material(Color("423c34")))
+	mark.set_meta("impact_mark", true)
+	mark.visible = contact is Vector3
 	mark.global_position = point + normal * 0.012
 	mark.look_at(mark.global_position + normal, Vector3.RIGHT if absf(normal.y) > 0.95 else Vector3.UP)
 	impact_marks.append(mark)
