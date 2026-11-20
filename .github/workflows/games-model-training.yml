@@ -4,6 +4,7 @@ name: Games model — обучение и проверка
 # torch и доступа к huggingface), а runner GitHub — может.
 #
 # Запуск: Actions → Games model — обучение и проверка → Run workflow.
+# На push не висит: обучение долгое и дорогое, его запускают осознанно.
 # Всё публикуется артефактами; веса не коммитятся в репозиторий.
 on:
   workflow_dispatch:
@@ -20,14 +21,6 @@ on:
         description: 'Прогнать проверку «находит баги» (медленно, но честно)'
         required: false
         default: 'true'
-  push:
-    branches: [arena/fe53aa07-games]
-    paths:
-      - .github/workflows/games-model-training.yml
-      - tools/training/build-knowledge.mjs
-      - tools/training/finetune.py
-      - tools/training/eval-bugs.py
-      - tools/training/make-bug-bench.mjs
 permissions:
   contents: read
 jobs:
