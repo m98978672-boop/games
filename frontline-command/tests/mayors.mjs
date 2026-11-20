@@ -186,6 +186,27 @@ console.log('Штаб слушает города');
     assert.ok(defUp.length > 0, 'тревога городов не подняла оборону ни одного сектора');
     assert.ok(defUp.every((r) => r.advice && r.advice.defense >= 0), 'оборона выросла не от советов');
   });
+  check('совет по снабжению ограничен и виден в плане штаба', () => {
+    const g = fresh(52);
+    const ai = g.strategic[0];
+    assert.ok(Math.abs(ai.supplyNeedFactor(0) - 1) < 1e-9, 'без совета множитель не 1');
+    assert.ok(Math.abs(ai.supplyNeedFactor(1) - 0.88) < 1e-9, 'склады не облегчают наступление');
+    assert.ok(Math.abs(ai.supplyNeedFactor(-1) - 1.12) < 1e-9, 'пробки не усложняют наступление');
+    assert.ok(Math.abs(ai.supplyNeedFactor(99) - 0.88) < 1e-9, 'совет по снабжению не ограничен сверху');
+    assert.ok(Math.abs(ai.supplyNeedFactor(-99) - 1.12) < 1e-9, 'совет по снабжению не ограничен снизу');
+  });
+  check('склады города попадают в план как снабжение сектора', () => {
+    const g = fresh(53);
+    for (let i = 0; i < 240; i++) g.step(1 / 30);
+    const ai = g.strategic[0];
+    for (const m of g.mayors.list) { m.supply = 0; m.jams = 0.2; }
+    ai.plan(g.cfg.ai.strategic);
+    const quiet = new Map(ai.lastPlan.map((r) => [r.sectorId, r]));
+    for (const m of g.mayors.list) { m.supply = 1; }
+    ai.plan(g.cfg.ai.strategic);
+    const stocked = [...ai.lastPlan.values()].filter((r) => r.supply > (quiet.get(r.sectorId)?.supply ?? 0) + 0.2);
+    assert.ok(stocked.length > 0, 'ни один сектор не получил снабжение от складов городов');
+  });
 }
 
 console.log('Бой меняет жизнь города');
@@ -296,6 +317,14 @@ console.log('Почему — читаемо человеком');
     assert.match(text, /Белая крепость/);
     assert.match(text, /жилой квартал/);
     assert.match(text, /итог/);
+  });
+  check('сводка для интерфейса называет последнее решение мэра', () => {
+    const g = fresh(91);
+    assert.equal(g.mayors.headline(), '', 'до первого дня сводка должна быть пустой');
+    g.mayors.tickDay();
+    const headline = g.mayors.headline();
+    assert.ok(headline.length > 0, 'после решений сводка пуста');
+    assert.match(headline, /итог/, 'в сводке нет причины решения: ' + headline);
   });
 }
 

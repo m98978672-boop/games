@@ -6,8 +6,8 @@
     "games": 233,
     "storefront": 17,
     "collection": 216,
-    "files": 2099,
-    "totalBytes": 51211765,
+    "files": 2100,
+    "totalBytes": 51243313,
     "chunks": 392,
     "blockedFiles": 5
   },
@@ -2090,11 +2090,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "4bbc3374b9afc913ea053e67fd5020edd76230196ecf602a224a544394044e18",
-      "totalSize": 9879711,
+      "infoHash": "f1f6409cfaec4a509e7b004ce54dc081459150f3a19f752ceff76de5ca9ff74a",
+      "totalSize": 9910375,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 559,
+      "fileCount": 560,
       "files": [
         {
           "path": ".gitattributes",
@@ -3478,8 +3478,8 @@
         },
         {
           "path": "package.json",
-          "size": 14753,
-          "sha256": "5150f1f9eb22faead5b0835b88d296a74c4a1413b1fc6592feab3f65a07c2526"
+          "size": 14803,
+          "sha256": "7995b621c00c11a54a202d52c04b8ffe3922f19157140cc9cd5ece8b803a6c3f"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3553,8 +3553,8 @@
         },
         {
           "path": "src/core/save.js",
-          "size": 27461,
-          "sha256": "b1b459fbe6f1ebe3a452c49d87c4f69459eba60fab3380516922d236f459e98f"
+          "size": 27906,
+          "sha256": "01bdf6fad483317dd5332fdf0dd28a95f7753ea0ee56699564d7353d3035d773"
         },
         {
           "path": "src/core/spatial.js",
@@ -3588,8 +3588,8 @@
         },
         {
           "path": "src/sim/ai_strategic.js",
-          "size": 15553,
-          "sha256": "6b18456c7201646355085a743c337a47ab841df22dc145a01ea91c0d6e215e13"
+          "size": 20205,
+          "sha256": "2b6f4a263c18785eb0e19447fc6f308d5017627d246f128b7bcd50055c2861d6"
         },
         {
           "path": "src/sim/autopilot.js",
@@ -3638,8 +3638,8 @@
         },
         {
           "path": "src/sim/game.js",
-          "size": 50232,
-          "sha256": "e9c7e2a8cc9053ec9888f606e76e8c258b5df62d6a3cd352d2344adb36f4ed8a"
+          "size": 51221,
+          "sha256": "6cb0d36475ef3adcd66acaf9b2759f007fe105f72e8576df24b5e85d5fd3aebe"
         },
         {
           "path": "src/sim/incremental_route.js",
@@ -3655,6 +3655,11 @@
           "path": "src/sim/logistics.js",
           "size": 32684,
           "sha256": "b35a19276e1a920ae936738c8ab8421ffb4e8e340ea795bae02394dc2715021c"
+        },
+        {
+          "path": "src/sim/mayors.js",
+          "size": 22917,
+          "sha256": "7ad1afed03d67fd358474971bc82d60a9945381d9ddb4bf7a35f0ea0e1a2642e"
         },
         {
           "path": "src/sim/motion_wall_sweep.js",
@@ -3733,8 +3738,8 @@
         },
         {
           "path": "src/ui/hud.js",
-          "size": 30742,
-          "sha256": "bf8ddccc55217ff81f3283340918708974404caf8b5f498695a22c778b4c9f9a"
+          "size": 32353,
+          "sha256": "1a366fb5213e0c5a7c30510293443fad53c2da82ab3a9cf6b0bfce8795b237b4"
         },
         {
           "path": "src/ui/menus.js",
@@ -5714,8 +5719,8 @@
       "play": "last-shore/index.html",
       "cover": "site/assets/last-shore.webp",
       "dir": "last-shore",
-      "infoHash": "f19170b83ec82f6da428793348ab82781c6132520324e1275849f00e71179568",
-      "totalSize": 2915558,
+      "infoHash": "3dcc332a6c2afb7f3b3b8d9d241192bda4f0de85c98ebcd42358547445fc6815",
+      "totalSize": 2916442,
       "chunkSize": 262144,
       "chunkCount": 12,
       "fileCount": 43,
@@ -5827,8 +5832,8 @@
         },
         {
           "path": "src/mobs.js",
-          "size": 61833,
-          "sha256": "16ae7b90ee2e2e31211fa71cb53db555c11385ddac66a3d124eb20215d7da1b7"
+          "size": 62717,
+          "sha256": "c8ab3fa736b59156320b0390d508f799edba94023d2febd9483288ea74180377"
         },
         {
           "path": "src/models.js",

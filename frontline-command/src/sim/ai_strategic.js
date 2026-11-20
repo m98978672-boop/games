@@ -108,7 +108,7 @@ export class StrategicAI {
     });
     this.lastPlan = scored.map((t) => ({
       sectorId: t.sector.id,
-      attack: t.attack, defense: t.defense,
+      attack: t.attack, defense: t.defense, supply: t.advSupply,
       advice: t.advice || null,
     }));
     // Добивание: когда враг почти разбит, стратег снижает порог сил и идёт на штаб —
@@ -180,9 +180,19 @@ export class StrategicAI {
       // оцениваем, хватит ли сил: сила отрядов против силы врага в секторе и рядом
       let need = (t.enemyPower + 1) * (finishing ? (cfg.finishPowerFactor ?? 1) : 1.25);
       need *= 1 + (cfg.openingPowerMult ?? 0) * opening;
+      /* Снабжение сектора — третий совет городов, и он работает здесь, а
+         не в оценке цели: склады города не делают врага слабее, но через
+         них группа снабжается быстрее и ей нужен меньший запас сил.
+         Пробки действуют наоборот. Поправка ограничена ±12%: логистика
+         мэра облегчает или усложняет наступление, но штаб по-прежнему
+         не ведёт отряды в заведомо проигрышный бой. */
+      need *= this.supplyNeedFactor(t.advSupply);
       if (allIn) need = Math.max(1, need * (cfg.allInPowerFactor ?? 0.55));
       const atkWhy = t.advice && t.advice.attack > 0.15 && t.advice.notes.length
         ? ' · город просит: ' + t.advice.notes.slice(0, 2).join(' · ') : '';
+      const supplyWhy = t.advSupply >= 0.3
+        ? ' · склады города поддерживают наступление'
+        : t.advSupply <= -0.3 ? ' · город предупреждает: снабжение слабое' : '';
       const group = [];
       let power = 0;
       const candidates = free.filter((s) => !used.has(s.id))
@@ -195,7 +205,7 @@ export class StrategicAI {
       if (!group.length || power < need) continue;
       const strategy = this.chooseStrategy(group[0], t, count, persona);
       for (const sq of group) {
-        this.issue(sq, 'capture', t.sector, point, strategy, `атака: ${point.name}` + atkWhy);
+        this.issue(sq, 'capture', t.sector, point, strategy, `атака: ${point.name}` + atkWhy + supplyWhy);
         used.add(sq.id);
         assigned.set(sq.id, { target: t.sector.id, at: game.time });
       }
@@ -241,6 +251,14 @@ export class StrategicAI {
       topAttack: attacks.slice(0, 3).map((a) => `${a.sector.name}:${a.attack.toFixed(2)}`),
     });
     if (this.journal.length > 60) this.journal.shift();
+  }
+
+  /* Множитель нужных сил от снабжения сектора: 1 — города молчат или
+     снабжение обычное, 0.88 — склады города помогают, 1.12 — пробки
+     мешают. Отдельным методом, чтобы предел поправки можно было
+     проверить без разыгрывания целой войны. */
+  supplyNeedFactor(advSupply) {
+    return 1 - clamp(advSupply, -1, 1) * 0.12;
   }
 
   pickSquad(free, sector, used, enemyPower) {
