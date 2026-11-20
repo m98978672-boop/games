@@ -10,7 +10,7 @@ static var sphere: SphereMesh
 static var torus: TorusMesh
 func _ready() -> void:
 	add_to_group("blast_fx")
-	var effects := get_tree().get_nodes_in_group("blast_fx")
+	var effects := get_tree().get_nodes_in_group("blast_fx").filter(func(effect): return not effect.is_queued_for_deletion())
 	if effects.size() > 8:
 		effects[0].queue_free()
 	if sphere == null:

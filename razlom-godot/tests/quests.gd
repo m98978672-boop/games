@@ -104,6 +104,7 @@ func run_tests() -> void:
 	malformed.quests.gate = 8
 	check(not restored.restore(malformed), "State restore validates quest data")
 	snapshot.erase("quests")
+	snapshot.erase("tracked_quest")
 	check(restored.restore(snapshot) and restored.quests.is_empty(), "Old save without quests migrates")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 415
