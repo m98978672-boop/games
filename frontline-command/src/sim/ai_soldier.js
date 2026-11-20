@@ -1,5 +1,6 @@
 import { solidUnitMoveFree } from './solid_units.js';
 import { unsafeRest, safeRestGoal } from './rest_positions.js';
+import { clearFinalApproach } from './arrival.js';
 // Индивидуальный ИИ солдата: Behavior Tree с приоритетами из спецификации,
 // мораль, укрытия, медики, инженеры, а также ручное управление игроком.
 import { clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp } from '../core/mathx.js';
@@ -268,6 +269,16 @@ export function thinkSoldier(game, u) {
         const spot = game.walls.interiorSpot(b, slot.x, slot.y);
         if (spot) slot = { x: spot.x, y: spot.y };
       }
+    }
+    // A formation offset must not park the squad on the wrong side of the
+    // wall from its order. In this case use the actual anchor, so ordinary
+    // door navigation can lead the unit through the building opening.
+    if (slot && !u.isVehicle && u.activity === 'advance' && sq.anchor && game.walls?.enabled() &&
+        (game.walls.blocksMove(slot.x,slot.y,u.radius,u) ||
+         (game.walls.buildingAtPoint(slot.x,slot.y) !== game.walls.buildingAtPoint(sq.anchor.x,sq.anchor.y) &&
+          !clearFinalApproach(game,{x:slot.x,y:slot.y,radius:u.radius,isVehicle:false},sq.anchor.x,sq.anchor.y))) &&
+        !game.walls.blocksMove(sq.anchor.x,sq.anchor.y,u.radius,u) && game.world.isBaseWalkable(sq.anchor.x,sq.anchor.y)) {
+      slot = {x:sq.anchor.x,y:sq.anchor.y};
     }
     if (slot && u.isVehicle && game.cfg.flag('vehicle_exterior_v1', true) && game.walls?.enabled()) {
       const b = game.walls.buildingAtPoint(slot.x,slot.y);

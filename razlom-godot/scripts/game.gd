@@ -17,6 +17,7 @@ var player
 var dog
 var world: Node3D
 var hud: CanvasLayer
+var combat_feedback: RazlomCombatFeedback
 var stats_label: Label
 var mission_label: Label
 var clock_label: Label
@@ -52,6 +53,8 @@ var world_epoch := 0
 var navigation := AStarGrid2D.new()
 var nav_dirty := false
 var sensitivity := 0.0022
+var look_scale := 1.0
+var sensitivity_step := 1
 var low_quality := false
 var ambience: WorldEnvironment
 
@@ -81,7 +84,7 @@ func _ready() -> void:
 	setup_hud()
 	if mobile_mode:
 		toggle_quality()
-	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nСыну Рады осталось воды на одну ночь.\nИ кому-то было приказано не пускать нас на склад».\n\nДоберись до склада, забери блок и вернись к убежищу.\nМожно пройти через ворота или пробить кирпичную стену.")
+	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nСыну Рады осталось воды на одну ночь.\nИ кому-то было приказано не пускать нас на склад».\n\n1. Выйди из убежища.\n2. Следуй направлению и расстоянию слева сверху.\n3. Найди насос на складе и верни его сюда.\n\nУ дороги есть связной Павел: поговори с ним о проходе без боя. Охрану также можно обойти.\nУправление: " + ("левый круг — идти, справа проведи пальцем — осмотреться. Кнопка ВЗЯТЬ — действие." if mobile_mode else "WASD — идти, мышь — смотреть, E — взять предмет. Esc — пауза.") + "")
 
 func fit_mobile() -> void:
 	var pixels := get_window().size
@@ -325,11 +328,15 @@ func ray(distance: float = 65.0) -> Dictionary:
 	return get_world_3d().direct_space_state.intersect_ray(query)
 
 func fire() -> void:
+	player.on_shot()
 	noise(player.global_position, 24)
 	play_tone(95, 0.07, 0.22)
 	var hit := ray()
 	if not hit.is_empty():
 		var object: Object = hit.collider
+		if object is RazlomEnemy:
+			combat_feedback.hit_time = 0.18
+		impact_particles(hit.position, hit.normal)
 		if object.has_method("hit"):
 			object.hit(36, -player.camera.global_basis.z * 9)
 		flash(hit.position, Color("ffce84"), 0.08, 0.09)
@@ -357,9 +364,10 @@ func share_contact(sender, point: Vector3) -> void:
 			guard.receive_report(point)
 
 func enemy_fire(guard) -> void:
-	if not guard.sees_player():
+	if state.passage or not guard.sees_player():
 		return
 	guard.motion.fire()
+	guard.weapon_motion.trigger_shot()
 	play_tone(70, 0.04, 0.06)
 	# Explicit prototype accuracy: seeded chance only after actual line of sight.
 	if world_rng.randf() < 0.55:
@@ -453,7 +461,7 @@ func complete_mission() -> void:
 	state.bottles += 2
 	notify("Вера: «Вода пошла. Значит, утро у нас будет». Глава завершена")
 	var checkpoint := save_game()
-	show_menu("ВОДА ВЕРНУЛАСЬ", "ГЛАВА 01 ЗАВЕРШЕНА\n\nВера запускает насос. Впервые за много дней вода не пахнет железом.\n«Ты вернулся. Это важнее, чем ты думаешь».\n\nПрипасы: +2 еды, +2 воды.\n" + ("Прогресс сохранён в убежище." if checkpoint else "Автосохранение пока недоступно. Сохранись в убежище, когда стихнет тревога.") + "\n\n" + ("Накладная обнародована. Жители узнают, кто перекрыл воду; Вера всё ещё надеется найти брата." if state.truth_shared else ("Подпись Ильи осталась между тобой и Верой. Правда может расколоть убежище, но молчание тоже имеет цену." if state.manifest else "На складе осталась накладная. Вера просит узнать, почему насос так и не дошёл до Очага.")) + "\n\nМожно продолжить исследование. Следующие главы ещё в разработке.")
+	show_menu("ВОДА ВЕРНУЛАСЬ", "ГЛАВА 01 ЗАВЕРШЕНА\n\nВера запускает насос. Впервые за много дней вода не пахнет железом.\n«Ты вернулся. Это важнее, чем ты думаешь».\n\nПрипасы: +2 еды, +2 воды.\n" + ("Прогресс сохранён в убежище." if checkpoint else "Автосохранение пока недоступно. Сохранись в убежище, когда стихнет тревога.") + "\n\n" + ("Накладная обнародована. Жители узнают, кто перекрыл воду; Вера всё ещё надеется найти брата." if state.truth_shared else ("Подпись Ильи осталась между тобой и Верой. Правда может расколоть убежище, но молчание тоже имеет цену." if state.manifest else "На складе осталась накладная. Вера просит узнать, почему насос так и не дошёл до Очага.")) + "\n\n" + ("Павел сдержал слово: насос вернулся без нового боя. Его рассказ об аварийной сирене даёт Вере первую зацепку." if state.passage else "") + "\n\nМожно продолжить исследование. Следующие главы ещё в разработке.")
 
 func is_sheltered(pos: Vector3) -> bool:
 	return absf(pos.x + 23) < 4.8 and pos.z > 17.5 and pos.z < 26.5 and pos.y < 3.5
@@ -528,6 +536,8 @@ func setup_hud() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(root)
+	combat_feedback = RazlomCombatFeedback.new()
+	root.add_child(combat_feedback)
 	var brand := ui_label("Р А З Л О М   /   Р У Б Е Ж", 24)
 	brand.position = Vector2(36, 28)
 	root.add_child(brand)
@@ -558,6 +568,16 @@ func setup_hud() -> void:
 	message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	message_label.position = Vector2(-340, -199)
 	root.add_child(message_label)
+	for readable in [stats_label, hint_label, message_label]:
+		readable.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.02, 0.95))
+		readable.add_theme_constant_override("outline_size", 5)
+	var hint_style := StyleBoxFlat.new()
+	hint_style.bg_color = Color(0.02, 0.055, 0.045, 0.92)
+	hint_style.content_margin_left = 10
+	hint_style.content_margin_right = 10
+	hint_style.content_margin_top = 6
+	hint_style.content_margin_bottom = 6
+	hint_label.add_theme_stylebox_override("normal", hint_style)
 	var controls := ui_label("WASD  ДВИЖЕНИЕ    /    ЛКМ  ОГОНЬ    /    E  ВЗЯТЬ    /    R  МАГАЗИН    /    G  ЗАРЯД    /    ESC  МЕНЮ", 12, Color("a5b6a5"))
 	controls.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	controls.position = Vector2(36, -32)
@@ -594,6 +614,14 @@ func setup_hud() -> void:
 	music_button.text = "Тихая музыка · вкл / выкл"
 	music_button.pressed.connect(toggle_music)
 	column.add_child(music_button)
+	var sensitivity_button := Button.new()
+	sensitivity_button.text = "Обзор · чувствительность: обычная"
+	sensitivity_button.pressed.connect(func():
+		sensitivity_step = (sensitivity_step + 1) % 3
+		look_scale = [0.65, 1.0, 1.4][sensitivity_step]
+		sensitivity_button.text = "Обзор · чувствительность: " + ["низкая", "обычная", "высокая"][sensitivity_step])
+	column.add_child(sensitivity_button)
+	menu_style.button(sensitivity_button, false)
 	var tips := ui_label("H — лечение   •   1 — еда   •   2 — вода   •   F5 / F9 — сохранить / загрузить\nПКМ — прицел   •   Shift — бег   •   Space — прыжок   •   C — присесть   •   F — фонарь   •   F2 — FPS", 13, Color("a8bca6"))
 	column.add_child(tips)
 	menu_style.label(modal_title, 46)
@@ -626,13 +654,21 @@ func setup_hud() -> void:
 		mission_label.add_theme_font_size_override("font_size", 13)
 		controls.hide()
 		message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		message_label.position = Vector2(-150, -50)
+		message_label.offset_left = -150
+		message_label.offset_right = 150
+		message_label.offset_top = -80
+		message_label.offset_bottom = 10
 		message_label.custom_minimum_size.x = 300
 		message_label.size = Vector2(300, 90)
 		message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		message_label.add_theme_font_size_override("font_size", 13)
 		hint_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-		hint_label.position = Vector2(-140, 32)
+		hint_label.offset_left = -150
+		hint_label.offset_right = 150
+		hint_label.offset_top = 32
+		hint_label.offset_bottom = 80
+		hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		for label in [brand, clock_label, stats_label, hint_label, message_label]:
 			label.add_theme_color_override("font_outline_color", Color(0.01, 0.04, 0.02, 0.85))
 			label.add_theme_constant_override("outline_size", 3)
@@ -707,6 +743,7 @@ func _process(delta: float) -> void:
 				"touch": touch_ui.diagnostics() if is_instance_valid(touch_ui) else {},
 				"startButton": [start_button.global_position.x, start_button.global_position.y, start_button.size.x, start_button.size.y],
 				"mobile": mobile_mode, "ammo": state.ammo, "yaw": player.rotation.y,
+				"weapon": {"motion": player.motion_state, "phase": player.weapon_motion.phase, "reload": player.reload_time, "magazineY": player.weapon_motion.magazine.position.y, "handY": player.weapon_motion.support_hand.position.y},
 				"view": [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y],
 				"health": state.health, "pump": state.pump, "complete": state.complete,
 				"position": [player.position.x, player.position.y, player.position.z],
@@ -724,9 +761,16 @@ func _process(delta: float) -> void:
 	clock_label.text = "РЕГИОН РУБЕЖ   /   %02d:%02d   /   ТЕПЛО %03d   УСТАЛОСТЬ %03d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	if mobile_mode:
 		clock_label.text = "%02d:%02d  ТЕПЛО %d  УСТАЛОСТЬ %d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
-	mission_label.text = "01  /  ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nМожно продолжить исследование" if state.complete else ("Вернись в убежище\nСдай насосный блок • E" if state.pump else "Найди насосный блок\nСклад 03 · северо-восток"))
+	var destination := Vector3(-23, 0, 22) if state.pump else Vector3(21, 0, -20)
+	var offset: Vector3 = destination - player.global_position
+	var distance := Vector2(offset.x, offset.z).length()
+	var local_target: Vector3 = player.global_transform.basis.inverse() * offset
+	var bearing := atan2(local_target.x, -local_target.z)
+	var direction_text := "ПРЯМО" if absf(bearing) < 0.35 else ("РАЗВЕРНИСЬ" if absf(bearing) > 2.5 else ("ПОВЕРНИ НАПРАВО" if bearing > 0 else "ПОВЕРНИ НАЛЕВО"))
+	mission_label.text = "01 / ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nЗадание завершено" if state.complete else (("Убежище" if state.pump else "Насос · склад 03") + " · %d м\n" % int(distance) + direction_text))
 	if get_tree().paused or ended:
 		return
+	interactions.advance_people(delta)
 	elapsed += delta
 	day_minutes += delta * 0.2
 	var hour := fmod(day_minutes / 60.0, 24.0)
@@ -746,11 +790,12 @@ func _process(delta: float) -> void:
 	hint_label.text = ""
 	var hit := ray(3.2)
 	if not hit.is_empty() and hit.collider.has_meta("loot"):
-		hint_label.text = "E  /  " + str(hit.collider.get_meta("title"))
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + str(hit.collider.get_meta("title"))
 	elif not hit.is_empty() and hit.collider.has_meta("use"):
-		hint_label.text = "E  /  " + str(hit.collider.get_meta("title"))
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + str(hit.collider.get_meta("title"))
 	elif is_sheltered(player.global_position):
-		hint_label.text = "E  /  " + ("Установить насос" if state.pump and not state.complete else "Убежище · верстак")
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + ("Установить насос" if state.pump and not state.complete else "Убежище · верстак")
+	hint_label.visible = not hint_label.text.is_empty()
 	if state.health <= 0 or player.position.y < -12:
 		ended = true
 		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
@@ -1016,3 +1061,16 @@ func _exit_tree() -> void:
 		shot_sound.stop()
 		shot_sound.stream = null
 	sound_playback = null
+
+func impact_particles(point: Vector3, normal: Vector3) -> void:
+	# Four short-lived visual chips; no collision bodies and no persistent decals.
+	for i in range(4):
+		var chip := Art.box(world, point + normal * 0.04, Vector3(0.025, 0.025, 0.06), Art.material(Color("d5b278")))
+		var tangent := normal.cross(Vector3.UP)
+		if tangent.length_squared() < 0.01:
+			tangent = Vector3.RIGHT
+		var end := chip.position + normal * 0.22 + tangent.normalized() * (float(i) - 1.5) * 0.11 + Vector3.UP * (0.08 + i * 0.025)
+		var tween := chip.create_tween().set_parallel(true)
+		tween.tween_property(chip, "position", end, 0.18)
+		tween.tween_property(chip, "scale", Vector3.ONE * 0.05, 0.22)
+		tween.chain().tween_callback(chip.queue_free)

@@ -26,22 +26,32 @@ export function safeRestGoal(game, u, goal) {
   // the spatial grid anew for every one of the candidate positions.
   const refs = walls.refsInBox ? walls.refsInBox(goal.x, goal.y, 120 + r + 24) : walls.refsNear(goal.x, goal.y, 120 + r + 24);
   if (!unsafeInRefs(refs, goal.x, goal.y, r)) return goal;
+  // Preserve the destination's side of a wall. Preferring the unit's side can
+  // turn an order to enter a building into a parking spot outside it. If the
+  // requested point itself intersects a wall, its side is ambiguous: retain
+  // the old conservative preference for the mover's side in that case.
   const origin = walls.buildingAtPoint(u.x, u.y);
+  const ambiguous = !!walls.blocksMove?.(goal.x,goal.y,r,u);
+  const targetSide = ambiguous ? origin : walls.buildingAtPoint(goal.x,goal.y);
   const fromGoal = Math.hypot(goal.x-u.x,goal.y-u.y);
-  let best = null, bestScore = Infinity;
+  let best = null, bestScore = Infinity, bestOnSide = false;
   for (let d = 8; d <= 120; d += 8) {
     // Every remaining candidate has at least this score; preserves the same
     // optimum while avoiding needless outer rings.
-    if (d + Math.max(0, fromGoal - d) * 0.01 > bestScore) break;
+    if ((ambiguous || bestOnSide) && d + Math.max(0, fromGoal - d) * 0.01 > bestScore) break;
     for (let k = 0; k < 16; k++) {
       const a = k * Math.PI / 8, x = goal.x + Math.cos(a) * d, y = goal.y + Math.sin(a) * d;
       if (x-r < 0 || y-r < 0 || x+r > w.W || y+r > w.H ||
           !w.isBaseWalkable(x,y) || !w.isBaseWalkable(x-r,y-r) || !w.isBaseWalkable(x+r,y-r) ||
           !w.isBaseWalkable(x-r,y+r) || !w.isBaseWalkable(x+r,y+r) || unsafeInRefs(refs,x,y,r)) continue;
       const base = d + Math.hypot(x-u.x,y-u.y)*0.01;
-      if (base >= bestScore) continue;
-      const score = base + (walls.buildingAtPoint(x,y) === origin ? 0 : 32);
-      if (score < bestScore) { bestScore = score; best = { ...goal, x, y }; }
+      if ((ambiguous || bestOnSide) && base >= bestScore) continue;
+      const sameSide = walls.buildingAtPoint(x,y) === targetSide;
+      if (!ambiguous && bestOnSide && !sameSide) continue;
+      const score = base + (sameSide ? 0 : 32);
+      if ((!ambiguous && sameSide && !bestOnSide) || score < bestScore) {
+        bestScore = score; bestOnSide = sameSide; best = { ...goal, x, y };
+      }
     }
   }
   return best;

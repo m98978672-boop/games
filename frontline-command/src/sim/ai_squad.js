@@ -1,6 +1,7 @@
 // Тактический ИИ отряда: FSM «Двигаться → Занять → Подавить → Штурмовать → Отступить → Перегруппироваться»,
 // фазы алгоритма директивы, формации, перекаты, фланги.
 import { clamp, dist, angleTo, lerp } from '../core/mathx.js';
+import { squadNearObjective } from './arrival.js';
 
 const PHASE_STATE = {
   attack: 'assault', hold: 'suppress', avoid: 'retreat',
@@ -56,7 +57,7 @@ export class SquadAI {
     // Перегруппировка: у рубежа, пока не восстановим мораль/патроны
     if (sq.state === 'retreat') {
       const rp = sq.retreatPoint || c;
-      const atRally = dist(c.x, c.y, rp.x, rp.y) < 130;
+      const atRally = squadNearObjective(game, sq, rp, 130, c);
       sq.anchor = { x: rp.x, y: rp.y };
       sq.stateLabel = 'отступление';
       if (atRally) {
@@ -117,7 +118,7 @@ export class SquadAI {
       const t = game.unitById(sq.objective.targetUnitId);
       if (!t || !t.alive) this.completeObjective(sq, null);
     }
-    if (sq.objective && dist(c.x, c.y, sq.objective.x, sq.objective.y) < 90) {
+    if (sq.objective && squadNearObjective(game, sq, sq.objective, 90, c)) {
       if (sq.objective.type === 'move' || sq.objective.type === 'retreat') {
         sq.state = 'hold';
         sq.stateLabel = 'на позиции';
@@ -173,7 +174,7 @@ export class SquadAI {
       supp /= Math.max(1, sq.units().length);
       if (supp >= until.suppression) next = true;
     }
-    if (until.reached && sq.objective && dist(c.x, c.y, sq.objective.x, sq.objective.y) < 110) next = true;
+    if (until.reached && sq.objective && squadNearObjective(game, sq, sq.objective, 110, c)) next = true;
     if (until.regrouped && sq.state === 'regroup') next = true;
     if (next && sq.phaseIndex < strategy.phases.length - 1) {
       sq.phaseIndex++;

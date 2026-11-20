@@ -39,6 +39,34 @@ try{
   await page.goto(base,{waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
   const on=await runScene();assert.equal(on.flag,true);assert.equal(on.arrived,true);assert.equal(on.pathFailed,false);
   assert.equal(on.collided,false);assert.ok(on.maxStep<=on.limit+1e-9);
+  const wallOrders=await page.evaluate(async()=>{
+    const {Game}=await import('/src/sim/game.js'),{Squad}=await import('/src/sim/squads.js');
+    const results=[];
+    for(const faction of [0,1])for(const dir of [-1,1])for(const kind of ['move','hold']){
+      const g=new Game({cfg:window.__frontline.cfg,seed:7,aiVsAi:true});
+      g.units.clear();g.unitGrid.clear();g.squads.clear();g.api.orders=[];
+      for(const sys of [...g.strategic,g.autopilot,g.rules,g.logistics,g.build,g.influence])sys.update=()=>{};
+      g.checkVictory=()=>{};
+      const b=g.world.buildings.find(b=>b.faction===faction&&b.type==='hq'&&g.walls.state(b));
+      const s=g.walls.state(b).outline.segments.find(s=>s.length>=80&&s.blocksMove);
+      const [[ax,ay],[bx,by]]=s.points,len=Math.hypot(bx-ax,by-ay),nx=-(by-ay)/len,ny=(bx-ax)/len;
+      const mx=b.x+(ax+bx)/2,my=b.y+(ay+by)/2;
+      const u=g.spawnUnit(faction,'infantry',mx+dir*nx*28,my+dir*ny*28),goal={x:mx-dir*nx*28,y:my-dir*ny*28};
+      const sq=new Squad(g,{faction});g.squads.set(sq.id,sq);sq.addUnit(u);sq.retreatTier='never';sq.strategyId='rush';
+      const order=g.api.issue({source:'player',type:kind,faction,squadIds:[sq.id],target:goal});
+      let crossed=false,arrived=false;
+      for(let i=0;i<1200;i++){
+        const x=u.x,y=u.y;g.step(.05);
+        if(Math.hypot(x-u.x,y-u.y)>1e-8&&g.walls.blocksMoveSweep(x,y,u.x,u.y,u.radius,u))crossed=true;
+        if(order.status==='accepted'&&sq.state==='hold'){
+          arrived=Math.hypot(u.x-goal.x,u.y-goal.y)<90&&!g.walls.blocksMoveSweep(u.x,u.y,goal.x,goal.y,u.radius,u);break;
+        }
+      }
+      results.push({arrived,crossed});
+    }
+    return results;
+  });
+  assert.equal(wallOrders.length,8);assert.ok(wallOrders.every(x=>x.arrived&&!x.crossed),'real HQ wall orders reach the correct side');
   await page.evaluate(()=>window.__frontline.newGame({seed:1,aiVsAi:true}));
   await page.waitForFunction(()=>window.__frontline.game?.time>0.1,{timeout:30000});
   assert.deepEqual(errors,[]);console.log('Chromium: default-on U detour, collision/speed check, live game ticks, no page errors');

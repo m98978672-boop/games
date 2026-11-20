@@ -15,6 +15,7 @@ var cooldown := 0.0
 var scan := 0.0
 var home := Vector3.ZERO
 var phase := 0.0
+var weapon_motion: RazlomWeaponMotion
 var motion: RazlomActorMotion
 var visual: Node3D
 var think_label: Label3D
@@ -34,6 +35,14 @@ func _ready() -> void:
 	add_child(col)
 	visual = RazlomArt.humanoid(self)
 	motion = RazlomActorMotion.new(visual)
+	visual.get_node("Weapon").hide()
+	var weapon: Node3D = load("res://assets/models/carbine.tscn").instantiate()
+	visual.get_node("ArmRJoint/ArmR").add_child(weapon)
+	weapon.position = Vector3(-0.15, 0.09, -0.29)
+	weapon.scale = Vector3.ONE * 0.65
+	weapon.get_node("LeftHand").hide()
+	weapon.get_node("RightHand").hide()
+	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home
 	think_label = RazlomArt.sign_text(self, "", Vector3(0, 2.25, 0), 24)
@@ -78,6 +87,10 @@ func remember_sighting(point: Vector3) -> void:
 
 func choose_target(delta: float) -> Vector3:
 	var contact := awareness.focus()
+	if game.state.passage:
+		alert = false
+		behavior = "stand_down"
+		return home
 	if visible_contact:
 		behavior = "engage"
 		alert = true
@@ -120,13 +133,20 @@ func _physics_process(delta: float) -> void:
 	if scan <= 0:
 		scan = 0.22
 		visible_contact = sees_player()
-		if visible_contact:
+		if visible_contact and not game.state.passage:
 			remember_sighting(game.player.global_position)
 			if cooldown <= 0:
 				cooldown = 1.3
 				game.enemy_fire(self)
 	phase += delta
 	var target := choose_target(delta)
+	# Wounded guards withdraw only from a currently visible opponent.
+	if visible_contact and health < 35 and not game.state.passage:
+		var away: Vector3 = global_position - last_seen
+		away.y = 0
+		if away.length() > 0.1:
+			target = global_position + away.normalized() * 5.0
+			behavior = "withdraw"
 	path_timer -= delta
 	if path_timer <= 0:
 		path_timer = 0.45
@@ -151,13 +171,19 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 18 * delta
 	move_and_slide()
 	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
-	think_label.text = "!" if behavior == "engage" else ("?" if alert else "")
+	weapon_motion.advance(0, motion.recoil * 0.09, delta)
+	think_label.text = "ПРОХОДИ" if game.state.passage else ("ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else "")))
 	think_label.modulate = Color("efb26a")
 
 func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	if dead:
 		return
 	health -= amount
+	if amount > 0 and game.state.passage:
+		game.state.passage = false
+		game.state.passage_broken = true
+		game.notify("Договор нарушен: охрана снова враждебна")
+	motion.hurt()
 	# A hit is evidence of danger, not a magical coordinate of an unseen shooter.
 	if sees_player():
 		remember_sighting(game.player.global_position)
@@ -169,4 +195,11 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		game.state.kills += 1
 		game.defeated.append(name)
 		game.spawn_loot("ammo", global_position + Vector3.UP * 0.3, "Патроны • +18")
+		# Collision/AI disappear immediately; detached visual finishes its fall.
+		visual.reparent(game.world, true)
+		visual.set_meta("defeat_visual", true)
+		var fall := visual.create_tween()
+		fall.tween_property(visual, "rotation:z", -1.45, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		fall.tween_interval(2.0)
+		fall.tween_callback(visual.queue_free)
 		queue_free()

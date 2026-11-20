@@ -5,7 +5,7 @@ import { updatePerception } from '../src/sim/units.js';
 import { thinkSoldier } from '../src/sim/ai_soldier.js';
 
 const cfg=await loadConfig();
-assert.equal(cfg.flag('bot_surround_vision_v1'),false,'surround vision must default off');
+assert.equal(cfg.flag('bot_surround_vision_v1'),true,'surround vision must be active in normal play');
 const g=new Game({cfg,seed:1,aiVsAi:true});g.units.clear();g.unitGrid.clear();
 const u=g.spawnUnit(0,'infantry',2000,2000),enemy=g.spawnUnit(1,'infantry',2200,2000);
 u.facing=0;g.world.hasLOS=()=>true;

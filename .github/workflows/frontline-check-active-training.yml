@@ -1,0 +1,41 @@
+# Refresh the latest durable checkpoint after phase 2 without stopping the trainer.
+name: Check active Frontline training progress
+on:
+  push:
+    branches: [arena/11f06075-games]
+    paths: [.github/workflows/frontline-check-active-training.yml]
+permissions:
+  contents: read
+jobs:
+  read-checkpoints:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Inspect durable training checkpoints without interrupting training
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/checkpoints"
+          tag=frontline-learning-15h-44671482687
+          assets=$(gh release view "$tag" --json assets --jq '.assets[].name')
+          for phase in 1 2 3; do
+            for file in "phase-$phase-slot-0.tar.gz" "phase-$phase-slot-1.tar.gz" "phase-$phase-complete.tar.gz"; do
+              if grep -Fxq "$file" <<< "$assets"; then
+                if gh release download "$tag" --pattern "$file" --dir "$RUNNER_TEMP/checkpoints"; then
+                  tar -xOzf "$RUNNER_TEMP/checkpoints/$file" checkpoint/progress.json > "$RUNNER_TEMP/checkpoints/$file.json"
+                fi
+              fi
+            done
+          done
+          python - <<'PY'
+          import glob,json,os
+          rows=[]
+          for path in glob.glob(os.path.join(os.environ['RUNNER_TEMP'],'checkpoints','*.json')):
+              with open(path) as f: data=json.load(f)
+              rows.append(data)
+          if not rows: raise RuntimeError('No checkpoint could be read')
+          best=max(rows,key=lambda x:(x['active_seconds'],x['steps']))
+          print('::notice::ACTUAL_PROGRESS '+json.dumps(best,separators=(',',':')),flush=True)
+          PY

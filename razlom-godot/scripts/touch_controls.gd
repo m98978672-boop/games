@@ -5,6 +5,7 @@ var game
 var movement := Vector2.ZERO
 var move_id := -1
 var look_id := -1
+var look_position := Vector2.ZERO
 var move_origin := Vector2.ZERO
 var move_knob := Vector2.ZERO
 var held: Dictionary = {}
@@ -40,6 +41,8 @@ func layout() -> void:
 	queue_redraw()
 
 func reset() -> void:
+	if game != null and is_instance_valid(game.player):
+		game.player.reset_touch_look()
 	for action in held.values():
 		if InputMap.has_action(action):
 			Input.action_release(action)
@@ -91,17 +94,19 @@ func _input(event: InputEvent) -> void:
 					Input.action_press(action)
 				queue_redraw()
 				return
-		if event.position.x < get_viewport_rect().size.x * 0.42 and move_id == -1:
+		if event.position.x < get_viewport_rect().size.x * 0.42 and event.position.y > get_viewport_rect().size.y * 0.5 and move_id == -1:
 			move_id = event.index
 			update_move(event.position)
 		elif look_id == -1:
 			look_id = event.index
+			look_position = event.position
 		get_viewport().set_input_as_handled()
 	elif event is InputEventScreenDrag:
 		if event.index == move_id:
 			update_move(event.position)
 		elif event.index == look_id:
-			game.player.touch_look(event.relative)
+			game.player.touch_look(event.position - look_position)
+			look_position = event.position
 		get_viewport().set_input_as_handled()
 
 func update_move(point: Vector2) -> void:
@@ -115,7 +120,7 @@ func _draw() -> void:
 	draw_circle(move_origin, 72, Color(0.08, 0.14, 0.12, 0.55))
 	draw_arc(move_origin, 72, 0, TAU, 48, Color(0.8, 0.9, 0.73, 0.6), 2)
 	draw_circle(move_knob, 28, Color(0.7, 0.8, 0.62, 0.7))
-	var names := {"fire": "ОГОНЬ", "interact": "ВЗЯТЬ", "jump": "ПРЫЖОК", "reload": "МАГАЗИН", "aim": "ПРИЦЕЛ", "crouch": "ПРИСЕСТЬ", "heal": "ЛЕЧИТЬ", "flashlight": "ФОНАРЬ", "menu": "МЕНЮ", "inventory": "РЮКЗАК"}
+	var names := {"fire": "ОГОНЬ", "interact": "ДЕЙСТВИЕ", "jump": "ПРЫЖОК", "reload": "ПЕРЕЗАР.", "aim": "ПРИЦЕЛ", "crouch": "ПРИСЕСТЬ", "heal": "ЛЕЧИТЬ", "flashlight": "ФОНАРЬ", "menu": "МЕНЮ", "inventory": "РЮКЗАК"}
 	var font := ThemeDB.fallback_font
 	for action in zones:
 		var rect: Rect2 = zones[action]
