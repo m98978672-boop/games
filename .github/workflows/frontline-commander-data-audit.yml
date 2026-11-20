@@ -1,0 +1,41 @@
+name: Verify commander holdout isolation
+on:
+  push:
+    branches: [arena/03bf5b1a-games]
+    paths: [.github/workflows/frontline-commander-data-audit.yml]
+permissions:
+  contents: read
+jobs:
+  isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Recreate balanced data and download original data
+        run: |
+          node frontline-command/tools/training/collect-commander-balanced.mjs "$RUNNER_TEMP/balanced"
+          mkdir "$RUNNER_TEMP/original"
+          gh release download frontline-learning-15h-44671482687 --pattern long-dataset.tar.gz --dir "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/long-dataset.tar.gz" -C "$RUNNER_TEMP/original"
+      - name: Check evaluated inputs against original train and validation data
+        run: |
+          python - <<'PY'
+          import json,os
+          r=os.environ['RUNNER_TEMP']
+          def read(p):return [json.loads(l) for l in open(p)]
+          def key(x):return json.dumps(x['input'],sort_keys=True,separators=(',',':'))
+          old={key(x) for s in ('train','eval') for x in read(f'{r}/original/commander/{s}.jsonl')}
+          out={}
+          for s in ('train','dev','test'):
+            rows=read(f'{r}/balanced/{s}.jsonl');hits=sum(key(x) in old for x in rows)
+            out[s]={'count':len(rows),'overlap_with_prior_train_or_dev':hits}
+          print('::notice::COMMANDER_HOLDOUT_OVERLAP '+json.dumps(out,separators=(',',':')))
+          if out['dev']['overlap_with_prior_train_or_dev'] or out['test']['overlap_with_prior_train_or_dev']:
+            raise ValueError('new dev/test overlap with earlier model inputs; comparison not an independent holdout')
+          PY

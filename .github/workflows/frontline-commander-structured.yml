@@ -1,0 +1,123 @@
+name: Improve commander training data and decisions
+on:
+  push:
+    branches: [arena/03bf5b1a-games]
+    paths: [.github/workflows/frontline-commander-structured.yml]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test and collect quick, disjoint data
+        run: |
+          node frontline-command/tests/commander-balanced-data.mjs
+          node frontline-command/tools/training/collect-commander-balanced.mjs "$RUNNER_TEMP/data" --quick
+      - name: Retrieve verified starting adapter
+        run: |
+          gh release download frontline-obstacle-v2-44626512571 --pattern frontline-obstacle-v2.tar.gz --dir "$RUNNER_TEMP"
+          echo "ba79aaf92c5c4bf11dbb22b3a0b324a834b2aa2f4fa0f376d6d498a02087f4d6  $RUNNER_TEMP/frontline-obstacle-v2.tar.gz" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/source"
+          tar -xzf "$RUNNER_TEMP/frontline-obstacle-v2.tar.gz" -C "$RUNNER_TEMP/source" adapter
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Train one action step and validate outputs
+        run: |
+          set -o pipefail
+          if python -u frontline-command/tools/training/train-commander-structured.py --data "$RUNNER_TEMP/data" --adapter "$RUNNER_TEMP/source/adapter" --out "$RUNNER_TEMP/output" --steps 1 --count 4 2>&1 | tee "$RUNNER_TEMP/smoke.log"; then
+            node frontline-command/tools/training/score-structured.mjs "$RUNNER_TEMP/output/report.json"
+            exit 0
+          fi
+          python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"smoke.log"),errors="replace").read()[-7000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: structured-smoke
+          path: |
+            ${{ runner.temp }}/smoke.log
+            ${{ runner.temp }}/output/
+          if-no-files-found: warn
+          retention-days: 7
+  train:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build balanced training, dev and held-out test examples
+        run: |
+          node frontline-command/tools/training/collect-commander-balanced.mjs "$RUNNER_TEMP/data"
+          python -c 'import json,os; d=json.load(open(os.path.join(os.environ["RUNNER_TEMP"],"data","manifest.json"))); print("::notice::BALANCED_DATA "+json.dumps(d["stats"],separators=(",",":")))'
+      - name: Freeze latest existing adapter without interrupting training
+        run: |
+          set -euo pipefail
+          tag=frontline-learning-15h-44671482687
+          mkdir -p "$RUNNER_TEMP/checkpoints"
+          for f in phase-1-slot-0.tar.gz phase-1-slot-1.tar.gz phase-1-complete.tar.gz; do
+            if gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fxq "$f"; then
+              gh release download "$tag" --pattern "$f" --dir "$RUNNER_TEMP/checkpoints"
+              mkdir "$RUNNER_TEMP/checkpoints/$f.dir"
+              tar -xzf "$RUNNER_TEMP/checkpoints/$f" -C "$RUNNER_TEMP/checkpoints/$f.dir"
+            fi
+          done
+          python - <<'PY'
+          import glob,json,os,shutil
+          root=os.environ['RUNNER_TEMP'];paths=glob.glob(root+'/checkpoints/*.dir/checkpoint/progress.json')
+          if not paths:raise RuntimeError('no checkpoint')
+          paths.sort(key=lambda p:(json.load(open(p))['active_seconds'],json.load(open(p))['steps']))
+          shutil.copytree(os.path.dirname(paths[-1]),root+'/snapshot')
+          print('::notice::STARTING_SNAPSHOT '+json.dumps(json.load(open(paths[-1])),separators=(',',':')))
+          PY
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Train structured commander and compare on separate test seeds
+        run: |
+          set -o pipefail
+          if python -u frontline-command/tools/training/train-commander-structured.py --data "$RUNNER_TEMP/data" --adapter "$RUNNER_TEMP/snapshot/adapter" --out "$RUNNER_TEMP/output" --steps 12 --count 16 2>&1 | tee "$RUNNER_TEMP/train.log"; then
+            node frontline-command/tools/training/score-structured.mjs "$RUNNER_TEMP/output/report.json"
+            exit 0
+          fi
+          python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"train.log"),errors="replace").read()[-7000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: structured-commander-results
+          path: |
+            ${{ runner.temp }}/data/
+            ${{ runner.temp }}/snapshot/progress.json
+            ${{ runner.temp }}/output/
+            ${{ runner.temp }}/train.log
+          if-no-files-found: warn
+          retention-days: 30
