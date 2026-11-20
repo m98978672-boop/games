@@ -97,7 +97,10 @@ func run_tests() -> void:
 	var yaw: float = game.player.rotation.y
 	controls._input(drag)
 	game.player.advance_touch_look(0.05)
-	check(absf(game.player.rotation.y - yaw) > 0.04, "Second finger rotates view independently")
+	var reference := 390.0 / minf(root.get_visible_rect().size.x, root.get_visible_rect().size.y)
+	check(absf(game.player.rotation.y - yaw) > 0.08 * reference, "Second finger rotates view independently")
+	if absf(game.player.rotation.y - yaw) <= 0.08 * reference:
+		print("Look diagnostic: ", controls.look_id, " / ", controls.look_position, " / ", game.player.pending_look, " / yaw ", yaw, " -> ", game.player.rotation.y, " / view ", root.get_visible_rect().size)
 	var fire_rect: Rect2 = controls.zones.fire
 	controls._input(touch_event(3, fire_rect.get_center(), true))
 	check(Input.is_action_pressed("fire") and controls.movement.y < -0.8, "Third finger can fire while the stick remains held")
