@@ -38,10 +38,17 @@ try{
     return {flags,rear,hiddenTank:{los,shots:ammo-u.mag}};
   });}
   await page.goto(base,{waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
+  const defaults=await check();assert.deepEqual(defaults.flags,{surround:true,vehicle:false,obstacle:true});assert.deepEqual(defaults.rear,{contact:true,shots:1});
+  assert.deepEqual(defaults.hiddenTank,{los:false,shots:1});
+  await page.route('**/data/feature_flags.json',async r=>{const resp=await r.fetch(),data=await resp.json();
+    data.flags.find(f=>f.id==='bot_surround_vision_v1').enabled=false;
+    await r.fulfill({response:resp,json:data});});
+  await page.reload({waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
   const off=await check();assert.deepEqual(off.flags,{surround:false,vehicle:false,obstacle:true});assert.deepEqual(off.rear,{contact:false,shots:0});
   assert.deepEqual(off.hiddenTank,{los:false,shots:1});
+  await page.unroute('**/data/feature_flags.json');
   await page.route('**/data/feature_flags.json',async r=>{const resp=await r.fetch(),data=await resp.json();
-    for(const id of ['bot_surround_vision_v1','vehicle_visible_fire_v1','bot_obstacle_vision_v1']){const f=data.flags.find(f=>f.id===id);if(!f)throw Error('missing flag');f.enabled=true;}
+    data.flags.find(f=>f.id==='vehicle_visible_fire_v1').enabled=true;
     await r.fulfill({response:resp,json:data});});
   await page.reload({waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
   const on=await check();assert.deepEqual(on.flags,{surround:true,vehicle:true,obstacle:true});assert.deepEqual(on.rear,{contact:true,shots:1});
