@@ -675,6 +675,8 @@ func toggle_quality() -> void:
 	notify("Низкое качество" if low_quality else "Стандартное качество")
 
 func _input(event: InputEvent) -> void:
+	if mobile_mode and interactions != null:
+		interactions.handle_touch(event)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_ESCAPE and started and not ended:
 			if get_tree().paused:

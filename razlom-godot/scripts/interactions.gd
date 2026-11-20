@@ -3,6 +3,8 @@ extends RefCounted
 var game
 var panel: PanelContainer
 var column: VBoxContainer
+var scroll: ScrollContainer
+var scroll_finger := -1
 
 func spawn_shelter(parent: Node3D) -> void:
 	var doctor := StaticBody3D.new()
@@ -39,13 +41,25 @@ func setup_ui(root: Control) -> void:
 	panel.add_theme_stylebox_override("panel", game.panel_style())
 	column = VBoxContainer.new()
 	column.add_theme_constant_override("separation", 16)
-	var scroll := ScrollContainer.new()
+	scroll = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	panel.add_child(scroll)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(column)
 	layout_dialog()
 	panel.hide()
+
+func handle_touch(event: InputEvent) -> void:
+	if not panel.visible:
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed and panel.get_global_rect().has_point(event.position):
+			scroll_finger = event.index
+		elif not event.pressed and event.index == scroll_finger:
+			scroll_finger = -1
+	elif event is InputEventScreenDrag and event.index == scroll_finger:
+		scroll.scroll_vertical -= int(event.relative.y)
+		game.get_viewport().set_input_as_handled()
 
 func layout_dialog() -> void:
 	var view: Vector2 = game.get_viewport().get_visible_rect().size
@@ -77,6 +91,8 @@ func open(title: String, body: String, choices: Array) -> void:
 		button.custom_minimum_size.y = 42
 		button.pressed.connect(choice.action)
 		column.add_child(button)
+	scroll.scroll_vertical = 0
+	scroll_finger = -1
 	game.modal.hide()
 	panel.show()
 	layout_dialog.call_deferred()
