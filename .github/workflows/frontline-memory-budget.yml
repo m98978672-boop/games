@@ -24,7 +24,8 @@ jobs:
           HF_HUB_DISABLE_XET: '1'
         run: |
           python -m pip install 'transformers==5.5.4'
-          python - <<'PY'
+          set -o pipefail
+          python - <<'PY' 2>&1 | tee "$RUNNER_TEMP/budget.log" || { python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"budget.log"),errors="replace").read()[-7000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'; exit 1; }
           import json,os
           from transformers import AutoTokenizer
           tok=AutoTokenizer.from_pretrained('Qwen/Qwen3.5-0.8B',revision='2fc06364715b967f1860aea9cf38778875588b17')
