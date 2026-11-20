@@ -11,7 +11,7 @@ const run = promisify(execFile);
 
 /* эти тесты бот не запускает: им нужен настоящий браузер, видеокарта,
    картинки-эталоны или сеть */
-const HEAVY = /(browser|render|preview|shot|screenshot|perf|view|texview|dashview|cabview|softview|diag|benchmark|device|autopilot|seams)/i;
+const HEAVY = /(browser|render|preview|shot|screenshot|perf|view|texview|dashview|cabview|softview|diag|benchmark|device|autopilot|seams|covers|phone-features|shaderlog|site-check|robust)/i;
 
 export function testsOf(project) {
   return project.tests
@@ -59,6 +59,16 @@ export async function runTests(root, project, opts = {}) {
           hint: 'возможен бесконечный цикл: node ' + test,
         });
         ran.push({ test, ms: Date.now() - started, ok: false, tail: tail(out) });
+        continue;
+      }
+      /* Тест, которому не хватило браузера, — это не дефект игры. В
+         песочнице без libnspr4 Chromium падает с «Failed to launch the
+         browser process: Code 127», и бот честно писал «тест не проходит»
+         на пять браузерных тестов LAST SHORE. Различаем: не смогли
+         запустить браузер → пропуск; тест упал по существу → находка. */
+      if (/Failed to launch the browser process|error while loading shared libraries|Code: 127|browserType\.launch/i.test(out)) {
+        skipped.push({ test, why: 'нужен браузер, а он в этой среде не запускается' });
+        ran.push({ test, ms: Date.now() - started, ok: true, tail: 'пропуск: браузер недоступен' });
         continue;
       }
       const lines = out.split('\n').filter((l) => /✗|Error|error|провал|Провалено|AssertionError|not ok/.test(l));
