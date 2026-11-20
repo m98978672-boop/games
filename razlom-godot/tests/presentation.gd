@@ -27,6 +27,9 @@ func run_tests() -> void:
 	for i in range(60):
 		motion.advance(1.0 / 60, 0)
 	check(absf(motion.joints.LegL.rotation.x) < 0.001, "Idle settles legs instead of freezing a mid-step pose")
+	# Aim must blend into its pose rather than snapping in a single frame.
+	for i in range(90):
+		motion.advance(1.0 / 60, 0, true)
 	motion.fire()
 	motion.advance(0.01, 0, true)
 	check(motion.joints.ArmL.rotation.x < -0.65, "Firing recoil animates raised arms")
