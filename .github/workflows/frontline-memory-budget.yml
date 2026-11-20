@@ -37,3 +37,5 @@ jobs:
               print('::notice::MEMORY_CONTEXT '+json.dumps({'knowledge':x['knowledge'],'transformersInputTokens':tokens,'outputReserve':96,'limit':1024},separators=(',',':')))
               if tokens+96>1024:raise ValueError('bounded memory fixture exceeds token budget')
           PY
+
+# Recheck whenever the shared compact runtime prompt changes.

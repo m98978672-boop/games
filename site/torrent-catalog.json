@@ -5,7 +5,7 @@
   "stats": {
     "games": 16,
     "files": 1204,
-    "totalBytes": 35989968,
+    "totalBytes": 35990283,
     "chunks": 146,
     "blockedFiles": 3
   },
@@ -2088,8 +2088,8 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "15678bba7034074198c1b301827687063ddec2b8170caccb69ea06727ef9be6d",
-      "totalSize": 9871425,
+      "infoHash": "77456ac17d5a299e08a6bfbfc5185ace502a6abed7a1bba4e9ae15421e19260d",
+      "totalSize": 9871740,
       "chunkSize": 262144,
       "chunkCount": 38,
       "fileCount": 558,
@@ -3486,8 +3486,8 @@
         },
         {
           "path": "src/ai/commander-prompts.js",
-          "size": 2667,
-          "sha256": "465d18fabac3c75002371db1ad6525a6a00b533b9cf8cb454d86d1c5c84d4d9b"
+          "size": 3377,
+          "sha256": "20ebae0956b142f8c2d3836360d0d78cfa10fb21af10535165c79f96af82edac"
         },
         {
           "path": "src/ai/commander-worker-entry.js",
@@ -3496,8 +3496,8 @@
         },
         {
           "path": "src/ai/commander-worker.bundle.js",
-          "size": 6133607,
-          "sha256": "89f2be71c5ce2f248f1a67e42783a888e5a74dc57d82ff71dbc9a45ede2e8c25"
+          "size": 6133212,
+          "sha256": "03ef511491d0939b3affa1d2742894796c49c073c9070915b810ae9c3dffd908"
         },
         {
           "path": "src/ai/licenses/LOGLEVEL-MIT.txt",
