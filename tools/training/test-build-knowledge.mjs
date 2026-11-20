@@ -185,6 +185,21 @@ async function main() {
     all.filter((r) => r.kind === 'code-bench-clean' || r.kind === 'code-clean')
       .every((r) => r.assistant === '{"bug":false}' || r.assistant === 'чисто'));
 
+  // Двойное кодирование в prompts.json уже случалось: cleanAnswer был
+  // строкой '"{\"bug\":false}"' с лишними кавычками, и модель училась
+  // отвечать с ними. Такое молча ломает ответ, поэтому проверяем форму.
+  const promptFile = join(dirname(fileURLToPath(import.meta.url)), 'prompts.json');
+  const promptCfg = JSON.parse(await readFile(promptFile, 'utf8'));
+  const clean = promptCfg.bugCheck.cleanAnswer;
+  check('подсказка чистого ответа — объект, а не строка в кавычках',
+    typeof clean === 'string' && clean.startsWith('{') && clean.endsWith('}'),
+    JSON.stringify(clean));
+  check('подсказка чистого ответа разбирается как JSON',
+    (() => { try { return JSON.parse(clean).bug === false; } catch { return false; } })(),
+    'если это не JSON, модель не сможет ему подражать');
+  check('в системной подсказке описан формат ответа',
+    /\{"bug":true/.test(promptCfg.bugCheck.system) && /\{"bug":false\}/.test(promptCfg.bugCheck.system));
+
   check('манифест фиксирует хэши файлов',
     manifest.files.train.sha256 === hash(await readFile(join(TMP, 'train.jsonl'), 'utf8'))
     || manifest.files.train.sha256.length === 64);
