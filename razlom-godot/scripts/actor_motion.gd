@@ -11,6 +11,7 @@ var rest_height := 0.0
 var is_quadruped := false
 var blink_clock := 0.0
 var gesture := 0.0
+var gesture_kind := "greet"
 
 func _init(root: Node3D, quadruped: bool = false) -> void:
 	model = root
@@ -29,7 +30,8 @@ func _init(root: Node3D, quadruped: bool = false) -> void:
 		limb.reparent(pivot, true)
 		joints[part] = pivot
 
-func greet() -> void:
+func greet(kind: String = "greet") -> void:
+	gesture_kind = kind
 	gesture = 1.6
 
 func hurt() -> void:
@@ -55,6 +57,8 @@ func advance(delta: float, speed: float, aiming: bool = false) -> void:
 			swing -= flinch * 0.3
 		if part == "ArmR" and gesture > 0.0:
 			swing = -1.2 + sin(gesture * 9.0) * 0.18
+		if part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
+			swing = -0.85 + sin(gesture * 7.0) * 0.08
 		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))
 	model.position.y = lerpf(model.position.y, rest_height + (1.0 - cos(clock * 2.0)) * blend * 0.009 + sin(clock * 2.0) * (1.0 - blend) * 0.004, 1.0 - exp(-delta * 10.0))
 	model.rotation.z = lerp_angle(model.rotation.z, flinch * 0.12, 1.0 - exp(-delta * 18.0))
@@ -66,7 +70,7 @@ func advance(delta: float, speed: float, aiming: bool = false) -> void:
 				eye.scale.y = 0.08 if fmod(blink_clock, 4.3) > 4.16 else 1.0
 		var idle := (1.0 - blend) * (0.0 if aiming else 1.0)
 		head.rotation.y = lerp_angle(head.rotation.y, sin(clock * 0.7) * idle * (0.32 if is_quadruped else 0.12), 1.0 - exp(-delta * 5.0))
-		head.rotation.x = lerp_angle(head.rotation.x, (sin(clock * 1.1) * idle * 0.05 if is_quadruped else 0.0) - flinch * 0.18, 1.0 - exp(-delta * 10.0))
+		head.rotation.x = lerp_angle(head.rotation.x, (sin(clock * 1.1) * idle * 0.05 if is_quadruped else 0.0) - flinch * 0.18 + (sin(gesture * 6.0) * 0.07 if gesture > 0.0 else 0.0), 1.0 - exp(-delta * 10.0))
 	var tail := model.get_node_or_null("Tail") as Node3D
 	if tail != null:
 		tail.rotation.y = sin(clock * 1.5) * 0.3

@@ -73,3 +73,13 @@ for index, (name, base) in enumerate(PALETTE.items()):
             rough.putpixel((x,y), max(100, min(250, (150 if name == 'metal' else 220) + round((relief.getpixel((x,y))-128)*0.25))))
     normal.save(OUT / 'surface' / (name + '_normal.png'), optimize=True)
     rough.save(OUT / 'surface' / (name + '_roughness.png'), optimize=True)
+
+# Vera's washed medical canvas is deliberately distinct from military olive cloth.
+canvas = Image.new('RGB', (256, 256))
+rng = random.Random(712)
+for y in range(256):
+    for x in range(256):
+        grain = rng.uniform(-2, 2) + math.sin(x * math.tau / 4) * math.cos(y * math.tau / 4)
+        seam = -13 if x % 128 < 2 else (5 if x % 128 < 5 and y % 8 < 4 else 0)
+        canvas.putpixel((x, y), tuple(round(c + grain + seam) for c in (182, 202, 198)))
+canvas.save(OUT / 'surface' / 'vera_canvas.png', optimize=True)

@@ -95,12 +95,25 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			var eye := box(head, Vector3(side * 0.085, 0.015, -0.178), Vector3(0.065, 0.035, 0.018), material(Color("e5ded0")))
 			eye.name = "EyeL" if side < 0 else "EyeR"
 			box(eye, Vector3(0, 0, -0.012), Vector3(0.026, 0.027, 0.012), eye_mat)
-			box(head, Vector3(side * 0.085, 0.065, -0.18), Vector3(0.085, 0.018, 0.018), material(Color("574533")))
+			box(head, Vector3(side * 0.085, 0.065, -0.18), Vector3(0.07, 0.012 if medic else 0.018, 0.018), material(Color("574533")))
 			box(head, Vector3(side * 0.18, -0.005, 0), Vector3(0.035, 0.075, 0.07), material(Color("b99978")))
 		box(head, Vector3(0, -0.025, -0.19), Vector3(0.045, 0.065, 0.045), material(Color("b99978")))
 		box(head, Vector3(0, -0.09, -0.18), Vector3(0.095, 0.018, 0.018), material(Color("795447")))
-		box(head, Vector3(0, 0.14, 0.015), Vector3(0.35, 0.065, 0.34), material(Color("544435")))
-	var fabric := material(Color("b9c1a9") if medic else Color("768575"), "cloth")
+		var scalp := box(head, Vector3(0, 0.14, 0.015), Vector3(0.35, 0.065, 0.34), material(Color("544435")))
+		if medic:
+			scalp.name = "VeraHairline"
+			# Distinct tied-back hairstyle, carried by the animated head.
+			var old_hair := root.get_node_or_null("Hair") as Node3D
+			if old_hair != null:
+				old_hair.reparent(head, true)
+				old_hair.position = Vector3(0, 0.15, 0.04)
+			for side in [-1, 1]:
+				box(head, Vector3(side * 0.153, 0.055, 0.055), Vector3(0.045, 0.21, 0.24), material(Color("594337")))
+			for i in range(5):
+				var braid := box(head, Vector3(0.105 + sin(i * 2.0) * 0.014, -0.04 - i * 0.055, 0.19), Vector3(0.075, 0.075, 0.075), material(Color("594337")))
+				braid.name = "Braid%d" % i
+			box(head, Vector3(0.105, -0.29, 0.19), Vector3(0.08, 0.025, 0.08), material(Color("b6c8b8")))
+	var fabric := material(Color("e0e7d5") if medic else Color("768575"), "cloth")
 	for side in [-1, 1]:
 		box(root, Vector3(side * 0.15, 1.1, -0.17), Vector3(0.16, 0.17, 0.065), fabric)
 		box(root, Vector3(side * 0.19, 1.25, -0.17), Vector3(0.035, 0.39, 0.035), material(Color("473f33"), "wood"))
