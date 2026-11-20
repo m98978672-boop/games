@@ -45,11 +45,9 @@ func _ready() -> void:
 	camera.add_child(light)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseMotion and not game.mobile_mode and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(-event.relative.x * game.sensitivity)
 		camera.rotation.x = clampf(camera.rotation.x - event.relative.y * game.sensitivity, -1.45, 1.45)
-	if event.is_action_pressed("reload") and reload_time <= 0 and game.state.ammo < 18 and game.state.reserve > 0:
-		reload_time = 1.4
 
 func _physics_process(delta: float) -> void:
 	if game.ended:
@@ -62,6 +60,8 @@ func _physics_process(delta: float) -> void:
 		else:
 			game.notify("Недостаточно места, чтобы встать")
 	camera.position.y = move_toward(camera.position.y, 1.03 if crouched else 1.6, delta * 4)
+	if Input.is_action_just_pressed("reload") and reload_time <= 0 and game.state.ammo < 18 and game.state.reserve > 0:
+		reload_time = 1.4
 	cooldown = maxf(0, cooldown - delta)
 	recoil = move_toward(recoil, 0, delta * 0.8)
 	if reload_time > 0:
@@ -69,8 +69,10 @@ func _physics_process(delta: float) -> void:
 		if reload_time <= 0:
 			game.state.reload_gun()
 	var input := Input.get_vector("left", "right", "forward", "back")
+	if game.mobile_mode and is_instance_valid(game.touch_ui):
+		input = (input + game.touch_ui.movement).limit_length(1)
 	aiming = Input.is_action_pressed("aim")
-	var running: bool = Input.is_action_pressed("sprint") and input.length() > 0.1 and game.state.stamina > 5 and not aiming and not crouched
+	var running: bool = (Input.is_action_pressed("sprint") or (game.mobile_mode and input.length() > 0.95)) and input.length() > 0.1 and game.state.stamina > 5 and not aiming and not crouched
 	var speed := 6.6 if running else 3.8
 	if aiming:
 		speed = 2.1
@@ -104,7 +106,7 @@ func _physics_process(delta: float) -> void:
 	gun.position = gun.position.lerp(anchor + Vector3(0, sin(bob * 2) * 0.009 * input.length(), recoil), delta * 14)
 	gun.rotation.x = -0.6 if reload_time > 0 else recoil * 2
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
-	if Input.is_action_pressed("fire") and cooldown <= 0 and reload_time <= 0 and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if Input.is_action_pressed("fire") and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
 		if game.state.ammo > 0:
 			game.state.ammo -= 1
 			cooldown = 0.19
@@ -139,3 +141,8 @@ func can_stand() -> bool:
 	query.collision_mask = collision_mask
 	query.exclude = [get_rid()]
 	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+func touch_look(relative: Vector2) -> void:
+	if game.mobile_mode and not get_tree().paused:
+		rotate_y(-relative.x * 0.004)
+		camera.rotation.x = clampf(camera.rotation.x - relative.y * 0.004, -1.45, 1.45)
