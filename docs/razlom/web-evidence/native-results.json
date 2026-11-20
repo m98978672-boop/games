@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 43.912,
+  "elapsedSeconds": 42.993,
   "checks": [
     {
       "name": "import",
@@ -198,7 +198,7 @@
     {
       "name": "body-reactions",
       "exitCode": 0,
-      "passed": true,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -207,9 +207,11 @@
         "--script",
         "res://tests/body_reactions.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 24; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 26; failures: 0\nERROR: The object does not have any 'meta' values with the key 'corpse_hit_tween'.\n   at: get_meta (core/object/object.cpp:1054)\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "ERROR: The object does not have any 'meta' values with the key 'corpse_hit_tween'."
+      ]
     },
     {
       "name": "quests",
@@ -245,8 +247,8 @@
     },
     {
       "name": "local-damage",
-      "exitCode": 1,
-      "passed": false,
+      "exitCode": 0,
+      "passed": true,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -255,11 +257,9 @@
         "--script",
         "res://tests/local_damage.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nLocal damage checks: 17; failures: 1\nFAIL: Upper arm starts at body-fixed shoulder\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nLocal damage checks: 17; failures: 0\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": [
-        "FAIL: Upper arm starts at body-fixed shoulder"
-      ]
+      "unexpectedDiagnostics": []
     }
   ],
   "passed": false,
