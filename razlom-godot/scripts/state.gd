@@ -1,12 +1,14 @@
 class_name RazlomState
 extends RefCounted
 const SAVE_VERSION := 2
-const NUMERIC_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "ammo", "reserve", "medkits", "food", "bottles", "charges", "scrap", "kills", "armor", "helmet", "pain", "leg_wound"]
-const METER_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "armor", "helmet", "pain", "leg_wound"]
+const NUMERIC_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "ammo", "reserve", "medkits", "food", "bottles", "charges", "scrap", "kills", "armor", "helmet", "pain", "leg_wound", "left_arm_wound", "right_arm_wound"]
+const METER_KEYS := ["health", "hunger", "water", "stamina", "warmth", "fatigue", "armor", "helmet", "pain", "leg_wound", "left_arm_wound", "right_arm_wound"]
 var armor := 0.0
 var helmet := 0.0
 var pain := 0.0
 var leg_wound := 0.0
+var left_arm_wound := 0.0
+var right_arm_wound := 0.0
 var health := 100.0
 var hunger := 82.0
 var water := 76.0
@@ -74,11 +76,13 @@ func craft(recipe: String) -> bool:
 func use_item(kind: String) -> bool:
 	match kind:
 		"heal":
-			if medkits <= 0 or (health >= 100 and leg_wound <= 0 and pain <= 0):
+			if medkits <= 0 or (health >= 100 and leg_wound <= 0 and pain <= 0 and left_arm_wound <= 0 and right_arm_wound <= 0):
 				return false
 			medkits -= 1
 			health = minf(100, health + 45)
 			leg_wound = 0
+			left_arm_wound = 0
+			right_arm_wound = 0
 			pain *= 0.3
 		"food":
 			if food <= 0 or hunger >= 100:
@@ -116,7 +120,7 @@ func restore(source: Dictionary) -> bool:
 		data["fatigue"] = 12.0
 	if data.get("version", 0) != SAVE_VERSION:
 		return false
-	for key in ["armor", "helmet", "pain", "leg_wound"]:
+	for key in ["armor", "helmet", "pain", "leg_wound", "left_arm_wound", "right_arm_wound"]:
 		if not data.has(key):
 			data[key] = 0.0
 	for key in NUMERIC_KEYS:

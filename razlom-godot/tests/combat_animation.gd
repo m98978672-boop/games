@@ -70,9 +70,9 @@ func run_tests() -> void:
 			corpse = child
 	check(is_instance_valid(corpse), "Defeat leaves a detached visual to finish falling")
 	await create_timer(0.4).timeout
-	check(is_instance_valid(corpse) and absf(corpse.rotation.z) > 1.0, "Defeat visual falls rather than disappearing instantly")
+	check(is_instance_valid(corpse) and absf(corpse.visual.rotation.z) > 1.0, "Defeat visual falls rather than disappearing instantly")
 	await create_timer(2.1).timeout
-	check(not is_instance_valid(corpse), "Temporary defeat visual is cleaned up")
+	check(is_instance_valid(corpse) and corpse.settled, "Settled corpse remains in world after former cleanup deadline")
 	game.queue_free()
 	await process_frame
 	print("Combat animation checks: %d; failures: %d" % [checks, failures])

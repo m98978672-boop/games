@@ -7,6 +7,7 @@ var helmet := 0.0
 var aim_time := 0.0
 var suppression := 0.0
 var leg_wound := false
+var arm_wounds := Vector2.ZERO
 var alert := false
 var last_seen := Vector3.ZERO
 var awareness := RazlomAIMemory.new()
@@ -155,7 +156,7 @@ func _physics_process(delta: float) -> void:
 		visible_contact = sees_player()
 		if visible_contact and not game.state.passage:
 			remember_sighting(game.player.global_position)
-			if cooldown <= 0 and aim_time >= 0.85 and suppression <= 0:
+			if cooldown <= 0 and aim_time >= 0.85 and suppression <= 0 and arm_wounds.y < 60:
 				cooldown = 1.1 + global_position.distance_to(game.player.global_position) * 0.012
 				game.enemy_fire(self)
 				aim_time = 0.35
@@ -199,7 +200,11 @@ func _physics_process(delta: float) -> void:
 		visual.get_node("Head").rotation.x = -clampf(pitch, -0.5, 0.5)
 	if leg_wound:
 		visual.rotation.z = motion.flinch * 0.28 + sin(phase * 7.0) * 0.045
+	if arm_wounds.y >= 30:
+		motion.joints.ArmR.rotation.x = 0.35 + sin(phase * 14) * 0.045
 	weapon_motion.advance(0, motion.recoil * 0.09, delta)
+	if arm_wounds.x >= 30:
+		carried_weapon.get_node("LeftHand").position += Vector3(-0.12, -0.3, 0.1)
 	left_arm.solve(Vector3(-0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("LeftHand").global_position), -1.0)
 	right_arm.solve(Vector3(0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("RightHand").global_position), 1.0)
 	if visible_contact and aim_time < 0.85:
@@ -230,13 +235,7 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		game.state.kills += 1
 		game.defeated.append(name)
 		game.spawn_loot("ammo", global_position + Vector3.UP * 0.3, "Патроны • +18")
-		# Collision/AI disappear immediately; detached visual finishes its fall.
-		visual.reparent(game.world, true)
-		visual.set_meta("defeat_visual", true)
-		var fall := visual.create_tween()
-		fall.tween_property(visual, "rotation:z", -1.45, 0.32).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		fall.tween_interval(2.0)
-		fall.tween_callback(visual.queue_free)
+		game.spawn_corpse(global_position, visual.global_rotation.y, last_hit_region, false, visual)
 		queue_free()
 
 func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) -> void:
@@ -260,10 +259,14 @@ func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) ->
 				contact = candidate
 	if contact is Vector3:
 		point = contact
-	var local := visual.to_local(point)
-	last_hit_region = "head" if local.y > 1.45 else ("left_arm" if local.x < -0.28 else ("right_arm" if local.x > 0.28 else "torso"))
-	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual
-	var mark := RazlomArt.box(host, Vector3.ZERO, Vector3(0.035, 0.035, 0.006), RazlomArt.material(Color("423c34")))
+	var local := to_local(point)
+	var zone := RazlomBallistics.region(local)
+	last_hit_region = ("left_arm" if local.x < 0 else "right_arm") if zone == "arms" else zone
+	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual.get_node("Coat")
+	if last_hit_region == "left_arm": host = visual.get_node("ArmLJoint/ArmL")
+	elif last_hit_region == "right_arm": host = visual.get_node("ArmRJoint/ArmR")
+	elif zone == "legs": host = visual.get_node("LegLJoint/LegL" if local.x < 0 else "LegRJoint/LegR")
+	var mark := RazlomArt.box(host, Vector3.ZERO, Vector3(0.065, 0.055, 0.007), RazlomArt.material(Color("84251e")))
 	mark.set_meta("impact_mark", true)
 	mark.visible = contact is Vector3
 	mark.global_position = point + normal * 0.012
@@ -271,7 +274,7 @@ func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) ->
 	impact_marks.append(mark)
 	if impact_marks.size() > 4:
 		impact_marks.pop_front().queue_free()
-	var zone := RazlomBallistics.region(to_local(point))
+
 	var result := RazlomBallistics.resolve(zone, amount, helmet if zone == "head" else armor)
 	if zone == "head":
 		helmet = maxf(0, helmet - float(result.wear))
@@ -279,5 +282,11 @@ func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) ->
 		armor = maxf(0, armor - float(result.wear))
 	if zone == "legs":
 		leg_wound = true
+	if zone == "arms":
+		if to_local(point).x < 0: arm_wounds.x = minf(100, arm_wounds.x + 40)
+		else: arm_wounds.y = minf(100, arm_wounds.y + 40)
+	motion.react(zone, to_local(point))
+	if float(result.wear) < amount:
+		RazlomBloodFX.spawn(game, point, normal)
 	hit(float(result.damage), impulse)
 	motion.hit_region = last_hit_region
