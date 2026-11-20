@@ -184,6 +184,8 @@ func vera_dialog() -> void:
 		else:
 			game.notify("Нужны 2 детали, а лечение имеет смысл только при ранении")
 		game.resume()})
+	if game.quests.phase("medicine") == 2:
+		choices.append({"text": "Передать Вере медицинский ящик", "action": func(): game.quests.offer("medicine")})
 	choices.append({"text": "Дела Очага • помощь и вылазки", "action": game.quests.board})
 	choices.append({"text": "Я вернусь", "action": game.resume})
 	if game.state.manifest and not game.state.truth_shared:
@@ -292,6 +294,8 @@ func courier_dialog() -> void:
 		body = "«Слово держим. Забирай насос. И найди накладную — без неё никто не поверит, что приказ был подменён. Если нападёшь на охрану, я больше не смогу тебя прикрыть»."
 	if game.state.passage_broken:
 		body = "Павел отворачивается: «Я поручился за тебя, а ты напал на моих людей. Второго слова по рации не будет. Насос всё ещё нужен Очагу — но теперь ищи другой путь»."
+	if game.quests.phase("gate") >= 3:
+		body += "\n\n" + game.quests.outcome("gate")
 	choices.append({"text": "Я сам выберу путь", "action": game.resume})
 	open("ПАВЕЛ / ПОСЛЕДНИЙ КОНВОЙ", body, choices)
 

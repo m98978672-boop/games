@@ -98,7 +98,7 @@ func accept(id: String, body: String) -> void:
 	choices.append({"text": "Вернуться к списку дел", "action": board})
 	game.interactions.open(str(TITLES[id]), body + "\n\n" + objective(id), choices)
 func resolve_gate(choice: int) -> void:
-	if phase("gate") != 2 or choice not in [3, 4]:
+	if phase("gate") != 2 or choice not in [3, 4] or not game.is_sheltered(game.player.global_position):
 		return
 	set_phase("gate", choice)
 	if choice == 3:

@@ -30,6 +30,7 @@ func run_tests() -> void:
 	check(q.phase("medicine") == 0, "Unaccepted objective cannot be collected")
 	q.offer("medicine")
 	click_first(game)
+	check(q.tracking().target == Vector3(-38, 0, -12), "Accepted quest gets a navigable HUD destination")
 	check(q.phase("medicine") == 1, "Accepting medicine quest starts state machine")
 	var station = game.world.get_node("Quest_medicine")
 	check(game.interactions.try_interact({"collider": station}) and q.phase("medicine") == 2, "Actual interaction dispatcher collects quest case")
@@ -121,7 +122,7 @@ func run_tests() -> void:
 	player.velocity = Vector3.ZERO
 	player.on_shot()
 	check(player.shot_bloom > 0, "Repeated fire adds recoverable bloom")
-	var max_angle := player.spread_angle()
+	var max_angle: float = player.spread_angle()
 	var center: Vector3 = -player.camera.global_basis.z
 	var first: Vector3 = player.sample_shot_direction(rng)
 	check(first != player.sample_shot_direction(rng), "Shots do not share an identical direction")
