@@ -28,6 +28,7 @@ with tempfile.TemporaryDirectory(prefix='razlom-runtime-') as runtime:
         ('perception', ['--script', 'res://tests/perception.gd'], 'failures: 0', 60),
         ('destruction', ['--script', 'res://tests/destruction.gd'], 'failures: 0', 60),
         ('presentation', ['--script', 'res://tests/presentation.gd'], 'failures: 0', 60),
+        ('ai-memory', ['--script', 'res://tests/ai_memory.gd'], 'failures: 0', 60),
     ]
     for name, flags, marker, timeout in jobs:
         command = [engine, '--headless', '--path', str(ROOT), *flags]
