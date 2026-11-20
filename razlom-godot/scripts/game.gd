@@ -743,7 +743,7 @@ func _process(delta: float) -> void:
 				"touch": touch_ui.diagnostics() if is_instance_valid(touch_ui) else {},
 				"startButton": [start_button.global_position.x, start_button.global_position.y, start_button.size.x, start_button.size.y],
 				"mobile": mobile_mode, "ammo": state.ammo, "yaw": player.rotation.y,
-				"weapon": {"phase": player.weapon_motion.phase, "reload": player.reload_time, "magazineY": player.weapon_motion.magazine.position.y, "handY": player.weapon_motion.support_hand.position.y},
+				"weapon": {"motion": player.motion_state, "phase": player.weapon_motion.phase, "reload": player.reload_time, "magazineY": player.weapon_motion.magazine.position.y, "handY": player.weapon_motion.support_hand.position.y},
 				"view": [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y],
 				"health": state.health, "pump": state.pump, "complete": state.complete,
 				"position": [player.position.x, player.position.y, player.position.z],

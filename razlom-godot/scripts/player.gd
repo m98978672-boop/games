@@ -11,6 +11,8 @@ var bob := 0.0
 var movement_blend := 0.0
 var hurt_blend := 0.0
 var last_health := 100.0
+var draw_time := 0.35
+var motion_state := "draw"
 var look_sway := Vector2.ZERO
 var landing := 0.0
 var grounded_last := true
@@ -67,6 +69,7 @@ func _physics_process(delta: float) -> void:
 	if game.state.health < last_health - 0.1:
 		on_hurt()
 	last_health = game.state.health
+	draw_time = maxf(0.0, draw_time - delta)
 	hurt_blend = move_toward(hurt_blend, 0.0, delta * 3.0)
 	if Input.is_action_just_pressed("crouch"):
 		if not crouched:
@@ -127,11 +130,12 @@ func _physics_process(delta: float) -> void:
 	look_sway = look_sway.lerp(Vector2.ZERO, 1.0 - exp(-delta * 14.0))
 	var reload_blend := sin(clampf(reload_time / 1.4, 0.0, 1.0) * PI)
 	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.2, -0.21, -0.6)
-	anchor.y += reload_blend * 0.08
+	anchor.y += reload_blend * 0.08 - smoothstep(0.0, 0.35, draw_time) * 0.2
 	var breath := sin(Time.get_ticks_msec() * 0.0018) * (0.001 if aiming else 0.003)
 	gun.position = gun.position.lerp(anchor + Vector3(sin(bob) * (0.003 if aiming else 0.023) * movement_blend + look_sway.x, absf(cos(bob)) * (0.003 if aiming else 0.018) * movement_blend + breath - landing - hurt_blend * 0.035, recoil + hurt_blend * 0.035), 1.0 - exp(-delta * 14.0))
 	gun.rotation.x = lerp_angle(gun.rotation.x, 0.18 * reload_blend + recoil * 2.4 - (0.3 if running else 0.0) + hurt_blend * 0.1 + look_sway.y, 1.0 - exp(-delta * 18.0))
 	gun.rotation.z = lerp_angle(gun.rotation.z, -0.48 * reload_blend - input.x * (0.01 if aiming else 0.065) + sin(bob) * movement_blend * 0.02 + hurt_blend * 0.09, 1.0 - exp(-delta * 12.0))
+	motion_state = "draw" if draw_time > 0 else ("hurt" if hurt_blend > 0.1 else ("reload" if reload_time > 0 else ("shoot" if recoil > 0.02 else ("run" if running else ("walk" if movement_blend > 0.1 else ("aim" if aiming else "idle"))))))
 	weapon_motion.advance(reload_time, recoil, delta)
 	camera.fov = lerpf(camera.fov, 60.0 if aiming else 78.0, delta * 10)
 	if Input.is_action_pressed("fire") and cooldown <= 0 and reload_time <= 0 and (game.mobile_mode or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):

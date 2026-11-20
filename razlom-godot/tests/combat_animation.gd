@@ -47,6 +47,20 @@ func run_tests() -> void:
 	check(absf(right.position.z - player.gun.get_node("Grip").position.z) < 0.015, "Right palm aligns along pistol grip")
 	check(left.position.y > -0.09 and left.position.z < -0.25, "Support palm contacts underside of fore-end")
 	check(right.has_node("FingerTip3") and left.has_node("FingerTip3"), "Fingers wrap around grips with second segments")
+	Input.action_press("forward")
+	for i in range(40):
+		player._physics_process(1.0 / 60)
+	check(player.movement_blend > 0.5 and player.motion_state == "walk", "Actual movement drives sustained weapon walk animation")
+	Input.action_press("sprint")
+	for i in range(15):
+		player._physics_process(1.0 / 60)
+	check(player.motion_state == "run" and player.gun.rotation.x < -0.1, "Sprint visibly lowers weapon")
+	Input.action_release("forward")
+	Input.action_release("sprint")
+	for i in range(90):
+		player._physics_process(1.0 / 60)
+	check(player.movement_blend < 0.01 and player.motion_state == "idle", "Stopping movement settles viewmodel instead of freezing its stride")
+	player.set_physics_process(false)
 	guard.hit(100)
 	await process_frame
 	check(not is_instance_valid(guard), "Defeated guard no longer runs AI or collision")
