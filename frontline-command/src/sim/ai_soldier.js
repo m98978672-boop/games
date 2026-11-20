@@ -1,5 +1,7 @@
 import { solidUnitMoveFree } from './solid_units.js';
 import { unsafeRest, safeRestGoal } from './rest_positions.js';
+import { clearFinalApproach } from './arrival.js';
+import { keepCombatRouteGoal } from './smart_route.js';
 // Индивидуальный ИИ солдата: Behavior Tree с приоритетами из спецификации,
 // мораль, укрытия, медики, инженеры, а также ручное управление игроком.
 import { clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp } from '../core/mathx.js';
@@ -178,6 +180,15 @@ export function thinkSoldier(game, u) {
       const sq = u.squad;
       const fireOk = !sq || sq.fire !== 'hold';
       const weaponRange = u.weapon.range;
+      // A valid detour can briefly move away from the target. Do not throw it
+      // away solely because that temporary detour takes us beyond gun range.
+      // Contact, target identity and position are checked by the route guard.
+      if (fireOk && d > weaponRange && keepCombatRouteGoal(game,u,target)) {
+        state(u, 'fight', 'обходит препятствие');
+        u.activity = 'fight';
+        u.aimAngle = angleTo(u.x,u.y,target.x,target.y);
+        return;
+      }
       if (fireOk && d <= weaponRange) {
         // перекаты: половина стреляет, половина двигается
         const leap = sq && sq.leapfrogHold(u.formationIndex);
@@ -187,7 +198,8 @@ export function thinkSoldier(game, u) {
         if (!leap) {
           const desired = Math.max(70, weaponRange * (u.weapon.kind === 'shell' ? 0.6 : 0.72));
           if (d > desired) {
-            u.goal = { x: target.x + (u.x - target.x) * 0.25, y: target.y + (u.y - target.y) * 0.25 };
+            if (!keepCombatRouteGoal(game,u,target))
+              u.goal = { x: target.x + (u.x - target.x) * 0.25, y: target.y + (u.y - target.y) * 0.25 };
           } else {
             u.goal = null;
             chooseCoverForFight(game, u);
@@ -268,6 +280,16 @@ export function thinkSoldier(game, u) {
         const spot = game.walls.interiorSpot(b, slot.x, slot.y);
         if (spot) slot = { x: spot.x, y: spot.y };
       }
+    }
+    // A formation offset must not park the squad on the wrong side of the
+    // wall from its order. In this case use the actual anchor, so ordinary
+    // door navigation can lead the unit through the building opening.
+    if (slot && !u.isVehicle && u.activity === 'advance' && sq.anchor && game.walls?.enabled() &&
+        (game.walls.blocksMove(slot.x,slot.y,u.radius,u) ||
+         (game.walls.buildingAtPoint(slot.x,slot.y) !== game.walls.buildingAtPoint(sq.anchor.x,sq.anchor.y) &&
+          !clearFinalApproach(game,{x:slot.x,y:slot.y,radius:u.radius,isVehicle:false},sq.anchor.x,sq.anchor.y))) &&
+        !game.walls.blocksMove(sq.anchor.x,sq.anchor.y,u.radius,u) && game.world.isBaseWalkable(sq.anchor.x,sq.anchor.y)) {
+      slot = {x:sq.anchor.x,y:sq.anchor.y};
     }
     if (slot && u.isVehicle && game.cfg.flag('vehicle_exterior_v1', true) && game.walls?.enabled()) {
       const b = game.walls.buildingAtPoint(slot.x,slot.y);

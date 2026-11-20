@@ -16,10 +16,15 @@ var scan := 0.0
 var home := Vector3.ZERO
 var phase := 0.0
 var weapon_motion: RazlomWeaponMotion
+var left_arm: RazlomArmRig
+var right_arm: RazlomArmRig
+var carried_weapon: Node3D
 var motion: RazlomActorMotion
 var visual: Node3D
 var think_label: Label3D
 var dead := false
+var last_hit_region := "torso"
+var impact_marks: Array[Node3D] = []
 var path_timer := 0.0
 var waypoint := Vector3.ZERO
 
@@ -40,8 +45,13 @@ func _ready() -> void:
 	visual.get_node("ArmRJoint/ArmR").add_child(weapon)
 	weapon.position = Vector3(-0.15, 0.09, -0.29)
 	weapon.scale = Vector3.ONE * 0.65
-	weapon.get_node("LeftHand").hide()
-	weapon.get_node("RightHand").hide()
+	carried_weapon = weapon
+	weapon.get_node("LeftHand/Sleeve").hide()
+	weapon.get_node("RightHand/Sleeve").hide()
+	visual.get_node("ArmRJoint/ArmR/Visual").hide()
+	visual.get_node("ArmLJoint/ArmL/Visual").hide()
+	left_arm = RazlomArmRig.new(visual)
+	right_arm = RazlomArmRig.new(visual)
 	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home
@@ -172,6 +182,8 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
 	weapon_motion.advance(0, motion.recoil * 0.09, delta)
+	left_arm.solve(Vector3(-0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("LeftHand").global_position), -1.0)
+	right_arm.solve(Vector3(0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("RightHand").global_position), 1.0)
 	think_label.text = "ПРОХОДИ" if game.state.passage else ("ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else "")))
 	think_label.modulate = Color("efb26a")
 
@@ -203,3 +215,38 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		fall.tween_interval(2.0)
 		fall.tween_callback(visual.queue_free)
 		queue_free()
+
+func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) -> void:
+	if dead:
+		return
+	# Project the capsule contact onto visible mesh bounds to avoid floating marks.
+	var direction := impulse.normalized()
+	var nearest := INF
+	var contact: Variant = null
+	for part in visual.find_children("*", "MeshInstance3D", true, false):
+		if not part.is_visible_in_tree() or part.get_parent().has_meta("impact_mark"):
+			continue
+		var from: Vector3 = part.to_local(point - direction * 0.6)
+		var to: Vector3 = part.to_local(point + direction * 1.0)
+		var intersection: Variant = part.get_aabb().intersects_segment(from, to)
+		if intersection is Vector3:
+			var candidate: Vector3 = part.to_global(intersection)
+			var distance: float = candidate.distance_to(point - direction * 0.6)
+			if distance < nearest:
+				nearest = distance
+				contact = candidate
+	if contact is Vector3:
+		point = contact
+	var local := visual.to_local(point)
+	last_hit_region = "head" if local.y > 1.45 else ("left_arm" if local.x < -0.28 else ("right_arm" if local.x > 0.28 else "torso"))
+	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual
+	var mark := RazlomArt.box(host, Vector3.ZERO, Vector3(0.035, 0.035, 0.006), RazlomArt.material(Color("423c34")))
+	mark.set_meta("impact_mark", true)
+	mark.visible = contact is Vector3
+	mark.global_position = point + normal * 0.012
+	mark.look_at(mark.global_position + normal, Vector3.RIGHT if absf(normal.y) > 0.95 else Vector3.UP)
+	impact_marks.append(mark)
+	if impact_marks.size() > 4:
+		impact_marks.pop_front().queue_free()
+	hit(amount, impulse)
+	motion.hit_region = last_hit_region
