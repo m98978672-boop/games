@@ -19,6 +19,10 @@ try {
  });
  await mkdir('../../docs/razlom/web-evidence', {recursive:true});
  await page.waitForTimeout(1000);
+ await check('Right menu stays inside viewport after text shaping', async () => {
+  const rect = await page.evaluate(() => window.__razlomStatus.menuRect);
+  assert.ok(rect[0] > 700 && rect[0] + rect[1] <= 1441, JSON.stringify(rect));
+ });
  await page.screenshot({path:'../../docs/razlom/web-evidence/menu.png'});
  await page.keyboard.press('Enter');
  await page.waitForFunction(() => window.__razlomStatus?.started && !window.__razlomStatus.paused);
