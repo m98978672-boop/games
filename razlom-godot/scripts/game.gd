@@ -777,6 +777,7 @@ func _process(delta: float) -> void:
 			bridge.eval("window.__razlomStatus = " + JSON.stringify({
 				"ready": true, "started": started, "paused": get_tree().paused,
 				"dialog": interactions.diagnostics(),
+				"quests": state.quests, "trackedQuest": state.tracked_quest,
 				"touch": touch_ui.diagnostics() if is_instance_valid(touch_ui) else {},
 				"startButton": [start_button.global_position.x, start_button.global_position.y, start_button.size.x, start_button.size.y],
 				"mobile": mobile_mode, "ammo": state.ammo, "yaw": player.rotation.y,

@@ -14,6 +14,23 @@ let fingers=[];
 async function point(x,y,id=1){const s=await page.evaluate(()=>window.__razlomStatus);const b=await page.locator('canvas').boundingBox();return {x:b.x+x*b.width/s.view[0],y:b.y+y*b.height/s.view[1],id};}
 async function dispatch(type,points){fingers=points;await session.send('Input.dispatchTouchEvent',{type,touchPoints:fingers});}
 async function tapRect(rect){const p=await point(rect[0]+rect[2]/2,rect[1]+rect[3]/2);await dispatch('touchStart',[p]);await page.waitForTimeout(100);await dispatch('touchEnd',[]);await page.waitForTimeout(400);}
+async function tapDialogButton(text){
+ for(let i=0;i<12;i++){
+  const d=await page.evaluate(()=>window.__razlomStatus.dialog);
+  const b=d.buttons.find(b=>b.text.includes(text));
+  assert.ok(b,`Missing dialog button: ${text}`);
+  const r=d.rect;
+  if(b.rect[1]>=r[1]+20 && b.rect[1]+b.rect[3]<=r[1]+r[3]-20){await tapRect(b.rect);return;}
+  const x=r[0]+r[2]*.5, y=r[1]+r[3]*.65;
+  const sign=b.rect[1]<r[1] ? 1 : -1;
+  await dispatch('touchStart',[await point(x,y)]);
+  for(let step=1;step<=5;step++){
+   await dispatch('touchMove',[await point(x,y+sign*step*45)]);await page.waitForTimeout(60);
+  }
+  await dispatch('touchEnd',[]);await page.waitForTimeout(400);
+ }
+ throw new Error(`Cannot scroll to dialog button: ${text}`);
+}
 const base=process.env.RAZLOM_URL || 'http://127.0.0.1:8765/razlom/web/game.html';
 try{
  await mkdir('../../docs/razlom/web-evidence',{recursive:true});
@@ -67,9 +84,25 @@ try{
  await tapRect(journal.rect);
  await page.waitForFunction(()=>window.__razlomStatus.dialog.title.includes('ЖУРНАЛ'));
  await check('Touch scrolling opens the real story journal',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.dialog.visible),true));
- await tapRect(await page.evaluate(()=>window.__razlomStatus.dialog.buttons[0].rect));
+ await tapDialogButton('Вернуться в мир');
  await page.waitForFunction(()=>!window.__razlomStatus.paused);
  await check('Closing the journal restores phone gameplay',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.touch.visible),true));
+ await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.inventory));
+ await page.waitForFunction(()=>window.__razlomStatus.dialog.visible);
+ await tapDialogButton('Журнал');
+ await page.waitForFunction(()=>window.__razlomStatus.dialog.title.includes('ЖУРНАЛ'));
+ await tapDialogButton('Дела Очага');
+ await page.waitForFunction(()=>window.__razlomStatus.dialog.title.includes('ВЫЛАЗКИ'));
+ await check('Phone quest board exposes five distinct authored jobs',async()=>{
+  const d=await page.evaluate(()=>window.__razlomStatus.dialog);
+  for(const name of ['Последний перевязочный','Чужая смена','Мёртвый ток','Три тихие точки','Приказ без подписи']) assert.ok(d.buttons.some(b=>b.text.includes(name)));
+ });
+ await page.screenshot({path:'../../docs/razlom/web-evidence/quest-board.png',timeout:60000});
+ await tapDialogButton('Последний перевязочный');
+ await page.waitForFunction(()=>window.__razlomStatus.dialog.title==='Последний перевязочный');
+ await tapDialogButton('Взяться за дело');
+ await page.waitForFunction(()=>!window.__razlomStatus.paused && window.__razlomStatus.quests.medicine===1);
+ await check('Touch quest acceptance persists stage and selects HUD objective',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.trackedQuest),'medicine'));
  await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.menu));
  await page.waitForFunction(()=>window.__razlomStatus.paused);
  await check('Touch pause clears stick state and hides controls',async()=>{const s=await page.evaluate(()=>window.__razlomStatus);assert.deepEqual(s.touch.movement,[0,0]);assert.equal(s.touch.visible,false);});
