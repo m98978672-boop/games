@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-20T14:31:42.043Z",
+  "updatedAt": "2026-11-20T22:35:00.000Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
@@ -23,8 +23,8 @@
     "lastSourcesReachable": 11,
     "categoriesCount": 6,
     "backlog": {
-      "total": 100,
-      "now": 40,
+      "total": 120,
+      "now": 60,
       "future": 60,
       "builtAt": "2026-11-18T14:07:33.421Z",
       "note": "Статьи очереди «на будущее» лежат с датой вперёд и раскрываются по расписанию автопоста."
@@ -2325,7 +2325,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-924.svg",
       "imageCaption": "Обложка рубрики: Трамп в телефонном разговоре с европейскими союзниками поставил под со",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-133fbef822",
@@ -2361,7 +2362,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-764.svg",
       "imageCaption": "Обложка рубрики: ВС России ударили по логистическому центру в Черниговской области",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-760021e995",
@@ -2397,7 +2399,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-867.svg",
       "imageCaption": "Обложка рубрики: Евросоюз предупредили об одной опасной зависимости",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-255a5a915e",
@@ -2434,7 +2437,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-993.svg",
       "imageCaption": "Обложка рубрики: Как провести нагрузочное тестирование правильно. Часть 3: мифы и типич",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-ad8647a8ab",
@@ -2474,7 +2478,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-964.svg",
       "imageCaption": "Обложка рубрики: «Недействительная схема (ai-catalog.json)» в Google PageSpeed Insights",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-1087533dfa",
@@ -2513,7 +2518,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-965.svg",
       "imageCaption": "Обложка рубрики: Google выбрала ракету Blue Origin для запуска спутников с ИИ-чипами",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-5cf6e4aeb9",
@@ -2552,7 +2558,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-885.svg",
       "imageCaption": "Обложка рубрики: Патч вышел четыре дня назад. ИИ-агенты уже атаковали 395 организаций",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-bbc-world-811c650e91",
@@ -2588,7 +2595,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-883.svg",
       "imageCaption": "Обложка рубрики: Russian missile hits Poland as Ukraine's allies hold military exercise",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-stopgame-a191c7c318",
@@ -2624,7 +2632,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-963.svg",
       "imageCaption": "Обложка рубрики: Аналитики: тираж GTA VI за первые сутки составил больше 24 млн копий",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-securitylab-b14076e104",
@@ -2660,7 +2669,8 @@
       "autoPosted": true,
       "image": "site/assets/news/c-870.svg",
       "imageCaption": "Обложка рубрики: Весь интернет решил, что ИИ принял картинку за огонь. Оказалось, огонь",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-40c1b4912b",
@@ -2696,7 +2706,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-804.svg",
       "imageCaption": "Обложка рубрики: «Переходите на нашу сторону». Путин обратился к украинцам и рассказал ",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-bbc-world-ee3a117d3e",
@@ -2732,7 +2743,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-926.svg",
       "imageCaption": "Обложка рубрики: White House removes cyber-security chief after series of tech outages",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-stopgame-56521e37e8",
@@ -2768,7 +2780,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-964.svg",
       "imageCaption": "Обложка рубрики: Goodbye Seoul про Сеул перед столкновением Земли с астероидом выйдет в",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-securitylab-34d5e55261",
@@ -2804,7 +2817,8 @@
       "autoPosted": true,
       "image": "site/assets/news/c-958.svg",
       "imageCaption": "Обложка рубрики: Хотели перехитрить Роскомнадзор, а получилось наоборот. VPN со сложной",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-3dnews-578e68da86",
@@ -2840,7 +2854,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-986.svg",
       "imageCaption": "Обложка рубрики: Google создала параллельный интернет для обучения ИИ-агентов — в нём е",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-nplus1-0a97ce4302",
@@ -2876,7 +2891,8 @@
       "autoPosted": true,
       "image": "site/assets/news/s-820.svg",
       "imageCaption": "Обложка рубрики: «Зависимость, отвлечение, скука: эмоциональные среды цифровой повседне",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-stopgame-0f5bd6c14b",
@@ -2912,7 +2928,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-702.svg",
       "imageCaption": "Обложка рубрики: Дженнифер Хейл хотела бы, чтобы EA продала права на Mass Effect фаната",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-securitylab-0d2096622e",
@@ -2948,7 +2965,8 @@
       "autoPosted": true,
       "image": "site/assets/news/c-905.svg",
       "imageCaption": "Обложка рубрики: GTA 6 раздают бесплатно. Только сначала мошенники заберут ваш аккаунт ",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-bbc-world-0c33c043d7",
@@ -2984,7 +3002,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-893.svg",
       "imageCaption": "Обложка рубрики: Russia targets Kyiv crossings days after Ukraine hits Crimean Bridge",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-nplus1-738c43ff47",
@@ -3020,7 +3039,8 @@
       "autoPosted": true,
       "image": "site/assets/news/s-702.svg",
       "imageCaption": "Обложка рубрики: Младенцы отреагировали на изменение высоты своего голоса",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-nplus1-435ec8c6b9",
@@ -3056,7 +3076,8 @@
       "autoPosted": true,
       "image": "site/assets/news/s-767.svg",
       "imageCaption": "Обложка рубрики: Римского младенца похоронили в одном сосуде с курицей",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-stopgame-5105d910e7",
@@ -3092,7 +3113,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-713.svg",
       "imageCaption": "Обложка рубрики: Steam Machine может ещё подорожать, так как «стоимость памяти растёт б",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-securitylab-3a761cd544",
@@ -3128,7 +3150,8 @@
       "autoPosted": true,
       "image": "site/assets/news/c-934.svg",
       "imageCaption": "Обложка рубрики: 30 ГБ в час в никуда. Новые драйверы NVIDIA тихо сокращают жизнь вашег",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-3dnews-0aa36786bd",
@@ -3164,7 +3187,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-857.svg",
       "imageCaption": "Обложка рубрики: Американские акционеры решили засудить Alibaba из-за скандала с Хуанго",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-hackernews-sec-2cf415093d",
@@ -3201,7 +3225,8 @@
       "autoPosted": true,
       "image": "site/assets/news/c-726.svg",
       "imageCaption": "Обложка рубрики: Linux KVM Flaw CVE-2026-99312 Lets Guest VMs Access Host Memory on AMD",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-hackernews-sec-e0107c5195",
@@ -3237,7 +3262,8 @@
       "autoPosted": true,
       "image": "site/assets/news/c-767.svg",
       "imageCaption": "Обложка рубрики: The Path to AI Autonomy in the SOC",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-nplus1-fff7e4c89c",
@@ -3273,7 +3299,8 @@
       "autoPosted": true,
       "image": "site/assets/news/s-905.svg",
       "imageCaption": "Обложка рубрики: Медики описали изменения в мозге впадавшей в зимнюю спячку женщины",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-ixbt-games-e4380fa093",
@@ -3312,7 +3339,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-776.svg",
       "imageCaption": "Обложка рубрики: VK Play запустил в облачном гейминге, но пока там только GTA VI",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-ixbt-games-9658ef158e",
@@ -3351,7 +3379,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-800.svg",
       "imageCaption": "Обложка рубрики: Paradox выпустила для Hearts of Iron IV дополнение про Румынию — оно п",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-ixbt-games-0e0bef519f",
@@ -3390,7 +3419,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-909.svg",
       "imageCaption": "Обложка рубрики: Звезда GTA VI и «Дэдпула» приедет в Россию на Comic Con",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-ixbt-games-48a16aaa1c",
@@ -3429,7 +3459,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-913.svg",
       "imageCaption": "Обложка рубрики: JoyToy показала распаковку фигурок тактических ветеранов и сержанта ве",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-bbc-world-29bd79565d",
@@ -3465,7 +3496,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-930.svg",
       "imageCaption": "Обложка рубрики: Nearly 600 women killed in South Africa within three months",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-hackernews-sec-2cdcce58a6",
@@ -3502,7 +3534,8 @@
       "autoPosted": true,
       "image": "site/assets/news/c-717.svg",
       "imageCaption": "Обложка рубрики: SonicWall Warns Gen 6 Firewalls Won't Get Security Patches, Even for C",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-hackernews-sec-6892200672",
@@ -3539,7 +3572,8 @@
       "autoPosted": true,
       "image": "site/assets/news/c-793.svg",
       "imageCaption": "Обложка рубрики: Hackers Exploit Critical Cisco Expressway Flaw, Breach Four Devices an",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-3dnews-bc4d592d7c",
@@ -3575,7 +3609,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-995.svg",
       "imageCaption": "Обложка рубрики: Акции китайских разработчиков чипов рухнули из-за угрозы потери доступ",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-top-6a5adc7562",
@@ -3614,7 +3649,8 @@
       "autoPosted": true,
       "image": "site/assets/news/f-718.svg",
       "imageCaption": "Обложка рубрики: Вторую ступень Starship поймали, станут ли дата-центры орбитальными?",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-top-b8763cb237",
@@ -3655,7 +3691,8 @@
       "autoPosted": true,
       "image": "site/assets/news/f-971.svg",
       "imageCaption": "Обложка рубрики: Чат-боты стали экспертами в убеждении людей",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-top-b401978e36",
@@ -3695,7 +3732,8 @@
       "autoPosted": true,
       "image": "site/assets/news/f-728.svg",
       "imageCaption": "Обложка рубрики: Зачем изучать ассемблер, если писать на нём вы не будете?",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-3dnews-511f17b13c",
@@ -3731,7 +3769,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-717.svg",
       "imageCaption": "Обложка рубрики: США разрешили AMD и Nvidia поставлять ИИ-ускорители китайским бигтехам",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-5cdba6399f",
@@ -3767,7 +3806,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-994.svg",
       "imageCaption": "Обложка рубрики: В российском регионе отстрелили медведя-шатуна с обмороженными лапами",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-32ee2264ed",
@@ -3803,7 +3843,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-899.svg",
       "imageCaption": "Обложка рубрики: Объявлено об ударе по Киеву и западу Украины после слов Путина об отве",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "s301-voyager-1-one-light-day",
@@ -3849,7 +3890,8 @@
       "comments": [],
       "featured": true,
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "g101-gta-vi-november-2026",
@@ -3898,7 +3940,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "c501-chrome-zero-day-cve-2026-125350",
@@ -3943,7 +3986,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "s306-nasa-roman-first-images-dec-2026",
@@ -3988,7 +4032,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "g102-zelda-oot-switch-2-million",
@@ -4029,7 +4074,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "c502-games-antivirus-v11-redteam",
@@ -4074,7 +4120,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "g103-games-portal-catalog-update",
@@ -4119,7 +4166,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "f603-noaa-deep-sea-glass-sponges",
@@ -4160,7 +4208,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "s305-webb-xlssc122-dark-matter-lens",
@@ -4201,7 +4250,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "s303-webb-21-extreme-debris-disks",
@@ -4242,7 +4292,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "w402-climate-threat-europe-unesco-louvre",
@@ -4283,7 +4334,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "t202-webgpu-baseline-all-browsers-2026",
@@ -4324,7 +4376,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "w401-unesco-48th-busan-2026",
@@ -4369,7 +4422,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "s304-webb-beta-pictoris-d",
@@ -4410,7 +4464,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "t201-microsoft-majorana-2-quantum",
@@ -4451,7 +4506,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "f601-ocean-census-1100-new-species",
@@ -4492,7 +4548,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "s302-nasa-artemis-ii-completed",
@@ -4533,7 +4590,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "t203-google-quantum-ai-willow-neutral-atom",
@@ -4574,7 +4632,8 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
     },
     {
       "id": "f602-kuril-kamchatka-6200m-flatworm-eggs",
@@ -4615,7 +4674,125 @@
       ],
       "comments": [],
       "pinned": true,
-      "autoPosted": false
+      "autoPosted": false,
+      "queue": "now"
+    },
+    {
+      "id": "plan-facts-f980a0",
+      "code": "F-980",
+      "category": "facts",
+      "title": "Как часто обновляют браузерные движки",
+      "summary": "Релизы выходят по расписанию: так проще проверять совместимость.",
+      "body": [
+        "Движки браузеров выпускают регулярные релизы, а старые версии получают только исправления безопасности. Для игр это значит: не полагайтесь на функции из свежих сборок без запасного пути."
+      ],
+      "tags": [
+        "Технологии",
+        "Браузеры"
+      ],
+      "sourceName": "Chrome for Developers — релизы",
+      "sourceUrl": "https://developer.chrome.com/release-notes",
+      "publishedAt": "2028-01-14T09:00:00.000Z",
+      "scheduledFor": "2028-01-14",
+      "readMin": 1,
+      "icon": "🧩",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Источник (Chrome for Developers — релизы)",
+          "url": "https://developer.chrome.com/release-notes"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Источник сверен с официальной документацией «Chrome for Developers — релизы»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-980.svg",
+      "imageCaption": "Обложка рубрики: Как часто обновляют браузерные движки",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "plan-facts-f981a1",
+      "code": "F-981",
+      "category": "facts",
+      "title": "Сколько весит средняя веб-игра",
+      "summary": "Бандл из движка и ассетов решает, сколько ждать загрузку.",
+      "body": [
+        "Вес веб-игры складывается из движка, ассетов и данных. Поэтому библиотеки держат локально и сжимают: каждая лишняя сотня килобайт — это секунды ожидания на мобильном интернете."
+      ],
+      "tags": [
+        "Производительность",
+        "Загрузка"
+      ],
+      "sourceName": "web.dev — метрики загрузки",
+      "sourceUrl": "https://web.dev/articles/vitals",
+      "publishedAt": "2028-02-03T09:00:00.000Z",
+      "scheduledFor": "2028-02-03",
+      "readMin": 1,
+      "icon": "📦",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Источник (web.dev — метрики загрузки)",
+          "url": "https://web.dev/articles/vitals"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Источник сверен с официальной документацией «web.dev — метрики загрузки»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-981.svg",
+      "imageCaption": "Обложка рубрики: Сколько весит средняя веб-игра",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "plan-facts-f982a2",
+      "code": "F-982",
+      "category": "facts",
+      "title": "Зачем игре локальные копии библиотек",
+      "summary": "CDN может быть недоступен — игра должна открываться и с диска.",
+      "body": [
+        "Если библиотека подключается с чужого сервера, без сети игра не запустится. Локальная копия движка и рендера позволяет открыть игру прямо с диска и не зависеть от сторонних сервисов."
+      ],
+      "tags": [
+        "Надёжность",
+        "Офлайн"
+      ],
+      "sourceName": "MDN — Progressive web apps",
+      "sourceUrl": "https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps",
+      "publishedAt": "2028-02-24T09:00:00.000Z",
+      "scheduledFor": "2028-02-24",
+      "readMin": 1,
+      "icon": "🔌",
+      "accent": "green",
+      "proofs": [
+        {
+          "label": "Источник (MDN — Progressive web apps)",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Источник сверен с официальной документацией «MDN — Progressive web apps»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-982.svg",
+      "imageCaption": "Обложка рубрики: Зачем игре локальные копии библиотек",
+      "imageCredit": "Games News · локальная обложка"
     }
   ],
   "notes": "Комментарии к новостям пишут только реальные читатели — они хранятся в браузере (localStorage) и проверяются GamesAntivirus. Заранее заготовленных и симулированных комментариев (в том числе «от редакции») в ленте нет."
