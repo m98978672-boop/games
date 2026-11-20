@@ -93,6 +93,18 @@ try{
     return results;
   });
   assert.ok(combat.every(x=>x.close&&x.route&&!x.crossed&&x.shots>0),'combat AI detours and shoots in both factions');
+  const groups=await page.evaluate(async()=>{
+    const {Game}=await import('/src/sim/game.js');const results=[];
+    for(const faction of [0,1]){
+      const g=new Game({cfg:window.__frontline.cfg,seed:7,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.occupancyGrid.clear();g.squads.clear();
+      for(const s of [g.squadAI,...g.strategic,g.autopilot,g.rules,g.logistics,g.build,g.influence,g.api])s.update=()=>{};g.checkVictory=()=>{};
+      const dir=faction?-1:1,goal={x:900,y:500},us=Array.from({length:5},(_,i)=>{const u=g.spawnUnit(faction,'infantry',goal.x-dir*(125+i*23),goal.y);u.goal={...goal};u.activity='advance';u.arrived=false;u.thinkTimer=1000;return u});let overlap=false,wall=false,group=false;
+      for(let t=0;t<1200;t++){const before=us.map(u=>({x:u.x,y:u.y}));g.step(.05);for(let i=0;i<us.length;i++){const u=us[i],p=before[i];if(Math.hypot(u.x-p.x,u.y-p.y)>1e-6&&g.walls.blocksMoveSweep(p.x,p.y,u.x,u.y,u.radius,u))wall=true;group ||= !!u._crowdOpenGroup;}
+        overlap ||= us.some((a,i)=>us.slice(i+1).some(b=>Math.hypot(a.x-b.x,a.y-b.y)<a.radius+b.radius-1e-6));if(us.every(u=>u.arrived||u.pathFailed))break;}
+      results.push({arrived:us.filter(u=>u.arrived&&!u.pathFailed).length,overlap,wall,group});
+    }return results;
+  });
+  assert.ok(groups.every(x=>x.arrived===5&&!x.overlap&&!x.wall&&x.group),'open shared-goal group reaches distinct positions on the real map');
   await page.evaluate(()=>window.__frontline.newGame({seed:1,aiVsAi:true}));
   await page.waitForFunction(()=>window.__frontline.game?.time>0.1,{timeout:30000});
   assert.deepEqual(errors,[]);console.log('Chromium: default-on U detour, collision/speed check, live game ticks, no page errors');
