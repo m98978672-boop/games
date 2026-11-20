@@ -6,7 +6,7 @@
   "description": "КАСКАД: Живая Вода — 3D-симулятор строительства ГЭС, каналов, реалистичной гидродинамики и растущих городов",
   "scripts": {
     "build": "node tools/build.mjs",
-    "test": "node tests/sim-test.mjs"
+    "test": "node tests/sim-test.mjs && node tests/finale.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

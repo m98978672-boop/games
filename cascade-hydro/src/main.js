@@ -239,6 +239,7 @@ class CascadeHydroGame {
         this.audio.playMilestone();
         this.notify(`★ Грант Минэнерго «${m.title}»: +${m.reward.toLocaleString('ru-RU')} ₽!`, 'good');
       },
+      onFinale: (summary) => this.showFinale(summary),
     });
 
     this.worldView = new WorldView(this.scene, this.hydro, this.economy, this.profile, this.renderer, this.textures);
@@ -673,6 +674,22 @@ class CascadeHydroGame {
   //  ИНТЕРФЕЙС, 14 ИНСТРУМЕНТОВ, ВКЛАДКИ ГИДРОЛОГИИ / 12 ДОХОДОВ И ИНСПЕКТОР
   // ==========================================================================
   _initUI() {
+    /* Кнопки экрана финала: «продолжить» просто закрывает его — вехи
+       кончились, но бассейн живёт; «новый бассейн» перезагружает выбор карты. */
+    const finaleModal = document.getElementById('finale-modal');
+    if (finaleModal) {
+      finaleModal.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-finale]');
+        if (!btn) return;
+        if (btn.dataset.finale === 'continue') {
+          finaleModal.classList.add('hidden');
+          this.notify('Свободное развитие: гранты кончились, каскад работает', 'good');
+        } else if (btn.dataset.finale === 'restart') {
+          window.location.reload();
+        }
+      });
+    }
+
     const hotbar = document.getElementById('hotbar');
     hotbar.innerHTML = '';
     for (const tool of TOOLS) {
@@ -1729,6 +1746,41 @@ class CascadeHydroGame {
     setTimeout(() => {
       if (div.parentNode) div.remove();
     }, 5200);
+  }
+
+  /* Финал: все государственные вехи пройдены. Вместо тоста на пять секунд —
+     экран с итогами партии и двумя путями: остаться или начать новый бассейн. */
+  showFinale(summary) {
+    const modal = document.getElementById('finale-modal');
+    if (!modal) return;
+    const grid = document.getElementById('finale-grid');
+    const verdict = document.getElementById('finale-verdict');
+    const s = summary || {};
+    const fmt = (n, unit = '') => `${Number(n || 0).toLocaleString('ru-RU')}${unit}`;
+    if (grid) {
+      const rows = [
+        ['Дней в игре', fmt(s.day)],
+        ['Мощность каскада', `${fmt(Math.round(s.totalMW * 10) / 10)} МВт`],
+        ['Отдано в сеть', `${fmt(Math.round(s.netMW * 10) / 10)} МВт`],
+        ['Городов подключено', `${s.cities || 0} из ${s.totalCities || 8}`],
+        ['Население', fmt(s.population)],
+        ['Касса', `${fmt(s.cash)} ₽`],
+        ['Долг', `${fmt(s.loan)} ₽`],
+        ['CO₂ не выброшено', `${fmt(Math.round(s.co2 || 0))} т`],
+        ['Построек в бассейне', fmt(s.buildings)],
+      ];
+      grid.innerHTML = rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+    }
+    if (verdict) {
+      const text = {
+        'образцовый': 'Образцовый каскад: чистая энергия, полная касса и доверие министерства.',
+        'надёжный': 'Надёжный каскад: стройка шла ровно, бассейн работает на страну.',
+        'крепкий': 'Крепкий каскад: вехи взяты, хотя экономика держалась на расчёте.',
+        'трудный': 'Трудный каскад: денег в обрез, но станции стоят и дают ток.',
+      }[s.rank] || 'Каскад построен. Бассейн работает.';
+      verdict.textContent = text + ' Дальше — свободное развитие: стройте ГАЭС, шлюзы и рыбхозы без гонки за грантами.';
+    }
+    modal.classList.remove('hidden');
   }
 
   // ==========================================================================

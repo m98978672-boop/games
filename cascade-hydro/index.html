@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>КАСКАД: Живая Вода v0.6 — Единая постройка «Целая ГЭС», поиск створов, каналы, квартальная 3D-архитектура и логика городов</title>
   <meta name="description" content="Оптимизированный 3D-симулятор гидрокаскада v0.6: единая постройка целой ГЭС без лишних турбин, разведка перепада высот ΔH и прокладка каналов, чистые прямоугольные городские кварталы с яркими 3D-зданиями и живая логика 8 городов.">
-  <link rel="stylesheet" href="style.css?v=0.6.1-202610312205">
+  <link rel="stylesheet" href="style.css?v=0.6.1-202611201057">
 </head>
 <body>
 <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
@@ -352,6 +352,23 @@
   </div>
 
   <!-- Заглушка WebGL -->
+  <!-- ======================= Финал: каскад построен ======================= -->
+  <div id="finale-modal" class="modal-backdrop hidden">
+    <div class="modal-card finale-card">
+      <div class="finale-hero">
+        <span class="finale-badge">каскад сдан в эксплуатацию</span>
+        <h2>Флагман национальной гидроэнергетики</h2>
+        <p class="finale-sub">Все восемь государственных вех пройдены. Бассейн дал ток, города подключены, вода работает на людей.</p>
+      </div>
+      <div class="finale-grid" id="finale-grid"></div>
+      <p class="finale-verdict" id="finale-verdict"></p>
+      <div class="modal-actions">
+        <button class="btn" data-finale="continue">Продолжить развивать каскад</button>
+        <button class="btn btn-ghost" data-finale="restart">Новый бассейн</button>
+      </div>
+    </div>
+  </div>
+
   <div id="nogl-modal" class="modal-backdrop hidden">
     <div class="modal-card">
       <h2>Не удалось запустить WebGL</h2>
@@ -361,7 +378,7 @@
 </div>
 
 <script src="../shared/engine.js"></script>
-<script src="bundle.js?v=0.6.1-202610312205"></script>
+<script src="bundle.js?v=0.6.1-202611201057"></script>
 <script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>
