@@ -17,6 +17,15 @@ const run = promisify(execFile);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const TMP = join(ROOT, 'node_modules/.cache/training-test');
 
+/* Безопасный разбор: битый манифест должен давать понятную ошибку. */
+const parseJson = (text, where) => {
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`битый JSON (${where}): ${e.message}`);
+  }
+};
+
 let passed = 0;
 let failed = 0;
 function check(name, ok, detail = '') {
@@ -30,7 +39,7 @@ async function main() {
 
   // --- бенчмарк багов ---
   await run('node', ['tools/training/make-bug-bench.mjs', '--out', TMP], { cwd: ROOT });
-  const manifest = JSON.parse(await readFile(join(TMP, 'manifest.json'), 'utf8'));
+  const manifest = parseJson(await readFile(join(TMP, 'manifest.json'), 'utf8'), 'manifest.json');
 
   check('бенчмарк содержит случаи с багом и чистые',
     manifest.counts.withBug > 0 && manifest.counts.clean > 0,

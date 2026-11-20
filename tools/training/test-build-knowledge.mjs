@@ -24,8 +24,20 @@ function check(name, ok, detail = '') {
   else { failed++; console.log('  ✗', name, detail); }
 }
 
-const load = async (file) => (await readFile(file, 'utf8'))
-  .split('\n').filter(Boolean).map((l) => JSON.parse(l));
+/* Безопасный разбор JSONL: битая строка датасета должна давать понятную
+   ошибку с номером строки, а не падать стеком в недрах теста. */
+const parseJson = (text, where) => {
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new Error(`битый JSON (${where}): ${e.message}`);
+  }
+};
+
+const load = async (file) => {
+  const lines = (await readFile(file, 'utf8')).split('\n').filter(Boolean);
+  return lines.map((line, i) => parseJson(line, `${file}:${i + 1}`));
+};
 
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 
@@ -42,7 +54,7 @@ async function main() {
 
   const train = await load(join(TMP, 'train.jsonl'));
   const evalRows = await load(join(TMP, 'eval.jsonl'));
-  const manifest = JSON.parse(await readFile(join(TMP, 'manifest.json'), 'utf8'));
+  const manifest = parseJson(await readFile(join(TMP, 'manifest.json'), 'utf8'), 'manifest.json');
 
   check('обучение и проверка непустые', train.length > 0 && evalRows.length > 0,
     `train=${train.length} eval=${evalRows.length}`);
@@ -77,7 +89,7 @@ async function main() {
     const { validateProposal } = await import(join(ROOT, 'frontline-command/src/sim/neutral_commander.js'));
     let ok = 0;
     for (const row of gameRows) {
-      const input = JSON.parse(row.user);
+      const input = parseJson(row.user, 'вход боевого примера');
       // Валидатору нужен снимок: восстанавливаем индексы из самого входа.
       // Валидатор проверяет существование слота по индексу, поэтому в
       // снимке должны лежать объекты, а не числа: 0 — это «нет слота».
@@ -93,7 +105,7 @@ async function main() {
       `${ok} из ${gameRows.length}`);
   }
 
-  const actions = new Set(gameRows.map((r) => JSON.parse(r.assistant).action));
+  const actions = new Set(gameRows.map((r) => parseJson(r.assistant, 'ответ боевого примера').action));
   check('в обучении больше одного типа действия', actions.size >= 2,
     'найдено: ' + [...actions].join(', '));
 
@@ -130,7 +142,7 @@ async function main() {
     const { validateProposal } = await import(join(ROOT, 'frontline-command/src/sim/neutral_commander.js'));
     let okEdge = 0;
     for (const row of edgeRows) {
-      const input = JSON.parse(row.user);
+      const input = parseJson(row.user, 'вход боевого примера');
       const snap = {
         squads: input.squads.map((q, i) => ({ id: i, ...q })),
         points: input.points.map((q, i) => ({ id: i, ...q })),
