@@ -31,6 +31,9 @@ func board() -> void:
 	for id in LIMITS:
 		var key: String = id
 		choices.append({"text": str(TITLES[id]) + " • " + status(id), "action": func(): offer(key)})
+	choices.append({"text": "Следить за основной историей", "action": func():
+		game.state.tracked_quest = ""
+		game.resume()})
 	choices.append({"text": "Закрыть журнал заданий", "action": game.resume})
 	game.interactions.open("ВЫЛАЗКИ / ОЧАГ", "Здесь нет бесконечных поручений. Каждое дело меняет запас Очага или открывает следующую зацепку. Выбери дело, чтобы узнать цель и награду.", choices)
 func status(id: String) -> String:
@@ -85,7 +88,12 @@ func accept(id: String, body: String) -> void:
 	if phase(id) == 0:
 		choices.append({"text": "Взяться за дело", "action": func():
 			set_phase(id, 1)
+			game.state.tracked_quest = id
 			game.notify("Новое дело: " + str(TITLES[id]))
+			game.resume()})
+	if phase(id) > 0:
+		choices.append({"text": "Следить за целью • расстояние и направление", "action": func():
+			game.state.tracked_quest = id
 			game.resume()})
 	choices.append({"text": "Вернуться к списку дел", "action": board})
 	game.interactions.open(str(TITLES[id]), body + "\n\n" + objective(id), choices)
@@ -184,3 +192,21 @@ func advance(delta: float) -> void:
 	if scan_time == 0 and phase("survey") == scan_stage:
 		set_phase("survey", scan_stage + 1)
 		game.notify("Замер сохранён • " + objective("survey"))
+
+func tracking() -> Dictionary:
+	var id: String = game.state.tracked_quest
+	if not LIMITS.has(id) or phase(id) == 0 or status(id) == "завершено":
+		return {}
+	var target := Vector3(-21, 0, 24)
+	match id:
+		"medicine":
+			if phase(id) == 1: target = Vector3(-38, 0, -12)
+		"engineer": target = Vector3(-42, 0, -5)
+		"power":
+			target = Vector3(-43, 0, -43) if phase(id) == 2 or phase("engineer") == 2 else Vector3(-51, 0, -31)
+		"survey":
+			if phase(id) < 4:
+				target = [Vector3(-32, 0, -38), Vector3(-55, 0, -39), Vector3(-57, 0, -18)][phase(id) - 1]
+		"gate":
+			if phase(id) == 1: target = Vector3(-12, 0, -60)
+	return {"title": TITLES[id], "target": target}

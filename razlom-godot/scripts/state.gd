@@ -29,6 +29,7 @@ var passage_broken := false
 var relay_log := false
 var relay_shared := false
 var quests: Dictionary = {}
+var tracked_quest := ""
 var kills := 0
 
 func tick(delta: float, sprinting: bool, indoors: bool = false) -> void:
@@ -101,6 +102,7 @@ func reload_gun() -> int:
 
 func snapshot() -> Dictionary:
 	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken, "relay_log": relay_log, "relay_shared": relay_shared}
+	result["tracked_quest"] = tracked_quest
 	result["quests"] = quests.duplicate(true)
 	for key in NUMERIC_KEYS:
 		result[key] = get(key)
@@ -143,6 +145,8 @@ func restore(source: Dictionary) -> bool:
 			return false
 	if data["ammo"] > 18:
 		return false
+	if not data.get("tracked_quest", "") is String or (data.get("tracked_quest", "") != "" and not RazlomQuests.LIMITS.has(data.tracked_quest)):
+		return false
 	if not RazlomQuests.valid(data.get("quests", {})):
 		return false
 	var quest_data: Dictionary = data.get("quests", {})
@@ -154,4 +158,5 @@ func restore(source: Dictionary) -> bool:
 	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken", "relay_log", "relay_shared"]:
 		set(key, data[key])
 	quests = quest_data.duplicate(true)
+	tracked_quest = data.get("tracked_quest", "")
 	return true
