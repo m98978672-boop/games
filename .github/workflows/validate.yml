@@ -142,6 +142,12 @@ jobs:
       - name: Test last-shore rocks and animals (переступание, звери не застревают)
         run: |
           cd last-shore
+          # Зависимости ставим здесь же. Раньше npm ci был только в шаге
+          # escape, который идёт ниже, — и этот шаг падал с
+          # ERR_MODULE_NOT_FOUND: jsdom, потому что в тестах v018/mobs
+          # используется jsdom, а его не было. Выглядело как «звери
+          # застревают», хотя тест не запускался вовсе.
+          npm ci
           npm run test:build
           node tests/v018.mjs
       - name: Test euro-haul smoke (карьера, рейс, сохранение) — без флака
