@@ -685,7 +685,10 @@ export function checkSecrets(root, p) {
     [/\b(?:password|passwd|secret)\s*[:=]\s*['"][^'"]{8,}['"]/gi, 'пароль в исходниках'],
   ];
   for (const file of p.files) {
-    if (/\.(png|jpe?g|webp|gif|mp3|ogg|wav|woff2?|zip|pdf)$/i.test(file)) continue;
+    // Бинарники: .wasm/.pck/.glb читаются как текст с заменой байтов, и случайная
+    // последовательность байт выдаёт себя за «ключ». Их проверяет антивирус, а не
+    // текстовый сканер секретов.
+    if (/\.(png|jpe?g|webp|gif|mp3|ogg|wav|mp4|woff2?|ttf|zip|pdf|wasm|pck|glb|bin|dat)$/i.test(file)) continue;
     /* отчёты бота — там «секрет» в цитате, а не в игре; тесты — там стенд */
     if (/tools\/bughunt\/report\.|\/reports?\//.test(file)) continue;
     const src = read(root, file); if (src == null) continue;
