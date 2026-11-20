@@ -398,18 +398,48 @@ body.view-top .tactical-grid { opacity: 1; }
   .panel.tools { width: 286px; }
 }
 
+.panel-collapse {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 30px; height: 30px; flex: 0 0 auto;
+  border-radius: 8px; border: 1px solid var(--line);
+  background: var(--panel-2); color: var(--ink-dim);
+  font-size: 12px; line-height: 1; cursor: pointer;
+}
+
 @media (max-width: 900px) {
   .panel.tools {
     left: 8px; right: 8px; width: auto;
-    top: auto; bottom: 54px;
+    top: auto; bottom: 8px;
     max-height: 44vh;
     z-index: 22;
+    -webkit-overflow-scrolling: touch;
   }
+  .panel-collapse { display: flex; }
+  body.panel-collapsed .panel.tools { max-height: 44px; overflow: hidden; padding-bottom: 10px; }
+  body.panel-collapsed .panel.tools .ctl-group,
+  body.panel-collapsed .panel.tools .panel-head .ctl-tick { display: none; }
   .panel.side { display: none; }
   .top-stats .stat:nth-child(3) { display: none; }
   .insp-body { grid-template-columns: 1fr; }
   .insp-stage { min-height: 240px; }
   .bottom-bar { display: none; }
+  .cmd { min-height: 42px; }
+  .icon-btn { min-width: 36px; min-height: 36px; }
+}
+
+/* Телефон в портрете: шапка в две строки, пульт — нижняя шторка */
+@media (max-width: 560px) {
+  .topbar { flex-wrap: wrap; gap: 6px; padding: 7px 9px; align-items: center; }
+  .brand-text i { display: none; }
+  .top-stats { order: 3; width: 100%; justify-content: space-between; gap: 4px; }
+  .top-stats .stat { padding: 2px 6px 3px; }
+  .top-stats .stat b { font-size: 13px; }
+  .top-actions { margin-left: auto; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .icon-btn { min-width: 32px; min-height: 32px; font-size: 14px; }
+  .panel.tools { max-height: 46vh; padding: 10px 10px 12px; }
+  .marker { transform: scale(0.92); }
+  .toasts { left: 8px; right: 8px; bottom: 52vh; }
 }
 
 @media (max-height: 720px) {
