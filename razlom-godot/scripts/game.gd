@@ -339,6 +339,8 @@ func fire() -> void:
 		impact_particles(hit.position, hit.normal)
 		if object is RazlomBlock:
 			object.bullet_hit(hit.position, -player.camera.global_basis.z, 0.012, 36.0)
+		elif object is RazlomEnemy:
+			object.hit_at(36, hit.position, hit.normal, -player.camera.global_basis.z * 9)
 		elif object.has_method("hit"):
 			object.hit(36, -player.camera.global_basis.z * 9)
 		flash(hit.position, Color("ffce84"), 0.08, 0.09)

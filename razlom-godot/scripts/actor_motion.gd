@@ -7,6 +7,7 @@ var blend := 0.0
 var recoil := 0.0
 var joints: Dictionary = {}
 var flinch := 0.0
+var hit_region := "torso"
 var rest_height := 0.0
 var is_quadruped := false
 var blink_clock := 0.0
@@ -54,7 +55,7 @@ func advance(delta: float, speed: float, aiming: bool = false) -> void:
 		if part.begins_with("Arm") and aiming:
 			swing = -0.65 - recoil * 0.2
 		if part.begins_with("Arm"):
-			swing -= flinch * 0.65
+			swing -= flinch * (0.95 if (part == "ArmL" and hit_region == "left_arm") or (part == "ArmR" and hit_region == "right_arm") else 0.65)
 		if part == "ArmR" and gesture > 0.0:
 			swing = -1.2 + sin(gesture * 9.0) * 0.18
 		if part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":

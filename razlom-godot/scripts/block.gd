@@ -54,7 +54,7 @@ func rebuild_damage() -> void:
 		child.queue_free()
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var normals := [Vector3.RIGHT, Vector3.LEFT, Vector3.UP, Vector3.DOWN, Vector3.BACK, Vector3.FORWARD]
+	var normals: Array[Vector3] = [Vector3.RIGHT, Vector3.LEFT, Vector3.UP, Vector3.DOWN, Vector3.BACK, Vector3.FORWARD]
 	for i in range(GRID * GRID * GRID):
 		if removed.has(i):
 			continue
@@ -69,7 +69,7 @@ func rebuild_damage() -> void:
 			var u: Vector3 = Vector3.UP if absf(normal.y) < 0.5 else Vector3.RIGHT
 			var v: Vector3 = normal.cross(u)
 			var face: Vector3 = center + normal * CELL * 0.5
-			var corners := [face - u * CELL * 0.5 - v * CELL * 0.5, face + u * CELL * 0.5 - v * CELL * 0.5, face + u * CELL * 0.5 + v * CELL * 0.5, face - u * CELL * 0.5 + v * CELL * 0.5]
+			var corners: Array[Vector3] = [face - u * CELL * 0.5 - v * CELL * 0.5, face + u * CELL * 0.5 - v * CELL * 0.5, face + u * CELL * 0.5 + v * CELL * 0.5, face - u * CELL * 0.5 + v * CELL * 0.5]
 			for vertex in [0, 2, 1, 0, 3, 2]:
 				surface.set_normal(normal)
 				surface.set_uv(Vector2(corners[vertex].x + corners[vertex].z, corners[vertex].y))

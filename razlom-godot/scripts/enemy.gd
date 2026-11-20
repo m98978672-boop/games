@@ -23,6 +23,8 @@ var motion: RazlomActorMotion
 var visual: Node3D
 var think_label: Label3D
 var dead := false
+var last_hit_region := "torso"
+var impact_marks: Array[Node3D] = []
 var path_timer := 0.0
 var waypoint := Vector3.ZERO
 
@@ -213,3 +215,18 @@ func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 		fall.tween_interval(2.0)
 		fall.tween_callback(visual.queue_free)
 		queue_free()
+
+func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) -> void:
+	if dead:
+		return
+	var local := visual.to_local(point)
+	last_hit_region = "head" if local.y > 1.45 else ("left_arm" if local.x < -0.28 else ("right_arm" if local.x > 0.28 else "torso"))
+	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual
+	var mark := RazlomArt.box(host, Vector3.ZERO, Vector3(0.035, 0.035, 0.006), RazlomArt.material(Color("423c34")))
+	mark.global_position = point + normal * 0.012
+	mark.look_at(mark.global_position + normal, Vector3.RIGHT if absf(normal.y) > 0.95 else Vector3.UP)
+	impact_marks.append(mark)
+	if impact_marks.size() > 4:
+		impact_marks.pop_front().queue_free()
+	hit(amount, impulse)
+	motion.hit_region = last_hit_region
