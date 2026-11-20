@@ -184,9 +184,6 @@ func vera_dialog() -> void:
 		else:
 			game.notify("Нужны 2 детали, а лечение имеет смысл только при ранении")
 		game.resume()})
-	if game.quests.phase("medicine") == 2:
-		choices.append({"text": "Передать Вере медицинский ящик", "action": func(): game.quests.offer("medicine")})
-	choices.append({"text": "Дела Очага • помощь и вылазки", "action": game.quests.board})
 	choices.append({"text": "Я вернусь", "action": game.resume})
 	if game.state.manifest and not game.state.truth_shared:
 		choices.append({"text": "Показать накладную с подписью Ильи", "action": reveal_manifest})
@@ -197,6 +194,9 @@ func vera_dialog() -> void:
 	elif game.state.passage_broken:
 		body += "\n\n«По рации говорят о сорванном договоре. Я не знаю, что случилось у ворот. Но после нас здесь останутся люди, которым придётся жить рядом. Не забудь об этом»."
 	choices.append({"text": "Вера, кем ты была до аварии?", "action": vera_past})
+	if game.quests.phase("medicine") == 2:
+		choices.append({"text": "Передать Вере медицинский ящик", "action": func(): game.quests.offer("medicine")})
+	choices.append({"text": "Дела Очага • помощь и вылазки", "action": game.quests.board})
 	open("ВЕРА ЛЕСНАЯ", body, choices)
 
 func bed_dialog() -> void:
