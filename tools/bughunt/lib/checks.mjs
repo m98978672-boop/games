@@ -677,7 +677,11 @@ export function checkSecrets(root, p) {
     [/AKIA[0-9A-Z]{16}/g, 'ключ AWS'],
     [/\bsk-[A-Za-z0-9]{24,}/g, 'ключ API (sk-)'],
     [/gh[pousr]_[A-Za-z0-9]{30,}/g, 'токен GitHub'],
-    [/-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/g, 'закрытый ключ'],
+    /* Заголовок ключа без тела — не ключ. В WebAssembly-сборках OpenSSL
+       (BoringSSL, ICU, AES) лежат строки-детекторы PEM: BEGIN и END стоят
+       подряд, между ними ничего. Настоящий ключ — это заголовок плюс
+       десятки строк base64. Требуем тело, иначе ловим библиотеку. */
+    [/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----(?![\s\S]{0,40}?-----END)[\s\S]{40,}?[A-Za-z0-9+/=\s]{40,}-----END/g, 'закрытый ключ'],
     [/\b(?:password|passwd|secret)\s*[:=]\s*['"][^'"]{8,}['"]/gi, 'пароль в исходниках'],
   ];
   for (const file of p.files) {

@@ -7,7 +7,7 @@
     "storefront": 17,
     "collection": 216,
     "files": 2085,
-    "totalBytes": 51141973,
+    "totalBytes": 51145227,
     "chunks": 392,
     "blockedFiles": 3
   },
@@ -5007,8 +5007,8 @@
       "play": "truck-showroom/index.html",
       "cover": "site/assets/truck-showroom.webp",
       "dir": "truck-showroom",
-      "infoHash": "c5f4396c72dfc373b563a8242d699cdd29452c248e45c3575885e61030dde7f7",
-      "totalSize": 5612593,
+      "infoHash": "cf898be79cb600153bd4755e2ffe935b7fc8e6c9e8808a4ec835177cb595488c",
+      "totalSize": 5615847,
       "chunkSize": 262144,
       "chunkCount": 22,
       "fileCount": 44,
@@ -5035,8 +5035,8 @@
         },
         {
           "path": "package.json",
-          "size": 758,
-          "sha256": "4ccb7694631d59957a4fe6ba13beeacabc1a36c691ae57890c2882a7dcdb96a7"
+          "size": 784,
+          "sha256": "81f2673105cdc943ebe210d76c7257d7253b36d5a0ce1415dcfc8be1f143e24e"
         },
         {
           "path": "preview.png",
@@ -5090,8 +5090,8 @@
         },
         {
           "path": "showroom.bundle.js",
-          "size": 909627,
-          "sha256": "38b42133371a0790eb298e9280ff5d2613158499d30d5003de0e0092db753fa9"
+          "size": 910503,
+          "sha256": "1743e8b232200a08ba01237d5f66ffce14fe3c80502281da6ca367bc98bbafd2"
         },
         {
           "path": "src/app.js",
@@ -5180,8 +5180,8 @@
         },
         {
           "path": "src/models/truck.js",
-          "size": 50370,
-          "sha256": "893785d9b35c3acc7c7e4ea377e09c9b02164078033652fa4050251d1cd33be2"
+          "size": 52722,
+          "sha256": "315d01415a7b0919179bce5dc7068164cd6b04a2b0a9909cba9a0814eca106ad"
         },
         {
           "path": "src/stage.js",
