@@ -10,8 +10,12 @@ var move_knob := Vector2.ZERO
 var held: Dictionary = {}
 var zones: Dictionary = {}
 var was_playing := false
+var idle_style: StyleBoxFlat
+var pressed_style: StyleBoxFlat
 
 func _ready() -> void:
+	idle_style = RazlomMenuStyle.surface(Color(0.05, 0.13, 0.1, 0.7), Color(0.6, 0.75, 0.55, 0.5), 14)
+	pressed_style = RazlomMenuStyle.surface(Color(0.3, 0.44, 0.34, 0.9), Color(0.6, 0.75, 0.55, 0.5), 14)
 	name = "TouchControls"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -116,7 +120,7 @@ func _draw() -> void:
 	for action in zones:
 		var rect: Rect2 = zones[action]
 		var active: bool = action in held.values()
-		draw_style_box(RazlomMenuStyle.surface(Color(0.3, 0.44, 0.34, 0.9) if active else Color(0.05, 0.13, 0.1, 0.7), Color(0.6, 0.75, 0.55, 0.5), 14), rect)
+		draw_style_box(pressed_style if active else idle_style, rect)
 		draw_string(font, rect.position + Vector2(4, 36), names[action], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x - 8, 12, Color("edf2dc"))
 
 func diagnostics() -> Dictionary:

@@ -615,14 +615,27 @@ func setup_hud() -> void:
 		stats_label.add_theme_font_size_override("font_size", 12)
 		mission_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		mission_panel.position = Vector2(12, 110)
-		mission_panel.custom_minimum_size = Vector2(270, 84)
+		mission_panel.custom_minimum_size = Vector2(260, 76)
+		mission_panel.size = Vector2(260, 76)
+		var compact_style := panel_style()
+		compact_style.content_margin_left = 12
+		compact_style.content_margin_right = 12
+		compact_style.content_margin_top = 10
+		compact_style.content_margin_bottom = 10
+		mission_panel.add_theme_stylebox_override("panel", compact_style)
 		mission_label.add_theme_font_size_override("font_size", 13)
 		controls.hide()
-		message_label.position = Vector2(-180, -280)
-		message_label.custom_minimum_size.x = 360
+		message_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+		message_label.position = Vector2(-150, -50)
+		message_label.custom_minimum_size.x = 300
+		message_label.size = Vector2(300, 90)
 		message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		message_label.add_theme_font_size_override("font_size", 13)
-		hint_label.position = Vector2(-140, -305)
+		hint_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+		hint_label.position = Vector2(-140, 32)
+		for label in [brand, clock_label, stats_label, hint_label, message_label]:
+			label.add_theme_color_override("font_outline_color", Color(0.01, 0.04, 0.02, 0.85))
+			label.add_theme_constant_override("outline_size", 3)
 		touch_ui = RazlomTouchControls.new()
 		touch_ui.game = self
 		root.add_child(touch_ui)
@@ -688,6 +701,7 @@ func _process(delta: float) -> void:
 			var bridge = Engine.get_singleton("JavaScriptBridge")
 			bridge.eval("window.__razlomStatus = " + JSON.stringify({
 				"ready": true, "started": started, "paused": get_tree().paused,
+				"dialog": interactions.diagnostics(),
 				"touch": touch_ui.diagnostics() if is_instance_valid(touch_ui) else {},
 				"startButton": [start_button.global_position.x, start_button.global_position.y, start_button.size.x, start_button.size.y],
 				"mobile": mobile_mode, "ammo": state.ammo, "yaw": player.rotation.y,

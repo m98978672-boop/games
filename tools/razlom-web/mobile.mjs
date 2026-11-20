@@ -47,6 +47,22 @@ try{
  await page.waitForTimeout(500);
  await check('Finger release stops automatic fire',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.ammo),released));
  await page.screenshot({path:'../../docs/razlom/web-evidence/phone-play.png',timeout:60000});
+ await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.inventory));
+ await page.waitForFunction(()=>window.__razlomStatus.dialog.visible);
+ await check('Phone inventory dialog fits the portrait viewport',async()=>{const s=await page.evaluate(()=>window.__razlomStatus);const r=s.dialog.rect;assert.ok(r[0]>=0 && r[1]>=0 && r[0]+r[2]<=s.view[0]+1 && r[1]+r[3]<=s.view[1]+1);});
+ // Scroll native Godot UI with actual touch events, not a DOM replacement.
+ const dialogRect=await page.evaluate(()=>window.__razlomStatus.dialog.rect);
+ const sx=dialogRect[0]+dialogRect[2]/2, sy=dialogRect[1]+dialogRect[3]-70;
+ await dispatch('touchStart',[await point(sx,sy)]);
+ for(let i=1;i<=5;i++){await dispatch('touchMove',[await point(sx,sy-i*65)]);await page.waitForTimeout(60);}
+ await dispatch('touchEnd',[]);await page.waitForTimeout(600);
+ const journal=await page.evaluate(()=>window.__razlomStatus.dialog.buttons.find(b=>b.text.includes('Журнал')));
+ await tapRect(journal.rect);
+ await page.waitForFunction(()=>window.__razlomStatus.dialog.title.includes('ЖУРНАЛ'));
+ await check('Touch scrolling opens the real story journal',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.dialog.visible),true));
+ await tapRect(await page.evaluate(()=>window.__razlomStatus.dialog.buttons[0].rect));
+ await page.waitForFunction(()=>!window.__razlomStatus.paused);
+ await check('Closing the journal restores phone gameplay',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.touch.visible),true));
  await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.menu));
  await page.waitForFunction(()=>window.__razlomStatus.paused);
  await check('Touch pause clears stick state and hides controls',async()=>{const s=await page.evaluate(()=>window.__razlomStatus);assert.deepEqual(s.touch.movement,[0,0]);assert.equal(s.touch.visible,false);});

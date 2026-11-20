@@ -189,3 +189,11 @@ func journal() -> void:
 		body += "\n\nНАКЛАДНАЯ № 17\nНасос перенаправили намеренно. Под приказом подпись Ильи Лесного, которого Вера считала погибшим."
 		body += "\nРешение: приказ обнародован; Вера ищет объяснение подписи." if s.truth_shared else "\nРешение пока открыто: показать документ Вере или сохранить его при себе."
 	open("ЖУРНАЛ / ОЧАГ", body, [{"text": "Вернуться в мир", "action": game.resume}])
+
+func diagnostics() -> Dictionary:
+	var buttons: Array = []
+	for child in column.get_children():
+		if child is Button:
+			buttons.append({"text": child.text, "rect": [child.global_position.x, child.global_position.y, child.size.x, child.size.y]})
+	return {"visible": panel.visible, "rect": [panel.global_position.x, panel.global_position.y, panel.size.x, panel.size.y],
+		"title": column.get_child(0).text if column.get_child_count() > 0 else "", "buttons": buttons}
