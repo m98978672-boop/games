@@ -6,9 +6,9 @@
     "games": 234,
     "storefront": 18,
     "collection": 216,
-    "files": 2142,
-    "totalBytes": 52835014,
-    "chunks": 398,
+    "files": 2145,
+    "totalBytes": 52845056,
+    "chunks": 399,
     "blockedFiles": 5
   },
   "games": [
@@ -2090,11 +2090,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "cbf9892250eafc06ade14d3c698110bddc04d30f93b7bdf2392abe68a3033afc",
-      "totalSize": 9951778,
+      "infoHash": "ff2fe394101f267945642201391eafefe713a14a3ec6c2bc9908dbd43d23db74",
+      "totalSize": 9961820,
       "chunkSize": 262144,
-      "chunkCount": 38,
-      "fileCount": 573,
+      "chunkCount": 39,
+      "fileCount": 576,
       "files": [
         {
           "path": ".gitattributes",
@@ -3478,8 +3478,8 @@
         },
         {
           "path": "package.json",
-          "size": 15323,
-          "sha256": "1eca897337095cb1327cde9498d8684b3a3d7266e5044f03758b83f935c29097"
+          "size": 15467,
+          "sha256": "30a5949bda8636eca444d656a58ee62e33d96bf5c1de6a35f3c4b192f5d4e08b"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3519,7 +3519,7 @@
         {
           "path": "src/core/build-info.js",
           "size": 848,
-          "sha256": "a0638fdff4dd0f6c35ea8f96f7cc18017265d1edc5b2f86ad688e1a2d2e7fbe0"
+          "sha256": "1011788a199b8d483555f363a0f961ef25fbe33a6967e6781dca45ed0b0f45bf"
         },
         {
           "path": "src/core/config.js",
@@ -3553,8 +3553,8 @@
         },
         {
           "path": "src/core/save.js",
-          "size": 27906,
-          "sha256": "01bdf6fad483317dd5332fdf0dd28a95f7753ea0ee56699564d7353d3035d773"
+          "size": 28698,
+          "sha256": "df46cadf0d86c926487c53be98aeae479601696f1ddfba7d969855f6cfc5f908"
         },
         {
           "path": "src/core/spatial.js",
@@ -3578,8 +3578,8 @@
         },
         {
           "path": "src/sim/ai_soldier.js",
-          "size": 29274,
-          "sha256": "2ba2bc28564f49c5bea54fa9ed65bc213be394379c6d0dbbd5b8d5a91229acb3"
+          "size": 29617,
+          "sha256": "a07028435ebb225b202b2f18e8d73867bf439b04c66c7f94c77be381fefb8198"
         },
         {
           "path": "src/sim/ai_squad.js",
@@ -3623,8 +3623,8 @@
         },
         {
           "path": "src/sim/crowd_nav.js",
-          "size": 12226,
-          "sha256": "e72631fde076ba1a6f62818c3ee4e899c4bc677ce1856ba62f722cfd2754043a"
+          "size": 12372,
+          "sha256": "a74c798837a8aff3e776b7ad3933680d9826626dad92ee10bf88a25b8d97bf98"
         },
         {
           "path": "src/sim/door_courtesy.js",
@@ -3723,8 +3723,8 @@
         },
         {
           "path": "src/sim/units.js",
-          "size": 45651,
-          "sha256": "3e38fb58f42198b7ded6a071919d4d54875253d09313bf1cf3538cd315e5d8b4"
+          "size": 46202,
+          "sha256": "126d1ad9d650e49fd575190afee4dc32a444ce403df6289dadc7a40f471dd733"
         },
         {
           "path": "src/sim/vision_nav_policy.js",
@@ -4137,6 +4137,11 @@
           "sha256": "98d2eb7710cb5a513d5fd413b1aa091d690a6b7a1b91e29963892e3eaf120832"
         },
         {
+          "path": "tools/crowd-fail-battles.mjs",
+          "size": 1998,
+          "sha256": "a4a9fb0ce060f937c7a43d6275fdd7bce5c449341ca8a7dbf1a4e30183dabc3c"
+        },
+        {
           "path": "tools/crowd-fixes-combat.mjs",
           "size": 4128,
           "sha256": "251d967370576db9d14bc3d07c7aca6d8368cf6a589b6fd7311c1f648a135d2c"
@@ -4145,6 +4150,11 @@
           "path": "tools/crowd-fixes-group-step.mjs",
           "size": 4740,
           "sha256": "9280bdd80d38bd06f65c549f8313112669e25508a5f1b04027c4583be6bb9f57"
+        },
+        {
+          "path": "tools/crowd-large-battles.mjs",
+          "size": 2181,
+          "sha256": "e2f60a2e2f7d96d3844b1c0aaa2f430986d9c08c9fec87e6ccc29cae6876d82b"
         },
         {
           "path": "tools/crowd-open-realmap.mjs",
@@ -4235,6 +4245,11 @@
           "path": "tools/door-safety-wars.mjs",
           "size": 1790,
           "sha256": "06aa64144f07407bb9412d98baefb5d5713527c716c716b2cc484ce7c7830c14"
+        },
+        {
+          "path": "tools/door-traffic-probe.mjs",
+          "size": 3887,
+          "sha256": "1a56e06c1f9f99b2a76c9a49be9ad5eecc1ccf73cca02ab69be164a1ad11b31f"
         },
         {
           "path": "tools/escape-bundle-base64.mjs",

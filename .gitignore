@@ -21,3 +21,6 @@ tools/training/__pycache__/
 # промежуточные файлы сборки видео «Борис»
 /boris/build/
 /boris/audio/*.wav
+
+# python-кэш
+__pycache__/

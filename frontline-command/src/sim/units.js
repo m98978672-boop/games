@@ -522,11 +522,15 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
   const occupancyReach = Math.max(Math.hypot(nearbyRadius+28,nearbyRadius+6),
     nearbyRadius+speed*dt+(anti.pushSpeedMult??1.5)*Math.max(u.speed,anti.pushSpeedFloor??30)*dt+1);
   const occupancyNeighbors = occupancy ? game.occupancyGrid.queryRange(u.x,u.y,occupancyReach) : null;
-  if (occupancy && !yieldPoint && !doorLane && !u._crowdActive) {
+  // Before approaching its reserved slot, an obstructed large column still
+  // needs local avoidance/escape. Slot movement itself stays unchanged.
+  const routeWithLargeGroup = u._crowdOpenLarge && !u._crowdPoint &&
+    (u._smartRoute || game._smartRouteState?.active?.unit===u || (u.stuck||0)>=1);
+  if (occupancy && !yieldPoint && !doorLane && (!u._crowdActive || routeWithLargeGroup)) {
     const detour=occupiedDetour(game,u,dx,dy,game.occupancyGrid,occupancyNeighbors);
     if (detour) { dx=detour.x;dy=detour.y; }
   }
-  const escape=occupancy && !yieldPoint && !doorLane && !u._crowdActive ? trafficEscape(game,u,dx,dy) : null;
+  const escape=occupancy && !yieldPoint && !doorLane && (!u._crowdActive || routeWithLargeGroup) ? trafficEscape(game,u,dx,dy) : null;
   if (escape) { dx=escape.x-u.x;dy=escape.y-u.y; }
   const len = Math.hypot(dx, dy);
   if (len > 1) { dx /= len; dy /= len; }
@@ -720,6 +724,7 @@ export function updateTimers(game, u, dt) {
 
 export function moveAlongFlow(game, u, dt) {
   if (!u.goal) { if (u._smartRoute || game._smartRouteState?.active?.unit === u) cancelSelectedSmartRoute(game,u); if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u); u.flowDir = null; return; }
+  const failedRestGoal = !!u.pathFailed && u.goal===u._failedRestGoal;
   // Adjust a destination embedded in a wall before asking for a flow field.
   // This does not validate all intermediate edges of the coarse nav grid.
   if (game.cfg.flag('wall_goal_guard_v1', false) && game.walls?.enabled() &&
@@ -773,7 +778,11 @@ export function moveAlongFlow(game, u, dt) {
   // updateTimers при отказе удаляет цель. Новая цель бойца или танка — новая
   // попытка; F8 не должен игнорировать её из-за прошлого отказа. Грузовики
   // управляются отдельно логистикой, которая сама обрабатывает этот статус.
-  if (u.pathFailed && u.role !== 'truck') u.pathFailed = false;
+  if (failedRestGoal) u._failedRestGoal=u.goal; // follow any safety correction above
+  else {
+    u._failedRestGoal=null;
+    if (u.pathFailed && u.role !== 'truck') u.pathFailed = false;
+  }
   const d = dist(u.x, u.y, u.goal.x, u.goal.y);
   const visionChoice = game.cfg.flag('vision_nav_policy_v1', false) ? chooseVisionNavigation(game,u) : null;
   // The two-person formation is restricted to a visibly opposing exit. This

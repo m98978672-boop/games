@@ -259,6 +259,10 @@ export const Save = {
       id: u.id, faction: u.faction, role: u.role, x: Math.round(u.x), y: Math.round(u.y),
       hp: Math.round(u.hp), morale: Math.round(u.morale), squadId: u.squadId,
       mag: u.mag, reserve: u.reserve, facing: +u.facing.toFixed(3), downed: !!u.downed,
+      // Preserve only a failed-order doorway evacuation; ordinary infantry
+      // goals and path failures still follow the existing save semantics.
+      ...(u.pathFailed && !u.isVehicle && u.goal && u.goal === u._failedRestGoal
+        ? { failedRestGoal: { x: u.goal.x, y: u.goal.y }, failedRestArrived: !!u.arrived } : {}),
     }));
     const payload = {
       version: 1,
@@ -439,6 +443,14 @@ export const Save = {
       unit.reserve = u.reserve;
       unit.facing = u.facing;
       if (u.downed) unit.downed = true;
+      if (!unit.isVehicle && Number.isFinite(u.failedRestGoal?.x) && Number.isFinite(u.failedRestGoal?.y) &&
+          u.failedRestGoal.x >= 0 && u.failedRestGoal.y >= 0 &&
+          u.failedRestGoal.x < game.world.W && u.failedRestGoal.y < game.world.H) {
+        unit.goal = { x: u.failedRestGoal.x, y: u.failedRestGoal.y };
+        unit._failedRestGoal = unit.goal;
+        unit.pathFailed = true;
+        unit.arrived = u.failedRestArrived === true;
+      }
       const exact = exactUnits.get(u.id);
       if (exact) {
         // Дополнительные поля старые версии не содержат; повреждённые значения
