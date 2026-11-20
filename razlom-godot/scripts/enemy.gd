@@ -262,7 +262,7 @@ func hit_at(amount: float, point: Vector3, normal: Vector3, impulse: Vector3) ->
 	var local := to_local(point)
 	var zone := RazlomBallistics.region(local)
 	last_hit_region = ("left_arm" if local.x < 0 else "right_arm") if zone == "arms" else zone
-	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual
+	var host: Node3D = visual.get_node("Head") if last_hit_region == "head" else visual.get_node("Coat")
 	if last_hit_region == "left_arm": host = visual.get_node("ArmLJoint/ArmL")
 	elif last_hit_region == "right_arm": host = visual.get_node("ArmRJoint/ArmR")
 	elif zone == "legs": host = visual.get_node("LegLJoint/LegL" if local.x < 0 else "LegRJoint/LegR")
