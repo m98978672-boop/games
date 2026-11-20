@@ -13,7 +13,7 @@ static func material(color: Color, texture: String = "", glow: float = 0.0) -> S
 	mat.roughness = 0.88
 	if not texture.is_empty():
 		mat.albedo_texture = load("res://assets/textures/" + texture + ".png")
-		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 		mat.uv1_triplanar = true
 		mat.uv1_scale = Vector3.ONE * 0.65
 	if glow > 0:
@@ -54,6 +54,10 @@ static func sign_text(parent: Node3D, text: String, pos: Vector3, font_size: int
 	label.pixel_size = 0.009
 	label.modulate = color
 	label.outline_size = 3
+	label.no_depth_test = false
+	label.visibility_range_end = 38.0
+	label.visibility_range_end_margin = 8.0
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	return label
 
 static func humanoid(parent: Node3D) -> Node3D:

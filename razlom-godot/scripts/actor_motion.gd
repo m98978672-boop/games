@@ -26,7 +26,7 @@ func fire() -> void:
 	recoil = 1.0
 
 func advance(delta: float, speed: float, aiming: bool = false) -> void:
-	clock += delta * (7.0 + speed * 1.4)
+	clock += delta * (speed * 3.4 + 0.4)
 	blend = move_toward(blend, clampf(speed / 2.5, 0, 1), delta * 6)
 	recoil = move_toward(recoil, 0, delta * 7)
 	for part in joints:
@@ -35,8 +35,8 @@ func advance(delta: float, speed: float, aiming: bool = false) -> void:
 		var swing := sin(clock + (PI if alternate else 0.0)) * blend * 0.5
 		if part.begins_with("Arm") and aiming:
 			swing = -0.65 - recoil * 0.2
-		joint.rotation.x = swing
-	model.position.y = absf(sin(clock)) * blend * 0.025
+		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))
+	model.position.y = lerpf(model.position.y, (1.0 - cos(clock * 2.0)) * blend * 0.009, 1.0 - exp(-delta * 10.0))
 	var tail := model.get_node_or_null("Tail") as Node3D
 	if tail != null:
 		tail.rotation.y = sin(clock * 1.5) * 0.3

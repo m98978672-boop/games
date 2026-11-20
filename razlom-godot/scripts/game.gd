@@ -724,7 +724,13 @@ func _process(delta: float) -> void:
 	clock_label.text = "РЕГИОН РУБЕЖ   /   %02d:%02d   /   ТЕПЛО %03d   УСТАЛОСТЬ %03d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	if mobile_mode:
 		clock_label.text = "%02d:%02d  ТЕПЛО %d  УСТАЛОСТЬ %d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
-	mission_label.text = "01  /  ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nМожно продолжить исследование" if state.complete else ("Вернись в убежище\nСдай насосный блок • E" if state.pump else "Найди насосный блок\nСклад 03 · северо-восток"))
+	var destination := Vector3(-23, 0, 22) if state.pump else Vector3(21, 0, -20)
+	var offset := destination - player.global_position
+	var distance := Vector2(offset.x, offset.z).length()
+	var local_target := player.global_transform.basis.inverse() * offset
+	var bearing := atan2(local_target.x, -local_target.z)
+	var direction_text := "ПРЯМО" if absf(bearing) < 0.35 else ("РАЗВЕРНИСЬ" if absf(bearing) > 2.5 else ("СПРАВА →" if bearing > 0 else "← СЛЕВА"))
+	mission_label.text = "01 / ТЁПЛАЯ СТЕНА\n" + ("Вода восстановлена\nЗадание завершено" if state.complete else (("Убежище" if state.pump else "Насос · склад 03") + " · %d м\n" % int(distance) + direction_text))
 	if get_tree().paused or ended:
 		return
 	elapsed += delta
@@ -746,11 +752,11 @@ func _process(delta: float) -> void:
 	hint_label.text = ""
 	var hit := ray(3.2)
 	if not hit.is_empty() and hit.collider.has_meta("loot"):
-		hint_label.text = "E  /  " + str(hit.collider.get_meta("title"))
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + str(hit.collider.get_meta("title"))
 	elif not hit.is_empty() and hit.collider.has_meta("use"):
-		hint_label.text = "E  /  " + str(hit.collider.get_meta("title"))
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + str(hit.collider.get_meta("title"))
 	elif is_sheltered(player.global_position):
-		hint_label.text = "E  /  " + ("Установить насос" if state.pump and not state.complete else "Убежище · верстак")
+		hint_label.text = ("ВЗЯТЬ  /  " if mobile_mode else "E  /  ") + ("Установить насос" if state.pump and not state.complete else "Убежище · верстак")
 	if state.health <= 0 or player.position.y < -12:
 		ended = true
 		show_menu("ВЫЛАЗКА ОКОНЧЕНА", "Рубеж ошибок не прощает.\n\nЗагрузи сохранение или начни заново.\nИспользуй укрытия и аптечки. Отходи от зарядов.\n\nПотери не означают конец истории.")
