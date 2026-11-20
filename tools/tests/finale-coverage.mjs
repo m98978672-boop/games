@@ -58,6 +58,10 @@ const END_MARKERS = [
      раздел не мог «пройти» страж случайным совпадением слова victory */
   /showCareerEnd/, /offerFinalContract/, /careerDone/, /winScreen/, /escaped\s*=\s*true/,
   /freeMode/, /finalDone/, /endless\s*[:=]/,
+  /* warehouse-crew: смена — это партия; её конец зовётся endShift, а
+     экран итогов — openShiftEnd (модалка «Смена закрыта» со счётом,
+     качеством и кнопкой новой смены) */
+  /endShift\s*\(/, /openShiftEnd/,
 ];
 
 /* Показ результата: экран, оверлей, модалка, тост-финал. */

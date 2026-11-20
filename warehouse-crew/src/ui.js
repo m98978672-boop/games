@@ -501,6 +501,20 @@ window.WC = window.WC || {};
     return box;
   }
 
+  /* Оценка смены: цифры без вердикта — не финал, а бухгалтерия.
+     Смена считается крепкой, когда качество высокое и ничего не
+     разбито; тяжёлой — когда брак и просрочка съели результат. */
+  function shiftVerdict(summary) {
+    if (summary.delivered === 0) return 'Смена пустая: ни одного заказа не дошло до стеллажа.';
+    if (summary.quality >= 90 && summary.ruined === 0 && summary.missed === 0) {
+      return 'Образцовая смена: всё в срок и без брака. Так держать.';
+    }
+    if (summary.quality >= 70 && summary.ruined <= 1) {
+      return 'Смена закрыта достойно: склад работал, бригада справилась.';
+    }
+    return 'Тяжёлая смена: брак и просрочка съели результат. Следующая будет лучше.';
+  }
+
   function openShiftEnd(summary) {
     var modal = U.el('div', { class: 'inspector' }, [
       U.el('div', { class: 'insp-head' }, [
@@ -526,6 +540,7 @@ window.WC = window.WC || {};
             U.el('span', { class: 'val', text: member.delivered + ' шт' }),
           ]);
         })),
+        U.el('div', { class: 'brain-note', text: shiftVerdict(summary) }),
         U.el('div', { class: 'brain-note', text: 'Прогресс сохранён автоматически. Хочешь — скачай отчёт смены в JSON.' }),
       ]),
       U.el('div', { class: 'help-actions' }, [
