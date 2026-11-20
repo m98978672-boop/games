@@ -6,8 +6,8 @@
     "games": 232,
     "storefront": 16,
     "collection": 216,
-    "files": 2065,
-    "totalBytes": 50869907,
+    "files": 2077,
+    "totalBytes": 50920342,
     "chunks": 391,
     "blockedFiles": 3
   },
@@ -2090,11 +2090,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "c8e7ddbcc454edca9107419e1d1d7d6470714c2dcf797f9abae754ed18c3c8e0",
-      "totalSize": 9762738,
+      "infoHash": "8fa17ab2361c3df114805eae2057670d2f7a1c569f69120e43f99f53d947bad8",
+      "totalSize": 9813173,
       "chunkSize": 262144,
       "chunkCount": 38,
-      "fileCount": 533,
+      "fileCount": 545,
       "files": [
         {
           "path": ".gitattributes",
@@ -4547,14 +4547,74 @@
           "sha256": "8456545dd248cbf1ce3e56ab9e3365f9fa415182a974ec7de3728ca331312647"
         },
         {
+          "path": "tools/training/collect-obstacle-game.mjs",
+          "size": 7125,
+          "sha256": "89164b1352a755de2373e3c656648e2dfe43a1991b3ce0858a33bc7d60b29276"
+        },
+        {
+          "path": "tools/training/collect-obstacle-v2.mjs",
+          "size": 4338,
+          "sha256": "ac9abac69da5d235885ecd785be0cfb9c5651470bfe7145bb031faedef301f79"
+        },
+        {
           "path": "tools/training/eval-qwen.py",
           "size": 3932,
           "sha256": "ea37e7e63c8e5f516e832066a01e472fa9634f0d80a2c190eb67a1f8e62a6126"
         },
         {
+          "path": "tools/training/obstacle-eval.py",
+          "size": 6744,
+          "sha256": "256d0cb1fcab91df7f450552c6822855070924b3f6a213d235e5d030d719ae5b"
+        },
+        {
+          "path": "tools/training/obstacle-fallback-sim.mjs",
+          "size": 3257,
+          "sha256": "05e1e8216563410749efcdfd7f08bb35e0e18943bccf7f2906f9a47613cb252b"
+        },
+        {
+          "path": "tools/training/obstacle-holdout-infer.py",
+          "size": 2768,
+          "sha256": "79f1bab62c7b136d313955c2faf58e732c4681825bfcd87d9b57ad965e14b56c"
+        },
+        {
+          "path": "tools/training/obstacle-holdout.mjs",
+          "size": 1049,
+          "sha256": "333882cae76fa5a8f821e834e3177ca0efc5e0a2cc4435d292878819830fe749"
+        },
+        {
+          "path": "tools/training/replay-obstacle-game.mjs",
+          "size": 1650,
+          "sha256": "a33676bf53a55752349f45ca27da1e8a29f17a5b932436820ac325fa93da4083"
+        },
+        {
+          "path": "tools/training/replay-obstacle-holdout.mjs",
+          "size": 2341,
+          "sha256": "9c37409864a44428040a09847fa75d97ee5f187d7f825b601d2bc9221d6c15f5"
+        },
+        {
           "path": "tools/training/score-generated.mjs",
           "size": 1071,
           "sha256": "421e0640e7f1f29e4553113390f02496fc1131b4e278499f763ca5c91fbfa933"
+        },
+        {
+          "path": "tools/training/study-qwen.py",
+          "size": 5857,
+          "sha256": "84fa4ce72ddc84c32dda312dd9ecc37e80933595d2bf344f00f51a96d6f71cee"
+        },
+        {
+          "path": "tools/training/summarize-obstacle-v2.mjs",
+          "size": 2164,
+          "sha256": "6103d3f2525b4ee5014003bf8fc02d9b4d8975a03192fe76faad88c8b88cfde3"
+        },
+        {
+          "path": "tools/training/train-obstacle-game.py",
+          "size": 6013,
+          "sha256": "31a526c6f61a8be3ced1936ec0fe52b6557941d71223acd88a2caab0c2d95650"
+        },
+        {
+          "path": "tools/training/train-obstacle-v2.py",
+          "size": 7129,
+          "sha256": "222c5d53feb5e2e9dcc8633bfd2001be643ddc043e21efd6427737442026a9eb"
         },
         {
           "path": "tools/training/train-qwen.py",

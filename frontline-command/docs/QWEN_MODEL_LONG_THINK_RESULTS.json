@@ -1,0 +1,42 @@
+[
+  {
+    "model": "base",
+    "mode": "thinking_sample",
+    "case": "gap-top",
+    "seed": 700,
+    "generated_tokens": 1024,
+    "budget": 1024,
+    "seconds": 114.33,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      ".....",
+      "..#..",
+      ".S#G.",
+      "..#..",
+      "#####"
+    ],
+    "score": null
+  },
+  {
+    "model": "base",
+    "mode": "thinking_sample",
+    "case": "door",
+    "seed": 702,
+    "generated_tokens": 1024,
+    "budget": 1024,
+    "seconds": 113.23,
+    "ended_with_eos": false,
+    "has_final": false,
+    "answer": null,
+    "map": [
+      "..#..",
+      "..#..",
+      ".S.G.",
+      "..#..",
+      "..#.."
+    ],
+    "score": null
+  }
+]

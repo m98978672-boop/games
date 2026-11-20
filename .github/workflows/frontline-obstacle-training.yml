@@ -1,0 +1,78 @@
+name: Frontline obstacle waypoint research
+on:
+  push:
+    branches: [arena/2045b9f2-games]
+    paths: [.github/workflows/frontline-obstacle-training.yml, frontline-command/tools/training/train-obstacle-game.py, frontline-command/tools/training/collect-obstacle-game.mjs, frontline-command/tools/training/replay-obstacle-game.mjs]
+permissions:
+  contents: read
+jobs:
+  train-and-evaluate:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Check game-based test cases
+        run: node frontline-command/tests/obstacle-training-game.mjs
+      - name: Collect validated Game.step demonstrations
+        run: node frontline-command/tools/training/collect-obstacle-game.mjs "$RUNNER_TEMP/obstacle-data"
+      - name: Install CPU model dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Train and generate decisions for unseen game scenes
+        run: python -u frontline-command/tools/training/train-obstacle-game.py --data "$RUNNER_TEMP/obstacle-data" --output "$RUNNER_TEMP/obstacle-output" --steps 128
+      - name: Replay generated decisions through the game
+        run: node frontline-command/tools/training/replay-obstacle-game.mjs "$RUNNER_TEMP/obstacle-output/report.json" "$RUNNER_TEMP/obstacle-output/replay.json"
+      - name: Report results
+        if: always()
+        run: |
+          python -c 'import os,json; p=os.path.join(os.environ["RUNNER_TEMP"],"obstacle-output","report.json"); r=json.load(open(p)) if os.path.exists(p) else None; print("::notice::TRAIN_REPORT "+json.dumps({k:v for k,v in r.items() if k not in ("results","train_losses")},separators=(",",":"))) if r else None'
+          python -c 'import os,json; p=os.path.join(os.environ["RUNNER_TEMP"],"obstacle-output","replay.json"); r=json.load(open(p)) if os.path.exists(p) else None; print("::notice::REPLAY_RESULT "+json.dumps(r,separators=(",",":"))) if r else None'
+      - name: Pack research result
+        run: |
+          mkdir "$RUNNER_TEMP/obstacle-output/dataset"
+          cp "$RUNNER_TEMP/obstacle-data/"* "$RUNNER_TEMP/obstacle-output/dataset/"
+          tar -C "$RUNNER_TEMP/obstacle-output" -czf "$RUNNER_TEMP/frontline-obstacle-research.tar.gz" adapter dataset report.json replay.json progress.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontline-obstacle-research
+          path: |
+            ${{ runner.temp }}/obstacle-data/
+            ${{ runner.temp }}/obstacle-output/
+            ${{ runner.temp }}/frontline-obstacle-research.tar.gz
+          if-no-files-found: warn
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontline-obstacle-complete
+          path: ${{ runner.temp }}/frontline-obstacle-research.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+  publish:
+    needs: train-and-evaluate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontline-obstacle-complete
+          path: ${{ runner.temp }}
+      - name: Preserve research data and adapter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "frontline-obstacle-research-$GITHUB_RUN_ID" --target "$GITHUB_SHA" --title 'Frontline waypoint research: model, data and replay' --notes 'Research PEFT adapter on synthetic U-wall scenarios, trained from actual Game.step and CommandAPI waypoint trials. Includes train/eval data, generated outputs and game replay report. NOT integrated into the game or a WebLLM model; success must be read from the replay report, and does not prove benefit in normal gameplay.' "$RUNNER_TEMP/frontline-obstacle-research.tar.gz"
