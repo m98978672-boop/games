@@ -16,6 +16,7 @@ export function clearCrowdState(u) {
   u._crowdGroupGoal = null;
   u._crowdAssigned = null;
   u._crowdOpenGroup = false;
+  u._crowdOpenLarge = false;
   if ('_crowdPairManaged' in u) delete u._crowdPairManaged;
 }
 
@@ -48,12 +49,13 @@ export function prepareCrowdNavigation(game, u, distance, maxMembers=MAX_GROUP, 
       const minimum = allowPair && game.cfg.flag('group_nav_pair_v1', false) ? 2 : (occupancy || game.cfg.flag('group_nav_3to5_v1', false)) ? 3 : 6;
       // Check the actual planned slots, not just points sampled on the ring.
       // Never reorganise parked allies, use this for large radii, or create a
-      // fresh pair. Limit the open-ground extension to 3–5: larger crowds are
-      // not reliably handled by these reservations. Building logic is unchanged.
+      // fresh pair. Up to ten infantry can reserve open-ground slots. This
+      // remains a narrow aligned-column heuristic, not a general crowd solver;
+      // building and doorway group logic is unchanged.
       let openSafe=true;
       if (openGoal && members.length >= minimum && members.length <= Math.min(MAX_GROUP,maxMembers) && aligned && unassigned) {
         const r=Math.max(...members.map(o=>o.radius));
-        openSafe=members.length>=3 && members.length<=5 && members.every(o=>!o.arrived && o.radius<=12) &&
+        openSafe=members.length>=3 && members.length<=10 && members.every(o=>!o.arrived && o.radius<=12) &&
           !unsafeRest(game,u.goal.x,u.goal.y,r);
         for(let i=0;openSafe && i<members.length;i++) {
           const k=SLOT_ORDER[i], a=(k??0)*2*Math.PI/9, cs=Math.cos(a),sn=Math.sin(a);
@@ -72,6 +74,7 @@ export function prepareCrowdNavigation(game, u, distance, maxMembers=MAX_GROUP, 
             point={x:u.goal.x-r*(nx*cs-ny*sn),y:u.goal.y-r*(nx*sn+ny*cs)};
           }
           members[i]._crowdOpenGroup=openGoal;
+          members[i]._crowdOpenLarge=openGoal && members.length>5;
           members[i]._crowdGroupGoal={...u.goal};
           members[i]._crowdAssigned=point;
           if (game.cfg.flag('group_nav_pair_v1', false) && members.length===2) members[i]._crowdPairManaged=true;
