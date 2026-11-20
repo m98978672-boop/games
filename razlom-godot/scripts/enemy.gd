@@ -4,7 +4,12 @@ var game
 var health := 100.0
 var alert := false
 var last_seen := Vector3.ZERO
-var memory := 0.0
+var awareness := RazlomAIMemory.new()
+var behavior := "patrol"
+var visible_contact := false
+var report_cooldown := 0.0
+var search_step := 0
+var search_time := 0.0
 var cooldown := 0.0
 var scan := 0.0
 var home := Vector3.ZERO
@@ -41,7 +46,7 @@ func sees_player() -> bool:
 	if eye.distance_to(target) > 24:
 		return false
 	var to_player := (target - eye).normalized()
-	if not alert and eye.distance_to(target) > 3 and (-visual.global_basis.z).dot(to_player) < 0.3:
+	if eye.distance_to(target) > 3 and (-visual.global_basis.z).dot(to_player) < (0.0 if alert else 0.3):
 		return false
 	var q := PhysicsRayQueryParameters3D.create(eye, target, 1 | 2)
 	q.exclude = [get_rid()]
@@ -50,36 +55,79 @@ func sees_player() -> bool:
 
 func hear(source: Vector3, radius: float) -> void:
 	if global_position.distance_to(source) <= radius:
-		last_seen = source
-		memory = 7
+		awareness.observe(source, "sound", 0.65)
+		if not visible_contact:
+			last_seen = source
 		alert = true
+
+func receive_report(point: Vector3) -> void:
+	awareness.observe(point, "radio", 0.55)
+	alert = true
+
+func remember_sighting(point: Vector3) -> void:
+	last_seen = point
+	awareness.observe(point, "sight", 1.0)
+	search_step = 0
+	search_time = 0
+	alert = true
+	if report_cooldown <= 0:
+		report_cooldown = 4.0
+		game.share_contact(self, point)
+
+func choose_target(delta: float) -> Vector3:
+	var contact := awareness.focus()
+	if visible_contact:
+		behavior = "engage"
+		alert = true
+		return last_seen
+	if not contact.is_empty():
+		alert = true
+		last_seen = contact.point
+		if global_position.distance_to(last_seen) > 1.8 and search_step == 0:
+			behavior = "investigate"
+			return last_seen
+		behavior = "search"
+		search_time += delta
+		var angle := float(search_step) * 2.4
+		var target := last_seen + Vector3(cos(angle), 0, sin(angle)) * 2.8
+		if global_position.distance_to(target) < 1.0 or search_time > 5.0:
+			search_step += 1
+			search_time = 0
+		if search_step >= 3:
+			contact.cleared = true
+			search_step = 0
+		return target
+	alert = false
+	search_step = 0
+	search_time = 0
+	behavior = "return" if global_position.distance_to(home) > 2.0 else "patrol"
+	return home if behavior == "return" else home + Vector3(sin(phase * 0.25) * 3, 0, cos(phase * 0.25) * 3)
 
 func _physics_process(delta: float) -> void:
 	if dead or game.ended:
 		return
 	cooldown -= delta
-	memory = maxf(0, memory - delta)
+	report_cooldown -= delta
+	awareness.tick(delta)
 	scan -= delta
 	if scan <= 0:
 		scan = 0.22
-		if sees_player():
-			last_seen = game.player.global_position
-			memory = 5
-			alert = true
+		visible_contact = sees_player()
+		if visible_contact:
+			remember_sighting(game.player.global_position)
 			if cooldown <= 0:
 				cooldown = 1.3
 				game.enemy_fire(self)
-	if memory <= 0:
-		alert = false
 	phase += delta
-	var target := last_seen if alert else home + Vector3(sin(phase * 0.25) * 3, 0, cos(phase * 0.25) * 3)
+	var target := choose_target(delta)
 	path_timer -= delta
 	if path_timer <= 0:
 		path_timer = 0.45
 		waypoint = game.next_waypoint(global_position, target)
 	var direction := waypoint - global_position
 	direction.y = 0
-	if direction.length() > 0.25 and (not alert or global_position.distance_to(target) > 4.0):
+	var stop_range := 4.0 if behavior == "engage" else 0.8
+	if direction.length() > 0.25 and global_position.distance_to(target) > stop_range:
 		direction = direction.normalized()
 		velocity.x = direction.x * (2.7 if alert else 1.1)
 		velocity.z = direction.z * (2.7 if alert else 1.1)
@@ -87,18 +135,28 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = 0
 		velocity.z = 0
+	if visible_contact:
+		var aim := last_seen - global_position
+		visual.rotation.y = atan2(-aim.x, -aim.z)
+	elif behavior == "search":
+		visual.rotation.y += delta * 0.8
 	if not is_on_floor():
 		velocity.y -= 18 * delta
 	move_and_slide()
-	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), alert)
-	think_label.text = "!" if alert else ""
+	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), visible_contact)
+	think_label.text = "!" if behavior == "engage" else ("?" if alert else "")
 	think_label.modulate = Color("efb26a")
 
 func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	if dead:
 		return
 	health -= amount
-	hear(game.player.global_position, 100)
+	# A hit is evidence of danger, not a magical coordinate of an unseen shooter.
+	if sees_player():
+		remember_sighting(game.player.global_position)
+	else:
+		awareness.observe(global_position, "damage", 0.8)
+		alert = true
 	if health <= 0:
 		dead = true
 		game.state.kills += 1

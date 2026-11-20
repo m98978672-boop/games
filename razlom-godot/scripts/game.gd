@@ -335,6 +335,12 @@ func noise(pos: Vector3, radius: float) -> void:
 			var occluded := not get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 			guard.hear(pos, radius * (0.45 if occluded else 1.0))
 
+func share_contact(sender, point: Vector3) -> void:
+	# One-hop local warning; recipients do not rebroadcast reports or get live tracking.
+	for guard in enemies:
+		if is_instance_valid(guard) and guard != sender and not guard.dead and guard.global_position.distance_to(sender.global_position) <= 18:
+			guard.receive_report(point)
+
 func enemy_fire(guard) -> void:
 	if not guard.sees_player():
 		return
@@ -721,7 +727,7 @@ func save_game() -> bool:
 	data["guards"] = []
 	for guard in enemies:
 		if is_instance_valid(guard) and not guard.is_queued_for_deletion():
-			data["guards"].append({"id": String(guard.name), "health": guard.health, "position": [guard.position.x, guard.position.y, guard.position.z]})
+			data["guards"].append({"id": String(guard.name), "health": guard.health, "position": [guard.position.x, guard.position.y, guard.position.z], "memory": guard.awareness.snapshot()})
 	var file := FileAccess.open(save_path + ".tmp", FileAccess.WRITE)
 	if file == null:
 		notify("Не удалось записать сохранение")
@@ -804,6 +810,7 @@ func load_game() -> bool:
 			for record in data.guards:
 				if record.id == String(guard.name):
 					found = true
+					guard.awareness.restore(record.get("memory", []))
 					guard.health = float(record.health)
 					guard.position = Vector3(record.position[0], record.position[1], record.position[2])
 			if not found:
@@ -861,6 +868,8 @@ func validate_world_save(data: Dictionary) -> bool:
 		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap"] or not record.get("title") is String:
 			return false
 	for record in data.guards:
+		if not RazlomAIMemory.valid(record.get("memory", [])):
+			return false
 		if not (record.get("health") is float or record.get("health") is int):
 			return false
 		if not is_finite(float(record.health)) or float(record.health) < 0 or float(record.health) > 100:
