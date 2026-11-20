@@ -1,0 +1,250 @@
+name: Frontline 15 hour model training
+on:
+  push:
+    branches: [arena/03bf5b1a-games]
+    paths: [.github/workflows/frontline-long-training.yml]
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test data isolation
+        run: |
+          node frontline-command/tests/long-training-data.mjs
+          node frontline-command/tests/commander-training-data.mjs
+          node frontline-command/tools/training/collect-long-training.mjs "$RUNNER_TEMP/data" --quick
+      - name: Retrieve and verify existing research adapter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download frontline-obstacle-v2-44626512571 --pattern frontline-obstacle-v2.tar.gz --dir "$RUNNER_TEMP"
+          echo "ba79aaf92c5c4bf11dbb22b3a0b324a834b2aa2f4fa0f376d6d498a02087f4d6  $RUNNER_TEMP/frontline-obstacle-v2.tar.gz" | sha256sum -c -
+          mkdir "$RUNNER_TEMP/source"
+          tar -xzf "$RUNNER_TEMP/frontline-obstacle-v2.tar.gz" -C "$RUNNER_TEMP/source" adapter
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Run short staged training and resume
+        run: |
+          set -euo pipefail
+          run() {
+            if "$@" 2>&1 | tee "$RUNNER_TEMP/smoke-last.log"; then return 0; fi
+            python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"smoke-last.log"),errors="replace").read()[-5000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+            return 1
+          }
+          run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/one" --initial-adapter "$RUNNER_TEMP/source/adapter" --phase 1 --active-seconds 3600 --max-steps 3 --eval-commands 1 --eval-token-budget 8
+          run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/restart" --resume "$RUNNER_TEMP/one/snapshot" --phase 1 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
+          run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/two" --resume "$RUNNER_TEMP/restart/snapshot" --phase 2 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
+          run python -u frontline-command/tools/training/train-long.py --data "$RUNNER_TEMP/data" --work "$RUNNER_TEMP/three" --resume "$RUNNER_TEMP/two/snapshot" --phase 3 --active-seconds 3600 --max-steps 2 --eval-commands 1 --eval-token-budget 8
+          python - <<'PY'
+          import json,os
+          t=os.environ['RUNNER_TEMP']; paths=['one','restart','two','three']
+          rows=[json.load(open(f'{t}/{x}/snapshot/progress.json')) for x in paths]
+          assert [x['phase'] for x in rows]==[1,1,2,3]
+          assert [x['steps'] for x in rows]==[3,5,7,9]
+          assert all(rows[i]['active_seconds']>rows[i-1]['active_seconds'] for i in range(1,4))
+          assert len({x['dataset_sha256'] for x in rows})==1
+          assert sum(rows[-1]['task_counts'].values())==9
+          print('::notice::SMOKE_PROGRESS '+json.dumps(rows[-1],separators=(',',':'))
+          PY
+  prepare:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify data contracts
+        run: |
+          node frontline-command/tests/long-training-data.mjs
+          node frontline-command/tests/commander-training-data.mjs
+      - name: Collect game demonstrations and independent tests
+        run: node frontline-command/tools/training/collect-long-training.mjs "$RUNNER_TEMP/data"
+      - name: Save data in a research release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="frontline-learning-15h-$GITHUB_RUN_ID"
+          tar -C "$RUNNER_TEMP/data" -czf "$RUNNER_TEMP/long-dataset.tar.gz" .
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" --title 'Frontline long model training' --notes 'Requested 15 hours of active CPU LoRA training, in three resumable phases. Work is in progress until all phases and evaluation finish. Synthetic obstacle scenes and side-isolated real-game snapshots with heuristic labels; no model is installed in the playable game. Alternating checkpoint assets are uploaded during training.'
+          fi
+          gh release upload "$tag" "$RUNNER_TEMP/long-dataset.tar.gz" --clobber
+          python -c 'import json,os; p=os.path.join(os.environ["RUNNER_TEMP"],"data","collection.json"); print("::notice::LONG_DATA "+json.dumps(json.load(open(p)),ensure_ascii=True,separators=(",",":")))'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: long-training-dataset
+          path: ${{ runner.temp }}/data/
+          if-no-files-found: warn
+          retention-days: 30
+  phase-1:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    permissions:
+      contents: write
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PHASE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Train 5 active hours with durable checkpoints
+        run: |
+          set -o pipefail
+          if bash frontline-command/tools/training/run-long-phase.sh 2>&1 | tee "$RUNNER_TEMP/phase.log"; then exit 0; fi
+          python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"phase.log"),errors="replace").read()[-5000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: long-phase-1-recovery
+          path: |
+            ${{ runner.temp }}/phase.log
+            ${{ runner.temp }}/long-work/snapshot/
+          if-no-files-found: warn
+          retention-days: 30
+  phase-2:
+    needs: phase-1
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    permissions:
+      contents: write
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PHASE: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Train 5 active hours with durable checkpoints
+        run: |
+          set -o pipefail
+          if bash frontline-command/tools/training/run-long-phase.sh 2>&1 | tee "$RUNNER_TEMP/phase.log"; then exit 0; fi
+          python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"phase.log"),errors="replace").read()[-5000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: long-phase-2-recovery
+          path: |
+            ${{ runner.temp }}/phase.log
+            ${{ runner.temp }}/long-work/snapshot/
+          if-no-files-found: warn
+          retention-days: 30
+  phase-3:
+    needs: phase-2
+    runs-on: ubuntu-latest
+    timeout-minutes: 358
+    permissions:
+      contents: write
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PHASE: '3'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Train 5 active hours with durable checkpoints
+        run: |
+          set -o pipefail
+          if bash frontline-command/tools/training/run-long-phase.sh 2>&1 | tee "$RUNNER_TEMP/phase.log"; then exit 0; fi
+          python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"phase.log"),errors="replace").read()[-5000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: long-phase-3-recovery
+          path: |
+            ${{ runner.temp }}/phase.log
+            ${{ runner.temp }}/long-work/snapshot/
+          if-no-files-found: warn
+          retention-days: 30
+  evaluate:
+    needs: phase-3
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU inference dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Test unseen scenes and commander snapshots
+        run: |
+          set -o pipefail
+          if bash frontline-command/tools/training/evaluate-long.sh 2>&1 | tee "$RUNNER_TEMP/eval.log"; then exit 0; fi
+          python -c 'import os; s=open(os.path.join(os.environ["RUNNER_TEMP"],"eval.log"),errors="replace").read()[-5000:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: long-training-evaluation
+          path: |
+            ${{ runner.temp }}/eval.log
+            ${{ runner.temp }}/eval-output/
+          if-no-files-found: warn
+          retention-days: 30
