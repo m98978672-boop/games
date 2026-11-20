@@ -6,8 +6,8 @@
     "games": 233,
     "storefront": 17,
     "collection": 216,
-    "files": 2084,
-    "totalBytes": 51008901,
+    "files": 2085,
+    "totalBytes": 51141466,
     "chunks": 392,
     "blockedFiles": 3
   },
@@ -21,8 +21,8 @@
       "play": "country-atlas/index.html",
       "cover": "site/assets/country-atlas.webp",
       "dir": "country-atlas",
-      "infoHash": "e890e5f2095641932454ec78c1b4dbdedf41a43da03431b8cd5d8b8417b3b635",
-      "totalSize": 1828128,
+      "infoHash": "26b3120f5578a3b52e155da8a73b8c2ec5f5658a26fa1053f7a5645cdd701986",
+      "totalSize": 1828161,
       "chunkSize": 262144,
       "chunkCount": 7,
       "fileCount": 83,
@@ -69,8 +69,8 @@
         },
         {
           "path": "package.json",
-          "size": 1273,
-          "sha256": "8e423acee060149ab19087fe79a24d5db6224714d41e7a77cb874d078d93a451"
+          "size": 1306,
+          "sha256": "d74e70d8aa186046d8da5198de654ba28dbff6e00f981d7685277478dc21236d"
         },
         {
           "path": "site/app.js",
@@ -457,8 +457,8 @@
       "play": "dead-district/index.html",
       "cover": "dead-district/cover.svg",
       "dir": "dead-district",
-      "infoHash": "1d50d6dca744f19e5cec5e4e4f26df91f3dd940390691feef9d48b41b4f251d1",
-      "totalSize": 1370610,
+      "infoHash": "9c536f78495dfdd299262c7cfb0ca06307d0abea0b18545250af370b0add8a28",
+      "totalSize": 1374311,
       "chunkSize": 262144,
       "chunkCount": 6,
       "fileCount": 255,
@@ -1465,8 +1465,8 @@
         },
         {
           "path": "index.html",
-          "size": 17957,
-          "sha256": "bc01b2cf84a93f41705f36544889db5bde245da4b86c4e8c06a73a7b1f67ef40"
+          "size": 18638,
+          "sha256": "bf32acb1441163654747172ae572d9e998db94c1e8f2568b46a2cf6ef6fc14f8"
         },
         {
           "path": "project.godot",
@@ -1725,8 +1725,8 @@
         },
         {
           "path": "web/main.js",
-          "size": 52616,
-          "sha256": "051b71b1066b5bbfa832b485761f250ae84e3c54507f238d19ad1b2ba86eaf52"
+          "size": 55636,
+          "sha256": "af3e6096af44a363b8cab63f2c76e3f185e66a3466f45639feed655bc1abfc64"
         },
         {
           "path": "web/renderer_audio.js",
@@ -4836,8 +4836,8 @@
       "play": "cascade-hydro/index.html",
       "cover": "site/assets/cascade-hydro.webp",
       "dir": "cascade-hydro",
-      "infoHash": "7952888d49cee38e43b43d8373b466792b08782b392ff93fe124b20f685f7a5c",
-      "totalSize": 1907767,
+      "infoHash": "67e58f21584fb8a3461996071a2cc8811a476c9ab6e38dad21f5b94824104536",
+      "totalSize": 1920555,
       "chunkSize": 262144,
       "chunkCount": 8,
       "fileCount": 30,
@@ -4849,8 +4849,8 @@
         },
         {
           "path": "bundle.js",
-          "size": 1082498,
-          "sha256": "de0e615d5ef719473940bfe48a613d59c1f2adcedc9600b183f615e924dd304c"
+          "size": 1087504,
+          "sha256": "f263ac5bb32b32df99bc6f56ca5dc98b4ba66413dd7b0d0ba8ad184ebc6e28f3"
         },
         {
           "path": "data/game-knowledge-data.json",
@@ -4859,13 +4859,13 @@
         },
         {
           "path": "index.html",
-          "size": 25557,
-          "sha256": "b4d010fdcd3aab48c7ffbc94bca48fb71db38577987a8e2dfc30d28f954618ef"
+          "size": 26586,
+          "sha256": "3013043b99dea4ce44840c13792f3d700e70fb80f7766798a11b43e9016447a4"
         },
         {
           "path": "package.json",
-          "size": 506,
-          "sha256": "0d6ef029495a29d8baebbe89ef916b9ce281830baea75f21d9dcdbafc8c74cba"
+          "size": 531,
+          "sha256": "205c0328b6aaa0305ea1b5323d84a65841bf1663f8fbaa8e640e0099f211296f"
         },
         {
           "path": "src/audio.js",
@@ -4904,8 +4904,8 @@
         },
         {
           "path": "src/economy.js",
-          "size": 40657,
-          "sha256": "54a78d460dfa9a17cbf76dd31ff63e74ede6e9b2412d4dcfd5437ff953a9391e"
+          "size": 42515,
+          "sha256": "248696b89696729bbe71c5f1da38f6ba44fdc62c52bf4088c138e8b92b531546"
         },
         {
           "path": "src/hydro.js",
@@ -4929,8 +4929,8 @@
         },
         {
           "path": "src/main.js",
-          "size": 86221,
-          "sha256": "29b488f8bb6770e67121e6d60c0bc30abbc65881c0491bd4d5894dac794f1332"
+          "size": 89453,
+          "sha256": "c25270a07d1d8ee77abb23f0d49d54d4841a4e42e10ea12b2da33f73880c8a7a"
         },
         {
           "path": "src/noise.js",
@@ -4979,8 +4979,8 @@
         },
         {
           "path": "style.css",
-          "size": 28710,
-          "sha256": "5cd092c5d4e503de1a5dd1c890afc1cfcb9502453c26ff25d1aeabb9d917f741"
+          "size": 30348,
+          "sha256": "91ddb91bb7380defa9ba1c9081931e78202ce0cfbd619a598e052c361f2b642f"
         },
         {
           "path": "tools/build.mjs",
@@ -5007,11 +5007,11 @@
       "play": "truck-showroom/index.html",
       "cover": "site/assets/truck-showroom.webp",
       "dir": "truck-showroom",
-      "infoHash": "640fe39f8e8c8798133cf4468620d4d51ea1c253fa9c1ab1ff880b52cd0628e3",
-      "totalSize": 5548322,
+      "infoHash": "c5f4396c72dfc373b563a8242d699cdd29452c248e45c3575885e61030dde7f7",
+      "totalSize": 5612593,
       "chunkSize": 262144,
       "chunkCount": 22,
-      "fileCount": 43,
+      "fileCount": 44,
       "files": [
         {
           "path": ".gitignore",
@@ -5037,6 +5037,11 @@
           "path": "package.json",
           "size": 758,
           "sha256": "4ccb7694631d59957a4fe6ba13beeacabc1a36c691ae57890c2882a7dcdb96a7"
+        },
+        {
+          "path": "preview.png",
+          "size": 61273,
+          "sha256": "a81308d0236b0114c16a811077bf64cc32c65ea0cd4394d4ad55f7d7451820c9"
         },
         {
           "path": "sheets/buildings-panel-9-dots.png",
@@ -5130,8 +5135,8 @@
         },
         {
           "path": "src/lib/kit.js",
-          "size": 26098,
-          "sha256": "abbca37e92d363f8ad32a2f594c62ac5cb099e389dafb383a5c864fd6fc688f7"
+          "size": 26637,
+          "sha256": "0e484813e1f7d6a2b2a41b11b8f431c23bfb2ab82c1c4d3c1b3116952f874b6d"
         },
         {
           "path": "src/lib/layout.js",
@@ -5175,8 +5180,8 @@
         },
         {
           "path": "src/models/truck.js",
-          "size": 47911,
-          "sha256": "aafef103d53cc2abc37c938f59d0abe3f11cadf2b7392082b5f4d2dba76f27c3"
+          "size": 50370,
+          "sha256": "893785d9b35c3acc7c7e4ea377e09c9b02164078033652fa4050251d1cd33be2"
         },
         {
           "path": "src/stage.js",
@@ -5299,8 +5304,8 @@
       "play": "road-tycoon/index.html",
       "cover": "road-tycoon/cover.svg",
       "dir": "road-tycoon",
-      "infoHash": "af76764a8981e6677701764a41bb9d379633b6227f3d509ed1340c94bfd8564e",
-      "totalSize": 1157943,
+      "infoHash": "0e2dbdd24a68d6cf7c0903f9c1d1ad7797ddee6cfe175659f54f2dfc55457438",
+      "totalSize": 1162889,
       "chunkSize": 262144,
       "chunkCount": 5,
       "fileCount": 18,
@@ -5322,8 +5327,8 @@
         },
         {
           "path": "package.json",
-          "size": 520,
-          "sha256": "6bc05f930dae0916256042f060bf4e4effdf84bb3a8eedc9980f237e1626ea39"
+          "size": 562,
+          "sha256": "df6b96be8fcda77b370287c11a61bf7ae0018ef3ed4cf7c406d96d164e248216"
         },
         {
           "path": "src/audio.js",
@@ -5352,13 +5357,13 @@
         },
         {
           "path": "src/sim.js",
-          "size": 62382,
-          "sha256": "4aff641ae2a6256ac2fce8cdc646b5c3ab6163ccf2d1966117c189909a6b7592"
+          "size": 65516,
+          "sha256": "71debdab20da8a657c11fb56c6b8c4c8626a8c28d0c9ecb3952aae836ff1ef8c"
         },
         {
           "path": "src/ui.js",
-          "size": 44701,
-          "sha256": "f86ff116619479680d79298f898b787a3241ed09b59705528fbf6377e5b61459"
+          "size": 46302,
+          "sha256": "e85dc9649e805580c35765e314f96022b377a96128a24b951420eabb0bc90b79"
         },
         {
           "path": "src/util.js",
@@ -5377,8 +5382,8 @@
         },
         {
           "path": "style.css",
-          "size": 48066,
-          "sha256": "87cc4bb347f2bacf09f88e52ebffd9c792df02a5745e8cbcf1d852fd090f015c"
+          "size": 48235,
+          "sha256": "315d1fbebc91ecca6b69f5bc143acdeb4e57196d2ea2d90c7563690683d21ed3"
         },
         {
           "path": "tools/balance.js",
@@ -5410,8 +5415,8 @@
       "play": "euro-haul/index.html",
       "cover": "euro-haul/cover.svg",
       "dir": "euro-haul",
-      "infoHash": "b68f85254322a9e5f0b0c0f36c354907569e71e3d4edb4fdc4f410ebbdae47a2",
-      "totalSize": 2866137,
+      "infoHash": "baa6e8ec5ac9e78ed95007be96369f49ca75fff39c31c5963ee6cc4250817b6c",
+      "totalSize": 2876007,
       "chunkSize": 262144,
       "chunkCount": 11,
       "fileCount": 39,
@@ -5458,8 +5463,8 @@
         },
         {
           "path": "game.bundle.js",
-          "size": 1293785,
-          "sha256": "4c2be52666559363340ef8caea950ca7d88d7049dcfd7f90322c6026047262ba"
+          "size": 1297829,
+          "sha256": "97c2b1414ab642ecc90afb5800c16f040aa3007c9154e134f7219b3bc7ef55d6"
         },
         {
           "path": "index.html",
@@ -5508,8 +5513,8 @@
         },
         {
           "path": "src/core/save.js",
-          "size": 4392,
-          "sha256": "5d8b7a8784ba15f0b00db13ac120035c1f03a64d49885636de9b46dfafed739a"
+          "size": 5706,
+          "sha256": "3218a2206add0445c5acc8c421c38e9317e9d5823d7acb5aa72ebb1620f8f4fe"
         },
         {
           "path": "src/data/achievements.js",
@@ -5538,13 +5543,13 @@
         },
         {
           "path": "src/main.js",
-          "size": 127575,
-          "sha256": "0df9c479a26ae3a3ebb7ef2d5f2871e7b8f015d11ea8548f6f8fc6bb3ead21c6"
+          "size": 129362,
+          "sha256": "41c21022641f9c1f12238d2f7b10d843d85ba3a5e7c038c901a1d66e1e453e02"
         },
         {
           "path": "src/ui/ui.js",
-          "size": 79184,
-          "sha256": "49088d88d069143316317e40da9d12377e79dc9c92fa006362192911c969ebf7"
+          "size": 81909,
+          "sha256": "2825a09aa539159e2a2d4064534afd53d33861a69a11b5233cdbd78190c702fb"
         },
         {
           "path": "src/world/countryside.js",
@@ -5626,8 +5631,8 @@
       "play": "last-shore/index.html",
       "cover": "site/assets/last-shore.webp",
       "dir": "last-shore",
-      "infoHash": "a1c024a9ba996decff9e098492a70546bcd1f9b48a8097ed06c51929d18be84f",
-      "totalSize": 2895341,
+      "infoHash": "0fd92d0937ad5c6a8b19dfc1a3ca4d05a00917618ac8ba8beafc6798b5151388",
+      "totalSize": 2915051,
       "chunkSize": 262144,
       "chunkCount": 12,
       "fileCount": 43,
@@ -5644,13 +5649,13 @@
         },
         {
           "path": "bundle.js",
-          "size": 2025291,
-          "sha256": "08f51e99cbecca71d76ea9ac3f896c34f0ac54e50166756725f83bd87630c029"
+          "size": 2035932,
+          "sha256": "826444fb70c019af63c592042430b69a106f892cc4046356642d7e84c925a014"
         },
         {
           "path": "index.html",
-          "size": 21713,
-          "sha256": "b5ba352c1beec1b2daac3127fc73024915b2f2175a38e840c3d4e0f68db3d4a1"
+          "size": 22248,
+          "sha256": "47336d0bd9dc6e0921f2a6f10dc7a1a53a51dca22118dc6a71d54fa7c5af22c3"
         },
         {
           "path": "package.json",
@@ -5714,13 +5719,13 @@
         },
         {
           "path": "src/items.js",
-          "size": 14559,
-          "sha256": "4d38639b7ca0dbb0031d2a90c63374d6d63e04cb55a4875d2d10b6cc365c8338"
+          "size": 15831,
+          "sha256": "64c17aa04a29a2909417e62580411c137eeb205ad9484651287fd44caaf31288"
         },
         {
           "path": "src/main.js",
-          "size": 136421,
-          "sha256": "ebd5f63bb3e68384ed453de31b576466a66231699441c984ce71f5301eb87daf"
+          "size": 140756,
+          "sha256": "1fbd49ce5f04e3852b40c8f9b98fa6df545a249d94fb4b18bda20e935fee39a6"
         },
         {
           "path": "src/menu.js",
@@ -5814,8 +5819,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 25675,
-          "sha256": "86d6c4a6a9797a0c69a144f85ae6a54b2ab6d55a128c30715d89f9821230a0ec"
+          "size": 27762,
+          "sha256": "8acfc8c98e812e2a35c9a177e43a2bbff4d3031fadb2f79b510d2cd9c681530e"
         },
         {
           "path": "src/world.js",
@@ -5824,8 +5829,8 @@
         },
         {
           "path": "style.css",
-          "size": 32772,
-          "sha256": "430cee20fa62f5369e1b7c9eaa14d1f2252026d9ac75d8e9a6028cef24ec3946"
+          "size": 33612,
+          "sha256": "43da40bb86f634611f475275272407121aea382123d24b37728da191699edc63"
         },
         {
           "path": "tools/build-test.mjs",
@@ -5915,8 +5920,8 @@
       "play": "night-taxi/index.html",
       "cover": "site/assets/night-taxi.webp",
       "dir": "night-taxi",
-      "infoHash": "8bd71c13cf9ab13057509e3677f6cc3e58032b3cbd542331a4e89223eb44fbe5",
-      "totalSize": 4004367,
+      "infoHash": "0de3a56d777215d36034cf9117129ac96637dc9d11c446f87f41aa194c08b6e0",
+      "totalSize": 4011861,
       "chunkSize": 262144,
       "chunkCount": 16,
       "fileCount": 32,
@@ -5978,18 +5983,18 @@
         },
         {
           "path": "game.bundle.js",
-          "size": 751144,
-          "sha256": "007638f874694b4da5e1d5a501f9edcf4999906e825d65465da5bdf346ceda20"
+          "size": 754859,
+          "sha256": "f28986419ccd719b1c670512e7ed774d268390870ae69bda718bbeb1ea48e6cb"
         },
         {
           "path": "index.html",
           "size": 7648,
-          "sha256": "d0734b62932e9e2b0a155b1449d22a8be27076485abbcd26f2878d8ed2af004e"
+          "sha256": "5c04f960ed3a7fdc58105cf10190bd53f4909d3cf8a11fb8ea44115dcd96f39c"
         },
         {
           "path": "package.json",
-          "size": 399,
-          "sha256": "419512171ff3d5b0a70bf0a4a7a8b283868911506fc40a449fd808ea16693032"
+          "size": 424,
+          "sha256": "c6ebf39dd711a65ff74e5604261559482eedc78607ae33e6f2c18289bc6c6951"
         },
         {
           "path": "src/city-assets.js",
@@ -6018,8 +6023,8 @@
         },
         {
           "path": "src/main.js",
-          "size": 38940,
-          "sha256": "c6fdc0139e5a3ff49f627843bb1698077252f6a6a953bb2c32eafdac43464ca5"
+          "size": 42694,
+          "sha256": "fd9af4eb8d74c33b144ef2c0b8cc88f1a045b1ca9f5f0e2808c0828c2f2d2ab5"
         },
         {
           "path": "src/pedestrians.js",
@@ -6309,8 +6314,8 @@
       "play": "truck-haul/index.html",
       "cover": "truck-haul/cover.svg",
       "dir": "truck-haul",
-      "infoHash": "7e395b4f28c7986b8bfd747a1df2372f626ca59169aca717c4f5561af2e140a0",
-      "totalSize": 723498,
+      "infoHash": "8f2dc978ceb252bc50c2ec0fc2f000761230c9c6f0e6d659f2680ede59d35926",
+      "totalSize": 733250,
       "chunkSize": 262144,
       "chunkCount": 3,
       "fileCount": 9,
@@ -6332,13 +6337,13 @@
         },
         {
           "path": "game3d.bundle.js",
-          "size": 622496,
-          "sha256": "142c6687496b9b44bc2a21ad4487e3f1dc6f92ea23694acfcafc1ca354c368df"
+          "size": 627690,
+          "sha256": "ec9c4c6d4456eebdb5b21fedada7242efa72d959f064b439fb2cac876137b05e"
         },
         {
           "path": "index.html",
-          "size": 8623,
-          "sha256": "9b6ceadbdad8a27139a33218e8f44c9f11cdadacb1ac3a922f094657e9882c9b"
+          "size": 8635,
+          "sha256": "ba1d50e3c5feea9f0326e77bdff6f3f09995c215bbe43812d316dcd98854b2bb"
         },
         {
           "path": "package.json",
@@ -6352,8 +6357,8 @@
         },
         {
           "path": "src/main.js",
-          "size": 40347,
-          "sha256": "0008fbf06a575224de2b0eb1e6e30e44d70f09429d6c6d1dc8032ac60cfcfe67"
+          "size": 44893,
+          "sha256": "38c7746362b88cc249eda5f650e598e78c02fe03f3c688dca9d2d85d0d607960"
         },
         {
           "path": "style.css",

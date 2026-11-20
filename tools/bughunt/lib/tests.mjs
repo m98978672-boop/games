@@ -5,7 +5,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 const run = promisify(execFile);
 
@@ -31,8 +31,22 @@ export async function runTests(root, project, opts = {}) {
     if (needsDeps) { skipped.push({ test, why: 'не установлены зависимости (npm i)' }); continue; }
     const started = Date.now();
     try {
+      /* Рабочая папка — папка самого теста, а не корень репозитория.
+         Тесты игр читают файлы относительно себя (`assets/kenney/…`,
+         `src/main.js`, `tests/.harness-bundle.js`), поэтому запуск из
+         корня давал пачку ложных «тест не проходит: ENOENT» — так были
+         оболганы night-taxi, last-shore и euro-haul. Путь к файлу
+         остаётся абсолютным, меняется только cwd. */
+      /* Рабочая папка — папка проекта, а не корень репозитория. Тесты игр
+         читают файлы относительно себя (`assets/kenney/…`, `src/main.js`,
+         `tests/.harness-bundle.js`), поэтому запуск из корня давал пачку
+         ложных «тест не проходит: ENOENT» — так были оболганы night-taxi,
+         last-shore и euro-haul. Берём папку из пути самого теста
+         (`night-taxi/tests/ui.mjs` → `night-taxi`). */
+      const testDir = dirname(join(root, test));
+      const projectDir = basename(testDir) === 'tests' ? dirname(testDir) : testDir;
       const { stdout } = await run(process.execPath, [join(root, test)], {
-        cwd: root, timeout: opts.timeout || 240000, maxBuffer: 32 * 1024 * 1024,
+        cwd: projectDir, timeout: opts.timeout || 240000, maxBuffer: 32 * 1024 * 1024,
         env: { ...process.env, BUGHUNT: '1' },
       });
       ran.push({ test, ms: Date.now() - started, ok: true, tail: tail(stdout) });

@@ -242,8 +242,11 @@ export class ShellField {
     const top = feetY + height;
     for (const p of this.near(pos.x, pos.z, radius + 1.2)) {
       if (p.enabled && !p.enabled()) continue;
-      const precise = p.kind === 'den' || p.kind === 'tree' || p.kind === 'palm' || p.kind === 'rock';
-      if (p.maxY < feetY + (precise ? 0 : stepUp)) continue;      // обводка ниже шага — переступаем
+      /* Точная обводка (ствол, валун, логово) считается по контуру, но это
+         не значит, что её нельзя переступить. Раньше здесь для валунов
+         стоял stepUp = 0, и низкий камень 0.48 м останавливал героя так же,
+         как двухметровая глыба: нога цеплялась за камешек на тропе. */
+      if (p.maxY < feetY + stepUp) continue;      // обводка ниже шага — переступаем
       if (p.minY > top) continue;                 // герой целиком выше обводки
       if (pos.x + radius < p.minX || pos.x - radius > p.maxX || pos.z + radius < p.minZ || pos.z - radius > p.maxZ) continue;
       const hit = this._pushOut(p, pos, radius);
@@ -280,8 +283,9 @@ export class ShellField {
   blocked(x, z, radius, y = 0) {
     for (const p of this.near(x, z, radius + 1.2)) {
       if (p.enabled && !p.enabled()) continue;
-      const precise = p.kind === 'den' || p.kind === 'tree' || p.kind === 'palm' || p.kind === 'rock';
-      if (p.maxY < y + (precise ? 0 : 0.35)) continue;
+      /* Зверь переступает то, что ниже его шага, — независимо от того,
+         насколько точна обводка. Иначе крабы застревали у первого валуна. */
+      if (p.maxY < y + 0.35) continue;
       if (p.minY > y + 1.85) continue;
       if (x + radius < p.minX || x - radius > p.maxX || z + radius < p.minZ || z - radius > p.maxZ) continue;
       if (this._inside(p.poly, x, z)) return true;

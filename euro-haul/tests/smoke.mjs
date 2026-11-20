@@ -62,6 +62,19 @@ window.HTMLCanvasElement.prototype.getContext = function (type) {
 window.HTMLCanvasElement.prototype.toDataURL = () => 'data:image/png;base64,';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* Ждать условие, а не фиксированное время. Загрузка мира — это маршрут,
+   тягач и геометрия трассы; на медленной машине она не укладывалась в
+   400 мс, и тест ловил промежуточное состояние «loading». Это была
+   настоящая нестабильность: три прогона подряд давали разные ошибки. */
+async function waitFor(fn, ms = 4000, step = 25) {
+  const until = Date.now() + ms;
+  while (Date.now() < until) {
+    if (fn()) return true;
+    await sleep(step);
+  }
+  return false;
+}
 const assert = (cond, msg) => {
   if (!cond) throw new Error('ПРОВАЛ: ' + msg);
   console.log('  ✓ ' + msg);
@@ -95,7 +108,7 @@ async function run() {
   // Приём заказа и старт рейса.
   const offer = g.offers.find((o) => o.distance < 200) || g.offers[0];
   g.acceptJob(offer);
-  await new Promise((r) => setTimeout(r, 400));
+  await waitFor(() => g.state === 'driving');
   assert(g.state === 'driving', 'игра перешла в режим вождения');
   assert(g.route && g.route.km > 0, `маршрут построен: ${g.route?.km?.toFixed(1)} км`);
   assert(g.truck, 'физика тягача инициализирована');
@@ -161,7 +174,7 @@ async function run() {
 
   // Дополнительные сценарии вождения: штраф, столкновение, заправка, отдых, пауза.
   g.acceptJob(g.offers[0]);
-  await new Promise((r) => setTimeout(r, 400));
+  await waitFor(() => g.state === 'driving');
   assert(g.state === 'driving', 'повторный рейс начался');
 
   // Превышение скорости в городе -> штраф.
@@ -279,7 +292,7 @@ async function run() {
   await sleep(100);
   assert(g.profile.activeJob, 'активный рейс восстановлен из сохранения');
   g.continueActiveJob();
-  await new Promise((r) => setTimeout(r, 400));
+  await new Promise((r) => setTimeout(r, 1500));
   assert(g.state === 'driving' && g.truck.s > 0, 'рейс продолжается с сохранённой точки');
   g.returnToMenu();
   await sleep(60);
@@ -287,7 +300,7 @@ async function run() {
   // Свободная поездка.
   g.openGarageTab('map');
   g.freeDrive('munich');
-  await new Promise((r) => setTimeout(r, 400));
+  await waitFor(() => g.state === 'driving');
   assert(g.job && g.job.free, 'свободная поездка запущена');
   assert(g.phase === 'free', 'фаза свободной поездки');
   g.returnToMenu();

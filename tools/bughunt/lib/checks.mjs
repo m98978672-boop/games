@@ -765,10 +765,32 @@ export function checkRepoCi(root, repo) {
       out.push(f('workflow', 'критично', 'репозиторий', wf, 1,
         'в YAML отступ табом', 'GitHub Actions не прочитает файл: «mapping values are not allowed»'));
     }
+    /* Внутри `run: |` шаг может сам перейти в папку игры (`cd last-shore`).
+       Тогда `node tests/escape.mjs` — это last-shore/tests/escape.mjs, и
+       ругаться на «несуществующий файл» нельзя: бот уже ошибался так на
+       шагах cascade-hydro, last-shore и night-taxi. Берём cd из того же
+       блока run, что и команда. */
+    const runBlocks = [];
+    for (const m of hits(src, /run:\s*\|\n([\s\S]*?)(?=\n\s{0,10}-\s+name:|\n\s{0,10}-\s+uses:|$)/g)) {
+      runBlocks.push({ at: m.index, body: m[1] });
+    }
+    const cdNear = (at) => {
+      let best = '';
+      for (const b of runBlocks) {
+        if (b.at > at) continue;
+        const cds = [...b.body.matchAll(/^\s*cd\s+([\w./\-]+)/gm)];
+        if (cds.length) best = cds[cds.length - 1][1];
+      }
+      return best;
+    };
     for (const m of hits(src, /^\s*(?:run:\s*)?node\s+([\w./\-]+\.mjs)/gm)) {
-      if (!existsSync(join(root, wd, m[1])) && !existsSync(join(root, m[1]))) {
+      const cd = cdNear(m.index);
+      const candidates = [join(root, wd, m[1]), join(root, m[1])];
+      if (cd) candidates.unshift(join(root, cd, m[1]));
+      if (!candidates.some((p) => existsSync(p))) {
         out.push(f('workflow-шаг', 'критично', 'репозиторий', wf, lineAt(src, m.index),
-          'workflow запускает несуществующий файл: ' + m[1], 'шаг упадёт всегда'));
+          'workflow запускает несуществующий файл: ' + (cd ? cd + '/' : '') + m[1],
+          'шаг упадёт всегда'));
       }
     }
     for (const m of hits(src, /npm\s+(?:run\s+)?[\w:-]+\s+--prefix\s+([\w\-./]+)/g)) {
