@@ -32,3 +32,5 @@ jobs:
           best=max(rows,key=lambda x:(x['active_seconds'],x['steps']))
           print('::notice::ACTUAL_PROGRESS '+json.dumps(best,separators=(',',':')),flush=True)
           PY
+
+# Re-run on this branch to inspect the latest uploaded slot.
