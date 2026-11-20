@@ -3,7 +3,7 @@ window.WC = window.WC || {};
 (function (global) {
   'use strict';
 
-  var booted = false;
+  var bootPromise = null;
 
   function showFatal(message) {
     var host = document.getElementById('modal-root');
@@ -11,9 +11,16 @@ window.WC = window.WC || {};
     host.innerHTML = '';
     var modal = document.createElement('div');
     modal.className = 'modal';
+    var where = location.protocol === 'file:' ? 'файл с диска (file://)' : location.href;
     modal.innerHTML = '<h2>Не удалось запустить склад</h2>' +
-      '<p style="color:#a9a294;font-size:12px;line-height:1.6">' + String(message || '') +
-      '<br><br>Проверь, что папка открыта целиком: нужны <code>ratcore/</code>, <code>shared/</code> и <code>warehouse-crew/data/</code>.</p>';
+      '<p style="color:#a9a294;font-size:12px;line-height:1.6">' +
+      '<b>Ошибка:</b> ' + String(message || 'неизвестно') +
+      '<br><b>Откуда открыто:</b> ' + where +
+      '<br><br>Что делать:' +
+      '<br>1. Распакуйте архив целиком — рядом с <code>warehouse-crew/</code> должны лежать папки <code>shared/</code>, <code>shooter/</code> и <code>ratcore/</code>.' +
+      '<br>2. Открывайте <code>warehouse-crew/index.html</code>, а не отдельный файл из архива (не перетаскивайте один html).' +
+      '<br>3. Если браузер блокирует локальные данные — запустите из папки: <code>python3 -m http.server 8000</code> и откройте <code>http://localhost:8000/warehouse-crew/</code>.' +
+      '<br>4. Онлайн-версия: <code>https://m98978672-boop.github.io/games/warehouse-crew/</code></p>';
     var backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.appendChild(modal);
@@ -28,14 +35,15 @@ window.WC = window.WC || {};
   }
 
   function boot() {
-    if (booted) return Promise.resolve(global.WC.game.api);
-    booted = true;
+    // Повторный вызов возвращает тот же промис: раньше он отдавал ещё не готовый api
+    if (bootPromise) return bootPromise;
     var GE = global.GamesEngine;
     if (!GE) {
       showFatal('Движок shared/engine.js не найден.');
-      return Promise.reject(new Error('Нет GamesEngine'));
+      bootPromise = Promise.reject(new Error('Нет GamesEngine'));
+      return bootPromise;
     }
-    return GE.ready()
+    bootPromise = GE.ready()
       .then(function () { return global.WC.game.boot(); })
       .then(function () {
         global.WC.render.initStage();
@@ -57,7 +65,9 @@ window.WC = window.WC || {};
       .catch(function (err) {
         console.error('[warehouse-crew] запуск не удался:', err);
         showFatal(err && err.message ? err.message : err);
+        throw err;
       });
+    return bootPromise;
   }
 
   if (document.readyState === 'loading') {

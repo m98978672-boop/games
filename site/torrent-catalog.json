@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 17,
-    "files": 1239,
-    "totalBytes": 37418795,
+    "files": 1241,
+    "totalBytes": 37460138,
     "chunks": 152,
     "blockedFiles": 3
   },
@@ -4957,16 +4957,21 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "6174021dc55a82a2af659e2f9c1ed287b91e5530e194698f2c97b0e8ed77212a",
-      "totalSize": 1394484,
+      "infoHash": "a17721ad31beea9ef4182d0705548b97c62b3cd1fe94773c2c01d9648cb9f905",
+      "totalSize": 1435827,
       "chunkSize": 262144,
       "chunkCount": 6,
-      "fileCount": 26,
+      "fileCount": 28,
       "files": [
         {
           "path": "cover.svg",
           "size": 9522,
           "sha256": "9141e3bf4d64ded27c72448663bcebf9576fbe8a5372ca6f6a2a91824ad95e22"
+        },
+        {
+          "path": "data/brain-data.js",
+          "size": 35695,
+          "sha256": "8ef6043680b330dd65ef02f9219d40cf994fde123dd5f3960f8efa420a5e9565"
         },
         {
           "path": "data/brain_dataset.json",
@@ -5005,8 +5010,8 @@
         },
         {
           "path": "index.html",
-          "size": 7119,
-          "sha256": "1b246e5c9c1780c90b432ac4676222c877f558caec94f9418cdf0993275820e2"
+          "size": 7296,
+          "sha256": "10f33c430a45f609e3c5c36ef0e178a85b2a14b5d23cfe7b4c5bfa60c4ef0b67"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5025,18 +5030,18 @@
         },
         {
           "path": "src/game.js",
-          "size": 12075,
-          "sha256": "bf3da9e0207777dee1bc18a5ee2bec704fc0d6f80649d830f0d780b3e819519b"
+          "size": 14444,
+          "sha256": "3520920ebbebc9052470bc515cc3e8be1e4470d595d0cd80d8821a814edbc0ce"
         },
         {
           "path": "src/main.js",
-          "size": 2616,
-          "sha256": "c3420d814159c7c791fdeaab34ab16637382af8c3f100552a1239fbbfc6833a9"
+          "size": 3645,
+          "sha256": "efe3a248bad31acdb47625e2afd432113366038a0711cb5c63bb50b479237b1b"
         },
         {
           "path": "src/render.js",
-          "size": 2108,
-          "sha256": "32849157b569ac11b90bb49b2f7f24013c583b207541376621e59fd886475fce"
+          "size": 2575,
+          "sha256": "896607c69176f9aa72205b0c0daea2a42fc8b8f169700aae10b60cc245980152"
         },
         {
           "path": "src/render/bodyview.js",
@@ -5087,6 +5092,11 @@
           "path": "style.css",
           "size": 17530,
           "sha256": "19a254428a02414b3f5658073d262e4ad7ef5c2b13f5c5d5d341cbc555ae4e50"
+        },
+        {
+          "path": "tools/embed-brains.mjs",
+          "size": 1606,
+          "sha256": "a85cc9c3ccc787dd4a220f7e47dfe0e1dd8903b5e26871babb5e7c2b4fe33583"
         },
         {
           "path": "training/train-brain.mjs",
