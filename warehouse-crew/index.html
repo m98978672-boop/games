@@ -74,11 +74,12 @@
 
 <!-- Быстрые приказы в один тап (телефон и планшет) -->
 <nav id="quickbar" class="quickbar" aria-label="Быстрые приказы выбранному рабочему">
-  <div class="qb-who">
+  <button class="qb-who" id="qb-cycle" type="button" aria-label="Переключить рабочего">
     <span class="qb-dot"></span>
     <b id="qb-name">Марта</b>
     <span id="qb-state">идёт</span>
-  </div>
+    <span class="qb-next" aria-hidden="true">›</span>
+  </button>
   <div class="qb-actions">
     <button class="qb" data-quick="pick" type="button" aria-label="Взять коробку"><svg class="ico"><use href="#i-box"/></svg><span>Взять</span></button>
     <button class="qb" data-quick="store" type="button" aria-label="Нести к стеллажу"><svg class="ico"><use href="#i-shelf"/></svg><span>Нести</span></button>

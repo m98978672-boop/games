@@ -5,7 +5,7 @@
   "stats": {
     "games": 17,
     "files": 1242,
-    "totalBytes": 37517300,
+    "totalBytes": 37518345,
     "chunks": 152,
     "blockedFiles": 3
   },
@@ -4957,8 +4957,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "b76ae5265dfa4e47430d8479cf7c5a4d6da0e06bd6ade6fcf001058a25f985c2",
-      "totalSize": 1492989,
+      "infoHash": "f46269373cdc6de21ab006abd41e6e243ff71919a00678a7c6a9ccdd811d7a8f",
+      "totalSize": 1494034,
       "chunkSize": 262144,
       "chunkCount": 6,
       "fileCount": 29,
@@ -5010,8 +5010,8 @@
         },
         {
           "path": "index.html",
-          "size": 13816,
-          "sha256": "4cee9be0fb02b0e3034b3415b8e4ec9a222e5a7e2a7ae5a5738c03c7ea2f495b"
+          "size": 13959,
+          "sha256": "d947d3178fc0f69f1213cb771bf24e0136ab57efb25db943e8f6c62e2ee93271"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5085,8 +5085,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 50239,
-          "sha256": "3c38c5e73211f9cc795b0dcbaf331784ae049668a802c88482b68e7367c720ca"
+          "size": 50761,
+          "sha256": "357dbfbc1e60d8ff60b37fbad01dd9aa372eaa411b5dda99bb90e1b9c8cf5666"
         },
         {
           "path": "src/util.js",
@@ -5095,8 +5095,8 @@
         },
         {
           "path": "style.css",
-          "size": 40296,
-          "sha256": "bfb0ef72e9921e08af9a607424a37036338198ae7344049a892070cdbf25ade2"
+          "size": 40676,
+          "sha256": "37fe3c6a09f9f4cabae945ba5496ab63f2f84db082279a775411ab6af2af16ab"
         },
         {
           "path": "tools/embed-brains.mjs",
