@@ -9,6 +9,7 @@ var recoil := 0.0
 var bob := 0.0
 var landing := 0.0
 var grounded_last := true
+var pending_look := Vector2.ZERO
 var aiming := false
 var light: SpotLight3D
 var footstep := 0.0
@@ -154,5 +155,22 @@ func can_stand() -> bool:
 
 func touch_look(relative: Vector2) -> void:
 	if game.mobile_mode and not get_tree().paused:
-		rotate_y(-relative.x * 0.004 * game.look_scale)
-		camera.rotation.x = clampf(camera.rotation.x - relative.y * 0.004 * game.look_scale, -1.45, 1.45)
+		# Accumulate displacement, not event-rate-dependent velocity.
+		var reference := 390.0 / maxf(1.0, minf(get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y))
+		pending_look += relative * 0.004 * game.look_scale * reference
+
+func reset_touch_look() -> void:
+	pending_look = Vector2.ZERO
+
+func advance_touch_look(delta: float) -> void:
+	# Render-time exponential smoothing; event packet size cannot change total turn.
+	var step := pending_look * (1.0 - exp(-minf(delta, 0.05) / 0.025))
+	pending_look -= step
+	rotate_y(-step.x)
+	camera.rotation.x = clampf(camera.rotation.x - step.y, -1.45, 1.45)
+	if pending_look.length_squared() < 0.0000000001:
+		pending_look = Vector2.ZERO
+
+func _process(delta: float) -> void:
+	if game.mobile_mode and not game.ended:
+		advance_touch_look(delta)

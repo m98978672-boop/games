@@ -93,9 +93,11 @@ func run_tests() -> void:
 	var drag := InputEventScreenDrag.new()
 	drag.index = 2
 	drag.relative = Vector2(40, 5)
+	drag.position = controls.look_position + drag.relative
 	var yaw: float = game.player.rotation.y
 	controls._input(drag)
-	check(absf(game.player.rotation.y - yaw) > 0.1, "Second finger rotates view independently")
+	game.player.advance_touch_look(0.05)
+	check(absf(game.player.rotation.y - yaw) > 0.04, "Second finger rotates view independently")
 	var fire_rect: Rect2 = controls.zones.fire
 	controls._input(touch_event(3, fire_rect.get_center(), true))
 	check(Input.is_action_pressed("fire") and controls.movement.y < -0.8, "Third finger can fire while the stick remains held")

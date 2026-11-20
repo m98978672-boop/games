@@ -7,6 +7,8 @@ var scroll: ScrollContainer
 var scroll_finger := -1
 var medic_motion: RazlomActorMotion
 var courier_motion: RazlomActorMotion
+var attention_timer := 0.0
+var attentive: Dictionary = {}
 
 func spawn_shelter(parent: Node3D) -> void:
 	var doctor := StaticBody3D.new()
@@ -157,6 +159,7 @@ func vera_dialog() -> void:
 		if game.state.scrap >= 2 and game.state.health < 100:
 			game.state.scrap -= 2
 			game.state.health = 100
+			medic_motion.greet("treat")
 			game.notify("Вера обработала раны")
 		else:
 			game.notify("Нужны 2 детали, а лечение имеет смысл только при ранении")
@@ -166,6 +169,11 @@ func vera_dialog() -> void:
 		choices.append({"text": "Показать накладную с подписью Ильи", "action": reveal_manifest})
 	if game.state.manifest:
 		choices.append({"text": "Перечитать накладную", "action": read_manifest})
+	if game.state.passage:
+		body += "\n\n«Павел передал, что ты отдал свою воду. Я не прошу тебя быть героем. Просто вернись живым: нам нужны люди, а не ещё одна история о погибшем»."
+	elif game.state.passage_broken:
+		body += "\n\n«По рации говорят о сорванном договоре. Я не знаю, что случилось у ворот. Но после нас здесь останутся люди, которым придётся жить рядом. Не забудь об этом»."
+	choices.append({"text": "Вера, кем ты была до аварии?", "action": vera_past})
 	open("ВЕРА ЛЕСНАЯ", body, choices)
 
 func bed_dialog() -> void:
@@ -264,3 +272,32 @@ func courier_dialog() -> void:
 		body = "Павел отворачивается: «Я поручился за тебя, а ты напал на моих людей. Второго слова по рации не будет. Насос всё ещё нужен Очагу — но теперь ищи другой путь»."
 	choices.append({"text": "Я сам выберу путь", "action": game.resume})
 	open("ПАВЕЛ / ПОСЛЕДНИЙ КОНВОЙ", body, choices)
+
+func vera_past() -> void:
+	medic_motion.greet()
+	open("ВЕРА / ДО РАЗЛОМА", "«Электромехаником на насосной станции. Не врачом. Лечить пришлось научиться позже.\nИлья всегда говорил: сначала проверь питание, потом хорони механизм. С людьми так не получается».\n\nОна поправляет старый пропуск на кармане.\n«Из тоннеля принесли его жетон, не его тело. Я согласилась считать его погибшим, потому что иначе пришлось бы снова идти искать. Поэтому мне и страшна эта подпись».\n\n" + ("Услышав рассказ Павла, она добавляет: «Аварийная сирена работает от отдельной линии. Если он слышал её, станция ещё была под напряжением. Илья мог остаться там не по своей воле»." if game.state.passage else "«Поговори с Павлом у дороги. Он был в последнем конвое. Может, знает больше, чем написал в отчёте»."), [
+		{"text": "Вернуться к разговору", "action": vera_dialog},
+		{"text": "Пора идти", "action": game.resume}])
+
+func advance_people(delta: float) -> void:
+	attention_timer -= delta
+	for motion in [medic_motion, courier_motion]:
+		if motion == null or not is_instance_valid(motion.model):
+			continue
+		motion.advance(delta, 0.0)
+		var actor: Node3D = motion.model.get_parent()
+		if attention_timer <= 0:
+			var eye := actor.global_position + Vector3.UP * 1.5
+			var target: Vector3 = game.player.global_position + Vector3.UP * 1.3
+			var visible := false
+			if eye.distance_to(target) < 6.0:
+				var query := PhysicsRayQueryParameters3D.create(eye, target, 1 | 2)
+				query.exclude = [actor.get_rid()]
+				var hit := actor.get_world_3d().direct_space_state.intersect_ray(query)
+				visible = not hit.is_empty() and hit.collider == game.player
+			attentive[actor.name] = visible
+		if attentive.get(actor.name, false):
+			var direction: Vector3 = game.player.global_position - actor.global_position
+			motion.model.rotation.y = lerp_angle(motion.model.rotation.y, atan2(-direction.x, -direction.z), 1.0 - exp(-delta * 3.0))
+	if attention_timer <= 0:
+		attention_timer = 0.25

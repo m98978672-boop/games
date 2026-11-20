@@ -5,6 +5,7 @@ var game
 var movement := Vector2.ZERO
 var move_id := -1
 var look_id := -1
+var look_position := Vector2.ZERO
 var move_origin := Vector2.ZERO
 var move_knob := Vector2.ZERO
 var held: Dictionary = {}
@@ -40,6 +41,8 @@ func layout() -> void:
 	queue_redraw()
 
 func reset() -> void:
+	if game != null and is_instance_valid(game.player):
+		game.player.reset_touch_look()
 	for action in held.values():
 		if InputMap.has_action(action):
 			Input.action_release(action)
@@ -96,12 +99,14 @@ func _input(event: InputEvent) -> void:
 			update_move(event.position)
 		elif look_id == -1:
 			look_id = event.index
+			look_position = event.position
 		get_viewport().set_input_as_handled()
 	elif event is InputEventScreenDrag:
 		if event.index == move_id:
 			update_move(event.position)
 		elif event.index == look_id:
-			game.player.touch_look(event.relative)
+			game.player.touch_look(event.position - look_position)
+			look_position = event.position
 		get_viewport().set_input_as_handled()
 
 func update_move(point: Vector2) -> void:
