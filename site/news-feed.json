@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-19T23:59:03.207Z",
+  "updatedAt": "2026-11-20T05:50:13.562Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
-    "lastRunAt": "2026-11-19T23:59:03.207Z",
+    "lastRunAt": "2026-11-20T05:50:13.562Z",
     "sourcesCount": 11,
     "verifiedArticlesCount": 19,
     "commentSyncTools": [
@@ -19,7 +19,7 @@
     ],
     "mode": "verified-editorial+auto-rss",
     "workflow": ".github/workflows/auto-news.yml",
-    "totalRuns": 6,
+    "totalRuns": 7,
     "lastSourcesReachable": 11,
     "categoriesCount": 6,
     "backlog": {
@@ -2409,6 +2409,759 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
+      "id": "auto-lenta-top-5cdba6399f",
+      "code": "W-994",
+      "category": "world",
+      "title": "В российском регионе отстрелили медведя-шатуна с обмороженными лапами",
+      "summary": "В российском регионе отстрелили медведя-шатуна с обмороженными лапами",
+      "body": [
+        "В российском регионе отстрелили медведя-шатуна с обмороженными лапами. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Россия"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/20/v-rossiyskom-regione-otstrelili-medvedya-shatuna-s-obmorozhennymi-lapami/",
+      "publishedAt": "2026-11-20T05:45:28.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/20/v-rossiyskom-regione-otstrelili-medvedya-shatuna-s-obmorozhennymi-lapami/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-994.svg",
+      "imageCaption": "Обложка рубрики: В российском регионе отстрелили медведя-шатуна с обмороженными лапами",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-32ee2264ed",
+      "code": "W-899",
+      "category": "world",
+      "title": "Объявлено об ударе по Киеву и западу Украины после слов Путина об ответе за Крымский мост",
+      "summary": "Объявлено об ударе по Киеву и западу Украины после слов Путина об ответе за Крымский мост",
+      "body": [
+        "Объявлено об ударе по Киеву и западу Украины после слов Путина об ответе за Крымский мост. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Россия"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/20/ob-yavleno-ob-udare-po-kievu-i-lvovskoy-oblasti-na-fone-slov-putina-ob-otvete-za-krymskiy-most/",
+      "publishedAt": "2026-11-20T05:44:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/20/ob-yavleno-ob-udare-po-kievu-i-lvovskoy-oblasti-na-fone-slov-putina-ob-otvete-za-krymskiy-most/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-899.svg",
+      "imageCaption": "Обложка рубрики: Объявлено об ударе по Киеву и западу Украины после слов Путина об отве",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-600f8bc631",
+      "code": "W-710",
+      "category": "world",
+      "title": "Ургант обзавелся новым элитным жильем в Европе",
+      "summary": "Ургант обзавелся новым элитным жильем в Европе",
+      "body": [
+        "Ургант обзавелся новым элитным жильем в Европе. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Недвижимость"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/20/urgant-obzavelsya-novym-elitnym-zhiliem-v-evrope/",
+      "publishedAt": "2026-11-20T05:43:43.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/20/urgant-obzavelsya-novym-elitnym-zhiliem-v-evrope/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-710.svg",
+      "imageCaption": "Обложка рубрики: Ургант обзавелся новым элитным жильем в Европе",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-bc98fc0769",
+      "code": "W-947",
+      "category": "world",
+      "title": "В Киеве слышны шестые за ночь взрывы",
+      "summary": "В Киеве слышны шестые за ночь взрывы",
+      "body": [
+        "В Киеве слышны шестые за ночь взрывы. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Бывший СССР"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/20/v-kieve-slyshny-shestye-za-noch-vzryvy/",
+      "publishedAt": "2026-11-20T05:43:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/20/v-kieve-slyshny-shestye-za-noch-vzryvy/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-947.svg",
+      "imageCaption": "Обложка рубрики: В Киеве слышны шестые за ночь взрывы",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-893e8881eb",
+      "code": "C-714",
+      "category": "security",
+      "title": "New Unpatched Windows 0-Day FastUnlock Lets Someone Holding a Locked PC Run Programs on It",
+      "summary": "A newly disclosed unpatched zero-day technique called FastUnlock lets someone with physical access to a locked Windows computer start programs without signing in. Whoever uses it gets only a limited account, not administ",
+      "body": [
+        "A newly disclosed unpatched zero-day technique called FastUnlock lets someone with physical access to a locked Windows computer start programs without signing in. Whoever uses it gets only a limited account, not administrator control of the machine.",
+        "The method was posted yesterday by a researcher who uses the handles MSNightmare and Nightmare Eclipse, and the endpoint-security firm ThreatLocker"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/new-unpatched-windows-0-day-fastunlock.html",
+      "publishedAt": "2026-11-20T05:30:01.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/new-unpatched-windows-0-day-fastunlock.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-714.svg",
+      "imageCaption": "Обложка рубрики: New Unpatched Windows 0-Day FastUnlock Lets Someone Holding a Locked P",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-e0de042b6a",
+      "code": "T-869",
+      "category": "tech",
+      "title": "В GPT‑6.2 для некоторых задач уже нужен KYC. Не станет ли это новым ограничением для обычных разработчиков?",
+      "summary": "17 ноября OpenAI представила GPT‑6.2 Astra и Sol . Новые модели стали сильнее в программировании и решении сложных задач, но вместе с ними появились дополнительные ограничения, о которых, подозреваю, знают далеко не все ",
+      "body": [
+        "17 ноября OpenAI представила GPT‑6.2 Astra и Sol . Новые модели стали сильнее в программировании и решении сложных задач, но вместе с ними появились дополнительные ограничения, о которых, подозреваю, знают далеко не все пользователи ChatGPT и Codex.",
+        "Изучая документацию, обнаружил интересную деталь: для получения более свободного доступа к некоторым возможностям моделей в области кибербезопасности уже предусмотрены проверка личности, дополнительные требования безопасности и отдельное одобрение OpenAI. Речь не о том, что паспорт нужен для каждого запроса к GPT‑6.2. Модели доступны и без него, но с более строгими ограничениями. А вот возможность выполнять некоторые задачи с меньшим количеством отказов уже зависит не только от подписки.",
+        "Причём у OpenAI существуют разные уровни доверенного доступа, а процесс получения разрешений устроен гораздо сложнее, чем просто отправка паспорта. Но не распространит ли OpenAI постепенно подобные проверки на другие категории задач, а затем и на обычных разработчиков? Учитывая собственный опыт блокировки оплаченного Claude Max 20x после проверки личности и недавние проблемы при работе с Codex, этот вопрос кажется мне далеко не праздным."
+      ],
+      "tags": [
+        "OpenAI",
+        "GPT-6.2",
+        "ChatGPT",
+        "Codex"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1110122/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110122",
+      "publishedAt": "2026-11-20T05:27:06.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1110122/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110122"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-869.svg",
+      "imageCaption": "Обложка рубрики: В GPT‑6.2 для некоторых задач уже нужен KYC. Не станет ли это новым ог",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-1e189d167b",
+      "code": "T-854",
+      "category": "tech",
+      "title": "Привет из 2020-го",
+      "summary": "Приветствую сообщество. Недавно, перебирая старые записи, наткнулся на подборку анекдотов времен коронавируса и карантина. Удивительно, но некоторые из них не только не устарели но и обрели второй смысл. Предлагаю их ваш",
+      "body": [
+        "Приветствую сообщество. Недавно, перебирая старые записи, наткнулся на подборку анекдотов времен коронавируса и карантина. Удивительно, но некоторые из них не только не устарели но и обрели второй смысл. Предлагаю их вашему вниманию. Все анекдоты действительно из коронавирусных времён. Понимаю, что не по теме, но надеюсь, что на “пятничное чтиво” потянет.",
+        "Улыбнитесь, если сможете."
+      ],
+      "tags": [
+        "пятничное чтиво",
+        "юмор",
+        "анекдоты",
+        "чёрный юмор"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1110120/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110120",
+      "publishedAt": "2026-11-20T05:06:11.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1110120/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110120"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-854.svg",
+      "imageCaption": "Обложка рубрики: Привет из 2020-го",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-ixbt-games-8aca653032",
+      "code": "G-879",
+      "category": "games",
+      "title": "GTA VI вряд ли будет работать с 60 FPS на большинстве ПК – инсайдер",
+      "summary": "Даже современные игровые ПК могут не обеспечить 60 FPS в GTA VI: технические специалисты предупреждают, что игра создаст огромную нагрузку на процессоры и видеокарты.",
+      "body": [
+        "Даже современные игровые ПК могут не обеспечить 60 FPS в GTA VI: технические специалисты предупреждают, что игра создаст огромную нагрузку на процессоры и видеокарты.",
+        "GTA VI вышла на консолях, где владельцы PS5 и Xbox играют с 30 FPS. Тем временем пользователи ПК ждут релиза, рассчитывая запустить новинку Rockstar с привычными 60 FPS. Однако их ожидания могут оказаться слишком оптимистичными. Об этом предупредил инсайдер KeplerL2, известный утечками характеристик консолей и комплектующих.",
+        "Игра стала серьёзным испытанием для современных консолей. Базовые PS5 и Xbox Series S теряют кадры, а для стабильных 30 FPS требуется PS5 Pro.",
+        "Главной причиной называют высокую нагрузку на процессор. Масштабная симуляция Леониды и поведения толп жителей может оказаться непосильной для многих домашних ПК. При этом процессоры уровня Ryzen 5 5600X и Intel Core i5-12400, которые заметно новее консольного Ryzen 5 3600, тоже могут не обеспечить 60 FPS. Владельцам таких систем, возможно, придётся рассчитывать примерно на 40 FPS."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/20/gta-vi-vriad-li-budet-rabotat-s-60-fps-na-bolsinstve-pk-insaider.html",
+      "publishedAt": "2026-11-20T05:05:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/20/gta-vi-vriad-li-budet-rabotat-s-60-fps-na-bolsinstve-pk-insaider.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-879.svg",
+      "imageCaption": "Обложка рубрики: GTA VI вряд ли будет работать с 60 FPS на большинстве ПК – инсайдер",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-c0e5753eb7",
+      "code": "S-929",
+      "category": "science",
+      "title": "APOD: 2026 November 20 – V-G-R",
+      "summary": "Astronomy Picture of the Day",
+      "body": [
+        "Astronomy Picture of the Day",
+        "Discover the cosmos! Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.",
+        "Explanation: On November 17, fans of interstellar spaceflight around planet Earth were invited to shine a message into the night sky. Traced by a flashlight beam switched on and off, the dashes and dots of a Morse code message captured in this time exposure from the Emirates Astronomical Observatory, are read V-G-R. That’s a call sign for the Voyager 1 spacecraft currently in interstellar space some 26 billion kilometers away. How long did it take the message to reach humanity’s most distant interstellar spacecraft ? Traveling at the speed of light, the ",
+        "Tomorrow’s picture: pixels in space"
+      ],
+      "tags": [
+        "APOD"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/image-article/apod-2026-november-20-v-g-r/",
+      "publishedAt": "2026-11-20T05:05:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/image-article/apod-2026-november-20-v-g-r/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-929.svg",
+      "imageCaption": "Обложка рубрики: APOD: 2026 November 20 – V-G-R",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-920161818f",
+      "code": "S-971",
+      "category": "science",
+      "title": "The Stormy Southwest Pacific",
+      "summary": "The Stormy Southwest Pacific",
+      "body": [
+        "The Stormy Southwest Pacific",
+        "Remote Sensing Technology",
+        "Blue Marble: Next Generation",
+        "Even as the unusually quiet 2026 storm season winds down in the North Atlantic, seas have begun to stir on the other side of the world in the Southwest Pacific. On November 15, 2026 , the Fiji Meteorological Service began issuing updates about a slow-moving tropical disturbance northeast of Samoa and the Cook Islands. Within just a few days, it had become one of the most intense November tropical cyclones the region has seen in decades."
+      ],
+      "tags": [
+        "Earth Observatory",
+        "Extreme Weather Events"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/earth/earth-observatory/the-stormy-southwest-pacific/",
+      "publishedAt": "2026-11-20T05:01:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/earth/earth-observatory/the-stormy-southwest-pacific/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-971.svg",
+      "imageCaption": "Обложка рубрики: The Stormy Southwest Pacific",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-77d92cceb6",
+      "code": "T-955",
+      "category": "tech",
+      "title": "Я искал баги в своём школьном сервисе, а нашёл обещания, которые он не выполнял",
+      "summary": "Внутренняя статистика сервиса. После правок она записывается только при наличии согласия.",
+      "body": [
+        "Внутренняя статистика сервиса. После правок она записывается только при наличии согласия.",
+        "В начале ноября я сел проверять EduTrainer. Не потому, что всё сломалось: сайт открывался, 238 тестов проходили, healthz отвечал ok , миграции были применены. Хотелось понять, где проект врёт сам себе.",
+        "EduTrainer — это бесплатный тренажёр по школьным предметам для 1–11 классов. Django, PostgreSQL, Redis, Daphne, Nginx. Никакой экзотики. Я ожидал найти обычные болячки: N+1, медленные запросы, забытые индексы, слишком длинные вьюхи. Нашёл несколько другое.",
+        "Чем дольше я читал код, тем чаще повторялась одна картина. В интерфейсе написано одно, в политике — второе, а сервер делает третье. Это не SQL-инъекции и не RCE. Но для сервиса, которым пользуются дети и родители, такие расхождения неприятнее: человек принимает решение на основе того, что ему показали, а система поступает иначе."
+      ],
+      "tags": [
+        "django",
+        "python"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1110118/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110118",
+      "publishedAt": "2026-11-20T04:50:41.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1110118/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110118"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-955.svg",
+      "imageCaption": "Обложка рубрики: Я искал баги в своём школьном сервисе, а нашёл обещания, которые он не",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-ixbt-games-8b673cae7c",
+      "code": "G-740",
+      "category": "games",
+      "title": "Battlefield 6 потроллила Rockstar собственным Vice City на фоне выхода GTA VI",
+      "summary": "Battlefield 6 запустила режим Vice City Conquest с ограничениями на оружие и технику, позволив игрокам почувствовать атмосферу GTA VI, не покидая шутер EA.",
+      "body": [
+        "Battlefield 6 запустила режим Vice City Conquest с ограничениями на оружие и технику, позволив игрокам почувствовать атмосферу GTA VI, не покидая шутер EA.",
+        "Выход GTA VI стал событием для всей игровой индустрии. Многие компании стараются переждать релиз Rockstar Games, опасаясь оттока аудитории, однако Electronic Arts решила удержать игроков и даже использовала популярность долгожданной новинки для продвижения Battlefield 6.",
+        "Battlefield Studios подготовила для тех, кто остаётся в её шутере, особый режим с атмосферой самого сердца Леониды. В Battlefield Portal доступен Vice City Conquest – разновидность классического «Захвата». Для победы командам необходимо исчерпать запас из 4000 билетов противника.",
+        "Разработчики добавили необычные ограничения: снайперские винтовки запрещены, а за управление вертолётом AH-6 Little Bird игрокам грозит бан. Режим работает на сервере с частотой 30 Гц. Это позволяет разместить до 100 участников и сохранить стабильность, однако некоторые представители сообщества восприняли такое решение как насмешку над Rockstar."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/20/battlefield-6-potrollila-rockstar-sobstvennym-vice-city-na-fone-vyxoda-gta-vi.html",
+      "publishedAt": "2026-11-20T04:50:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/20/battlefield-6-potrollila-rockstar-sobstvennym-vice-city-na-fone-vyxoda-gta-vi.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-740.svg",
+      "imageCaption": "Обложка рубрики: Battlefield 6 потроллила Rockstar собственным Vice City на фоне выхода",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-ixbt-games-f608ba6557",
+      "code": "G-818",
+      "category": "games",
+      "title": "В Total War: Warhammer 40,000 репутация космодесантников повлияет на доступность подкреплений",
+      "summary": "Новый геймплей Total War: Warhammer 40,000 раскрыл систему влияния и особенности космодесантников, чья репутация среди местных фракций напрямую влияет на доступность подкреплений.",
+      "body": [
+        "Новый геймплей Total War: Warhammer 40,000 раскрыл систему влияния и особенности космодесантников, чья репутация среди местных фракций напрямую влияет на доступность подкреплений.",
+        "После масштабной демонстрации сражения между силами Астра Милитарум и орками в июле Total War: Warhammer 40,000 надолго пропала из новостной повестки. Теперь разработчики провели новую трансляцию, посвящённую особенностям кампании и тому, как в ней действуют космодесантники.",
+        "Сохранять бойцов живыми особенно важно: по сюжетным причинам их сложно заменить, а действовать им предстоит в разных звёздных системах. При переходе в следующую систему отряд сможет забрать с собой лишь ограниченную часть добычи.",
+        "Космодесантникам придётся следить за отношением местных правительств и фракций. Действия, угрожающие мирным жителям или подрывающие доверие к бойцам, способны осложнить кампанию. Поэтому игрокам придётся налаживать отношения с местными жителями: дружественные связи позволят получать подкрепления и повысят шансы вернуть отряд в полном составе."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/20/v-total-war-warhammer-40000-reputaciia-kosmodesantnikov-povliiaet-na-dostupnost-podkreplenii.html",
+      "publishedAt": "2026-11-20T04:42:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/20/v-total-war-warhammer-40000-reputaciia-kosmodesantnikov-povliiaet-na-dostupnost-podkreplenii.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-818.svg",
+      "imageCaption": "Обложка рубрики: В Total War: Warhammer 40,000 репутация космодесантников повлияет на д",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-ixbt-games-7ffc571332",
+      "code": "G-756",
+      "category": "games",
+      "title": "Разработчики WARDOGS пересмотрели цены на оружие и снизили уровни разблокировки танков",
+      "summary": "WARDOGS получила обновление баланса, которое снижает цены на несколько видов оружия, боеприпасы и снаряжение, а также уменьшает требования к уровню для разблокировки танков.",
+      "body": [
+        "WARDOGS получила обновление баланса, которое снижает цены на несколько видов оружия, боеприпасы и снаряжение, а также уменьшает требования к уровню для разблокировки танков.",
+        "Bulkhead выпустила обновление 0.31 для многопользовательского военного шутера WARDOGS. Основные изменения касаются стоимости вооружения. Разработчики подчеркнули, что это лишь временные корректировки, пока команда готовит более масштабные изменения.",
+        "Мы знаем о продолжающихся обсуждениях внутриигровых предметов, оружия и техники, их баланса и системы разблокировки. Наша команда дизайнеров сейчас изучает, какие изменения помогут улучшить ситуацию, однако эта работа потребует значительно больше времени.",
+        "— Стоимость боеприпасов для .50 Cal снизили, чтобы уменьшить расходы на использование Wolf-110. Ранее, в начале третьего сезона, разработчики уже уменьшили цену самой винтовки, однако это не решило проблему дорогих патронов. Также снизили уровни разблокировки танков: теперь, когда сезон уже в разгаре, студия готова чаще выпускать бронетехнику на поле боя."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/20/razrabotciki-wardogs-peresmotreli-ceny-na-oruzie-i-snizili-urovni-razblokirovki-tankov.html",
+      "publishedAt": "2026-11-20T04:36:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/20/razrabotciki-wardogs-peresmotreli-ceny-na-oruzie-i-snizili-urovni-razblokirovki-tankov.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-756.svg",
+      "imageCaption": "Обложка рубрики: Разработчики WARDOGS пересмотрели цены на оружие и снизили уровни разб",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-bbc-world-8cbe31226c",
+      "code": "W-955",
+      "category": "world",
+      "title": "UK and EU to agree youth mobility scheme, BBC understands",
+      "summary": "The scheme is expected to be approved at Friday's UK-EU summit, with new deals on food trade and carbon emissions also on the table.",
+      "body": [
+        "The scheme is expected to be approved at Friday's UK-EU summit, with new deals on food trade and carbon emissions also on the table."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/c623j4kpg94go?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-20T04:35:51.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/c623j4kpg94go?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-955.svg",
+      "imageCaption": "Обложка рубрики: UK and EU to agree youth mobility scheme, BBC understands",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-433528c721",
+      "code": "C-894",
+      "category": "security",
+      "title": "MySQL ошиблась всего на один байт. Его превратили в полноценный RCE",
+      "summary": "Обычные SQL-запросы превращаются в системные команды и ломают привычную модель безопасности.",
+      "body": [
+        "Обычные SQL-запросы превращаются в системные команды и ломают привычную модель безопасности."
+      ],
+      "tags": [
+        "Отчеты/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580347.php",
+      "publishedAt": "2026-11-20T04:03:20.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580347.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-894.svg",
+      "imageCaption": "Обложка рубрики: MySQL ошиблась всего на один байт. Его превратили в полноценный RCE",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-5c82f57d15",
+      "code": "C-897",
+      "category": "security",
+      "title": "Монстр дышит вам в затылок. Sony придумала игровой ошейник, который перенесёт ужас с экрана на вашу кожу",
+      "summary": "Обычного звука и изображения разработчикам оказалось мало.",
+      "body": [
+        "Обычного звука и изображения разработчикам оказалось мало."
+      ],
+      "tags": [
+        "Технологии/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580291.php",
+      "publishedAt": "2026-11-20T03:32:33.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580291.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-897.svg",
+      "imageCaption": "Обложка рубрики: Монстр дышит вам в затылок. Sony придумала игровой ошейник, который пе",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-1b69c0c25e",
+      "code": "C-924",
+      "category": "security",
+      "title": "Топовые нейросети поймали на сексизме и занижении зарплат женщинам в ИТ",
+      "summary": "В эксперименте с 35 тысячами резюме обнаружили разницу даже в зарплатных рекомендациях.",
+      "body": [
+        "В эксперименте с 35 тысячами резюме обнаружили разницу даже в зарплатных рекомендациях."
+      ],
+      "tags": [
+        "Технологии/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580371.php",
+      "publishedAt": "2026-11-20T03:00:38.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580371.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-924.svg",
+      "imageCaption": "Обложка рубрики: Топовые нейросети поймали на сексизме и занижении зарплат женщинам в И",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-c174df3c10",
+      "code": "C-705",
+      "category": "security",
+      "title": "17 км/ч без единого чипа. Инженеры напечатали пневматического монстра, которому плевать на радиацию и воду",
+      "summary": "Этот аппарат справляется с водой, песком и лестницами. Но пока есть одна проблема.",
+      "body": [
+        "Этот аппарат справляется с водой, песком и лестницами. Но пока есть одна проблема."
+      ],
+      "tags": [
+        "Технологии/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/580358.php",
+      "publishedAt": "2026-11-20T02:45:01.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/580358.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-705.svg",
+      "imageCaption": "Обложка рубрики: 17 км/ч без единого чипа. Инженеры напечатали пневматического монстра,",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-bbc-world-c15353b457",
+      "code": "W-800",
+      "category": "world",
+      "title": "'I tell my son it's just fireworks': People inside besieged Yemeni city speak to BBC",
+      "summary": "Orla Guerin speaks to seven people trapped in Taiz by the Houthis who reveal what life is like under siege.",
+      "body": [
+        "Orla Guerin speaks to seven people trapped in Taiz by the Houthis who reveal what life is like under siege."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/cx7v2d8q879eo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-20T00:13:21.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/cx7v2d8q879eo?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-800.svg",
+      "imageCaption": "Обложка рубрики: 'I tell my son it's just fireworks': People inside besieged Yemeni cit",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
       "id": "auto-lenta-top-3d8f4b2825",
       "code": "W-849",
       "category": "world",
@@ -2896,6 +3649,42 @@
       "autoPosted": true,
       "image": "site/assets/news/t-831.svg",
       "imageCaption": "Обложка рубрики: Рой дронов держит строй без GPS: адаптивный консенсус и цена его точно",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-7a5642424b",
+      "code": "T-946",
+      "category": "tech",
+      "title": "Нобелевские лауреаты призвали не верить в посулы Anthropic — но инвесторы их не услышали",
+      "summary": "За день до триумфального выхода компании Anthropic на биржу ценных бумаг группа нобелевских лауреатов и ряд глав техногигантов опубликовали открытую петицию, обвиняющую Anthropic в отказе от ранее заявленных принципов бе",
+      "body": [
+        "За день до триумфального выхода компании Anthropic на биржу ценных бумаг группа нобелевских лауреатов и ряд глав техногигантов опубликовали открытую петицию, обвиняющую Anthropic в отказе от ранее заявленных принципов безопасности в развитии искусственного интеллекта. По замыслу активистов, это должно было сорвать дебют компании, но рынок ценных бумаг остался глух к призыву — акции Anthropic раскупили как горячие пирожки зимой. Источник изображения: ИИ-генерация ChatGPT/3DNews"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151565",
+      "publishedAt": "2026-11-19T21:30:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151565"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-19",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-946.svg",
+      "imageCaption": "Обложка рубрики: Нобелевские лауреаты призвали не верить в посулы Anthropic — но инвест",
       "imageCredit": "Games News · локальная обложка"
     },
     {
