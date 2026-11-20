@@ -179,7 +179,25 @@ for (const m of tracked) {
 log('звери в движении: проверено', tracked.length, '· почти не двигались', stuck.length,
   stuck.length ? '→ ' + stuck.slice(0, 4).join(', ') : '');
 check(tracked.length > 5, 'звери есть');
-check(stuck.length <= Math.ceil(tracked.length * 0.2), 'звери не застревают');
+/* Порог «до 20% могут стоять» был слишком мягким: он пропускал ровно тот
+   случай, который искал. Из-за fleeBelow: 1 травоядные запирались в
+   состоянии побега и стояли намертво, а тест это списывал на норму.
+   Теперь любой зверь, не сдвинувшийся за 14 секунд, — провал. */
+check(stuck.length === 0, 'звери не застревают');
+
+/* И отдельно — что травоядное не заперто в вечном страхе: без игрока
+   рядом оно должно заниматься своими делами, а не дрожать в flee. */
+{
+  const grazers = game.mobs.list.filter((m) => m.alive && !m.def.swim && m.def.fleeBelow >= 1).slice(0, 6);
+  game.player.position.set(400, 0, 400); // игрок далеко, никто его не чует
+  for (const m of grazers) m.state = 'idle';
+  for (let step = 0; step < 240; step++) {
+    game.mobs.update(1 / 30, game.player, { creative: false, night: 0, onHit: () => {}, onSound: () => {}, damage: () => {} });
+  }
+  const stuckInFear = grazers.filter((m) => m.state === 'flee' || m.state === 'alert');
+  check(stuckInFear.length === 0, 'травоядные не заперты в вечном побеге',
+    stuckInFear.map((m) => m.type).join(','));
+}
 
 // --- 6. уклоны: 0/15/30/40°, не круче ---
 const allowed = [0, Math.tan(15 * Math.PI / 180), Math.tan(30 * Math.PI / 180), Math.tan(40 * Math.PI / 180)];
