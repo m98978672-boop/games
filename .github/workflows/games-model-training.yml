@@ -10,13 +10,13 @@ on:
   workflow_dispatch:
     inputs:
       steps:
-        description: 'Шагов обучения (256 ≈ 40 мин на 2 CPU; больше = дольше)'
+        description: 'Шагов обучения (520 ≈ 75 мин на 2 CPU; 256 ≈ 40 мин)'
         required: false
-        default: '256'
+        default: '520'
       game_rows:
-        description: 'Сколько боевых состояний собрать (400 ≈ 80 с симуляции)'
+        description: 'Сколько боевых состояний собрать (900 ≈ 3 мин симуляции)'
         required: false
-        default: '400'
+        default: '900'
       run_eval:
         description: 'Прогнать проверку «находит баги» (медленно, но честно)'
         required: false
@@ -54,7 +54,7 @@ jobs:
         run: |
           node tools/training/build-knowledge.mjs \
             --out "$RUNNER_TEMP/knowledge" \
-            --game "${{ inputs.game_rows || '400' }}" \
+            --game "${{ inputs.game_rows || '900' }}" \
             --bug 400 --code 40 --play 60 --readme 20
           node -e '
             const m = require(process.env.RUNNER_TEMP + "/knowledge/manifest.json");
@@ -79,7 +79,7 @@ jobs:
           python -u tools/training/finetune.py \
             --data "$RUNNER_TEMP/knowledge" \
             --out "$RUNNER_TEMP/model-out" \
-            --steps "${{ inputs.steps || '256' }}" \
+            --steps "${{ inputs.steps || '520' }}" \
             --rank 16 --eval-count 8 2>&1 | tee "$RUNNER_TEMP/train.log"
           status=$?
           if [ "$status" -ne 0 ]; then

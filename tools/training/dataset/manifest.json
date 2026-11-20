@@ -1,36 +1,36 @@
 {
   "schema": "games-knowledge-v1",
-  "madeAt": "2026-11-19T23:12:29.930Z",
+  "madeAt": "2026-11-20T00:37:15.317Z",
   "seed": 7,
   "counts": {
-    "total": 565,
-    "train": 508,
-    "eval": 57,
+    "total": 1065,
+    "train": 958,
+    "eval": 107,
     "byKind": {
-      "game-decision": 400,
-      "bug-rule": 115,
-      "bug-severity": 10,
-      "code-check": 3,
-      "play-guide": 19,
-      "code-ui": 1,
-      "repo-rule": 5,
-      "code-dom": 1,
+      "game-decision": 900,
       "play-frontline": 7,
+      "bug-rule": 115,
+      "play-guide": 19,
+      "code-check": 3,
+      "bug-severity": 10,
+      "code-dom": 1,
+      "repo-rule": 5,
+      "code-security": 1,
       "code-dt": 2,
       "code-css": 1,
-      "code-security": 1
+      "code-ui": 1
     }
   },
   "files": {
     "train": {
       "name": "train.jsonl",
-      "count": 508,
-      "sha256": "6c1e0e16a54ecc7a8e2a56cfc16ab84f141a610c1c00a204a39b9dba27f6354a"
+      "count": 958,
+      "sha256": "76c0876b8f88a730ea846c20d28d20490cf1eb435e8e4b8228def71d05dfcf7c"
     },
     "eval": {
       "name": "eval.jsonl",
-      "count": 57,
-      "sha256": "d450b5a5d9653118dba40aee23c8e6c5f3afa90f877d02ed39679649dec6197b"
+      "count": 107,
+      "sha256": "443fb9b88c29967db9c90b841092bb513819cbaa77b765c40068f54fe9e234c4"
     }
   },
   "note": "Только настоящие данные репозитория: состояния боя Frontline, каталог правил баг-искателя и реальные исправления. Ничего выдуманного."
