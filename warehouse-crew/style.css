@@ -638,6 +638,8 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
 }
 .order .o-line .o-take:hover { border-color: var(--accent); color: var(--accent-2); }
 .order .o-line .o-take:active { transform: scale(0.95); }
+.order .o-line .o-take:disabled { opacity: 0.55; cursor: not-allowed; border-color: var(--line); color: var(--ink-faint); transform: none; }
+.order-list:empty::before { content: 'Свободных заказов пока нет'; color: var(--ink-faint); font-size: calc(10px * var(--ui)); padding: 8px 0; }
 .order .o-timer { font-family: var(--mono); }
 .order .o-timer.late { color: var(--red); }
 .order .o-timer.soon { color: var(--accent-2); }
@@ -911,12 +913,16 @@ body.ready .panel.side { animation: panelIn 0.55s 0.08s var(--ease-out) both; }
   body[data-sheet="hidden"] .ctl-scroll { opacity: 0; pointer-events: none; }
   .ctl-scroll { transition: opacity 0.22s var(--ease); }
 
-  /* на планшете правая колонка не нужна — прячем */
-  .top-stats { flex: 1; }
+  /* Статистика получает отдельную строку и не сжимается до нуля на телефоне. */
+  .top-stats { flex: 1 0 100%; width: 100%; justify-content: space-between; }
+  .top-stats .stat { min-width: 0; }
+  .top-actions { margin-left: auto; }
+  .engine-hud-slot .engine-status-text { display: none; }
 
   .cmd { min-height: calc(44px * var(--ui)); }
   .cmd b { font-size: calc(11px * var(--ui)); }
   .order-list { max-height: calc(240px * var(--ui)); }
+  .order .o-line .o-take { min-height: 40px; }
 
   .inspector {
     width: 100vw; max-height: 100%;
@@ -1079,5 +1085,7 @@ body.view-map #scene { filter: saturate(0.92) contrast(1.04); }
 .shop-shortcut:hover { background: #594425; }
 @media (max-width: 600px) { .shop-shortcut { padding: 0 7px; font-size: 11px; min-height: 30px; } }
 @media (max-width: 400px) {
-  .top-actions { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 40px); }
+  .top-actions { flex-wrap: nowrap; justify-content: flex-end; max-width: none; gap: 3px; }
+  .top-actions .icon-btn { width: 28px; height: 32px; }
+  .shop-shortcut { padding: 0 5px; font-size: 10px; }
 }

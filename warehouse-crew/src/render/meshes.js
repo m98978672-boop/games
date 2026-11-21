@@ -292,6 +292,13 @@ WC.meshes = (function () {
     opts = opts || {};
     var entry = buildOne(engine, name, palette || null);
     var m = new THREE.Mesh(entry.geometry, opts.material || makeMaterial(opts));
+    // Некоторые круглые примитивы RatCore после отражения оси имеют обратный
+    // порядок граней. Рисуем обе стороны непрозрачного материала: иначе руки,
+    // суставы и колёса исчезают с некоторых ракурсов из-за back-face culling.
+    if (!opts.material && opts.side == null && RECIPES[name].parts.some(function (part) {
+      return part.shape === 'cylinder' || part.shape === 'sphere' || part.shape === 'cone';
+    })) m.material.side = THREE.DoubleSide;
+    m.userData.recipe = name;
     if (entry.offset) m.position.set(entry.offset[0], entry.offset[1], entry.offset[2]);
     m.castShadow = opts.castShadow !== false;
     m.receiveShadow = opts.receiveShadow !== false;

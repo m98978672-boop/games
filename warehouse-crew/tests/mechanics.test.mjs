@@ -196,6 +196,36 @@ console.log('Отказ от неподъёмного');
   check(warehouse.state.orders.find((o) => o.id === order.id).refusedBy != null, 'заказ помечен «отказался»');
 }
 
+console.log('Завершённые рейсы не блокируют приёмку');
+{
+  const { warehouse } = makeWorld({ maxPending: 2 });
+  const old = warehouse.spawnOrder();
+  old.status = 'loaded';
+  const second = warehouse.spawnOrder();
+  check(Boolean(second), 'после загрузки остаётся место для нового заказа');
+  second.status = 'loaded';
+  check(Boolean(warehouse.spawnOrder()), 'загруженные в фуру коробки не занимают лимит очереди');
+}
+
+console.log('Безопасное назначение заказов');
+{
+  const { warehouse, workers } = makeWorld();
+  const first = warehouse.spawnOrder(), second = warehouse.spawnOrder();
+  first.mass = 8; second.mass = 8;
+  const owner = workers[0], other = workers[1];
+  check(owner.command('pick', warehouse, { orderId: first.id }).ok, 'первый заказ закреплён за работником');
+  const mode = owner.state.mode;
+  const attempt = owner.command('pick', warehouse, { orderId: second.id });
+  check(!attempt.ok && owner.state.orderId === first.id && owner.state.mode === mode && second.status === 'pending', 'занятый работник не подменяет выбранный заказ');
+  first.mass = 90;
+  const steal = other.command('pick', warehouse, { orderId: first.id });
+  check(!steal.ok && first.status === 'claimed' && first.carrier === owner.id && other.state.safety.refusals === 0, 'чужой заказ не освобождается при отказе по весу');
+  first.mass = 8;
+  warehouse.markCarried(first, owner.id); owner.state.carryingId = first.id;
+  const carryingAttempt = owner.command('pick', warehouse, { orderId: second.id });
+  check(!carryingAttempt.ok && owner.state.carryingId === first.id && first.status === 'carried', 'нельзя подменить заказ с коробкой в руках');
+}
+
 console.log('');
 if (failures) {
   console.log(`✗ Провалов: ${failures} из ${checks}`);

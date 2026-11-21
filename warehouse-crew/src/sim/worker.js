@@ -843,7 +843,12 @@
           emit('Режим: автономия нейросети', 'info');
           return { ok: true, state: w.state };
         case 'pick': {
-          w.mode = opts2.keepAuto ? w.mode : 'manual';
+          // Явный выбор в очереди не должен молча переключать на другой
+          // заказ или освобождать груз, принадлежащий другому работнику.
+          if (opts2.orderId && ((w.orderId && w.orderId !== opts2.orderId) ||
+              (w.carryingId && w.carryingId !== opts2.orderId))) {
+            return { ok: false, reason: 'Сначала завершите текущий заказ' };
+          }
           var order = null;
           if (opts2.orderId) {
             for (var i = 0; i < warehouse.state.orders.length; i++) {
@@ -852,6 +857,10 @@
           } else if (!w.carryingId && !w.orderId) {
             order = warehouse.nearestPending(w.pos);
           }
+          if (opts2.orderId && !w.orderId && !w.carryingId && order && order.status !== 'pending') {
+            return { ok: false, reason: 'Заказ уже занят или завершён' };
+          }
+          w.mode = opts2.keepAuto ? w.mode : 'manual';
           if (w.carryingId) return command('store', warehouse, opts2);
           if (w.orderId) {
             var current = activeOrder(warehouse);

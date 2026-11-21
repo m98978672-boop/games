@@ -439,7 +439,7 @@
     function spawnOrder() {
       var intakeIdx = freeIntake();
       var slot = freeSlot();
-      if (intakeIdx < 0 || !slot || state.orders.filter(function (o) { return o.status !== 'stored' && o.status !== 'ruined' && o.status !== 'missed'; }).length >= state.maxPending) return null;
+      if (intakeIdx < 0 || !slot || state.orders.filter(function (o) { return o.status === 'pending' || o.status === 'claimed' || o.status === 'carried'; }).length >= state.maxPending) return null;
       var priority = rng.next();
       var mass = Math.round(rng.range(5, 34));
       var size = mass > 24 ? 'big' : mass > 13 ? 'medium' : 'small';

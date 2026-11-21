@@ -384,7 +384,17 @@ window.WC = window.WC || {};
   }
 
   function renderOrders() {
-    var active = game.sim.activeOrders();
+    // После новой смены идентификаторы заказов начинаются заново: старые
+    // обработчики кнопок и подписи нельзя переносить в другую симуляцию.
+    if (uiState.ordersSim !== game.sim) {
+      uiState.orderRows.forEach(function (row) { if (row.parentNode) row.parentNode.removeChild(row); });
+      uiState.orderRows.clear();
+      uiState.ordersSim = game.sim;
+    }
+    // Ближайший дедлайн сверху — срочные заказы не теряются в очереди.
+    var active = game.sim.activeOrders().slice().sort(function (a, b) {
+      return a.deadline - b.deadline || a.createdAt - b.createdAt;
+    });
     var now = game.sim.state.time;
     var live = {};
     dom.queueCount.textContent = String(active.length);
@@ -417,6 +427,15 @@ window.WC = window.WC || {};
         uiState.orderRows.set(order.id, row);
         dom.orderList.appendChild(row);
       }
+      // Переставляем существующие карточки, сохраняя кнопки и их фокус.
+      var index = active.indexOf(order);
+      if (dom.orderList.children[index] !== row) dom.orderList.insertBefore(row, dom.orderList.children[index] || null);
+      var take = row.querySelector('.o-take');
+      var selected = game.activeWorker();
+      var busy = selected && (selected.state.orderId || selected.state.carryingId);
+      take.disabled = order.status !== 'pending' || !selected || Boolean(busy);
+      take.textContent = order.status !== 'pending' ? 'в работе' : busy ? 'рабочий занят' : 'взять';
+      take.title = order.status !== 'pending' ? 'Заказ уже назначен' : busy ? 'Сначала завершите текущий заказ' : 'Назначить выбранному рабочему';
       row.classList.toggle('urgent', Boolean(order.urgent) && order.status !== 'stored');
       row.classList.toggle('carried', order.status === 'carried');
       var who = order.status === 'carried' ? 'несёт: ' + nameOf(order.carrier)
