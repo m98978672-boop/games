@@ -595,6 +595,23 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
   padding: 1px 7px;
   transition: background 0.2s, color 0.2s;
 }
+.queue-summary, .queue-showing, .queue-empty {
+  color: var(--ink-dim); font-size: calc(10px * var(--ui)); line-height: 1.4;
+}
+.queue-summary { padding: 6px 0; }
+.queue-summary.warning { color: var(--accent-2); }
+.queue-showing { padding: 5px 0; color: var(--ink-faint); }
+.queue-empty { padding: 8px 0; }
+.queue-filters { display: flex; flex-wrap: wrap; gap: 4px; }
+.queue-filters button, .queue-more {
+  border: 1px solid var(--line-strong); border-radius: 7px; background: var(--panel-2);
+  color: var(--ink-dim); font-size: calc(9px * var(--ui)); padding: 6px 8px;
+  min-height: 32px; cursor: pointer;
+}
+.queue-filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-2); background: rgba(232, 180, 90, 0.12); }
+.queue-filters button:focus-visible, .queue-more:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.queue-more { margin-top: 6px; width: 100%; }
+.queue-more[hidden], .queue-empty[hidden] { display: none; }
 .order-list { display: grid; gap: calc(5px * var(--ui)); max-height: calc(190px * var(--ui)); overflow-y: auto; padding-right: 2px; }
 .order {
   display: grid;
@@ -641,7 +658,6 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
 .order .o-line .o-take:active, .order .o-line .o-priority:active { transform: scale(0.95); }
 .order .o-line .o-take:disabled, .order .o-line .o-priority:disabled { opacity: 0.55; cursor: not-allowed; border-color: var(--line); color: var(--ink-faint); transform: none; }
 .order .o-priority[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-2); }
-.order-list:empty::before { content: 'Свободных заказов пока нет'; color: var(--ink-faint); font-size: calc(10px * var(--ui)); padding: 8px 0; }
 .order .o-timer { font-family: var(--mono); }
 .order .o-timer.late { color: var(--red); }
 .order .o-timer.soon { color: var(--accent-2); }
@@ -936,7 +952,7 @@ body.ready .panel.side { animation: panelIn 0.55s 0.08s var(--ease-out) both; }
   .cmd { min-height: calc(44px * var(--ui)); }
   .cmd b { font-size: calc(11px * var(--ui)); }
   .order-list { max-height: calc(240px * var(--ui)); }
-  .order .o-line .o-take, .order .o-line .o-priority { min-height: 40px; }
+  .order .o-line .o-take, .order .o-line .o-priority, .queue-filters button, .queue-more { min-height: 40px; }
 
   .inspector {
     width: 100vw; max-height: 100%;
@@ -990,7 +1006,7 @@ body.ready .panel.side { animation: panelIn 0.55s 0.08s var(--ease-out) both; }
   body[data-sheet="hidden"] .panel.tools { transform: translateX(100%) !important; }
   .sheet-handle { display: none; }
   .ctl-scroll { opacity: 1 !important; pointer-events: auto !important; }
-  .order .o-line .o-take, .order .o-line .o-priority { min-height: 40px; }
+  .order .o-line .o-take, .order .o-line .o-priority, .queue-filters button, .queue-more { min-height: 40px; }
   .quickbar { right: auto; left: calc(8px * var(--ui)); width: min(58vw, 430px); bottom: calc(8px + var(--safe-b)); }
   .toasts { bottom: calc(12px + var(--safe-b)); left: calc(12px * var(--ui)); right: auto; transform: none; align-items: flex-start; }
   .topbar { padding-top: calc(4px + var(--safe-t)); }
