@@ -270,7 +270,6 @@
       var points = Math.max(1, base - damagePenalty - latePenalty);
       state.stats.delivered += 1;
       state.stats.score += points;
-      state.stats.loaded += 1;
       state.stats.forWorker = state.stats.forWorker || {};
       state.stats.forWorker[workerId] = (state.stats.forWorker[workerId] || 0) + points;
       if (order.damage < 0.05 && !late) {
@@ -399,7 +398,7 @@
           so.deadline = state.time + 150 + k * 12;
           so.pickedAt = null;
           so.storedAt = null;
-          state.stats.loaded += 0; // засчитаем на погрузке
+          // очки за погрузку начисляются в loadTruck()
         }
       }
 
@@ -428,6 +427,7 @@
       var base = 15 + Math.round(order.priority * 12);
       var points = Math.max(1, base - Math.round(order.damage * 18) - (late ? 6 : 0));
       state.stats.score += points;
+      state.stats.loaded += 1;
       state.stats.forWorker = state.stats.forWorker || {};
       state.stats.forWorker[workerId] = (state.stats.forWorker[workerId] || 0) + points;
       note('Коробка ' + order.code + ' ушла в фуру' + (truck ? ' ' + truck.plate : '') + ' (+' + points + ')', 'good');

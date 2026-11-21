@@ -29,7 +29,14 @@ export function updateSoldier(game, u, dt) {
   // Never teleport, and do not interrupt a unit that is traversing a doorway.
   if (!u.isVehicle && (!u.goal || u.arrived) && unsafeRest(game, u.x, u.y, u.radius)) {
     const safe = safeRestGoal(game, u, { x: u.x, y: u.y });
-    if (safe) { u.goal = safe; u.arrived = false; u.healBusy = false; u.buildBusy = false; moveAlongFlow(game, u, dt); return; }
+    if (safe) {
+      // Vacating a doorway after a route failure is safety movement, not a
+      // successful retry of the discarded order. A later, genuinely new goal
+      // still clears the failure in moveAlongFlow.
+      const failedSafety=u.pathFailed && (!u.goal || u.goal===u._failedRestGoal);
+      u.goal=safe;u._failedRestGoal=failedSafety?safe:null;
+      u.arrived = false; u.healBusy = false; u.buildBusy = false; moveAlongFlow(game, u, dt); return;
+    }
   }
   if (u.isVehicle) updateVehicle(game, u, dt);
   else actSoldier(game, u, dt);
