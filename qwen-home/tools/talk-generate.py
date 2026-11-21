@@ -42,7 +42,7 @@ WIKI_API = 'https://ru.wikipedia.org/w/api.php'
 
 SEARCH_WORDS = re.compile(r'(поищи|найди|узнай|погугли|загугли|поиск)', re.I)
 STRIP_WORDS = re.compile(r'(квеня|поищи|найди|узнай|посмотри|пожалуйста|в википедии|в интернете|поиске|мне|ответь|своими словами|ещё раз|еще раз|одной фразой|скажи)', re.I)
-BAD_HISTORY = re.compile(r'(Нашлось:|Статья «|https?://|\nuser\n|\nassistant\n|Поискала в Википедии\.$|написано:\s*$)')
+BAD_HISTORY = re.compile(r'(нашлось:|https?://|\nuser\n|\nassistant\n|поискала в википедии\.$|написано:\s*$|написано:\s*<|написано, что\s*$)', re.I)
 QUERY_STOP = {'каком', 'году', 'была', 'было', 'были', 'когда', 'какая', 'какой', 'какое', 'какие', 'сколько', 'ответь', 'своими', 'словами', 'одной', 'фразой', 'скажи', 'такой', 'такая'}
 
 
@@ -254,9 +254,12 @@ def main():
         messages.append({'role': role, 'content': body})
     messages.append({'role': 'user', 'content': owner_text + context_note})
     torch.manual_seed(42 + len(turns))
-    raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7, min_new=24 if results else 0)
+    raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7, min_new=44 if results else 0)
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
     reply = clean_reply(raw_reply)
+    if results:
+        parts = [p for p in re.split(r'(?<=[.!?])\s+', reply) if p.strip()]
+        reply = ' '.join(parts[:2]).strip()
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
     DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
