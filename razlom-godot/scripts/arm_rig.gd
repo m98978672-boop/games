@@ -12,8 +12,8 @@ var fist_mode := false
 var handedness := -1.0
 var pole_bias := Vector3.ZERO
 var last_pole := Vector3.ZERO
-const BONE_LENGTH := 0.52
-const MAX_REACH := 1.01
+var bone_length := 0.52
+var max_reach := 1.01
 
 func _init(host: Node3D, hand_side: float = -1.0) -> void:
 	parent = host
@@ -92,7 +92,7 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	var axis := target - shoulder
 	if axis.length_squared() < 0.000001:
 		axis = Vector3(0, -0.01, -0.01)
-	var distance := clampf(axis.length(), 0.06, MAX_REACH)
+	var distance := clampf(axis.length(), 0.06, max_reach)
 	var direction := axis.normalized()
 	wrist = shoulder + direction * distance
 	var pole := pole_bias
@@ -109,7 +109,7 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 		pole = -pole
 	last_pole = pole
 	# Equal finite upper/lower lengths prevent hyperextension and elbow flips.
-	elbow = (shoulder + wrist) * 0.5 + pole * sqrt(maxf(0.0025, BONE_LENGTH * BONE_LENGTH - distance * distance * 0.25))
+	elbow = (shoulder + wrist) * 0.5 + pole * sqrt(maxf(0.0025, bone_length * bone_length - distance * distance * 0.25))
 	place(segments[0], shoulder, elbow)
 	place(segments[1], elbow, wrist)
 	joint.position = elbow

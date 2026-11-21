@@ -41,7 +41,7 @@ var shots_hit := 0
 var near_misses := 0
 # Weapon and grip targets live in the visual root, never under an animated arm.
 # Keeping the gun out of the shoulder hierarchy prevents IK feedback and flipping.
-var weapon_raised_pos := Vector3(0.25, 1.32, -0.42)
+var weapon_raised_pos := Vector3(0.15, 1.32, -0.34)
 var weapon_raised_rot := Vector3.ZERO
 var weapon_lowered_pos := Vector3(0.34, 0.78, -0.03)
 var weapon_lowered_rot := Vector3(-0.35, 0.15, 0.20)
@@ -92,6 +92,10 @@ func _ready() -> void:
 	# the first-person rigs retain their separate, already-tuned pole direction.
 	left_arm.pole_bias = Vector3(-0.28, -1.0, 0.1)
 	right_arm.pole_bias = Vector3(0.28, -1.0, 0.1)
+	left_arm.bone_length = 0.39
+	left_arm.max_reach = 0.77
+	right_arm.bone_length = 0.39
+	right_arm.max_reach = 0.77
 	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home

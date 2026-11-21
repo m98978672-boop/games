@@ -63,7 +63,7 @@ func run_tests() -> void:
 		var left_forearm_axis: Vector3 = (guard.left_arm.wrist - guard.left_arm.elbow).normalized()
 		var right_forearm_axis: Vector3 = (guard.right_arm.wrist - guard.right_arm.elbow).normalized()
 		check(guard.left_arm.hand.basis.y.normalized().dot(left_forearm_axis) < -0.98 and guard.right_arm.hand.basis.y.normalized().dot(right_forearm_axis) < -0.98, "Guard fingers point forward from each wrist along the forearm instead of flopping sideways")
-		check(absf(guard.left_arm.elbow.distance_to(Vector3(-0.3, 1.3, 0)) - 0.52) < 0.002 and absf(guard.left_arm.elbow.distance_to(guard.left_arm.wrist) - 0.52) < 0.002 and absf(guard.right_arm.elbow.distance_to(Vector3(0.3, 1.3, 0)) - 0.52) < 0.002 and absf(guard.right_arm.elbow.distance_to(guard.right_arm.wrist) - 0.52) < 0.002, "Guard upper arms and forearms keep fixed length instead of stretching")
+		check(absf(guard.left_arm.elbow.distance_to(Vector3(-0.3, 1.3, 0)) - guard.left_arm.bone_length) < 0.002 and absf(guard.left_arm.elbow.distance_to(guard.left_arm.wrist) - guard.left_arm.bone_length) < 0.002 and absf(guard.right_arm.elbow.distance_to(Vector3(0.3, 1.3, 0)) - guard.right_arm.bone_length) < 0.002 and absf(guard.right_arm.elbow.distance_to(guard.right_arm.wrist) - guard.right_arm.bone_length) < 0.002, "Guard upper arms and forearms keep character-scaled lengths instead of stretching")
 		if is_equal_approx(blend, 1.0):
 			check(guard.left_arm.elbow.y < 1.15 and guard.right_arm.elbow.y < 1.15 and absf(guard.left_arm.elbow.x + 0.3) < 0.3 and absf(guard.right_arm.elbow.x - 0.3) < 0.3, "Rifle-ready elbows stay tucked below the shoulders instead of flaring into a wide V")
 	guard.arm_wounds = Vector2(100, 100)
