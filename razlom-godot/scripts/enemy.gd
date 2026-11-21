@@ -76,12 +76,14 @@ func _ready() -> void:
 	weapon.rotation = weapon_lowered_rot
 	weapon.scale = Vector3.ONE * 0.65
 	carried_weapon = weapon
-	weapon.get_node("LeftHand/Sleeve").hide()
-	weapon.get_node("RightHand/Sleeve").hide()
+	for hand_path in ["LeftHand", "RightHand"]:
+		var weapon_hand := weapon.get_node(hand_path) as Node3D
+		for hand_visual in weapon_hand.find_children("*", "MeshInstance3D", true, false):
+			(hand_visual as MeshInstance3D).hide()
 	visual.get_node("ArmRJoint/ArmR/Visual").hide()
 	visual.get_node("ArmLJoint/ArmL/Visual").hide()
-	left_arm = RazlomArmRig.new(visual)
-	right_arm = RazlomArmRig.new(visual)
+	left_arm = RazlomArmRig.new(visual, -1.0)
+	right_arm = RazlomArmRig.new(visual, 1.0)
 	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home

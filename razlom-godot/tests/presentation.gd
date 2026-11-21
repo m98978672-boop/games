@@ -56,10 +56,22 @@ func run_tests() -> void:
 	check(courier_motion.idle_fidget > 0 and courier_motion.idle_fidget_arm == "ArmR", "An idle courier begins a staggered sleeve-adjustment fidget")
 	courier_motion.advance(0.3, 0)
 	check(courier_motion.joints.ArmR.rotation.z > 0.02, "Fidget visibly moves the shoulder and arm before settling")
+	# Evaluate the same viewmodel pose update explicitly; the initial pause menu suspends Player._process.
+	game.player._process(1.0 / 60)
 	var player_glove: Node3D = game.player.left_arm.hand
 	var player_finger: Node3D = player_glove.get_node("Finger0") as Node3D
 	var player_finger_segment := player_finger.get_child(0) as MeshInstance3D
 	check(player_glove.has_node("Palm") and player_finger_segment.mesh is BoxMesh and not player_glove.has_node("KnuckleRidge0"), "First-person glove keeps attached block-built fingers without floating ornaments")
+	var player_right_glove: Node3D = game.player.right_arm.hand
+	check(player_glove.get_node("Thumb").position.x < 0 and player_right_glove.get_node("Thumb").position.x > 0, "Left and right IK gloves have opposite, anatomically correct thumbs")
+	check(not player_glove.visible and not player_right_glove.visible and game.player.gun.get_node("LeftHand/Palm/Visual").visible and game.player.gun.get_node("RightHand/Palm/Visual").visible, "Unarmed player has no floating IK fists; the authored weapon hands remain intact")
+	check(not guard.carried_weapon.get_node("LeftHand/Palm/Visual").visible and not guard.carried_weapon.get_node("RightHand/Palm/Visual").visible, "Guards draw only their articulated IK hands, not duplicate weapon hands")
+	check(game.player.gun.scale.x < 1.0 and game.player.gun.position.y < -0.25 and game.player.gun.position.z < -0.6, "First-person viewmodel is smaller and lowered away from the sightline")
+	game.state.rifle_owned = true
+	game.player.sync_weapon_state()
+	check(game.player.gun.visible and game.player.gun.get_node("LeftHand/Palm/Visual").visible and game.player.gun.get_node("RightHand/Palm/Visual").visible and not player_glove.visible and not player_right_glove.visible, "Equipped rifle uses one attached pair of authored hands without IK overlap")
+	game.state.rifle_owned = false
+	game.player.sync_weapon_state()
 	var surface := RazlomArt.material(Color.WHITE, "brick")
 	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")
 	check(surface.roughness_texture != null, "Surface roughness map is bound")

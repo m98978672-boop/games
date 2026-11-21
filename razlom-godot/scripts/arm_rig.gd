@@ -9,9 +9,11 @@ var joint: MeshInstance3D
 var hand: Node3D
 var hand_knuckles: Array[Node3D] = []
 var fist_mode := false
+var handedness := -1.0
 
-func _init(host: Node3D) -> void:
+func _init(host: Node3D, hand_side: float = -1.0) -> void:
 	parent = host
+	handedness = -1.0 if hand_side < 0 else 1.0
 	var cloth := RazlomArt.material(Color("65756b"), "cloth")
 	for i in range(2):
 		var segment := Node3D.new()
@@ -39,6 +41,7 @@ func _init(host: Node3D) -> void:
 	# Palm, knuckles and fingers are separate square pieces, never round beads.
 	hand = Node3D.new()
 	hand.name = "IKHand"
+	hand.scale = Vector3.ONE * 0.82
 	host.add_child(hand)
 	var glove := RazlomArt.material(Color("39463f"), "cloth")
 	var glove_highlight := RazlomArt.material(Color("56645a"), "cloth")
@@ -70,12 +73,12 @@ func _init(host: Node3D) -> void:
 	thumb_mesh.size = Vector3(0.024, 0.055, 0.02)
 	thumb.mesh = thumb_mesh
 	thumb.material_override = glove
-	thumb.position = Vector3(-0.06, 0.004, -0.045)
-	thumb.rotation = Vector3(-PI * 0.5, 0.0, -0.58)
+	thumb.position = Vector3(handedness * 0.06, 0.004, -0.045)
+	thumb.rotation = Vector3(-PI * 0.5, 0.0, handedness * 0.58)
 	hand.add_child(thumb)
-	var thumb_joint := RazlomArt.box(hand, Vector3(-0.074, 0.002, -0.078), Vector3(0.026, 0.022, 0.02), glove_highlight)
+	var thumb_joint := RazlomArt.box(hand, Vector3(handedness * 0.074, 0.002, -0.078), Vector3(0.026, 0.022, 0.02), glove_highlight)
 	thumb_joint.name = "ThumbJoint"
-	thumb_joint.rotation.z = -0.4
+	thumb_joint.rotation.z = handedness * 0.4
 	var wrist_cuff := RazlomArt.box(hand, Vector3(0, 0, 0.022), Vector3(0.105, 0.068, 0.04), cloth)
 	wrist_cuff.name = "Cuff"
 	RazlomArt.box(hand, Vector3(0, 0.008, 0.041), Vector3(0.075, 0.005, 0.004), seam)
@@ -102,6 +105,7 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	hand.position = wrist
 	var hand_up := Vector3.UP if absf(direction.dot(Vector3.UP)) < 0.95 else Vector3.FORWARD
 	hand.basis = Basis.looking_at(direction, hand_up)
+	hand.scale = Vector3.ONE * 0.82
 	hand.rotation.z += sin(Time.get_ticks_msec() * 0.003 + side) * 0.018
 	for i in range(hand_knuckles.size()):
 		var curl := -0.62 if fist_mode else -0.12
@@ -114,7 +118,7 @@ func place(segment: Node3D, start: Vector3, finish: Vector3) -> void:
 	segment.position = (start + finish) * 0.5
 	var direction := (finish - start).normalized()
 	var up := Vector3.UP if absf(direction.dot(Vector3.UP)) < 0.95 else Vector3.FORWARD
-	segment.basis = Basis.looking_at(direction, up) * Basis.from_scale(Vector3(1, 1, maxf(0.001, start.distance_to(finish))))
+	segment.basis = Basis.looking_at(direction, up) * Basis.from_scale(Vector3(0.84, 0.84, maxf(0.001, start.distance_to(finish))))
 
 func set_visible(value: bool) -> void:
 	for segment in segments: segment.visible = value

@@ -54,8 +54,10 @@ func _ready() -> void:
 	gun = model.instantiate()
 	camera.add_child(gun)
 	gun.scale = Vector3.ONE * 0.85
-	gun.position = Vector3(0.2, -0.21, -0.6)
+	gun.position = Vector3(0.18, -0.28, -0.68)
 	weapon_motion = RazlomWeaponMotion.new(gun)
+	# Keep the authored hands and sleeves on the weapon as the only first-person
+	# pair; the camera-space IK rigs are reserved for world characters.
 	bandage = RazlomArt.box(gun.get_node("LeftHand"), Vector3(0, 0.035, 0), Vector3(0.055, 0.05, 0.09), RazlomArt.material(Color("dedbc4")))
 	bandage.hide()
 	scanner = Node3D.new()
@@ -64,10 +66,8 @@ func _ready() -> void:
 	RazlomArt.box(scanner, Vector3(0, 0.07, -0.03), Vector3(0.05, 0.05, 0.01), RazlomArt.material(Color("8bbfa1"), "", 0.5))
 	RazlomArt.box(scanner, Vector3(0.02, 0.15, 0), Vector3(0.008, 0.1, 0.008), RazlomArt.material(Color("555c50")))
 	scanner.hide()
-	gun.get_node("LeftHand/Sleeve").hide()
-	gun.get_node("RightHand/Sleeve").hide()
-	left_arm = RazlomArmRig.new(camera)
-	right_arm = RazlomArmRig.new(camera)
+	left_arm = RazlomArmRig.new(camera, -1.0)
+	right_arm = RazlomArmRig.new(camera, 1.0)
 	sync_weapon_state()
 	light = SpotLight3D.new()
 	light.position = Vector3(0.12, -0.1, -0.15)
@@ -161,7 +161,7 @@ func _physics_process(delta: float) -> void:
 	bob += delta * (9.0 if running else 6.0) * movement_blend
 	look_sway = look_sway.lerp(Vector2.ZERO, 1.0 - exp(-delta * 14.0))
 	var reload_blend := sin(clampf(reload_time / 1.4, 0.0, 1.0) * PI)
-	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.2, -0.21, -0.6)
+	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.18, -0.28, -0.68)
 	if game.quests.scan_time > 0:
 		anchor.y -= 0.14
 	anchor.y -= sin(clampf(healing_time / 1.2, 0, 1) * PI) * 0.16
@@ -259,6 +259,10 @@ func _process(delta: float) -> void:
 func sync_weapon_state() -> void:
 	var owned: bool = game.state.rifle_owned
 	gun.visible = owned
+	# The weapon scene contains its own articulated hands. Do not layer a second
+	# camera-space pair over them (or show fists when the player is unarmed).
+	left_arm.set_visible(false)
+	right_arm.set_visible(false)
 	left_arm.set_fist_mode(not owned)
 	right_arm.set_fist_mode(not owned)
 	if not owned:
@@ -345,6 +349,6 @@ func reset_death_pose() -> void:
 	camera.position = Vector3(0, 1.6, 0)
 	camera.rotation.z = 0
 	gun.show()
-	left_arm.set_visible(true)
-	right_arm.set_visible(true)
+	left_arm.set_visible(false)
+	right_arm.set_visible(false)
 	reflex_time = 0
