@@ -129,7 +129,7 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			pupil.position = Vector3(0, 0, -0.011)
 			pupil.material_override = material(Color("282923"))
 			eye.add_child(pupil)
-			var brow := box(head, Vector3(side * 0.062, 0.071, -0.16), Vector3(0.03, 0.004, 0.008), brow_mat)
+			var brow := box(head, Vector3(side * 0.062, 0.071, -0.16), Vector3(0.03, 0.007, 0.008), brow_mat)
 			brow.name = "BrowL" if side < 0 else "BrowR"
 			brow.rotation.z = side * -0.01
 		# Flat stepped nose and a short mouth line; no spherical details.
