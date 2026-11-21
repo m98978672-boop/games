@@ -8,6 +8,7 @@ WC.world = (function () {
   var renderer = null;
   var scene = null;
   var camera = null;
+  var perspCamera = null;
   var canvas = null;
   var meshes = null;
   var engine = null;
@@ -26,6 +27,7 @@ WC.world = (function () {
     distance: 1,
     focusId: null,
     shake: 0,
+    zoom: 1,
   };
 
   var state = {
@@ -63,6 +65,7 @@ WC.world = (function () {
     scene.fog = new THREE_NS.Fog(0x0a0d0c, 26, 54);
 
     camera = new THREE_NS.PerspectiveCamera(55, aspect(), 0.1, 140);
+    perspCamera = camera;
     camera.position.set(0, 12, 16);
     state.cameraPos = camera.position.clone();
     state.lookAt = new THREE_NS.Vector3(0, 1, 0);
@@ -118,6 +121,10 @@ WC.world = (function () {
     var h = canvas.clientHeight || window.innerHeight;
     if (w < 2 || h < 2) return;
     renderer.setSize(w, h, false);
+    if (view.mode === 'map2d' && mapCamera) {
+      fitMapCamera(w, h);
+      return;
+    }
     camera.aspect = Math.max(0.35, w / Math.max(1, h));
     camera.updateProjectionMatrix();
   }
@@ -179,7 +186,14 @@ WC.world = (function () {
     });
     // Стены
     addStatic('wall', 0, 0, -8.55, { castShadow: false });
-    addStatic('wall', 0, 0, 8.55, { castShadow: false });
+    // Южная стена с воротами на улицу: проём между -9.8 и -7.4
+    var gate = streetConf().gate;
+    var leftSeg = addStatic('wall', (-13 + (gate.x - gate.half)) / 2, 0, 8.55, { castShadow: false });
+    leftSeg.scale.x = (gate.x - gate.half + 13) / 26;
+    var rightSeg = addStatic('wall', (gate.x + gate.half + 13) / 2, 0, 8.55, { castShadow: false });
+    rightSeg.scale.x = (13 - gate.x - gate.half) / 26;
+    addStatic('gateFrame', gate.x - gate.half, 1.3, 8.55, { castShadow: false });
+    addStatic('gateFrame', gate.x + gate.half, 1.3, 8.55, { castShadow: false });
     // Боковые стены с проёмами под доки (по 1.6 м ворот с каждой стороны)
     [-13.05, 13.05].forEach(function (x) {
       [-5.05, 5.05].forEach(function (z) {
@@ -195,6 +209,10 @@ WC.world = (function () {
     // Разметка двора под фуры
     addStatic('yardLine', -16.6, 0.01, 0, { castShadow: false, receiveShadow: false });
     addStatic('yardLine', 16.6, 0.01, 0, { castShadow: false, receiveShadow: false });
+
+    buildStreet();
+    buildCabins();
+    buildHeavyZone();
 
     // Стеллажи: 3 ряда по 3 уровня
     var rackX = [-1.6, 2.2, 6.0];
@@ -235,6 +253,126 @@ WC.world = (function () {
     });
   }
 
+  function streetConf() {
+    var layout = (WC.worldLayout || (window.WarehouseSim && window.WarehouseSim.LAYOUT)) || {};
+    return layout.street || { x0: -10.8, x1: 10.8, y0: 9, y1: 14.4, gate: { x: -8.6, half: 1.2 }, spots: [] };
+  }
+
+  function layoutConf() {
+    return (window.WarehouseSim && window.WarehouseSim.LAYOUT) || {};
+  }
+
+  // Улица: тротуар, дорога, фонари, киоск, сетка. Никаких ассетов — те же
+  // примитивы движка, что и у цеха.
+  function buildStreet() {
+    var st = streetConf();
+    var midZ = (st.y0 + st.y1) / 2;
+    addStatic('streetSlab', 0, 0.02, midZ + 0.4, { castShadow: false });
+    addStatic('sidewalk', 0, 0.06, st.y0 + 0.45, { castShadow: false });
+    addStatic('curb', 0, 0.1, st.y0 + 1.1, { castShadow: false, receiveShadow: false });
+    for (var x = -9.6; x <= 9.7; x += 2.4) {
+      addStatic('roadDash', x, 0.06, st.y1 - 1.6, { castShadow: false, receiveShadow: false });
+    }
+    [-9.6, 9.6].forEach(function (lx) {
+      addStatic('lampPost', lx, 0.1, st.y0 + 0.5, { castShadow: false });
+      addStatic('lampHead', lx, 3.7, st.y0 + 0.5, { castShadow: false, receiveShadow: false, material: meshes.makeMaterial({ emissive: '#f6e3b0', emissiveIntensity: 0.7, roughness: 0.5 }) });
+      var light = new THREE_NS.PointLight(0xffe0a8, 0.5, 8, 2);
+      light.position.set(lx, 3.5, st.y0 + 0.5);
+      scene.add(light);
+    });
+    // Киоск: визуально и как препятствие в навигации
+    var kiosk = st.kiosk || { x: 6.4, y: 10.3 };
+    addStatic('kioskBody', kiosk.x, 0.08, kiosk.y, {});
+    addStatic('kioskGlass', kiosk.x, 0.08, kiosk.y, { castShadow: false });
+    addStatic('kioskSign', kiosk.x, 0.08, kiosk.y, { castShadow: false, receiveShadow: false });
+    // Сетка по краю улицы: за неё нельзя
+    for (var fx = -10.4; fx <= 10.5; fx += 2.0) {
+      addStatic('fencePost', fx, 0.9, st.y1 + 0.05, { castShadow: false });
+    }
+    [0.45, 0.95, 1.45].forEach(function (h) {
+      var bar = addStatic('fenceBar', 0, h, st.y1 + 0.05, { castShadow: false, receiveShadow: false });
+      bar.scale.x = 13.4 / 1.6;
+    });
+    // Уединённые места прикрыты штабелями паллет
+    (layoutConf().privacySpots || []).forEach(function (spot) {
+      addStatic('palletStack', spot.x + 0.95, 0, spot.y + 1.15, { castShadow: true });
+      addStatic('palletStack', spot.x - 1.0, 0, spot.y + 1.2, { castShadow: true });
+    });
+  }
+
+  function buildCabins() {
+    (layoutConf().wc || []).forEach(function (cab) {
+      addStatic('wcCabin', cab.x, 0, cab.y, {});
+      addStatic('wcRoof', cab.x, 0, cab.y, { castShadow: true });
+      var doorName = cab.id === 'Ж' ? 'wcDoorF' : 'wcDoorM';
+      var signName = cab.id === 'Ж' ? 'wcSignF' : 'wcSignM';
+      addStatic(doorName, cab.x, 0.05, cab.y - cab.d / 2 - 0.03, { castShadow: false });
+      addStatic(signName, cab.x, 1.95, cab.y - cab.d / 2 - 0.08, { castShadow: false, receiveShadow: false, material: meshes.makeMaterial({ emissive: '#e8a0b8', emissiveIntensity: 0.25, roughness: 0.6 }) });
+      addStatic('wcLight', cab.x, 2.42, cab.y - 0.2, { castShadow: false, receiveShadow: false, material: meshes.makeMaterial({ emissive: '#f2e6c0', emissiveIntensity: 0.8, roughness: 0.5 }) });
+    });
+  }
+
+  function buildHeavyZone() {
+    var heavy = layoutConf().heavy;
+    if (!heavy) return;
+    addStatic('heavyPad', heavy.x, 0.02, heavy.y, { castShadow: false });
+    var s1 = addStatic('heavyStripe', heavy.x, 0.03, heavy.y - heavy.d / 2 + 0.2, { castShadow: false, receiveShadow: false });
+    s1.scale.z = 1;
+    var s2 = addStatic('heavyStripe', heavy.x, 0.03, heavy.y + heavy.d / 2 - 0.2, { castShadow: false, receiveShadow: false });
+    s2.scale.z = 1;
+    addStatic('heavyPallet', heavy.pallet.x, 0.14, heavy.pallet.y, { castShadow: true });
+    addStatic('palletStack', heavy.x - 1.9, 0, heavy.y - 1.1, { castShadow: true });
+    addStatic('palletStack', heavy.x + 1.9, 0, heavy.y - 1.2, { castShadow: true });
+  }
+
+  // ---------------------------------------------------------------- техника
+  var forkliftView = null;
+
+  function makeForkliftView() {
+    var group = new THREE_NS.Group();
+    var wheels = [];
+    function part(name, x, y, z, rx) {
+      var m = meshes.mesh(engine, name, null, { castShadow: true, receiveShadow: true });
+      m.position.set(x, y, z);
+      if (rx) m.rotation.z = rx;
+      group.add(m);
+      return m;
+    }
+    part('forkliftBody', 0, 0, 0);
+    part('forkliftCounter', -0.62, 0, 0);
+    part('forkliftMast', 0.78, 0, 0);
+    part('forkliftFork', 1.35, 0.16, 0.28);
+    part('forkliftFork', 1.35, 0.16, -0.28);
+    part('forkliftSeat', -0.25, 0.6, 0);
+    part('forkliftCage', -0.68, 0, 0.42);
+    part('forkliftCage', -0.68, 0, -0.42);
+    var beacon = part('forkliftBeacon', -0.7, 1.95, 0);
+    beacon.castShadow = false;
+    [[-0.55, 0.45], [-0.55, -0.45], [0.55, 0.45], [0.55, -0.45]].forEach(function (w) {
+      var wheel = meshes.mesh(engine, 'forkliftWheel', null, { castShadow: true });
+      wheel.position.set(w[0], 0.28, w[1]);
+      wheel.rotation.x = Math.PI * 0.5;
+      group.add(wheel);
+      wheels.push(wheel);
+    });
+    group.userData.wheels = wheels;
+    scene.add(group);
+    return group;
+  }
+
+  function updateForklift(sim) {
+    if (!forkliftView) forkliftView = makeForkliftView();
+    var f = sim.state.forklift;
+    if (!f) { forkliftView.visible = false; return; }
+    forkliftView.visible = true;
+    forkliftView.position.x += (f.x - forkliftView.position.x) * 0.35;
+    forkliftView.position.z += (f.y - forkliftView.position.z) * 0.35;
+    forkliftView.position.y = 0;
+    forkliftView.rotation.y = -f.yaw;
+    var wheels = forkliftView.userData.wheels || [];
+    for (var i = 0; i < wheels.length; i++) wheels[i].rotation.y = (f.wheels || 0) * 1.4;
+  }
+
   var WC_WAREHOUSE_INTAKE = [
     { x: -9.4, y: -4.6 }, { x: -9.4, y: 0 }, { x: -9.4, y: 4.6 },
   ];
@@ -266,8 +404,8 @@ WC.world = (function () {
 
     var torso = new THREE_NS.Group();
     hips.add(torso);
-    part(torso, 'torso', 0, 0, 0);
-    part(torso, 'vest', 0, 0, 0);
+    var torsoMesh = part(torso, 'torso', 0, 0, 0);
+    var vestMesh = part(torso, 'vest', 0, 0, 0);
     part(torso, 'strap', 0, 0, 0);
     part(torso, 'strap2', 0, 0, 0);
     part(torso, 'pocket', 0, 0, 0);
@@ -303,37 +441,37 @@ WC.world = (function () {
       shoulder.position.set(0.205 * sign, 0.355, 0);
       torso.add(shoulder);
       part(shoulder, 'shoulderPad', 0, 0, 0);
-      part(shoulder, 'upperArm', 0, 0, 0);
+      var upperMesh = part(shoulder, 'upperArm', 0, 0, 0);
       var elbow = new THREE_NS.Group();
       elbow.position.y = -0.27;
       shoulder.add(elbow);
       part(elbow, 'elbowPad', 0, 0, 0);
-      part(elbow, 'forearm', 0, 0, 0);
+      var foreMesh = part(elbow, 'forearm', 0, 0, 0);
       var wrist = new THREE_NS.Group();
       wrist.position.y = -0.25;
       elbow.add(wrist);
       part(wrist, 'hand', 0, 0, 0);
       part(wrist, 'thumb', 0, 0, 0);
-      return { shoulder: shoulder, elbow: elbow, wrist: wrist };
+      return { shoulder: shoulder, elbow: elbow, wrist: wrist, upper: upperMesh, fore: foreMesh };
     }
 
     function makeLeg(sign) {
       var hip = new THREE_NS.Group();
       hip.position.set(0.085 * sign, -0.19, 0);
       hips.add(hip);
-      part(hip, 'thigh', 0, 0, 0);
+      var thighMesh = part(hip, 'thigh', 0, 0, 0);
       var knee = new THREE_NS.Group();
       knee.position.y = -0.38;
       hip.add(knee);
       part(knee, 'kneePad', 0, 0, 0);
-      part(knee, 'shin', 0, 0, 0);
+      var shinMesh = part(knee, 'shin', 0, 0, 0);
       var ankle = new THREE_NS.Group();
       ankle.position.y = -0.34;
       knee.add(ankle);
       part(ankle, 'anklePad', 0, 0, 0);
       part(ankle, 'foot', 0, 0, 0);
       part(ankle, 'sole', 0, 0, 0);
-      return { hip: hip, knee: knee, ankle: ankle };
+      return { hip: hip, knee: knee, ankle: ankle, thigh: thighMesh, shin: shinMesh };
     }
 
     var armL = makeArm(1);
@@ -351,6 +489,7 @@ WC.world = (function () {
     var viewState = {
       root: root, hips: hips, torso: torso, neck: neck, head: head,
       armL: armL, armR: armR, legL: legL, legR: legR,
+      torsoMesh: torsoMesh, vestMesh: vestMesh,
       carryAnchor: carryAnchor, palette: palette,
       anim: { phase: 0, walk: 0, breath: 0 },
     };
@@ -359,7 +498,7 @@ WC.world = (function () {
   }
 
   function attachCrew(game) {
-    game.api.crew.forEach(function (worker) {
+    game.api.crew.concat(game.api.staff || []).forEach(function (worker) {
       if (crewViews.has(worker.state.id)) return;
       createCrewView({ id: worker.state.id, palette: worker.state.palette }, worker.state.pos);
     });
@@ -445,15 +584,21 @@ WC.world = (function () {
         // возврата в сцену она «летит» следом за рабочим по всему складу.
         if (group.parent !== scene) scene.add(group);
         group.scale.setScalar(1);
-        // Низ коробки — её локальный нуль, поэтому ставим прямо на полку.
-        group.position.set(slot.x, slotTop, slot.y);
-        group.rotation.set(0, 0, 0);
+        // Точка B: низ коробки — её локальный нуль, ставим прямо на полку.
+        var bPose = order.dest || { x: slot.x, y: slot.y, z: slotTop };
+        group.position.set(bPose.x, bPose.z != null ? bPose.z : slotTop, bPose.y);
+        group.rotation.set(0, order.pose ? order.pose.yaw : 0, 0);
         group.visible = true;
-      } else if (order.status === 'ruined' || order.status === 'missed') {
+      } else if (order.status === 'ruined' || order.status === 'missed' || order.status === 'loaded') {
         group.visible = false;
       } else if (order.status === 'carried' && order.carrier) {
         var carrierView = crewViews.get(order.carrier);
-        if (carrierView) {
+        if (carrierView && sim.state.forklift && sim.state.forklift.rider === order.carrier && forkliftView) {
+          if (group.parent !== forkliftView) forkliftView.add(group);
+          group.scale.setScalar(1);
+          group.position.set(1.25, 0.30, 0);
+          group.rotation.set(0, 0, 0);
+        } else if (carrierView) {
           if (group.parent !== carrierView.carryAnchor) carrierView.carryAnchor.add(group);
           // Коробка ложится на живот: низ на уровне пояса, спинка упирается
           // в корпус. Наклон повторяет наклон рабочего, поэтому «не парит».
@@ -471,13 +616,105 @@ WC.world = (function () {
       } else {
         if (group.parent !== scene) scene.add(group);
         group.scale.setScalar(1);
-        group.position.set(order.x, floorSupport(order), order.y);
-        group.rotation.set(0, order.priority > 0.72 ? 0.35 : -0.2, 0);
+        // Точка C: высота, наклон, «на боку» — всё из физики склада
+        var pose = order.pose || { x: order.x, y: order.y, z: floorSupport(order), yaw: 0, tilt: 0, lying: false };
+        // Вращаем вокруг нижнего центра; компенсируем поворот так, чтобы
+        // нижняя грань не пересекала опору во время наклона.
+        var tilt = pose.lying ? Math.PI * 0.5 * (pose.tilt >= 0 ? 1 : -1) : (pose.tilt || 0);
+        var yaw = pose.yaw || 0;
+        var bottom = -Math.abs(Math.sin(tilt) * Math.sin(yaw)) * viewEntry.halfW
+          - Math.abs(Math.sin(tilt) * Math.cos(yaw)) * viewEntry.halfD
+          + Math.min(0, Math.cos(tilt) * viewEntry.height);
+        group.rotation.set(tilt, yaw, 0);
+        group.position.set(pose.x, (pose.z != null ? pose.z : floorSupport(order)) - bottom, pose.y);
         group.visible = true;
       }
     });
     boxViews.forEach(function (entry, id) {
       if (!seen[id]) removeBoxView(id);
+    });
+    updateBoxMarks(sim);
+  }
+
+  // ------------------------------------------------------- метки A / B / C
+  var boxMarks = new Map();
+
+  function makeBoxMarks(order) {
+    var group = new THREE_NS.Group();
+    function disc(color) {
+      var m = new THREE_NS.Mesh(
+        meshes.get('markA', null).geometry,
+        meshes.makeMaterial({ emissive: color, emissiveIntensity: 0.75, transparent: true, opacity: 0.62, roughness: 0.5, depthWrite: false })
+      );
+      m.renderOrder = 3;
+      group.add(m);
+      return m;
+    }
+    var a = disc('#4fbf7a');
+    var b = disc('#4f8fdb');
+    var c = disc('#e8b45a');
+    var dashes = [];
+    for (var i = 0; i < 20; i++) {
+      var d = new THREE_NS.Mesh(
+        meshes.get('dash', null).geometry,
+        meshes.makeMaterial({ transparent: true, opacity: 0.42, roughness: 0.6, depthWrite: false })
+      );
+      group.add(d);
+      dashes.push(d);
+    }
+    scene.add(group);
+    var entry = { group: group, a: a, b: b, c: c, dashes: dashes };
+    boxMarks.set(order.id, entry);
+    return entry;
+  }
+
+  function dashLine(list, from, to, floorY) {
+    var dist = Math.hypot(to.x - from.x, to.y - from.y);
+    var step = 0.6;
+    var count = Math.min(list.length, Math.max(0, Math.floor(dist / step)));
+    for (var i = 0; i < list.length; i++) {
+      var d = list[i];
+      if (i >= count) { d.visible = false; continue; }
+      var t = (i + 0.5) / count;
+      d.visible = true;
+      d.position.set(from.x + (to.x - from.x) * t, floorY + 0.01, from.y + (to.y - from.y) * t);
+      d.rotation.y = -Math.atan2(to.y - from.y, to.x - from.x);
+    }
+  }
+
+  // Три точки каждой коробки: A — откуда приехала, C — где лежит сейчас,
+  // B — куда поедет. Видно, что происходит с грузом даже ночью.
+  function updateBoxMarks(sim) {
+    var shown = 0;
+    sim.state.orders.forEach(function (order) {
+      var active = order.status === 'pending' || order.status === 'claimed' || order.status === 'carried';
+      var entry = boxMarks.get(order.id);
+      if (!active || shown >= 6) {
+        if (entry) entry.group.visible = false;
+        return;
+      }
+      shown += 1;
+      if (!entry) entry = makeBoxMarks(order);
+      entry.group.visible = true;
+      var pose = order.pose || { x: order.x, y: order.y, z: 0 };
+      var origin = order.origin || { x: pose.x, y: pose.y };
+      var dest = order.dest || { x: order.x, y: order.y, z: 0 };
+      var carried = order.status === 'carried';
+      // Коробку несут — точка C едет вместе с ней
+      entry.c.position.set(pose.x, (pose.z || 0) + 0.012, pose.y);
+      entry.a.position.set(origin.x, (order.supportHeight ? 0 : 0) + 0.014, origin.y);
+      entry.b.position.set(dest.x, (dest.z || 0) + 0.016, dest.y);
+      entry.a.visible = !carried;
+      entry.b.visible = true;
+      entry.c.visible = true;
+      dashLine(entry.dashes.slice(0, 10), origin, { x: pose.x, y: pose.y }, 0.02);
+      dashLine(entry.dashes.slice(10), { x: pose.x, y: pose.y }, dest, 0.02);
+    });
+    boxMarks.forEach(function (entry, id) {
+      if (!sim.state.orders.some(function (o) { return o.id === id; })) {
+        scene.remove(entry.group);
+        boxMarks.delete(id);
+      }
     });
   }
 
@@ -582,41 +819,63 @@ WC.world = (function () {
   }
 
   function updateCrew(dt, game) {
-    game.api.crew.forEach(function (worker) {
-      var viewEntry = crewViews.get(worker.id);
+    // Рабочие и наёмный персонал (медик, сторож) — в одном проходе рига
+    var actors = game.api.crew.concat(game.api.staff || []);
+    actors.forEach(function (actor) {
+      var viewEntry = crewViews.get(actor.state.id);
       if (!viewEntry) return;
-      var s = worker.state;
+      var s = actor.state;
       var root = viewEntry.root;
+      var body = actor.body || { injuries: [], fatigue: 0 };
+      // Погибшего рига больше нет, в кабинке — не видно: двери закрыты
+      if (s.dead) { root.visible = false; return; }
+      root.visible = !s.inCabin && !s.privacy;
+      if (!root.visible) return;
+
       root.position.x += (s.pos.x - root.position.x) * Math.min(1, dt * 18);
       root.position.z += (s.pos.y - root.position.z) * Math.min(1, dt * 18);
       var targetYaw = sceneYaw(s.heading);
       var delta = ((targetYaw - root.rotation.y + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
       root.rotation.y += delta * Math.min(1, dt * 12);
+      root.rotation.z = 0;
 
-      var walk = s.anim.walk;
-      var phase = s.anim.phase;
-      var carrying = Boolean(s.carryingId);
+      var anim = s.anim || {};
+      var walk = anim.walk || 0;
+      var phase = anim.phase || 0;
+      var run = anim.run || 0;
+      var hurt = anim.hurt || {};
+      var muscle = anim.muscle || {};
+      var carrying = Boolean(s.carryingId) && !s.onForklift;
       var resting = s.state === 'rest' || s.state === 'toRest';
       var down = s.state === 'down';
-      var body = worker.body;
+      var sitting = Boolean(s.onForklift) || s.state === 'play';
+      var twist = anim.torsoTwist || 0;
+      var headTurn = anim.headTurn || 0;
 
-      // Ноги
-      var stride = 0.62 * walk;
-      viewEntry.legL.hip.rotation.x = Math.sin(phase) * stride;
-      viewEntry.legR.hip.rotation.x = -Math.sin(phase) * stride;
-      viewEntry.legL.knee.rotation.x = Math.max(0, -Math.cos(phase)) * 0.85 * walk;
-      viewEntry.legR.knee.rotation.x = Math.max(0, Math.cos(phase)) * 0.85 * walk;
-      viewEntry.legL.ankle.rotation.x = -Math.sin(phase) * 0.18 * walk;
-      viewEntry.legR.ankle.rotation.x = Math.sin(phase) * 0.18 * walk;
+      // ---------------------------------------------------------------- ноги
+      var stride = (0.5 + 0.55 * run) * walk;
+      if (sitting) {
+        viewEntry.legL.hip.rotation.x = -1.25;
+        viewEntry.legR.hip.rotation.x = -1.25;
+        viewEntry.legL.knee.rotation.x = 1.15;
+        viewEntry.legR.knee.rotation.x = 1.15;
+        viewEntry.legL.ankle.rotation.x = 0.25;
+        viewEntry.legR.ankle.rotation.x = 0.25;
+      } else {
+        viewEntry.legL.hip.rotation.x = Math.sin(phase) * stride;
+        viewEntry.legR.hip.rotation.x = -Math.sin(phase) * stride;
+        viewEntry.legL.knee.rotation.x = Math.max(0, -Math.cos(phase)) * (0.85 + 0.7 * run) * walk;
+        viewEntry.legR.knee.rotation.x = Math.max(0, Math.cos(phase)) * (0.85 + 0.7 * run) * walk;
+        viewEntry.legL.ankle.rotation.x = -Math.sin(phase) * 0.18 * walk;
+        viewEntry.legR.ankle.rotation.x = Math.sin(phase) * 0.18 * walk;
+      }
 
-      // Руки: при переноске — вперёд, иначе машут
-      var swing = Math.sin(phase) * 0.7 * walk;
+      // ---------------------------------------------------------------- руки
+      var swing = Math.sin(phase) * (0.7 + 0.55 * run) * walk;
       if (carrying) {
         var hugBox = viewEntry.carryHug == null ? 0.82 : viewEntry.carryHug;
         var boxDims = viewEntry.carryBox || { height: 0.4, halfD: 0.21 };
         var lowY = viewEntry.carryLow == null ? -0.22 : viewEntry.carryLow;
-        // Кисти — на боках коробки ниже её середины: ладони обхватывают борта
-        // снаружи, а не уходят внутрь коробки.
         var ik = solveArm(lowY + boxDims.height * hugBox * 0.34 - 0.355, 0.20 + boxDims.halfD * hugBox * 0.35);
         viewEntry.armL.shoulder.rotation.x = ik.shoulder;
         viewEntry.armR.shoulder.rotation.x = ik.shoulder;
@@ -626,41 +885,57 @@ WC.world = (function () {
         viewEntry.armR.elbow.rotation.x = ik.elbow;
         viewEntry.armL.wrist.rotation.x = -0.45;
         viewEntry.armR.wrist.rotation.x = -0.45;
+      } else if (sitting) {
+        // Руки на руле погрузчика
+        viewEntry.armL.shoulder.rotation.x = -1.05;
+        viewEntry.armR.shoulder.rotation.x = -1.05;
+        viewEntry.armL.shoulder.rotation.z = -0.22;
+        viewEntry.armR.shoulder.rotation.z = 0.22;
+        viewEntry.armL.elbow.rotation.x = -0.55;
+        viewEntry.armR.elbow.rotation.x = -0.55;
+        viewEntry.armL.wrist.rotation.x = -0.2;
+        viewEntry.armR.wrist.rotation.x = -0.2;
       } else if (resting) {
-        viewEntry.armL.shoulder.rotation.x = -0.22 + Math.sin(s.anim.breath) * 0.04;
-        viewEntry.armR.shoulder.rotation.x = -0.22 + Math.sin(s.anim.breath) * 0.04;
+        viewEntry.armL.shoulder.rotation.x = -0.22 + Math.sin(anim.breath || 0) * 0.04;
+        viewEntry.armR.shoulder.rotation.x = -0.22 + Math.sin(anim.breath || 0) * 0.04;
         viewEntry.armL.shoulder.rotation.z = -0.12;
         viewEntry.armR.shoulder.rotation.z = 0.12;
         viewEntry.armL.elbow.rotation.x = -0.35;
         viewEntry.armR.elbow.rotation.x = -0.35;
+        viewEntry.armL.wrist.rotation.x = 0;
+        viewEntry.armR.wrist.rotation.x = 0;
       } else {
         viewEntry.armL.wrist.rotation.x = 0;
         viewEntry.armR.wrist.rotation.x = 0;
         viewEntry.armL.shoulder.rotation.x = -swing;
         viewEntry.armR.shoulder.rotation.x = swing;
-        viewEntry.armL.shoulder.rotation.z = -0.07;
-        viewEntry.armR.shoulder.rotation.z = 0.07;
-        viewEntry.armL.elbow.rotation.x = -0.18 - Math.max(0, swing) * 0.3;
-        viewEntry.armR.elbow.rotation.x = -0.18 - Math.max(0, -swing) * 0.3;
+        viewEntry.armL.shoulder.rotation.z = -0.07 - 0.05 * run;
+        viewEntry.armR.shoulder.rotation.z = 0.07 + 0.05 * run;
+        viewEntry.armL.elbow.rotation.x = -0.18 - Math.max(0, swing) * 0.3 - 0.75 * run;
+        viewEntry.armR.elbow.rotation.x = -0.18 - Math.max(0, -swing) * 0.3 - 0.75 * run;
       }
 
-      // Корпус: наклон от груза, дыхание, поза отдыха
-      var targetLean = down ? 0 : (carrying ? 0.13 : 0.02) + Math.min(0.12, body.fatigue * 0.18);
-      viewEntry.hips.position.y = 0.98 - (resting ? 0.16 : 0) - Math.min(0.1, body.fatigue * 0.1) - (down ? 0.5 : 0);
-      viewEntry.torso.rotation.x = viewEntry.torso.rotation.x + ((targetLean) - viewEntry.torso.rotation.x) * Math.min(1, dt * 6);
-      viewEntry.neck.rotation.y = Math.sin(s.anim.breath * 0.35) * 0.16;
+      // --------------------------------------------------- корпус, шея, голова
+      var targetLean = down ? 0 : (carrying ? 0.13 : 0.02) + 0.17 * run + Math.min(0.12, (body.fatigue || 0) * 0.18);
+      var bob = Math.abs(Math.sin(phase)) * 0.03 * walk * (1 + run);
+      viewEntry.hips.position.y = 0.98 - (resting ? 0.16 : 0) - Math.min(0.1, (body.fatigue || 0) * 0.1) - (down ? 0.5 : 0) + bob;
+      viewEntry.torso.rotation.x = viewEntry.torso.rotation.x + (targetLean - viewEntry.torso.rotation.x) * Math.min(1, dt * 6);
+      viewEntry.torso.rotation.y = -twist * 0.35;
+      viewEntry.hips.rotation.y = twist * 0.55;
+      viewEntry.neck.rotation.y = headTurn + Math.sin((anim.breath || 0) * 0.35) * 0.05;
       viewEntry.head.rotation.x = resting ? 0.22 : (down ? 0.5 : 0.02);
-      root.rotation.z = down ? 1.35 : 0;
-      if (down) root.position.y = 0.18 * (1 - Math.min(1, Math.abs(root.rotation.z) / 1.35)) + 0.0;
-
-      // Ступни держим у пола
-      if (!down) {
-        root.position.y = 0;
+      if (down) {
+        root.rotation.z = 1.35;
+        root.position.y = 0.18 * (1 - Math.min(1, Math.abs(root.rotation.z) / 1.35));
+      } else {
+        root.position.y += (0.0 - root.position.y) * Math.min(1, dt * 10);
+        if (sitting) root.position.y = 0.62;
       }
+      if (sitting) root.rotation.x = 0.04 * Math.sin(phase);
 
-      // Травмы видно по позе: хромает, берегёт плечо, держит голову
-      var limp = Math.max(injuryOn(body, 'knee'), injuryOn(body, 'ankle'));
-      if (limp > 0.05 && walk > 0.15 && !down) {
+      // ---------------------------------------------------------------- травмы
+      var limp = Math.max(hurt.knee || 0, hurt.ankle || 0, anim.limp || 0);
+      if (limp > 0.05 && walk > 0.12 && !down && !sitting) {
         var hobble = Math.sin(phase) * 0.6 * limp;
         viewEntry.legL.hip.rotation.x -= hobble;
         viewEntry.legR.hip.rotation.x += hobble;
@@ -668,26 +943,78 @@ WC.world = (function () {
         root.rotation.z = Math.sin(phase * 2) * 0.07 * limp * walk;
         root.position.y += Math.abs(Math.sin(phase)) * 0.035 * limp * walk;
       }
-      var shoulder = injuryOn(body, 'shoulder');
-      if (shoulder > 0.12 && !carrying && !down) {
+      var shoulder = hurt.shoulder || 0;
+      if (shoulder > 0.12 && !carrying && !down && !sitting) {
         viewEntry.armR.shoulder.rotation.x = -0.3;
         viewEntry.armR.shoulder.rotation.z = 0.32;
         viewEntry.armR.elbow.rotation.x = -1.25;
+        viewEntry.armL.shoulder.rotation.x += 0.04 * Math.sin(clock * 5) * shoulder;
       }
-      var headHurt = injuryOn(body, 'head');
+      var headHurt = hurt.head || 0;
       if (headHurt > 0.05 && !down) {
         viewEntry.head.rotation.x += 0.12 * headHurt;
         viewEntry.neck.rotation.y += Math.sin(clock * 0.9) * 0.05 * headHurt;
+        if (headHurt > 0.3) {
+          // держится за голову
+          viewEntry.armR.shoulder.rotation.x = -2.15;
+          viewEntry.armR.shoulder.rotation.z = 0.42;
+          viewEntry.armR.elbow.rotation.x = -1.45;
+        }
+      }
+      var backHurt = hurt.back || 0;
+      if (backHurt > 0.08 && !down) {
+        viewEntry.torso.rotation.x += 0.16 * backHurt;
+        viewEntry.hips.position.y -= 0.05 * backHurt;
+        if (!carrying) {
+          // ладонь на пояснице
+          viewEntry.armL.shoulder.rotation.x = 0.55;
+          viewEntry.armL.shoulder.rotation.z = -0.55;
+          viewEntry.armL.elbow.rotation.x = -1.05;
+        }
+      }
+      var wristHurt = hurt.wrist || 0;
+      if (wristHurt > 0.08 && !down && !carrying) {
+        viewEntry.armR.shoulder.rotation.x = -0.55;
+        viewEntry.armR.shoulder.rotation.z = 0.16;
+        viewEntry.armR.elbow.rotation.x = -1.15;
+        viewEntry.armR.wrist.rotation.x = -0.8 - Math.sin(clock * 6) * 0.1 * wristHurt;
       }
       var fear = s.safety ? s.safety.fear : 0;
-      if (fear > 0.1 && !down) {
-        // после травмы двигается осторожнее, чуть пригнувшись
-        viewEntry.torso.rotation.x += 0.05 * fear;
+      if (fear > 0.1 && !down) viewEntry.torso.rotation.x += 0.05 * fear;
+
+      // --------------------------------------------------------------- мышцы
+      // Натяжение групп мышц видно по объёму: руки, ноги, спина «надуваются»
+      var armsStrain = muscle.arms || 0;
+      var legsStrain = muscle.legs || 0;
+      var backStrain = muscle.back || 0;
+      var shouldersStrain = muscle.shoulders || 0;
+      var shiver = Math.sin(clock * 9.1) * 0.006;
+      [viewEntry.armL, viewEntry.armR].forEach(function (arm) {
+        if (arm.upper) arm.upper.scale.set(1 + 0.16 * armsStrain, 1, 1 + 0.16 * armsStrain);
+        if (arm.fore) arm.fore.scale.set(1 + 0.12 * armsStrain, 1, 1 + 0.12 * armsStrain);
+        arm.shoulder.rotation.z += (arm === viewEntry.armL ? -1 : 1) * shouldersStrain * 0.04;
+      });
+      [viewEntry.legL, viewEntry.legR].forEach(function (leg) {
+        if (leg.thigh) leg.thigh.scale.set(1 + 0.14 * legsStrain, 1, 1 + 0.14 * legsStrain);
+        if (leg.shin) leg.shin.scale.set(1 + 0.12 * legsStrain, 1, 1 + 0.12 * legsStrain);
+      });
+      if (viewEntry.torsoMesh) {
+        viewEntry.torsoMesh.scale.set(1 + 0.05 * backStrain + shiver, 1, 1 + 0.07 * backStrain);
       }
 
       // Жёсткий предел растяжения: суставы не выгибаются дальше анатомии
       clampRig(viewEntry);
     });
+  }
+
+  function removeView(id) {
+    var entry = crewViews.get(id);
+    if (!entry) return false;
+    scene.remove(entry.root);
+    var marker = document.getElementById('marker-' + id);
+    if (marker) marker.remove();
+    crewViews.delete(id);
+    return true;
   }
 
   // ---------------------------------------------------------------- фуры
@@ -749,18 +1076,66 @@ WC.world = (function () {
   }
 
   // ---------------------------------------------------------------- камера
+  var mapCamera = null;
+
+  // Ортокамера сверху: склад как чертёж. Все метки и подписи работают так же,
+  // потому что project() есть у любой камеры.
+  function fitMapCamera(w, h) {
+    if (!mapCamera) {
+      var conf = (WC.CONFIG && WC.CONFIG.camera && WC.CONFIG.camera.map) || { size: 15.5 };
+      var aspect0 = Math.max(0.4, (w || 800) / Math.max(1, h || 600));
+      mapCamera = new THREE_NS.OrthographicCamera(
+        -conf.size * aspect0 / 2, conf.size * aspect0 / 2,
+        conf.size / 2, -conf.size / 2, 0.1, 120
+      );
+      mapCamera.up.set(0, 0, -1);
+    }
+    var conf2 = (WC.CONFIG && WC.CONFIG.camera && WC.CONFIG.camera.map) || { size: 15.5 };
+    var aspect = Math.max(0.4, (w || canvas.clientWidth || 800) / Math.max(1, h || canvas.clientHeight || 600));
+    var halfH = Math.max(12.5, 14 / aspect) / (view.zoom || 1);
+    mapCamera.left = -halfH * aspect;
+    mapCamera.right = halfH * aspect;
+    mapCamera.top = halfH;
+    mapCamera.bottom = -halfH;
+    mapCamera.updateProjectionMatrix();
+    return mapCamera;
+  }
+
   function setMode(mode) {
-    var modes = ['third', 'follow', 'top'];
+    var modes = ['third', 'follow', 'top', 'map2d'];
     view.mode = modes.indexOf(mode) >= 0 ? mode : 'third';
     document.body.classList.toggle('view-top', view.mode === 'top');
     document.body.classList.toggle('view-follow', view.mode === 'follow');
+    document.body.classList.toggle('view-map', view.mode === 'map2d');
+    if (view.mode === 'map2d') {
+      fitMapCamera(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight);
+      camera = mapCamera;
+      scene.fog = null;
+      state.cameraPos.copy(camera.position);
+    } else {
+      camera = perspCamera;
+      scene.fog = new THREE_NS.Fog(0x0a0d0c, 26, 54);
+      state.cameraPos.copy(camera.position);
+    }
     return view.mode;
   }
 
   function cycleMode() {
-    var modes = ['third', 'follow', 'top'];
+    var modes = ['third', 'follow', 'top', 'map2d'];
     var next = modes[(modes.indexOf(view.mode) + 1) % modes.length];
     return setMode(next);
+  }
+
+  function toggleMap2d() {
+    return setMode(view.mode === 'map2d' ? 'third' : 'map2d');
+  }
+
+  function setZoom(value) {
+    view.zoom = Math.max(0.6, Math.min(2.6, value));
+    if (view.mode === 'map2d' && mapCamera) {
+      fitMapCamera(canvas.clientWidth || window.innerWidth, canvas.clientHeight || window.innerHeight);
+    }
+    return view.zoom;
   }
 
   function setFocus(workerId) {
@@ -837,6 +1212,10 @@ WC.world = (function () {
 
     canvas.addEventListener('wheel', function (e) {
       e.preventDefault();
+      if (view.mode === 'map2d') {
+        setZoom((view.zoom || 1) + (e.deltaY > 0 ? -0.12 : 0.12));
+        return;
+      }
       view.distance = WC.util.clamp(view.distance + (e.deltaY > 0 ? 0.12 : -0.12), 0.55, 2.4);
     }, { passive: false });
     canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
@@ -844,7 +1223,13 @@ WC.world = (function () {
 
   // Точка камеры внутри стеллажа, стены или за пределами цеха?
   function cameraObstructed(point) {
-    if (Math.abs(point.x) > 12.1 || Math.abs(point.z) > 7.9) return true;
+    var street = streetConf();
+    var inside = Math.abs(point.x) <= 12.1 && Math.abs(point.z) <= 7.9;
+    var outdoors = point.x >= street.x0 && point.x <= street.x1 && point.z >= 7.9 && point.z <= street.y1;
+    if (!inside && !outdoors) return true;
+    var cabins = layoutConf().wc || [];
+    for (var c = 0; c < cabins.length; c++) if (Math.abs(point.x - cabins[c].x) < cabins[c].w / 2 + 0.15 && Math.abs(point.z - cabins[c].y) < cabins[c].d / 2 + 0.15) return true;
+    if (Math.abs(point.x - street.kiosk.x) < 1.0 && Math.abs(point.z - street.kiosk.y) < 0.9) return true;
     var rackX = [-1.6, 2.2, 6.0];
     for (var i = 0; i < rackX.length; i++) {
       if (Math.abs(point.x - rackX[i]) < 0.95 && Math.abs(point.z) < 6.05) return true;
@@ -860,6 +1245,22 @@ WC.world = (function () {
     }
     if (!focus) focus = game.api.crew[0];
 
+    if (view.mode === 'map2d') {
+      // Вид сверху 2D: ортокамера висит над складом, поворот — пальцем/мышью
+      var w = canvas.clientWidth || window.innerWidth;
+      var h = canvas.clientHeight || window.innerHeight;
+      var mapCam = fitMapCamera(w, h);
+      var center = { x: 0, z: 1.4 };
+      mapCam.position.set(center.x, 40, center.z);
+      mapCam.up.set(Math.sin(view.yaw), 0, -Math.cos(view.yaw));
+      mapCam.lookAt(center.x, 0, center.z);
+      mapCam.updateMatrixWorld(true);
+      camera = mapCam;
+      if (!focus && game.api.crew[0]) focus = game.api.crew[0];
+      return;
+    }
+
+    if (!focus) { camera.position.set(0, 22, 12); camera.lookAt(0, 0, 0); return; }
     if (view.mode === 'third') {
       var fx = focus.state.pos.x;
       var fz = focus.state.pos.y;
@@ -936,6 +1337,15 @@ WC.world = (function () {
   function updateMarkers(game, activeId) {
     var host = document.getElementById('markers');
     if (!host) return;
+    (layoutConf().wc || []).forEach(function (cab) {
+      var id = 'cabin-sign-' + cab.id;
+      var sign = document.getElementById(id);
+      if (!sign) { sign = WC.util.el('span', { id: id, class: 'cabin-label', text: cab.id }); host.appendChild(sign); }
+      var labelPos = new THREE_NS.Vector3(cab.x, 2.45, cab.y).project(camera);
+      sign.style.left = ((labelPos.x * 0.5 + 0.5) * host.clientWidth).toFixed(1) + 'px';
+      sign.style.top = ((-labelPos.y * 0.5 + 0.5) * host.clientHeight).toFixed(1) + 'px';
+      sign.style.opacity = labelPos.z > -1 && labelPos.z < 1 ? '1' : '0';
+    });
     game.api.crew.forEach(function (worker) {
       var id = 'marker-' + worker.id;
       var node = document.getElementById(id);
@@ -954,7 +1364,7 @@ WC.world = (function () {
       var y = (-pos.y * 0.5 + 0.5) * host.clientHeight;
       node.style.left = x.toFixed(1) + 'px';
       node.style.top = y.toFixed(1) + 'px';
-      node.style.opacity = visible ? '1' : '0';
+      node.style.opacity = visible && !worker.state.inCabin && !worker.state.privacy ? '1' : '0';
       node.classList.toggle('active', worker.id === activeId);
       var bar = node.querySelector('.m-bar i');
       var energy = worker.body.energy;
@@ -997,10 +1407,12 @@ WC.world = (function () {
     var sim = game.sim;
     updateCrew(dt, game);
     updateTrucks(sim, dt);
+    updateForklift(sim);
     updateBoxes(sim);
     updateSlotMarkers(sim);
     updateAtmosphere(dt, game);
     updateCamera(dt, game);
+    updatePrivacyOverlay(game);
     updateMarkers(game, game.api.activeWorkerId);
     renderer.render(scene, camera);
     state.frame += 1;
@@ -1008,9 +1420,49 @@ WC.world = (function () {
     state.tris = renderer.info && renderer.info.render ? renderer.info.render.triangles : 0;
   }
 
+  // Уединённое место: локальный блюр прямо на сцене-оверлее
+  function updatePrivacyOverlay(game) {
+    var node = document.getElementById('privacy-blur');
+    if (!node) return;
+    var pair = game.api.pair;
+    var on = Boolean(pair && pair.privacy && pair.spot);
+    node.classList.toggle('on', on);
+    if (!on) { node.style.opacity = '0'; return; }
+    var point = new THREE_NS.Vector3(pair.spot.x, 0.9, pair.spot.y);
+    point.project(camera);
+    var host = document.getElementById('stage') || canvas;
+    var w = host.clientWidth || window.innerWidth;
+    var h = host.clientHeight || window.innerHeight;
+    var x = (point.x * 0.5 + 0.5) * w;
+    var y = (-point.y * 0.5 + 0.5) * h;
+    if (point.z > 1) { node.style.opacity = '0'; return; }
+    node.style.left = x.toFixed(1) + 'px';
+    node.style.top = y.toFixed(1) + 'px';
+    node.style.opacity = '1';
+    var label = node.querySelector('.pb-label');
+    if (label) label.textContent = 'Уединённое место · ' + (pair.spot.label || 'приватно');
+  }
+
+  // Экранные координаты произвольной точки мира (для подсказок и блюра)
+  function projectPoint(x, y, z) {
+    var p = new THREE_NS.Vector3(x, y || 0, z || 0);
+    p.project(camera);
+    var host = document.getElementById('stage') || canvas;
+    return {
+      x: (p.x * 0.5 + 0.5) * (host.clientWidth || window.innerWidth),
+      y: (-p.y * 0.5 + 0.5) * (host.clientHeight || window.innerHeight),
+      visible: p.z > -1 && p.z < 1,
+    };
+  }
+
   return {
     init: init,
     render: render,
+    removeView: removeView,
+    projectPoint: projectPoint,
+    toggleMap2d: toggleMap2d,
+    setZoom: setZoom,
+    getZoom: function () { return view.zoom || 1; },
     resize: resize,
     setMode: setMode,
     cycleMode: cycleMode,

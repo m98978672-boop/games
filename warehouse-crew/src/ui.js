@@ -64,6 +64,9 @@ window.WC = window.WC || {};
     dom.sheetHandle = q('sheet-handle');
     dom.viewFlash = q('view-flash');
     dom.panel = q('control-panel');
+    dom.shopBalance = q('shop-balance');
+    dom.shopList = q('shop-list');
+    dom.staffList = q('staff-list');
   }
 
   // --------------------------------------------------- мелочи «на ощупь»
@@ -279,9 +282,10 @@ window.WC = window.WC || {};
     dom.selectedCard.appendChild(U.el('div', { class: 'trait-row' }, nodes.traits.map(function (t) { return t.chip; })));
     nodes.injuries = U.el('b', { text: 'нет' });
     nodes.rules = U.el('b', { text: '100%' });
+    nodes.needs = U.el('span', { class: 'sc-needs', text: '' });
     nodes.healthRow = U.el('div', { class: 'sc-health' }, [
       U.el('span', { class: 'sc-inj' }, [U.el('span', { text: 'травмы: ' }), nodes.injuries]),
-      U.el('span', { class: 'sc-rule' }, [U.el('span', { text: 'правила: ' }), nodes.rules]),
+      U.el('span', { class: 'sc-rule' }, [U.el('span', { text: 'правила: ' }), nodes.rules]), nodes.needs,
     ]);
     dom.selectedCard.appendChild(nodes.healthRow);
 
@@ -315,6 +319,7 @@ window.WC = window.WC || {};
     setBar(n.fatigue, n.fatigueVal, body.fatigue, U.pct(body.fatigue));
     setBar(n.stress, n.stressVal, body.stress, U.pct(body.stress));
     setBar(n.oxygen, n.oxygenVal, body.oxygen, U.pct(body.oxygen));
+    n.needs.textContent = 'нужда: ' + U.pctNum(body.bladder) + ' · настроение: ' + U.pctNum(body.fun) + ' · здоровье: ' + U.pctNum(body.vitality);
     var injuries = body.injuries || [];
     if (n.injuries) {
       var Parts = global.WarehouseModel.BODY_PARTS;
@@ -394,11 +399,13 @@ window.WC = window.WC || {};
             U.el('span', { class: 'o-info', text: '' }),
             U.el('span', { class: 'o-timer', text: '' }),
           ]),
+          U.el('div', { class: 'o-abc', text: '' }),
           U.el('div', { class: 'o-line' }, [
             U.el('button', {
               class: 'o-take', type: 'button', text: 'взять',
               onclick: function () {
                 var worker = game.activeWorker();
+                if (!worker) { U.toast('В бригаде пока никого нет', 'bad'); return; }
                 var res = game.command(worker.id, 'pick', { orderId: order.id });
                 if (!res.ok) U.toast(res.reason || 'Не получилось', 'bad');
                 else U.toast(worker.state.name + ' идёт за ' + order.code, 'good');
@@ -416,6 +423,19 @@ window.WC = window.WC || {};
         : order.status === 'claimed' ? 'в работе: ' + nameOf(order.carrier) : 'на приёмке';
       row.querySelector('.o-who').textContent = who;
       row.querySelector('.o-info').textContent = order.goods + ' · ' + order.mass + ' кг' + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
+      // Точки коробки: A — откуда, C — где лежит, B — куда едет
+      var abc = row.querySelector('.o-abc');
+      if (abc) {
+        var from = order.source === 'truck' ? 'фура' : order.source === 'heavy' ? 'тяжёлый отдел' : 'приёмка';
+        var poseText = order.status === 'carried' ? 'в руках'
+          : (order.pose && order.pose.lying) ? 'на боку'
+            : (order.pose && order.pose.z > 0.7) ? 'на полке' : 'на полу';
+        var to = order.direction === 'out' ? 'фура' : order.slotId;
+        abc.innerHTML = '';
+        abc.appendChild(U.el('span', { text: 'A ' + from }));
+        abc.appendChild(U.el('span', { class: 'abc-c', text: '→ C ' + poseText }));
+        abc.appendChild(U.el('span', { class: 'abc-b', text: '→ B ' + to }));
+      }
       var left = order.deadline - now;
       var timer = row.querySelector('.o-timer');
       timer.textContent = left > 0 ? 'до ' + U.timeLeft(left) : 'просрочен ' + U.timeLeft(-left);
@@ -484,6 +504,24 @@ window.WC = window.WC || {};
       dom.side.appendChild(card);
       side.cards.set(st.id, { card: card, nodes: nodes });
     });
+    if ((game.api.staff || []).length) {
+      dom.side.appendChild(U.el('h3', { text: 'Персонал' }));
+      game.api.staff.forEach(function (member) {
+        dom.side.appendChild(U.el('div', { class: 'crew-card staff' }, [
+          U.el('div', { class: 'cc-head' }, [
+            U.el('span', { class: 'cc-swatch', style: 'background:' + member.state.palette.shirt }),
+            U.el('div', {}, [
+              U.el('div', { class: 'cc-name', text: member.name }),
+              U.el('div', { class: 'cc-role', text: member.role }),
+            ]),
+          ]),
+          U.el('div', { class: 'cc-mini' }, [
+            U.el('div', {}, [U.el('span', { text: 'смена' }), U.el('b', { text: member.kind === 'medic' ? 'лечит' : 'обходит' })]),
+            U.el('div', {}, [U.el('span', { text: 'дел' }), U.el('b', { text: String(member.state.stats.healed + member.state.stats.caught) })]),
+          ]),
+        ]));
+      });
+    }
     dom.side.appendChild(U.el('h3', { text: 'Журнал смены' }));
     side.logBox = U.el('div', { class: 'log' });
     dom.side.appendChild(side.logBox);
@@ -493,7 +531,12 @@ window.WC = window.WC || {};
 
   function renderSide() {
     if (!dom.side) return;
-    if (!side.built) buildSide();
+    var crewKey = game.api.crew.map(function (w) { return w.state.id; }).join('|') + '|' + (game.api.staff || []).length;
+    if (!side.built || side.crewKey !== crewKey) {
+      side.crewKey = crewKey;
+      buildSide();
+      buildCrewTabs();
+    }
     game.api.crew.forEach(function (worker) {
       var entry = side.cards.get(worker.state.id);
       if (!entry) return;
@@ -543,7 +586,7 @@ window.WC = window.WC || {};
     if (uiState.lastQuality != null && snap.quality < uiState.lastQuality) bump(dom.quality, true);
     uiState.lastQuality = snap.quality;
     dom.quality.textContent = snap.quality + ' %';
-    dom.time.textContent = U.clockLabel(snap.time, snap.shiftLength, cfg.shiftHours);
+    dom.time.textContent = 'День ' + game.sim.state.day + ' · ' + U.clockLabel(snap.time, snap.shiftLength, cfg.shiftHours);
 
     if (dom.shiftFill) {
       var progress = U.clamp01(snap.time / Math.max(1, snap.shiftLength));
@@ -898,13 +941,64 @@ window.WC = window.WC || {};
   }
 
   // ------------------------------------------------------------------ init
+  // ---------------------------------------------------------- магазин смены
+  function renderShop() {
+    if (!game.sim || !game.sim.state) return;
+    var score = Math.round(game.sim.state.stats.score);
+    if (dom.shopBalance) dom.shopBalance.textContent = String(score);
+    U.$$('[data-buy]').forEach(function (card) {
+      var kind = card.getAttribute('data-buy');
+      var bought = game.hasStaff(kind);
+      var cost = game.staffCost(kind);
+      card.classList.toggle('bought', bought);
+      card.classList.toggle('broke', !bought && score < cost);
+      var price = card.querySelector('.shop-price');
+      if (price) price.textContent = bought ? 'нанят' : String(cost);
+      card.disabled = bought || score < cost;
+    });
+    if (!dom.staffList) return;
+    var staff = game.api.staff || [];
+    var key = staff.map(function (m) { return m.kind + ':' + m.state.stats.healed + ':' + m.state.stats.caught; }).join('|');
+    if (uiState.staffKey === key) return;
+    uiState.staffKey = key;
+    dom.staffList.innerHTML = '';
+    staff.forEach(function (member) {
+      var line = member.kind === 'medic'
+        ? 'залечил травм: ' + member.state.stats.healed
+        : 'поймал за техникой: ' + member.state.stats.caught;
+      dom.staffList.appendChild(U.el('div', { class: 'staff-row' }, [
+        U.el('b', { text: member.name }),
+        U.el('span', { text: member.role + ' · ' + line }),
+      ]));
+    });
+  }
+
+  function wireShop() {
+    U.$$('[data-buy]').forEach(function (card) {
+      card.addEventListener('click', function () {
+        var kind = card.getAttribute('data-buy');
+        var res = game.buyStaff(kind);
+        if (!res.ok) {
+          U.toast(res.reason || 'Не получилось', 'bad', 2400);
+          buzz([16, 40, 16]);
+          return;
+        }
+        U.toast((kind === 'medic' ? 'Медик' : 'Сторож') + ' нанят за ' + res.cost + ' очков', 'good', 2400);
+        buzz(14);
+        renderShop();
+        renderSide();
+      });
+    });
+  }
+
   function wireControls() {
+    wireShop();
     U.$$('[data-command]').forEach(function (button) {
       button.addEventListener('click', function () {
         var cmd = button.getAttribute('data-command');
         var res = game.command(game.api.activeWorkerId, cmd);
         if (!res.ok) U.toast(res.reason || 'Приказ не выполнен', 'bad');
-        else U.toast(cfg.crew.filter(function (c) { return c.id === game.api.activeWorkerId; })[0].name + ': ' + button.querySelector('b').textContent.toLowerCase(), 'good', 1800);
+        else U.toast((game.activeWorker() ? game.activeWorker().state.name : 'Рабочий') + ': ' + button.querySelector('b').textContent.toLowerCase(), 'good', 1800);
         renderSelected();
         renderSide();
       });
@@ -936,6 +1030,14 @@ window.WC = window.WC || {};
       });
     }
     q('btn-camera').addEventListener('click', function () { setCamera(WC.world.getMode() === 'third' ? 'top' : 'third'); });
+    var mapButton = q('btn-map');
+    if (mapButton) {
+      mapButton.addEventListener('click', function () {
+        var applied = WC.world.toggleMap2d();
+        setCamera(applied);
+        mapButton.classList.toggle('on', applied === 'map2d');
+      });
+    }
     q('btn-inspector').addEventListener('click', function () { openInspector(); });
     q('btn-help').addEventListener('click', openHelp);
     q('btn-save').addEventListener('click', function () {
@@ -1030,6 +1132,7 @@ window.WC = window.WC || {};
     third: 'Вид от третьего лица: работа руками',
     follow: 'Сверху за рабочим: следи за ним и бригадой',
     top: 'Тактический вид: весь цех и приказы бригаде',
+    map2d: '2D-вид сверху: склад как чертёж, точки A · C · B',
   };
 
   function setCamera(mode) {
@@ -1040,6 +1143,7 @@ window.WC = window.WC || {};
     document.body.classList.toggle('view-top', applied === 'top');
     document.body.classList.toggle('view-third', applied === 'third');
     document.body.classList.toggle('view-follow', applied === 'follow');
+    document.body.classList.toggle('view-map', applied === 'map2d');
     flashView();
     buzz(8);
     U.toast(VIEW_HINTS[applied] || VIEW_HINTS.third, 'good', 1600);
@@ -1062,6 +1166,9 @@ window.WC = window.WC || {};
         game.setPaused(!game.state.paused);
       } else if (key === 'c') {
         setCamera(WC.world.cycleMode ? WC.world.cycleMode() : 'third');
+      } else if (key === 't') {
+        var mapMode = WC.world.toggleMap2d ? WC.world.toggleMap2d() : 'third';
+        setCamera(mapMode);
       } else if (key === 'i') {
         if (uiState.inspectorOpen) closeModal(); else openInspector();
       } else if (key === 'h') {
@@ -1077,8 +1184,8 @@ window.WC = window.WC || {};
         closeModal();
       } else if (/^[1-9]$/.test(key)) {
         var index = Number(key) - 1;
-        var member = cfg.crew[index];
-        if (member && game.workerById(member.id)) select(member.id);
+        var member = game.api.crew[index];
+        if (member) select(member.id);
       }
     });
   }
@@ -1094,6 +1201,7 @@ window.WC = window.WC || {};
     renderSelected();
     renderSide();
     renderOrders();
+    renderShop();
     renderNews(true);
     U.$$('[data-view]').forEach(function (button) {
       button.classList.toggle('on', button.getAttribute('data-view') === WC.world.getMode());
@@ -1109,6 +1217,19 @@ window.WC = window.WC || {};
         U.toast('Уронил ' + payload.order.code + ' — брак ' + Math.round(payload.order.damage * 100) + '%', 'bad', 2200);
         if (WC.world && WC.world.kick) WC.world.kick(0.85);
         buzz([24, 50, 24]);
+      } else if (type === 'death') {
+        U.toast(payload.worker.state.name + ' погиб: ' + payload.cause, 'bad', 3600);
+        buzz([40, 60, 40]);
+        renderSide();
+      } else if (type === 'hire') {
+        U.toast('Новый работяга: ' + payload.worker.state.name, 'good', 3000);
+        renderSide();
+      } else if (type === 'privacy') {
+        if (payload.on) U.toast('Ж и М уединились — там приватно', 'info', 2600);
+      } else if (type === 'staff') {
+        renderShop();
+      } else if (type === 'caught') {
+        U.toast('Сторож поймал ' + payload.worker.state.name.split(' ')[0] + ' на погрузчике', 'warn', 2400);
       } else if (type === 'body-event') {
         U.toast(payload.worker.state.name.split(' ')[0] + ': ' + payload.event.text, payload.event.tone === 'bad' ? 'bad' : 'info', 2000);
       }
@@ -1143,6 +1264,7 @@ window.WC = window.WC || {};
     renderSelected();
     renderTrucks();
     renderOrders();
+    renderShop();
     renderNews(false);
     if (uiState.inspectorOpen) renderInspector();
     if (uiState.sideAt == null || now - uiState.sideAt > 900) {

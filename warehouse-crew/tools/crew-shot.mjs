@@ -148,6 +148,7 @@ const zbuf = new Float32Array(W * H).fill(Infinity);
 const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
 root.updateMatrixWorld(true);
 const drawRoot = lineup ? scene : ((sceneCam && sceneLook) ? scene : root);
+scene.updateMatrixWorld(true);
 drawRoot.traverse((obj) => {
   if (!obj.isMesh || !obj.geometry || !obj.visible) return;
   const geo = obj.geometry;

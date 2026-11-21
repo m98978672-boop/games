@@ -229,7 +229,7 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
         box3.setFromObject(obj);
         seen += 1;
         // Паллеты приёмки (0.12) и площадки доков (0.09) тоже держат коробку.
-        let support = order.truckId ? 0.09 : (order.intake != null && !order.drops ? 0.12 : 0);
+        let support = game.sim.supportHeight(order);
         if (order.status === 'stored') {
           const slot = slots.find((s) => s.id === order.slotId);
           support = slot ? slot.h + 0.025 : 0;
@@ -243,7 +243,7 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
           }
         } else {
           if (box3.min.y < support - 0.06) sunk += 1;
-          if (box3.min.y > support + 0.06) hovering += 1;
+          if (!order.physics && box3.min.y > support + 0.06) hovering += 1;
         }
       });
     }
@@ -251,6 +251,39 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
     result.boxSunk = sunk;
     result.boxHovering = hovering;
     result.boxStray = stray;
+    // Новые режимы проходят через те же игровые и рендерные API.
+    try {
+      window.WC.ui.setCamera('map2d');
+      window.WC.world.render(1 / 30, game);
+      result.mapWorks = window.WC.world.camera.isOrthographicCamera && window.WC.world.getMode() === 'map2d';
+      window.WC.ui.setCamera('third');
+      game.sim.state.stats.score = 250;
+      const medic = game.buyStaff('medic');
+      const watch = game.buyStaff('watchman');
+      result.staffBought = medic.ok && watch.ok && game.sim.state.stats.score === 30 && !game.buyStaff('medic').ok;
+      const patient = game.api.crew[0];
+      window.WarehouseModel.addInjury(patient.body, { type: 'muscle', part: 'back', severity: 0.3, cause: 'тест' });
+      medic.member.state.pos.x = patient.state.pos.x;
+      medic.member.state.pos.y = patient.state.pos.y;
+      const beforeInjury = patient.body.injuries[0].severity;
+      for (let k = 0; k < 30; k++) game.update(1 / 30);
+      result.medicWorks = patient.body.injuries.length === 0 || patient.body.injuries[0].severity < beforeInjury;
+      window.WC.world.render(1 / 30, game);
+      result.staffRenders = game.api.staff.length === 2;
+      const victim = game.api.crew[0];
+      victim.body.vitality = 0;
+      victim.body.deceased = true;
+      game.update(1 / 30);
+      result.deathWorks = game.api.crew.length === 2 && game.api.deaths.length === 1;
+      game.sim.state.time = game.sim.state.day * game.sim.state.dayLength + 0.01;
+      game.update(1 / 30);
+      window.WC.world.render(1 / 30, game);
+      window.WC.ui.renderSide();
+      result.hireWorks = game.api.crew.length === 3 && game.sim.state.hires.length === 1;
+      game.restart();
+      window.WC.world.render(1 / 30, game);
+      result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
+    } catch (err) { result.featureError = String(err && err.stack || err); }
   }
   window.close();
   return result;
@@ -281,7 +314,7 @@ for (const mode of modes) {
   check(r.crewCards === 3 && r.crewCardsAfter === 3, 'три карточки бригады без дублей', { n: r.crewCards, after: r.crewCardsAfter });
   check(r.cardStable, 'карточки не пересобираются при обновлении HUD');
   check(r.selectedChildren === 9, 'карточка рабочего собрана один раз (3 строки + 4 полоски + характеры + травмы)', { children: r.selectedChildren });
-  check(r.cameraButtons === 3, 'в пульте три режима камеры', { n: r.cameraButtons });
+  check(r.cameraButtons === 4, 'в пульте четыре режима камеры', { n: r.cameraButtons });
   check(r.truckPanel && r.truckButton, 'есть блок фур и кнопка вызова');
   check(Array.isArray(r.cameraCycle) && r.cameraCycle[0] === 'follow' && r.cameraCycle[1] === 'top', 'C переключает 3-е лицо → сверху за ним → весь цех', { cycle: r.cameraCycle });
   check(r.followMode === 'follow' && r.followClass, 'камера «сверху за рабочим» включается', { mode: r.followMode });
@@ -301,6 +334,7 @@ for (const mode of modes) {
   check(r.boxSunk === 0 && r.boxHovering === 0, 'коробки стоят на опоре (не тонут и не летают)',
     { sunk: r.boxSunk, hovering: r.boxHovering });
   check(r.boxStray === 0, 'коробку не уносит за рабочим после переноски', { stray: r.boxStray });
+  check(!r.featureError && r.mapWorks && r.staffBought && r.medicWorks && r.staffRenders && r.deathWorks && r.hireWorks && r.restartWorks, '2D, магазин, медик, смерть и пополнение работают в игре', { error: r.featureError, map: r.mapWorks, staff: r.staffBought, medic: r.medicWorks, death: r.deathWorks, hire: r.hireWorks, restart: r.restartWorks });
     // У запасного (синтетического) мозга качество случайное — требуем доставку
     // только там, где загружены обученные веса.
     if (mode.allowInline) check(r.delivered > 0, 'смена идёт, заказы доставляются', { delivered: r.delivered });

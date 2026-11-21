@@ -125,6 +125,8 @@
         lactate: 0.08,
         condition: 1,
         microDamage: 0,
+        strain: 0,      // 0..1 — насколько мышца «натянута» сейчас (для анимации)
+        pump: 0.5,      // 0..1 — кровенаполнение, растёт от работы
       };
     }
     var body = {
@@ -162,6 +164,16 @@
       kidneyLoad: 0.2,
       digestion: 0.3,
       muscles: muscles,
+      // Нижняя часть живота и настроение: рабочий человек — не робот.
+      bladder: 0.18 + (overrides.bladder != null ? overrides.bladder : 0.22),
+      fun: overrides.fun != null ? overrides.fun : 0.42,
+      social: 0.5,
+      // Жизненный ресурс: несколько тяжёлых травм без помощи — и человека
+      // не спасти. Медик поднимает vitality и залечивает повреждения.
+      vitality: 1,
+      blood: 1,
+      gender: overrides.gender === 'ж' ? 'ж' : 'м',
+      deceased: false,
       unitsDelivered: 0,
       unitsDropped: 0,
       restSeconds: 0,
@@ -260,13 +272,14 @@
     return { type: type, part: part, severity: severity, text: label };
   }
 
-  function healInjuries(body, dt, resting) {
+  function healInjuries(body, dt, resting, boost) {
     if (!body.injuries.length) return 0;
     var healed = 0;
+    var boostK = boost == null ? 1 : boost;
     for (var i = body.injuries.length - 1; i >= 0; i--) {
       var injury = body.injuries[i];
       var preset = INJURY_TYPES[injury.type] || INJURY_TYPES.muscle;
-      var rate = preset.healRate * (resting ? 2.6 : 1) * (0.6 + 0.9 * body.traits.recovery);
+      var rate = preset.healRate * (resting ? 2.6 : 1) * (0.6 + 0.9 * body.traits.recovery) * boostK;
       injury.severity = Math.max(0, injury.severity - rate * dt);
       if (injury.severity <= 0.02) {
         body.injuries.splice(i, 1);
@@ -383,6 +396,9 @@
       m.lactate = clamp01(m.lactate + (production - clearance * m.lactate) * dt);
       m.microDamage = clamp01(m.microDamage + (m.load > 0.75 ? (m.load - 0.75) * 0.05 * dt : -0.012 * dt));
       m.condition = clamp01(1 - m.microDamage * 0.6 - m.lactate * 0.25);
+      // Натяжение и «пампинг» — по ним анимируются пучки мышц на теле
+      m.strain = clamp01(m.load * (0.55 + 0.45 * m.lactate) * (1 + 0.35 * (ctx.carrying ? 1 : 0)));
+      m.pump = clamp01(approach(m.pump, 0.35 + 0.65 * m.load, 1.4, dt));
     }
 
     // --- Лактат/усталость тела ---
@@ -467,8 +483,39 @@
       }
     }
 
+    // --- Мочевой пузырь: чем больше пьёшь и работаешь, тем чаще надо ---
+    if (ctx.toilet) {
+      body.bladder = clamp01(body.bladder - 0.16 * dt);
+    } else {
+      body.bladder = clamp01(body.bladder + (0.0016 + 0.0026 * intensity) * dt * (1 + body.thirst));
+    }
+
+    // --- Настроение: рутина сушит, техника и разговоры — веселят ---
+    if (ctx.fun) body.fun = clamp01(body.fun + 0.02 * ctx.fun * dt);
+    else body.fun = clamp01(body.fun - (0.00035 + 0.0004 * intensity) * dt);
+    body.social = clamp01(body.social - 0.0006 * dt + (ctx.teamSupport || 0) * 0.0005 * dt);
+
+    // --- Витальность: тяжёлые травмы и кровопотеря съедают ресурс ---
+    var injuryTotal = 0;
+    for (var ii = 0; ii < body.injuries.length; ii++) injuryTotal += body.injuries[ii].severity;
+    if (injuryTotal > 0.9) {
+      body.blood = clamp01(body.blood - (injuryTotal - 0.9) * 0.004 * dt);
+      body.vitality = clamp01(body.vitality - (injuryTotal - 0.9) * 0.0032 * dt);
+    } else if (resting) {
+      body.vitality = clamp01(body.vitality + 0.0035 * dt * (injuryTotal < 0.4 ? 1 : 0.4));
+      body.blood = clamp01(body.blood + 0.002 * dt);
+    }
+    if (ctx.medical) {
+      body.vitality = clamp01(body.vitality + 0.02 * dt);
+      body.blood = clamp01(body.blood + 0.012 * dt);
+    }
+    if (body.vitality <= 0.001 && !body.deceased) {
+      body.deceased = true;
+      pushEvent(body, 'Организм не выдержал нагрузок', 'bad');
+    }
+
     // --- Травмы: боль держится, заживление идёт медленно, в покое быстрее ---
-    healInjuries(body, dt, resting);
+    healInjuries(body, dt, resting, ctx.medical ? 3.2 : 1);
     if (body.injuries.length) {
       var worst = worstInjury(body);
       var floorPain = 0.16 * injuryLevel(body) + 0.1 * worst.severity;
@@ -589,6 +636,10 @@
       readiness: clamp01(0.5 * body.energy + 0.3 * (1 - body.fatigue) + 0.2 * body.cognition),
       hazard: clamp01(0.4 * body.pain + 0.3 * body.stress + 0.3 * (1 - body.cognition)),
       muscleCondition: muscleAvg,
+      vitality: clamp01(body.vitality),
+      bladder: clamp01(body.bladder),
+      fun: clamp01(body.fun),
+      blood: clamp01(body.blood),
     };
   }
 
@@ -624,6 +675,11 @@
     INJURY_TYPES: INJURY_TYPES,
     featuresOf: featuresOf,
     vitals: vitals,
+    isDead: function (body) { return Boolean(body.deceased) || body.vitality <= 0; },
+    muscleStrain: function (body, group) {
+      var m = body.muscles && body.muscles[group];
+      return m ? clamp01(m.strain) : 0;
+    },
     clamp: clamp,
     clamp01: clamp01,
     lerp: lerp,
