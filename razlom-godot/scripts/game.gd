@@ -1281,7 +1281,7 @@ func validate_world_save(data: Dictionary) -> bool:
 			if not (value is float or value is int) or not is_finite(float(value)) or absf(float(value)) > 128:
 				return false
 	for record in data.loot:
-		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap", "record", "armor", "helmet"] or not record.get("title") is String:
+		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap", "record", "armor", "helmet", "rifle"] or not record.get("title") is String:
 			return false
 	for record in data.guards:
 		var wounds: Variant = record.get("arm_wounds", [0, 0])
