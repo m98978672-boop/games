@@ -8,6 +8,7 @@ var wrist := Vector3.ZERO
 var joint: MeshInstance3D
 var hand: Node3D
 var hand_knuckles: Array[Node3D] = []
+var fist_mode := false
 func _init(host: Node3D) -> void:
 	parent = host
 	var cloth := RazlomArt.material(Color("65756b"), "cloth")
@@ -41,24 +42,43 @@ func _init(host: Node3D) -> void:
 	joint.mesh = sphere
 	joint.material_override = cloth
 	host.add_child(joint)
-	# Palm, knuckles, curled fingers and cuff make the IK endpoint read as a hand,
-	# not a sleeve that vanishes into the weapon. Every piece follows the solved wrist.
+	# Rounded glove anatomy: padded palm, two soft finger joints, thumb and cuff.
+	# All pieces inherit the wrist pose from the IK solve instead of ending as cubes.
 	hand = Node3D.new()
 	hand.name = "IKHand"
 	host.add_child(hand)
 	var glove := RazlomArt.material(Color("39463f"), "cloth")
-	RazlomArt.box(hand, Vector3(0, 0, -0.035), Vector3(0.105, 0.07, 0.105), glove)
+	RazlomArt.orb(hand, Vector3(0, 0, -0.035), Vector3(0.092, 0.063, 0.105), glove, "Palm")
 	for i in range(4):
 		var finger := Node3D.new()
 		finger.name = "Finger%d" % i
 		hand.add_child(finger)
-		finger.position = Vector3(-0.039 + i * 0.026, -0.012, -0.09)
-		RazlomArt.box(finger, Vector3(0, 0, -0.018), Vector3(0.019, 0.027, 0.052), glove)
-		RazlomArt.box(finger, Vector3(0, 0.001, -0.044), Vector3(0.017, 0.025, 0.026), glove)
+		finger.position = Vector3(-0.037 + i * 0.025, -0.012, -0.09)
+		for segment_index in range(2):
+			var segment := MeshInstance3D.new()
+			var mesh := CapsuleMesh.new()
+			mesh.radius = 0.009 if i in [0, 3] else 0.010
+			mesh.height = 0.038 if segment_index == 0 else 0.032
+			mesh.radial_segments = 8
+			mesh.rings = 3
+			segment.mesh = mesh
+			segment.material_override = glove
+			segment.rotation.x = -PI * 0.5
+			segment.position.z = -0.018 - segment_index * 0.033
+			finger.add_child(segment)
 		hand_knuckles.append(finger)
-	var thumb := RazlomArt.box(hand, Vector3(-0.064, 0.006, -0.035), Vector3(0.06, 0.033, 0.027), glove)
-	thumb.rotation.y = -0.55
-	var wrist_cuff := RazlomArt.box(hand, Vector3(0, 0, 0.015), Vector3(0.11, 0.074, 0.035), cloth)
+	var thumb := MeshInstance3D.new()
+	var thumb_mesh := CapsuleMesh.new()
+	thumb_mesh.radius = 0.012
+	thumb_mesh.height = 0.058
+	thumb_mesh.radial_segments = 8
+	thumb_mesh.rings = 3
+	thumb.mesh = thumb_mesh
+	thumb.material_override = glove
+	thumb.position = Vector3(-0.061, 0.004, -0.045)
+	thumb.rotation = Vector3(-PI * 0.5, 0.0, -0.58)
+	hand.add_child(thumb)
+	var wrist_cuff := RazlomArt.box(hand, Vector3(0, 0, 0.022), Vector3(0.105, 0.068, 0.04), cloth)
 	wrist_cuff.name = "Cuff"
 func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	var axis := target - shoulder
@@ -84,7 +104,10 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	hand.basis = Basis.looking_at(direction, hand_up)
 	hand.rotation.z += sin(Time.get_ticks_msec() * 0.003 + side) * 0.018
 	for i in range(hand_knuckles.size()):
-		hand_knuckles[i].rotation.x = -0.12 + sin(Time.get_ticks_msec() * 0.002 + i * 0.4 + side) * 0.025
+		var curl := -0.62 if fist_mode else -0.12
+		hand_knuckles[i].rotation.x = curl + sin(Time.get_ticks_msec() * 0.002 + i * 0.4 + side) * 0.02
+func set_fist_mode(value: bool) -> void:
+	fist_mode = value
 func place(segment: Node3D, start: Vector3, finish: Vector3) -> void:
 	segment.position = (start + finish) * 0.5
 	var direction := (finish - start).normalized()

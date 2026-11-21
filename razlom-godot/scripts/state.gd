@@ -17,6 +17,7 @@ var warmth := 78.0
 var fatigue := 12.0
 var ammo := 18
 var reserve := 54
+var rifle_owned := false
 var medkits := 2
 var food := 1
 var bottles := 1
@@ -107,7 +108,7 @@ func reload_gun() -> int:
 	return amount
 
 func snapshot() -> Dictionary:
-	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken, "relay_log": relay_log, "relay_shared": relay_shared, "vera_bond": vera_bond}
+	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken, "relay_log": relay_log, "relay_shared": relay_shared, "vera_bond": vera_bond, "rifle_owned": rifle_owned}
 	result["tracked_quest"] = tracked_quest
 	result["quests"] = quests.duplicate(true)
 	for key in NUMERIC_KEYS:
@@ -124,6 +125,11 @@ func restore(source: Dictionary) -> bool:
 		return false
 	if not data.has("vera_bond"):
 		data["vera_bond"] = 0
+	# Existing checkpoints were made with the rifle already in the player's hands.
+	if not data.has("rifle_owned"):
+		data["rifle_owned"] = true
+	if not data.get("rifle_owned") is bool:
+		return false
 	var bond_value: Variant = data.get("vera_bond", 0)
 	if not (bond_value is int or bond_value is float) or not is_finite(float(bond_value)):
 		return false
@@ -171,6 +177,7 @@ func restore(source: Dictionary) -> bool:
 	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken", "relay_log", "relay_shared"]:
 		set(key, data[key])
 	vera_bond = int(bond_value)
+	rifle_owned = data.rifle_owned
 	quests = quest_data.duplicate(true)
 	tracked_quest = data.get("tracked_quest", "")
 	return true

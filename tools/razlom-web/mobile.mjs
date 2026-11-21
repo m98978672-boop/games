@@ -58,18 +58,26 @@ try{
  await page.waitForTimeout(450);
  await check('Right-side drag turns the camera',async()=>assert.ok(Math.abs(await page.evaluate(()=>window.__razlomStatus.yaw)-yaw)>.03));
  const ammo=await page.evaluate(()=>window.__razlomStatus.ammo);
+ const hasRifle=await page.evaluate(()=>window.__razlomStatus.rifleOwned);
  await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.fire));
- await check('Touch fire consumes actual ammunition',async()=>assert.ok(await page.evaluate(()=>window.__razlomStatus.ammo)<ammo));
- const released=await page.evaluate(()=>window.__razlomStatus.ammo);
- await page.waitForTimeout(500);
- await check('Finger release stops automatic fire',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.ammo),released));
+ if(hasRifle){
+  await check('Touch fire consumes actual ammunition',async()=>assert.ok(await page.evaluate(()=>window.__razlomStatus.ammo)<ammo));
+  const released=await page.evaluate(()=>window.__razlomStatus.ammo);
+  await page.waitForTimeout(500);
+  await check('Finger release stops automatic fire',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.ammo),released));
+  await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.reload));
+  await page.waitForFunction(()=>window.__razlomStatus.weapon.reload>0 && window.__razlomStatus.weapon.phase!=='ready',null,{timeout:10000});
+  await check('Touch reload drives the visible moving-parts animation',async()=>assert.notEqual(await page.evaluate(()=>window.__razlomStatus.weapon.phase),'ready'));
+  await page.screenshot({path:'../../docs/razlom/web-evidence/weapon-reload.png',timeout:60000});
+  await page.waitForFunction(()=>window.__razlomStatus.weapon.phase==='ready' && window.__razlomStatus.ammo===18,null,{timeout:20000});
+  await check('Reload completes and restores actual ammunition',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.ammo),18));
+ }else{
+  await check('Fire is safely blocked until the shelter rifle is picked up',async()=>{assert.equal(await page.evaluate(()=>window.__razlomStatus.ammo),ammo);assert.equal(await page.evaluate(()=>window.__razlomStatus.rifleOwned),false);});
+  await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.reload));
+  await page.waitForTimeout(500);
+  await check('Reload does not animate when the player has no rifle',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.weapon.reload),0));
+ }
  await page.screenshot({path:'../../docs/razlom/web-evidence/phone-play.png',timeout:60000});
- await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.reload));
- await page.waitForFunction(()=>window.__razlomStatus.weapon.reload>0 && window.__razlomStatus.weapon.phase!=='ready',null,{timeout:10000});
- await check('Touch reload drives the visible moving-parts animation',async()=>assert.notEqual(await page.evaluate(()=>window.__razlomStatus.weapon.phase),'ready'));
- await page.screenshot({path:'../../docs/razlom/web-evidence/weapon-reload.png',timeout:60000});
- await page.waitForFunction(()=>window.__razlomStatus.weapon.phase==='ready' && window.__razlomStatus.ammo===18,null,{timeout:20000});
- await check('Reload completes and restores actual ammunition',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.ammo),18));
 
  await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.inventory));
  await page.waitForFunction(()=>window.__razlomStatus.dialog.visible);
