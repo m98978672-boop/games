@@ -28,6 +28,11 @@ async function waitStatus(predicate, timeout, label) {
   try {
     await page.waitForFunction(predicate, null, { timeout, polling: 250 });
   } catch (err) {
+    // On a heavily loaded software-WebGL runner the predicate may become true
+    // between the final poll and the timeout callback. Recheck the live state
+    // before reporting a false negative.
+    const satisfied = await page.evaluate(predicate).catch(() => false);
+    if (satisfied) return;
     const state = await page.evaluate(() => window.__razlomStatus || null).catch(() => null);
     throw new Error(`${label}: статус игры ${JSON.stringify(state)}`, { cause: err });
   }
