@@ -115,7 +115,8 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	# Hand mesh uses local -Y from wrist toward the fingers. Aim that axis along
 	# the forearm; the old look-at basis pointed the palm forward while leaving
 	# the fingers hanging sideways during rifle raise and recoil.
-	var hand_y := -direction
+	var forearm_direction := (wrist - elbow).normalized()
+	var hand_y := -forearm_direction
 	var hand_x := Vector3.RIGHT - hand_y * Vector3.RIGHT.dot(hand_y)
 	if hand_x.length_squared() < 0.001:
 		hand_x = Vector3.FORWARD - hand_y * Vector3.FORWARD.dot(hand_y)
