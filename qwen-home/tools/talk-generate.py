@@ -279,7 +279,7 @@ def main():
     if results:
         final_user = (f'Владелец спрашивает: {owner_text}\n\n'
                       f'Текст из русской Википедии, статья «{best["title"]}»: {best["digest"]}\n\n'
-                      f'Ответь владельцу ровно одной фразой по этому тексту: начни её словами «Поискала в Википедии! В статье {best["title"]} написано, что» и сразу после «что» допиши ответ из текста СВОИМИ СЛОВАМИ. Ничего больше не пиши.')
+                      f'Ответь владельцу двумя короткими фразами по этому тексту: первая фраза — «Поискала в Википедии!», вторая фраза — сам ответ из текста СВОИМИ СЛОВАМИ, с годом из текста. Ничего больше не пиши.')
     else:
         final_user = owner_text + context_note
     from_search = bool(results)
@@ -301,7 +301,7 @@ def main():
     reply = clean_reply(raw_reply)
     def reply_problem(text):
         """Что не так с черновиком: обрыв или цифры не из фактов."""
-        if len(text) < 60 or text.endswith(('что', ':', ',')):
+        if len(text) < 35 or text.endswith(('что', ':', ',')):
             return 'оборвался'
         if best:
             fact_years = set(re.findall(r'\b\d{3,4}\b', best['digest']))
@@ -318,7 +318,7 @@ def main():
         attempt += 1
         print(f'Черновик плох ({problem}), попытка {attempt + 1}: {reply!r}', flush=True)
         torch.manual_seed(100 + attempt)
-        retry = messages[:-1] + [{'role': 'user', 'content': final_user + '\n(Прошлый черновик не годится. Пиши фразу целиком до точки: после «написано, что» сразу ответ из текста выше, а год бери из текста — тот же год, что там написан, цифры не меняй.)'}]
+        retry = messages[:-1] + [{'role': 'user', 'content': final_user + '\n(Прошлый черновик не годится. Пиши обе фразы целиком до точки, а год бери из текста выше — тот же год, что там написан, цифры не меняй.)'}]
         raw_retry = generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.1)
         drafts.append(raw_retry)
         reply = clean_reply(raw_retry)
