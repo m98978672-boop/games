@@ -51,7 +51,7 @@ func has_natural_face(model: Node3D) -> bool:
 		if sclera == null or not sclera.mesh is BoxMesh:
 			return false
 		var sclera_size: Vector3 = (sclera.mesh as BoxMesh).size
-		if sclera_size.x > 0.04 or sclera_size.y > 0.024 or sclera_size.z > 0.01:
+		if sclera_size.x > 0.041 or sclera_size.y > 0.025 or sclera_size.z > 0.011:
 			return false
 		var iris := eye.get_node("Iris") as MeshInstance3D
 		if iris == null or not iris.mesh is BoxMesh:
