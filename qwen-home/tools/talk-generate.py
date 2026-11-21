@@ -271,15 +271,28 @@ def main():
     raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7)
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
     reply = clean_reply(raw_reply)
+    def reply_problem(text):
+        """Что не так с черновиком: обрыв или цифры не из фактов."""
+        if len(text) < 60 or text.endswith(('что', ':', ',')):
+            return 'оборвался'
+        if best:
+            fact_years = set(re.findall(r'\b\d{3,4}\b', best['digest']))
+            reply_years = set(re.findall(r'\b\d{3,4}\b', text))
+            if fact_years and reply_years and not (fact_years & reply_years):
+                return f'год не из фактов (в фактах: {", ".join(sorted(fact_years))})'
+        return None
+
     attempt = 0
-    while results and attempt < 2 and (len(reply) < 60 or reply.endswith(('что', ':', ','))):
-        # Маленькая модель иногда обрывает фразу на «написано, что» —
-        # просим её ещё раз, строже и холоднее; факты всё ещё перед ней.
+    problem = reply_problem(reply)
+    while results and attempt < 2 and problem:
+        # Маленькая модель иногда обрывает фразу на «написано, что» или
+        # перевирает год — просим ещё раз, строже и холоднее.
         attempt += 1
-        print(f'Черновик оборвался, попытка {attempt + 1}: {reply!r}', flush=True)
+        print(f'Черновик плох ({problem}), попытка {attempt + 1}: {reply!r}', flush=True)
         torch.manual_seed(100 + attempt)
-        retry = messages[:-1] + [{'role': 'user', 'content': owner_text + context_note + '\n(Прошлый черновик оборвался. Пиши фразу целиком до точки: после «написано, что» сразу ответ из фактов.)'}]
-        reply = clean_reply(generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.2))
+        retry = messages[:-1] + [{'role': 'user', 'content': owner_text + context_note + '\n(Прошлый черновик не годится. Пиши фразу целиком до точки: после «написано, что» сразу ответ из фактов, а год бери из фактов — тот же год, что там написан, цифры не меняй.)'}]
+        reply = clean_reply(generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.1))
+        problem = reply_problem(reply)
     if results:
         parts = [p for p in re.split(r'(?<=[.!?])\s+', reply) if p.strip()]
         reply = ' '.join(parts[:2]).strip()
