@@ -54,8 +54,14 @@ func _ready() -> void:
 	gun = model.instantiate()
 	camera.add_child(gun)
 	gun.scale = Vector3.ONE * 0.85
-	gun.position = Vector3(0.2, -0.21, -0.6)
+	gun.position = Vector3(0.18, -0.28, -0.68)
 	weapon_motion = RazlomWeaponMotion.new(gun)
+	# Keep the weapon's hand pivots for IK/reload targets, but draw only the
+	# articulated camera-rig hands to avoid two gloves fighting for the same space.
+	for hand_path in ["LeftHand", "RightHand"]:
+		var weapon_hand := gun.get_node(hand_path) as Node3D
+		for visual in weapon_hand.find_children("*", "MeshInstance3D", true, false):
+			(visual as MeshInstance3D).hide()
 	bandage = RazlomArt.box(gun.get_node("LeftHand"), Vector3(0, 0.035, 0), Vector3(0.055, 0.05, 0.09), RazlomArt.material(Color("dedbc4")))
 	bandage.hide()
 	scanner = Node3D.new()
@@ -64,10 +70,8 @@ func _ready() -> void:
 	RazlomArt.box(scanner, Vector3(0, 0.07, -0.03), Vector3(0.05, 0.05, 0.01), RazlomArt.material(Color("8bbfa1"), "", 0.5))
 	RazlomArt.box(scanner, Vector3(0.02, 0.15, 0), Vector3(0.008, 0.1, 0.008), RazlomArt.material(Color("555c50")))
 	scanner.hide()
-	gun.get_node("LeftHand/Sleeve").hide()
-	gun.get_node("RightHand/Sleeve").hide()
-	left_arm = RazlomArmRig.new(camera)
-	right_arm = RazlomArmRig.new(camera)
+	left_arm = RazlomArmRig.new(camera, -1.0)
+	right_arm = RazlomArmRig.new(camera, 1.0)
 	sync_weapon_state()
 	light = SpotLight3D.new()
 	light.position = Vector3(0.12, -0.1, -0.15)
@@ -161,7 +165,7 @@ func _physics_process(delta: float) -> void:
 	bob += delta * (9.0 if running else 6.0) * movement_blend
 	look_sway = look_sway.lerp(Vector2.ZERO, 1.0 - exp(-delta * 14.0))
 	var reload_blend := sin(clampf(reload_time / 1.4, 0.0, 1.0) * PI)
-	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.2, -0.21, -0.6)
+	var anchor := Vector3(0, -0.09, -0.48) if aiming else Vector3(0.18, -0.28, -0.68)
 	if game.quests.scan_time > 0:
 		anchor.y -= 0.14
 	anchor.y -= sin(clampf(healing_time / 1.2, 0, 1) * PI) * 0.16
@@ -248,11 +252,11 @@ func advance_touch_look(delta: float) -> void:
 func _process(delta: float) -> void:
 	if is_instance_valid(gun):
 		if game.state.rifle_owned:
-			left_arm.solve(Vector3(-0.18, -0.28, 0.02), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
-			right_arm.solve(Vector3(0.22, -0.28, 0.04), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
+			left_arm.solve(Vector3(-0.18, -0.4, -0.02), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
+			right_arm.solve(Vector3(0.22, -0.4, 0.02), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
 		else:
-			left_arm.solve(Vector3(-0.18, -0.28, 0.02), Vector3(-0.23, -0.31, -0.36), -1.0)
-			right_arm.solve(Vector3(0.22, -0.28, 0.04), Vector3(0.23, -0.31, -0.36), 1.0)
+			left_arm.solve(Vector3(-0.18, -0.4, -0.02), Vector3(-0.23, -0.31, -0.36), -1.0)
+			right_arm.solve(Vector3(0.22, -0.4, 0.02), Vector3(0.23, -0.31, -0.36), 1.0)
 	if game.mobile_mode and not game.ended:
 		advance_touch_look(delta)
 

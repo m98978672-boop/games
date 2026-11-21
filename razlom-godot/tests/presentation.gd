@@ -60,6 +60,11 @@ func run_tests() -> void:
 	var player_finger: Node3D = player_glove.get_node("Finger0") as Node3D
 	var player_finger_segment := player_finger.get_child(0) as MeshInstance3D
 	check(player_glove.has_node("Palm") and player_finger_segment.mesh is BoxMesh and not player_glove.has_node("KnuckleRidge0"), "First-person glove keeps attached block-built fingers without floating ornaments")
+	var player_right_glove: Node3D = game.player.right_arm.hand
+	check(player_glove.get_node("Thumb").position.x < 0 and player_right_glove.get_node("Thumb").position.x > 0, "Left and right IK gloves have opposite, anatomically correct thumbs")
+	check(not game.player.gun.get_node("LeftHand/Palm/Visual").visible and not game.player.gun.get_node("RightHand/Palm/Visual").visible and player_glove.visible and player_right_glove.visible, "Duplicate weapon hands are hidden while both IK gloves remain visible")
+	check(not guard.carried_weapon.get_node("LeftHand/Palm/Visual").visible and not guard.carried_weapon.get_node("RightHand/Palm/Visual").visible, "Guards also draw one coherent pair of IK hands")
+	check(player_glove.scale.x < 1.0 and player_glove.scale.y < 1.0, "First-person IK gloves are scaled down to keep the center of view clear")
 	var surface := RazlomArt.material(Color.WHITE, "brick")
 	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")
 	check(surface.roughness_texture != null, "Surface roughness map is bound")
