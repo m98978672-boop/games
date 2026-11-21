@@ -252,13 +252,13 @@ func advance_touch_look(delta: float) -> void:
 func _process(delta: float) -> void:
 	if is_instance_valid(gun):
 		if game.state.rifle_owned:
-			left_arm.solve(Vector3(-0.18, -0.4, -0.02), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
-			right_arm.solve(Vector3(0.22, -0.4, 0.02), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
+			left_arm.solve(Vector3(-0.18, -0.32, -0.34), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
+			right_arm.solve(Vector3(0.18, -0.32, -0.34), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
 		else:
-			# Keep unarmed fists in the lower outer corners, not down below the
-			# viewport or stacked over the crosshair—especially in portrait view.
-			left_arm.solve(Vector3(-0.24, -0.34, -0.04), Vector3(-0.17, -0.18, -0.48), -1.0)
-			right_arm.solve(Vector3(0.24, -0.34, -0.04), Vector3(0.17, -0.18, -0.48), 1.0)
+			# Keep compact fists at the lower outer edges, away from the
+			# crosshair; forward anchors prevent the sleeves swelling in view.
+			left_arm.solve(Vector3(-0.18, -0.34, -0.42), Vector3(-0.27, -0.22, -0.65), -1.0)
+			right_arm.solve(Vector3(0.18, -0.34, -0.42), Vector3(0.27, -0.22, -0.65), 1.0)
 	if game.mobile_mode and not game.ended:
 		advance_touch_look(delta)
 
