@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="icon" href="cover.svg" type="image/svg+xml" />
-<link rel="stylesheet" href="style.css?v=20261121-4" />
+<link rel="stylesheet" href="style.css?v=20261121-5" />
 </head>
 <body data-sheet="hidden">
 <!-- Иконки: одна спрайт-карта на всю страницу (никаких CDN и шрифтов) -->
@@ -56,7 +56,7 @@
     <div class="stat accent"><span>Очки</span><b id="hud-score">0</b></div>
     <div class="stat"><span>Заказы</span><b id="hud-orders">0</b></div>
     <div class="stat"><span>Качество</span><b id="hud-quality">100 %</b></div>
-    <div class="stat"><span>Смена</span><b id="hud-time">08:00</b></div>
+    <div class="stat"><span id="hud-shift-label">Смена</span><b id="hud-time">08:00</b></div>
   </div>
 
   <div class="top-actions">
@@ -170,6 +170,11 @@
         <button data-view="top">Весь цех</button>
         <button data-view="map2d">2D</button>
       </div>
+      <div class="ctl-label">Освещение склада</div>
+      <div class="seg" id="lighting-seg" role="group" aria-label="Освещение склада">
+        <button type="button" data-lighting="day" class="on" aria-pressed="true">☀ День</button>
+        <button type="button" data-lighting="night" aria-pressed="false">☾ Ночь</button>
+      </div>
       <div class="seg" id="speed-seg" role="group" aria-label="Скорость времени">
         <button data-speed="1" class="on">1×</button>
         <button data-speed="2">2×</button>
@@ -207,26 +212,26 @@
 <script src="../shared/engine.js"></script>
 <script src="../shared/engine-bootstrap.js" defer></script>
 <script src="../shooter/three.min.js"></script>
-<script src="../ratcore/ratcore.bundle.js?v=20261121-4"></script>
+<script src="../ratcore/ratcore.bundle.js?v=20261121-5"></script>
 <!-- Мозги «в коде»: нужны, чтобы игра шла и без fetch (открытие с диска, file://) -->
 <script src="data/brain-data.js"></script>
-<script src="src/sim/model.js?v=20261121-4"></script>
-<script src="src/ai/brain-net.js?v=20261121-4"></script>
+<script src="src/sim/model.js?v=20261121-5"></script>
+<script src="src/ai/brain-net.js?v=20261121-5"></script>
 <script src="vendor/cannon-es.min.js"></script>
-<script src="src/sim/physics.js?v=20261121-4"></script>
-<script src="src/sim/warehouse.js?v=20261121-4"></script>
-<script src="src/sim/worker.js?v=20261121-4"></script>
-<script src="src/config.js?v=20261121-4"></script>
-<script src="src/util.js?v=20261121-4"></script>
-<script src="src/layout.js?v=20261121-4"></script>
-<script src="src/save.js?v=20261121-4"></script>
-<script src="src/audio.js?v=20261121-4"></script>
-<script src="src/render/meshes.js?v=20261121-4"></script>
-<script src="src/render/world.js?v=20261121-4"></script>
-<script src="src/render/bodyview.js?v=20261121-4"></script>
-<script src="src/render.js?v=20261121-4"></script>
-<script src="src/game.js?v=20261121-4"></script>
-<script src="src/ui.js?v=20261121-4"></script>
-<script src="src/main.js?v=20261121-4"></script>
+<script src="src/sim/physics.js?v=20261121-5"></script>
+<script src="src/sim/warehouse.js?v=20261121-5"></script>
+<script src="src/sim/worker.js?v=20261121-5"></script>
+<script src="src/config.js?v=20261121-5"></script>
+<script src="src/util.js?v=20261121-5"></script>
+<script src="src/layout.js?v=20261121-5"></script>
+<script src="src/save.js?v=20261121-5"></script>
+<script src="src/audio.js?v=20261121-5"></script>
+<script src="src/render/meshes.js?v=20261121-5"></script>
+<script src="src/render/world.js?v=20261121-5"></script>
+<script src="src/render/bodyview.js?v=20261121-5"></script>
+<script src="src/render.js?v=20261121-5"></script>
+<script src="src/game.js?v=20261121-5"></script>
+<script src="src/ui.js?v=20261121-5"></script>
+<script src="src/main.js?v=20261121-5"></script>
 </body>
 </html>

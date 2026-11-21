@@ -1076,6 +1076,7 @@
         resting: w.resting || w.state === 'down',
         carrying: bodyCarrying,
         noise: 0.2 + Math.min(0.5, allWorkers.length * 0.04),
+        light: warehouse.illuminationAt ? warehouse.illuminationAt(env.shiftMode, w.pos.x, w.pos.y) : 1,
         urgency: order ? order.priority : 0.2,
         teamSupport: w.decision.coop,
         reward: 0,

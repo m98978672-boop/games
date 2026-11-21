@@ -20,6 +20,10 @@ async function boot() {
 }
 let c = await boot(); let game = c.WC.game;
 assert.equal(game.api.resumeStatus,'new');
+assert.equal(game.api.shiftMode,'day');
+assert.equal(game.setShiftMode('night'),true);
+assert.equal(game.setShiftMode('invalid'),false);
+assert(game.api.crew.every(w => game.api.envs[w.id].shiftMode === 'night'));
 for(let i=0;i<100;i++) game.update(.1);
 game.sim.state.stats.score = 1000;
 assert(game.hireWorker().ok); assert(game.buyStaff('medic').ok); assert(game.buyStaff('watchman').ok);
@@ -48,6 +52,8 @@ const raw = data.get(c.WC.save.CHECKPOINT_KEY);
 assert(raw && data.has(c.WC.save.CHECKPOINT_KEY));
 c = await boot(); game = c.WC.game;
 assert.equal(game.api.resumeStatus,'restored');
+assert.equal(game.api.shiftMode,'night');
+assert(game.api.crew.every(w => game.api.envs[w.id].shiftMode === 'night'));
 assert.equal(game.api.crew.length,4); assert.equal(game.api.staff.length,2);
 assert.equal(game.api.activeWorkerId,snap.activeWorkerId);
 assert.equal(game.state.paused,true); assert.equal(game.state.speed,2);
@@ -77,6 +83,16 @@ const previous = data.get(c.WC.save.CHECKPOINT_KEY);
 const setItem = storage.setItem; storage.setItem = (key, value) => { if (key.endsWith('v2')) throw Error('quota'); setItem(key,value); };
 assert.equal(c.WC.save.save(game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),previous);
 storage.setItem = setItem;
+// v2 старого формата без поля режима должен оставаться доступным.
+const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode;
+data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldV2));
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.shiftMode,'day');
+// Неизвестный режим блокирует перезапись.
+oldV2.checkpoint.shiftMode = 'broken';
+data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldV2));
+const badMode = data.get(c.WC.save.CHECKPOINT_KEY);
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed');
+assert.equal(c.WC.save.save(c.WC.game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),badMode);
 // A truncated or semantically damaged snapshot remains untouched, even on autosave.
 data.set(c.WC.save.CHECKPOINT_KEY,'{broken');
 c = await boot(); game = c.WC.game;

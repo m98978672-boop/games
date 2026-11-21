@@ -71,6 +71,7 @@ WC.render = (function () {
     WC.world.attachCrew(WC.game);
     WC.world.setFocus(WC.game.api.activeWorkerId);
     WC.world.setMode('third');
+    WC.world.setShiftLighting(WC.game.api.shiftMode);
     document.body.classList.add('view-third');
   }
 

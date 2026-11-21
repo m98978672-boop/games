@@ -605,6 +605,8 @@ window.WC = window.WC || {};
     if (uiState.lastQuality != null && snap.quality < uiState.lastQuality) bump(dom.quality, true);
     uiState.lastQuality = snap.quality;
     dom.quality.textContent = snap.quality + ' %';
+    var shiftLabel = document.getElementById('hud-shift-label');
+    if (shiftLabel) shiftLabel.textContent = game.api.shiftMode === 'night' ? 'Смена · ночь' : 'Смена';
     dom.time.textContent = 'День ' + game.sim.state.day + ' · ' + U.clockLabel(snap.time, snap.shiftLength, cfg.shiftHours);
 
     if (dom.shiftFill) {
@@ -675,6 +677,8 @@ window.WC = window.WC || {};
         U.el('p', { html: 'Пульт — <b>нижняя шторка</b>: потяни за «язычок» вверх или тапни по нему. Снизу всегда висят <b>быстрые приказы</b> (Взять · Нести · Перерыв · Авто) — один тап, без меню. Тап по <b>метке над рабочим</b> выбирает его. Кнопка <b>⤢</b> разворачивает игру на весь экран.' }),
         U.el('h3', { text: 'Клавиши' }),
         U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
+        U.el('h3', { text: 'День и ночь' }),
+        U.el('p', { text: 'В пульте можно переключить освещение на день или ночь в любой момент. Ночью фонари освещают улицу, а лампы — стеллажи. В темноте зрение рабочих постепенно снижается, особенно при усталости, и восстанавливается на свету.' }),
         U.el('h3', { text: 'Сохранение смены' }),
         U.el('p', { text: 'Смена автоматически сохраняется в браузере каждые 25 секунд и при закрытии страницы. При следующем запуске она продолжится с прежней бригадой, грузами и состоянием здоровья. Кнопка сохранения и клавиша S записывают смену сразу.' }),
         U.el('h3', { text: 'Движок' }),
@@ -771,6 +775,7 @@ window.WC = window.WC || {};
           vital('Боль', U.pctNum(body.pain) + ' %', 'травма ' + U.pctNum(body.injury)),
           vital('Стресс', U.pctNum(body.stress) + ' %', 'кортизол ' + U.pctNum(body.cortisol)),
           vital('Зрение', U.pctNum(body.vision) + ' %', 'слух ' + U.pctNum(body.hearing)),
+          vital('Свет', U.pctNum(game.sim.illuminationAt(game.api.shiftMode, st.pos.x, st.pos.y)) + ' %', 'условная освещённость'),
           vital('Мозг', U.pctNum(body.cognition) + ' %', 'решения: ' + st.stats.brainTicks),
           vital('Сон', U.pctNum(1 - body.sleepDebt) + ' %', 'долг ' + U.pctNum(body.sleepDebt)),
           vital('Вода', U.pctNum(body.hydration) + ' %', 'жажда ' + U.pctNum(body.thirst)),
@@ -941,6 +946,7 @@ window.WC = window.WC || {};
           vital('Очки', U.money(summary.score), 'за смену'),
           vital('Заказы', String(summary.delivered), 'доставлено'),
           vital('Качество', summary.quality + ' %', 'без брака'),
+          vital('Освещение', summary.lighting === 'night' ? 'Ночь' : 'День', 'режим в конце смены'),
           vital('Лучшая серия', String(summary.bestStreak), 'без ошибок'),
           vital('Разбито', String(summary.ruined), 'списание'),
           vital('Просрочено', String(summary.missed), 'штрафы'),
@@ -1050,6 +1056,15 @@ window.WC = window.WC || {};
     });
     U.$$('#camera-seg button').forEach(function (button) {
       button.addEventListener('click', function () { setCamera(button.getAttribute('data-view')); });
+    });
+    U.$$('#lighting-seg button').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var mode = button.getAttribute('data-lighting');
+        if (!game.setShiftMode(mode)) return;
+        syncLightingControls();
+        if (WC.world && WC.world.setShiftLighting) WC.world.setShiftLighting(mode);
+        U.toast(mode === 'night' ? 'Ночной свет: в тёмных местах зрению труднее' : 'Дневное освещение', 'info', 2400);
+      });
     });
     U.$$('#speed-seg button').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -1227,8 +1242,17 @@ window.WC = window.WC || {};
     });
   }
 
+  function syncLightingControls() {
+    U.$$('#lighting-seg button').forEach(function (button) {
+      var active = button.getAttribute('data-lighting') === game.api.shiftMode;
+      button.classList.toggle('on', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  }
+
   function init() {
     cacheDom();
+    syncLightingControls();
     if (WC.layout) WC.layout.init();
     sheet.init();
     wireRipple();

@@ -59,6 +59,22 @@ try {
   assert(actual.sorted && actual.assigned && actual.disabled);
   assert(actual.stats.every((r, i) => r.left >= 0 && r.right <= (portrait ? 390 : 844) && r.top >= actual.actions.bottom - 1 && (i === 0 || r.left >= actual.stats[i - 1].right)));
   assert(actual.header.bottom < (portrait ? 125 : 120), 'заголовок не должен занимать слишком много экрана');
+  const dayLight = await page.evaluate(() => WC.world.scene.children.find(o => o.isHemisphereLight).intensity);
+  await page.evaluate(() => WC.ui.sheet.set('full', true));
+  await page.locator('[data-lighting="night"]').scrollIntoViewIfNeeded();
+  await page.locator('[data-lighting="night"]').click();
+  const lighting = await page.evaluate((day) => {
+    const findHemi = () => WC.world.scene.children.find(o => o.isHemisphereLight);
+    WC.world.render(1 / 30, WC.game);
+    const night = findHemi().intensity;
+    const selected = document.querySelector('[data-lighting="night"]').getAttribute('aria-pressed');
+    WC.world.setMode('map2d'); const noFog = WC.world.scene.fog === null;
+    WC.world.setMode('third'); const fog = WC.world.scene.fog.color.getHex();
+    return {day, night, selected, noFog, fog, mode:WC.game.api.shiftMode};
+  }, dayLight);
+  assert(lighting.day > lighting.night && lighting.night > 0);
+  assert.deepEqual({selected:lighting.selected, noFog:lighting.noFog, fog:lighting.fog, mode:lighting.mode},
+    {selected:'true', noFog:true, fog:0x080e1c, mode:'night'});
   const saved = await page.evaluate(() => {
     const g = WC.game;
     g.sim.state.stats.score = 1000;
@@ -76,11 +92,13 @@ try {
     crew: WC.game.api.crew.length, staff: WC.game.api.staff.length, id: WC.game.api.crew[3]?.id,
     time: WC.game.sim.state.time, orders: WC.game.sim.state.orders.length,
     energy: WC.game.api.crew[0].body.energy, paused: WC.game.state.paused, speed: WC.game.state.speed,
-    speedOn: document.querySelector('#speed-seg button.on')?.getAttribute('data-speed') }));
+    speedOn: document.querySelector('#speed-seg button.on')?.getAttribute('data-speed'),
+    mode: WC.game.api.shiftMode, lightingOn: document.querySelector('#lighting-seg button.on')?.getAttribute('data-lighting'),
+    lightLevel: WC.world.scene.children.find(o => o.isHemisphereLight)?.intensity }));
   assert.deepEqual(resumed, {status:'restored', crew:4, staff:1, id:saved.id, time:saved.time, orders:saved.orders,
-    energy:.41, paused:true, speed:4, speedOn:'4'});
+    energy:.41, paused:true, speed:4, speedOn:'4', mode:'night', lightingOn:'night', lightLevel:lighting.night});
   assert.equal(errors.length, 0, errors.join('\n'));
-  console.log('✓ Сохранение и перезагрузка в настоящем браузере');
+  console.log('✓ Ночной свет, карта и сохранение режима при перезагрузке в браузере');
   console.log('✓ WebGL, непрозрачные руки, очередь и мобильная шапка (' + (portrait ? 'портрет' : 'ландшафт') + ')');
 } finally {
   await browser.close();

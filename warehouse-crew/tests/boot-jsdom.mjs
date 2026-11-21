@@ -181,6 +181,15 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
     result.selectedChildren = selectedCard ? selectedCard.children.length : 0;
     // Три камеры: 3-е лицо → сверху за рабочим → весь цех
     result.cameraButtons = doc.querySelectorAll('#camera-seg button').length;
+    const nightButton = doc.querySelector('[data-lighting="night"]');
+    const dayButton = doc.querySelector('[data-lighting="day"]');
+    if (nightButton && dayButton) {
+      nightButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      result.lightingWorks = game.api.shiftMode === 'night' && nightButton.getAttribute('aria-pressed') === 'true' &&
+        game.api.crew.every(w => game.api.envs[w.id].shiftMode === 'night');
+      dayButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      result.lightingWorks = result.lightingWorks && game.api.shiftMode === 'day' && dayButton.getAttribute('aria-pressed') === 'true';
+    }
     result.truckPanel = Boolean(doc.getElementById('truck-list'));
     result.truckButton = Boolean(doc.getElementById('btn-truck'));
     if (window.WC.world && window.WC.world.cycleMode) {
@@ -442,6 +451,7 @@ for (const mode of modes) {
   check(r.cardStable, 'карточки не пересобираются при обновлении HUD');
   check(r.selectedChildren === 9, 'карточка рабочего собрана один раз (3 строки + 4 полоски + характеры + травмы)', { children: r.selectedChildren });
   check(r.cameraButtons === 4, 'в пульте четыре режима камеры', { n: r.cameraButtons });
+  check(r.lightingWorks, 'дневной и ночной свет переключаются на пульте');
   check(r.truckPanel && r.truckButton, 'есть блок фур и кнопка вызова');
   check(Array.isArray(r.cameraCycle) && r.cameraCycle[0] === 'follow' && r.cameraCycle[1] === 'top', 'C переключает 3-е лицо → сверху за ним → весь цех', { cycle: r.cameraCycle });
   check(r.followMode === 'follow' && r.followClass, 'камера «сверху за рабочим» включается', { mode: r.followMode });

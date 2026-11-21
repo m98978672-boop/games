@@ -96,7 +96,23 @@
     big: { halfW: 0.31, halfD: 0.25, h: 0.52 },
   };
 
-  // Доки для фур: слева разгрузка (у приёмки), справа загрузка (у отгрузки).
+  // Нормированная освещённость для физиологии (не фотометрия рендера).
+  // Ночью лампы над рядами и уличные фонари дают локальные светлые зоны.
+  var INTERIOR_LIGHTS = [[-1.6, 0], [2.2, 0], [6.0, 0]];
+  var STREET_LIGHTS = [[-9.6, LAYOUT.street.y0 + 0.5], [9.6, LAYOUT.street.y0 + 0.5]];
+  function illuminationAt(mode, x, y) {
+    if (mode !== 'night') return 1;
+    var outdoor = y >= LAYOUT.street.y0;
+    var points = outdoor ? STREET_LIGHTS : INTERIOR_LIGHTS;
+    var base = outdoor ? 0.38 : 0.61;
+    var strength = outdoor ? 0.33 : 0.24;
+    var radius = outdoor ? 5 : 6.5;
+    var nearest = Infinity;
+    points.forEach(function (p) { nearest = Math.min(nearest, Math.hypot(x - p[0], y - p[1])); });
+    return base + strength * Math.max(0, 1 - nearest / radius);
+  }
+
+  // Доки для фур: слева разгрузка, справа загрузка.
   // handle — куда реально подают коробку (порог фуры), stand — где стоит рабочий.
   var DOCKS = {
     unload: {
@@ -914,6 +930,7 @@
     return {
       state: state,
       layout: LAYOUT,
+      illuminationAt: illuminationAt,
       captureCheckpoint: captureCheckpoint,
       restoreCheckpoint: restoreCheckpoint,
       rng: rng,
@@ -956,6 +973,7 @@
 
   return {
     createRng: createRng,
+    illuminationAt: illuminationAt,
     createWarehouse: createWarehouse,
     LAYOUT: LAYOUT,
     DOCKS: DOCKS,
