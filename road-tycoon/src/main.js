@@ -82,6 +82,9 @@
       canvas.style.userSelect = 'none';
       canvas.style.webkitUserSelect = 'none';
     }
+    // Render.init сам выбирает режим: 3D на WebGL, иначе 2D.
+    // Раньше сбой WebGL валил весь init(), и на телефонах без WebGL2
+    // игра не запускалась вовсе — теперь она продолжает в 2D.
     Render.init(canvas, app.world);
     TR.UI.init(app);
     bindInput();
@@ -106,8 +109,15 @@
 
     let last = performance.now();
     function frame(now) {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
+      // requestAnimationFrame может прийти без отметки времени (или с мусором
+      // после сворачивания вкладки). Тогда dt превращался в NaN, и Sim.tick
+      // навсегда отравлял состояние: time = NaN, город не растёт, сохранение
+      // битое. Один кадр — не повод ломать партию.
+      const stamp = Number.isFinite(now) ? now : (performance.now() || last);
+      let dt = (stamp - last) / 1000;
+      if (!Number.isFinite(dt) || dt < 0) dt = 0;
+      dt = Math.min(0.05, dt);
+      last = stamp;
       step(dt);
       requestAnimationFrame(frame);
     }

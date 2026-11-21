@@ -17,9 +17,16 @@ const ok = (name, cond, extra = '') => {
 const group = (title) => console.log('— ' + title);
 
 const lands = buildLands(424242);
-const t0 = Date.now();
-const grid = buildBiomes(lands, 424242);
-const ms = Date.now() - t0;
+/* Замер — лучший из трёх, как в speed2d: одиночный замер на загруженной
+   CI-машине измеряет планировщик, а не построение сетки. Настоящий
+   регресс (алгоритм стал медленнее) поднимет и лучший из трёх. */
+let ms = Infinity;
+let grid = null;
+for (let i = 0; i < 3; i++) {
+  const t0 = Date.now();
+  grid = buildBiomes(lands, 424242);
+  ms = Math.min(ms, Date.now() - t0);
+}
 const stats = biomeStats(grid);
 const world = buildWorld(424242);
 

@@ -104,10 +104,47 @@
     </section>
 
     <section class="panel start-panel" id="past-panel">
-      <h2>Прошлые жизни <span class="count" id="past-count"></span></h2>
+      <h2>Мемориал · прошлые жизни <span class="count" id="past-count"></span></h2>
       <p class="src">Ваши жизни хранятся только в этом браузере. Ничего никуда не отправляется.</p>
+
+      <div class="memorial-filters" id="memorial-filters">
+        <label class="memorial-field">
+          <span>Страна</span>
+          <select id="mem-country"><option value="">Все страны</option></select>
+        </label>
+        <label class="memorial-field">
+          <span>Возраст</span>
+          <select id="mem-age">
+            <option value="">Любой</option>
+            <option value="0-29">до 29 лет</option>
+            <option value="30-59">30–59 лет</option>
+            <option value="60-79">60–79 лет</option>
+            <option value="80-200">80 лет и больше</option>
+          </select>
+        </label>
+        <label class="memorial-field">
+          <span>Сортировка</span>
+          <select id="mem-sort">
+            <option value="new">Сначала новые</option>
+            <option value="long">Дольше прожитые</option>
+            <option value="happy">Самые счастливые</option>
+            <option value="year">По году рождения</option>
+          </select>
+        </label>
+        <button class="btn btn-ghost" id="mem-reset" type="button">Сбросить</button>
+      </div>
+
+      <div class="memorial-compare" id="mem-compare" hidden>
+        <div class="mem-compare-head"><b>Сравнение двух жизней</b><button class="icon-btn" id="mem-compare-close" type="button" aria-label="Закрыть сравнение">✕</button></div>
+        <div id="mem-compare-body"></div>
+      </div>
+      <p class="hint" id="mem-hint">Отметьте две жизни флажком, чтобы сравнить их рядом.</p>
+
       <div class="past-list" id="past-list"></div>
       <div class="row-actions">
+        <button class="btn btn-ghost" id="btn-export-past">Экспорт книги жизней</button>
+        <button class="btn btn-ghost" id="btn-import-past">Импорт из файла</button>
+        <input type="file" id="past-import-file" accept="application/json,.json" hidden>
         <button class="btn btn-ghost" id="btn-clear-past">Удалить все записи</button>
       </div>
     </section>

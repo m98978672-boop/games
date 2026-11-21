@@ -7,7 +7,7 @@
      • каталог раздач актуален (--check сборщика);
      • размер и sha256 КАЖДОГО файла в манифесте совпадает с диском;
      • каждый кусок читается сервером и его sha256 совпадает с .torrent;
-     • игра собирается из кусков БИТ-В-БИТ (все 16 игр);
+     • каждая игра собирается из кусков БИТ-В-БИТ (витрина + коллекция);
      • автоочистка на собранных файлах не удаляет ничего нужного
        и не портит бинарники (EXR/PNG/звук);
      • вредоносное по-прежнему блокируется (контрольный пример);
@@ -34,6 +34,12 @@ function ok(cond, msg) {
 }
 
 const catalog = JSON.parse(await readFile(path.join(repoRoot, 'site/torrent-catalog.json'), 'utf8'));
+// Витрина games-data.js — обычный IIFE, читаем так же, как сборщик каталога.
+function parseCatalog(source) {
+  const box = {};
+  const fn = new Function('window', 'globalThis', `${source}\nreturn window.GAMES_CATALOG;`);
+  return fn(box, box) || [];
+}
 console.log(`\nРаздачи: ${catalog.games.length} игр, ${catalog.stats.files} файлов, ${catalog.stats.chunks} кусков\n`);
 
 // ------------------------------------------------- 1. Манифест = диск
@@ -121,7 +127,10 @@ for (const game of catalog.games) {
   }
 }
 ok(piecesOk === piecesTotal, `все ${piecesTotal} кусков собраны и имеют ожидаемый размер`);
-ok(true, 'все 16 игр собираются из кусков бит-в-бит');
+const storefrontCount = catalog.games.filter((g) => g.source !== 'collection').length;
+const collectionCount = catalog.games.length - storefrontCount;
+ok(true, `все ${catalog.games.length} игр собираются из кусков бит-в-бит ` +
+  `(витрина ${storefrontCount} + коллекция ${collectionCount})`);
 
 // ---------------------------------------- 4. Автоочистка не портит игру
 console.log('\n[автоудаление плохих файлов]');
@@ -144,7 +153,7 @@ for (const game of catalog.games) {
   }
   if (!SAN.assertPlayable(assembled.files).ok) playableMissing += 1;
 }
-ok(removedNeeded === 0, 'ни один нужный игре файл не попадает под автоудаление (16 игр)');
+ok(removedNeeded === 0, `ни один нужный игре файл не попадает под автоудаление (${catalog.games.length} игр)`);
 ok(playableMissing === 0, 'у каждой игры после очистки остаётся точка входа index.html');
 
 // ------------------- 4b. info_hash один и тот же и в каталоге, и в .torrent
@@ -171,13 +180,81 @@ for (const game of catalog.games) {
     assert.equal(torrent.pieces[i].sha256, torrent.info.pieces[i], `${game.gameId}: pieces[${i}] согласован`);
   }
 }
-ok(hashMismatchGames === 0, 'info_hash в каталоге и в .torrent совпадает у всех 16 игр');
+ok(hashMismatchGames === 0, `info_hash в каталоге и в .torrent совпадает у всех ${catalog.games.length} игр`);
 
 // Разные версии игры — разные раздачи (magnet не должен вести на старые куски).
 const sample = catalog.games[0];
 const v1 = await TOUR.buildTorrent({ ...sample, version: 'v1' }, { version: 'v1' });
 const v2 = await TOUR.buildTorrent({ ...sample, version: 'v2' }, { version: 'v2' });
 ok(v1.infoHash !== v2.infoHash, 'новая версия игры даёт новый info_hash');
+
+// ------- 4c. Скачанное переходит в библиотеку, коллекция — только в торренте
+// Правило владельца: в библиотеке Games появляется ТОЛЬКО то, что игрок
+// скачал. Проверяем главное: пакет игры упаковывается в один HTML и
+// принимается библиотекой (тот же путь, что и «Добавить свою игру»).
+console.log('\n[импорт в библиотеку]');
+const vmMod = await import('node:vm');
+const browserBox = (() => {
+  const store = new Map();
+  const sandbox = {
+    console,
+    localStorage: {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      setItem: (k, v) => {
+        if (v.length > 5 * 1024 * 1024) { const e = new Error('QuotaExceededError'); e.name = 'QuotaExceededError'; throw e; }
+        store.set(k, v);
+      },
+      removeItem: (k) => store.delete(k),
+    },
+    location: { href: 'https://example.test/games/', origin: 'https://example.test', host: 'example.test', protocol: 'https:', search: '', pathname: '/games/' },
+    navigator: { userAgent: 'node-test', onLine: true },
+    setTimeout, clearTimeout,
+    btoa: (s) => Buffer.from(s, 'binary').toString('base64'),
+    atob: (s) => Buffer.from(s, 'base64').toString('binary'),
+    TextDecoder, TextEncoder, URL, Blob: function () { this.size = 1; },
+  };
+  sandbox.window = sandbox; sandbox.globalThis = sandbox; sandbox.self = sandbox;
+  vmMod.createContext(sandbox);
+  for (const f of ['site/game-antivirus.js', 'site/user-games.js', 'shared/p2p/manifest.js', 'shared/p2p/fetch.js']) {
+    vmMod.runInContext(require('node:fs').readFileSync(path.join(repoRoot, f), 'utf8'), sandbox, { filename: f });
+  }
+  return sandbox;
+})();
+const F2P = browserBox.GamesP2P;
+ok(Boolean(F2P && F2P.packAsStandalone && browserBox.GamesUserHub), 'библиотека и упаковщик доступны в браузерном контексте');
+
+const libGame = catalog.games.find((g) => g.source === 'collection' && g.totalSize > 3000) || catalog.games[0];
+const libFiles = TOUR.layoutOf(libGame).map((f) => ({
+  path: f.path,
+  bytes: require('node:fs').readFileSync(path.join(repoRoot, libGame.dir, f.path)),
+  size: f.size,
+}));
+const libPack = F2P.packAsStandalone({ files: libFiles });
+ok(libPack && libPack.ok, `игра «${libGame.title}» упакована в один HTML (${Math.round((libPack?.html?.length || 0) / 1024)} КБ)`);
+
+const libRecord = {
+  id: `usr-torrent-${libGame.gameId}`.slice(0, 52),
+  slug: libGame.gameId.slice(0, 48),
+  sourceType: 'html',
+  htmlCode: libPack.html,
+  title: libGame.title,
+  subtitle: 'Скачано из торрента',
+  description: 'Скачано из P2P-раздачи «Торрент»',
+  author: libGame.author || 'Открытая коллекция Games',
+  version: 'v1', category: '2d', icon: '🧲',
+  features: ['Скачано из торрента'],
+};
+const saved = browserBox.GamesUserHub.upsert(libRecord);
+assert.ok(saved.ok, `игра принимается библиотекой Games: ${saved.error || ''}`);
+ok(true, 'скачанное из торрента попадает в библиотеку Games');
+ok(saved.game && saved.game.avSummary && saved.game.avSummary.verdict !== 'blocked', 'игра прошла 10 проходов антивируса библиотеки');
+browserBox.GamesUserHub.upsert(libRecord);
+ok(browserBox.GamesUserHub.getAll().length === 1, 'повторное скачивание не создаёт дубликат в библиотеке');
+
+// Коллекция не должна попадать в витрину сама по себе.
+const storefrontIds = new Set(parseCatalog(require('node:fs').readFileSync(path.join(repoRoot, 'site/games-data.js'), 'utf8')).map((g) => g.id));
+const collectionInStorefront = catalog.games.filter((g) => g.source === 'collection' && storefrontIds.has(g.gameId));
+ok(collectionInStorefront.length === 0, 'коллекция не просачивается в витрину — только в торрент');
 
 // ------------------------------------------- 5. Вредоносное ловится
 console.log('\n[контрольные образцы]');

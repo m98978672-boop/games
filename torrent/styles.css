@@ -138,6 +138,22 @@ button { font-family: inherit; }
 }
 .stat-card span { display: block; color: var(--text-2); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; }
 .stat-card b { display: block; margin-top: 4px; font-size: 20px; font-variant-numeric: tabular-nums; }
+.stat-card small { display: block; margin-top: 2px; color: var(--text-3, #8b93a7); font-size: 10.5px; }
+
+/* Метка «из коллекции»: привезённые игры визуально отличаются от витрины */
+.src-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(127, 178, 240, 0.16);
+  border: 1px solid rgba(127, 178, 240, 0.34);
+  color: #9fc6f5;
+  font-size: 10px;
+  font-weight: 600;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 .stat-card.is-accent b { color: var(--accent-strong); }
 .stat-card.is-good b { color: var(--good); }
 

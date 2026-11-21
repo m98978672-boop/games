@@ -615,12 +615,17 @@ async function main() {
 
   feed.items = [...existing, ...fresh];
   feed.updatedAt = new Date().toISOString();
+  // Счётчик очереди считается по ВСЕМУ фиду, а не по новым статьям: иначе
+  // повторный запуск писал «43» вместо реальных 100 и проверка ловила
+  // «backlog меньше 100», хотя статьи на месте.
+  const queueNow = feed.items.filter((i) => i.queue === 'now').length;
+  const queueFuture = feed.items.filter((i) => i.queue === 'future').length;
   feed.autoPost = {
     ...(feed.autoPost || {}),
     backlog: {
-      total: fresh.length,
-      now: fresh.filter((i) => i.queue === 'now').length,
-      future: fresh.filter((i) => i.queue === 'future').length,
+      total: queueNow + queueFuture,
+      now: queueNow,
+      future: queueFuture,
       builtAt: new Date().toISOString(),
       note: 'Статьи очереди «на будущее» лежат с датой вперёд и раскрываются по расписанию автопоста.',
     },

@@ -76,5 +76,67 @@ ok(GB.game.state.timeLeftMs === t, 'на паузе время не идёт');
 GB.game.togglePause(false);
 ok(GB.game.state.paused === false, 'пауза снимается');
 
+/* ------------------------------------------------ режимы мини-игры */
+
+// В каждом режиме раунд запускается и спавнит объекты своего типа.
+for (const mode of ['fireflies', 'stars', 'shadow']) {
+  GB.game.newRound(mode);
+  const st = GB.game.state;
+  ok(st.mode === mode, `режим «${mode}» запускается`);
+  st.spawnInMs = 0;
+  GB.game.update(16, 1200, 800);
+  ok(st.flies.length > 0, `режим «${mode}» создаёт цели`);
+  ok(st.flies.every((f) => Number.isFinite(f.x) && Number.isFinite(f.y)), `режим «${mode}»: координаты конечны`);
+}
+
+// Падающая звезда уходит за нижний край — это пропуск, а не бесконечный отскок.
+GB.game.newRound('stars');
+const star = GB.game.state;
+star.spawnInMs = 1e9; // больше не спавним, следим за одной
+star.flies.push({ x: 600, y: 100, vx: 0, vy: 900, r: 6, age: 0, ttl: 999999, phase: 0 });
+for (let i = 0; i < 40 && star.flies.length; i++) GB.game.update(100, 1200, 800);
+ok(star.missed >= 1, 'звезда, ушедшая за край, считается пропущенной');
+
+// Тень убегает от указателя.
+GB.game.newRound('shadow');
+const sh = GB.game.state;
+sh.spawnInMs = 1e9;
+sh.flies.push({ x: 600, y: 400, vx: 0, vy: 0, r: 8, age: 0, ttl: 999999, phase: 0 });
+for (let i = 0; i < 30; i++) GB.game.dodgeShadows(610, 410, 1200, 800);
+ok(Math.hypot(sh.flies[0].vx, sh.flies[0].vy) > 0, 'тень получает импульс от курсора');
+
+// Серия растёт от попаданий и обнуляется промахом.
+GB.game.newRound('fireflies');
+const sr = GB.game.state;
+sr.spawnInMs = 1e9;
+sr.flies.push({ x: 300, y: 300, vx: 0, vy: 0, r: 10, age: 0, ttl: 999999, phase: 0 });
+GB.game.click(300, 300);
+ok(sr.streak === 1, 'попадание увеличило серию');
+sr.flies.push({ x: 500, y: 300, vx: 0, vy: 0, r: 10, age: 0, ttl: 999999, phase: 0 });
+GB.game.click(500, 300);
+ok(sr.streak === 2, 'второе попадание — серия 2');
+GB.game.click(10, 790);
+ok(sr.streak === 0, 'промах обнулил серию');
+
+// Битая отметка времени не останавливает игру.
+GB.game.newRound('fireflies');
+const g2 = GB.game.state;
+const timeBefore = g2.timeLeftMs;
+GB.game.update(NaN, 1200, 800);
+GB.game.update(undefined, 1200, 800);
+ok(Number.isFinite(g2.timeLeftMs) && g2.timeLeftMs === timeBefore, 'битый dt не ломает таймер');
+
+// Лучшая серия сохраняется между раундами.
+GB.game.newRound('fireflies');
+const bs = GB.game.state;
+bs.spawnInMs = 1e9;
+for (let i = 0; i < 3; i++) {
+  bs.flies.push({ x: 200 + i * 40, y: 300, vx: 0, vy: 0, r: 10, age: 0, ttl: 999999, phase: 0 });
+  GB.game.click(200 + i * 40, 300);
+}
+GB.game.endRound();
+const savedAfter = GB.save.load();
+ok(savedAfter.bestStreak >= 3, 'лучшая серия сохраняется: ' + savedAfter.bestStreak);
+
 if (failed) { console.error(`\n✗ Провалено: ${failed}`); process.exit(1); }
 console.log('\n✓ Логика игры в порядке');

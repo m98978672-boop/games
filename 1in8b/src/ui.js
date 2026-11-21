@@ -165,17 +165,194 @@
       : '';
     if (!list.length) {
       box.innerHTML = '<p class="empty">Пока ни одной прожитой жизни. Проживите первую — она сохранится здесь.</p>';
+      el('mem-hint').hidden = true;
+      return;
+    }
+    el('mem-hint').hidden = false;
+    fillCountryFilter(list);
+    var shown = applyMemorialFilters(list);
+    if (!shown.length) {
+      box.innerHTML = '<p class="empty">Под эти фильтры не подошла ни одна жизнь.</p>';
       return;
     }
     box.innerHTML = '';
-    list.forEach(function (l) {
+    shown.forEach(function (l) {
       var d = document.createElement('div');
-      d.className = 'past-item';
-      d.innerHTML = '<div><b>' + esc(l.name) + '</b><span>' + l.born + ' – ' + l.died + ' · ' + esc(l.country) +
+      d.className = 'past-item' + (comparePicks.indexOf(l.id) !== -1 ? ' picked' : '');
+      d.innerHTML = '<label class="past-pick" title="Отметить для сравнения"><input type="checkbox"' +
+        (comparePicks.indexOf(l.id) !== -1 ? ' checked' : '') + ' aria-label="Отметить для сравнения"></label>' +
+        '<div><b>' + esc(l.name) + '</b><span>' + l.born + ' – ' + l.died + ' · ' + esc(l.country) +
         ' · ' + esc(l.cause || '') + '</span></div><div class="age">' + l.age + '</div>';
-      d.addEventListener('click', function () { pastLifeModal(l); });
+      d.addEventListener('click', function (e) {
+        if (e.target && e.target.tagName === 'INPUT') return;
+        pastLifeModal(l);
+      });
+      var cb = d.querySelector('input');
+      cb.addEventListener('change', function () { toggleCompare(l.id, cb.checked); });
       box.appendChild(d);
     });
+  }
+
+  /* --------------------------- мемориал: фильтры ----------------------- */
+
+  var comparePicks = [];
+
+  function fillCountryFilter(list) {
+    var sel = el('mem-country');
+    if (!sel || sel.dataset.filled === '1') return;
+    var seen = {};
+    list.forEach(function (l) { if (l.countryCode) seen[l.countryCode] = l.country; });
+    Object.keys(seen).sort(function (a, b) { return String(seen[a]).localeCompare(String(seen[b]), 'ru'); })
+      .forEach(function (code) {
+        var o = document.createElement('option');
+        o.value = code; o.textContent = seen[code];
+        sel.appendChild(o);
+      });
+    sel.dataset.filled = '1';
+  }
+
+  function applyMemorialFilters(list) {
+    var country = el('mem-country') ? el('mem-country').value : '';
+    var age = el('mem-age') ? el('mem-age').value : '';
+    var sort = el('mem-sort') ? el('mem-sort').value : 'new';
+    var out = list.filter(function (l) {
+      if (country && l.countryCode !== country) return false;
+      if (age) {
+        var p = age.split('-');
+        var lo = Number(p[0]), hi = Number(p[1]);
+        if (!(l.age >= lo && l.age <= hi)) return false;
+      }
+      return true;
+    });
+    function peakHappy(l) {
+      var best = 0;
+      (l.history || []).forEach(function (h) { if (h.happy > best) best = h.happy; });
+      return best;
+    }
+    out.sort(function (a, b) {
+      if (sort === 'long') return (b.age || 0) - (a.age || 0);
+      if (sort === 'happy') return peakHappy(b) - peakHappy(a);
+      if (sort === 'year') return (a.born || 0) - (b.born || 0);
+      return (b.savedAt || 0) - (a.savedAt || 0);
+    });
+    return out;
+  }
+
+  function toggleCompare(id, on) {
+    if (on) {
+      if (comparePicks.indexOf(id) === -1) comparePicks.push(id);
+      while (comparePicks.length > 2) comparePicks.shift();
+    } else {
+      comparePicks = comparePicks.filter(function (x) { return x !== id; });
+    }
+    var box = el('mem-compare');
+    if (comparePicks.length === 2) {
+      renderCompare();
+      box.hidden = false;
+    } else {
+      box.hidden = true;
+    }
+    // Обновляем подсветку выбранных карточек без полной перерисовки списка.
+    document.querySelectorAll('#past-list .past-item').forEach(function (node, i) {
+      var cb = node.querySelector('input');
+      if (cb) node.classList.toggle('picked', cb.checked);
+    });
+  }
+
+  function clearCompare() {
+    comparePicks = [];
+    document.querySelectorAll('#past-list .past-item input').forEach(function (cb) { cb.checked = false; });
+    document.querySelectorAll('#past-list .past-item').forEach(function (n) { n.classList.remove('picked'); });
+  }
+
+  function renderCompare() {
+    var all = SAVE.pastLives();
+    var picked = comparePicks.map(function (id) {
+      return all.filter(function (l) { return l.id === id; })[0];
+    }).filter(Boolean);
+    var body = el('mem-compare-body');
+    if (picked.length !== 2) { body.innerHTML = '<p class="empty">Нужны две жизни.</p>'; return; }
+    var a = picked[0], b = picked[1];
+    function peak(l) {
+      var best = 0;
+      (l.history || []).forEach(function (h) { if (h.happy > best) best = h.happy; });
+      return best;
+    }
+    function row(label, x, y) {
+      return '<tr><th>' + esc(label) + '</th><td>' + esc(String(x)) + '</td><td>' + esc(String(y)) + '</td></tr>';
+    }
+    body.innerHTML = '<table class="compare-table">' +
+      '<thead><tr><th></th><th>' + esc(a.name) + '</th><th>' + esc(b.name) + '</th></tr></thead><tbody>' +
+      row('Страна', a.country, b.country) +
+      row('Годы', a.born + ' – ' + a.died, b.born + ' – ' + b.died) +
+      row('Возраст', a.age, b.age) +
+      row('Причина ухода', a.cause || '—', b.cause || '—') +
+      row('Пик счастья', Math.round(peak(a)), Math.round(peak(b))) +
+      row('Достижений', (a.achievements || []).length, (b.achievements || []).length) +
+      row('Отмеченных моментов', (a.starred || []).length, (b.starred || []).length) +
+      '</tbody></table>' +
+      '<p class="hint">' + esc(a.summary || '') + '</p><p class="hint">' + esc(b.summary || '') + '</p>';
+  }
+
+  /* --------------------- мемориал: экспорт и импорт -------------------- */
+
+  function exportPast() {
+    var list = SAVE.pastLives();
+    if (!list.length) { toast('Книга жизней пуста — экспортировать нечего.'); return; }
+    var payload = {
+      app: '1in8b', version: 1, exportedAt: new Date().toISOString(), lives: list
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'proshlye-zhizni-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+    toast('Книга жизней сохранена в файл.');
+  }
+
+  function importPast(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data;
+      try {
+        data = JSON.parse(String(reader.result || ''));
+      } catch (e) {
+        toast('Файл не похож на книгу жизней: испорченный JSON.');
+        return;
+      }
+      var incoming = data && Array.isArray(data.lives) ? data.lives : (Array.isArray(data) ? data : null);
+      if (!incoming) { toast('В файле нет списка жизней.'); return; }
+      var clean = incoming.filter(function (l) {
+        return l && typeof l === 'object' && l.name && Number.isFinite(Number(l.age));
+      }).map(function (l) {
+        var copy = Object.assign({}, l);
+        copy.age = Number(copy.age);
+        copy.id = copy.id || ('imp-' + Math.random().toString(36).slice(2, 10));
+        copy.savedAt = Number(copy.savedAt) || Date.now();
+        copy.history = Array.isArray(copy.history) ? copy.history : [];
+        copy.achievements = Array.isArray(copy.achievements) ? copy.achievements : [];
+        copy.starred = Array.isArray(copy.starred) ? copy.starred : [];
+        copy.notes = Array.isArray(copy.notes) ? copy.notes : [];
+        return copy;
+      });
+      if (!clean.length) { toast('Подходящих записей в файле не нашлось.'); return; }
+      var existing = SAVE.pastLives();
+      var byId = {};
+      existing.forEach(function (l) { byId[l.id] = true; });
+      var added = 0;
+      clean.forEach(function (l) { if (!byId[l.id]) { existing.push(l); added++; } });
+      existing.sort(function (x, y) { return (y.savedAt || 0) - (x.savedAt || 0); });
+      if (typeof SAVE.replacePast === 'function') SAVE.replacePast(existing.slice(0, 200));
+      renderPastList();
+      toast(added ? 'Добавлено жизней: ' + added + '.' : 'Все жизни из файла уже есть в книге.');
+    };
+    reader.onerror = function () { toast('Не удалось прочитать файл.'); };
+    reader.readAsText(file);
   }
 
   function pastLifeModal(l) {
@@ -1578,6 +1755,7 @@
     confirm: confirmBox,
     currencies: CURRENCIES, setCurrency: setCurrency, money: money, rub: rub, useCountry: useCountry,
     fillStartSelects: fillStartSelects, renderPastList: renderPastList, countriesModal: countriesModal,
+    exportPast: exportPast, importPast: importPast, clearCompare: clearCompare,
     whoModal: whoModal, birthCard: birthCard, helpModal: helpModal,
     renderAll: renderAll, renderPerson: renderPerson, renderStats: renderStats, renderBudget: renderBudget,
     renderFocus: renderFocus, renderLog: renderLog, renderFamily: renderFamily, renderPeers: renderPeers,

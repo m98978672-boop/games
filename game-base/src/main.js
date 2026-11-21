@@ -13,11 +13,12 @@
     GB.render.init(GB.util.el('game'));
     GB.ui.init();
 
-    // новый раунд
-    GB.game.newRound();
+    // новый раунд в выбранном режиме (по умолчанию — прошлый)
+    const savedMode = data.mode || localStorage.getItem('gb-base-mode') || 'fireflies';
+    GB.game.newRound(savedMode);
     if (data.best) GB.game.state.best = data.best;
     GB.ui.renderSide();
-    GB.ui.setHint('Лови светлячков кликом — они не ждут!');
+    GB.ui.setHint(GB.game.MODES[GB.game.state.mode].note);
     GB.ui.setNews('');
     GB.ui.updateHud();
 
@@ -28,11 +29,24 @@
       GB.ui.toast('С возвращением! Лови светлячков 👋', 'win', '✨');
     }
 
+    // Тень в режиме «Поймай тень» убегает от указателя: слушаем поле.
+    const field = GB.util.el('game');
+    if (field && field.addEventListener) {
+      field.addEventListener('pointermove', (e) => {
+        const rect = field.getBoundingClientRect ? field.getBoundingClientRect() : { left: 0, top: 0 };
+        GB.game.dodgeShadows(e.clientX - rect.left, e.clientY - rect.top, GB.render.w, GB.render.h);
+      });
+    }
+
     // игровой цикл
     let last = performance.now();
     function frame(now) {
-      const dt = Math.min(100, Math.max(0, now - last));
-      last = now;
+      // Битая отметка времени не должна отравлять раунд: NaN в dt остановил бы игру.
+      const stamp = Number.isFinite(now) ? now : (performance.now() || last);
+      let dt = stamp - last;
+      if (!Number.isFinite(dt) || dt < 0) dt = 0;
+      dt = Math.min(100, dt);
+      last = stamp;
       GB.game.update(dt, GB.render.w, GB.render.h);
       GB.render.draw(now);
       GB.ui.updateHud();

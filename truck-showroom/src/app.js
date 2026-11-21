@@ -1765,7 +1765,11 @@ let fpsClock = 0;
 let lowFpsStrikes = 0;
 function loop() {
   requestAnimationFrame(loop);
-  const dt = Math.min(0.06, clock.getDelta());
+  // clock.getDelta() может вернуть NaN после долгой паузы вкладки — камера
+  // и физика шоурума тогда улетают в бесконечность без единой ошибки.
+  let raw = clock.getDelta();
+  if (!Number.isFinite(raw) || raw < 0) raw = 0;
+  const dt = Math.min(0.06, raw);
   cam.update(dt);
   // свободный полёт камеры: W — вперёд, S — назад, A/D — влево/вправо,
   // Q/E — вниз/вверх, Shift — ускорение

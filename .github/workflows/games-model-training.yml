@@ -1,0 +1,193 @@
+name: Games model — обучение и проверка
+# Обучает LoRA-адаптер на знаниях репозитория: правила игр, каталог багов,
+# уроки по коду, руководства «как играть». Песочница этого не может (нет
+# torch и доступа к huggingface), а runner GitHub — может.
+#
+# Запуск: Actions → Games model — обучение и проверка → Run workflow.
+# На push не висит: обучение долгое и дорогое, его запускают осознанно.
+# Всё публикуется артефактами; веса не коммитятся в репозиторий.
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: 'Шагов обучения (1040 ≈ 2.5 ч на 2 CPU; 520 ≈ 75 мин)'
+        required: false
+        default: '1040'
+      game_rows:
+        description: 'Сколько боевых состояний собрать (900 ≈ 3 мин симуляции)'
+        required: false
+        default: '900'
+      run_eval:
+        description: 'Прогнать проверку «находит баги» (медленно, но честно)'
+        required: false
+        default: 'true'
+permissions:
+  contents: write  # нужно, чтобы опубликовать релиз с адаптером
+jobs:
+  train:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      HF_HOME: ${{ github.workspace }}/.hf-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Проверить сборщик знаний и бенчмарк
+        run: |
+          node tools/training/test-build-knowledge.mjs
+          node tools/training/test-training.mjs
+
+      - name: Собрать датасет из репозитория
+        run: |
+          node tools/training/build-knowledge.mjs \
+            --out "$RUNNER_TEMP/knowledge" \
+            --game "${{ inputs.game_rows || '900' }}" \
+            --bug 400 --code 40 --play 60 --readme 20 \
+            --codes 400 --law 40 --defect 40 --balance 30 --edge 40 --engine 30 \
+            --realcode 60 --bench 200
+          node -e '
+            const m = require(process.env.RUNNER_TEMP + "/knowledge/manifest.json");
+            console.log("::notice::Датасет: " + JSON.stringify(m.counts));
+            if (m.counts.train < 1000) { console.error("слишком мало данных для обучения"); process.exit(1); }
+          '
+
+      - name: Собрать бенчмарк «найди баг»
+        run: node tools/training/make-bug-bench.mjs --out "$RUNNER_TEMP/bug-bench"
+
+      - name: Установить CPU-зависимости
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+
+      - name: Обучить LoRA
+        timeout-minutes: 240
+        run: |
+          set +e
+          set -o pipefail
+          python -u tools/training/finetune.py \
+            --data "$RUNNER_TEMP/knowledge" \
+            --out "$RUNNER_TEMP/model-out" \
+            --steps "${{ inputs.steps || '1040' }}" \
+            --rank 16 --eval-count 8 2>&1 | tee "$RUNNER_TEMP/train.log"
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            # Логи артефактов бывают недоступны снаружи, а аннотация видна всегда.
+            python -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"train.log"); s="".join(open(p,errors="replace").readlines()[-40:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit "$status"
+
+      - name: Проверить, что адаптер действительно обучался
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          p = Path(os.environ['RUNNER_TEMP']) / 'model-out' / 'report.json'
+          r = json.loads(p.read_text())
+          ev = r['evaluation']
+          print('::notice::' + json.dumps(ev, ensure_ascii=False))
+          before, after = ev.get('loss_before'), ev.get('loss_after')
+          if before is None or after is None:
+              print('нет отложенной проверки'); sys.exit(1)
+          if not (after < before):
+              print(f'::error::потеря не уменьшилась: {before} -> {after}')
+              sys.exit(1)
+          print(f'потеря уменьшилась: {before:.3f} -> {after:.3f}')
+          PY
+
+      - name: Проверка «находит баги»
+        if: ${{ inputs.run_eval != 'false' }}
+        timeout-minutes: 60
+        continue-on-error: true
+        run: |
+          python -u tools/training/eval-bugs.py \
+            --bench "$RUNNER_TEMP/bug-bench" \
+            --adapter "$RUNNER_TEMP/model-out/adapter" \
+            --out "$RUNNER_TEMP/bug-eval.json" 2>&1 | tee "$RUNNER_TEMP/eval.log"
+
+      - name: Итог проверки «находит баги»
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = process.env.RUNNER_TEMP + "/bug-eval.json";
+            if (!fs.existsSync(p)) { console.log("::warning::проверки багов нет"); process.exit(0); }
+            const r = JSON.parse(fs.readFileSync(p, "utf8"));
+            for (const [name, v] of Object.entries(r)) {
+              if (name === "method" || name === "bench" || !v.score) continue;
+              const s = v.score;
+              // Аннотация видна всегда, даже когда артефакты недоступны снаружи.
+              console.log(`::notice::${name}: точность ${(s.accuracy*100).toFixed(1)}% (${s.correct}/${s.total}), `
+                + `полнота ${(s.recall*100).toFixed(1)}%, ложных тревог ${s.falseAlarms} `
+                + `(${(s.falseAlarmRate*100).toFixed(1)}%), не разобрано ${s.unparsed}`);
+            }
+          '
+
+      - name: Итог
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            const base = process.env.RUNNER_TEMP + "/model-out";
+            if (fs.existsSync(base + "/report.json")) {
+              const r = JSON.parse(fs.readFileSync(base + "/report.json", "utf8"));
+              const t = r.training, e = r.evaluation;
+              console.log("::notice::Шагов: " + t.steps + ", параметров в адаптере: " + t.trainable_parameters
+                + ", потеря " + e.loss_before.toFixed(3) + " -> " + e.loss_after.toFixed(3)
+                + ", " + t.seconds + " с");
+            }
+          '
+
+      - name: Сохранить модель и отчёты
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: games-model-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/model-out/
+            ${{ runner.temp }}/knowledge/
+            ${{ runner.temp }}/bug-bench/
+            ${{ runner.temp }}/bug-eval.json
+            ${{ runner.temp }}/train.log
+            ${{ runner.temp }}/eval.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Упаковать адаптер, отчёт и датасет
+        if: success()
+        run: |
+          set -eu
+          cp "$RUNNER_TEMP/model-out/report.json" "$RUNNER_TEMP/model-out/adapter/" 2>/dev/null || true
+          tar -C "$RUNNER_TEMP/model-out" -czf "$RUNNER_TEMP/games-model-adapter.tar.gz" adapter
+          ls -la "$RUNNER_TEMP/games-model-adapter.tar.gz"
+
+      - name: Опубликовать релиз с адаптером
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: games-model-${{ github.run_number }}
+          name: games-model-${{ github.run_number }}
+          body: |
+            LoRA-адаптер на знаниях репозитория (правила игр, каталог багов,
+            уроки по коду, руководства «как играть»).
+
+            Это адаптер, а не готовая браузерная модель. Метрики — в report.json
+            внутри архива. Датасет собран из настоящих файлов репозитория.
+          files: |
+            ${{ runner.temp }}/games-model-adapter.tar.gz
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

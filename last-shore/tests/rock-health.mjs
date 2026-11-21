@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import fs from 'node:fs';
 import path from 'node:path';
+import { waitReady } from './wait-ready.mjs';
 const dir = path.resolve(import.meta.dirname, '..');
 const dom = new JSDOM(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), {url:'http://localhost/', pretendToBeVisual:true, runScripts:'outside-only'});
 globalThis.window=dom.window; globalThis.document=dom.window.document;

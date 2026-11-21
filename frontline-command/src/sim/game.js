@@ -12,6 +12,7 @@ import { CommandAPI } from './command_api.js';
 import { InfluenceSystem } from './influence.js';
 import { SquadAI } from './ai_squad.js';
 import { StrategicAI } from './ai_strategic.js';
+import { Mayors } from './mayors.js';
 import { BattleMemory } from './battle_memory.js';
 import { updateSoldier } from './ai_soldier.js';
 import { BuildSystem } from './build.js';
@@ -109,6 +110,10 @@ export class Game {
     this.rules = new RulesEngine(this);
     this.squadAI = new SquadAI(this);
     this.battleMemory = new BattleMemory(this, { storage: strategicMemoryStorage, enabled: strategicMemoryEnabled });
+    /* Мэры городов — мозги COUNTRY ATLAS поверх штаба. Создаются раньше
+       стратегов: в кадре они тикают ДО plan(), чтобы штаб видел свежие
+       заказы городов, а не вчерашние. */
+    this.mayors = new Mayors(this);
     this.strategic = [new StrategicAI(this, 0), new StrategicAI(this, 1)];
     this.events.on('squadRetreat', ({ squad }) => this.battleMemory.onRetreat(squad));
     this.events.on('pointCaptured', ({ point, faction }) => this.battleMemory.onCapture(point, faction));
@@ -904,6 +909,16 @@ export class Game {
     }
 
     this.squadAI.update(dt);
+    /* Решения городов попадают в общую ленту событий: игрок видит
+       «почему», а не только цифры. Одно событие на город за день, чтобы
+       лента не превращалась в поток. */
+    const mayorDecisions = this.mayors.update(dt);
+    if (mayorDecisions && mayorDecisions.length) {
+      for (const d of mayorDecisions.slice(0, 2)) {
+        this.alertLog.push({ kind: 'city', text: d.text, t: this.time });
+      }
+      while (this.alertLog.length > 200) this.alertLog.shift();
+    }
     for (const ai of this.strategic) ai.update(dt);
     this.autopilot.update(dt);
     this.rules.update(dt);

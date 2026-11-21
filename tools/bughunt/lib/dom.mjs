@@ -137,6 +137,40 @@ export class El {
   removeChild(c) { const i = this.children.indexOf(c); if (i >= 0) this.children.splice(i, 1); return c; }
   remove() { if (this.parentNode) this.parentNode.removeChild(this); }
   replaceChildren(...cs) { this.children.length = 0; cs.forEach((c) => this.appendChild(c)); }
+  // ChildNode.replaceWith / .before / .after — стандартный DOM с 2016 года.
+  // Без них эмулятор находил «падение» в честно работающих играх
+  // (collection/16-puzzle заменяет .grid через replaceWith).
+  replaceWith(...nodes) {
+    const parent = this.parentNode;
+    if (!parent) return this;
+    const idx = parent.children.indexOf(this);
+    if (idx < 0) return this;
+    const clean = nodes.filter((n) => n && typeof n === 'object');
+    clean.forEach((n) => { n.parentNode = parent; });
+    parent.children.splice(idx, 1, ...clean);
+    this.parentNode = null;
+    return this;
+  }
+  before(...nodes) {
+    const parent = this.parentNode;
+    if (!parent) return this;
+    const idx = parent.children.indexOf(this);
+    if (idx < 0) return this;
+    const clean = nodes.filter((n) => n && typeof n === 'object');
+    clean.forEach((n) => { n.parentNode = parent; });
+    parent.children.splice(idx, 0, ...clean);
+    return this;
+  }
+  after(...nodes) {
+    const parent = this.parentNode;
+    if (!parent) return this;
+    const idx = parent.children.indexOf(this);
+    if (idx < 0) return this;
+    const clean = nodes.filter((n) => n && typeof n === 'object');
+    clean.forEach((n) => { n.parentNode = parent; });
+    parent.children.splice(idx + 1, 0, ...clean);
+    return this;
+  }
   setAttribute(k, v) {
     this.attributes[k] = String(v);
     if (k === 'id') this.id = String(v);

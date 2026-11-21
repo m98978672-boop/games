@@ -1,19 +1,23 @@
 import * as THREE from 'three';
+import Logic from './logic.js';
 
 const $ = id => document.getElementById(id);
 const SAVE='dalnoboy-3d-save-v1';
-const cities=[['Санкт-Петербург','Новгород','Тверь','Москва','Владимир','Ярославль','Вологда','Псков'],['Нижний Новгород','Казань','Самара','Уфа','Пермь','Ижевск','Киров','Саранск'],['Волгоград','Саратов','Астрахань','Ростов-на-Дону','Краснодар','Воронеж','Элиста','Ставрополь'],['Екатеринбург','Тюмень','Челябинск','Омск','Новосибирск','Томск','Барнаул','Курган'],['Мурманск','Архангельск','Петрозаводск','Сыктывкар','Ухта','Котлас','Апатиты','Онега']];
 const regions=['Северо-Запад','Поволжье','Юг','Урал и Сибирь','Север'];
-const cargoes=[['Продукты',5,12],['Пиломатериалы',10,20],['Стальной прокат',16,27],['Медицинское оборудование',4,12],['Строительная техника',15,25],['Бытовая техника',7,17],['Зерно',12,22],['Мебель',5,14],['Автозапчасти',4,12],['Стекло',9,18],['Электроника',3,10],['Цемент',15,24],['Текстиль',5,14],['Рыбная продукция',7,15],['Трубы',12,20],['Сельхозтехника',16,25],['Фармацевтика',4,11],['Кабель',10,21],['Солнечные панели',6,16],['Бумажные рулоны',10,18],['Кофе и чай',4,12],['Упакованная вода',8,18],['Шины',7,15],['Пластиковая тара',5,13],['Запчасти для станков',10,22]];
-const defaultState={money:24000,fuel:420,oil:100,temp:82,condition:100,engine:100,brakes:100,suspension:100,tires:100,fatigue:0,odometer:0,completed:0,reputation:0,region:0,jobs:[],active:null,speed:0,lateral:0,day:1,minute:500,firstPerson:false,gear:1,gearboxAuto:true,rpm:750};
+const defaultState={money:24000,fuel:420,oil:100,temp:82,condition:100,engine:100,brakes:100,suspension:100,tires:100,fatigue:0,odometer:0,completed:0,reputation:0,region:0,jobs:[],active:null,finalDone:false,endless:false,careerBest:0,speed:0,lateral:0,day:1,minute:500,firstPerson:false,gear:1,gearboxAuto:true,rpm:750};
+// Чистая логика игры подключается до первого использования:
+// const-биндинги не поднимаются, как function, и порядок здесь важен.
+const cities=Logic.CITIES;
+const cargoes=Logic.CARGOES;
+const rand=Logic.rand;
+const makeRoute=Logic.makeRoute;
+const makeJobs=Logic.makeJobs;
+const cash=n=>Math.round(n).toLocaleString('ru-RU')+' ₽';const clamp=Logic.clamp;
+
 let saved={};try{saved=JSON.parse(localStorage.getItem(SAVE)||'{}')}catch{}
 const S={...defaultState,...saved,traffic:[]};if(!Array.isArray(S.jobs)||!S.jobs.length)S.jobs=makeJobs(250);for(const j of S.jobs)if(!Array.isArray(j.route))j.route=makeRoute(j.id||1);if(S.active&&!Array.isArray(S.active.route))S.active.route=makeRoute(S.active.id||1);S.speed=0;S.firstPerson=false;
 let keys=new Set(),paused=false,modalRegion=S.region,toastTimer=0,last=0,worldFlow=0,spawn=0,treeTimer=0, weather=['ЯСНО','ОБЛАЧНО','ДОЖДЬ','ТУМАН'][Math.floor(Math.random()*4)];
-function rand(seed){let n=seed>>>0;return()=>{n=(n*1664525+1013904223)>>>0;return n/4294967296}}
-function makeRoute(seed){const r=rand(6401+seed*31),p=[{x:.5,y:.94}];for(let i=1;i<8;i++)p.push({x:clamp(.5+(r()-.5)*.82,.09,.91),y:.94-i*.118});p.push({x:clamp(.5+(r()-.5)*.7,.14,.86),y:.035});return p}
-function makeJobs(count,start=1){const r=rand(81252+start*733);return Array.from({length:count},(_,i)=>{const region=Math.floor(r()*5),list=cities[region],a=Math.floor(r()*list.length),b=(a+1+Math.floor(r()*(list.length-1)))%list.length,c=cargoes[Math.floor(r()*cargoes.length)],distance=Math.round((70+r()*360)/5)*5,load=+(c[1]+r()*(c[2]-c[1])).toFixed(1),urgent=r()<.17,fragile=['Стекло','Электроника','Фармацевтика'].includes(c[0]),reward=Math.round((distance*(45+r()*16)+load*220+(urgent?6500:0)+(fragile?3500:0))/100)*100;return{id:start+i,region,from:list[a],to:list[b],cargo:c[0],distance,load,reward,urgent,fragile,deadline:Math.round(distance/(urgent?83:57)+r()*1.3),route:makeRoute(start+i+region*99),status:'available'}})}
 function save(){try{localStorage.setItem(SAVE,JSON.stringify(S));$('save-indicator').textContent='● СОХРАНЕНО';setTimeout(()=>$('save-indicator').textContent='● АВТОСОХРАНЕНИЕ',1500)}catch{}}
-const cash=n=>Math.round(n).toLocaleString('ru-RU')+' ₽';function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function toast(text){const n=$('event-toast');n.textContent=text;n.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove('show'),2500)}
 
 // Three.js scene: a lightweight, original low-poly tractor, trailer and highway.
@@ -85,11 +89,79 @@ function ask(text,onYes,opts){opts=opts||{};window.__askYes=onYes;openModal(opts
 document.addEventListener('click',e=>{const b=e.target.closest('[data-ask]');if(!b)return;const yes=b.dataset.ask==='yes';const run=window.__askYes;window.__askYes=null;closeModal();if(yes&&run)run();});
 function openModal(title,sub,html,eyebrow='ДИСПЕТЧЕРСКАЯ'){$('modal-title').textContent=title;$('modal-sub').textContent=sub;$('modal-eyebrow').textContent=eyebrow;$('modal-content').innerHTML=html;$('modal-backdrop').classList.remove('hidden')}
 function closeModal(){$('modal-backdrop').classList.add('hidden')}
-function showJobs(){if(S.active){toast('Сначала заверши текущий рейс');return}if(!S.jobs.some(j=>j.status==='available'))S.jobs.push(...makeJobs(250,S.completed+251));modalRegion=S.region;openModal(`Доступные заказы · ${S.jobs.filter(j=>j.status==='available').length}`,`${S.completed} доставлено · каталог из 250+ контрактов`,regions.map((r,i)=>`<button data-region="${i}" class="${i===modalRegion?'active':''}">${r}</button>`).join('')+'<div class="job-list" id="job-list"></div>');renderJobs()}
+function showJobs(){if(S.active){toast('Сначала заверши текущий рейс');return}if(!S.jobs.some(j=>j.status==='available'))S.jobs.push(...makeJobs(250,S.completed+251));modalRegion=S.region;
+  const careerLen=S.endless||S.finalDone?`${S.completed} доставлено · бесконечные рейсы`:`${S.completed} из ${CAREER_LENGTH} доставок до конца карьеры`;
+  openModal(`Доступные заказы · ${S.jobs.filter(j=>j.status==='available').length}`,careerLen,regions.map((r,i)=>`<button data-region="${i}" class="${i===modalRegion?'active':''}">${r}</button>`).join('')+'<div class="job-list" id="job-list"></div>');renderJobs()}
 function renderJobs(){const target=$('job-list');if(!target)return;const jobs=S.jobs.filter(j=>j.status==='available'&&j.region===modalRegion).slice(0,18);target.innerHTML=jobs.length?jobs.map(j=>`<article class="job-card"><div><h3>${j.from} <span style="color:#9cac80">→</span> ${j.to}</h3><div class="job-meta">${j.distance} км · ${j.load} т · срок ${j.deadline} ч · ${regions[j.region]}</div><div class="job-tags"><span>${j.cargo}</span>${j.urgent?'<span>СРОЧНО</span>':''}${j.fragile?'<span>ХРУПКИЙ ГРУЗ</span>':''}</div></div><div><div class="job-reward">${cash(j.reward)}</div><button data-accept="${j.id}">ВЗЯТЬ ГРУЗ</button></div></article>`).join(''):'<div class="empty-state">В регионе нет доступных предложений. Посмотри другие регионы.</div>'}
 function accept(id){const j=S.jobs.find(x=>x.id===id);if(!j||S.active)return;j.status='active';j.progress=0;j.broken=0;j.startMinute=S.minute;S.active=j;S.region=j.region;S.minute+=10;closeModal();toast('Заказ принят. Тронься с места, чтобы начать рейс.');save();ui()}
 function service(type){if(S.active){toast('Сначала доставь текущий груз');return}const jobs={oil:[1200,()=>S.oil=100,'Масло заменено'],coolant:[850,()=>S.temp=82,'Охлаждающая жидкость обновлена'],repair:[Math.ceil((100-S.condition)*120+(100-S.engine)*220+(100-S.brakes)*100+(100-S.suspension)*130+(100-S.tires)*90),()=>{S.condition=S.engine=S.brakes=S.suspension=S.tires=100},'Тягач отремонтирован'],fuel:[Math.ceil((420-S.fuel)*62),()=>S.fuel=420,'Бак заправлен']}[type];if(!jobs||jobs[0]===0){toast('Обслуживание не требуется');return}if(S.money<jobs[0]){toast('Недостаточно средств');return}S.money-=jobs[0];jobs[1]();save();ui();toast(jobs[2])}
-function finish(){const j=S.active;if(!j)return;const late=S.minute>j.startMinute+j.deadline*60,damage=Math.round(j.broken*j.reward*.5);let pay=Math.max(0,j.reward-damage-(late?Math.round(j.reward*.2):0));S.money+=pay;S.completed++;S.reputation=clamp(S.reputation+(late?-1:2),0,100);j.status='completed';S.active=null;S.speed=0;toast(`${late?'Доставка с опозданием':'Доставка принята'} · ${cash(pay)}`);save();ui()}
+function finish(){const j=S.active;if(!j)return;const late=S.minute>j.startMinute+j.deadline*60,damage=Math.round(j.broken*j.reward*.5);let pay=Math.max(0,j.reward-damage-(late?Math.round(j.reward*.2):0));S.money+=pay;S.completed++;S.reputation=clamp(S.reputation+(late?-1:2),0,100);j.status='completed';S.active=null;S.speed=0;toast(`${late?'Доставка с опозданием':'Доставка принята'} · ${cash(pay)}`);save();ui();if(j.final){showCareerEnd()}else if(S.completed>=CAREER_LENGTH&&!S.finalDone&&!S.endless&&!hasFinalJob()){offerFinalContract()}}
+
+/* ---------------------------------------------- концовка карьеры
+   Игра была бесконечной: рейсы шли один за другим, и «конца» не было
+   ни в каком виде. Теперь у карьеры есть финал. После 25 доставок
+   диспетчерская предлагает последний, особый контракт. Он выдаётся один
+   раз, не сгорает по сроку и оплачивается по полной. После него
+   показывается итог смены с числами, и есть выбор: остаться в игре
+   в режиме бесконечных рейсов или начать карьеру заново. */
+const CAREER_LENGTH=25;
+
+function hasFinalJob(){return S.jobs.some(j=>j.final&&j.status!=='completed')}
+
+function offerFinalContract(){
+  // CITIES — массив регионов, каждый регион — массив названий городов.
+  // Берём первый город первого региона и последний город последнего.
+  const from=(Logic.CITIES[0]&&Logic.CITIES[0][0])||'Санкт-Петербург';
+  const lastRegion=Logic.CITIES[Logic.CITIES.length-1]||[];
+  const to=lastRegion[lastRegion.length-1]||'Онега';
+  const job={
+    id:'final-contract', final:true, from, to,
+    region:regions.length-1,
+    cargo:'Сборный гуманитарный груз',
+    distance:1480, load:18, deadline:48, reward:180000,
+    urgent:false, fragile:true, status:'available',
+    route:makeRoute(424242), progress:0, broken:0, startMinute:0,
+  };
+  S.jobs.push(job);
+  openModal('Последний контракт','Диспетчерская · особое задание',
+    `<div class="notice"><b>${from} → ${to}</b><br>${job.distance} км · ${job.load} т · срок ${job.deadline} ч<br>
+     Оплата ${cash(job.reward)} — это больше, чем любой обычный рейс.<br><br>
+     Это последняя доставка карьеры. Отказаться можно, но другого такого заказа не будет.</div>
+     <button class="modal-action" id="take-final">ВЗЯТЬ ПОСЛЕДНИЙ ГРУЗ</button>`,
+    'КАРЬЕРА');
+  setTimeout(()=>{
+    const b=document.getElementById('take-final');
+    if(b)b.addEventListener('click',()=>{closeModal();accept('final-contract')});
+  },0);
+}
+
+function showCareerEnd(){
+  S.finalDone=true;
+  S.careerBest=Math.max(S.careerBest||0,S.completed);
+  const days=S.day, km=Math.floor(S.odometer), money=cash(S.money), rep=Math.round(S.reputation);
+  const verdict=rep>=70?'Надёжный перевозчик: диспетчеры ставят вас первым в очередь.'
+    :rep>=40?'Опытный водитель: работа есть всегда, но до легенды далеко.'
+    :'Водитель без репутации: были опоздания и битый груз.';
+  openModal('Карьера пройдена',`${S.completed} доставок · день ${days}`,`
+    <div class="notice">
+      <b>Последний рейс принят.</b><br><br>
+      Доставок: <b>${S.completed}</b><br>
+      Пробег: <b>${km.toLocaleString('ru-RU')} км</b><br>
+      Дней в пути: <b>${days}</b><br>
+      Репутация: <b>${rep}/100</b><br>
+      На счету: <b>${money}</b><br><br>
+      ${verdict}
+    </div>
+    <button class="modal-action" id="endless-btn">ОСТАТЬСЯ · БЕСКОНЕЧНЫЕ РЕЙСЫ</button>
+    <button class="modal-action" id="restart-btn" style="margin-left:7px;background:#3c2d2a;color:#f4b6a9">НАЧАТЬ ЗАНОВО</button>`,
+    'ИТОГ КАРЬЕРЫ');
+  setTimeout(()=>{
+    const e=document.getElementById('endless-btn');
+    if(e)e.addEventListener('click',()=>{S.endless=true;closeModal();save();ui();toast('Режим бесконечных рейсов включён')});
+    const r=document.getElementById('restart-btn');
+    if(r)r.addEventListener('click',()=>{localStorage.removeItem(SAVE);location.reload()});
+  },0);
+}
 function rest(){if(S.active){toast('Сначала доставь груз');return}if(S.money<500){toast('Не хватает денег');return}S.money-=500;S.fatigue=0;S.minute+=480;S.day+=Math.floor(S.minute/1440);S.minute%=1440;S.temp=82;save();ui();toast('Отдых 8 часов')}
 
 let cruise=false;S.cruise=false;const gearRatios=[0,2.8,2.1,1.68,1.4,1.2,1.05,.93,.82,.73,.65,.57,.5],shiftUp=[0,10,18,27,37,47,58,69,81,93,105,114,124];
@@ -107,7 +179,7 @@ function syncScene(dt){updateRoadGeometry();sign.position.x=roadCenterAt(115);tr
  scene.fog.color.set(weather==='ТУМАН'?0xd7ddda:weather==='ДОЖДЬ'?0x85999f:0x9ebbc2);scene.fog.near=weather==='ТУМАН'?45:140;scene.fog.far=weather==='ТУМАН'?200:530;scene.background.set(weather==='ЯСНО'?0x83b2cb:weather==='ТУМАН'?0xbac3c0:0x879ea5);
  if(weather==='ДОЖДЬ'&&rainCount){rain.visible=true;const p=rain.geometry.attributes.position;for(let i=0;i<p.count;i++){p.array[i*3+2]+=S.speed/3.6*dt*1.8;p.array[i*3+1]-=dt*19;if(p.array[i*3+1]<0)p.array[i*3+1]=24}p.needsUpdate=true}else rain.visible=false;
 }
-function frame(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;simulate(dt);syncScene(dt);renderer.render(scene,camera);ui();requestAnimationFrame(frame)}
+function frame(t){if(!Number.isFinite(t))t=performance.now();let _r=(t-last)/1000;if(!Number.isFinite(_r)||_r<0)_r=0;const dt=Math.min(.05,_r);last=t;simulate(dt);syncScene(dt);renderer.render(scene,camera);ui();requestAnimationFrame(frame)}
 
 function toggleCamera(){S.firstPerson=!S.firstPerson;toast(S.firstPerson?'Вид из кабины':'Камера снаружи')}
 function toggleCruise(){S.cruise=!S.cruise;toast(S.cruise?'Круиз-контроль включён':'Круиз-контроль выключен')}

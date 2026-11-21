@@ -94,6 +94,9 @@ export class EconomyAndCities {
     }
 
     this.completedMilestones = new Set();
+    /* Финал каскада: показываем один раз на партию. Флаг переживает
+       сохранение — иначе экран всплывал бы после каждой загрузки. */
+    this.finaleShown = false;
     this.hydrology.reset();
 
     this.cities = [];
@@ -899,6 +902,41 @@ export class EconomyAndCities {
         }
       }
     }
+
+    /* Все вехи взяты — это финал игры, а не строчка в списке грантов.
+       Раньше здесь был только текст в панели «все гранты получены». */
+    if (!this.finaleShown && this.completedMilestones.size >= MILESTONES.length) {
+      this.finaleShown = true;
+      if (this.callbacks.onFinale) this.callbacks.onFinale(this.campaignSummary());
+    }
+  }
+
+  /* Итоги каскада для экрана финала. Считаются из состояния, поэтому
+     их можно показать и после загрузки сохранения. */
+  campaignSummary() {
+    const totalPop = this.cities.reduce((s, c) => s + c.population, 0);
+    const connected = this.cities.filter((c) => c.connected).length;
+    const hours = (this.day - 1) * 24 + this.hour;
+    let rank = 'крепкий';
+    if (this.cash >= 400000 && this.totalCO2SavedTons >= 80000) rank = 'образцовый';
+    else if (this.cash >= 250000) rank = 'надёжный';
+    else if (this.cash < 80000) rank = 'трудный';
+    return {
+      day: this.day,
+      hours: Math.round(hours),
+      totalMW: this.totalMW,
+      netMW: this.netDeliveredMW,
+      cities: connected,
+      totalCities: this.cities.length,
+      population: totalPop,
+      cash: this.cash,
+      loan: this.loan,
+      co2: this.totalCO2SavedTons,
+      buildings: this.allBuildings.length,
+      milestones: this.completedMilestones.size,
+      totalMilestones: MILESTONES.length,
+      rank,
+    };
   }
 
   getSummary() {

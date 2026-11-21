@@ -287,6 +287,10 @@ export const Save = {
       })),
       stock: game.logistics.stock,
       battleMemoryRecent: game.battleMemory?.saveRecent() || null,
+      /* Мэры городов: бюджет, настроение, накопленные укрепления и
+         журнал «почему». Без этого после загрузки города забывали, что
+         уже решили и что пережили, и начинали день с чистого листа. */
+      mayors: game.mayors?.toJSON?.() || null,
       squads, units,
     };
     // Расширение необязательно: старый формат и ветка с выключенным флагом не меняются.
@@ -507,6 +511,7 @@ export const Save = {
     if (ext && Number.isInteger(ext.rngState) && ext.rngState >= 0 && ext.rngState <= 0xffffffff) game.rng.s = ext.rngState;
     game.time = ext && Number.isFinite(ext.exactTime) && ext.exactTime >= 0 ? ext.exactTime : data.time || 0;
     game.battleMemory?.restoreRecent(data.battleMemoryRecent);
+    game.mayors?.load?.(data.mayors);
     game.stats = data.stats || game.stats;
     return true;
   },

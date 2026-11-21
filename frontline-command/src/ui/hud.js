@@ -115,6 +115,10 @@ export class HUD {
           <div class="panel-head"><span>Журнал приказов</span><span style="color:#6f7a66">Command API</span></div>
           <div class="journal" id="hud-journal"></div>
         </div>
+        <div class="panel">
+          <div class="panel-head"><span>Города</span><span id="hud-mayors-day" style="color:#6f7a66">мэры</span></div>
+          <div class="feed" id="hud-mayors"></div>
+        </div>
       </div>
 
       <div class="hud-bottom">
@@ -207,6 +211,8 @@ export class HUD {
       squadCount: this.root.querySelector('#hud-squad-count'),
       feed: this.root.querySelector('#hud-feed'),
       journal: this.root.querySelector('#hud-journal'),
+      mayors: this.root.querySelector('#hud-mayors'),
+      mayorsDay: this.root.querySelector('#hud-mayors-day'),
       selection: this.root.querySelector('#hud-selection'),
       orders: this.root.querySelector('#hud-orders'),
       minimap: this.root.querySelector('#hud-minimap canvas'),
@@ -467,6 +473,7 @@ export class HUD {
     this.renderSelection();
     this.renderFeed();
     this.renderJournal();
+    this.renderMayors();
     this.renderMinimap();
     if (this.el.apPanel.classList.contains('show')) this.refreshAutopilot();
     if (this.buildMode) {
@@ -560,6 +567,27 @@ export class HUD {
     const game = this.game;
     const alerts = game.alertLog.slice(-14).reverse();
     this.el.feed.innerHTML = alerts.map((a) => `<div class="kind-${a.kind}"><time>${Math.floor(a.t / 60)}:${String(Math.floor(a.t % 60)).padStart(2, '0')}</time>${a.text}</div>`).join('');
+  }
+
+  /* Города живут поверх штаба: панель показывает последнее решение
+     мэра с его «почему» и сводку по всем городам. Если мэры отключены
+     конфигурацией, панель честно говорит об этом, а не показывает
+     вчерашние цифры. */
+  renderMayors() {
+    if (!this.el.mayors) return;
+    const mayors = this.game.mayors;
+    if (!mayors || !mayors.enabled || !mayors.size) {
+      this.el.mayors.innerHTML = '<div>Мэры отключены</div>';
+      this.el.mayorsDay.textContent = 'мэры';
+      return;
+    }
+    const s = mayors.stats();
+    this.el.mayorsDay.textContent = `день ${s.day}`;
+    const headline = mayors.headline();
+    this.el.mayors.innerHTML = `
+      ${headline ? `<div class="kind-capture">${headline}</div>` : '<div>Города пока молчат</div>'}
+      <div>Городов: ${s.count} · решений: ${s.decisions} · под огнём: ${s.underFire}</div>
+      <div>Настроение ${Math.round(s.mood * 100)}% · бюджет ${Math.round(s.budget * 100)}% · пробки ${Math.round(s.jams * 100)}%</div>`;
   }
 
   renderJournal() {

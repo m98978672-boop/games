@@ -147,6 +147,7 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
     for (let i = 0; i < 900; i++) game.update(1 / 60);
     result.delivered = game.sim.state.stats.delivered;
     result.orders = game.sim.state.orders.length;
+
     // Карточки бригады и карточка выбранного не должны пересобираться:
     // иначе анимации и переходы полосок перезапускаются каждые 110 мс.
     const doc = window.document;
@@ -208,6 +209,48 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       window.WC.ui.sheet.set('hidden', true);
       result.sheetHidden = body.getAttribute('data-sheet');
     }
+
+    // Коробки стоят на опоре: раньше их ставили на фиксированные 0.13 м,
+    // из-за чего любая коробка висела в воздухе, а после переноски ещё и
+    // улетала вслед за рабочим (оставалась ребёнком carryAnchor).
+    const box3 = new THREE.Box3();
+    let sunk = 0, hovering = 0, stray = 0, seen = 0;
+    const slots = game.sim.state.slots;
+    for (let i = 0; i < 60 * 30; i++) {
+      game.update(1 / 30);
+      window.WC.world.render(1 / 30, game);
+      if (i % 12) continue;
+      window.WC.world.scene.updateMatrixWorld(true);
+      const byId = new Map(game.sim.state.orders.map((o) => [o.id, o]));
+      window.WC.world.scene.traverse((obj) => {
+        if (!obj.userData || !obj.userData.orderId) return;
+        const order = byId.get(obj.userData.orderId);
+        if (!order || !obj.visible) return;
+        box3.setFromObject(obj);
+        seen += 1;
+        // Паллеты приёмки (0.12) и площадки доков (0.09) тоже держат коробку.
+        let support = order.truckId ? 0.09 : (order.intake != null && !order.drops ? 0.12 : 0);
+        if (order.status === 'stored') {
+          const slot = slots.find((s) => s.id === order.slotId);
+          support = slot ? slot.h + 0.025 : 0;
+          if (obj.parent !== window.WC.world.scene) stray += 1;
+        }
+        if (order.status === 'carried') {
+          const carrier = game.api.crew.find((w) => w.state.id === order.carrier);
+          if (carrier) {
+            const c = box3.getCenter(new THREE.Vector3());
+            if (Math.hypot(c.x - carrier.state.pos.x, c.z - carrier.state.pos.y) > 1.6) stray += 1;
+          }
+        } else {
+          if (box3.min.y < support - 0.06) sunk += 1;
+          if (box3.min.y > support + 0.06) hovering += 1;
+        }
+      });
+    }
+    result.boxSamples = seen;
+    result.boxSunk = sunk;
+    result.boxHovering = hovering;
+    result.boxStray = stray;
   }
   window.close();
   return result;
@@ -254,6 +297,10 @@ for (const mode of modes) {
   check(r.errors.length === 0, 'ни одной ошибки в консоли', { errors: r.errors.slice(0, 3) });
   if (r.ready) {
     check(r.orders > 0, 'заказы появляются на приёмке', { orders: r.orders });
+  check(r.boxSamples > 200, 'коробки вообще рисуются', { samples: r.boxSamples });
+  check(r.boxSunk === 0 && r.boxHovering === 0, 'коробки стоят на опоре (не тонут и не летают)',
+    { sunk: r.boxSunk, hovering: r.boxHovering });
+  check(r.boxStray === 0, 'коробку не уносит за рабочим после переноски', { stray: r.boxStray });
     // У запасного (синтетического) мозга качество случайное — требуем доставку
     // только там, где загружены обученные веса.
     if (mode.allowInline) check(r.delivered > 0, 'смена идёт, заказы доставляются', { delivered: r.delivered });

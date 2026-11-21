@@ -144,6 +144,60 @@ export function buildPrimitiveGeometry(opts = {}) {
     return finalizeGeometry(pos, idx, null, color);
   }
 
+  // torus: кольцо, а не сфера. Раньше неизвестный вид молча уходил в сферу,
+  // и «тор» с плоскостью выглядели как шар — молчаливая подмена.
+  if (kind === 'torus') {
+    const ringR = Math.max(0.05, Number(opts.radius ?? opts.r ?? 0.5));
+    const tubeR = Math.max(0.01, Number(opts.tube ?? 0.18));
+    const ringSeg = Math.max(6, Number(opts.segments ?? 16) | 0);
+    const tubeSeg = Math.max(4, Number(opts.tubeSegments ?? 10) | 0);
+    const base = pos.length / 3;
+    for (let i = 0; i <= ringSeg; i++) {
+      const u = (i / ringSeg) * Math.PI * 2;
+      for (let j = 0; j <= tubeSeg; j++) {
+        const v = (j / tubeSeg) * Math.PI * 2;
+        const rr = ringR + tubeR * Math.cos(v);
+        pos.push(rr * Math.cos(u), tubeR * Math.sin(v) + tubeR, rr * Math.sin(u));
+      }
+    }
+    const stride = tubeSeg + 1;
+    for (let i = 0; i < ringSeg; i++) {
+      for (let j = 0; j < tubeSeg; j++) {
+        const a = base + i * stride + j;
+        const b = a + 1;
+        const c = a + stride;
+        const d = c + 1;
+        idx.push(a, c, b, b, c, d);
+      }
+    }
+    return finalizeGeometry(pos, idx, null, color);
+  }
+
+  // plane: плоский прямоугольник с толщиной 0, отдельная деталь, не сфера.
+  if (kind === 'plane') {
+    const hx = sx * 0.5;
+    const hz = sz * 0.5;
+    pos.push(-hx, 0, -hz, hx, 0, -hz, hx, 0, hz, -hx, 0, hz);
+    idx.push(0, 2, 1, 0, 3, 2);
+    const geom = finalizeGeometry(pos, idx, null, color);
+    // Плоскости придают нормаль вверх: иначе освещение «съедает» её.
+    const n = geom.buffers.normals;
+    for (let i = 0; i < n.length; i += 3) {
+      n[i] = 0; n[i + 1] = 1; n[i + 2] = 0;
+    }
+    return geom;
+  }
+
+  // Неизвестный вид — явный отказ, а не молчаливая сфера. Подмена была
+  // настоящим багом: «torus» и «plane» возвращали шар с чужими габаритами.
+  if (kind !== 'sphere') {
+    throw new RatCoreError(
+      'RC-202',
+      `Неизвестный вид примитива: ${kind}`,
+      'Доступны: box, roof, cylinder, cone, torus, plane, sphere. Укажи kind корректно.'
+    );
+  }
+
   // sphere
   const rings = Math.max(4, Math.floor(segments / 2));
   const cols = Math.max(6, segments | 0);

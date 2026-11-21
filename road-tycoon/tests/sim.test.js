@@ -293,6 +293,53 @@ test('10 игровых дней на стартовой сети без NaN', (
   ok(s.vehicles.length <= C.maxVehicles, 'машин не больше лимита');
 });
 
+test('битый dt не отравляет партию', () => {
+  const s = Sim.newGame(21);
+  const before = s.time;
+  // NaN и Infinity приходят из requestAnimationFrame в нештатных ситуациях.
+  // Раньше `NaN <= 0` было ложью, NaN попадал в s.time и ломал сохранение.
+  Sim.tick(s, NaN);
+  Sim.tick(s, Infinity);
+  Sim.tick(s, undefined);
+  finite(s.time, 'время после битого dt');
+  ok(s.time === before, 'время не сдвинулось от битого dt');
+  Sim.tick(s, 0.05);
+  ok(Number.isFinite(s.time) && s.time > before, 'нормальный тик по-прежнему работает');
+});
+
+test('испорченное сохранение чинится, а не наследует NaN', () => {
+  const s = Sim.newGame(22);
+  s.time = NaN;
+  Sim.tick(s, 0.05);
+  finite(s.time, 'время восстановлено');
+  ok(s.time >= C.dayStartHour / 24, 'время откатилось к началу дня');
+});
+
+
+test('карточка итогов дня не прячется под тостами', () => {
+  // В PLAN.md этот баг был записан как известное ограничение: на телефоне
+  // всплывающие сообщения ложились поверх цифр отчёта. Проверяем порядок слоёв.
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+  const z = (selector) => {
+    const re = new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\{([^}]*)\\}', 'g');
+    let last = null, m;
+    while ((m = re.exec(css))) {
+      const hit = /z-index:\s*(\d+)/.exec(m[1]);
+      if (hit) last = Number(hit[1]);
+    }
+    return last;
+  };
+  const daily = z('.daily:not(.hidden)');
+  const toasts = z('.toasts');
+  ok(daily !== null, 'у карточки итогов дня задан слой');
+  ok(toasts !== null, 'у тостов задан слой');
+  ok(daily > toasts, 'отчёт дня выше тостов (' + daily + ' > ' + toasts + ')');
+  // На телефоне тосты ещё и уступают место по вертикали.
+  ok(/#daily:not\(\.hidden\) ~ \.toasts/.test(css), 'на телефоне тосты сдвигаются от карточки');
+});
+
 console.log('\n' + passed + ' тестов прошло, ' + failures.length + ' упало');
 if (failures.length) {
   console.log('\nПадения:');
