@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-20T23:56:28.395Z",
+  "updatedAt": "2026-11-21T08:18:34.700Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
-    "lastRunAt": "2026-11-20T23:28:04.974Z",
+    "lastRunAt": "2026-11-21T04:38:04.913Z",
     "sourcesCount": 11,
     "verifiedArticlesCount": 19,
     "commentSyncTools": [
@@ -19,14 +19,14 @@
     ],
     "mode": "verified-editorial+auto-rss",
     "workflow": ".github/workflows/auto-news.yml",
-    "totalRuns": 9,
-    "lastSourcesReachable": 11,
+    "totalRuns": 10,
+    "lastSourcesReachable": 10,
     "categoriesCount": 6,
     "backlog": {
-      "total": 128,
-      "now": 65,
+      "total": 122,
+      "now": 59,
       "future": 63,
-      "builtAt": "2026-11-20T23:56:28.395Z",
+      "builtAt": "2026-11-21T08:18:34.700Z",
       "note": "Статьи очереди «на будущее» лежат с датой вперёд и раскрываются по расписанию автопоста."
     }
   },
@@ -2409,6 +2409,262 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
+      "id": "auto-lenta-top-92e1db5859",
+      "code": "W-985",
+      "category": "world",
+      "title": "Европейских лидеров на встрече «коалиции желающих» описали словами «как дети»",
+      "summary": "Европейских лидеров на встрече «коалиции желающих» описали словами «как дети»",
+      "body": [
+        "Европейских лидеров на встрече «коалиции желающих» описали словами «как дети». Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Интернет и СМИ"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/21/evropeyskih-liderov-na-vstreche-koalitsii-zhelayuschih-opisali-slovami-kak-deti/",
+      "publishedAt": "2026-11-21T04:32:45.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/21/evropeyskih-liderov-na-vstreche-koalitsii-zhelayuschih-opisali-slovami-kak-deti/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-985.svg",
+      "imageCaption": "Обложка рубрики: Европейских лидеров на встрече «коалиции желающих» описали словами «ка",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-ea1b29f9ae",
+      "code": "W-805",
+      "category": "world",
+      "title": "Россиянам дали советы по уплате налогов до 1 декабря",
+      "summary": "Россиянам дали советы по уплате налогов до 1 декабря",
+      "body": [
+        "Россиянам дали советы по уплате налогов до 1 декабря. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Экономика"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/20/rossiyanam-dali-sovety-po-uplate-nalogov-do-1-dekabrya/",
+      "publishedAt": "2026-11-21T04:30:23.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/20/rossiyanam-dali-sovety-po-uplate-nalogov-do-1-dekabrya/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-805.svg",
+      "imageCaption": "Обложка рубрики: Россиянам дали советы по уплате налогов до 1 декабря",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-265cca31cb",
+      "code": "T-934",
+      "category": "tech",
+      "title": "Выпуск интегрированной среды разработки Apache NetBeans 32",
+      "summary": "Во второй половине ноября 2026 года состоялся релиз интегрированной среды разработки Apache NetBeans 32 . Проект имеет поддержку языков программирования Java SE, Java EE, PHP, C/C++, JavaScript, Rust и Groovy. Готовые сб",
+      "body": [
+        "Во второй половине ноября 2026 года состоялся релиз интегрированной среды разработки Apache NetBeans 32 . Проект имеет поддержку языков программирования Java SE, Java EE, PHP, C/C++, JavaScript, Rust и Groovy. Готовые сборки проекта NetBeans 32 сформированы для скачивания под Linux ( snapcraft.io , flathub ), Windows и macOS. Исходный код решения написан в основном на Java и опубликован на GitHub под лицензией Apache License 2.0."
+      ],
+      "tags": [
+        "Apache NetBeans"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1110264/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110264",
+      "publishedAt": "2026-11-21T04:26:25.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1110264/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110264"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-934.svg",
+      "imageCaption": "Обложка рубрики: Выпуск интегрированной среды разработки Apache NetBeans 32",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-305c294800",
+      "code": "W-705",
+      "category": "world",
+      "title": "Стало известно об изменении предпочтений россиян при покупке вина",
+      "summary": "Стало известно об изменении предпочтений россиян при покупке вина",
+      "body": [
+        "Стало известно об изменении предпочтений россиян при покупке вина. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Экономика"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/21/stalo-izvestno-ob-izmenenii-predpochteniy-rossiyan-pri-pokupke-vina/",
+      "publishedAt": "2026-11-21T04:23:25.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/21/stalo-izvestno-ob-izmenenii-predpochteniy-rossiyan-pri-pokupke-vina/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-705.svg",
+      "imageCaption": "Обложка рубрики: Стало известно об изменении предпочтений россиян при покупке вина",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-558a667a86",
+      "code": "W-754",
+      "category": "world",
+      "title": "«Держим под прицелом». В подготовке ударов ВСУ по Крымскому мосту заподозрили несколько стран. Какой ответ готовит Россия?",
+      "summary": "«Держим под прицелом». В подготовке ударов ВСУ по Крымскому мосту заподозрили несколько стран. Какой ответ готовит Россия?",
+      "body": [
+        "«Держим под прицелом». В подготовке ударов ВСУ по Крымскому мосту заподозрили несколько стран. Какой ответ готовит Россия?. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Бывший СССР"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/21/long-derzhim-pod-pritselom-v-podgotovke-udarov-vsu-po-krymskomu-mostu-zapodozrili-neskolko-stran-kakoy-otvet-gotovit-rossiya/",
+      "publishedAt": "2026-11-21T04:21:23.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/21/long-derzhim-pod-pritselom-v-podgotovke-udarov-vsu-po-krymskomu-mostu-zapodozrili-neskolko-stran-kakoy-otvet-gotovit-rossiya/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-754.svg",
+      "imageCaption": "Обложка рубрики: «Держим под прицелом». В подготовке ударов ВСУ по Крымскому мосту запо",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-bbc-world-811c650e91",
+      "code": "W-883",
+      "category": "world",
+      "title": "Russian missile hits Poland as Ukraine's allies hold military exercise, says Tusk",
+      "summary": "Nobody was hurt and no damage has been reported, but Warsaw described the incident as a \"provocation\" from Moscow.",
+      "body": [
+        "Nobody was hurt and no damage has been reported, but Warsaw described the incident as a \"provocation\" from Moscow."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/cqx2x9dklxnro?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-21T02:09:46.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/cqx2x9dklxnro?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-883.svg",
+      "imageCaption": "Обложка рубрики: Russian missile hits Poland as Ukraine's allies hold military exercise",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-c52d91fb48",
+      "code": "T-844",
+      "category": "tech",
+      "title": "Логотип NVIDIA: пригреть змею на груди",
+      "summary": "Научимся различать CPU и GPU по функциям мозга.",
+      "body": [
+        "Научимся различать CPU и GPU по функциям мозга.",
+        "Разберемся с логотипом и названием, научимся не завидовать и завидовать правильно. Узнаем для чего нужно пригреть змею на груди."
+      ],
+      "tags": [
+        "nvidia",
+        "brending",
+        "logotype",
+        "design"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1110574/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110574",
+      "publishedAt": "2026-11-21T00:51:57.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1110574/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110574"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-844.svg",
+      "imageCaption": "Обложка рубрики: Логотип NVIDIA: пригреть змею на груди",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
       "id": "auto-habr-news-bd7f78c6e3",
       "code": "T-866",
       "category": "tech",
@@ -2825,6 +3081,42 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
+      "id": "auto-3dnews-9c2063f72b",
+      "code": "T-862",
+      "category": "tech",
+      "title": "Micron собралась поставить память прямо на процессоры — многослойная DRAM появится в 2028–2029 годах",
+      "summary": "Многослойная оперативная память, размещаемая непосредственно поверх чипов ИИ-ускорителей, может появиться на рынке в 2028–2029 годах. Такой прогноз представил технический директор Micron Скотт Дебоер (Scott DeBoer), отме",
+      "body": [
+        "Многослойная оперативная память, размещаемая непосредственно поверх чипов ИИ-ускорителей, может появиться на рынке в 2028–2029 годах. Такой прогноз представил технический директор Micron Скотт Дебоер (Scott DeBoer), отметив, что новая технология позволит значительно увеличить пропускную способность памяти и снизить энергозатраты на передачу данных. Источник изображения: Micron Technology"
+      ],
+      "tags": [
+        "- процессоры"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151620",
+      "publishedAt": "2026-11-20T21:30:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151620"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-862.svg",
+      "imageCaption": "Обложка рубрики: Micron собралась поставить память прямо на процессоры — многослойная D",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
       "id": "auto-stopgame-4fdf730a8b",
       "code": "G-756",
       "category": "games",
@@ -2974,6 +3266,42 @@
       "autoPosted": true,
       "image": "site/assets/news/g-859.svg",
       "imageCaption": "Обложка рубрики: Denuvo не смогла победить обход через гипервизор, Call of Duty: Modern",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-a472cfcb30",
+      "code": "T-932",
+      "category": "tech",
+      "title": "Китай докатился до пещерных технологий в энергетике — запущен первый в мире аккумулятор на сжатом в рукотворном подземелье воздухе",
+      "summary": "Практика закачивать под землю воздух в периоды пиковой выработки энергии от возобновляемых источников, чтобы потом с его помощью получать электричество по требованию — это не что-то новое. Для этого принято использовать ",
+      "body": [
+        "Практика закачивать под землю воздух в периоды пиковой выработки энергии от возобновляемых источников, чтобы потом с его помощью получать электричество по требованию — это не что-то новое. Для этого принято использовать соляные пещеры или заброшенные выработки. Но китайцы пошли дальше — они не ждут милости от природы и геологии, а роют пещеры для аккумуляторов там, где им нужно. Источник изображения: Energy China"
+      ],
+      "tags": [
+        "- окружающая среда"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151621",
+      "publishedAt": "2026-11-20T20:29:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151621"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-20",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-932.svg",
+      "imageCaption": "Обложка рубрики: Китай докатился до пещерных технологий в энергетике — запущен первый в",
       "imageCredit": "Games News · локальная обложка"
     },
     {
@@ -3602,346 +3930,6 @@
       "image": "site/assets/news/s-826.svg",
       "imageCaption": "Обложка рубрики: NASA Honor Awards Ceremony Recognizes Employees at Stennis Space Cente",
       "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nasa-8205576d77",
-      "code": "S-705",
-      "category": "science",
-      "title": "NASA’s Curiosity Mars Rover Collects Samples",
-      "summary": "This Nov. 16 collage shows 49 drill holes captured by NASA’s Curiosity Mars rover as of November 2026. Each hole represents a sample collected from rocks on the Martian surface; Curiosity’s drill, located on the end of i",
-      "body": [
-        "This Nov. 16 collage shows 49 drill holes captured by NASA’s Curiosity Mars rover as of November 2026. Each hole represents a sample collected from rocks on the Martian surface; Curiosity’s drill, located on the end of its robotic arm, drops pulverized rock samples into instruments in its belly that analyze their composition.",
-        "Learn more about Curiosity.",
-        "Image credit: NASA/JPL-Caltech/MSSS"
-      ],
-      "tags": [
-        "NASA"
-      ],
-      "sourceName": "NASA",
-      "sourceUrl": "https://www.nasa.gov/image-article/nasas-curiosity-mars-rover-collects-samples/",
-      "publishedAt": "2026-11-20T15:53:24.000Z",
-      "readMin": 1,
-      "icon": "🚀",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (NASA)",
-          "url": "https://www.nasa.gov/image-article/nasas-curiosity-mars-rover-collects-samples/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-705.svg",
-      "imageCaption": "Обложка рубрики: NASA’s Curiosity Mars Rover Collects Samples",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nplus1-3e5fa49f10",
-      "code": "S-845",
-      "category": "science",
-      "title": "Сердцевидка покаталась на тюленьих усах",
-      "summary": "Зоологи встретили на северном побережье Франции обыкновенного тюленя, на морде которого расположился, зажав между створок три вибриссы, небольшой двустворчатый моллюск — съедобная сердцевидка. Вероятно, зверь обзавелся «",
-      "body": [
-        "Зоологи встретили на северном побережье Франции обыкновенного тюленя, на морде которого расположился, зажав между створок три вибриссы, небольшой двустворчатый моллюск — съедобная сердцевидка. Вероятно, зверь обзавелся «пассажиром», когда охотился на рыбу у морского дна. Исследователи предполагают, что сердцевидка прикрепилась к тюленьей морде случайно. Однако в результате она получила шанс расселиться на несколько десятков километров — намного дальше, чем могла бы добраться самостоятельно. Таким образом, ее поведение можно считать примером форезии. Резу"
-      ],
-      "tags": [
-        "N+1 Наука"
-      ],
-      "sourceName": "N+1 Наука",
-      "sourceUrl": "https://nplus1.ru/news/2026/11/20/possible-phoretic-association-between-cockles-and-seals",
-      "publishedAt": "2026-11-20T15:46:00.000Z",
-      "readMin": 1,
-      "icon": "🔬",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (N+1 Наука)",
-          "url": "https://nplus1.ru/news/2026/11/20/possible-phoretic-association-between-cockles-and-seals"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-845.svg",
-      "imageCaption": "Обложка рубрики: Сердцевидка покаталась на тюленьих усах",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nplus1-5276b8ffe0",
-      "code": "S-860",
-      "category": "science",
-      "title": "Недоказательная медицина",
-      "summary": "В 2009 году расследование показало, что как минимум 21 публикация анестезиолога Скотта Ройбена содержала фальсифицированные данные. Он был одним из авторитетных специалистов в своей области, поэтому масштаб последствий б",
-      "body": [
-        "В 2009 году расследование показало, что как минимум 21 публикация анестезиолога Скотта Ройбена содержала фальсифицированные данные. Он был одним из авторитетных специалистов в своей области, поэтому масштаб последствий был особенно неприятным: после скандала обоснованность применения НПВС для купирования послеоперационной боли оказалась под сомнением. Впоследствии на суде Ройбен признал себя виновным в фальсификации медицинских исследований. Это пример того, как некачественное исследование успело стать частью доказательной медицины. И он не единственный."
-      ],
-      "tags": [
-        "N+1 Наука"
-      ],
-      "sourceName": "N+1 Наука",
-      "sourceUrl": "https://nplus1.ru/material/2026/11/20/faked-medical-research",
-      "publishedAt": "2026-11-20T15:00:00.000Z",
-      "readMin": 1,
-      "icon": "🔬",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (N+1 Наука)",
-          "url": "https://nplus1.ru/material/2026/11/20/faked-medical-research"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-860.svg",
-      "imageCaption": "Обложка рубрики: Недоказательная медицина",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-lenta-top-24f2d6958f",
-      "code": "W-924",
-      "category": "world",
-      "title": "Трамп в телефонном разговоре с европейскими союзниками поставил под сомнение помощь Киеву",
-      "summary": "Трамп в телефонном разговоре с европейскими союзниками поставил под сомнение помощь Киеву",
-      "body": [
-        "Трамп в телефонном разговоре с европейскими союзниками поставил под сомнение помощь Киеву. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Мир"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/20/tramp-v-telefonnom-razgovore-s-evropeyskimi-soyuznikami-postavil-pod-somnenie-pomosch-kievu/",
-      "publishedAt": "2026-11-20T14:27:49.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/20/tramp-v-telefonnom-razgovore-s-evropeyskimi-soyuznikami-postavil-pod-somnenie-pomosch-kievu/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-924.svg",
-      "imageCaption": "Обложка рубрики: Трамп в телефонном разговоре с европейскими союзниками поставил под со",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-lenta-top-133fbef822",
-      "code": "W-764",
-      "category": "world",
-      "title": "ВС России ударили по логистическому центру в Черниговской области",
-      "summary": "ВС России ударили по логистическому центру в Черниговской области",
-      "body": [
-        "ВС России ударили по логистическому центру в Черниговской области. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Россия"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/20/vs-rossii-udarili-po-logisticheskomu-tsentru-v-chernigovskoy-oblasti/",
-      "publishedAt": "2026-11-20T14:27:36.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/20/vs-rossii-udarili-po-logisticheskomu-tsentru-v-chernigovskoy-oblasti/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-764.svg",
-      "imageCaption": "Обложка рубрики: ВС России ударили по логистическому центру в Черниговской области",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-lenta-top-760021e995",
-      "code": "W-867",
-      "category": "world",
-      "title": "Евросоюз предупредили об одной опасной зависимости",
-      "summary": "Евросоюз предупредили об одной опасной зависимости",
-      "body": [
-        "Евросоюз предупредили об одной опасной зависимости. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Экономика"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/20/evrosoyuz-predupredili-ob-odnoy-opasnoy-zavisimosti/",
-      "publishedAt": "2026-11-20T14:25:00.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/20/evrosoyuz-predupredili-ob-odnoy-opasnoy-zavisimosti/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-867.svg",
-      "imageCaption": "Обложка рубрики: Евросоюз предупредили об одной опасной зависимости",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-habr-news-255a5a915e",
-      "code": "T-993",
-      "category": "tech",
-      "title": "Как провести нагрузочное тестирование правильно. Часть 3: мифы и типичные ошибки",
-      "summary": "Это третья часть серии статей о нагрузочном тестировании. В первых двух частях мы разобрались, как правильно думать о тестировании производительности и для чего оно вообще нужно бизнесу. Сегодня поговорим о мифах, которы",
-      "body": [
-        "Это третья часть серии статей о нагрузочном тестировании. В первых двух частях мы разобрались, как правильно думать о тестировании производительности и для чего оно вообще нужно бизнесу. Сегодня поговорим о мифах, которые мешают выстроить процесс правильно, и о типичных ошибках, которые встречаются в проектах слишком часто."
-      ],
-      "tags": [
-        "нагрузочное тестирование",
-        "тестирование"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/companies/lemana_tech/articles/1110390/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110390",
-      "publishedAt": "2026-11-20T14:22:38.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/companies/lemana_tech/articles/1110390/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110390"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-993.svg",
-      "imageCaption": "Обложка рубрики: Как провести нагрузочное тестирование правильно. Часть 3: мифы и типич",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-habr-news-ad8647a8ab",
-      "code": "T-964",
-      "category": "tech",
-      "title": "«Недействительная схема (ai-catalog.json)» в Google PageSpeed Insights: как исправить за 10 минут",
-      "summary": "В Google PageSpeed Insights (PSI), в категории «Агентный просмотр», раздел «Доступность для агентов», появляется ошибка:",
-      "body": [
-        "В Google PageSpeed Insights (PSI), в категории «Агентный просмотр», раздел «Доступность для агентов», появляется ошибка:",
-        "Недействительная схема (ai-catalog.json) Не удалось загрузить файл каталога для проверки схемы.",
-        "Заголовок говорит «схема недействительна», и я первым делом искал ошибку в JSON. Её не было, потому что не было самого файла. Ответ — в красной приписке: PSI не смог файл даже загрузить."
-      ],
-      "tags": [
-        "seo",
-        "pagespeed",
-        "lighthouse"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1110456/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110456",
-      "publishedAt": "2026-11-20T14:22:28.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1110456/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110456"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-964.svg",
-      "imageCaption": "Обложка рубрики: «Недействительная схема (ai-catalog.json)» в Google PageSpeed Insights",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-habr-news-1087533dfa",
-      "code": "T-965",
-      "category": "tech",
-      "title": "Google выбрала ракету Blue Origin для запуска спутников с ИИ-чипами",
-      "summary": "Google договорилась с Blue Origin о первом отдельном запуске тяжёлой ракеты для Project Suncatcher. В первом квартале 2029 года New Glenn должна вывести на орбиту несколько спутников с ИИ-ускорителями Google. По оценке к",
-      "body": [
-        "Google договорилась с Blue Origin о первом отдельном запуске тяжёлой ракеты для Project Suncatcher. В первом квартале 2029 года New Glenn должна вывести на орбиту несколько спутников с ИИ-ускорителями Google. По оценке компании, каждый аппарат будет сопоставим по вычислительной мощности с одной серверной стойкой в обычном дата-центре."
-      ],
-      "tags": [
-        "космос",
-        "google",
-        "project suncatcher",
-        "blue origin"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/companies/speshu_ai/articles/1110454/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110454",
-      "publishedAt": "2026-11-20T14:21:07.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/companies/speshu_ai/articles/1110454/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110454"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-20",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-965.svg",
-      "imageCaption": "Обложка рубрики: Google выбрала ракету Blue Origin для запуска спутников с ИИ-чипами",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
     },
     {
       "id": "s301-voyager-1-one-light-day",
