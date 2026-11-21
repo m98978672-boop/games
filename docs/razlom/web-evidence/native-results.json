@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 46.632,
+  "elapsedSeconds": 47.107,
   "checks": [
     {
       "name": "import",
@@ -149,8 +149,8 @@
     },
     {
       "name": "character-story",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -159,9 +159,11 @@
         "--script",
         "res://tests/character_story.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nCharacter/story checks: 46; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nCharacter/story checks: 47; failures: 1\nFAIL: NPC sleeves overlap their shoulder sockets instead of floating beyond the torso\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: NPC sleeves overlap their shoulder sockets instead of floating beyond the torso"
+      ]
     },
     {
       "name": "touch-camera",
@@ -292,7 +294,7 @@
       "unexpectedDiagnostics": []
     }
   ],
-  "passed": true,
+  "passed": false,
   "limitations": [
     "Headless dummy renderer; no image/audio validation",
     "Automated mission uses teleportation and frozen enemy ticks for isolation",
