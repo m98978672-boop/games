@@ -51,6 +51,26 @@ func run_tests() -> void:
 	check(not player.can_fire(), "Severely wounded firing arm remains disabled")
 	check(player.begin_heal() and game.state.right_arm_wound == 0, "First aid restores wounded arm function")
 	var guard = game.enemies[0]
+	var support_hand: Node3D = guard.carried_weapon.get_node("LeftHand") as Node3D
+	var support_hand_local := support_hand.transform
+	check(guard.carried_weapon.get_parent() == guard.visual, "Guard rifle is parented to the stable body root, not a swinging sleeve")
+	for blend in [0.0, 0.25, 0.5, 0.75, 1.0]:
+		guard.arm_wounds = Vector2.ZERO
+		guard.update_arm_pose(1.0 / 60.0, blend, 0.0)
+		var left_grip: Vector3 = guard.visual.to_local(support_hand.global_position)
+		var right_grip: Vector3 = guard.visual.to_local(guard.carried_weapon.get_node("RightHand").global_position)
+		check(guard.left_arm.wrist.distance_to(left_grip) < 0.002 and guard.right_arm.wrist.distance_to(right_grip) < 0.002, "Both guard wrists track the same-frame rifle grips throughout its raise arc")
+		check(absf(guard.left_arm.elbow.distance_to(Vector3(-0.3, 1.3, 0)) - 0.52) < 0.002 and absf(guard.left_arm.elbow.distance_to(guard.left_arm.wrist) - 0.52) < 0.002 and absf(guard.right_arm.elbow.distance_to(Vector3(0.3, 1.3, 0)) - 0.52) < 0.002 and absf(guard.right_arm.elbow.distance_to(guard.right_arm.wrist) - 0.52) < 0.002, "Guard upper arms and forearms keep fixed length instead of stretching")
+	guard.arm_wounds = Vector2(100, 100)
+	guard.update_arm_pose(1.0 / 60.0, 0.4, 0.0)
+	var stable_wounded_pose := guard.carried_weapon.transform
+	for i in range(30):
+		guard.update_arm_pose(1.0 / 60.0, 0.4, 0.0)
+	check(support_hand.transform.is_equal_approx(support_hand_local), "Support-hand damage does not drift the grip away from the gun")
+	check(guard.carried_weapon.transform.is_equal_approx(stable_wounded_pose), "Repeated wounded-arm poses are absolute, not cumulative")
+	var final_left_grip: Vector3 = guard.visual.to_local(support_hand.global_position)
+	check(guard.left_arm.wrist.distance_to(final_left_grip) < 0.002, "Wounded support arm remains connected to its stable grip")
+	guard.arm_wounds = Vector2.ZERO
 	guard.motion.react("legs", Vector3(-0.2, 0.4, 0))
 	guard.motion.advance(0.1, 2)
 	check(guard.motion.reactions.has("LegL") and guard.motion.knees.LegL.rotation.x > 0, "Leg impact independently bends correct knee")

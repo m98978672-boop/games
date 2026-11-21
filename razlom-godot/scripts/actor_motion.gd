@@ -106,6 +106,10 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 		elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
 			swing = -0.85 + sin(gesture * 7.0) * 0.08
 		swing += float(reactions.get(part, 0)) * (0.65 if part.begins_with("Leg") else -0.8)
+		# Keep every humanoid shoulder inside a usable range; combined flinch,
+		# gait and gesture offsets must never fold a sleeve through the torso.
+		if part.begins_with("Arm"):
+			swing = clampf(swing, -1.38, 0.5)
 		var gesture_roll := 0.0
 		if part.begins_with("Arm") and gesture <= 0.0 and aim_amount < 0.05:
 			var idle_phase := 0.0 if part == "ArmL" else 1.7
@@ -118,7 +122,8 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 			gesture_roll = -0.22 * social_blend
 		elif part == "ArmR" and gesture_kind in ["warm", "listen"]:
 			gesture_roll = 0.22 * social_blend
-		joint.rotation.z = float(reactions.get(part, 0)) * (0.25 if alternate else -0.25) + gesture_roll
+		var roll := float(reactions.get(part, 0)) * (0.25 if alternate else -0.25) + gesture_roll
+		joint.rotation.z = clampf(roll, -0.35, 0.35) if part.begins_with("Arm") else roll
 		if knees.has(part):
 			knees[part].rotation.x = maxf(0, -sin(clock + (PI if alternate else 0.0))) * blend * 0.7 + float(reactions.get(part, 0)) * 0.6 + duck * 0.55
 		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))

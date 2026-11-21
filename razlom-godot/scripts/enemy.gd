@@ -39,9 +39,11 @@ var startle_time := 0.0
 var shots_fired := 0
 var shots_hit := 0
 var near_misses := 0
-var weapon_raised_pos := Vector3(-0.15, 0.09, -0.29)
+# Weapon and grip targets live in the visual root, never under an animated arm.
+# Keeping the gun out of the shoulder hierarchy prevents IK feedback and flipping.
+var weapon_raised_pos := Vector3(0.25, 1.14, -0.42)
 var weapon_raised_rot := Vector3.ZERO
-var weapon_lowered_pos := Vector3(0.06, -0.30, 0.06)
+var weapon_lowered_pos := Vector3(0.34, 0.78, -0.03)
 var weapon_lowered_rot := Vector3(-0.35, 0.15, 0.20)
 const RAISE_TIME := 0.65
 const LOWER_TIME := 0.45
@@ -71,7 +73,7 @@ func _ready() -> void:
 	motion = RazlomActorMotion.new(visual)
 	visual.get_node("Weapon").hide()
 	var weapon: Node3D = load("res://assets/models/carbine.tscn").instantiate()
-	visual.get_node("ArmRJoint/ArmR").add_child(weapon)
+	visual.add_child(weapon)
 	weapon.position = weapon_lowered_pos
 	weapon.rotation = weapon_lowered_rot
 	weapon.scale = Vector3.ONE * 0.65
@@ -80,8 +82,12 @@ func _ready() -> void:
 		var weapon_hand := weapon.get_node(hand_path) as Node3D
 		for hand_visual in weapon_hand.find_children("*", "MeshInstance3D", true, false):
 			(hand_visual as MeshInstance3D).hide()
-	visual.get_node("ArmRJoint/ArmR/Visual").hide()
-	visual.get_node("ArmLJoint/ArmL/Visual").hide()
+	for arm_path in ["ArmRJoint/ArmR", "ArmLJoint/ArmL"]:
+		var old_arm := visual.get_node(arm_path) as Node3D
+		(old_arm.get_node("Visual") as MeshInstance3D).hide()
+		var old_hand := old_arm.get_node_or_null("CharacterHand") as Node3D
+		if old_hand != null:
+			old_hand.hide()
 	left_arm = RazlomArmRig.new(visual, -1.0)
 	right_arm = RazlomArmRig.new(visual, 1.0)
 	weapon_motion = RazlomWeaponMotion.new(weapon)
@@ -222,31 +228,19 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 18 * delta
 	move_and_slide()
 	motion.advance(delta, Vector2(velocity.x, velocity.z).length(), smoothstep(0.0, 0.9, weapon_raise))
-	# Deliberate low-ready -> shoulder raise -> sight picture animation. The elbows
-	# follow the rifle, and the muzzle settles gradually rather than snapping on target.
+	# Deliberate low-ready -> shoulder raise -> sight picture animation. The arm
+	# rig follows stable gun grips and never borrows the animated source sleeves.
 	var raise_blend := smoothstep(0.0, 1.0, weapon_raise)
 	var aim_blend := smoothstep(0.55, 1.0, weapon_raise) * (1.0 if visible_contact else 0.0)
 	var sight_sway := sin(phase * 2.1) * 0.012 * aim_blend + sin(phase * 0.7) * 0.008 * aim_blend
-	carried_weapon.position = weapon_lowered_pos.lerp(weapon_raised_pos, raise_blend)
-	carried_weapon.rotation = weapon_lowered_rot.lerp(weapon_raised_rot, raise_blend)
-	carried_weapon.rotation.x += sight_sway + motion.recoil * 0.025
 	if visible_contact:
 		var offset: Vector3 = game.player.camera.global_position - (global_position + Vector3.UP * 1.4)
 		var pitch := atan2(offset.y, Vector2(offset.x, offset.z).length())
-		var target_arm_pitch := lerpf(-0.12, -0.65 - clampf(pitch, -0.5, 0.5), aim_blend)
-		motion.joints.ArmR.rotation.x = lerp_angle(motion.joints.ArmR.rotation.x, target_arm_pitch - motion.recoil * 0.2 - motion.flinch * 0.65, 1.0 - exp(-delta * 7.0))
-		motion.joints.ArmL.rotation.x = lerp_angle(motion.joints.ArmL.rotation.x, lerpf(0.05, -0.45, aim_blend), 1.0 - exp(-delta * 6.0))
 		var head: Node3D = visual.get_node("Head")
 		head.rotation.x = lerp_angle(head.rotation.x, -clampf(pitch, -0.5, 0.5) * aim_blend, 1.0 - exp(-delta * 5.0))
 	if leg_wound:
 		visual.rotation.z = motion.flinch * 0.28 + sin(phase * 7.0) * 0.045
-	if arm_wounds.y >= 30:
-		motion.joints.ArmR.rotation.x = 0.35 + sin(phase * 14) * 0.045
-	weapon_motion.advance(0, motion.recoil * 0.09, delta)
-	if arm_wounds.x >= 30:
-		carried_weapon.get_node("LeftHand").position += Vector3(-0.12, -0.3, 0.1)
-	left_arm.solve(Vector3(-0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("LeftHand").global_position), -1.0)
-	right_arm.solve(Vector3(0.3, 1.3, 0), visual.to_local(carried_weapon.get_node("RightHand").global_position), 1.0)
+	update_arm_pose(delta, raise_blend, sight_sway)
 	if game.state.passage:
 		think_label.text = "ПРОХОДИ"
 	elif visible_contact and weapon_raise < 0.55:
@@ -256,6 +250,21 @@ func _physics_process(delta: float) -> void:
 	else:
 		think_label.text = "ОТХОД" if behavior == "withdraw" else ("!" if behavior == "engage" else ("?" if alert else ""))
 	think_label.modulate = Color("efb26a")
+
+func update_arm_pose(delta: float, raise_blend: float, sight_sway: float) -> void:
+	# Absolute transforms make the pose idempotent; damage and animation never
+	# accumulate offsets into the grip or feed an arm's motion back into the gun.
+	carried_weapon.position = weapon_lowered_pos.lerp(weapon_raised_pos, clampf(raise_blend, 0.0, 1.0))
+	carried_weapon.rotation = weapon_lowered_rot.lerp(weapon_raised_rot, clampf(raise_blend, 0.0, 1.0))
+	var firing_arm_wound := clampf(arm_wounds.y / 60.0, 0.0, 1.0)
+	var support_arm_wound := clampf(arm_wounds.x / 100.0, 0.0, 1.0)
+	var wound_sway := sin(phase * 11.0) * (firing_arm_wound + support_arm_wound) * 0.018
+	carried_weapon.rotation.x += sight_sway + motion.recoil * 0.025 + wound_sway
+	weapon_motion.advance(0.0, motion.recoil * 0.09 + support_arm_wound * 0.035, delta)
+	var left_target := visual.to_local(carried_weapon.get_node("LeftHand").global_position)
+	var right_target := visual.to_local(carried_weapon.get_node("RightHand").global_position)
+	left_arm.solve(Vector3(-0.3, 1.3, 0), left_target, -1.0)
+	right_arm.solve(Vector3(0.3, 1.3, 0), right_target, 1.0)
 
 func hit(amount: float, _impulse: Vector3 = Vector3.ZERO) -> void:
 	if dead:

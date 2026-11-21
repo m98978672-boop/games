@@ -69,6 +69,7 @@ static func humanoid(parent: Node3D) -> Node3D:
 	var root: Node3D = scene.instantiate()
 	parent.add_child(root)
 	dress_actor(root)
+	add_actor_hands(root)
 	return root
 
 static func tree(parent: Node3D, pos: Vector3, height: float) -> void:
@@ -197,6 +198,7 @@ static func add_actor_hands(root: Node3D, bare_hands: bool = false) -> void:
 		var arm := root.get_node_or_null(NodePath(side)) as Node3D
 		if arm == null or arm.has_node("CharacterHand"):
 			continue
+		var hand_side := -1.0 if side == "ArmL" else 1.0
 		var hand := Node3D.new()
 		hand.name = "CharacterHand"
 		hand.position = Vector3(0, -0.32, -0.015)
@@ -213,12 +215,12 @@ static func add_actor_hands(root: Node3D, bare_hands: bool = false) -> void:
 				finger.name = "Finger%dJ%d" % [i, joint]
 			var nail := box(hand, Vector3(x, -0.127, -0.039), Vector3(0.011, 0.008, 0.003), nail_mat)
 			nail.name = "Nail%d" % i
-		var thumb := box(hand, Vector3(-0.065, -0.025, -0.02), Vector3(0.022, 0.065, 0.022), hand_mat)
+		var thumb := box(hand, Vector3(hand_side * 0.065, -0.025, -0.02), Vector3(0.022, 0.065, 0.022), hand_mat)
 		thumb.name = "Thumb"
-		thumb.rotation.z = -0.62
-		var thumb_joint := box(hand, Vector3(-0.074, -0.045, -0.035), Vector3(0.024, 0.022, 0.018), knuckle_mat)
+		thumb.rotation.z = hand_side * 0.62
+		var thumb_joint := box(hand, Vector3(hand_side * 0.074, -0.045, -0.035), Vector3(0.024, 0.022, 0.018), knuckle_mat)
 		thumb_joint.name = "ThumbJoint"
-		box(hand, Vector3(-0.085, -0.045, -0.035), Vector3(0.014, 0.01, 0.004), nail_mat)
+		box(hand, Vector3(hand_side * 0.085, -0.045, -0.035), Vector3(0.014, 0.01, 0.004), nail_mat)
 
 static func protection_pickup(parent: Node3D, helmet: bool) -> void:
 	var canvas := material(Color("606c5c"), "cloth")
