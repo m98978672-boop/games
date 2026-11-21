@@ -130,7 +130,10 @@ def main():
     print(f'Dataset: {len(train)} train, {len(validation)} validation, skipped-too-long {skipped}; kinds {manifest["counts"]}', flush=True)
     model = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
     if args.initial_adapter:
-        model = PeftModel.from_pretrained(model, args.initial_adapter)
+        # is_trainable=True is required: by default PEFT loads an adapter
+        # frozen for inference and continued training gets 0 trainable
+        # parameters (second lesson run died exactly on this).
+        model = PeftModel.from_pretrained(model, args.initial_adapter, is_trainable=True)
         print(f'Continuing from adapter: {args.initial_adapter}', flush=True)
     else:
         model = get_peft_model(model, LoraConfig(r=8, lora_alpha=16, lora_dropout=0.0, target_modules=['q_proj', 'v_proj'], bias='none'))

@@ -86,6 +86,7 @@ const trainLearn = await readFile(path.join(home, 'tools', 'train-learn.py'), 'u
 const trainQwen = await readFile(path.join(home, '..', 'frontline-command', 'tools', 'training', 'train-qwen.py'), 'utf8');
 const pin = (src, name) => src.match(new RegExp(`${name} = '([^']+)'`))?.[1];
 check('база и ревизия тренера совпадают с командирским обучением', pin(trainLearn, 'MODEL') === pin(trainQwen, 'MODEL') && pin(trainLearn, 'REVISION') === pin(trainQwen, 'REVISION'));
+check('продолжение обучения грузит адаптер обучаемым (is_trainable), а не замороженным', trainLearn.includes('is_trainable=True'));
 check('состояние дома называет ту же базу и ревизию', st0.baseModel === pin(trainLearn, 'MODEL') && st0.revision === pin(trainLearn, 'REVISION'));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
