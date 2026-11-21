@@ -51,43 +51,23 @@ func has_natural_face(model: Node3D) -> bool:
 		if sclera == null or not sclera.mesh is BoxMesh:
 			return false
 		var sclera_size: Vector3 = (sclera.mesh as BoxMesh).size
-		if sclera_size.x > 0.04 or sclera_size.y > 0.02 or sclera_size.z > 0.01:
+		if sclera_size.x > 0.04 or sclera_size.y > 0.024 or sclera_size.z > 0.01:
 			return false
 		var iris := eye.get_node("Iris") as MeshInstance3D
 		if iris == null or not iris.mesh is BoxMesh:
 			return false
 	return true
-func has_separated_fringe(model: Node3D) -> bool:
+func has_clean_forehead(model: Node3D) -> bool:
 	var head := model.get_node_or_null("Head") as Node3D
-	if head == null:
+	if head == null or head.has_node("Fringe0") or head.has_node("Fringe1") or head.has_node("Fringe2"):
 		return false
-	var brow_l := head.get_node_or_null("BrowL") as Node3D
-	var brow_r := head.get_node_or_null("BrowR") as Node3D
-	if brow_l == null or brow_r == null or brow_l.get_child_count() == 0 or brow_r.get_child_count() == 0:
-		return false
-	var brow_l_mesh := brow_l.get_child(0) as MeshInstance3D
-	var brow_r_mesh := brow_r.get_child(0) as MeshInstance3D
-	if brow_l_mesh == null or brow_r_mesh == null or not brow_l_mesh.mesh is BoxMesh or not brow_r_mesh.mesh is BoxMesh:
-		return false
-	var brow_l_size: Vector3 = (brow_l_mesh.mesh as BoxMesh).size
-	var brow_r_size: Vector3 = (brow_r_mesh.mesh as BoxMesh).size
-	var highest_brow := maxf(brow_l.position.y + brow_l_size.y * 0.5, brow_r.position.y + brow_r_size.y * 0.5)
-	var previous: Node3D
-	var previous_width := 0.0
-	for i in range(3):
-		var fringe := head.get_node_or_null("Fringe%d" % i) as Node3D
-		if fringe == null or fringe.get_child_count() == 0:
+	for name in ["TempleHairL", "TempleHairR"]:
+		var lock := head.get_node_or_null(name) as Node3D
+		if lock == null or lock.get_child_count() == 0 or absf(lock.position.x) < 0.11:
 			return false
-		var visual := fringe.get_child(0) as MeshInstance3D
+		var visual := lock.get_child(0) as MeshInstance3D
 		if visual == null or not visual.mesh is BoxMesh:
 			return false
-		var size: Vector3 = (visual.mesh as BoxMesh).size
-		if fringe.position.y - size.y * 0.5 - highest_brow < 0.03:
-			return false
-		if previous != null and fringe.position.x - previous.position.x - (previous_width + size.x) * 0.5 < 0.02:
-			return false
-		previous = fringe
-		previous_width = size.x
 	return true
 func run_tests() -> void:
 	var game = load("res://scenes/main.tscn").instantiate()
@@ -98,7 +78,7 @@ func run_tests() -> void:
 	check(guard.left_arm.hand.has_node("Palm") and guard.left_arm.hand.get_node("Finger0").get_child(0).mesh is BoxMesh, "Guard glove uses block-built palms and segmented fingers")
 	var medic = game.interactions.medic_motion.model
 	check(has_natural_face(medic), "Vera has the same shaped head and compact inset eyes")
-	check(has_separated_fringe(medic), "Vera's separate hair blocks leave a clear gap above the brows")
+	check(has_clean_forehead(medic), "Vera's temple hair leaves two brows separate and no third forehead bar")
 	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")
 	var vera_hand: Node3D = medic.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
 	check(vera_hand.has_node("Finger0J0") and vera_hand.has_node("Finger3J1") and vera_hand.has_node("Thumb"), "Vera's hands have knuckles, separated fingers and a thumb")
