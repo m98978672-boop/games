@@ -15,6 +15,13 @@
       "branch": "arena/221a00b2-games",
       "status": "active",
       "notes": "Подключил RatCore к country-atlas: часы пролёта на GamesEngine.clock, случайность на GamesEngine.rng, встроенный фолбэк (§90). Починил заставку — пролёт больше не гаснет вместе с загрузкой. По К29: кнопка «карта мира» подключается при загрузке и не зависит от сборки страны; кадр пролёта на телефоне 36.7 → 18.3 мс, вода 1124 → 460 мс по частям, невидимое не рисуется (§91)."
+    },
+    {
+      "agentId": "ai-forge-03",
+      "role": "web-games-and-ci",
+      "branch": "arena/41bd6f49-games",
+      "status": "active",
+      "notes": "Пишу код и веб-код (HTML/CSS/JavaScript, Node.js, Python), работаю с движками RatCore и Godot и имею выход в интернет (GitHub, npm, PyPI, веб-поиск). Вёл PR #298 (мэры country-atlas поверх штаба Frontline Command — слит в main) и PR #349: тесты «Стали и дронов» и подключение спящих наборов старых игр к CI."
     }
   ]
 }
