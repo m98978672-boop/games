@@ -76,7 +76,7 @@ function check(ok, label, extra) {
   }
 }
 
-async function boot({ allowFetch, allowInline, label, width, height, touch }) {
+async function boot({ allowFetch, allowInline, label, width, height, touch, textureBridge }) {
   const html = fs.readFileSync(path.join(gameDir, 'index.html'), 'utf8');
   const dom = new JSDOM(html, {
     url: 'http://localhost/warehouse-crew/',
@@ -112,6 +112,17 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
 
   // Настоящий движок и настоящий мост — никаких заглушек API.
   window.eval(fs.readFileSync(path.join(repoRoot, 'ratcore/ratcore.bundle.js'), 'utf8'));
+  if (textureBridge) {
+    // Настоящий RatCore без новой функции, как в старом кэше браузера;
+    // или движок, в котором экспорт текстуры неожиданно бросает исключение.
+    const createEngine = window.RatCore.createEngine;
+    window.RatCore.createEngine = function (...args) {
+      const engine = createEngine(...args);
+      if (textureBridge === 'missing') delete engine.tools.bridge.exportTexture;
+      if (textureBridge === 'throws') engine.tools.bridge.exportTexture = () => { throw new Error('texture unavailable'); };
+      return engine;
+    };
+  }
   window.eval(fs.readFileSync(path.join(repoRoot, 'shared/engine.js'), 'utf8'));
   if (!window.GamesEngine) throw new Error('shared/engine.js не объявил GamesEngine');
 
@@ -224,6 +235,7 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
     const dashTop = new THREE.Box3().setFromObject(findPart('roadDash')).max.y;
     const shader = { uniforms: {}, vertexShader: browserThree.ShaderLib.standard.vertexShader, fragmentShader: browserThree.ShaderLib.standard.fragmentShader };
     floor.material.onBeforeCompile(shader);
+    result.textureFallback = !floor.material.userData.surfaceTexture && !yard.material.userData.surfaceTexture;
     result.textureMaterial = floor.material.userData.textureId?.startsWith('tex_') &&
       floor.material.userData.surfaceTexture?.image?.data?.length === 128 * 128 * 4 &&
       shader.uniforms.warehouseSurface.value === floor.material.userData.surfaceTexture && shader.vertexShader.includes('warehouseSurfacePos =') && shader.fragmentShader.includes('texture2D(warehouseSurface') &&
@@ -379,6 +391,8 @@ const modes = [
   { allowFetch: false, allowInline: true, label: 'file://: fetch запрещён', width: 1440, height: 900, touch: false },
   { allowFetch: false, allowInline: false, label: 'без данных: запасной мозг', width: 1440, height: 900, touch: false },
   { allowFetch: true, allowInline: true, label: 'телефон 390×844 (touch)', width: 390, height: 844, touch: true },
+  { allowFetch: true, allowInline: true, label: 'старый движок без exportTexture', width: 844, height: 390, touch: true, textureBridge: 'missing' },
+  { allowFetch: true, allowInline: true, label: 'ошибка экспорта текстуры', width: 1440, height: 900, touch: false, textureBridge: 'throws' },
 ];
 
 for (const mode of modes) {
@@ -392,7 +406,8 @@ for (const mode of modes) {
   check(r.meshes > 100, 'меши собраны движком', { meshes: r.meshes });
   check(r.bodyReady, 'body.ready выставлен');
   check(Boolean(r.quickbar), 'есть панель быстрых приказов');
-  check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
+  if (mode.textureBridge) check(r.textureFallback, 'игра работает без текстуры при несовместимом движке');
+  else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
   check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');
   check(r.haloRecipe, 'рецепт подсветки halo в движке');
