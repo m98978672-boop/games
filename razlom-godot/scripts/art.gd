@@ -99,7 +99,11 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			head_visual.mesh = head_mesh
 			head_visual.scale = Vector3.ONE
 			head_visual.material_override = skin
-		# Every facial feature is a small flat block aligned to the same front plane.
+		# Flat, evenly readable facial details on the same front plane.
+		var brow_mat := StandardMaterial3D.new()
+		brow_mat.albedo_color = Color("59483a")
+		brow_mat.roughness = 0.88
+		brow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		for side in [-1, 1]:
 			var ear := box(head, Vector3(side * 0.15, -0.018, -0.008), Vector3(0.045, 0.06, 0.055), skin)
 			ear.name = "EarL" if side < 0 else "EarR"
@@ -125,7 +129,7 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			pupil.position = Vector3(0, 0, -0.011)
 			pupil.material_override = material(Color("282923"))
 			eye.add_child(pupil)
-			var brow := box(head, Vector3(side * 0.062, 0.071, -0.16), Vector3(0.03, 0.004, 0.008), material(Color("725946")))
+			var brow := box(head, Vector3(side * 0.062, 0.071, -0.16), Vector3(0.03, 0.004, 0.008), brow_mat)
 			brow.name = "BrowL" if side < 0 else "BrowR"
 			brow.rotation.z = side * -0.01
 		# Flat stepped nose and a short mouth line; no spherical details.
@@ -140,14 +144,15 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			var old_hair := root.get_node_or_null("Hair") as Node3D
 			if old_hair != null:
 				old_hair.reparent(head, true)
-				old_hair.position = Vector3(0, 0.19, 0.025)
+				old_hair.position = Vector3(0, 0.18, 0.025)
 				var hair_visual := old_hair.get_node_or_null("Visual") as MeshInstance3D
 				if hair_visual != null:
 					hair_visual.material_override = hair_mat
+					hair_visual.scale = Vector3(0.9, 0.75, 0.97)
 			# Hair frames the temples only; keep the forehead clear so it cannot
 			# merge with the brows into a bar or a third eyebrow.
 			for side in [-1, 1]:
-				var temple_lock := box(head, Vector3(side * 0.13, 0.02, -0.153), Vector3(0.025, 0.08, 0.022), hair_mat)
+				var temple_lock := box(head, Vector3(side * 0.138, 0.045, -0.153), Vector3(0.016, 0.05, 0.02), hair_mat)
 				temple_lock.name = "TempleHairL" if side < 0 else "TempleHairR"
 			for i in range(5):
 				var braid := box(head, Vector3(0.105 + (i % 2) * 0.018, -0.06 - i * 0.04, 0.15), Vector3(0.034, 0.04, 0.04), hair_mat)

@@ -36,6 +36,10 @@ func has_natural_face(model: Node3D) -> bool:
 		return false
 	var brow_l_size: Vector3 = (brow_l_visual.mesh as BoxMesh).size
 	var brow_r_size: Vector3 = (brow_r_visual.mesh as BoxMesh).size
+	var brow_l_mat := brow_l_visual.material_override as StandardMaterial3D
+	var brow_r_mat := brow_r_visual.material_override as StandardMaterial3D
+	if brow_l_mat == null or brow_r_mat == null or brow_l_mat.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED or brow_r_mat.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED:
+		return false
 	if brow_r.position.x - brow_l.position.x - (brow_l_size.x + brow_r_size.x) * 0.5 < 0.03:
 		return false
 	if head.get_node("EyeL").position.z > -0.15 or head.get_node("EyeR").position.z > -0.15:
