@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 48.209,
+  "elapsedSeconds": 47.257,
   "checks": [
     {
       "name": "import",
