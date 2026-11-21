@@ -548,7 +548,7 @@ window.WC = window.WC || {};
       row.classList.toggle('urgent', Boolean(order.urgent) && order.status !== 'stored');
       row.classList.toggle('carried', order.status === 'carried');
       var who = order.status === 'carried' ? 'несёт: ' + nameOf(order.carrier)
-        : order.status === 'claimed' ? 'в работе: ' + nameOf(order.carrier) : 'на приёмке';
+        : order.status === 'claimed' ? (order.physics ? 'ждёт остановки: ' : 'в работе: ') + nameOf(order.carrier) : 'свободен';
       row.querySelector('.o-who').textContent = who;
       row.querySelector('.o-info').textContent = order.goods + ' · ' + order.mass + ' кг' + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
       // Точки коробки: A — откуда, C — где лежит, B — куда едет
@@ -556,7 +556,8 @@ window.WC = window.WC || {};
       if (abc) {
         var from = order.source === 'truck' ? 'фура' : order.source === 'heavy' ? 'тяжёлый отдел' : 'приёмка';
         var poseText = order.status === 'carried' ? 'в руках'
-          : (order.pose && order.pose.lying) ? 'на боку'
+          : order.physics ? 'движется'
+            : (order.pose && order.pose.lying) ? 'на боку'
             : (order.pose && order.pose.z > 0.7) ? 'на полке' : 'на полу';
         var to = order.direction === 'out' ? 'фура' : order.slotId;
         abc.innerHTML = '';

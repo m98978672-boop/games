@@ -955,16 +955,20 @@
           return { ok: true, state: w.state, orderId: order.id };
         }
         case 'store': {
-          w.mode = opts2.keepAuto ? w.mode : 'manual';
           if (!w.orderId) return { ok: false, reason: 'Нет заказа в работе' };
+          var ord = activeOrder(warehouse);
+          if (!ord || (w.carryingId && (ord.id !== w.carryingId || ord.status !== 'carried' || ord.carrier !== w.id)) ||
+              (!w.carryingId && ord.status !== 'pending' && (ord.status !== 'claimed' || ord.carrier !== w.id))) {
+            return { ok: false, reason: 'Заказ больше недоступен' };
+          }
+          w.mode = opts2.keepAuto ? w.mode : 'manual';
           if (w.carryingId) {
-            var ord = activeOrder(warehouse);
             setState('toDrop');
             setGoal(targetPoint(warehouse, ord), 'drop:' + ord.id);
             return { ok: true, state: w.state };
           }
           setState('toPick');
-          setGoal(targetPoint(warehouse, activeOrder(warehouse)), 'pick:' + w.orderId);
+          setGoal(targetPoint(warehouse, ord), 'pick:' + w.orderId);
           emit('Сначала поднять коробку', 'warn');
           return { ok: true, state: w.state };
         }
@@ -976,7 +980,7 @@
             for (var k = 0; k < warehouse.state.orders.length; k++) {
               if (warehouse.state.orders[k].id === w.carryingId) carried = warehouse.state.orders[k];
             }
-            if (carried) warehouse.drop(carried, 0.08, w.pos.x, w.pos.y);
+            if (carried && carried.status === 'carried' && carried.carrier === w.id) warehouse.drop(carried, 0.08, w.pos.x, w.pos.y);
             w.carryingId = null;
           }
           w.resting = false;
@@ -1410,6 +1414,15 @@
             setGoal(null);
             break;
           }
+          // Не ловим падающий или скользящий груз. Резерв остаётся за
+          // работником; после остановки цель строится по новой позиции.
+          if (order.physics) {
+            w.timers.pick = 0;
+            w.timers.reach = 0;
+            w.speedNow = 0;
+            setGoal(null);
+            break;
+          }
           // Тяжёлое не берём: правило техники безопасности, а не «сила есть — тяни»
           var lift = checkLift(order);
           if (!lift.ok) {
@@ -1439,8 +1452,8 @@
             var need = model.pickTime(body, w.decision) * (1 + Math.max(0, order.mass - 22) / 60);
             if (w.timers.pick >= need) {
               w.timers.pick = 0;
+              if (!warehouse.markCarried(order, w.id)) break;
               w.carryingId = order.id;
-              warehouse.markCarried(order, w.id);
               w.stats.picked += 1;
               if (order.mass > model.safeLift(body)) {
                 emit('Поднял ' + Math.round(order.mass) + ' кг — выше безопасного предела', 'warn');
@@ -1450,6 +1463,7 @@
               emit('Коробка ' + order.code + ' в руках', 'info');
             }
           } else if (d < 0.45 && gap > ARM_REACH) {
+            w.timers.pick = 0;
             // Стоим рядом, но не дотягиваемся — отказываемся, а не тянемся «резиновой рукой»
             w.timers.reach = (w.timers.reach || 0) + dt;
             if (w.timers.reach > 2.5) {
@@ -1459,6 +1473,7 @@
               if (env.onRefused) env.onRefused(w, order, why);
             }
           } else {
+            w.timers.pick = 0;
             w.timers.reach = 0;
           }
           break;

@@ -235,7 +235,17 @@
       var used = {};
       for (var i = 0; i < state.orders.length; i++) {
         var o = state.orders[i];
-        if (o.status === 'pending' && o.intake != null) used[o.intake] = true;
+        if (o.status !== 'pending' && o.status !== 'claimed') continue;
+        if (o.intake != null && o.source !== 'rack' && !o.drops && !o._physicalDynamic) used[o.intake] = true;
+        // Упавший или сдвинутый груз может находиться на другой площадке.
+        // Не создаём новую коробку внутри него, даже если он уже без intake.
+        if (o.drops || o._physicalDynamic) {
+          var d = dims(o);
+          var clearance = Math.hypot(d.halfW, d.halfD) + Math.hypot(BOX_DIMS.big.halfW, BOX_DIMS.big.halfD);
+          for (var p = 0; p < LAYOUT.intake.length; p++) {
+            if (Math.hypot(o.x - LAYOUT.intake[p].x, o.y - LAYOUT.intake[p].y) < clearance) used[p] = true;
+          }
+        }
       }
       for (var k = 0; k < LAYOUT.intake.length; k++) if (!used[k]) return k;
       return -1;
@@ -514,15 +524,20 @@
     }
 
     function markCarried(order, workerId) {
+      // Поднимать можно только свой остановившийся заказ, не летящую коробку.
+      if (!order || order.status !== 'claimed' || order.carrier !== workerId || order.physics) return false;
       order.status = 'carried';
       order.carrier = workerId;
+      order.intake = null;
       order.pickedAt = state.time;
+      return true;
     }
 
     function drop(order, damage, x, y, opts) {
       opts = opts || {};
       order.status = 'pending';
       order.carrier = null;
+      order.intake = null;
       order.x = x;
       order.y = y;
       order.stand = null;
