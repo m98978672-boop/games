@@ -6,8 +6,8 @@
     "games": 234,
     "storefront": 18,
     "collection": 216,
-    "files": 2149,
-    "totalBytes": 52875544,
+    "files": 2148,
+    "totalBytes": 52814271,
     "chunks": 399,
     "blockedFiles": 5
   },
@@ -5361,11 +5361,11 @@
       "play": "truck-showroom/index.html",
       "cover": "site/assets/truck-showroom.webp",
       "dir": "truck-showroom",
-      "infoHash": "cf898be79cb600153bd4755e2ffe935b7fc8e6c9e8808a4ec835177cb595488c",
-      "totalSize": 5615847,
+      "infoHash": "b367add37c36291ad917c0aa3784544bf5d80c958e0ae6225895f251866d367d",
+      "totalSize": 5554574,
       "chunkSize": 262144,
       "chunkCount": 22,
-      "fileCount": 44,
+      "fileCount": 43,
       "files": [
         {
           "path": ".gitignore",
@@ -5391,11 +5391,6 @@
           "path": "package.json",
           "size": 784,
           "sha256": "81f2673105cdc943ebe210d76c7257d7253b36d5a0ce1415dcfc8be1f143e24e"
-        },
-        {
-          "path": "preview.png",
-          "size": 61273,
-          "sha256": "a81308d0236b0114c16a811077bf64cc32c65ea0cd4394d4ad55f7d7451820c9"
         },
         {
           "path": "sheets/buildings-panel-9-dots.png",
