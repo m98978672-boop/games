@@ -18,6 +18,12 @@
     <a class="button secondary" href="https://studio.youtube.com/" target="_blank" rel="noreferrer">Открыть YouTube Studio ↗</a>
   </header>
   <div id="notice" class="notice hidden" role="status"></div>
+  <section class="card wide" style="margin-bottom:18px">
+    <h2>Проверка автономного бота</h2>
+    <p class="muted">Подключите YouTube один раз — сервер загрузит короткий тестовый ролик как <b>приватный</b>. Он не станет публичным без отдельного решения.</p>
+    <a class="button" href="https://cuhfnzgytndyntpbnbda.supabase.co/functions/v1/youtube-bot/auth/start">Подключить YouTube и загрузить приватный тест</a>
+    <p class="help">OAuth-токен хранится только в зашифрованном серверном хранилище. Google покажет запрашиваемые разрешения до подтверждения.</p>
+  </section>
   <div class="grid">
     <section class="card">
       <h2>1. Подключите канал</h2>
@@ -74,6 +80,18 @@ let busy = false;
 const $ = (id) => document.getElementById(id);
 const notice = $('notice');
 function message(text, kind='') { notice.textContent = text; notice.className = 'notice ' + kind; notice.classList.remove('hidden'); }
+const callbackParams = new URLSearchParams(location.search);
+if (callbackParams.get('youtube_bot') === 'private_upload_complete') {
+  const uploadedId = callbackParams.get('video_id') || '';
+  message('Тестовый ролик загружен на YouTube как приватный.', 'success');
+  if (/^[A-Za-z0-9_-]{6,}$/.test(uploadedId)) {
+    const link = document.createElement('a');
+    link.href = 'https://studio.youtube.com/video/' + encodeURIComponent(uploadedId) + '/edit';
+    link.target = '_blank'; link.rel = 'noreferrer'; link.textContent = ' Открыть в YouTube Studio';
+    notice.append(link);
+  }
+  history.replaceState(null, '', location.pathname);
+}
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function readyToken() { return accessToken && Date.now() < expiresAt - 30000; }
 function requireToken(prompt='') {

@@ -25,7 +25,11 @@ class OAuthFlowTests(unittest.TestCase):
 
     def test_oauth_callback_reuses_original_flow_for_pkce_verifier(self):
         flow = _FakeFlow()
-        with patch.object(app.Flow, "from_client_secrets_file", return_value=flow), patch.object(app, "store_credentials") as save:
+        with (
+            patch.object(app.Path, "is_file", return_value=True),
+            patch.object(app.Flow, "from_client_secrets_file", return_value=flow),
+            patch.object(app, "store_credentials") as save,
+        ):
             response = app.auth_start()
             self.assertEqual(response.status_code, 307)
             self.assertTrue(flow.authorization_url_called)

@@ -113,3 +113,13 @@ python autopilot.py
 ```
 
 Цикл пишет `data/episodes/<id>/script.json`, `short.mp4` и `result.json`. По умолчанию результат остаётся `rendered_review_required`; автоматическая загрузка выключена. Для явного включения владельцем задайте `AUTOPILOT_AUTO_PUBLISH=true`, `YOUTUBE_MADE_FOR_KIDS=true` или `false` (не угадывайте классификацию аудитории) и `AUTOPILOT_PUBLISH_AT` — ISO-8601 дату со смещением, минимум за 15 минут в будущем. Тогда валидированный ролик попадёт в локальную очередь существующего uploader, будет загружен приватным и запланирован YouTube на заданное время. Сам цикл не работает постоянно: его запуск по расписанию должен обеспечить владелец на постоянно работающем сервере. Не выкладывайте `data/`, OAuth JSON или токены в GitHub.
+
+## Размещение backend для настоящего сайта
+
+GitHub Pages остаётся фронтендом; отдельная OAuth/загрузка функция развёртывается в подключённом Supabase-проекте. Она хранит только зашифрованный refresh token в закрытой таблице и после согласия Google отправляет демонстрационный ролик как **private**. Для реального OAuth добавьте в Google Auth Platform → Clients в используемый Web client этот Authorized redirect URI:
+
+```text
+https://cuhfnzgytndyntpbnbda.supabase.co/functions/v1/youtube-bot/oauth/callback
+```
+
+Это не Arena preview. Публичный сайт содержит кнопку автономного приватного теста; опубликованная страница обновится после слияния PR. Удаление OAuth-доступа доступно через Google Account → Security → Third-party connections.
