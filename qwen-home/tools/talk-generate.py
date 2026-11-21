@@ -69,6 +69,7 @@ def parse_turns(text):
 
 def clean_reply(text):
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.S).strip()
+    text = re.sub(r'<([^<>]*)>', r'\1', text)  # она иногда оставляет скобки от шаблона-подсказки
     text = re.sub(r'^(Квеня|Qwen)\s*:\s*', '', text).strip()
     for marker in ('\nВладелец:', '\nКвеня:', '\nВладелец', '\nUser:', '\nuser\n', '\nassistant\n', '\nuser ', '\nassistant '):
         if marker in text:
@@ -184,6 +185,11 @@ def search_wikipedia(query, limit=3):
         text, score = digest(extract or snippets.get(title, ''), query)
         if text:
             results.append({'title': title, 'url': page.get('fullurl', ''), 'digest': text, 'score': score})
+    # Статья, чей заголовок точно называет спрошенное, важнее совпадений слов:
+    # иначе «Франкфурт-на-Майне» проигрывает футбольному клубу из того же города.
+    proper = [w.lower() for w in re.findall(r'[\u0400-\u04FFA-Za-z][\u0400-\u04FFA-Za-z0-9\-]*', query) if w[:1].isupper() and len(w) >= 3]
+    for r in results:
+        r['exact'] = r['title'].split('(')[0].strip().lower() in proper
     return results
 
 
@@ -232,9 +238,10 @@ def main():
         log_search(query, results)
         print(f'Поиск «{query}»: найдено статей: {len(results)}', flush=True)
         if results:
-            best = max(results, key=lambda r: r['score'])
+            exact = [r for r in results if r.get('exact')]
+            best = exact[0] if exact else max(results, key=lambda r: r['score'])
             print(f'Отвечает по статье: {best["title"]!r} (совпадений: {best["score"]})', flush=True)
-            context_note = f'\n\n(Факты из русской Википедии: {best["digest"]}\nОтветь владельцу ровно одной фразой по образцу: «Поискала в Википедии! В статье «{best["title"]}» написано: <ответ из фактов своими словами>». Ничего больше не пиши.)'
+            context_note = f'\n\n(Факты из русской Википедии: {best["digest"]}\nОтветь владельцу ровно одной фразой: начни её словами «Поискала в Википедии! В статье {best["title"]} написано:» — а дальше сразу, в той же фразе, допиши ответ из фактов СВОИМИ СЛОВАМИ. Ничего больше не пиши.)'
         else:
             context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
     history = turns[-(9):-1] if len(turns) > 1 else []
