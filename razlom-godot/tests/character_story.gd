@@ -52,7 +52,7 @@ func run_tests() -> void:
 	var medic = game.interactions.medic_motion.model
 	check(has_natural_face(medic), "Vera has the same shaped head and compact inset eyes")
 	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")
-	var vera_hand := medic.get_node("ArmLJoint/ArmL/CharacterHand")
+	var vera_hand: Node3D = medic.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
 	check(vera_hand.has_node("Finger0J0") and vera_hand.has_node("Finger3J1") and vera_hand.has_node("Thumb"), "Vera's hands have knuckles, separated fingers and a thumb")
 	var pavel: Node3D = game.world.get_node("Pavel").find_child("guard", true, false) as Node3D
 	check(pavel != null and has_natural_face(pavel), "Pavel uses the same shaped head and compact eyes")

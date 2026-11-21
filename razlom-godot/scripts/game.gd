@@ -234,7 +234,7 @@ func build_level() -> void:
 				make_block(Vector3(25, wall_y, staggered_z), "right_stagger_%d_%d" % [z, y], side_wall_size, "box", course)
 	# Small right-triangle masonry voussoirs close the corners below the roof beam.
 	for pos in [Vector3(7.8, 4.62, -24), Vector3(24.2, 4.62, -24), Vector3(7.8, 4.62, -8), Vector3(24.2, 4.62, -8)]:
-		var mirrored := pos.x > 16
+		var mirrored: bool = pos.x > 16
 		make_block(pos, "gable_wedge_%d_%d" % [roundi(pos.x), roundi(pos.z)], Vector3(0.72, 0.82, 0.36), "right_triangle" if not mirrored else "right_triangle_mirrored", 2)
 	# A true framed loading bay: reinforced jambs, lintel and a thin raised sill.
 	for x in [13.35, 18.65]:
