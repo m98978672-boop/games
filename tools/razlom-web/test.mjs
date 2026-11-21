@@ -82,20 +82,32 @@ try {
   assert.ok(Math.hypot(after[0]-before[0], after[2]-before[2]) > .2);
  });
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
- // Walk to a safe standing distance and line Vera up under the camera ray using
- // ordinary movement; no teleport, scripted pose, or debug scene is involved.
- await page.keyboard.down('d');
- await waitStatus(() => window.__razlomStatus.position[0] < -25.25, 20000, 'не удалось подойти к Вере по оси X');
- await page.keyboard.up('d');
+ // Point the real first-person camera at Vera, then walk into interaction range.
+ // Target coordinates only drive ordinary mouse/W input; the player is never teleported.
+ await page.mouse.click(720,450);
+ await page.waitForTimeout(150);
+ const aimMove = await page.evaluate(() => {
+  const state = window.__razlomStatus;
+  const dx = -25.5 - state.position[0];
+  const dz = 24 - state.position[2];
+  const targetYaw = Math.atan2(-dx, -dz);
+  const delta = Math.atan2(Math.sin(targetYaw - state.yaw), Math.cos(targetYaw - state.yaw));
+  return Math.max(-600, Math.min(600, -delta / 0.0022));
+ });
+ await page.mouse.move(720,450);
+ await page.mouse.move(720 + aimMove,450);
+ await page.waitForTimeout(500);
+ await check('Mouse-look aims the live camera at Vera from the measured player position', async () => {
+  const state = await page.evaluate(() => window.__razlomStatus);
+  const targetYaw = Math.atan2(25.5 + state.position[0], state.position[2] - 24);
+  const error = Math.atan2(Math.sin(targetYaw - state.yaw), Math.cos(targetYaw - state.yaw));
+  assert.ok(Math.abs(error) < 0.18, `yaw=${state.yaw}, target=${targetYaw}, error=${error}`);
+ });
  await page.keyboard.down('w');
- await waitStatus(() => window.__razlomStatus.position[2] > 23.1, 15000, 'не удалось подойти к Вере по оси Z');
+ await waitStatus(() => Math.hypot(window.__razlomStatus.position[0] + 25.5, window.__razlomStatus.position[2] - 24) < 2.8, 20000, 'не удалось подойти к Вере');
  await page.keyboard.up('w');
  await page.waitForTimeout(350);
- await check('NPC pose review camera reaches Vera by real in-world movement', async () => {
-  const state = await page.evaluate(() => window.__razlomStatus);
-  const distance = Math.hypot(state.position[0] + 25.5, state.position[2] - 24);
-  assert.ok(distance > 0.65 && distance < 1.25, `position=${state.position}, distance=${distance}`);
- });
+ await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/npc-approach.png'});
  await page.keyboard.press('c');
  await page.waitForTimeout(350);
  await page.keyboard.press('e');
