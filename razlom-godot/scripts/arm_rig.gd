@@ -48,38 +48,48 @@ func _init(host: Node3D) -> void:
 	hand.name = "IKHand"
 	host.add_child(hand)
 	var glove := RazlomArt.material(Color("39463f"), "cloth")
-	RazlomArt.orb(hand, Vector3(0, 0, -0.035), Vector3(0.092, 0.063, 0.105), glove, "Palm")
+	var glove_highlight := RazlomArt.material(Color("56645a"), "cloth")
+	var seam := RazlomArt.material(Color("8b927e"))
+	RazlomArt.orb(hand, Vector3(0, 0, -0.035), Vector3(0.084, 0.06, 0.095), glove, "Palm")
+	RazlomArt.orb(hand, Vector3(0, 0.018, -0.075), Vector3(0.065, 0.018, 0.052), glove_highlight, "BackhandPad")
 	for i in range(4):
 		var finger := Node3D.new()
 		finger.name = "Finger%d" % i
 		hand.add_child(finger)
 		finger.position = Vector3(-0.037 + i * 0.025, -0.012, -0.09)
-		for segment_index in range(2):
+		for segment_index in range(3):
 			var segment := MeshInstance3D.new()
 			var mesh := CapsuleMesh.new()
-			mesh.radius = 0.009 if i in [0, 3] else 0.010
-			mesh.height = 0.038 if segment_index == 0 else 0.032
-			mesh.radial_segments = 8
-			mesh.rings = 3
+			mesh.radius = 0.008 if i in [0, 3] else 0.009
+			mesh.height = [0.036, 0.031, 0.026][segment_index]
+			mesh.radial_segments = 10
+			mesh.rings = 4
 			segment.mesh = mesh
 			segment.material_override = glove
 			segment.rotation.x = -PI * 0.5
-			segment.position.z = -0.018 - segment_index * 0.033
+			segment.position.z = -0.015 - segment_index * 0.026
 			finger.add_child(segment)
+		var seam_mark := RazlomArt.box(finger, Vector3(0, 0.007, -0.078), Vector3(0.012, 0.003, 0.008), seam)
+		seam_mark.name = "Stitch"
 		hand_knuckles.append(finger)
+	for i in range(4):
+		RazlomArt.orb(hand, Vector3(-0.039 + i * 0.026, 0.024, -0.095), Vector3(0.011, 0.012, 0.014), glove_highlight, "Knuckle%d" % i)
 	var thumb := MeshInstance3D.new()
 	var thumb_mesh := CapsuleMesh.new()
-	thumb_mesh.radius = 0.012
-	thumb_mesh.height = 0.058
-	thumb_mesh.radial_segments = 8
-	thumb_mesh.rings = 3
+	thumb_mesh.radius = 0.011
+	thumb_mesh.height = 0.052
+	thumb_mesh.radial_segments = 10
+	thumb_mesh.rings = 4
 	thumb.mesh = thumb_mesh
 	thumb.material_override = glove
-	thumb.position = Vector3(-0.061, 0.004, -0.045)
+	thumb.position = Vector3(-0.06, 0.004, -0.045)
 	thumb.rotation = Vector3(-PI * 0.5, 0.0, -0.58)
 	hand.add_child(thumb)
+	var thumb_joint := RazlomArt.orb(hand, Vector3(-0.074, 0.002, -0.078), Vector3(0.014, 0.014, 0.016), glove_highlight, "ThumbJoint")
+	thumb_joint.rotation.z = -0.4
 	var wrist_cuff := RazlomArt.box(hand, Vector3(0, 0, 0.022), Vector3(0.105, 0.068, 0.04), cloth)
 	wrist_cuff.name = "Cuff"
+	RazlomArt.box(hand, Vector3(0, 0.008, 0.041), Vector3(0.075, 0.005, 0.004), seam)
 func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	var axis := target - shoulder
 	if axis.length_squared() < 0.000001:

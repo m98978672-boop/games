@@ -21,7 +21,7 @@ func run_tests() -> void:
 	var block = game.blocks.values()[0]
 	var id: String = block.block_id
 	var before: int = game.blocks.size()
-	var entry: Vector3 = block.to_global(Vector3(0.04, 0.04, 0.5))
+	var entry: Vector3 = block.to_global(Vector3(0.04, 0.04, block.block_size.z * 0.5 + 0.04))
 	var changed: int = block.bullet_hit(entry, Vector3.FORWARD, 0.012, 36)
 	check(changed > 0 and changed < 100, "Small bullet removes a local subset, not the entire metre block")
 	check(game.blocks.size() == before and block.durability == 70, "Local hit does not trigger whole-column collapse")

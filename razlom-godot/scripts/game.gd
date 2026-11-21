@@ -199,13 +199,48 @@ func build_level() -> void:
 			Art.box(world, Vector3(x, 2.5, z), Vector3(0.35, 5, 0.35), metal, true)
 	Art.box(world, Vector3(16, 5.2, -16), Vector3(19, 0.3, 17), metal, true)
 	for y in range(4):
-		for x in range(8, 25):
-			make_block(Vector3(x, 0.65 + y, -24), "back_%d_%d" % [x, y])
-			if x < 14 or x > 18:
-				make_block(Vector3(x, 0.65 + y, -8), "front_%d_%d" % [x, y])
-		for z in range(-23, -8):
-			make_block(Vector3(7, 0.65 + y, z), "left_%d_%d" % [z, y])
-			make_block(Vector3(25, 0.65 + y, z), "right_%d_%d" % [z, y])
+		var course := 1 if y == 0 else (2 if y == 3 else 0)
+		var wall_y := 0.61 + y
+		var front_or_back_size := Vector3(1, 1, 0.36)
+		var side_wall_size := Vector3(0.36, 1, 1)
+		if y % 2 == 0:
+			for x in range(8, 25):
+				make_block(Vector3(x, wall_y, -24), "back_%d_%d" % [x, y], front_or_back_size, "box", course)
+				if x < 14 or x > 18:
+					make_block(Vector3(x, wall_y, -8), "front_%d_%d" % [x, y], front_or_back_size, "box", course)
+		else:
+			# Half-brick closers plus shifted full units make a bonded running course.
+			make_block(Vector3(7.75, wall_y, -24), "back_left_half_%d" % y, Vector3(0.5, 1, 0.36), "box", course)
+			make_block(Vector3(24.25, wall_y, -24), "back_right_half_%d" % y, Vector3(0.5, 1, 0.36), "box", course)
+			make_block(Vector3(7.75, wall_y, -8), "front_left_half_%d" % y, Vector3(0.5, 1, 0.36), "box", course)
+			make_block(Vector3(24.25, wall_y, -8), "front_right_half_%d" % y, Vector3(0.5, 1, 0.36), "box", course)
+			for x in range(8, 24):
+				var staggered_x := x + 0.5
+				make_block(Vector3(staggered_x, wall_y, -24), "back_stagger_%d_%d" % [x, y], front_or_back_size, "box", course)
+				if staggered_x < 14 or staggered_x > 18:
+					make_block(Vector3(staggered_x, wall_y, -8), "front_stagger_%d_%d" % [x, y], front_or_back_size, "box", course)
+		if y % 2 == 0:
+			for z in range(-23, -8):
+				make_block(Vector3(7, wall_y, z), "left_%d_%d" % [z, y], side_wall_size, "box", course)
+				make_block(Vector3(25, wall_y, z), "right_%d_%d" % [z, y], side_wall_size, "box", course)
+		else:
+			make_block(Vector3(7, wall_y, -23.25), "left_near_half_%d" % y, Vector3(0.36, 1, 0.5), "box", course)
+			make_block(Vector3(7, wall_y, -8.75), "left_far_half_%d" % y, Vector3(0.36, 1, 0.5), "box", course)
+			make_block(Vector3(25, wall_y, -23.25), "right_near_half_%d" % y, Vector3(0.36, 1, 0.5), "box", course)
+			make_block(Vector3(25, wall_y, -8.75), "right_far_half_%d" % y, Vector3(0.36, 1, 0.5), "box", course)
+			for z in range(-23, -9):
+				var staggered_z := z + 0.5
+				make_block(Vector3(7, wall_y, staggered_z), "left_stagger_%d_%d" % [z, y], side_wall_size, "box", course)
+				make_block(Vector3(25, wall_y, staggered_z), "right_stagger_%d_%d" % [z, y], side_wall_size, "box", course)
+	# Small right-triangle masonry voussoirs close the corners below the roof beam.
+	for pos in [Vector3(7.8, 4.62, -24), Vector3(24.2, 4.62, -24), Vector3(7.8, 4.62, -8), Vector3(24.2, 4.62, -8)]:
+		var mirrored := pos.x > 16
+		make_block(pos, "gable_wedge_%d_%d" % [roundi(pos.x), roundi(pos.z)], Vector3(0.72, 0.82, 0.36), "right_triangle" if not mirrored else "right_triangle_mirrored", 2)
+	# A true framed loading bay: reinforced jambs, lintel and a thin raised sill.
+	for x in [13.35, 18.65]:
+		Art.box(world, Vector3(x, 2.12, -8.12), Vector3(0.18, 4.0, 0.44), metal, true)
+	Art.box(world, Vector3(16, 4.22, -8.12), Vector3(5.45, 0.22, 0.44), metal, true)
+	Art.box(world, Vector3(16, 0.18, -8.12), Vector3(5.25, 0.12, 0.44), concrete)
 	Art.sign_text(world, "ВОДОСНАБЖЕНИЕ", Vector3(16, 4.65, -7.65), 55)
 	Art.sign_text(world, "СКЛАД 03 / РЕЗЕРВ", Vector3(16, 4.05, -7.65), 29, Color("bdc8a9"))
 	decorate_warehouse()
@@ -244,7 +279,16 @@ func build_level() -> void:
 func decorate_shelter() -> void:
 	var timber := Art.material(Color("6c6250"), "wood")
 	var warm_metal := Art.material(Color("8e8067"), "metal")
-	# Layered doorway, rain lip and window framing break up the plain box silhouette.
+	var dark_glass := Art.material(Color("30433f"), "metal")
+	# Recessed panes, layered timber frames, doorway lintel and roof fascia break
+	# up the flat shelter walls and give openings real depth cues.
+	for center_z in [20.0, 22.7, 25.0]:
+		Art.box(world, Vector3(-18.17, 2.0, center_z), Vector3(0.025, 1.05, 1.15), dark_glass)
+		for side in [-1, 1]:
+			Art.box(world, Vector3(-18.19, 2.0, center_z + side * 0.61), Vector3(0.08, 1.22, 0.08), timber)
+		Art.box(world, Vector3(-18.19, 1.4, center_z), Vector3(0.08, 0.08, 1.3), timber)
+		Art.box(world, Vector3(-18.19, 2.6, center_z), Vector3(0.08, 0.08, 1.3), timber)
+		Art.box(world, Vector3(-18.22, 2.0, center_z), Vector3(0.035, 0.045, 1.15), warm_metal)
 	Art.box(world, Vector3(-23, 3.82, 26.42), Vector3(4.8, 0.18, 0.35), warm_metal)
 	for x in [-27.5, -18.5]:
 		Art.box(world, Vector3(x, 1.8, 17.31), Vector3(0.09, 3.15, 0.09), timber)
@@ -372,30 +416,24 @@ func lamp(pos: Vector3, color: Color, radius: float) -> void:
 	light.shadow_enabled = false
 	world.add_child(light)
 
-func make_block(pos: Vector3, id: String) -> void:
+func make_block(pos: Vector3, id: String, size: Vector3 = Vector3.ONE, shape_kind: String = "box", course: int = 0) -> void:
 	var block = BlockScript.new()
 	block.game = self
 	block.block_id = id
-	# Stable per-block variation: saved/damaged bricks keep the same finish after reload.
+	# Per-course mineral variation reads as stone footing, brick infill and a
+	# reinforced cap while keeping every unit locked to its grid position.
 	var variant_rng := RandomNumberGenerator.new()
 	variant_rng.seed = abs(id.hash()) + 1
-	var palettes := [Color("d0c2a6"), Color("b9a991"), Color("c6b79b"), Color("d5c9b1"), Color("a99a80")]
-	block.tint = palettes[variant_rng.randi_range(0, palettes.size() - 1)]
+	var foundation := [Color("827b6c"), Color("928875"), Color("777669")]
+	var masonry := [Color("d0b99c"), Color("bb9f82"), Color("c7aa8d"), Color("d5c3a7"), Color("aa9075")]
+	var lintel := [Color("aaa898"), Color("bab6a7"), Color("96978b")]
+	var palette: Array = foundation if course == 1 else (lintel if course == 2 else masonry)
+	block.tint = palette[variant_rng.randi_range(0, palette.size() - 1)]
+	block.set_meta("course", course)
+	block.set_meta("shape_kind", shape_kind)
 	world.add_child(block)
 	block.position = pos
-	var visual := MeshInstance3D.new()
-	var mesh := BoxMesh.new()
-	mesh.size = Vector3(variant_rng.randf_range(0.94, 0.99), 0.97, variant_rng.randf_range(0.94, 0.99))
-	visual.mesh = mesh
-	visual.position.y = variant_rng.randf_range(-0.01, 0.01)
-	visual.rotation.y = deg_to_rad(float(variant_rng.randi_range(-2, 2)))
-	visual.material_override = Art.material(block.tint, "brick")
-	block.add_child(visual)
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = Vector3.ONE
-	shape.shape = box
-	block.add_child(shape)
+	block.configure_geometry(size, shape_kind, Art.material(block.tint, "brick" if course != 1 else "concrete"))
 	blocks[id] = block
 
 func break_block(block, impulse: Vector3) -> void:
@@ -419,7 +457,11 @@ func break_block(block, impulse: Vector3) -> void:
 		body.global_position = pos
 		var mesh := MeshInstance3D.new()
 		var cube := BoxMesh.new()
-		cube.size = Vector3.ONE * 0.78
+		cube.size = Vector3(
+			minf(block.block_size.x, 0.78),
+			minf(block.block_size.y, 0.78),
+			minf(block.block_size.z, 0.78)
+		)
 		mesh.mesh = cube
 		mesh.material_override = Art.material(Color.WHITE, "brick")
 		body.add_child(mesh)
