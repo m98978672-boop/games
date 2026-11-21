@@ -454,7 +454,7 @@ WC.game = (function () {
       p.goTimer += dt;
       var a = workerById(p.a);
       var b = workerById(p.b);
-      if (!a || !b || a.state.dead || b.state.dead) { endMeet(); return; }
+      if (!a || !b || a.state.dead || b.state.dead || a.body.collapsed || b.body.collapsed || a.state.state === 'down' || b.state.state === 'down') { endMeet(); return; }
       if (a.state.state === 'meet' && b.state.state === 'meet') {
         p.phase = 'meet';
         p.privacy = true;
@@ -472,7 +472,7 @@ WC.game = (function () {
       p.until -= dt;
       var a2 = workerById(p.a);
       var b2 = workerById(p.b);
-      if (p.until <= 0 || !a2 || !b2 || a2.state.dead || b2.state.dead) endMeet();
+      if (p.until <= 0 || !a2 || !b2 || a2.state.dead || b2.state.dead || a2.body.collapsed || b2.body.collapsed || a2.state.state === 'down' || b2.state.state === 'down') endMeet();
     }
   }
 
@@ -482,7 +482,7 @@ WC.game = (function () {
     if (!api.sim || !api.sim.layout.privacySpots || api.sim.layout.privacySpots.length < 1) return;
     var free = api.crew.filter(function (w) {
       var st = w.state;
-      return !st.dead && !st.carryingId && !st.orderId && (st.state === 'idle' || st.state === 'rest');
+      return !st.dead && !w.body.collapsed && !st.carryingId && !st.orderId && (st.state === 'idle' || st.state === 'rest');
     });
     var woman = null;
     var man = null;

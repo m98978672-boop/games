@@ -349,6 +349,13 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       result.bloodRendered = game.sim.state.bloodDrops.length > 0;
 
       const victim = game.api.crew[0];
+      const partner = game.api.crew[1];
+      Object.assign(game.api.pair, { phase: 'meet', privacy: true, a: victim.id, b: partner.id, until: 15 });
+      victim.state.state = 'down'; victim.state.privacy = true; victim.body.collapsed = true;
+      partner.state.state = 'meet'; partner.state.privacy = true;
+      game.update(1 / 30);
+      result.pairCollapse = game.api.pair.phase === 'idle' && !game.api.pair.privacy && !partner.state.privacy;
+      victim.state.state = 'idle'; victim.body.collapsed = false;
       victim.state.pos.x = -5.6; victim.state.pos.y = 0;
       victim.state.inToilet = false; victim.state.privacy = false;
       victim.body.energy = 0; victim.body.collapsed = true;
@@ -640,6 +647,7 @@ for (const mode of modes) {
   check(r.boxStray === 0, 'коробку не уносит за рабочим после переноски', { stray: r.boxStray });
   check(r.extraCrew && r.extraTabs && r.extraControllable && r.maxCrew && r.extraReplaced && r.hireCommand && r.hireActuallyWorks, 'найм до восьми, управление и замена дополнительных рабочих', { extraCrew: r.extraCrew, tabs: r.extraTabs, controllable: r.extraControllable, max: r.maxCrew, replaced: r.extraReplaced, command: r.hireCommand, works: r.hireActuallyWorks, error: r.featureError });
   check(r.ragdollWorks, 'обморок отображается физическим ragdoll', { ragdoll: r.ragdollWorks, error: r.featureError });
+  check(r.pairCollapse, 'при обмороке совместное уединение завершается', { error: r.featureError });
   check(r.staffNavigation && r.bloodRendered && r.caughtWorks, 'персонал обходит препятствия, частицы крови рисуются', { navigation: r.staffNavigation, blood: r.bloodRendered, error: r.featureError });
   check(!r.featureError && r.mapWorks && r.staffBought && r.medicWorks && r.staffRenders && r.deathWorks && r.hireWorks && r.restartWorks, '2D, магазин, медик, смерть и пополнение работают в игре', { error: r.featureError, map: r.mapWorks, staff: r.staffBought, medic: r.medicWorks, death: r.deathWorks, hire: r.hireWorks, restart: r.restartWorks });
     // У запасного (синтетического) мозга качество случайное — требуем доставку
