@@ -21,6 +21,14 @@ WC.CONFIG = {
     third: { distance: 4.2, height: 3.35, lookAhead: 0.45, fov: 56 },
     follow: { height: 12.5, distance: 5.4, fov: 50 },
     top: { height: 22, fov: 42, tilt: 0.92, distance: 9 },
+    // 2D-вид сверху: ортокамера, склад как чертёж
+    map: { size: 15.5, near: 0.1, far: 90, height: 26 },
+  },
+
+  // Магазин смены: покупки за очки
+  shop: {
+    medic: { title: 'Медик', cost: 120, hint: 'лечит травмы и не даёт погибнуть' },
+    watchman: { title: 'Сторож', cost: 100, hint: 'следит за правилами и техникой' },
   },
 
   // Три характера. traits → входы нейросети, тело → физиология.
@@ -28,6 +36,7 @@ WC.CONFIG = {
     {
       id: 'marta',
       name: 'Марта Ковач',
+      gender: 'ж',
       role: 'Старший кладовщик',
       focus: 'Выносливость и порядок',
       palette: {
@@ -47,6 +56,7 @@ WC.CONFIG = {
     {
       id: 'grisha',
       name: 'Гриша Волков',
+      gender: 'м',
       role: 'Грузчик-силач',
       focus: 'Тяжёлые коробки, риск',
       palette: {
@@ -66,6 +76,7 @@ WC.CONFIG = {
     {
       id: 'timur',
       name: 'Тимур Асланов',
+      gender: 'м',
       role: 'Комплектовщик',
       focus: 'Аккуратность и взаимопомощь',
       palette: {
@@ -92,6 +103,15 @@ WC.CONFIG = {
     toRest: 'идёт на перерыв',
     rest: 'отдыхает',
     down: 'упал без сил',
+    toWc: 'идёт в кабинку',
+    wc: 'в кабинке',
+    toStreet: 'идёт на улицу',
+    street: 'на улице, дышит',
+    toTech: 'идёт к погрузчику',
+    play: 'катается на погрузчике',
+    toMeet: 'уходит вдвоём',
+    meet: 'уединился',
+    dead: 'погиб',
   },
 
   orders: {

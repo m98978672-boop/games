@@ -116,6 +116,49 @@ WC.meshes = (function () {
     truckWheel: { parts: [{ shape: 'cylinder', radius: 0.46, height: 0.3, segments: 12, offset: [0, 0, 0], color: '#191d1f' }] },
     truckChassis: { parts: [{ shape: 'box', sx: 6.4, sy: 0.24, sz: 2.1, offset: [0, 0.78, 0], color: '#2b3236' }] },
     cargoStack: { parts: [{ shape: 'box', sx: 1.0, sy: 0.9, sz: 1.6, offset: [0, 1.1, 0], color: '#9d7240' }] },
+
+    // --- улица за южной стеной ---
+    streetSlab: { parts: [{ shape: 'box', sx: 21.6, sy: 0.08, sz: 5.3, offset: [0, -0.08, 0], color: '#2f3538' }] },
+    sidewalk: { parts: [{ shape: 'box', sx: 21.6, sy: 0.16, sz: 1.15, offset: [0, 0, 0], color: '#5f6669' }] },
+    curb: { parts: [{ shape: 'box', sx: 21.6, sy: 0.2, sz: 0.18, offset: [0, -0.02, 0], color: '#8b9195' }] },
+    roadDash: { parts: [{ shape: 'box', sx: 1.1, sy: 0.02, sz: 0.12, offset: [0, 0.005, 0], color: '#d8cf9a' }] },
+    lampPost: { parts: [{ shape: 'cylinder', radius: 0.07, height: 3.6, segments: 8, offset: [0, 0, 0], color: '#3a4247' }] },
+    lampHead: { parts: [{ shape: 'box', sx: 0.52, sy: 0.12, sz: 0.3, offset: [0, 0, 0], color: '#f6e3b0' }] },
+    kioskBody: { parts: [{ shape: 'box', sx: 1.7, sy: 2.0, sz: 1.5, offset: [0, 0, 0], color: '#4a6f5e' }] },
+    kioskGlass: { parts: [{ shape: 'box', sx: 1.2, sy: 0.9, sz: 0.06, offset: [0, 1.15, 0.76], color: '#7fb6c6' }] },
+    kioskSign: { parts: [{ shape: 'box', sx: 1.4, sy: 0.3, sz: 0.06, offset: [0, 2.1, 0.78], color: '#f0d9a7' }] },
+    gateFrame: { parts: [{ shape: 'box', sx: 0.18, sy: 2.6, sz: 0.22, offset: [0, 0, 0], color: '#4a555c' }] },
+    fencePost: { parts: [{ shape: 'box', sx: 0.08, sy: 1.5, sz: 0.08, offset: [0, 0, 0], color: '#3d464b' }] },
+    fenceBar: { parts: [{ shape: 'box', sx: 1.6, sy: 0.05, sz: 0.05, offset: [0, 0, 0], color: '#4a555c' }] },
+
+    // --- кабинки Ж и М ---
+    wcCabin: { parts: [{ shape: 'box', sx: 1.5, sy: 2.3, sz: 1.5, offset: [0, 0, 0], color: '#3b4a4f' }] },
+    wcRoof: { parts: [{ shape: 'box', sx: 1.7, sy: 0.12, sz: 1.7, offset: [0, 2.3, 0], color: '#2c383c' }] },
+    wcDoorF: { parts: [{ shape: 'box', sx: 0.62, sy: 1.85, sz: 0.08, offset: [0, 0, 0], color: '#8a6a7c' }] },
+    wcDoorM: { parts: [{ shape: 'box', sx: 0.62, sy: 1.85, sz: 0.08, offset: [0, 0, 0], color: '#5c7a8a' }] },
+    wcSignF: { parts: [{ shape: 'box', sx: 0.26, sy: 0.26, sz: 0.03, offset: [0, 0, 0], color: '#e8a0b8' }] },
+    wcSignM: { parts: [{ shape: 'box', sx: 0.26, sy: 0.26, sz: 0.03, offset: [0, 0, 0], color: '#8fc0dc' }] },
+    wcLight: { parts: [{ shape: 'sphere', radius: 0.07, segments: 8, offset: [0, 0, 0], color: '#f2e6c0' }] },
+
+    // --- отдел тяжёлого груза и техника ---
+    heavyPad: { parts: [{ shape: 'box', sx: 4.6, sy: 0.03, sz: 3.0, offset: [0, 0, 0], color: '#3a4144' }] },
+    heavyStripe: { parts: [{ shape: 'box', sx: 4.6, sy: 0.02, sz: 0.14, offset: [0, 0.04, 0], color: '#c9a13f' }] },
+    heavyPallet: { parts: [{ shape: 'box', sx: 1.25, sy: 0.14, sz: 1.05, offset: [0, 0, 0], color: '#7d5f38' }] },
+    forkliftBody: { parts: [{ shape: 'box', sx: 1.55, sy: 0.62, sz: 0.95, offset: [0, 0.42, 0], color: '#d8a13a' }] },
+    forkliftCounter: { parts: [{ shape: 'box', sx: 0.62, sy: 0.55, sz: 0.9, offset: [0, 0.44, 0], color: '#8f6a24' }] },
+    forkliftMast: { parts: [{ shape: 'box', sx: 0.14, sy: 1.9, sz: 0.86, offset: [0, 0.95, 0], color: '#4b5054' }] },
+    forkliftFork: { parts: [{ shape: 'box', sx: 0.95, sy: 0.07, sz: 0.14, offset: [0, 0.12, 0], color: '#5c6165' }] },
+    forkliftWheel: { parts: [{ shape: 'cylinder', radius: 0.28, height: 0.2, segments: 12, offset: [0, 0, 0], color: '#1b1f21' }] },
+    forkliftSeat: { parts: [{ shape: 'box', sx: 0.5, sy: 0.34, sz: 0.14, offset: [0, 0.42, 0.3], color: '#2b3033' }] },
+    forkliftCage: { parts: [{ shape: 'box', sx: 0.06, sy: 1.1, sz: 0.06, offset: [0, 1.0, 0], color: '#3d4246' }] },
+    forkliftBeacon: { parts: [{ shape: 'sphere', radius: 0.09, segments: 8, offset: [0, 0, 0], color: '#f0b13a' }] },
+    palletStack: { parts: [{ shape: 'box', sx: 1.15, sy: 0.9, sz: 1.0, offset: [0, 0, 0], color: '#8a6a41' }] },
+
+    // --- метки A / B / C под коробками ---
+    markA: { parts: [{ shape: 'cylinder', radius: 0.3, height: 0.02, segments: 18, offset: [0, 0, 0], color: '#4fbf7a' }] },
+    markB: { parts: [{ shape: 'cylinder', radius: 0.3, height: 0.02, segments: 18, offset: [0, 0, 0], color: '#4f8fdb' }] },
+    markC: { parts: [{ shape: 'cylinder', radius: 0.36, height: 0.02, segments: 18, offset: [0, 0, 0], color: '#e8b45a' }] },
+    dash: { parts: [{ shape: 'box', sx: 0.24, sy: 0.015, sz: 0.07, offset: [0, 0, 0], color: '#e8c88a' }] },
   };
 
   var FALLBACK = { hat: '#e8b45a', hatBand: '#f6f2e9', bootSole: '#15181a' };

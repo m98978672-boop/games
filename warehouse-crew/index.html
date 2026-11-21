@@ -40,6 +40,9 @@
   <div id="vignette" class="vignette" aria-hidden="true"></div>
   <div id="markers" class="markers" aria-hidden="true"></div>
   <div id="view-flash" class="view-flash" aria-hidden="true"></div>
+  <div id="privacy-blur" class="privacy-blur" aria-hidden="true">
+    <span class="pb-label">Уединённое место</span>
+  </div>
 </div>
 
 <!-- Верхняя панель -->
@@ -60,6 +63,7 @@
     <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
     <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза"><svg class="ico"><use href="#i-pause"/></svg></button>
     <button id="btn-camera" class="icon-btn" title="Сменить вид (C)" aria-label="Сменить вид"><svg class="ico"><use href="#i-camera"/></svg></button>
+    <button id="btn-map" class="icon-btn" title="2D-вид сверху (T)" aria-label="2D-вид сверху"><span class="map-ico">2D</span></button>
     <button id="btn-inspector" class="icon-btn" title="Инспектор тела (I)" aria-label="Инспектор тела"><svg class="ico"><use href="#i-heart"/></svg></button>
     <button id="btn-sound" class="icon-btn" title="Звук (M)" aria-label="Звук"><svg class="ico"><use href="#i-sound"/></svg></button>
     <button id="btn-save" class="icon-btn" title="Сохранить (S)" aria-label="Сохранить"><svg class="ico"><use href="#i-save"/></svg></button>
@@ -116,6 +120,10 @@
         <button class="cmd" data-command="wait"><b>Ждать указаний</b><i>освободить заказ</i></button>
         <button class="cmd" data-command="auto"><b>Автономия</b><i>решает нейросеть</i></button>
         <button class="cmd" data-command="help"><b>Помочь бригаде</b><i>срочные заказы</i></button>
+        <button class="cmd" data-command="wc"><b>В кабинку</b><i>снять нужду</i></button>
+        <button class="cmd" data-command="street"><b>На улицу</b><i>передохнуть</i></button>
+        <button class="cmd" data-command="play"><b>Покататься</b><i>погрузчик</i></button>
+        <button class="cmd" data-command="meet"><b>Уединиться</b><i>тихое место</i></button>
       </div>
     </div>
 
@@ -132,11 +140,29 @@
     </div>
 
     <div class="ctl-group">
+      <div class="ctl-label">Магазин смены <span id="shop-balance" class="queue-count">0</span></div>
+      <div id="shop-list" class="shop-list">
+        <button class="shop-card" type="button" data-buy="medic">
+          <span class="shop-mark">✚</span>
+          <span class="shop-text"><b>Медик</b><i>лечит травмы и поддерживает здоровье</i></span>
+          <span class="shop-price">120</span>
+        </button>
+        <button class="shop-card" type="button" data-buy="watchman">
+          <span class="shop-mark">◉</span>
+          <span class="shop-text"><b>Сторож</b><i>следит за правилами и техникой</i></span>
+          <span class="shop-price">100</span>
+        </button>
+      </div>
+      <div id="staff-list" class="staff-list"></div>
+    </div>
+
+    <div class="ctl-group">
       <div class="ctl-label">Вид и наблюдение</div>
-      <div class="seg seg-3" id="camera-seg" role="group" aria-label="Режим камеры">
+      <div class="seg seg-4" id="camera-seg" role="group" aria-label="Режим камеры">
         <button data-view="third" class="on">3-е лицо</button>
-        <button data-view="follow">Сверху за ним</button>
+        <button data-view="follow">Сверху</button>
         <button data-view="top">Весь цех</button>
+        <button data-view="map2d">2D</button>
       </div>
       <div class="seg" id="speed-seg" role="group" aria-label="Скорость времени">
         <button data-speed="1" class="on">1×</button>

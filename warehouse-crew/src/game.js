@@ -5,6 +5,7 @@ WC.game = (function () {
   'use strict';
 
   var cfg = null;
+  var socialRng = null;
   var S = {
     time: 0,
     paused: false,
@@ -33,6 +34,35 @@ WC.game = (function () {
     onEvent: null,
     onShiftEnd: null,
     lastFrame: 0,
+    staff: [],
+    purchases: { medic: 0, watchman: 0 },
+    pair: null,
+    deaths: [],
+    day: 1,
+    needsCleanup: false,
+    envs: {},
+  };
+
+  // ------------------------------------------------------------- магазин
+  // Медик лечит травмы, сторож ловит за катание на погрузчике и напоминает
+  // правила. Покупаются за очки смены, работают до конца смены.
+  var STAFF_DEFS = {
+    medic: {
+      kind: 'medic', name: 'Полина Верес', role: 'Медик', cost: 120,
+      palette: {
+        skin: '#e0b393', hair: '#6b4a34', shirt: '#e9eef1', vest: '#d8e3e6',
+        pants: '#4b5b66', boots: '#2a3136', gloves: '#9fd8c3', hat: '#e9eef1',
+      },
+      speed: 1.5,
+    },
+    watchman: {
+      kind: 'watchman', name: 'Егор Сомов', role: 'Сторож', cost: 100,
+      palette: {
+        skin: '#c99a72', hair: '#2b2118', shirt: '#233a57', vest: '#37567c',
+        pants: '#222c36', boots: '#15191c', gloves: '#3d4a55', hat: '#37567c',
+      },
+      speed: 1.15,
+    },
   };
 
   function pushLog(text, tone) {
@@ -129,34 +159,8 @@ WC.game = (function () {
     });
   }
 
-  function createSim() {
-    api.sim = window.WarehouseSim.createWarehouse({
-      seed: cfg.seed,
-      shiftLength: cfg.shiftRealSeconds,
-      spawnEvery: cfg.orderSpawnEvery,
-      maxPending: cfg.maxPending,
-      firstSpawnDelay: 3,
-      truckEvery: cfg.truckEvery,
-      firstTruckDelay: cfg.firstTruckDelay,
-    });
-    api.crew = cfg.crew.map(function (member, i) {
-      return window.WarehouseWorker.createWorker({
-        id: member.id,
-        name: member.name,
-        role: member.role,
-        palette: member.palette,
-        traits: member.traits,
-        overrides: member.body,
-        model: window.WarehouseModel,
-        layout: api.sim.layout,
-        spawn: api.sim.layout.spawns[i],
-        heading: 0,
-      });
-    });
-    api.activeWorkerId = cfg.crew[0].id;
-    api.envs = {};
-    api.crew.forEach(function (worker) {
-      api.envs[worker.id] = {
+  function makeEnv(worker) {
+    return {
         warehouse: api.sim,
         workers: api.crew,
         brain: api.brains[worker.id] || api.baseBrain,
@@ -187,11 +191,388 @@ WC.game = (function () {
           WC.audio.drop();
           emit('dropped', { worker: w, order: order, outcome: outcome });
         },
-      };
+      onCaught: function (w) {
+        api.staff.forEach(function (m) {
+          if (m.kind === 'watchman') m.state.stats.caught += 1;
+        });
+        emit('caught', { worker: w });
+      },
+      onDeath: function (w, cause) {
+        onWorkerDeath(w, cause);
+      },
+    };
+  }
+
+  function createSim() {
+    socialRng = window.WarehouseSim.createRng(cfg.seed + 7719);
+    api.sim = window.WarehouseSim.createWarehouse({
+      seed: cfg.seed,
+      shiftLength: cfg.shiftRealSeconds,
+      spawnEvery: cfg.orderSpawnEvery,
+      maxPending: cfg.maxPending,
+      firstSpawnDelay: 3,
+      truckEvery: cfg.truckEvery,
+      firstTruckDelay: cfg.firstTruckDelay,
     });
+    api.crew = cfg.crew.map(function (member, i) {
+      return window.WarehouseWorker.createWorker({
+        id: member.id,
+        name: member.name,
+        role: member.role,
+        gender: member.gender,
+        palette: member.palette,
+        traits: member.traits,
+        overrides: member.body,
+        model: window.WarehouseModel,
+        layout: api.sim.layout,
+        spawn: api.sim.layout.spawns[i],
+        heading: 0,
+      });
+    });
+    api.activeWorkerId = api.crew[0] ? api.crew[0].id : null;
+    api.envs = {};
+    api.crew.forEach(function (worker) {
+      api.envs[worker.id] = makeEnv(worker);
+    });
+    api.day = api.sim.state.day;
+    api.pair = {
+      ids: null, phase: 'idle', timer: 55 + socialRng.next() * 20,
+      spot: null, until: 0, goTimer: 0, privacy: false, count: 0,
+    };
     api.state = S;
     api.state.time = 0;
     return api.sim;
+  }
+
+
+  // ------------------------------------------------------- магазин и персонал
+  function makeAnim() {
+    return {
+      phase: 0, walk: 0, lean: 0, armSwing: 0, breath: 0,
+      run: 0, stride: 0, limp: 0, torsoTwist: 0, headTurn: 0,
+      hurt: { shoulder: 0, back: 0, head: 0, wrist: 0, knee: 0, ankle: 0 },
+      muscle: { legs: 0, back: 0, arms: 0, shoulders: 0 },
+      drive: 0, sit: 0, blink: 0,
+    };
+  }
+
+  function createStaffMember(kind) {
+    var def = STAFF_DEFS[kind];
+    if (!def) return null;
+    var gate = api.sim.layout.street ? { x: api.sim.layout.street.gate.x, y: 6.1 } : { x: -8.9, y: 6.1 };
+    var traits = window.WarehouseModel.normalizeTraits({
+      endurance: 0.72, strength: 0.5, precision: 0.82, caution: 0.85,
+      paceTrait: 0.5, neuroticism: 0.2, recovery: 0.7, coop: 0.85,
+    });
+    var body = window.WarehouseModel.createBody(traits, { gender: kind === 'medic' ? 'ж' : 'м' });
+    var st = {
+      id: 'staff-' + kind,
+      name: def.name,
+      role: def.role,
+      palette: def.palette,
+      kind: kind,
+      body: body,
+      at: api.sim.state.time,
+      targetId: null,
+      patrol: kind === 'watchman' ? 0 : 0,
+      state: {
+        id: 'staff-' + kind, name: def.name, role: def.role, palette: def.palette,
+        pos: { x: gate.x + (kind === 'medic' ? 0.8 : -0.8), y: gate.y },
+        heading: Math.PI * 0.5,
+        speedNow: 0,
+        state: 'idle',
+        carryingId: null,
+        turnRate: 0,
+        anim: makeAnim(),
+        safety: { fear: 0, strikes: 0 },
+        stats: { healed: 0, caught: 0, delivered: 0, dropped: 0, metres: 0, picked: 0, restSeconds: 0 },
+      },
+    };
+    st.state.anim.breath = socialRng.next() * 3;
+    return st;
+  }
+
+  function staffCost(kind) {
+    return STAFF_DEFS[kind] ? STAFF_DEFS[kind].cost : 0;
+  }
+
+  function hasStaff(kind) {
+    for (var i = 0; i < api.staff.length; i++) if (api.staff[i].kind === kind) return true;
+    return false;
+  }
+
+  function buyStaff(kind) {
+    var def = STAFF_DEFS[kind];
+    if (!def) return { ok: false, reason: 'Нет такого сотрудника' };
+    if (!api.ready || !api.sim) return { ok: false, reason: 'Смена ещё не началась' };
+    if (hasStaff(kind)) return { ok: false, reason: def.role + ' уже нанят' };
+    var score = api.sim.state.stats.score;
+    if (score < def.cost) {
+      return { ok: false, reason: 'Не хватает очков: нужно ' + def.cost + ', а на счету ' + Math.round(score) };
+    }
+    api.sim.state.stats.score -= def.cost;
+    var member = createStaffMember(kind);
+    api.staff.push(member);
+    if (WC.world && WC.world.state.ready) WC.world.attachCrew({ api: api });
+    api.purchases[kind] = (api.purchases[kind] || 0) + 1;
+    if (api.sim.state.staff) api.sim.state.staff[kind] = { hired: true, hiredAt: api.sim.state.time };
+    pushLog(def.role + ' ' + def.name + ' нанят за ' + def.cost + ' очков', 'good');
+    if (WC.audio && WC.audio.select) WC.audio.select();
+    emit('staff', { kind: kind, member: member });
+    return { ok: true, member: member, cost: def.cost };
+  }
+
+  // Медик идёт к самому травмированному, сторож обходит зал по кругу.
+  function stepStaff(dt) {
+    if (!api.staff.length) return;
+    api.crew.forEach(function (w) { w.medicalAid = false; });
+    api.staff.forEach(function (member) {
+      var st = member.state;
+      var anim = st.anim;
+      var goal = null;
+      var target = null;
+      if (member.kind === 'medic') {
+        var worst = null;
+        var worstLevel = 0;
+        api.crew.forEach(function (w) {
+          if (w.state.dead) return;
+          var level = window.WarehouseModel.injuryLevel(w.body);
+          if (level > worstLevel) { worstLevel = level; worst = w; }
+        });
+        if (worst && worstLevel > 0.01) { target = worst; goal = worst.state.pos; }
+        else goal = { x: -7.0, y: 6.7 };
+        member.targetId = worst ? worst.state.id : null;
+      } else {
+        member.patrol += dt * 0.14;
+        goal = { x: -0.6 + Math.cos(member.patrol) * 5.4, y: 0.2 + Math.sin(member.patrol) * 4.4 };
+      }
+      var speed = 0;
+      if (goal) {
+        var dx = goal.x - st.pos.x;
+        var dy = goal.y - st.pos.y;
+        var dist = Math.hypot(dx, dy);
+        var stopAt = member.kind === 'medic' ? 0.95 : 0.3;
+        if (dist > stopAt) {
+          speed = Math.min(dist / Math.max(dt, 1e-4), STAFF_DEFS[member.kind].speed * (1 - 0.25 * member.body.fatigue));
+          st.pos.x += (dx / dist) * speed * dt;
+          st.pos.y += (dy / dist) * speed * dt;
+          st.heading = Math.atan2(dy, dx);
+          st.stats.metres += speed * dt;
+        }
+      }
+      st.speedNow = speed;
+      if (member.kind === 'medic' && target) {
+        var d = Math.hypot(target.state.pos.x - st.pos.x, target.state.pos.y - st.pos.y);
+        if (d < 1.8) {
+          var healed = window.WarehouseModel.healInjuries(target.body, dt, true, 8);
+          target.body.vitality = Math.min(1, target.body.vitality + dt * 0.02);
+          target.body.blood = Math.min(1, target.body.blood + dt * 0.01);
+          target.body.pain = Math.max(0, target.body.pain - dt * 0.06);
+          target.medicalAid = true;
+          if (healed > 0) {
+            st.stats.healed += healed;
+            pushLog(def_medic_name() + ' залечил травму: ' + target.state.name, 'good');
+            emit('healed', { worker: target });
+          }
+        }
+      }
+      // Та же анимация, что у рабочих: шаг, дыхание, поворот корпуса
+      var moving = speed > 0.05;
+      anim.walk += ((moving ? 1 : 0) - anim.walk) * Math.min(1, dt * 8);
+      anim.phase += dt * (2.2 + 5.2 * Math.min(1.5, speed / 1.2)) * (moving ? 1 : 0);
+      anim.breath += dt * 0.9;
+      anim.armSwing = Math.sin(anim.phase) * 0.55 * anim.walk;
+      anim.lean += ((0.02 + (speed > 1.35 ? 0.1 : 0)) - anim.lean) * Math.min(1, dt * 4);
+      var twist = Math.max(-0.4, Math.min(0.4, (st.turnRate || 0) * 0.05));
+      anim.torsoTwist += (twist - anim.torsoTwist) * Math.min(1, dt * 5);
+      st.turnRate = moving ? Math.abs(Math.sin(anim.phase)) * 1.2 : 0;
+      anim.headTurn += ((goal ? 0.12 : 0) - anim.headTurn) * Math.min(1, dt * 3);
+    });
+    var watch = null;
+    api.staff.forEach(function (m) { if (m.kind === 'watchman') watch = m.state.pos; });
+    api.crew.forEach(function (w) {
+      var env = api.envs[w.state.id];
+      if (!env) return;
+      env.medicNear = Boolean(w.medicalAid);
+      env.watchman = watch ? { x: watch.x, y: watch.y } : null;
+    });
+  }
+
+  function def_medic_name() {
+    for (var i = 0; i < api.staff.length; i++) if (api.staff[i].kind === 'medic') return api.staff[i].name;
+    return 'Медик';
+  }
+
+  // ------------------------------------------------- уединение пары Ж и М
+  function stepPair(dt) {
+    var p = api.pair;
+    if (!p) return;
+    if (p.phase === 'idle') {
+      p.timer -= dt;
+      if (p.timer <= 0) tryMeet();
+      return;
+    }
+    if (p.phase === 'go') {
+      p.goTimer += dt;
+      var a = workerById(p.a);
+      var b = workerById(p.b);
+      if (!a || !b || a.state.dead || b.state.dead) { endMeet(); return; }
+      if (a.state.state === 'meet' && b.state.state === 'meet') {
+        p.phase = 'meet';
+        p.privacy = true;
+        p.until = 15;
+        p.count += 1;
+        api.sim.state.stats.privacy = (api.sim.state.stats.privacy || 0) + 1;
+        pushLog(a.state.name + ' и ' + b.state.name + ' уединились: ' + (p.spot && p.spot.label ? p.spot.label : 'укромное место'), 'info');
+        emit('privacy', { on: true, ids: [a.state.id, b.state.id] });
+      } else if (p.goTimer > 26) {
+        endMeet();
+      }
+      return;
+    }
+    if (p.phase === 'meet') {
+      p.until -= dt;
+      var a2 = workerById(p.a);
+      var b2 = workerById(p.b);
+      if (p.until <= 0 || !a2 || !b2 || a2.state.dead || b2.state.dead) endMeet();
+    }
+  }
+
+  function tryMeet() {
+    var p = api.pair;
+    p.timer = 95 + socialRng.next() * 60;
+    if (!api.sim || !api.sim.layout.privacySpots || api.sim.layout.privacySpots.length < 1) return;
+    var free = api.crew.filter(function (w) {
+      var st = w.state;
+      return !st.dead && !st.carryingId && !st.orderId && (st.state === 'idle' || st.state === 'rest');
+    });
+    var woman = null;
+    var man = null;
+    for (var i = 0; i < free.length; i++) {
+      if (!woman && free[i].state.gender === 'ж') woman = free[i];
+      else if (!man && free[i].state.gender === 'м') man = free[i];
+    }
+    if (!woman || !man) return;
+    var spots = api.sim.layout.privacySpots;
+    p.spot = spots[Math.floor(socialRng.next() * spots.length) % spots.length];
+    p.a = woman.state.id;
+    p.b = man.state.id;
+    p.phase = 'go';
+    p.goTimer = 0;
+    p.privacy = false;
+    command(woman.state.id, 'meet', { spot: { x: p.spot.x - 0.42, y: p.spot.y }, meetId: 'pair', until: 15, keepAuto: true });
+    command(man.state.id, 'meet', { spot: { x: p.spot.x + 0.42, y: p.spot.y }, meetId: 'pair', until: 15, keepAuto: true });
+    pushLog(woman.state.name + ' и ' + man.state.name + ' отошли вдвоём (' + (p.spot.label || 'укромное место') + ')', 'info');
+  }
+
+  function endMeet() {
+    var p = api.pair;
+    if (!p) return;
+    if (p.privacy) emit('privacy', { on: false, ids: [] });
+    [p.a, p.b].forEach(function (id) {
+      var w = workerById(id);
+      if (w && (w.state.state === 'meet' || w.state.state === 'toMeet')) {
+        w.state.privacy = false;
+        w.command('wait', api.sim, { keepAuto: true });
+      }
+    });
+    p.phase = 'idle';
+    p.privacy = false;
+    p.a = null;
+    p.b = null;
+    p.until = 0;
+    p.goTimer = 0;
+    p.timer = 100 + socialRng.next() * 60;
+  }
+
+  // -------------------------------------------------- смерть и пополнение
+  function onWorkerDeath(worker, cause) {
+    api.deaths.push({
+      name: worker.state.name, cause: cause,
+      day: api.sim.state.day, at: Math.round(api.sim.state.time),
+    });
+    pushLog(worker.state.name + ' погиб: ' + cause + '. Замена выйдет в новый день', 'bad');
+    api.needsCleanup = true;
+    if (WC.audio && WC.audio.shiftEnd) WC.audio.shiftEnd();
+    if (WC.world && WC.world.kick) WC.world.kick(0.9);
+    emit('death', { worker: worker, cause: cause });
+  }
+
+  function cleanupDead() {
+    api.needsCleanup = false;
+    api.crew = api.crew.filter(function (w) {
+      if (!w.state.dead) return true;
+      delete api.envs[w.state.id];
+      if (WC.world && WC.world.removeView) WC.world.removeView(w.state.id);
+      return false;
+    });
+    if (!workerById(api.activeWorkerId) && api.crew[0]) api.activeWorkerId = api.crew[0].state.id;
+    if (api.pair && api.pair.phase !== 'idle') {
+      var a = workerById(api.pair.a);
+      var b = workerById(api.pair.b);
+      if (!a || !b) endMeet();
+    }
+  }
+
+  var HIRE_NAMES = [
+    { name: 'Лида Кравцова', gender: 'ж', role: 'Комплектовщица' },
+    { name: 'Артём Белов', gender: 'м', role: 'Грузчик' },
+    { name: 'Соня Мартынова', gender: 'ж', role: 'Кладовщица' },
+    { name: 'Фёдор Ильин', gender: 'м', role: 'Водитель погрузчика' },
+    { name: 'Ника Соловьёва', gender: 'ж', role: 'Приёмщица' },
+    { name: 'Юра Панов', gender: 'м', role: 'Разнорабочий' },
+  ];
+
+  var HIRE_PALETTES = [
+    { skin: '#d9a982', hair: '#3a2a22', shirt: '#4b6b4a', vest: '#d8c088', pants: '#33424c', boots: '#23292c', gloves: '#c8b48c', hat: '#d8c088' },
+    { skin: '#c08a63', hair: '#1f1a17', shirt: '#5c4b7a', vest: '#c7c0d8', pants: '#2f3a46', boots: '#1f2427', gloves: '#a8a2b8', hat: '#c7c0d8' },
+    { skin: '#e3b795', hair: '#6d4a2f', shirt: '#8a5a3a', vest: '#e6d2a9', pants: '#3a444d', boots: '#20262a', gloves: '#b99a72', hat: '#e6d2a9' },
+    { skin: '#d3a077', hair: '#25201d', shirt: '#2f6470', vest: '#a9d3cf', pants: '#31404a', boots: '#23292c', gloves: '#b9c2c9', hat: '#a9d3cf' },
+  ];
+
+  function hireReplacements() {
+    var target = cfg.crew.length;
+    var guard = 0;
+    while (api.crew.length < target && guard < 4) {
+      guard += 1;
+      spawnReplacement();
+    }
+  }
+
+  function spawnReplacement() {
+    var seq = api.sim.state.hires.length + api.deaths.length + api.crew.length;
+    var person = HIRE_NAMES[seq % HIRE_NAMES.length];
+    var palette = HIRE_PALETTES[seq % HIRE_PALETTES.length];
+    var rng = window.WarehouseSim.createRng((cfg.seed + api.sim.state.day * 977 + seq * 131) >>> 0);
+    var traits = {
+      endurance: rng.range(0.45, 0.85), strength: rng.range(0.45, 0.85),
+      precision: rng.range(0.45, 0.9), caution: rng.range(0.3, 0.8),
+      paceTrait: rng.range(0.4, 0.85), neuroticism: rng.range(0.15, 0.6),
+      recovery: rng.range(0.4, 0.8), coop: rng.range(0.4, 0.9),
+    };
+    var spawn = api.sim.layout.street
+      ? { x: api.sim.layout.street.gate.x + rng.range(-0.4, 0.4), y: 6.6 }
+      : api.sim.layout.spawns[0];
+    var worker = window.WarehouseWorker.createWorker({
+      id: 'hire-' + api.sim.state.day + '-' + (api.crew.length + 1) + '-' + seq,
+      name: person.name,
+      role: person.role,
+      gender: person.gender,
+      palette: palette,
+      traits: traits,
+      model: window.WarehouseModel,
+      layout: api.sim.layout,
+      spawn: spawn,
+      heading: Math.PI * 0.5,
+    });
+    api.crew.push(worker);
+    api.envs[worker.state.id] = makeEnv(worker);
+    api.sim.state.hires.push({ name: person.name, day: api.sim.state.day, t: Math.round(api.sim.state.time) });
+    api.sim.state.stats.hires = (api.sim.state.stats.hires || 0) + 1;
+    if (WC.world && WC.world.attachCrew) WC.world.attachCrew({ api: api });
+    pushLog('Новый работяга: ' + person.name + ' (' + person.role + ') вышел на смену', 'good');
+    emit('hire', { worker: worker });
+    return worker;
   }
 
   function qualityPercent(game) {
@@ -294,7 +675,14 @@ WC.game = (function () {
       delivered: Math.max((api.best && api.best.delivered) || 0, api.sim.state.stats.delivered),
     };
     api.log.length = 0;
+    if (WC.world && WC.world.removeView) api.crew.concat(api.staff).forEach(function (w) { WC.world.removeView(w.state.id); });
+    api.staff = [];
+    api.purchases = { medic: 0, watchman: 0 };
+    api.deaths = [];
+    api.day = 1;
+    api.needsCleanup = false;
     createSim();
+    if (WC.world && WC.world.state.ready) WC.world.attachCrew({ api: api });
     S.paused = false;
     S.shiftEnded = false;
     S.accumulator = 0;
@@ -326,6 +714,10 @@ WC.game = (function () {
       unloaded: stats.unloaded,
       truckShifts: stats.truckShifts,
       injuries: api.crew.reduce(function (sum, w) { return sum + (w.state.safety ? w.state.safety.injuries : 0); }, 0),
+      deaths: api.deaths.length,
+      hires: api.sim.state.hires.length,
+      privacy: api.sim.state.stats.privacy || 0,
+      staff: api.staff.map(function (m) { return { kind: m.kind, name: m.name, healed: m.state.stats.healed, caught: m.state.stats.caught }; }),
       crew: api.crew.map(function (w) {
         return {
           id: w.id,
@@ -374,10 +766,17 @@ WC.game = (function () {
       S.accumulator -= step;
       guard += 1;
       api.sim.step(step);
+      stepStaff(step);
+      stepPair(step);
       api.crew.forEach(function (worker) {
         worker.update(step, api.envs[worker.id]);
         detectBodyEvents(worker);
       });
+      if (api.needsCleanup) cleanupDead();
+      if (api.sim.state.day !== api.day) {
+        api.day = api.sim.state.day;
+        hireReplacements();
+      }
       if (api.sim.state.time >= cfg.shiftRealSeconds) endShift();
     }
     api.state.autosaveClock = (api.state.autosaveClock || 0) + dt;
@@ -443,6 +842,11 @@ WC.game = (function () {
     workerById: workerById,
     command: command,
     teamCommand: teamCommand,
+    buyStaff: buyStaff,
+    staffCost: staffCost,
+    hasStaff: hasStaff,
+    hireReplacements: hireReplacements,
+    spawnReplacement: spawnReplacement,
     setPaused: setPaused,
     setSpeed: setSpeed,
     qualityPercent: qualityPercent,

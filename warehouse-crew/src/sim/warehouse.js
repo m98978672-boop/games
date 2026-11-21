@@ -58,6 +58,42 @@
       { x: -5.2, y: 2.4 },
       { x: -5.2, y: -2.4 },
     ],
+    // Улица за южной стеной: сюда выходят подышать, покурить, поговорить.
+    // Ворота — единственный проход, остальное перекрыто сеткой.
+    street: {
+      x0: -10.8, x1: 10.8, y0: 9.0, y1: 14.4,
+      gate: { x: -8.6, half: 1.2 },
+      kiosk: { x: 6.4, y: 10.3 },
+      spots: [
+        { x: -4.8, y: 11.2, label: 'у бордюра' },
+        { x: 0.9, y: 11.7, label: 'у остановки' },
+        { x: 5.2, y: 10.9, label: 'у киоска' },
+      ],
+    },
+    // Кабинки «Ж» и «М» вдоль южной стены: заходят внутрь, снаружи не видно.
+    wc: [
+      { id: 'Ж', x: -3.7, y: 7.35, w: 1.5, d: 1.5 },
+      { id: 'М', x: 0.7, y: 7.35, w: 1.5, d: 1.5 },
+    ],
+    // Отдел тяжёлого груза в северо-восточном углу: там же стоит техника.
+    heavy: {
+      x: 9.1, y: -6.1, w: 4.6, d: 3.0,
+      pallet: { x: 8.1, y: -6.3 },
+      stand: { x: 9.35, y: -6.2 },
+      forklift: { x: 9.9, y: -6.6, yaw: -0.85 },
+    },
+    // Уединённые места: за штабелем паллет и у сетки на улице.
+    privacySpots: [
+      { x: 9.7, y: 12.0, label: 'за кузовом' },
+      { x: -9.6, y: 12.3, label: 'у сетки' },
+    ],
+  };
+
+  // Габариты коробок повторяют геометрию мешей (ax/ay/az — полуразмеры).
+  var BOX_DIMS = {
+    small: { halfW: 0.21, halfD: 0.17, h: 0.30 },
+    medium: { halfW: 0.26, halfD: 0.21, h: 0.40 },
+    big: { halfW: 0.31, halfD: 0.25, h: 0.52 },
   };
 
   // Доки для фур: слева разгрузка (у приёмки), справа загрузка (у отгрузки).
@@ -136,12 +172,35 @@
         loaded: 0,
         unloaded: 0,
         truckShifts: 0,
+        heavy: 0,
+        deaths: 0,
+        hires: 0,
+        privacy: 0,
+        play: 0,
       },
       log: [],
       trucks: [],
       truckSeq: 1,
       truckTimer: options.firstTruckDelay || 40,
       truckEvery: options.truckEvery || 120,
+      // Тяжёлый груз из соседнего отдела приезжает своим челноком
+      heavyTimer: options.firstHeavyDelay || 55,
+      heavyEvery: options.heavyEvery || 135,
+      // День на складе: раз в dayLength секунд табель пересматривается,
+      // погибших заменяют новые работяги.
+      day: 1,
+      dayLength: options.dayLength || 90,
+      deaths: [],
+      hires: [],
+      // Техника для тяжёлого груза: одна на склад, катается по цеху.
+      forklift: {
+        x: LAYOUT.heavy.forklift.x,
+        y: LAYOUT.heavy.forklift.y,
+        yaw: LAYOUT.heavy.forklift.yaw,
+        rider: null,
+        wheels: 0,
+      },
+      staff: { medic: null, watchman: null },
     };
 
     function note(text, tone) {
@@ -170,6 +229,248 @@
         if (d < bestD) { bestD = d; best = candidates[i]; }
       }
       return best;
+    }
+
+
+    // ------------------------------------------------ точки A / B / C коробки
+    // A (origin) — откуда приехала, B (dest) — куда едет, C (pose) — как лежит
+    // сейчас: высота, поворот, наклон, «на боку». C живёт своей жизнью, когда
+    // коробку роняют: физика доводит её до полки или до пола, но не сквозь него.
+    function dims(order) {
+      return BOX_DIMS[order.size] || BOX_DIMS.medium;
+    }
+
+    function supportHeight(order) {
+      if (order.status === 'stored') {
+        for (var i = 0; i < state.slots.length; i++) {
+          if (state.slots[i].id === order.slotId) return state.slots[i].h + 0.025;
+        }
+      }
+      if (order.source === 'rack' && order.pose && !order.physics) {
+        for (var j = 0; j < state.slots.length; j++) {
+          var rackSlot = state.slots[j];
+          if (rackSlot.id === order.slotId && Math.hypot(order.pose.x - rackSlot.x, order.pose.y - rackSlot.y) < 0.1 && order.pose.z >= rackSlot.h) return rackSlot.h + 0.025;
+        }
+      }
+      if (!order.drops && order.truckId) return 0.09;
+      if (!order.drops && order.intake != null) return 0.12;
+      if (!order.drops && order.source === 'heavy') return 0.14;
+      // При падении над стеллажом поддерживает ближайшая нижняя полка.
+      if (order.drops && order.pose) {
+        var p = order.pose;
+        var top = 0;
+        for (var r = 0; r < LAYOUT.racks.length; r++) {
+          if (Math.abs(p.x - LAYOUT.racks[r].x) > 0.55 || Math.abs(p.y) > 5.9) continue;
+          for (var l = 0; l < RACK_LEVELS.length; l++) {
+            var h = RACK_LEVELS[l].height + 0.025;
+            if (p.z >= h - 0.001 && h > top) top = h;
+          }
+        }
+        return top;
+      }
+      return 0;
+    }
+
+    function destPoint(order) {
+      if (order.direction === 'out' && order.truckId) {
+        var truck = truckById(order.truckId);
+        if (truck) return { x: truck.handle.x, y: truck.handle.y, z: 0.42, lying: false };
+      }
+      for (var i = 0; i < state.slots.length; i++) {
+        if (state.slots[i].id === order.slotId) {
+          return { x: state.slots[i].x, y: state.slots[i].y, z: state.slots[i].h + 0.025, lying: false };
+        }
+      }
+      return { x: order.x, y: order.y, z: supportHeight(order), lying: false };
+    }
+
+    function decorate(order) {
+      var d = dims(order);
+      var z = supportHeight(order);
+      order.origin = { x: order.x, y: order.y, z: z };
+      order.pose = {
+        x: order.x, y: order.y, z: z,
+        yaw: rng.range(-0.45, 0.45), tilt: 0, roll: 0,
+        lying: false, h: d.h, halfW: d.halfW, halfD: d.halfD,
+      };
+      order.vel = { x: 0, y: 0, vz: 0, spin: 0 };
+      order.dest = destPoint(order);
+      order.physics = false;
+      order.grounded = true;
+      return order;
+    }
+
+    // Коробка встала на место: C совпадает с B.
+    function syncDest(order) {
+      var d = dims(order);
+      order.dest = destPoint(order);
+      order.pose = {
+        x: order.dest.x, y: order.dest.y, z: order.dest.z,
+        yaw: order.pose ? order.pose.yaw : 0, tilt: 0, roll: 0,
+        lying: false, h: d.h, halfW: d.halfW, halfD: d.halfD,
+      };
+      order.vel = { x: 0, y: 0, vz: 0, spin: 0 };
+      order.physics = false;
+      order.grounded = true;
+      order.x = order.dest.x;
+      order.y = order.dest.y;
+    }
+
+    // Рывок/толчок: коробка получает скорость и дальше живёт по физике.
+    function kick(order, opts) {
+      opts = opts || {};
+      var d = dims(order);
+      if (!order.pose) decorate(order);
+      order.pose.z = Math.max(order.pose.z, 0.35);
+      order.pose.lying = false;
+      order.vel = {
+        x: opts.vx || 0,
+        y: opts.vy || 0,
+        vz: opts.vz != null ? opts.vz : 0.2,
+        spin: opts.spin != null ? opts.spin : rng.range(-3.4, 3.4),
+      };
+      order.physics = true;
+      order.grounded = false;
+      order.pose.h = d.h;
+      return order;
+    }
+
+    function boxOverlap(a, b) {
+      var da = dims(a);
+      var db = dims(b);
+      return Math.abs(a.pose.x - b.pose.x) < da.halfW + db.halfW - 0.04 &&
+        Math.abs(a.pose.y - b.pose.y) < da.halfD + db.halfD - 0.04 &&
+        Math.abs(a.pose.z - b.pose.z) < da.h * 0.9;
+    }
+
+    // Физика коробок: гравитация, пол/полка, трение, «на бок» после жёсткого
+    // приземления. Ни одна коробка не висит в воздухе и не проваливается.
+    function stepPhysics(dt) {
+      var loose = [];
+      for (var i = 0; i < state.orders.length; i++) {
+        var o = state.orders[i];
+        if (o.status === 'stored' || o.status === 'ruined' || o.status === 'missed' || o.status === 'loaded') continue;
+        if (o.status === 'carried') continue;
+        if (!o.pose) decorate(o);
+        if (!o.physics) { if (o.pose) loose.push(o); continue; }
+        loose.push(o);
+        var p = o.pose;
+        var v = o.vel;
+        var d = dims(o);
+        var floorZ = supportHeight(o);
+        v.vz -= 9.81 * dt;
+        p.x += v.x * dt;
+        p.y += v.y * dt;
+        p.z += v.vz * dt;
+        p.yaw += v.spin * dt * 0.45;
+        p.tilt += v.spin * dt;
+        p.x = Math.max(-12.2, Math.min(12.2, p.x));
+        p.y = Math.max(-8.2, Math.min(13.8, p.y));
+        if (p.z <= floorZ) {
+          p.z = floorZ;
+          if (v.vz < -1.1) {
+            // удар: гасим скорость, коробка может лечь on its side
+            v.vz = -v.vz * 0.24;
+            v.x *= 0.62;
+            v.y *= 0.62;
+            v.spin *= 0.55;
+            o.bounces = (o.bounces || 0) + 1;
+          } else {
+            v.vz = 0;
+            o.grounded = true;
+          }
+        }
+        if (o.grounded) {
+          var damp = Math.pow(0.015, dt);
+          v.x *= damp;
+          v.y *= damp;
+          p.x += v.x * dt;
+          p.y += v.y * dt;
+          var targetTilt = Math.abs(p.tilt) > 0.55 ? Math.sign(p.tilt) * Math.PI * 0.5 : 0;
+          p.tilt += (targetTilt - p.tilt) * Math.min(1, dt * 9);
+          p.lying = Math.abs(targetTilt) > 0.1;
+          v.spin *= Math.pow(0.02, dt);
+          if (Math.hypot(v.x, v.y) < 0.05 && Math.abs(v.spin) < 0.1) {
+            o.physics = false;
+            v.x = 0; v.y = 0; v.spin = 0;
+            p.tilt = targetTilt;
+            p.z = floorZ;
+          }
+        }
+        o.x = p.x;
+        o.y = p.y;
+      }
+      // Расталкивание лёгших коробок: одна не влезает в другую
+      for (var a = 0; a < loose.length; a++) {
+        for (var b = a + 1; b < loose.length; b++) {
+          if (!boxOverlap(loose[a], loose[b])) continue;
+          var oa = loose[a];
+          var ob = loose[b];
+          var dx = oa.pose.x - ob.pose.x;
+          var dy = oa.pose.y - ob.pose.y;
+          var len = Math.hypot(dx, dy);
+          if (len < 0.001) { dx = 1; dy = 0; len = 1; }
+          var push = 0.05;
+          oa.pose.x += (dx / len) * push;
+          oa.pose.y += (dy / len) * push;
+          ob.pose.x -= (dx / len) * push;
+          ob.pose.y -= (dy / len) * push;
+          oa.physics = true;
+          ob.physics = true;
+        }
+      }
+      return loose.length;
+    }
+
+    // ------------------------------------------------- тяжёлый груз и техника
+    function spawnHeavyBatch() {
+      var made = 0;
+      var count = 1 + (rng.next() < 0.35 ? 1 : 0);
+      for (var i = 0; i < count; i++) {
+        var slot = freeSlot(LAYOUT.heavy.pallet);
+        if (!slot) break;
+        var mass = Math.round(rng.range(36, 62));
+        var px = LAYOUT.heavy.pallet.x + rng.range(-0.5, 0.5);
+        var py = LAYOUT.heavy.pallet.y + rng.range(-0.7, 0.7);
+        var order = {
+          id: 'ord-' + (state.orderSeq++),
+          code: 'HVY-' + String(2000 + state.orderSeq * 3).slice(-4),
+          customer: rng.pick(CUSTOMERS),
+          goods: rng.pick(['станок в обрешётке', 'ящик с редуктором', 'мотоблок', 'плита', 'компрессор', 'бак с маслом']),
+          priority: Math.round(rng.range(0.4, 0.95) * 100) / 100,
+          urgent: false,
+          mass: mass,
+          size: 'big',
+          heavy: true,
+          source: 'heavy',
+          intake: null,
+          x: px, y: py,
+          stand: { x: LAYOUT.heavy.stand.x, y: LAYOUT.heavy.stand.y + (i - 0.5) * 0.6 },
+          reachPad: 0,
+          slotId: slot.id,
+          rack: slot.rack,
+          damage: 0,
+          status: 'pending',
+          carrier: null,
+          createdAt: state.time,
+          deadline: state.time + 210 + i * 20,
+          pickedAt: null,
+          storedAt: null,
+          drops: 0,
+        };
+        slot.occupied = true;
+        slot.orderId = order.id;
+        decorate(order);
+        state.orders.push(order);
+        state.stats.heavy = (state.stats.heavy || 0) + 1;
+        made += 1;
+        note('Тяжёлый груз ' + order.code + ' (' + mass + ' кг) из соседнего отдела — только техникой', 'warn');
+      }
+      return made;
+    }
+
+    function heavyOf(order) {
+      return Boolean(order && (order.heavy || order.mass > 34));
     }
 
     function spawnOrder() {
@@ -204,6 +505,7 @@
       };
       slot.occupied = true;
       slot.orderId = order.id;
+      decorate(order);
       state.orders.push(order);
       note('Новый заказ ' + order.code + ' для ' + order.customer, order.urgent ? 'warn' : 'info');
       return order;
@@ -236,7 +538,8 @@
       order.pickedAt = state.time;
     }
 
-    function drop(order, damage, x, y) {
+    function drop(order, damage, x, y, opts) {
+      opts = opts || {};
       order.status = 'pending';
       order.carrier = null;
       order.x = x;
@@ -246,6 +549,16 @@
       order.damage = Math.min(1, order.damage + damage);
       order.drops += 1;
       state.stats.dropped += 1;
+      // Коробка выпала из рук: у неё есть начальная скорость и высота,
+      // дальше всё решает физика (см. stepPhysics).
+      var d = dims(order);
+      if (!order.pose) decorate(order);
+      kick(order, { vx: opts.vx || 0, vy: opts.vy || 0, vz: opts.vz != null ? opts.vz : 0.35, spin: opts.spin });
+      order.pose.x = x;
+      order.pose.y = y;
+      order.pose.z = Math.max(supportHeight(order) + d.h * 0.5, opts.z || 0.6);
+      order.dest = destPoint(order);
+      order.bounces = 0;
       if (order.damage >= 0.85) {
         order.status = 'ruined';
         releaseSlot(order);
@@ -278,6 +591,7 @@
       } else {
         state.stats.perfectStreak = 0;
       }
+      syncDest(order);
       note('Заказ ' + order.code + ' уложен в ' + order.slotId + ' (+' + points + (late ? ', с опозданием' : '') + ')', late ? 'warn' : 'good');
       return { points: points, late: late, damage: order.damage };
     }
@@ -373,6 +687,8 @@
           };
           slot.occupied = true;
           slot.orderId = ord.id;
+          decorate(ord);
+          ord.origin = { x: dock.handle.x, y: ord.y, z: ord.pose.z };
           state.orders.push(ord);
           state.stats.unloaded += 1;
         }
@@ -395,6 +711,8 @@
           so.y = sl.y;
           so.stand = null;
           so.reachPad = 0.62;
+          so.origin = { x: so.pose.x, y: so.pose.y, z: so.pose.z };
+          so.dest = destPoint(so);
           so.deadline = state.time + 150 + k * 12;
           so.pickedAt = null;
           so.storedAt = null;
@@ -408,6 +726,7 @@
       }
       truck.total = ordersOfTruck(truck).length;
       state.trucks.push(truck);
+      if (kind === 'load') ordersOfTruck(truck).forEach(function (o) { o.dest = destPoint(o); });
       if (state.trucks.length > 6) state.trucks.shift();
       note(kind === 'unload'
         ? 'Прибыла фура ' + truck.plate + ' (' + truck.carrier + '): разгрузить ' + truck.total + ' мест'
@@ -422,6 +741,7 @@
       order.status = 'loaded';
       order.carrier = null;
       order.loadedAt = state.time;
+      syncDest(order);
       releaseSlot(order);
       var late = state.time > order.deadline;
       var base = 15 + Math.round(order.priority * 12);
@@ -467,6 +787,7 @@
         order.x = state.slots[i].x;
         order.y = state.slots[i].y;
       }
+      syncDest(order);
       note('Коробка ' + order.code + ' вернулась на место', 'warn');
       return order;
     }
@@ -498,9 +819,26 @@
           departTruck(truck, 'окно погрузки закрылось');
         }
       }
+      // --- Тяжёлый груз из соседнего отдела ---
+      state.heavyTimer -= dt;
+      if (state.heavyTimer <= 0) {
+        var heavyMade = spawnHeavyBatch();
+        state.heavyTimer = heavyMade ? state.heavyEvery * (0.85 + rng.next() * 0.4) : 25;
+      }
+
+      // --- Новый день: табель пересматривается ---
+      var day = 1 + Math.floor(state.time / state.dayLength);
+      if (day !== state.day) {
+        state.day = day;
+        note('Новый день на складе (' + day + '-й)', 'info');
+      }
+
+      // --- Физика коробок ---
+      stepPhysics(dt);
+
       for (var i = 0; i < state.orders.length; i++) {
         var o = state.orders[i];
-        if (o.status === 'missed' || o.status === 'stored' || o.status === 'ruined') continue;
+        if (o.status === 'missed' || o.status === 'stored' || o.status === 'ruined' || o.status === 'loaded') continue;
         if (state.time > o.deadline + 35) {
           o.status = 'missed';
           o.carrier = null;
@@ -554,6 +892,14 @@
             x: Math.round(o.x * 100) / 100, y: Math.round(o.y * 100) / 100,
             slotId: o.slotId, rack: o.rack, carrier: o.carrier,
             deadline: Math.round(o.deadline), createdAt: Math.round(o.createdAt),
+            heavy: Boolean(o.heavy), source: o.source || null, direction: o.direction || null,
+            origin: o.origin ? { x: Math.round(o.origin.x * 100) / 100, y: Math.round(o.origin.y * 100) / 100 } : null,
+            dest: o.dest ? { x: Math.round(o.dest.x * 100) / 100, y: Math.round(o.dest.y * 100) / 100, z: Math.round(o.dest.z * 100) / 100 } : null,
+            pose: o.pose ? {
+              x: Math.round(o.pose.x * 100) / 100, y: Math.round(o.pose.y * 100) / 100, z: Math.round(o.pose.z * 100) / 100,
+              yaw: Math.round(o.pose.yaw * 1000) / 1000, tilt: Math.round(o.pose.tilt * 1000) / 1000,
+              lying: Boolean(o.pose.lying),
+            } : null,
           };
         }),
         trucks: state.trucks.map(function (t) {
@@ -569,6 +915,15 @@
         slots: state.slots.map(function (s) {
           return { id: s.id, x: s.x, y: s.y, h: s.h, occupied: s.occupied, orderId: s.orderId, levelLabel: s.levelLabel };
         }),
+        day: state.day,
+        dayLength: state.dayLength,
+        deaths: state.deaths.slice(-6),
+        hires: state.hires.slice(-6),
+        forklift: { x: state.forklift.x, y: state.forklift.y, yaw: state.forklift.yaw, rider: state.forklift.rider },
+        staff: {
+          medic: state.staff.medic ? { hired: true, at: state.staff.medic.hiredAt } : null,
+          watchman: state.staff.watchman ? { hired: true, at: state.staff.watchman.hiredAt } : null,
+        },
       };
     }
 
@@ -597,6 +952,14 @@
       truckById: truckById,
       truckProgress: truckProgress,
       ordersOfTruck: ordersOfTruck,
+      dims: dims,
+      destPoint: destPoint,
+      supportHeight: supportHeight,
+      syncDest: syncDest,
+      kick: kick,
+      stepPhysics: stepPhysics,
+      spawnHeavyBatch: spawnHeavyBatch,
+      heavyOf: heavyOf,
     };
   }
 

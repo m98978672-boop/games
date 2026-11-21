@@ -991,3 +991,87 @@ body.ready .panel.side { animation: panelIn 0.55s 0.08s var(--ease-out) both; }
   }
   body.view-top .tactical-grid { animation: none; }
 }
+
+/* ------------------------------ магазин смены ------------------------------ */
+.shop-list { display: grid; gap: calc(6px * var(--ui)); }
+.shop-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: calc(8px * var(--ui));
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  padding: calc(7px * var(--ui)) calc(9px * var(--ui));
+  min-height: calc(44px * var(--ui));
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.2s, transform 0.12s;
+}
+.shop-card:hover { border-color: var(--accent); background: rgba(232, 180, 90, 0.1); }
+.shop-card:active { transform: scale(0.985); }
+.shop-card.bought { border-color: rgba(79, 191, 122, 0.55); background: rgba(79, 191, 122, 0.1); cursor: default; }
+.shop-card.broke { opacity: 0.55; }
+.shop-mark {
+  display: grid; place-items: center;
+  width: calc(24px * var(--ui)); height: calc(24px * var(--ui));
+  border-radius: 8px; background: rgba(232, 180, 90, 0.16); color: var(--accent-2);
+  font-size: calc(12px * var(--ui)); font-weight: 800;
+}
+.shop-text { display: grid; gap: 1px; min-width: 0; }
+.shop-text b { font-size: calc(11px * var(--ui)); letter-spacing: 0.03em; }
+.shop-text i { font-style: normal; font-size: calc(9px * var(--ui)); color: var(--ink-faint); line-height: 1.2; }
+.shop-price { font-family: var(--mono); font-size: calc(11px * var(--ui)); color: var(--accent-2); }
+.staff-list { display: grid; gap: calc(4px * var(--ui)); margin-top: calc(5px * var(--ui)); }
+/* ------------------------------- 2D-вид сверху ------------------------------ */
+.map-ico { font-family: var(--mono); font-size: calc(10px * var(--ui)); font-weight: 800; letter-spacing: 0.02em; }
+.seg.seg-4 button { font-size: calc(9px * var(--ui)); padding-left: 3px; padding-right: 3px; letter-spacing: 0.02em; }
+body.view-map .vignette { background: radial-gradient(120% 95% at 50% 50%, transparent 62%, rgba(0, 0, 0, 0.28) 100%); }
+body.view-map .tactical-grid { opacity: 0.75; animation: none; }
+body.view-map #scene { filter: saturate(0.92) contrast(1.04); }
+/* A / B / C в очереди заказов */
+.order .o-abc {
+  grid-column: 1 / -1;
+  display: flex; gap: 6px; align-items: center;
+  font-family: var(--mono); font-size: calc(8.5px * var(--ui));
+  color: var(--ink-faint); letter-spacing: 0.03em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.order .o-abc b { color: var(--accent-2); font-weight: 700; }
+.order .o-abc .abc-c { color: var(--accent); }
+.order .o-abc .abc-b { color: #6fa8dc; }
+/* -------------------------- блюр уединённого места ------------------------- */
+.privacy-blur {
+  position: absolute;
+  width: calc(240px * var(--ui));
+  height: calc(200px * var(--ui));
+  transform: translate(-50%, -50%) scale(0.9);
+  border-radius: 28px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease);
+  backdrop-filter: blur(11px) saturate(0.9);
+  -webkit-backdrop-filter: blur(11px) saturate(0.9);
+  background: radial-gradient(closest-side, rgba(10, 13, 12, 0.34), rgba(10, 13, 12, 0));
+  display: grid;
+  place-items: end center;
+  padding-bottom: calc(10px * var(--ui));
+  z-index: 4;
+}
+.privacy-blur.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.privacy-blur .pb-label {
+  font-family: var(--mono);
+  font-size: calc(9px * var(--ui));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  background: rgba(10, 13, 12, 0.6);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: calc(3px * var(--ui)) calc(10px * var(--ui));
+}
+.staff-row { display: grid; gap: 1px; border: 1px dashed var(--line); border-radius: 8px; padding: 5px 7px; font-size: 9px; color: var(--ink-faint); }
+.staff-row b { color: var(--ink-dim); font-size: 10px; }
+.sc-needs { flex-basis: 100%; }
+.cabin-label { position: absolute; transform: translate(-50%, -50%); padding: 2px 6px; border: 1px solid var(--line-strong); border-radius: 5px; background: rgba(16, 22, 25, .92); color: #f3ebdc; font-size: 12px; font-weight: 800; pointer-events: none; }
