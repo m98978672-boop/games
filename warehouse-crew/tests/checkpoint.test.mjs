@@ -103,6 +103,30 @@ const previous = data.get(c.WC.save.CHECKPOINT_KEY);
 const setItem = storage.setItem; storage.setItem = (key, value) => { if (key.endsWith('v2')) throw Error('quota'); setItem(key,value); };
 assert.equal(c.WC.save.save(game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),previous);
 storage.setItem = setItem;
+// Если квота заполнена, чтение всё ещё работает: снимок надо восстановить,
+// а не начинать новую смену из-за неудачной тестовой записи.
+data.set(c.WC.save.CHECKPOINT_KEY, raw);
+storage.setItem = () => { throw Error('quota'); };
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'restored');
+assert.equal(c.WC.game.api.crew[0].body.energy,.43);
+assert.equal(c.WC.save.save(c.WC.game),false);
+assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),raw);
+storage.setItem = setItem;
+// Отказ чтения v2 защищает запись и после восстановления доступа: нельзя
+// незаметно заменить снимок новой сменой. Явный рестарт снимает защиту.
+const getItem = storage.getItem;
+storage.getItem = key => { if (key.endsWith('v2')) throw Error('access denied'); return getItem(key); };
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed');
+assert.equal(c.WC.save.protectionReason(),'unavailable');
+storage.getItem = getItem;
+assert.equal(c.WC.save.save(c.WC.game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),raw);
+c.WC.game.restart(); assert.equal(c.WC.save.isProtected(),false);
+assert.notEqual(data.get(c.WC.save.CHECKPOINT_KEY),raw);
+// Пустое, но существующее значение — повреждение, а не отсутствие сохранения.
+data.set(c.WC.save.CHECKPOINT_KEY,'');
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed');
+assert.equal(c.WC.save.protectionReason(),'damaged');
+assert.equal(c.WC.save.save(c.WC.game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),'');
 // v2 старого формата без поля режима должен оставаться доступным.
 const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode; delete oldV2.checkpoint.dialogueState;
 oldV2.checkpoint.warehouse.state.orders.forEach(o => delete o.dispatchPriority);

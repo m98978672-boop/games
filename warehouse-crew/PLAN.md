@@ -119,6 +119,7 @@
   движка, автомасштаб и шторка.
 - `tests/brain.test.mjs` — обученная политика должна обгонять необученную.
 - `tests/safety.test.mjs` — пороги и порядок предупреждений о состоянии бригады.
+- `tests/save-status.test.mjs` — ошибки записи и корректность индикатора; `tests/checkpoint.test.mjs` — защита и восстановление снимка.
 - `tests/dialogue.test.mjs` — реплики, беседы и опциональная локальная озвучка;
   `tests/checkpoint.test.mjs` — сохранение состояния разговора и совместимость.
 - `tests/boot-jsdom.mjs` — полный запуск в jsdom на **настоящих** `shared/engine.js`

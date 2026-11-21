@@ -62,7 +62,7 @@ window.WC = window.WC || {};
         global.WC.render.start();
         var status = global.WC.game.api.resumeStatus;
         document.getElementById('save-indicator').textContent = status === 'failed' ? '● сохранение защищено' : '● автосохранение';
-        if (status === 'failed') global.WC.util.toast('Сохранение повреждено. Автозапись отключена, чтобы не потерять данные.', 'bad', 8000);
+        if (status === 'failed') global.WC.util.toast(global.WC.save.protectionReason() === 'unavailable' ? 'Хранилище недоступно. Автозапись отключена, чтобы не перезаписать возможное сохранение.' : 'Сохранение повреждено. Автозапись отключена, чтобы не потерять данные.', 'bad', 8000);
         else if (status === 'restored') global.WC.util.toast('Смена восстановлена', 'good', 3000);
         if (global.WC.game.state.shiftEnded && global.WC.game.api.onShiftEnd) global.WC.game.api.onShiftEnd(global.WC.game.summary());
         window.addEventListener('pointerdown', unlockAudio);
@@ -70,10 +70,16 @@ window.WC = window.WC || {};
         document.addEventListener('visibilitychange', function () {
           if (document.hidden) {
             global.WC.game.setPaused(true);
+            global.WC.save.autosave(global.WC.game);
           }
         });
+        // pagehide работает и при переходе в bfcache; на мобильных beforeunload
+        // часто не срабатывает при закрытии или вытеснении фоновой вкладки.
+        window.addEventListener('pagehide', function () {
+          global.WC.save.autosave(global.WC.game);
+        });
         window.addEventListener('beforeunload', function () {
-          global.WC.save.save(global.WC.game);
+          global.WC.save.autosave(global.WC.game);
         });
         // Смена размера (поворот телефона, адресная строка) — пересчитываем камеру
         if (global.WC.layout) {
