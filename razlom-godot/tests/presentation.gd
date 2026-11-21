@@ -45,10 +45,21 @@ func run_tests() -> void:
 	check(motion.model.rotation.z > 0.001, "Hit reaction tilts the guard visually")
 	for i in range(120):
 		motion.advance(1.0 / 60, 0, false)
-	check(absf(motion.model.rotation.z) < 0.001, "Hit reaction settles without lasting tilt")
+	var idle_tilt := sin(motion.clock * 0.7) * 0.025
+	check(absf(motion.model.rotation.z - idle_tilt) < 0.006, "Hit reaction settles back to its breathing idle pose")
 	check(absf(motion.model.get_node("Head").rotation.y) > 0.001, "Idle guard looks around")
 	check(absf(dog_motion.model.get_node("Head").rotation.y) > 0.001, "Waiting dog scans with its head")
 	check(game.interactions.medic_motion != null, "Vera has an idle animation driver")
+	var courier_motion: RazlomActorMotion = game.interactions.courier_motion
+	courier_motion.idle_fidget_wait = 0.01
+	courier_motion.advance(0.02, 0)
+	check(courier_motion.idle_fidget > 0 and courier_motion.idle_fidget_arm == "ArmR", "An idle courier begins a staggered sleeve-adjustment fidget")
+	courier_motion.advance(0.3, 0)
+	check(courier_motion.joints.ArmR.rotation.z > 0.02, "Fidget visibly moves the shoulder and arm before settling")
+	var player_glove: Node3D = game.player.left_arm.hand
+	var player_finger: Node3D = player_glove.get_node("Finger0") as Node3D
+	var player_finger_segment := player_finger.get_child(0) as MeshInstance3D
+	check(player_glove.has_node("Palm") and player_finger_segment.mesh is CapsuleMesh and not player_glove.has_node("KnuckleRidge0"), "First-person glove keeps attached segmented fingers without floating ornaments")
 	var surface := RazlomArt.material(Color.WHITE, "brick")
 	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")
 	check(surface.roughness_texture != null, "Surface roughness map is bound")

@@ -124,21 +124,21 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			ear.rotation.z = side * -0.12
 			var eye := Node3D.new()
 			eye.name = "EyeL" if side < 0 else "EyeR"
-			eye.position = Vector3(side * 0.069, 0.035, -0.3)
+			eye.position = Vector3(side * 0.069, 0.035, -0.323)
 			head.add_child(eye)
 			box(eye, Vector3.ZERO, Vector3(0.037, 0.017, 0.006), material(Color("eee2d2")))
 			orb(eye, Vector3(0, 0, -0.004), Vector3(0.007, 0.009, 0.003), material(Color("626c53")), "Iris")
 			orb(eye, Vector3(0, 0, -0.006), Vector3(0.0035, 0.005, 0.002), material(Color("282923")), "Pupil")
 			orb(eye, Vector3(-0.002, 0.003, -0.008), Vector3(0.0017, 0.0017, 0.001), material(Color("fff0d9")), "Catchlight")
-			var brow := box(head, Vector3(side * 0.07, 0.063, -0.298), Vector3(0.047, 0.009, 0.008), material(Color("594337")))
+			var brow := box(head, Vector3(side * 0.07, 0.063, -0.321), Vector3(0.047, 0.009, 0.008), material(Color("594337")))
 			brow.rotation.z = side * -0.08
 			if medic:
-				box(head, Vector3(side * 0.103, -0.026, -0.275), Vector3(0.025, 0.008, 0.003), material(Color("bf887a")))
+				box(head, Vector3(side * 0.103, -0.026, -0.296), Vector3(0.025, 0.008, 0.003), material(Color("bf887a")))
 		# A softly shaded bridge and a small rounded tip sit on the face plane.
-		box(head, Vector3(0, -0.006, -0.302), Vector3(0.018, 0.042, 0.014), skin)
-		orb(head, Vector3(0, -0.03, -0.313), Vector3(0.012, 0.01, 0.009), material(skin_color.lightened(0.035)), "NoseTip")
-		box(head, Vector3(0, -0.078, -0.296), Vector3(0.046, 0.006, 0.005), material(Color("9a6259") if medic else Color("765449")))
-		box(head, Vector3(0, -0.083, -0.295), Vector3(0.025, 0.003, 0.004), material(Color("d0a092")))
+		box(head, Vector3(0, -0.006, -0.326), Vector3(0.018, 0.042, 0.014), skin)
+		orb(head, Vector3(0, -0.03, -0.344), Vector3(0.012, 0.01, 0.009), material(skin_color.lightened(0.035)), "NoseTip")
+		box(head, Vector3(0, -0.078, -0.32), Vector3(0.046, 0.006, 0.005), material(Color("9a6259") if medic else Color("765449")))
+		box(head, Vector3(0, -0.083, -0.319), Vector3(0.025, 0.003, 0.004), material(Color("d0a092")))
 		var cap := root.get_node_or_null("Cap") as Node3D
 		if cap != null: cap.reparent(head, true)
 		var hair_mat := material(Color("544435"))

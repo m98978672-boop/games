@@ -23,7 +23,7 @@ func has_natural_face(model: Node3D) -> bool:
 		return false
 	if not head.has_node("NoseTip") or not head.has_node("EyeL") or not head.has_node("EyeR"):
 		return false
-	if head.get_node("EyeL").position.z > -0.28 or head.get_node("EyeR").position.z > -0.28:
+	if head.get_node("EyeL").position.z > -0.315 or head.get_node("EyeR").position.z > -0.315:
 		return false
 	for eye_name in ["EyeL", "EyeR"]:
 		var eye := head.get_node_or_null(eye_name) as Node3D
