@@ -82,6 +82,8 @@ jobs:
         run: node 1in8b/tests/smoke.mjs
       - name: Test 1 IN 8 BILLION life model
         run: node 1in8b/tests/logic.mjs
+      - name: Test 1 IN 8 BILLION bot (бот играет по правилам и не нарушает их)
+        run: node 1in8b/tests/bot.mjs
       - name: Test game template structure
         run: node game-base/tests/smoke.mjs
       - name: Test game template logic
@@ -171,8 +173,25 @@ jobs:
           cd truck-showroom
           npm ci --no-audit --no-fund
           node tests/details.mjs
-      - name: Test road-tycoon victory (финал, сохранение, свободная игра)
-        run: node road-tycoon/tests/victory.test.js
+      - name: Test road-tycoon (симуляция, финал, сохранение, свободная игра)
+        run: |
+          node road-tycoon/tests/sim.test.js
+          node road-tycoon/tests/victory.test.js
+      - name: Test night-taxi (логика, ресурсы, функции, интерфейс, финал)
+        run: |
+          cd night-taxi
+          npm ci --no-audit --no-fund
+          npm test
+      - name: Test warehouse-crew (смоук, механики, мозг, запуск в jsdom)
+        run: |
+          cd warehouse-crew
+          node tests/smoke.mjs
+          node tests/mechanics.test.mjs
+          node tests/brain.test.mjs
+          # boot-jsdom честно пропускается без зависимостей — ставим их
+          # сюда же, чтобы запуск игры в CI проверялся по-настоящему.
+          npm install --no-save --no-package-lock jsdom three
+          node tests/boot-jsdom.mjs
       - name: Guard finale coverage (у каждой игры есть конец, и он закреплён тестом)
         run: node tools/tests/finale-coverage.mjs
       - name: Test game endings — у каждой игры должен быть финал

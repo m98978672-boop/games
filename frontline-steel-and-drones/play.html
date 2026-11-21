@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Линия Фронта: Сталь и Дроны — Frontline: Steel & Drones</title>
 <style>
+@import url("../shared/tokens.css");
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0b0e09; --panel:#151a12; --panel2:#202719; --panel3:#2b351f; --line:#46543a;
@@ -169,6 +170,7 @@ button.big:active{transform:translateY(3px)}
 </style>
 </head>
 <body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
 
 <!-- Hand-drawn vector icon sprite (no emoji, no generated raster icons) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -415,6 +417,7 @@ window.addEventListener('error', function(e){
   if (x) { x.hidden = false; x.textContent = 'Ошибка запуска: ' + (e.message || 'неизвестная ошибка') + '. Обнови страницу (Ctrl+R).'; }
 });
 </script>
+<script src="../shared/engine.js"></script>
 <script>
 'use strict';
 /* ============================================================
@@ -3068,5 +3071,6 @@ if(window.__wantStart) frontlineStart();              // player clicked while sc
 requestAnimationFrame(loop);
 
 </script>
+<script src="../shared/engine-bootstrap.js" defer></script>
 </body>
 </html>
