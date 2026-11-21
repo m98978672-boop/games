@@ -55,10 +55,14 @@ func run_tests() -> void:
 	game.state.complete = true
 	game.state.relay_log = true
 	game.state.relay_shared = true
+	game.refresh_world_state()
+	check(game.world.has_node("ShelterImprovements") and game.world.has_node("ShelterImprovements/WaterTank"), "Restoring the pump adds persistent water infrastructure to the shelter")
 	q.offer("power")
 	click_first(game)
 	q.use_station("switch")
 	check(q.phase("power") == 3, "Engineer knowledge opens alternate repair path")
+	game.refresh_world_state()
+	check(game.world.has_node("SubstationRestored/LiveIndicator"), "Power quest visibly restores the substation and its green signal")
 	var ammo: int = game.state.reserve
 	q.use_station("switch")
 	check(game.state.reserve == ammo, "Repair reward cannot repeat")
@@ -69,6 +73,8 @@ func run_tests() -> void:
 	q.offer("gate")
 	click_first(game)
 	check(q.phase("gate") == 3, "Broadcast branch becomes permanent")
+	game.refresh_world_state()
+	check(game.world.has_node("WorldDecisionNotice"), "Final evidence choice leaves a visible notice at the shelter")
 	ammo = game.state.reserve
 	q.resolve_gate(4)
 	check(q.phase("gate") == 3 and game.state.reserve == ammo, "Cannot claim both mutually exclusive endings")

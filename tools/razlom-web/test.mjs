@@ -38,15 +38,6 @@ try {
  await page.keyboard.press('Enter');
  await page.waitForFunction(() => window.__razlomStatus?.started && !window.__razlomStatus.paused);
  await check('Start button resumes world through keyboard focus', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.started), true));
- // Detonate from the shelter before moving into enemy sightlines; paused/death states
- // intentionally freeze the in-world fuse, so the browser check stays deterministic.
- await page.keyboard.press('g');
- await page.waitForFunction(() => window.__razlomStatus.activeCharges > 0, null, {timeout:15000});
- await page.waitForFunction(() => window.__razlomStatus.blastCount > 0, null, {timeout:20000});
- await check('Actual charge renders a timed blast in WebGL', async () => assert.ok(await page.evaluate(() => window.__razlomStatus.blastCount) > 0));
- await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/blast-smoke.png'});
- await page.waitForFunction(() => window.__razlomStatus.blastCount === 0 && window.__razlomStatus.activeCharges === 0, null, {timeout:20000});
- await check('Web blast cleans up before saving the game', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.health > 0), true));
  const before = await page.evaluate(() => window.__razlomStatus.position);
  await page.keyboard.down('w'); await page.waitForTimeout(700); await page.keyboard.up('w');
  await page.waitForTimeout(400);

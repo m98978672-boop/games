@@ -10,11 +10,22 @@ W, H, FPS = B.W, B.H, B.FPS
 FF = B.FF
 TMP = B.TMP
 F = 1500.0
+MODE = "wide"
+
+def set_mode(m):
+    global MODE, W, H, F
+    MODE = m
+    if m == "shorts":
+        W, H, F = 1080, 1920, 1350.0
+    else:
+        W, H, F = 1920, 1080, 1500.0
+    SKY.clear()
 
 CLAY = (212, 206, 198); ORANGE = (232, 138, 58); PINK = (238, 150, 170)
 GREEN = (70, 200, 70); BLACK = (15, 15, 15); PURP = (150, 40, 190)
 GREY = (178, 178, 180); GREY_D = (150, 150, 152); WHITE = (235, 235, 230)
 BROWN = (186, 148, 100); RED = (190, 60, 55); KIB = (150, 105, 60)
+MUZZ = (228, 223, 217)
 LIGHT = (0.45, 0.8, -0.4)
 LN = math.sqrt(sum(c * c for c in LIGHT)); LIGHT = tuple(c / LN for c in LIGHT)
 
@@ -55,9 +66,38 @@ def eob(x):  # easeOutBack
 def blink(t): return 0.15 if (t % 3.7) < 0.14 else 1.0
 
 # ---------- кот ----------
-def cat_faces(P):
-    """P: x,z,yaw,lift,pitch,walk,head_yaw,head_pitch,sit,rear,tp,tail_t,blink,detach,paper,crouch"""
+def octa(z, yc, r, squash=0.92):
+    pts = []
+    for k in range(8):
+        a = math.radians(22.5 + 45*k)
+        pts.append((r*math.cos(a), yc + r*math.sin(a)*squash, z))
+    return pts
+
+def loft(rings, col, ol=True, caps=True):
     faces = []
+    for i in range(len(rings)-1):
+        A, Bn = rings[i], rings[i+1]
+        for k in range(len(A)):
+            k2 = (k+1) % len(A)
+            faces.append(([A[k], A[k2], Bn[k2], Bn[k]], col, False, ol))
+    if caps:
+        faces.append((list(rings[0]), col, False, ol))
+        faces.append((list(reversed(rings[-1])), col, False, ol))
+    return faces
+
+def disc(cx, cy, cz, r, squash=1.0):
+    pts = []
+    for k in range(8):
+        a = math.radians(22.5 + 45*k)
+        pts.append((cx + r*math.cos(a), cy + r*math.sin(a)*squash, cz))
+    return pts
+
+def B4(c, s, col):
+    return [(q, col, False, True) for q, _c, _e in box(c, s, col)]
+
+def cat_faces(P):
+    """P: x,z,yaw,lift,pitch,walk,head_yaw,head_pitch,sit,rear,tp,tail_t,blink,detach,paper,crouch,grey,ear_tw"""
+    faces, lines = [], []
     lift = P.get("lift", 0.0) + (0.015*abs(math.sin(P["walk"]*math.pi*2)) if P.get("walk") else 0.0)
     if P.get("crouch"): lift -= 0.13
     bp = P.get("pitch", 0.0)
@@ -65,70 +105,88 @@ def cat_faces(P):
         p = rx(p, bp, (0, 0.30, 0))
         p = ry(p, P.get("yaw", 0.0))
         return (p[0]+P.get("x", 0), p[1]+lift, p[2]+P.get("z", 0))
-    faces += [(  [body(p) for p in q], col, e) for q, col, e in box((0, 0.34, 0.0), (0.17, 0.17, 0.34), CLAY)]
-    faces += [([body(p) for p in q], col, e) for q, col, e in box((0, 0.42, 0.14), (0.09, 0.13, 0.14), CLAY)]
-    faces += quad(*[body(p) for p in [(-0.06,0.428,-0.06),(0.06,0.428,-0.06),(0.06,0.428,0.10),(-0.06,0.428,0.10)]], col=ORANGE)
-    # ноги
-    legs = {"FL": (0.075,0.30,0.14), "FR": (-0.075,0.30,0.14), "HL": (0.075,0.30,-0.14), "HR": (-0.075,0.30,-0.14)}
+    # тело — округлый лофт из восьмигранных сечений
+    BS = [(-0.22, 0.295, 0.068), (-0.12, 0.310, 0.090), (0.04, 0.317, 0.088),
+          (0.15, 0.327, 0.074), (0.22, 0.337, 0.056)]
+    rings = [octa(z, yc, r) for z, yc, r in BS]
+    faces += [([body(p) for p in q], c, e, ol) for q, c, e, ol in loft(rings, CLAY)]
+    pr = [octa(z, yc, r*1.06) for z, yc, r in BS]
+    for i in (1, 2):
+        faces += [([body(p) for p in [pr[i][1], pr[i][2], pr[i+1][2], pr[i+1][1]]], ORANGE, False, False)]
+    faces += [([body(p) for p in q], c, e, ol) for q, c, e, ol in B4((0, 0.385, 0.14), (0.10, 0.12, 0.14), CLAY)]
+    # ноги: бедро тоньше к низу + подушечка-лапка
+    legs = {"FL": (0.070, 0.26, 0.14), "FR": (-0.070, 0.26, 0.14), "HL": (0.070, 0.26, -0.14), "HR": (-0.070, 0.26, -0.14)}
     a = 0.5*math.sin(P["walk"]*math.pi*2) if P.get("walk") else 0.0
     ang = {"FL": a, "HR": a, "FR": -a, "HL": -a}
     if P.get("sit"): ang.update({"HL": 1.25, "HR": 1.25, "FL": 0.0, "FR": 0.0})
     if P.get("rear"): r = P["rear"]; ang.update({"FL": -1.15*r, "FR": -1.15*r, "HL": 0.5*r, "HR": 0.5*r})
     if P.get("crouch"): ang = {"FL": 0.7, "FR": 0.7, "HL": 0.9, "HR": 0.9}
     for name, pv in legs.items():
-        pts = [q for q, col, e in box((pv[0], pv[1]-0.15, pv[2]), (0.05, 0.30, 0.055), CLAY)]
-        out = []
-        for q in pts:
-            p = q[0] if isinstance(q, tuple) else q
-            out.append(q)
-        newf = []
-        for q, col, e in box((pv[0], pv[1]-0.15, pv[2]), (0.05, 0.30, 0.055), CLAY):
+        parts = B4((pv[0], pv[1]-0.075, pv[2]), (0.062, 0.14, 0.066), CLAY)
+        parts += B4((pv[0], pv[1]-0.185, pv[2]), (0.048, 0.13, 0.052), CLAY)
+        parts += B4((pv[0], pv[1]-0.24, pv[2]+0.02), (0.055, 0.05, 0.08), CLAY)
+        for q, col, e, ol in parts:
             qq = [rx(p, ang[name], pv) for p in q]
             if P.get("tp"):
                 sgn = 1.0 if name.endswith("L") else -1.0
-                qq = [rz(p, sgn*1.5708, (pv[0], pv[1], pv[2])) for p in qq]
+                qq = [rz(p, sgn*1.5708, pv) for p in qq]
                 qq = [(p[0], pv[1], p[2]) for p in qq]
-            newf.append(([body(p) for p in qq], col, e))
-        faces += newf
-    # голова
-    HP = (0, 0.44, 0.20)
+            faces.append(([body(p) for p in qq], col, e, ol))
+    # голова — округлый лофт, чуть крупнее тела (чиби)
+    HP = (0, 0.40, 0.20)
     hy, hp = P.get("head_yaw", 0.0), P.get("head_pitch", 0.0)
     def head(p):
         p = ry(p, hy, HP); p = rx(p, hp, HP)
         return body(p)
-    faces += [([head(p) for p in q], col, e) for q, col, e in box((0, 0.51, 0.27), (0.16, 0.15, 0.15), CLAY)]
-    faces += quad(*[head(p) for p in [(-0.055,0.588,0.20),(0.055,0.588,0.20),(0.055,0.588,0.33),(-0.055,0.588,0.33)]], col=ORANGE)
+    HS = [(0.155, 0.465, 0.070), (0.225, 0.475, 0.096), (0.315, 0.480, 0.090), (0.375, 0.472, 0.062)]
+    hr = [octa(z, yc, r, 0.95) for z, yc, r in HS]
+    faces += [([head(p) for p in q], c, e, ol) for q, c, e, ol in loft(hr, CLAY)]
+    ph = [octa(z, yc, r*1.05, 0.95) for z, yc, r in HS]
+    for i in (1, 2):
+        faces += [([head(p) for p in [ph[i][1], ph[i][2], ph[i+1][2], ph[i+1][1]]], ORANGE, False, False)]
+    faces += [([head(p) for p in q], c, e, ol) for q, c, e, ol in B4((0, 0.442, 0.390), (0.062, 0.048, 0.055), MUZZ)]
+    faces += [([head(p) for p in [(-0.012, 0.456, 0.420), (0.012, 0.456, 0.420), (0, 0.442, 0.420)]], PINK, True, False)]
+    # ушки-конусы
     tw = P.get("ear_tw", 0.0)
     for sgn, ext in ((1, tw), (-1, 0.0)):
-        faces += [([head(rz(p, sgn*0.28+ext, (sgn*0.05, 0.58, 0.25))) for p in q], col, e)
-                  for q, col, e in box((sgn*0.05, 0.615, 0.25), (0.05, 0.06, 0.04), CLAY if sgn > 0 else ORANGE)]
+        base = [(sgn*0.052-0.034, 0.545, 0.22), (sgn*0.052+0.034, 0.545, 0.22), (sgn*0.052, 0.545, 0.285)]
+        tip = [(sgn*0.052-0.009, 0.620, 0.225), (sgn*0.052+0.009, 0.620, 0.225), (sgn*0.052, 0.620, 0.250)]
+        pv = (sgn*0.052, 0.545, 0.20)
+        ear = loft([base, tip], ORANGE if sgn > 0 else CLAY)
+        faces += [([head(rz(p, sgn*0.16+ext, pv)) for p in q], c, e, ol) for q, c, e, ol in ear]
+    # глаза-круги с зрачком и бликом
     bl = P.get("blink", 1.0)
     for sgn in (1, -1):
-        ex = sgn*0.042
-        faces += quad(*[head(p) for p in [(ex-0.026,0.53-0.03*bl,0.348),(ex+0.026,0.53-0.03*bl,0.348),(ex+0.026,0.53+0.03*bl,0.348),(ex-0.026,0.53+0.03*bl,0.348)]], col=GREEN, emis=True)
-        faces += quad(*[head(p) for p in [(ex-0.009,0.53-0.016*bl,0.352),(ex+0.009,0.53-0.016*bl,0.352),(ex+0.009,0.53+0.016*bl,0.352),(ex-0.009,0.53+0.016*bl,0.352)]], col=(25, 25, 25), emis=True)
-    faces += quad(*[head(p) for p in [(-0.012,0.472,0.348),(0.012,0.472,0.348),(0.012,0.492,0.348),(-0.012,0.492,0.348)]], col=PINK, emis=True)
+        ex = sgn*0.046
+        faces += [( [head(p) for p in disc(ex, 0.492, 0.378, 0.034, bl)], GREEN, True, False)]
+        faces += [( [head(p) for p in disc(ex, 0.492, 0.382, 0.016, bl)], (25, 25, 25), True, False)]
+        faces += [( [head(p) for p in disc(ex-0.010, 0.492+0.012*bl, 0.386, 0.0065, bl)], (250, 250, 250), True, False)]
     if P.get("paper"):
-        faces += quad(*[head(p) for p in [(-0.09,0.40,0.40),(0.09,0.40,0.40),(0.11,0.52,0.46),(-0.11,0.52,0.46)]], col=WHITE)
-    # хвост-«missing texture»
-    tb = (0, 0.40, -0.14)
+        faces += [([head(p) for p in [(-0.09, 0.40, 0.42), (0.09, 0.40, 0.42), (0.11, 0.52, 0.48), (-0.11, 0.52, 0.48)]], WHITE, False, False)]
+    # усы
+    for sgn in (1, -1):
+        for dy, dz in ((0.014, 0.30), (0.0, 0.345), (-0.014, 0.39)):
+            lines.append((head((sgn*0.030, 0.442, 0.40)), head((sgn*0.13, 0.442+dy, dz))))
+    # хвост-«missing texture», сужающийся и плавный
+    tb = (0, 0.36, -0.14)
     if P.get("detach"):
         w = P["tail_t"]
-        tb = (0.12+0.03*math.sin(w*5), 0.50+0.04*math.sin(w*3.1), -0.30)
+        tb = (0.12+0.03*math.sin(w*5), 0.46+0.04*math.sin(w*3.1), -0.30)
     pos = tb
-    for i in range(5):
-        w = P["tail_t"]
-        elev = 0.85 + 0.25*math.sin(w*2.0 + i*0.7)
-        azim = 0.5*math.sin(w*2.6 + i*0.5)
-        d = (math.sin(azim)*0.06, math.sin(elev)*0.06, -math.cos(azim)*0.06)
+    w = P["tail_t"]
+    for i in range(7):
+        elev = 0.75 + 0.22*math.sin(w*2.0 + i*0.55)
+        azim = 0.45*math.sin(w*2.6 + i*0.40)
+        d = (math.sin(azim)*0.048, math.sin(elev)*0.048, -math.cos(azim)*0.048)
         pos = (pos[0]+d[0], pos[1]+d[1], pos[2]+d[2])
+        s = 0.050 - 0.024*(i/6.0)
         col = PURP if i % 2 == 0 else BLACK
-        faces += [([body(p) for p in q], col, True) for q, c2, e in box(pos, (0.055, 0.055, 0.06), col)]
+        faces += [([body(p) for p in q], col, True, False) for q, c2, e in box(pos, (s, s, s*1.1), col)]
     if P.get("grey"):
-        gm = {CLAY: (172, 172, 174), ORANGE: (172, 172, 174), GREEN: (95, 95, 97),
-              BLACK: (120, 120, 122), PINK: (150, 150, 152), PURP: (150, 150, 152)}
-        faces = [(q, gm.get(c, c), e) for q, c, e in faces]
-    return faces
+        gm = {CLAY: (172, 172, 174), ORANGE: (172, 172, 174), MUZZ: (182, 182, 184),
+              GREEN: (95, 95, 97), BLACK: (120, 120, 122), PINK: (150, 150, 152), PURP: (150, 150, 152)}
+        faces = [(q, gm.get(c, c), e, ol) for q, c, e, ol in faces]
+    return faces, lines
 
 # ---------- камера/рендер ----------
 def make_cam(pos, target):
@@ -185,7 +243,7 @@ def draw_shadow(dr, cam, x, z, r=0.35):
 
 def render_frame(k, t, ovl_imgs):
     S = B.scenes[k]
-    faces, grid, shadow = [], True, None
+    faces, grid, shadow, lines = [], True, None, []
     if k == 0:
         sky = sky_img("dawn", (72, 76, 84), (152, 154, 157))
         wz = 4.6 - 2.4*smooth(0, 7, t)
@@ -198,7 +256,7 @@ def render_frame(k, t, ovl_imgs):
         faces += box((-3.4, 1.0, 4), (2.0, 2.0, 2.4), GREY) + box((3.9, 0.9, 2.5), (1.6, 1.8, 2), GREY_D)
         faces += box((2.6, 0.35, 3.4), (0.6, 0.7, 0.5), GREY_D)
         faces += box((2.9, 1.4, 5.0), (0.08, 2.8, 0.08), GREY) + box((2.9, 2.85, 5.0), (0.5, 0.14, 0.3), (230, 225, 190))
-        faces += cat_faces(P)
+        cf, cl = cat_faces(P); faces += cf; lines += cl
         cam = make_cam((0.15*math.sin(t*0.3), 0.75, -0.4), (0, 0.45, wz-0.2))
     elif k == 1:
         sky = sky_img("dawn", (72, 76, 84), (152, 154, 157))
@@ -208,7 +266,7 @@ def render_frame(k, t, ovl_imgs):
         shadow = (0, 0)
         faces += box((3.6, 1.2, 6), (2.2, 2.4, 3), GREY) + box((-3.8, 1.5, 8), (2.6, 3.0, 3), GREY_D)
         faces += box((-3.4, 1.0, 4), (2.0, 2.0, 2.4), GREY)
-        faces += cat_faces(P)
+        cf, cl = cat_faces(P); faces += cf; lines += cl
         hx = 0.9*math.sin(0.5+0.12*math.sin(t*0.5)); hz = 1.05*math.cos(0.5+0.12*math.sin(t*0.5))
         cam = make_cam((hx, 0.62, hz), (0, 0.50, 0.24))
     elif k == 2:
@@ -230,7 +288,7 @@ def render_frame(k, t, ovl_imgs):
         faces += box((0.6, 0.35, 0), (0.55, 0.7, 0.45), GREY_D)
         faces += box((-3.5, 1.4, 3), (2.4, 2.8, 3), GREY) + box((3.8, 1.2, 5), (2.2, 2.4, 3), GREY_D)
         faces += [ ( [ (p[0], p[1], p[2]+3.5) for p in q ], c, e) for q, c, e in box((-3.0, 0.35, 0), (0.6, 0.7, 0.5), GREY_D) ]
-        faces += cat_faces(P)
+        cf, cl = cat_faces(P); faces += cf; lines += cl
         cam = make_cam((2.3, 0.95, 3.2-0.5*smooth(0, 18, t)), (0.2, 0.5, 0.4))
     elif k == 3:
         sky = sky_img("dusk", (92, 72, 84), (205, 145, 95))
@@ -249,7 +307,7 @@ def render_frame(k, t, ovl_imgs):
         faces += box((0, 0.02, 0), (0.6, 0.04, 0.48), BROWN)
         faces += box((-3.6, 1.3, 4), (2.4, 2.6, 3), GREY_D) + box((3.7, 1.4, 6), (2.2, 2.8, 3), GREY)
         faces += box((3.0, 1.5, 2.0), (0.08, 3.0, 0.08), GREY) + box((3.0, 3.05, 2.0), (0.5, 0.14, 0.3), (240, 220, 170))
-        faces += cat_faces(P)
+        cf, cl = cat_faces(P); faces += cf; lines += cl
         cam = make_cam((0.0, 0.9, -2.4+0.3*smooth(0, 14, t)), (0, 0.35, 0))
     elif k == 4:
         sky = sky_img("night", (22, 26, 40), (64, 70, 92))
@@ -265,8 +323,11 @@ def render_frame(k, t, ovl_imgs):
         faces += box((0.62+sw, 1.55, 6.80), (0.1, 0.05, 0.05), PINK)
         faces += box((-3.2, 1.5, 5), (2.4, 3.0, 3), (52, 55, 66)) + box((3.6, 1.2, 4), (2.2, 2.4, 3), (46, 49, 60))
         faces += box((2.6, 1.5, 2.2), (0.08, 3.0, 0.08), (60, 62, 70)) + box((2.6, 3.05, 2.2), (0.5, 0.14, 0.3), (250, 235, 180))
-        faces += cat_faces(P)
-        cam = make_cam((-1.05, 0.55, -2.1), (0.25, 1.05, 6.0))
+        cf, cl = cat_faces(P); faces += cf; lines += cl
+        if MODE == "shorts":
+            cam = make_cam((0.0, 0.62, -1.9), (0.4, 1.05, 6.0))
+        else:
+            cam = make_cam((-1.05, 0.55, -2.1), (0.25, 1.05, 6.0))
     elif k == 5:
         sky = sky_img("studio", (118, 118, 121), (162, 162, 164))
         seq = [(1.5, -0.55), (5.5, 0.0), (9.5, 0.55)]
@@ -277,7 +338,8 @@ def render_frame(k, t, ovl_imgs):
                  head_pitch=0.30, tail_t=t*0.9, blink=blink(t))
         shadow = (0, 0)
         objs = [(-1.3, 1.5, "bowl"), (0.0, 5.5, "house"), (1.3, 9.5, "cat")]
-        for ox, t0, kind in objs:
+        for ox0, t0, kind in objs:
+            ox = ox0 * (0.72 if MODE == "shorts" else 1.0)
             s = 0.85*eob(clamp01((t-t0)/0.6)) if t > t0 else 0.0
             if s <= 0.01: continue
             oz = -0.8
@@ -288,17 +350,18 @@ def render_frame(k, t, ovl_imgs):
                 fs += quad((ox-0.26,0.26,oz-0.24),(ox+0.26,0.26,oz-0.24),(ox+0.26,0.44,oz),(ox-0.26,0.44,oz), BROWN)
                 fs += quad((ox-0.26,0.26,oz+0.24),(ox+0.26,0.26,oz+0.24),(ox+0.26,0.44,oz),(ox-0.26,0.44,oz), BROWN)
             else:
-                fs = cat_faces(dict(x=ox, z=oz, yaw=-0.5+math.pi, walk=None, head_yaw=0.3*math.sin(t),
-                                    head_pitch=0, tail_t=t*1.3, blink=blink(t+1), grey=True))
-            faces += [(scale_pts(q2, (ox, 0, oz), s), c2, e2) for q2, c2, e2 in fs]
-        faces += cat_faces(P)
+                fs, lsr = cat_faces(dict(x=ox, z=oz, yaw=-0.5+math.pi, walk=None, head_yaw=0.3*math.sin(t),
+                                         head_pitch=0, tail_t=t*1.3, blink=blink(t+1), grey=True))
+                lines += [(tuple(scale_pts([q], (ox, 0, oz), s))[0], tuple(scale_pts([q2], (ox, 0, oz), s))[0]) for q, q2 in lsr]
+            faces += [tuple([scale_pts(it[0], (ox, 0, oz), s)] + list(it[1:])) for it in fs]
+        cf, cl = cat_faces(P); faces += cf; lines += cl
         cam = make_cam((0, 1.15, -3.6), (0, 0.30, 0.1))
     else:
         sky = sky_img("studio", (118, 118, 121), (162, 162, 164))
         P = dict(x=0, z=0, yaw=0.0, walk=None, tp=1.0, detach=1.0, tail_t=t,
                  blink=blink(t), head_yaw=0.0, head_pitch=0.0)
         shadow = (0, 0)
-        faces += cat_faces(P)
+        cf, cl = cat_faces(P); faces += cf; lines += cl
         a = 0.3 + (t/B.scenes[6]["D"])*math.pi*1.7
         cam = make_cam((2.3*math.sin(a), 0.68, 2.3*math.cos(a)), (0, 0.45, 0))
     img = sky.copy()
@@ -306,14 +369,22 @@ def render_frame(k, t, ovl_imgs):
     if grid: draw_grid(dr, cam)
     if shadow: draw_shadow(dr, cam, shadow[0], shadow[1])
     proj = []
-    for q, col, emis in faces:
+    for item in faces:
+        q, col, emis = item[0], item[1], item[2]
+        ol = item[3] if len(item) > 3 else False
         pp = [project(p, cam) for p in q]
         if any(p is None for p in pp): continue
         depth = sum(p[2] for p in pp)/len(pp)
-        proj.append((depth, [(p[0], p[1]) for p in pp], shade((q, col, emis))))
+        proj.append((depth, [(p[0], p[1]) for p in pp], shade((q, col, emis)), ol))
     proj.sort(key=lambda x: -x[0])
-    for depth, poly, col in proj:
+    for depth, poly, col, ol in proj:
         dr.polygon(poly, fill=col, outline=col)
+        if ol:
+            dr.line(poly + [poly[0]], fill=(36, 36, 40), width=2, joint="curve")
+    for pa, pb in lines:
+        qa, qb = project(pa, cam), project(pb, cam)
+        if qa and qb:
+            dr.line([qa[0], qa[1], qb[0], qb[1]], fill=(238, 238, 238), width=2)
     for im, ta, tb in ovl_imgs:
         if ta <= t <= tb:
             img = img.convert("RGBA")
@@ -322,9 +393,9 @@ def render_frame(k, t, ovl_imgs):
             dr = ImageDraw.Draw(img)
     return img
 
-def render_scene(k, ovl, out_path, only_t=None):
+def render_scene(k, ovl, out_path, only_t=None, D=None):
     S = B.scenes[k]
-    Dl = S["D"]
+    Dl = D if D is not None else S["D"]
     ovl_imgs = [(Image.open(p).convert("RGBA"), a, b) for p, a, b in ovl]
     if only_t is not None:
         img = render_frame(k, only_t, ovl_imgs)

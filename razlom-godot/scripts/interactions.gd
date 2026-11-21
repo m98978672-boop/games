@@ -162,6 +162,10 @@ func vera_dialog() -> void:
 		body += "\n\nНа восток идёт дорога к ретранслятору 12. Там должны храниться записи конвоя. Найди, кто отдавал приказы Илье."
 	if game.state.relay_shared:
 		body += "\n\n«На записи Илья спорит с диспетчером. Он не бросил нас добровольно. Ищи северный шлюз — туда ушёл последний конвой»."
+	match game.state.vera_bond:
+		1: body += "\n\nВера заметно спокойнее рядом с тобой. Вы договорились не торопить то, что только начинает складываться."
+		2: body += "\n\nВера встречает тебя тёплой улыбкой. Между вами — взаимная близость, выбранная обоими, без обещаний, которые нельзя выполнить в этом мире."
+		3: body += "\n\nВы с Верой решили остаться друзьями. Она доверяет тебе и рада, что ты не стал давить на неё."
 	var choices: Array = []
 	if game.state.relay_log and not game.state.relay_shared:
 		choices.append({"text": "Передать Вере запись конвоя", "action": func():
@@ -196,10 +200,62 @@ func vera_dialog() -> void:
 	elif game.state.passage_broken:
 		body += "\n\n«По рации говорят о сорванном договоре. Я не знаю, что случилось у ворот. Но после нас здесь останутся люди, которым придётся жить рядом. Не забудь об этом»."
 	choices.append({"text": "Вера, кем ты была до аварии?", "action": vera_past})
+	# Vera is an active quest giver for several authored jobs, not only the main pump plot.
+	if game.quests.phase("medicine") < 3:
+		choices.append({"text": "Дело Веры • медицинский ящик", "action": func(): game.quests.offer("medicine")})
+	if game.quests.phase("engineer") < 2 and game.quests.phase("engineer") < 3:
+		choices.append({"text": "Дело Веры • раненый электрик Семён", "action": func(): game.quests.offer("engineer")})
+	if game.state.relay_shared and game.quests.phase("power") < 3:
+		choices.append({"text": "Дело Веры • запитать северный шлюз", "action": func(): game.quests.offer("power")})
+	if game.state.complete and game.state.vera_bond == 0:
+		choices.append({"text": "Спросить Веру, хочет ли она сблизиться", "action": vera_invite})
+	elif game.state.vera_bond == 1 and game.state.relay_shared:
+		choices.append({"text": "Обсудить, какими мы хотим быть друг для друга", "action": vera_relationship})
+	if game.state.vera_bond == 2:
+		choices.append({"text": "Побыть с Верой • тихий разговор", "action": vera_quiet_moment})
 	if game.quests.phase("medicine") == 2:
 		choices.append({"text": "Передать Вере медицинский ящик", "action": func(): game.quests.offer("medicine")})
 	choices.append({"text": "Дела Очага • помощь и вылазки", "action": game.quests.board})
 	open("ВЕРА ЛЕСНАЯ", body, choices)
+
+func vera_invite() -> void:
+	medic_motion.greet("warm")
+	open("ВЕРА / ВЕЧЕР ПОСЛЕ ВЫЛАЗКИ", "Ты не должен ей спасение, а она не должна тебе близость. После возвращения насоса вы оба впервые можете остановиться. Вера слушает, не отводя взгляда.\n\n«Мне хорошо рядом с тобой. Но я не хочу, чтобы благодарность за помощь принимали за обещание. Если мы попробуем стать ближе, то только потому, что оба этого захотим».", [
+		{"text": "Предложить узнать друг друга ближе — без спешки", "action": func():
+			game.state.vera_bond = 1
+			game.refresh_world_state()
+			medic_motion.greet("warm")
+			game.notify("Вера согласилась: вы решили дать этому чувству время")
+			game.resume()},
+		{"text": "Сказать, что важнее сохранить дружбу", "action": func():
+			game.state.vera_bond = 3
+			medic_motion.greet("listen")
+			game.notify("Вера благодарна за честность. Вы остались близкими друзьями")
+			game.resume()},
+		{"text": "Не сейчас", "action": game.resume}])
+
+func vera_relationship() -> void:
+	medic_motion.greet("warm")
+	open("ВЕРА / ДОВЕРИЕ", "«Мы прошли через слишком многое, чтобы притворяться, будто ничего не чувствуем. Я хочу быть с тобой — не из страха остаться одной и не в обмен на то, что ты сделал. Ты сам этого хочешь?»", [
+		{"text": "Да. Давай попробуем быть вместе и беречь друг друга", "action": func():
+			game.state.vera_bond = 2
+			game.refresh_world_state()
+			medic_motion.greet("warm")
+			game.notify("Вера выбрала быть с тобой. Это взаимное решение сохранено")
+			game.resume()},
+		{"text": "Я дорожу тобой, но хочу остаться другом", "action": func():
+			medic_motion.greet("listen")
+			game.notify("Вы договорились сохранить дружбу без обиды")
+			game.resume()},
+		{"text": "Мне нужно подумать", "action": game.resume}])
+
+func vera_quiet_moment() -> void:
+	medic_motion.greet("warm")
+	open("ТИХИЙ ВЕЧЕР У ОЧАГА", "Старая лампа греет угол убежища. Вера рассказывает, как они с Ильёй собирали этот верстак из дверных петель, а ты делишься тем, что обычно оставляешь при себе. Она берёт твою руку только после короткого вопросительного взгляда. Никаких больших клятв — лишь доверие, которое вы оба можете продолжать выбирать.", [
+		{"text": "Посидеть ещё немного", "action": func():
+			medic_motion.greet("warm")
+			game.resume()},
+		{"text": "Вернуться к делам Очага", "action": game.resume}])
 
 func bed_dialog() -> void:
 	open("ТЁПЛЫЙ НОЧЛЕГ", "Отдохнуть четыре часа: восстановятся тепло, силы и часть здоровья.\nРасход: 10 еды и 15 воды. Нужно хотя бы 15 еды и 20 воды.\nНельзя спать во время тревоги или рядом с активным зарядом.", [

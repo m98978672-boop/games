@@ -589,11 +589,28 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
   else {
     // обход препятствия: пробуем скользить под углом (wall follow)
     let moved = false;
-    for (const a of [0.7, -0.7, 1.2, -1.2]) {
+    // Against a distant wall, the usual angled steps may all still point
+    // into it. Try tangential and slightly backwards steps as a last resort;
+    // keep doorway approaches, vehicles, players and combat unchanged.
+    let budget=u._wallFollowBudget;
+    if (budget && (!u.goal || Math.hypot(budget.gx-u.goal.x,budget.gy-u.goal.y)>1 ||
+        budget.version!==game.world.navVersion || Math.hypot(u.x-budget.x,u.y-budget.y)>55)) budget=u._wallFollowBudget=null;
+    const extended = occupancy && game.cfg.flag('distant_building_wall_follow_v1', true) && game.cfg.flag('pathing_v2', false) && !u.isVehicle && !u.playerControlled && !u.perception.hasContact && u.goal &&
+      Math.hypot(u.x-u.goal.x,u.y-u.goal.y)>500 && !wallFree(nx,ny) && (!budget || game.time-budget.since<20) &&
+      !game.walls.buildingAtPoint?.(u.x,u.y) && !!game.walls.buildingAtPoint?.(u.goal.x,u.goal.y);
+    const angles = extended ? [0.7,-0.7,1.2,-1.2,Math.PI/2,-Math.PI/2,2.1,-2.1] : [0.7,-0.7,1.2,-1.2];
+    for (const a of angles) {
       const rx = dx * Math.cos(a) - dy * Math.sin(a);
       const ry = dx * Math.sin(a) + dy * Math.cos(a);
       const tx = u.x + rx * step, ty = u.y + ry * step;
-      if (free(tx, ty)) { u.x = tx; u.y = ty; moved = true; break; }
+      if (free(tx, ty) && (Math.abs(a)<Math.PI/2 || clearFinalApproach(game,u,tx,ty))) {
+        u.x = tx; u.y = ty; moved = true;
+        if (Math.abs(a)>=Math.PI/2) {
+          if (!budget) u._wallFollowBudget={gx:u.goal.x,gy:u.goal.y,version:game.world.navVersion,x:motionX,y:motionY,since:game.time};
+          if (game._wallFollowMetrics) game._wallFollowMetrics.steps++;
+        }
+        break;
+      }
     }
     if (!moved) u.stuck = (u.stuck || 0) + dt * 2;
   }

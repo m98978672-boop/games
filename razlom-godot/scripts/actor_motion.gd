@@ -83,12 +83,22 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 			swing = lerpf(swing, -0.65 - recoil * 0.2, aim_amount)
 		if part.begins_with("Arm"):
 			swing -= flinch * (0.95 if (part == "ArmL" and hit_region == "left_arm") or (part == "ArmR" and hit_region == "right_arm") else 0.65)
-		if part == "ArmR" and gesture > 0.0:
+		var social_blend := sin((1.0 - gesture / 1.6) * PI) if gesture > 0.0 else 0.0
+		if part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
 			swing = -1.2 + sin(gesture * 9.0) * 0.18
-		if part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
+		elif part.begins_with("Arm") and gesture_kind == "warm":
+			swing = lerpf(swing, -0.22 if part == "ArmR" else -0.15, social_blend)
+		elif part.begins_with("Arm") and gesture_kind == "listen":
+			swing = lerpf(swing, -0.32, social_blend)
+		elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
 			swing = -0.85 + sin(gesture * 7.0) * 0.08
 		swing += float(reactions.get(part, 0)) * (0.65 if part.begins_with("Leg") else -0.8)
-		joint.rotation.z = float(reactions.get(part, 0)) * (0.25 if alternate else -0.25)
+		var gesture_roll := 0.0
+		if part == "ArmL" and gesture_kind in ["warm", "listen"]:
+			gesture_roll = -0.22 * social_blend
+		elif part == "ArmR" and gesture_kind in ["warm", "listen"]:
+			gesture_roll = 0.22 * social_blend
+		joint.rotation.z = float(reactions.get(part, 0)) * (0.25 if alternate else -0.25) + gesture_roll
 		if knees.has(part):
 			knees[part].rotation.x = maxf(0, -sin(clock + (PI if alternate else 0.0))) * blend * 0.7 + float(reactions.get(part, 0)) * 0.6 + duck * 0.55
 		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))
