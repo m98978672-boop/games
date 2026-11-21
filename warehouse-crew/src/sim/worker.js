@@ -521,6 +521,42 @@
       var speed = Math.max(0, Math.min(desiredSpeed, w.speedNow + 3.5 * dt));
       var step = speed * dt;
       var next = { x: w.pos.x + (dx / dist) * step, y: w.pos.y + (dy / dist) * step };
+      // Предсказуемый боковой обход: уступаем живым коллегам и занятой технике,
+      // но не закрываем себе подход к погрузчику, когда он является целью.
+      var obstacles = (lastEnv && lastEnv.workers || []).filter(function (peer) {
+        return peer.id !== w.id && peer.pos && !(peer.state && peer.state.dead) && !(peer.state && peer.state.privacy);
+      }).map(function (peer) { return { x: peer.pos.x, y: peer.pos.y, radius: 0.78 }; });
+      var vehicle = warehouse.state.forklift;
+      if (vehicle && vehicle.rider !== w.id && !w.onForklift && w.state !== 'toTech') obstacles.push({ x: vehicle.x, y: vehicle.y, radius: 1.15 });
+      var closest = null, proximity = Infinity;
+      obstacles.forEach(function (item) {
+        var d = Math.hypot(next.x - item.x, next.y - item.y);
+        if (d < item.radius && d < proximity) { closest = item; proximity = d; }
+      });
+      if (closest) {
+        var rx = w.pos.x - closest.x, ry = w.pos.y - closest.y;
+        var before = Math.hypot(rx, ry);
+        // Если уже тесно, не мешаем отходить от препятствия.
+        if (proximity < before + 0.01) {
+          var side = (dx * ry - dy * rx >= 0) ? 1 : -1;
+          var options = [side, -side].map(function (sign) {
+            var vx = dx / dist * 0.12 - dy / dist * sign * 0.96 + rx / Math.max(before, 0.001) * 0.25;
+            var vy = dy / dist * 0.12 + dx / dist * sign * 0.96 + ry / Math.max(before, 0.001) * 0.25;
+            var length = Math.hypot(vx, vy) || 1;
+            return { x: w.pos.x + vx / length * step, y: w.pos.y + vy / length * step };
+          });
+          var alternative = options.find(function (candidate) {
+            return insideWalk(candidate.x, candidate.y, layout) && !pathBlocked(w.pos, candidate, 0.30) &&
+              obstacles.every(function (item) {
+                var oldD = Math.hypot(w.pos.x - item.x, w.pos.y - item.y);
+                var newD = Math.hypot(candidate.x - item.x, candidate.y - item.y);
+                return newD >= Math.min(item.radius, oldD) - 0.002;
+              });
+          });
+          if (alternative) next = alternative;
+          else { w.speedNow = 0; return 0; }
+        }
+      }
       if (pathBlocked(w.pos, next, 0.30) || !insideWalk(next.x, next.y, layout)) {
         w.path = []; w.speedNow = 0; return 0;
       }
@@ -1087,7 +1123,9 @@
       if (w.mode === 'auto' && !body.collapsed) {
         var NEED_STATES = { toRest: 1, rest: 1, toToilet: 1, toilet: 1, fromToilet: 1, toStreet: 1, street: 1, toTech: 1, play: 1, toMeet: 1, meet: 1 };
         if (!w.orderId && !NEED_STATES[w.state]) {
-          var wantsRest = w.decision.rest > 0.62 && body.energy < 0.48 + 0.1 * (1 - w.traits.endurance);
+          var wantsRest = body.energy < 0.24 || body.fatigue > 0.83 ||
+            (model.injuryLevel(body) > 0.55 && body.energy < 0.48) ||
+            (w.decision.rest > 0.62 && body.energy < 0.48 + 0.1 * (1 - w.traits.endurance));
           if (wantsRest) {
             setState('toRest');
             setGoal({ x: layout.restArea.x + (w.id.length % 3 - 1) * 0.5, y: layout.restArea.y }, 'rest');
@@ -1561,6 +1599,16 @@
         var urgencyScore = (1 - Math.min(1, timeLeft / 100)) * (0.6 + 1.8 * urgency);
         var massScore = -Math.max(0, o.mass - model.carryCapacity(body)) * 0.12;
         var s = urgencyScore * 6 + o.priority * (1 + 2 * urgency) - dist * 0.14 - o.damage * 2 + massScore;
+        // Отдаём близкий обычный заказ свободному, здоровому коллеге; срочные
+        // грузы всё равно перевешивают этот штраф и не остаются без исполнителя.
+        var closer = allWorkers.some(function (peer) {
+          if (peer.id === w.id || !peer.body || !peer.pos || peer.orderId || peer.carryingId ||
+              peer.mode !== 'auto' || peer.body.collapsed || peer.body.energy < 0.3 || peer.body.fatigue > 0.8 ||
+              (peer.state && (peer.state.dead || peer.state.state !== 'idle'))) return false;
+          return Math.hypot(o.x - peer.pos.x, o.y - peer.pos.y) + 2.5 < dist &&
+            (o.mass <= model.safeLift(peer.body) || !techNeeded);
+        });
+        if (closer) s -= Math.min(2.5, (dist - 2.5) * 0.22) * Math.min(1, timeLeft / 25);
         if (o.truckId) s += 1.8; // фуру не заставишь ждать
         if (o.mass > model.safeLift(body)) s -= 1.2; // тяжесть — техникой, но не в первую очередь
         if (o.heavy) s += 1.4;                      // тяжёлый груз не должен лежать до просрочки

@@ -56,8 +56,15 @@ window.WC = window.WC || {};
       .then(function () {
         global.WC.render.initStage();
         global.WC.ui.init();
+        document.querySelectorAll('#speed-seg button').forEach(function (button) {
+          button.classList.toggle('on', Number(button.getAttribute('data-speed')) === global.WC.game.state.speed);
+        });
         global.WC.render.start();
-        document.getElementById('save-indicator').textContent = '● автосохранение';
+        var status = global.WC.game.api.resumeStatus;
+        document.getElementById('save-indicator').textContent = status === 'failed' ? '● сохранение защищено' : '● автосохранение';
+        if (status === 'failed') global.WC.util.toast('Сохранение повреждено. Автозапись отключена, чтобы не потерять данные.', 'bad', 8000);
+        else if (status === 'restored') global.WC.util.toast('Смена восстановлена', 'good', 3000);
+        if (global.WC.game.state.shiftEnded && global.WC.game.api.onShiftEnd) global.WC.game.api.onShiftEnd(global.WC.game.summary());
         window.addEventListener('pointerdown', unlockAudio);
         window.addEventListener('keydown', unlockAudio);
         document.addEventListener('visibilitychange', function () {

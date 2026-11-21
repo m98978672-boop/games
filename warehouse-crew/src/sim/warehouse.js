@@ -31,6 +31,8 @@
     }
     return {
       next: next,
+      getState: function () { return state >>> 0; },
+      setState: function (value) { if (!Number.isInteger(value) || value < 0 || value > 4294967295) throw new Error('Некорректное состояние ГПСЧ'); state = value >>> 0; },
       range: function (a, b) { return a + (b - a) * next(); },
       int: function (a, b) { return Math.floor(a + (b - a + 1) * next()); },
       pick: function (arr) { return arr[Math.floor(next() * arr.length) % arr.length]; },
@@ -891,9 +893,29 @@
       };
     }
 
+    // Снимок содержит только данные; Cannon-тела пересоздаются через мост физики.
+    function captureCheckpoint() {
+      return { state: state, rng: rng.getState(), effectsRng: effectsRng.getState(),
+        effectSeq: effectSeq, physics: physicsWorld.capture() };
+    }
+    function restoreCheckpoint(saved, actors) {
+      if (!saved || !saved.state || !Array.isArray(saved.state.orders) || !Array.isArray(saved.state.slots) ||
+          !Array.isArray(saved.state.trucks) || !saved.state.stats || !Number.isFinite(saved.state.time)) throw new Error('Повреждено состояние склада');
+      if (saved.state.orders.length > 2000 || saved.state.slots.length !== RACK_SLOTS.length || saved.state.trucks.length > 500) throw new Error('Недопустимый размер сохранения');
+      Object.keys(state).forEach(function (key) {
+        if (!Object.prototype.hasOwnProperty.call(saved.state, key)) throw new Error('Отсутствуют данные склада: ' + key);
+        state[key] = saved.state[key];
+      });
+      rng.setState(saved.rng); effectsRng.setState(saved.effectsRng);
+      if (!Number.isInteger(saved.effectSeq) || saved.effectSeq < 0) throw new Error('Повреждены частицы');
+      effectSeq = saved.effectSeq;
+      physicsWorld.restore(saved.physics, state.orders, actors || []);
+    }
     return {
       state: state,
       layout: LAYOUT,
+      captureCheckpoint: captureCheckpoint,
+      restoreCheckpoint: restoreCheckpoint,
       rng: rng,
       step: step,
       spawnOrder: spawnOrder,
