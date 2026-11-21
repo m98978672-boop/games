@@ -21,3 +21,4 @@ _shots/
 
 # python-кэш
 __pycache__/
+node_modules/
