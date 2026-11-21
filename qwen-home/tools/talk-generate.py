@@ -77,10 +77,12 @@ def clean_reply(text):
     return text
 
 
-def generate(model, tokenizer, messages, max_new, sample, temperature=0.7):
+def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_new=0):
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
     inputs = tokenizer(prompt, return_tensors='pt')
     kwargs = dict(max_new_tokens=max_new, pad_token_id=tokenizer.eos_token_id)
+    if min_new:
+        kwargs['min_new_tokens'] = min_new  # не даём оборвать фразу на полуслове
     if sample:
         kwargs.update(do_sample=True, temperature=temperature, top_p=0.9)
     else:
@@ -149,12 +151,12 @@ def digest(extract, query):
 def keyword_query(query):
     """Wikipedia search wants keywords, not a whole question sentence."""
     words = re.findall(r'[\u0400-\u04FFA-Za-z0-9][\u0400-\u04FFA-Za-z0-9\-]*', query)
-    stop = QUERY_STOP | {'когда', 'какой', 'какая', 'какое', 'какие', 'каком', 'где', 'кто', 'что', 'сколько', 'почему', 'зачем', 'как', 'это', 'есть', 'так'}
+    stop = QUERY_STOP | {'когда', 'какой', 'какая', 'какое', 'какие', 'каком', 'где', 'кто', 'что', 'сколько', 'почему', 'зачем', 'как', 'это', 'есть', 'так', 'давай', 'давайте', 'всё', 'все'}
     keys = [w for w in words if len(w) >= 4 and w.lower() not in stop]
     return ' '.join(keys) or query
 
 
-def search_wikipedia(query, limit=3):
+def search_wikipedia(query, limit=5):
     """Her hands: two-step Wikipedia search.
 
     Step 1 ranks article titles; step 2 fetches their texts. Each result
@@ -165,7 +167,7 @@ def search_wikipedia(query, limit=3):
     try:
         found = wiki_get({'action': 'query', 'format': 'json', 'formatversion': '2',
                           'list': 'search', 'srsearch': terms, 'srnamespace': '0',
-                          'srlimit': str(limit + 2)})
+                          'srlimit': str(limit + 3)})
         hits = found.get('query', {}).get('search', [])
         titles = [h['title'] for h in hits if h.get('title')]
         if not titles:
@@ -252,7 +254,7 @@ def main():
         messages.append({'role': role, 'content': body})
     messages.append({'role': 'user', 'content': owner_text + context_note})
     torch.manual_seed(42 + len(turns))
-    reply = clean_reply(generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7))
+    reply = clean_reply(generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7, min_new=24 if results else 0))
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
     DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
