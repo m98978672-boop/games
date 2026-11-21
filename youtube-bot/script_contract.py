@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from typing import Any
 
 
@@ -94,12 +95,9 @@ def validate_script(raw: str | dict[str, Any], expected_topic_id: str | None = N
     }
 
 
-def generate_with_qwen(messages: list[dict[str, str]], *, max_new_tokens: int = 700) -> str:
-    """Run the pinned Qwen home model locally; model dependencies are optional.
-
-    The GitHub Actions runner downloads the model at run time. No model weights
-    or generated audience data are committed to this repository.
-    """
+@lru_cache(maxsize=1)
+def _load_qwen_runtime():
+    """Load the pinned model once per runner process, not once per episode."""
     try:
         import torch
         from transformers import AutoModelForImageTextToText, AutoTokenizer
@@ -109,10 +107,19 @@ def generate_with_qwen(messages: list[dict[str, str]], *, max_new_tokens: int = 
     model_id = "Qwen/Qwen3.5-0.8B"
     revision = "2fc06364715b967f1860aea9cf38778875588b17"
     tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision)
-    model = AutoModelForImageTextToText.from_pretrained(
-        model_id, revision=revision, dtype=torch.bfloat16, low_cpu_mem_usage=True,
-    )
+    dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+    model = AutoModelForImageTextToText.from_pretrained(model_id, revision=revision, dtype=dtype)
     model.eval()
+    return torch, tokenizer, model
+
+
+def generate_with_qwen(messages: list[dict[str, str]], *, max_new_tokens: int = 700) -> str:
+    """Run the repository's pinned Qwen model; no third-party model API is used.
+
+    Model weights live in the runner cache, never in Git. The model stays loaded
+    for a batch so several review episodes do not repeatedly download/load it.
+    """
+    torch, tokenizer, model = _load_qwen_runtime()
     prompt = tokenizer.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True, enable_thinking=False,
     )

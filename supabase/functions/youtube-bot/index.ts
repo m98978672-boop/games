@@ -16,7 +16,7 @@ function cors(origin: string | null): HeadersInit {
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Vary": "Origin",
   };
 }
@@ -167,6 +167,191 @@ async function uploadPrivateDemo(accessToken: string): Promise<string> {
   return result.id;
 }
 
+function fromBase64(value: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+function decodeJwtPart(value: string): Record<string, unknown> {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+  return JSON.parse(new TextDecoder().decode(fromBase64(padded)));
+}
+
+let githubJwksCache: { keys: Array<JsonWebKey & { kid?: string }>; expiresAt: number } | null = null;
+
+async function verifyGitHubActionsOidc(request: Request): Promise<Record<string, unknown>> {
+  const authorization = request.headers.get("Authorization") ?? "";
+  const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
+  const parts = token.split(".");
+  if (parts.length !== 3) throw new Error("Missing or malformed GitHub Actions identity.");
+  const header = decodeJwtPart(parts[0]);
+  if (header.alg !== "RS256" || typeof header.kid !== "string") throw new Error("Unexpected GitHub identity signature.");
+  const now = Math.floor(Date.now() / 1000);
+  if (!githubJwksCache || githubJwksCache.expiresAt <= now) {
+    const response = await fetch("https://token.actions.githubusercontent.com/.well-known/jwks");
+    if (!response.ok) throw new Error("GitHub identity keys are unavailable.");
+    const payload = await response.json();
+    githubJwksCache = { keys: payload.keys ?? [], expiresAt: now + 300 };
+  }
+  const jwk = githubJwksCache.keys.find((key) => key.kid === header.kid);
+  if (!jwk) throw new Error("GitHub identity key was not recognized.");
+  const publicKey = await crypto.subtle.importKey(
+    "jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"],
+  );
+  const signature = fromBase64(parts[2].replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - parts[2].length % 4) % 4));
+  const signed = encoder.encode(`${parts[0]}.${parts[1]}`);
+  if (!await crypto.subtle.verify("RSASSA-PKCS1-v1_5", publicKey, signature.buffer, signed.buffer)) {
+    throw new Error("GitHub identity signature did not verify.");
+  }
+  const claims = decodeJwtPart(parts[1]);
+  const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  const expectedWorkflow = "m98978672-boop/games/.github/workflows/youtube-shorts-autopilot.yml@refs/heads/main";
+  if (
+    claims.iss !== "https://token.actions.githubusercontent.com" ||
+    !audience.includes("youtube-bot") ||
+    claims.sub !== "repo:m98978672-boop/games:ref:refs/heads/main" ||
+    claims.repository !== "m98978672-boop/games" ||
+    claims.ref !== "refs/heads/main" ||
+    claims.workflow_ref !== expectedWorkflow ||
+    !["schedule", "workflow_dispatch"].includes(String(claims.event_name)) ||
+    typeof claims.exp !== "number" || claims.exp < now ||
+    typeof claims.iat !== "number" || claims.iat > now + 60
+  ) throw new Error("GitHub identity is not from the trusted Games autopilot workflow.");
+  return claims;
+}
+
+async function accessTokenFromStoredRefreshToken(): Promise<string> {
+  const storedResponse = await dbRequest(
+    "youtube_bot_tokens", "?slot=eq.channel-owner&select=token_cipher,token_iv", { method: "GET" },
+  );
+  const rows = await storedResponse.json();
+  const stored = rows[0];
+  if (!stored) throw new Error("YouTube channel is not connected.");
+  const keyBytes = new Uint8Array(32);
+  keyBytes.set(fromHex(env("YOUTUBE_BOT_ENCRYPTION_KEY")));
+  const key = await crypto.subtle.importKey("raw", keyBytes.buffer, "AES-GCM", false, ["decrypt"]);
+  const iv = fromBase64(stored.token_iv);
+  const cipher = fromBase64(stored.token_cipher);
+  const refreshBytes = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: iv.buffer }, key, cipher.buffer,
+  );
+  const refreshToken = new TextDecoder().decode(refreshBytes);
+  const form = new URLSearchParams({
+    client_id: env("YOUTUBE_OAUTH_CLIENT_ID"),
+    client_secret: env("YOUTUBE_OAUTH_CLIENT_SECRET"),
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  });
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form,
+  });
+  const tokens = await response.json().catch(() => ({}));
+  if (!response.ok || typeof tokens.access_token !== "string") {
+    console.error("YouTube access-token refresh failed", response.status);
+    throw new Error("YouTube authorization expired; reconnect the channel.");
+  }
+  return tokens.access_token;
+}
+
+async function publishAutopilotReview(request: Request): Promise<Response> {
+  try { await verifyGitHubActionsOidc(request); }
+  catch { return Response.json({ error: "GitHub Actions identity was not accepted." }, { status: 401 }); }
+  let form: FormData;
+  try { form = await request.formData(); }
+  catch { return Response.json({ error: "Expected multipart review upload." }, { status: 400 }); }
+  const metadataText = form.get("metadata");
+  const video = form.get("video");
+  if (typeof metadataText !== "string" || !(video instanceof File)) {
+    return Response.json({ error: "Review metadata or MP4 is missing." }, { status: 400 });
+  }
+  let metadata: Record<string, unknown>;
+  try { metadata = JSON.parse(metadataText); }
+  catch { return Response.json({ error: "Review metadata is invalid JSON." }, { status: 400 }); }
+  const jobId = String(metadata.job_id ?? "");
+  const gameId = String(metadata.game_id ?? "");
+  const title = String(metadata.title ?? "").trim();
+  const description = String(metadata.description ?? "");
+  const publishAt = String(metadata.publish_at ?? "");
+  const kids = metadata.made_for_kids;
+  const tagList = metadata.tags;
+  const category = String(metadata.category_id ?? "20");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId) ||
+      !/^[a-z0-9-]{1,60}$/.test(gameId) || !title || title.length > 100 || description.length > 5000 ||
+      typeof kids !== "boolean" || !Array.isArray(tagList) || tagList.length > 30 ||
+      tagList.some((tag) => typeof tag !== "string" || tag.length > 100) ||
+      !/^\d{1,4}$/.test(category)) {
+    return Response.json({ error: "Review metadata failed validation." }, { status: 400 });
+  }
+  const scheduledDate = new Date(publishAt);
+  if (!publishAt || Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() < Date.now() + 15 * 60 * 1000) {
+    return Response.json({ error: "Scheduled publish time must be at least 15 minutes in the future." }, { status: 400 });
+  }
+  if (video.size < 1024 || video.size > 5 * 1024 * 1024 || video.type !== "video/mp4") {
+    return Response.json({ error: "Generated MP4 must be between 1 KiB and 5 MiB." }, { status: 413 });
+  }
+  const safeTime = scheduledDate.toISOString();
+  const existingResponse = await dbRequest(
+    "youtube_bot_autopilot_jobs", `?publish_at=eq.${encodeURIComponent(safeTime)}&select=id,status,video_id,watch_url`, { method: "GET" },
+  );
+  const existing = (await existingResponse.json())[0];
+  if (existing) {
+    return Response.json({
+      status: existing.status, video_id: existing.video_id, watch_url: existing.watch_url,
+      error: "A job already exists for this publish slot; duplicate upload was prevented.",
+    }, { status: existing.status === "scheduled" ? 200 : 409 });
+  }
+  await dbRequest("youtube_bot_autopilot_jobs", "", {
+    method: "POST", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({
+      id: jobId, game_id: gameId, title, publish_at: safeTime, made_for_kids: kids, status: "processing",
+    }),
+  });
+
+  try {
+    const accessToken = await accessTokenFromStoredRefreshToken();
+    const bytes = new Uint8Array(await video.arrayBuffer());
+    const youtubeMetadata = {
+      snippet: { title, description, tags: tagList, categoryId: category },
+      status: { privacyStatus: "private", publishAt: safeTime, selfDeclaredMadeForKids: kids },
+    };
+    const init = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Length": String(bytes.length),
+        "X-Upload-Content-Type": "video/mp4",
+      },
+      body: JSON.stringify(youtubeMetadata),
+    });
+    if (!init.ok) throw new Error(`YouTube rejected the upload request (${init.status}).`);
+    const uploadUrl = init.headers.get("Location");
+    if (!uploadUrl) throw new Error("YouTube did not return a resumable upload URL.");
+    const uploaded = await fetch(uploadUrl, {
+      method: "PUT", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "video/mp4" }, body: bytes,
+    });
+    const result = await uploaded.json().catch(() => ({}));
+    if (!uploaded.ok || typeof result.id !== "string") throw new Error(`YouTube upload did not complete (${uploaded.status}).`);
+    const watchUrl = `https://youtu.be/${result.id}`;
+    await dbRequest("youtube_bot_autopilot_jobs", `?id=eq.${jobId}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ status: "scheduled", video_id: result.id, watch_url: watchUrl, updated_at: new Date().toISOString() }),
+    });
+    return Response.json({ status: "scheduled", game_id: gameId, video_id: result.id, watch_url: watchUrl, publish_at: safeTime });
+  } catch (error) {
+    const safeError = error instanceof Error ? error.message.slice(0, 240) : "Upload failed.";
+    console.error("Autopilot review upload failed", safeError);
+    await dbRequest("youtube_bot_autopilot_jobs", `?id=eq.${jobId}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ status: "failed", safe_error: safeError, updated_at: new Date().toISOString() }),
+    }).catch(() => undefined);
+    return Response.json({ error: safeError }, { status: 502 });
+  }
+}
+
 async function oauthCallback(request: Request): Promise<Response> {
   const url = new URL(request.url);
   if (url.searchParams.get("error")) return htmlPage("Подключение отменено", "Google не выдал разрешение. Видео не загружено.");
@@ -220,6 +405,7 @@ Deno.serve(async (request: Request) => {
     if (request.method === "GET" && route === "/auth/start") return await startOAuth(request);
     if (request.method === "GET" && route === "/oauth/callback") return await oauthCallback(request);
     if (request.method === "GET" && route === "/health") return Response.json({ ok: true, service: "youtube-bot" }, { headers: cors(request.headers.get("origin")) });
+    if (request.method === "POST" && route === "/autopilot/publish") return await publishAutopilotReview(request);
     return new Response("Not found", { status: 404, headers: cors(request.headers.get("origin")) });
   } catch (error) {
     console.error("YouTube bot request failed", error instanceof Error ? error.message : "unknown error");

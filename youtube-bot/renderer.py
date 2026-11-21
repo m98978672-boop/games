@@ -103,38 +103,78 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
                  out: Path) -> None:
     image = Image.new("RGB", (WIDTH, HEIGHT), "#e8f3ff")
     draw = ImageDraw.Draw(image)
-    # Warm, simple background with a small decorative horizon.
-    for y in range(0, HEIGHT, 4):
-        blend = y / HEIGHT
-        r = int(235 - 23 * blend); g = int(244 - 20 * blend); b = int(255 - 8 * blend)
-        draw.rectangle((0, y, WIDTH, y + 4), fill=(r, g, b))
-    draw.ellipse((-120, 840, 840, 1520), fill="#d5eddb")
-    title_font = font(26)
-    title = script["title"][:58]
-    title_lines = wrap_text(draw, title, title_font, 640)
-    draw.text((40, 48), "КРАТКАЯ ИСТОРИЯ", font=font(18), fill="#49566b")
-    for i, line in enumerate(title_lines[:2]):
-        draw.text((40, 82 + i * 35), line, font=title_font, fill="#172033")
-    if scene_index == 0:
-        draw.rounded_rectangle((38, 164, 682, 214), radius=18, fill="#fff4c2")
-        hook_lines = wrap_text(draw, script["hook"][:100], font(22), 600)
-        draw.text((54, 177), hook_lines[0][:80], font=font(22), fill="#5e4b16")
-    left_name = str(scene.get("speaker", "Герой"))
-    right_name = str(scene.get("listener", "Друг"))
-    left_color, right_color = color_for(left_name), color_for(right_name)
-    active_left = str(scene.get("speaker", "")) != right_name
-    draw_character(draw, left_name, 190, 770, left_color, active_left, str(scene.get("emotion", "calm")), frame)
-    draw_character(draw, right_name, 530, 770, right_color, not active_left, "calm", frame)
-    draw_bubble(image, str(scene["dialogue"]), "left" if active_left else "right")
-    visual = str(scene.get("visual", ""))[:120]
-    if visual:
-        caption_font = font(18)
-        caption_lines = wrap_text(draw, visual, caption_font, 600)[:2]
-        caption_y = 1120 - 23 * len(caption_lines)
-        draw.rounded_rectangle((44, caption_y - 10, 676, 1190), radius=16, fill="#ffffff", outline="#9aa8bd", width=2)
+    if script.get("format") == "game-review":
+        # Original typography-first review cards; no fake gameplay footage or
+        # third-party game art is presented as if it were captured gameplay.
+        for y in range(HEIGHT):
+            blend = y / HEIGHT
+            color = (int(12 + 8 * blend), int(19 + 5 * blend), int(35 + 13 * blend))
+            draw.line((0, y, WIDTH, y), fill=color)
+        draw.ellipse((500, -170, 930, 280), fill="#242451")
+        draw.ellipse((-180, 850, 450, 1510), fill="#113f4a")
+        draw.rounded_rectangle((36, 36, 684, 112), radius=24, fill="#18243a", outline="#50617a", width=2)
+        draw.text((60, 57), "GAMES  /  ИИ-РАЗБОР", font=font(24), fill="#9ee9d0")
+        game_title = str(script.get("game_title", "Игра Games"))[:72]
+        title_lines = wrap_text(draw, game_title, font(38), 620)[:2]
+        for i, line in enumerate(title_lines):
+            draw.text((42, 145 + i * 54), line, font=font(38), fill="#ffffff")
+        score = int(script.get("idea_score", 0))
+        draw.rounded_rectangle((520, 252, 678, 322), radius=22, fill="#ffcf70")
+        score_text = f"{score}/10"
+        draw.text((548, 265), score_text, font=font(34), fill="#282039")
+        label = str(scene.get("label", "РАЗБОР"))[:28]
+        draw.rounded_rectangle((42, 345, 678, 407), radius=18, fill="#ff5d75" if "МИНУС" in label else "#4779e6")
+        label_box = draw.textbbox((0, 0), label, font=font(25))
+        draw.text(((WIDTH - (label_box[2] - label_box[0])) / 2, 361), label, font=font(25), fill="#ffffff")
+        visual = str(scene.get("visual", ""))[:160]
+        lines = wrap_text(draw, visual, font(30), 560)[:5]
+        card_y0, card_y1 = 445, 785
+        draw.rounded_rectangle((42, card_y0, 678, card_y1), radius=28, fill="#f3f6fb", outline="#cad7eb", width=3)
+        line_y = card_y0 + 50
+        for line in lines:
+            draw.text((72, line_y), line, font=font(30), fill="#172033")
+            line_y += 48
+        dialogue = str(scene.get("dialogue", ""))[:150]
+        caption_lines = wrap_text(draw, dialogue, font(24), 600)[:3]
+        caption_y = 850
         for line in caption_lines:
-            draw.text((60, caption_y), line, font=caption_font, fill="#37445a")
-            caption_y += 24
+            draw.text((54, caption_y), line, font=font(24), fill="#ffffff")
+            caption_y += 38
+        draw.text((44, 1160), "Оценка по описанию проекта · не личное прохождение", font=font(16), fill="#bac8dc")
+        draw.text((44, 1190), "Проверьте подробности в каталоге Games", font=font(16), fill="#bac8dc")
+    else:
+        # Warm, simple background with a small decorative horizon.
+        for y in range(0, HEIGHT, 4):
+            blend = y / HEIGHT
+            r = int(235 - 23 * blend); g = int(244 - 20 * blend); b = int(255 - 8 * blend)
+            draw.rectangle((0, y, WIDTH, y + 4), fill=(r, g, b))
+        draw.ellipse((-120, 840, 840, 1520), fill="#d5eddb")
+        title_font = font(26)
+        title = script["title"][:58]
+        title_lines = wrap_text(draw, title, title_font, 640)
+        draw.text((40, 48), "КРАТКАЯ ИСТОРИЯ", font=font(18), fill="#49566b")
+        for i, line in enumerate(title_lines[:2]):
+            draw.text((40, 82 + i * 35), line, font=title_font, fill="#172033")
+        if scene_index == 0:
+            draw.rounded_rectangle((38, 164, 682, 214), radius=18, fill="#fff4c2")
+            hook_lines = wrap_text(draw, script["hook"][:100], font(22), 600)
+            draw.text((54, 177), hook_lines[0][:80], font=font(22), fill="#5e4b16")
+        left_name = str(scene.get("speaker", "Герой"))
+        right_name = str(scene.get("listener", "Друг"))
+        left_color, right_color = color_for(left_name), color_for(right_name)
+        active_left = str(scene.get("speaker", "")) != right_name
+        draw_character(draw, left_name, 190, 770, left_color, active_left, str(scene.get("emotion", "calm")), frame)
+        draw_character(draw, right_name, 530, 770, right_color, not active_left, "calm", frame)
+        draw_bubble(image, str(scene["dialogue"]), "left" if active_left else "right")
+        visual = str(scene.get("visual", ""))[:120]
+        if visual:
+            caption_font = font(18)
+            caption_lines = wrap_text(draw, visual, caption_font, 600)[:2]
+            caption_y = 1120 - 23 * len(caption_lines)
+            draw.rounded_rectangle((44, caption_y - 10, 676, 1190), radius=16, fill="#ffffff", outline="#9aa8bd", width=2)
+            for line in caption_lines:
+                draw.text((60, caption_y), line, font=caption_font, fill="#37445a")
+                caption_y += 24
     out.parent.mkdir(parents=True, exist_ok=True)
     image.save(out, optimize=True)
 
