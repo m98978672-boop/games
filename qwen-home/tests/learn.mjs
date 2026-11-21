@@ -97,5 +97,13 @@ check('продолжение обучения грузит адаптер об�
 check('состояние дома называет ту же базу и ревизию', st0.baseModel === pin(trainLearn, 'MODEL') && st0.revision === pin(trainLearn, 'REVISION'));
 check('в состоянии записана персона: Квеня, девушка', st0.name === 'Квеня' && st0.persona?.gender === 'female');
 
+/* ---------- она умеет искать в интернете (Википедия) ---------- */
+const talkGen = await readFile(path.join(home, 'tools', 'talk-generate.py'), 'utf8');
+const personaMd = await readFile(path.join(home, 'talk', 'persona.md'), 'utf8');
+check('генератор разговора ищет в русской Википедии и пишет журнал', talkGen.includes('ru.wikipedia.org/w/api.php') && talkGen.includes('search_wikipedia') && talkGen.includes('search-log.md'));
+check('генератор сначала решает, нужен ли поиск, и не подделывает ответ', talkGen.includes('decide_search') && talkGen.includes('ПОИСК') && talkGen.includes('forced_query'));
+check('уроки учат искать: поискала, назвала статью, честно сказала, когда пусто', dialogue.filter((r) => /Википеди/.test(r.response)).length >= 4 && dialogue.some((r) => r.response.includes('Поискала')) && dialogue.some((r) => /только Википедия|только статьи Википедии/.test(r.response)));
+check('персона и состояние честно называют границу поиска: только Википедия', personaMd.includes('Википедии') && st0.internetSearch?.engine === 'ru.wikipedia.org');
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
