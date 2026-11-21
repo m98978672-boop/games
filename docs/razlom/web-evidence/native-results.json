@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 46.079,
+  "elapsedSeconds": 46.158,
   "checks": [
     {
       "name": "import",
@@ -95,7 +95,7 @@
         "--script",
         "res://tests/building_geometry.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBuilding geometry checks: 10; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBuilding geometry checks: 13; failures: 0\n",
       "acceptedBuildLimitations": [],
       "unexpectedDiagnostics": []
     },
@@ -159,7 +159,7 @@
         "--script",
         "res://tests/character_story.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nCharacter/story checks: 49; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nCharacter/story checks: 53; failures: 0\n",
       "acceptedBuildLimitations": [],
       "unexpectedDiagnostics": []
     },
@@ -239,7 +239,7 @@
         "--script",
         "res://tests/body_reactions.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 43; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 48; failures: 0\n",
       "acceptedBuildLimitations": [],
       "unexpectedDiagnostics": []
     },

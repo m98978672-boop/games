@@ -106,8 +106,36 @@ try {
  await check('Games launcher opens the real game inside its iframe', async () => assert.equal(await landing.locator('#game-stage').isVisible(), true));
  await landing.screenshot({path:'../../docs/razlom/web-evidence/launcher.png', timeout:90000});
  await landing.close();
+ async function captureReview(mode, filename) {
+  const review = await browser.newPage({viewport:{width:1440,height:900}});
+  review.on('pageerror', e => errors.push(String(e)));
+  review.on('console', msg => { if (msg.type() === 'error' && /SCRIPT ERROR|Parse Error|Failed to load|Aborted|RuntimeError/.test(msg.text())) errors.push(msg.text()); });
+  const reviewUrl = new URL(base);
+  reviewUrl.searchParams.set('artReview', mode);
+  await review.goto(reviewUrl.href);
+  await review.waitForFunction(() => window.__razlomStatus?.reviewReady && window.__razlomStatus.reviewMode, null, {timeout:120000});
+  if (mode === 'guard-fire') {
+   await review.waitForFunction(() => window.__razlomStatus?.reviewFired, null, {timeout:10000});
+   await review.waitForTimeout(40);
+  } else {
+   await review.waitForTimeout(900);
+  }
+  await review.screenshot({path:`../../docs/razlom/web-evidence/${filename}`, timeout:90000});
+  await check(`Actual WebGL art review renders ${mode}`, async () => {
+   assert.equal(await review.evaluate(() => window.__razlomStatus.reviewMode), mode);
+  });
+  await review.close();
+ }
+ await captureReview('vera-idle','npc-arms-idle.png');
+ await captureReview('vera-greet','npc-arms-greeting.png');
+ await captureReview('vera-treat','npc-arms-treatment.png');
+ await captureReview('pavel-walk','npc-arms-walk.png');
+ await captureReview('guard-aim','npc-arms-guard-aim.png');
+ await captureReview('guard-fire','npc-arms-guard-fire.png');
+ await captureReview('shelter-window','shelter-window-review.png');
+ await captureReview('service-window','service-window-review.png');
  await check('No script or WASM runtime errors', async () => assert.deepEqual(errors, []));
- await writeFile('../../docs/razlom/web-evidence/result.json', JSON.stringify({passed:true,checks,errors,limits:['Software WebGL on Chromium; not a human campaign playthrough','Sound is not auditioned','Only desktop keyboard controls tested']},null,2)+'\n');
+ await writeFile('../../docs/razlom/web-evidence/result.json', JSON.stringify({passed:true,checks,errors,limits:['Software WebGL on Chromium; not a human campaign playthrough','NPC pose evidence uses review cameras in the actual level; it is not a replacement for human animation review','Sound is not auditioned','Only desktop keyboard controls tested']},null,2)+'\n');
 } catch(e) {
  console.error(e, errors);
  await mkdir('../../docs/razlom/web-evidence', {recursive:true});

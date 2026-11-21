@@ -27,6 +27,23 @@ static func material(color: Color, texture: String = "", glow: float = 0.0) -> S
 	materials[key] = mat
 	return mat
 
+static func glass_material() -> StandardMaterial3D:
+	var key := "razlom_window_glass"
+	if materials.has(key):
+		return materials[key] as StandardMaterial3D
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.48, 0.68, 0.68, 0.24)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.roughness = 0.16
+	mat.metallic = 0.12
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	mat.emission_enabled = true
+	mat.emission = Color(0.32, 0.52, 0.5)
+	mat.emission_energy_multiplier = 0.08
+	materials[key] = mat
+	return mat
+
 static func box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material, solid: bool = false) -> Node3D:
 	var root: Node3D = StaticBody3D.new() if solid else Node3D.new()
 	parent.add_child(root)
@@ -161,6 +178,24 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			box(head, Vector3(0.114, -0.27, 0.15), Vector3(0.06, 0.025, 0.055), material(Color("b6c8b8")))
 	var torso := root.get_node("Coat") as Node3D
 	var fabric := material(Color("e0e7d5") if medic else Color("768575"), "cloth")
+	# A readable upper sleeve, articulated elbow and tapered-looking forearm.
+	# The simple rectangular construction stays faithful to the block-built world,
+	# but gives the wrist a real elbow pivot instead of one rigid shoulder-to-hand bar.
+	for side in ["ArmL", "ArmR"]:
+		var arm := root.get_node_or_null(NodePath(side)) as Node3D
+		if arm == null:
+			continue
+		var upper := arm.get_node_or_null("Visual") as MeshInstance3D
+		if upper != null and upper.mesh is BoxMesh:
+			(upper.mesh as BoxMesh).size = Vector3(0.14, 0.28, 0.18)
+			upper.position.y = 0.09
+		var elbow := Node3D.new()
+		elbow.name = "Elbow"
+		elbow.position = Vector3(0, -0.05, 0)
+		arm.add_child(elbow)
+		var forearm := box(elbow, Vector3(0, -0.12, 0), Vector3(0.13, 0.25, 0.17), fabric)
+		forearm.name = "Forearm"
+		box(elbow, Vector3(0, -0.01, -0.002), Vector3(0.145, 0.055, 0.185), fabric).name = "ElbowSeam"
 	for side in [-1, 1]:
 		box(root, Vector3(side * 0.15, 1.1, -0.17), Vector3(0.16, 0.17, 0.065), fabric).reparent(torso, true)
 		box(root, Vector3(side * 0.19, 1.25, -0.17), Vector3(0.035, 0.39, 0.035), material(Color("473f33"), "wood")).reparent(torso, true)
@@ -191,36 +226,30 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 
 static func add_actor_hands(root: Node3D, bare_hands: bool = false) -> void:
 	var hand_mat := material(Color("c69d7c") if bare_hands else Color("39463f"), "")
-	var knuckle_mat := material(Color("d2ad8d") if bare_hands else Color("48564d"), "")
-	var nail_mat := material(Color("e0cdb5") if bare_hands else Color("58665b"), "")
 	var cuff_mat := material(Color("e0e7d5") if bare_hands else Color("65756b"), "cloth")
 	for side in ["ArmL", "ArmR"]:
 		var arm := root.get_node_or_null(NodePath(side)) as Node3D
-		if arm == null or arm.has_node("CharacterHand"):
+		var elbow := arm.get_node_or_null("Elbow") as Node3D if arm != null else null
+		if elbow == null or elbow.has_node("CharacterHand"):
 			continue
 		var hand_side := -1.0 if side == "ArmL" else 1.0
 		var hand := Node3D.new()
 		hand.name = "CharacterHand"
-		hand.position = Vector3(0, -0.29, -0.015)
-		arm.add_child(hand)
-		var palm := box(hand, Vector3(0, -0.005, -0.012), Vector3(0.072, 0.078, 0.034), hand_mat)
+		hand.position = Vector3(0, -0.22, -0.012)
+		elbow.add_child(hand)
+		# Compact, continuous shapes read as a useful hand at game distance;
+		# four short fingers and a thumb replace the spindly two-link digits.
+		var cuff := box(hand, Vector3(0, 0.015, 0), Vector3(0.12, 0.065, 0.16), cuff_mat)
+		cuff.name = "Cuff"
+		var palm := box(hand, Vector3(0, -0.043, -0.012), Vector3(0.09, 0.085, 0.045), hand_mat)
 		palm.name = "Palm"
-		box(hand, Vector3(0, 0.065, 0), Vector3(0.105, 0.05, 0.095), cuff_mat)
 		for i in range(4):
-			var x := -0.039 + i * 0.026
-			var knuckle := box(hand, Vector3(x, -0.045, -0.032), Vector3(0.015, 0.016, 0.012), knuckle_mat)
-			knuckle.name = "Knuckle%d" % i
-			for joint in range(2):
-				var finger := box(hand, Vector3(x, -0.073 - joint * 0.035, -0.03), Vector3(0.016, 0.043 if joint == 0 else 0.036, 0.02), hand_mat)
-				finger.name = "Finger%dJ%d" % [i, joint]
-			var nail := box(hand, Vector3(x, -0.127, -0.039), Vector3(0.011, 0.008, 0.003), nail_mat)
-			nail.name = "Nail%d" % i
-		var thumb := box(hand, Vector3(hand_side * 0.065, -0.025, -0.02), Vector3(0.022, 0.065, 0.022), hand_mat)
+			var x := -0.033 + i * 0.022
+			var finger := box(hand, Vector3(x, -0.098, -0.014), Vector3(0.019, 0.075, 0.04), hand_mat)
+			finger.name = "Finger%d" % i
+		var thumb := box(hand, Vector3(hand_side * 0.054, -0.044, -0.005), Vector3(0.032, 0.062, 0.04), hand_mat)
 		thumb.name = "Thumb"
-		thumb.rotation.z = hand_side * 0.62
-		var thumb_joint := box(hand, Vector3(hand_side * 0.074, -0.045, -0.035), Vector3(0.024, 0.022, 0.018), knuckle_mat)
-		thumb_joint.name = "ThumbJoint"
-		box(hand, Vector3(hand_side * 0.085, -0.045, -0.035), Vector3(0.014, 0.01, 0.004), nail_mat)
+		thumb.rotation.z = hand_side * 0.48
 
 static func protection_pickup(parent: Node3D, helmet: bool) -> void:
 	var canvas := material(Color("606c5c"), "cloth")

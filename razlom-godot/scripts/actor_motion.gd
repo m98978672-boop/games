@@ -6,6 +6,7 @@ var clock := 0.0
 var blend := 0.0
 var recoil := 0.0
 var joints: Dictionary = {}
+var elbows: Dictionary = {}
 var flinch := 0.0
 var reactions: Dictionary = {}
 var knees: Dictionary = {}
@@ -37,6 +38,10 @@ func _init(root: Node3D, quadruped: bool = false) -> void:
 		pivot.position = limb.position + Vector3.UP * (0.19 if quadruped else (0.35 if part.begins_with("Leg") else 0.23))
 		limb.reparent(pivot, true)
 		joints[part] = pivot
+		if not quadruped and part.begins_with("Arm"):
+			var elbow := limb.get_node_or_null("Elbow") as Node3D
+			if elbow != null:
+				elbows[part] = elbow
 		if not quadruped and part.begins_with("Leg"):
 			limb.get_node("Visual").hide()
 			var cloth := RazlomArt.material(Color("45554e"), "cloth")
@@ -104,7 +109,7 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 		elif part.begins_with("Arm") and gesture_kind == "listen":
 			swing = lerpf(swing, -0.32, social_blend)
 		elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
-			swing = -0.85 + sin(gesture * 7.0) * 0.08
+			swing = 0.82 + sin(gesture * 7.0) * 0.05
 		swing += float(reactions.get(part, 0)) * (0.65 if part.begins_with("Leg") else -0.8)
 		# Keep every humanoid shoulder inside a usable range; combined flinch,
 		# gait and gesture offsets must never fold a sleeve through the torso.
@@ -122,17 +127,38 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 			gesture_roll = -0.22 * social_blend
 		elif part == "ArmR" and gesture_kind in ["warm", "listen"]:
 			gesture_roll = 0.22 * social_blend
+		elif part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
+			# Raise the greeting hand clear of the coat so the wave reads head-on.
+			gesture_roll = 1.05 * social_blend
+		elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
+			# Turn the offered hand outward while the forearm reaches forward.
+			gesture_roll = -0.5 * social_blend
 		var roll := float(reactions.get(part, 0)) * (0.25 if alternate else -0.25) + gesture_roll
+		var roll_limit := 0.35
 		if part.begins_with("Arm"):
 			# Mild inward rest cant keeps sleeves joined to the chest and hands
 			# close to the hips instead of hanging out from the shoulders.
 			roll += 0.14 if part == "ArmL" else -0.14
-			joint.rotation.z = clampf(roll, -0.35, 0.35)
+			if part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
+				roll_limit = 1.15
+			elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
+				roll_limit = 0.7
+			joint.rotation.z = clampf(roll, -roll_limit, roll_limit)
 		else:
 			joint.rotation.z = roll
 		if knees.has(part):
 			knees[part].rotation.x = maxf(0, -sin(clock + (PI if alternate else 0.0))) * blend * 0.7 + float(reactions.get(part, 0)) * 0.6 + duck * 0.55
 		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))
+		if elbows.has(part):
+			var bend := 0.06 + absf(swing) * 0.12 + flinch * 0.12
+			if part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
+				bend = lerpf(bend, 0.72, social_blend)
+			elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
+				bend = lerpf(bend, 0.5, social_blend)
+			elif part.begins_with("Arm") and gesture_kind in ["warm", "listen"]:
+				bend = lerpf(bend, 0.28, social_blend)
+			var elbow: Node3D = elbows[part]
+			elbow.rotation.x = lerp_angle(elbow.rotation.x, clampf(bend, 0.0, 0.78), 1.0 - exp(-delta * 10.0))
 	var breathing := sin(clock * 1.25) * (1.0 - blend) * 0.012
 	var step_bob := (1.0 - cos(clock * 2.0)) * blend * 0.012
 	model.position.y = lerpf(model.position.y, rest_height + step_bob + breathing - duck * 0.20, 1.0 - exp(-delta * 10.0))

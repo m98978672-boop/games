@@ -37,6 +37,14 @@ func run_tests() -> void:
 	check(wedge_collision.shape is ConvexPolygonShape3D and (wedge_collision.shape as ConvexPolygonShape3D).points.size() == 6, "Triangular blocks have matching six-vertex solid collision")
 	var mirrored: RazlomBlock = game.blocks["gable_wedge_24_-24"]
 	check(mirrored.shape_kind == "right_triangle_mirrored", "Opposite gable uses the mirrored triangle orientation")
+	var shelter_pane_root := game.world.get_node("ShelterWindowPane_20") as Node3D
+	var shelter_pane := shelter_pane_root.get_child(0) as MeshInstance3D
+	var glass := shelter_pane.material_override as StandardMaterial3D
+	check(glass != null and glass.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA and glass.albedo_color.a > 0.15 and glass.albedo_color.a < 0.4, "Shelter windows use real alpha glass rather than opaque dark metal")
+	check(game.world.has_node("ShelterWindowSillWall") and game.world.has_node("ShelterWindowHeaderWall") and game.world.has_node("ShelterWindowPier0"), "Shelter keeps solid sills, headers and piers around true window openings")
+	var yard_pane := game.world.get_node("RelayYard/ServiceWindow_62_17") as Node3D
+	var yard_glass := (yard_pane.get_child(0) as MeshInstance3D).material_override as StandardMaterial3D
+	check(yard_glass == glass and (yard_pane.get_child(0) as MeshInstance3D).cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "District windows share the transparent, non-shadowing glazing")
 	game.queue_free()
 	await process_frame
 	print("Building geometry checks: %d; failures: %d" % [checks, failures])

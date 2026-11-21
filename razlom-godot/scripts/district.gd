@@ -9,6 +9,7 @@ static func build(game: Node3D) -> void:
 	var rust := RazlomArt.material(Color.WHITE, "rust")
 	var tile := RazlomArt.material(Color.WHITE, "tile")
 	var plaster := RazlomArt.material(Color.WHITE, "plaster")
+	var glass := RazlomArt.glass_material()
 	# Clear road between warehouse and new district, with visible destination.
 	RazlomArt.box(yard, Vector3(49, -0.02, 10), Vector3(60, 0.12, 5), RazlomArt.material(Color.WHITE, "gravel"))
 	for x in [40, 52, 64]:
@@ -21,6 +22,10 @@ static func build(game: Node3D) -> void:
 		RazlomArt.box(yard, Vector3(x, 3.2, 20), Vector3(0.25, 0.6, 10), plaster, true)
 		for z in [15, 20, 25]:
 			RazlomArt.box(yard, Vector3(x, 2.2, z), Vector3(0.3, 1.4, 0.25), rust, true)
+		for z in [17.5, 22.5]:
+			var pane := RazlomArt.box(yard, Vector3(x, 2.22, z), Vector3(0.025, 1.12, 4.55), glass)
+			pane.name = "ServiceWindow_%d_%d" % [int(x), int(z)]
+			(pane.get_child(0) as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	RazlomArt.box(yard, Vector3(68, 1.75, 25), Vector3(12, 3.5, 0.25), plaster, true)
 	RazlomArt.box(yard, Vector3(68, 3.6, 20), Vector3(12.5, 0.2, 10.5), rust, true)
 	RazlomArt.sign_text(yard, "РЕТРАНСЛЯТОР / 12", Vector3(68, 3, 14.8), 37)
