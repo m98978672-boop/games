@@ -20,8 +20,13 @@ func run_tests() -> void:
 	await process_frame
 	var guard = game.enemies[0]
 	check(guard.visual.has_node("Head/EyeL") and guard.visual.has_node("Head/EyeR"), "Guards have both modeled eyes")
+	var iris: MeshInstance3D = guard.visual.get_node("Head/EyeL/Iris")
+	check(iris.scale.x < 0.03 and iris.scale.y < 0.03 and iris.scale.z < 0.01, "Iris details stay small inside sockets instead of forming giant oval eyes")
+	check(guard.left_arm.hand.has_node("Palm") and guard.left_arm.hand.get_node("Finger0").get_child(0).mesh is CapsuleMesh, "Guard glove uses rounded palms and segmented fingers")
 	var medic = game.interactions.medic_motion.model
 	check(medic.has_node("Head/EyeL"), "Vera has a modeled face")
+	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")
+	check(game.world.has_node("Pavel/Guard/ArmLJoint/ArmL/CharacterHand/Palm") or game.world.get_node("Pavel").find_child("CharacterHand", true, false) != null, "Pavel also has visible articulated hands")
 	check(game.world.has_node("Pavel"), "Courier exists in playable world")
 	var count: int = guard.visual.get_child_count()
 	RazlomArt.dress_actor(guard.visual)

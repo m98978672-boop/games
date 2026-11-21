@@ -33,6 +33,7 @@ with tempfile.TemporaryDirectory(prefix='razlom-runtime-') as runtime:
         ('character-story', ['--script', 'res://tests/character_story.gd'], 'failures: 0', 60),
         ('touch-camera', ['--script', 'res://tests/touch_camera.gd'], 'failures: 0', 60),
         ('weapon-viewmodel', ['--script', 'res://tests/weapon_viewmodel.gd'], 'failures: 0', 60),
+        ('weapon-pickup', ['--script', 'res://tests/weapon_pickup.gd'], 'failures: 0', 60),
         ('combat-animation', ['--script', 'res://tests/combat_animation.gd'], 'failures: 0', 60),
         ('body-reactions', ['--script', 'res://tests/body_reactions.gd'], 'failures: 0', 90),
         ('quests', ['--script', 'res://tests/quests.gd'], 'failures: 0', 90),
