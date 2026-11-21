@@ -75,6 +75,10 @@ def _mo2(scenes, W, H, TMP):
                 ["1 ДРУГ-КОТ", "2 ПОДОКОННИК С ВИДОМ", "3 ГОЛУБЬ-СОСЕД"])
     out[0].append((os.path.join(TMP, "result.png"), 0.5, round(min(7.2, scenes[0]["D"]), 2)))
     out[4].append((os.path.join(TMP, "vote.png"), round(scenes[4]["D"] * 0.40, 2), scenes[4]["D"]))
+    P.plate_png(os.path.join(TMP, "tail.png"), W, H,
+                "ХВОСТ РАЗУКРАШЕН? ЭТО ШТРИХ-КОД",
+                ["пикнешь — выдаст сосиску", "не смывать до следующего эпизода"])
+    out[4].append((os.path.join(TMP, "tail.png"), 1.2, 5.2))
     return out
 
 
