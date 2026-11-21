@@ -509,6 +509,14 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       result.movingCargoStatus = result.movingCargoStatus && rows[0].querySelector('.o-who').textContent.includes('в работе') && !rows[0].querySelector('.o-abc').textContent.includes('движется');
       const filter = name => doc.querySelector('[data-order-filter="' + name + '"]');
       const visibleCodes = () => [...doc.querySelectorAll('#order-list .o-code')].map(e => e.textContent);
+      qLate.direction = 'return'; qLate.deadline = -100;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      const returnRow = [...doc.querySelectorAll('#order-list .order')].find(row => row.querySelector('.o-code').textContent === qLate.code);
+      result.returnQueue = returnRow.querySelector('.o-info').textContent.includes('возврат на полку') &&
+        returnRow.querySelector('.o-timer').textContent === 'без срока' && !returnRow.querySelector('.o-timer').classList.contains('late') &&
+        doc.getElementById('queue-summary').textContent.includes('≤ 30 с: 1');
+      filter('soon').click(); result.returnQueue = result.returnQueue && visibleCodes().join() === qSoon.code;
+      delete qLate.direction; qLate.deadline = 100; filter('all').click();
       const savedBeforeFilter = JSON.stringify(game.captureCheckpoint());
       filter('pending').click();
       result.queueFilters = visibleCodes().join() === qLate.code && filter('pending').getAttribute('aria-pressed') === 'true';
@@ -621,6 +629,7 @@ for (const mode of modes) {
   check(r.journalDisplay && r.journalFilters && r.journalRestart, 'журнал в пульте: фильтры, история, фокус, новая смена', {display:r.journalDisplay, filters:r.journalFilters, restart:r.journalRestart, error:r.featureError});
   check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
   check(r.movingCargoStatus, 'очередь показывает движение груза и ожидание остановки', {error:r.featureError});
+  check(r.returnQueue, 'возврат на полку виден без ложной просрочки и не попадает в срочные', {error:r.featureError});
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);

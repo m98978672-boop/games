@@ -466,12 +466,12 @@ window.WC = window.WC || {};
     }
     // Ближайший дедлайн сверху — срочные заказы не теряются в очереди.
     var active = game.sim.activeOrders().slice().sort(function (a, b) {
-      return a.deadline - b.deadline || a.createdAt - b.createdAt;
+      return (a.direction === 'return') - (b.direction === 'return') || a.deadline - b.deadline || a.createdAt - b.createdAt;
     });
     var now = game.sim.state.time;
     var slots = game.sim.state.slots;
     var free = slots.filter(function (slot) { return !slot.occupied; }).length;
-    var soon = active.filter(function (order) { return order.deadline - now <= 30; }).length;
+    var soon = active.filter(function (order) { return order.direction !== 'return' && order.deadline - now <= 30; }).length;
     dom.queueSummary.textContent = 'Свободных ячеек: ' + free + '/' + slots.length + ' · срок ≤ 30 с: ' + soon;
     dom.queueSummary.title = 'Свободные ячейки не включают места, зарезервированные для заказов';
     dom.queueSummary.classList.toggle('warning', free === 0 || soon > 0);
@@ -479,7 +479,7 @@ window.WC = window.WC || {};
       if (uiState.orderFilter === 'pending') return order.status === 'pending';
       if (uiState.orderFilter === 'working') return order.status === 'claimed' || order.status === 'carried';
       if (uiState.orderFilter === 'priority') return order.dispatchPriority === true;
-      if (uiState.orderFilter === 'soon') return order.deadline - now <= 30;
+      if (uiState.orderFilter === 'soon') return order.direction !== 'return' && order.deadline - now <= 30;
       return true;
     });
     var visible = filtered.slice(0, uiState.orderVisibleLimit);
@@ -550,11 +550,11 @@ window.WC = window.WC || {};
       var who = order.status === 'carried' ? 'несёт: ' + nameOf(order.carrier)
         : order.status === 'claimed' ? (order.physics ? 'ждёт остановки: ' : 'в работе: ') + nameOf(order.carrier) : 'свободен';
       row.querySelector('.o-who').textContent = who;
-      row.querySelector('.o-info').textContent = order.goods + ' · ' + order.mass + ' кг' + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
+      row.querySelector('.o-info').textContent = order.goods + ' · ' + order.mass + ' кг' + (order.direction === 'return' ? ' · возврат на полку' : '') + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
       // Точки коробки: A — откуда, C — где лежит, B — куда едет
       var abc = row.querySelector('.o-abc');
       if (abc) {
-        var from = order.source === 'truck' ? 'фура' : order.source === 'heavy' ? 'тяжёлый отдел' : 'приёмка';
+        var from = order.source === 'truck' ? 'фура' : order.source === 'rack' ? 'стеллаж' : order.source === 'heavy' ? 'тяжёлый отдел' : 'приёмка';
         var poseText = order.status === 'carried' ? 'в руках'
           : order.physics ? 'движется'
             : (order.pose && order.pose.lying) ? 'на боку'
@@ -567,9 +567,9 @@ window.WC = window.WC || {};
       }
       var left = order.deadline - now;
       var timer = row.querySelector('.o-timer');
-      timer.textContent = left > 0 ? 'до ' + U.timeLeft(left) : 'просрочен ' + U.timeLeft(-left);
-      timer.classList.toggle('late', left <= 0);
-      timer.classList.toggle('soon', left > 0 && left < 18);
+      timer.textContent = order.direction === 'return' ? 'без срока' : left > 0 ? 'до ' + U.timeLeft(left) : 'просрочен ' + U.timeLeft(-left);
+      timer.classList.toggle('late', order.direction !== 'return' && left <= 0);
+      timer.classList.toggle('soon', order.direction !== 'return' && left > 0 && left < 18);
     });
     uiState.orderRows.forEach(function (row, id) {
       if (!live[id]) {

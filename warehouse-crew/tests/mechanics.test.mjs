@@ -506,6 +506,119 @@ console.log('Приёмка и безопасный подбор после па
   check(res && !res.ok && !res.error, 'приказ не ломает игру при отсутствующем заказе', res);
 }
 
+
+console.log('Отъезд фуры без телепортации груза');
+{
+  const { warehouse, workers, envs } = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, truckEvery:9999, heavyEvery:9999});
+  const [w, helper] = workers;
+  const boxes = Array.from({length:3}, () => warehouse.spawnOrder());
+  boxes.forEach(box => { box.mass = 8; warehouse.claim(box.id, helper.id); warehouse.markCarried(box, helper.id); warehouse.store(box, helper.id); });
+  const truck = warehouse.spawnTruck('load'), outgoing = warehouse.ordersOfTruck(truck);
+  check(outgoing.length === 3, 'подготовлены три коробки для погрузки');
+  const [carried, untouched, dropped] = outgoing;
+  warehouse.claim(carried.id, w.id); warehouse.markCarried(carried, w.id);
+  w.state.orderId = carried.id; w.state.carryingId = carried.id; w.state.state = 'toDrop'; w.state.mode = 'manual';
+  w.state.pos.x = -6; w.state.pos.y = -6; w.state.timers.place = 0.9;
+  warehouse.claim(untouched.id, helper.id);
+  warehouse.claim(dropped.id, 'temp'); warehouse.markCarried(dropped, 'temp');
+  warehouse.drop(dropped, .1, -7, -6, {z:1, vx:1});
+  const before = {x:dropped.pose.x, y:dropped.pose.y, z:dropped.pose.z};
+  const score = warehouse.state.stats.score, delivered = warehouse.state.stats.delivered, loaded = warehouse.state.stats.loaded;
+  warehouse.departTruck(truck, 'тест');
+  check(untouched.status === 'stored' && !untouched.carrier, 'неподнятый груз остаётся на своей полке');
+  check(carried.status === 'carried' && carried.carrier === w.id && carried.direction === 'return' && w.carryingId === carried.id,
+    'груз в руках остаётся с работником и получает маршрут возврата');
+  check(dropped.status === 'pending' && dropped.direction === 'return' && dropped.physics &&
+    dropped.pose.x === before.x && dropped.pose.y === before.y && dropped.pose.z === before.z,
+    'упавший груз не телепортируется и продолжает физическое движение');
+  check(warehouse.state.slots.find(s => s.id === carried.slotId).orderId === carried.id &&
+    warehouse.state.slots.find(s => s.id === dropped.slotId).orderId === dropped.id, 'ячейки возвращаемого груза остаются зарезервированы');
+  w.update(.05, envs[w.id]);
+  check(w.carryingId === carried.id && carried.status === 'carried', 'в первый тик возврата коробка не исчезает из рук');
+  check(w.state.timers.place === 0, 'незавершённая погрузка не ускоряет укладку на полку');
+  for (let i=0; i<1600 && w.carryingId; i++) w.update(.05, envs[w.id]);
+  check(!w.carryingId && carried.status === 'stored' && !carried.direction, 'работник доносит коробку до исходной полки', {state:w.state.state, x:w.pos.x, y:w.pos.y});
+  check(warehouse.state.stats.score === score && warehouse.state.stats.delivered === delivered && warehouse.state.stats.loaded === loaded,
+    'возврат не начисляет очки за несуществующую доставку');
+  dropped.deadline = -1000;
+  warehouse.step(.05);
+  check(dropped.status === 'pending' && dropped.direction === 'return', 'возврат не исчезает по истёкшему сроку фуры');
+  check(helper.chooseOrder(warehouse, [helper]) === dropped, 'свободный работник может подобрать упавший груз для возврата');
+}
+{
+  const { warehouse, workers, envs } = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, truckEvery:9999});
+  const [w] = workers, truck = warehouse.spawnTruck('unload'), boxes = warehouse.ordersOfTruck(truck);
+  boxes.forEach(o => { o.mass = 8; });
+  const carried = boxes[0];
+  warehouse.claim(carried.id, w.id); warehouse.markCarried(carried, w.id);
+  w.state.orderId = carried.id; w.state.carryingId = carried.id; w.state.state = 'toDrop'; w.state.mode = 'manual';
+  warehouse.departTruck(truck, 'тест');
+  w.update(.05, envs[w.id]);
+  check(w.carryingId === carried.id && carried.status === 'carried' && carried.direction === 'in',
+    'разгруженный груз не телепортируется при отъезде фуры');
+  check(w.chooseOrder(warehouse,[w]) && w.chooseOrder(warehouse,[w]).direction === 'in',
+    'остальные разгруженные места доступны после отъезда фуры');
+}
+
+
+{
+  const {warehouse, workers, envs} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const w = workers[0], order = warehouse.spawnOrder(); order.mass = 8;
+  warehouse.claim(order.id, w.id); warehouse.markCarried(order, w.id); warehouse.store(order, w.id);
+  const truck = warehouse.spawnTruck('load');
+  warehouse.claim(order.id, w.id); warehouse.markCarried(order, w.id);
+  w.state.mode = 'manual'; w.state.orderId = order.id; w.state.carryingId = order.id; w.state.state = 'toDrop';
+  w.state.pos.x = -6; w.state.pos.y = -6; order.deadline = -36;
+  const score = warehouse.state.stats.score;
+  warehouse.step(.05);
+  check(order.direction === 'return' && order.status === 'carried' && order.carrier === w.id,
+    'просроченная отгрузка остаётся в руках для возврата');
+  check(warehouse.state.stats.missed === 1 && warehouse.state.stats.score === score - 6 && warehouse.truckProgress(truck).total === 1,
+    'срок штрафуется единожды, объём фуры не уменьшается');
+  warehouse.step(.05); w.update(.05, envs[w.id]);
+  check(warehouse.state.stats.missed === 1 && order.status === 'carried', 'повторный тик не штрафует и не удаляет груз');
+  for (let i=0; i<1600 && w.carryingId; i++) w.update(.05, envs[w.id]);
+  check(order.status === 'stored' && !w.carryingId && warehouse.state.stats.score === score - 6,
+    'просроченный груз возвращён на полку без награды');
+}
+{
+  const {warehouse, workers, envs} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const w = workers[0], truck = warehouse.spawnTruck('unload'), order = warehouse.ordersOfTruck(truck)[0]; order.mass = 8;
+  warehouse.claim(order.id, w.id); warehouse.markCarried(order, w.id);
+  w.state.mode = 'manual'; w.state.orderId = order.id; w.state.carryingId = order.id; w.state.state = 'toDrop';
+  w.state.pos.x = -6; w.state.pos.y = -6; order.deadline = -36;
+  warehouse.step(.05); w.update(.05, envs[w.id]);
+  check(order.direction === 'return' && order.status === 'carried' && w.carryingId === order.id && warehouse.state.stats.missed === 1,
+    'просроченный входящий груз также остаётся в руках для возврата');
+  for (let i=0; i<1600 && w.carryingId; i++) w.update(.05, envs[w.id]);
+  check(order.status === 'stored' && !w.carryingId, 'входящий груз после штрафа физически доносится до ячейки');
+}
+{
+  const {warehouse, workers, envs} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const w = workers[0], order = warehouse.spawnOrder(); order.mass = 8;
+  warehouse.claim(order.id,w.id); warehouse.markCarried(order,w.id); warehouse.store(order,w.id);
+  const truck = warehouse.spawnTruck('load'); warehouse.claim(order.id,w.id); warehouse.markCarried(order,w.id);
+  w.state.mode = 'manual'; w.state.orderId = order.id; w.state.carryingId = order.id; w.state.state = 'toDrop';
+  truck.status = 'done'; // снимок старой версии: фура уехала, груз ещё у работника
+  warehouse.step(.05); w.update(.05, envs[w.id]);
+  check(order.direction === 'return' && order.status === 'carried' && w.carryingId === order.id,
+    'старый снимок с уехавшей фурой исправляется без перемещения груза');
+}
+
+
+{
+  const {warehouse, workers} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const inbound = warehouse.spawnTruck('unload'), boxes = warehouse.ordersOfTruck(inbound), first = boxes[0];
+  first.mass = 8; warehouse.claim(first.id,workers[0].id); warehouse.markCarried(first,workers[0].id); warehouse.store(first,workers[0].id);
+  const loaded = warehouse.spawnTruck('load');
+  const progress = warehouse.truckProgress(inbound);
+  check(Boolean(loaded) && progress.done === 1 && progress.total === boxes.length,
+    'переназначение уже уложенного груза не теряет прогресс разгрузки', progress);
+  warehouse.step(.05);
+  check(inbound.status === 'working' && inbound.total === boxes.length && inbound.done === 1,
+    'приходная фура не заканчивает разгрузку преждевременно');
+}
+
 console.log('');
 if (failures) {
   console.log(`✗ Провалов: ${failures} из ${checks}`);

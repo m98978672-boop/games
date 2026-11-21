@@ -7,7 +7,7 @@
     "storefront": 18,
     "collection": 216,
     "files": 2156,
-    "totalBytes": 53161771,
+    "totalBytes": 53165727,
     "chunks": 401,
     "blockedFiles": 5
   },
@@ -5029,8 +5029,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "5d1832410489524f988a1a516e12df9782dac2487675fd29959ccf626c398528",
-      "totalSize": 1910005,
+      "infoHash": "4d9e28e04de60f22185dd4729adc3ac200af929bbee12f3450175d2c76d48f97",
+      "totalSize": 1913961,
       "chunkSize": 262144,
       "chunkCount": 8,
       "fileCount": 36,
@@ -5083,7 +5083,7 @@
         {
           "path": "index.html",
           "size": 20446,
-          "sha256": "5fc9d22557f9a1cc4c804364729392f1d053cfe2ce1bff569c2b65f3584c9f22"
+          "sha256": "9dcdfe3f35a49452b5fc702bd9e0cf42db0036af00896a4944d23b78bba01f4d"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5162,18 +5162,18 @@
         },
         {
           "path": "src/sim/warehouse.js",
-          "size": 41334,
-          "sha256": "94ffe7fce7ef05abe80d605225f687ac80e1374407b6e3202e5d59972b22cb4f"
+          "size": 44406,
+          "sha256": "8761115b0f5c24be10fe6128add576ea2fa9c272db506a679d1b27d3c640a610"
         },
         {
           "path": "src/sim/worker.js",
-          "size": 79136,
-          "sha256": "1c720733342b05463032113413d1c758c2c0452e5c39b1cb7225ab7df868b844"
+          "size": 79658,
+          "sha256": "e0e84311ac2e42f9150e92b72974475baa3a6d6036144e07ec17c1bdfc7f2bb4"
         },
         {
           "path": "src/ui.js",
-          "size": 87503,
-          "sha256": "a5023055cd1f9adb77c74bb0ce10acff8bf62da6a39c10c2fc98348e782192cd"
+          "size": 87865,
+          "sha256": "e47ab1f5abb58d7a4fb55063015d111bacf7aa151b5a7e95155365290f8369c4"
         },
         {
           "path": "src/util.js",

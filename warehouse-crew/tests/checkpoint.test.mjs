@@ -110,6 +110,25 @@ c = await boot(); game = c.WC.game;
 assert.equal(game.api.resumeStatus,'restored'); assert.equal(game.state.shiftEnded,true);
 game.restart(); assert.equal(game.state.shiftEnded,false); assert.equal(game.sim.state.time,0);
 
+// Возврат после отъезда фуры переживает перезагрузку и не телепортирует груз.
+let returning = game.sim.spawnOrder(); returning.mass = 8;
+let returner = game.api.crew[0];
+assert(game.sim.claim(returning.id,returner.id)); assert(game.sim.markCarried(returning,returner.id));
+game.sim.store(returning,returner.id);
+let lateTruck = game.sim.spawnTruck('load');
+assert(game.sim.claim(returning.id,returner.id)); assert(game.sim.markCarried(returning,returner.id));
+returner.state.orderId = returning.id; returner.state.carryingId = returning.id; returner.state.state = 'toDrop'; returner.state.mode = 'manual';
+returner.state.pos.x = -6; returner.state.pos.y = -6;
+game.sim.departTruck(lateTruck, 'тест');
+assert.equal(returning.direction,'return'); game.setPaused(true); assert(c.WC.save.save(game));
+const returnId = returning.id;
+c = await boot(); game = c.WC.game; returning = game.sim.state.orders.find(o => o.id === returnId); returner = game.api.crew[0];
+assert.equal(game.api.resumeStatus,'restored'); assert.equal(returning.direction,'return');
+assert.equal(returning.carrier,returner.id); assert.equal(returner.state.carryingId,returnId);
+game.setPaused(false); game.update(.1);
+assert.equal(returning.status,'carried'); assert.equal(returner.state.carryingId,returnId);
+game.restart();
+
 // Ошибка записи не повреждает предыдущий снимок.
 const previous = data.get(c.WC.save.CHECKPOINT_KEY);
 const setItem = storage.setItem; storage.setItem = (key, value) => { if (key.endsWith('v2')) throw Error('quota'); setItem(key,value); };
