@@ -74,6 +74,7 @@ WC.audio = (function () {
     unlock: resume,
     setMuted: function (value) {
       muted = Boolean(value);
+      if (muted && WC.voice) WC.voice.cancel();
       return muted;
     },
     isMuted: function () { return muted; },

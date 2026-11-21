@@ -476,7 +476,7 @@ window.WC = window.WC || {};
 
   // Правая колонка: карточки бригады и журнал. Собираются один раз —
   // иначе анимация появления карточек играла бы заново каждую секунду.
-  var side = { built: false, cards: new Map(), logLen: -1, logBox: null };
+  var side = { built: false, cards: new Map(), lastLogEntry: null, logBox: null };
 
   function buildSide() {
     dom.side.innerHTML = '';
@@ -545,7 +545,7 @@ window.WC = window.WC || {};
     side.logBox = U.el('div', { class: 'log' });
     dom.side.appendChild(side.logBox);
     side.built = true;
-    side.logLen = -1;
+    side.lastLogEntry = null;
   }
 
   function renderSide() {
@@ -571,8 +571,9 @@ window.WC = window.WC || {};
       entry.card.classList.toggle('active', st.id === game.api.activeWorkerId);
       entry.card.classList.toggle('alarm', body.energy < 0.22 || body.pain > 0.4);
     });
-    if (side.logLen !== game.api.log.length) {
-      side.logLen = game.api.log.length;
+    var latestLogEntry = game.api.log[game.api.log.length - 1];
+    if (side.lastLogEntry !== latestLogEntry) {
+      side.lastLogEntry = latestLogEntry;
       side.logBox.innerHTML = '';
       game.api.log.slice(-14).reverse().forEach(function (entry) {
         side.logBox.appendChild(U.el('div', {}, [
@@ -677,6 +678,8 @@ window.WC = window.WC || {};
         U.el('p', { html: 'Пульт — <b>нижняя шторка</b>: потяни за «язычок» вверх или тапни по нему. Снизу всегда висят <b>быстрые приказы</b> (Взять · Нести · Перерыв · Авто) — один тап, без меню. Тап по <b>метке над рабочим</b> выбирает его. Кнопка <b>⤢</b> разворачивает игру на весь экран.' }),
         U.el('h3', { text: 'Клавиши' }),
         U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
+        U.el('h3', { text: 'Реплики рабочих' }),
+        U.el('p', { text: 'Рабочие отвечают на приказы и иногда разговаривают рядом друг с другом. Текст виден над сценой и в журнале. В пульте можно включить озвучку: используется только установленный на устройстве локальный русский голос. Если его нет, остаются текстовые реплики. Общая кнопка звука отключает и озвучку.' }),
         U.el('h3', { text: 'День и ночь' }),
         U.el('p', { text: 'В пульте можно переключить освещение на день или ночь в любой момент. Ночью фонари освещают улицу, а лампы — стеллажи. В темноте зрение рабочих постепенно снижается, особенно при усталости, и восстанавливается на свету.' }),
         U.el('h3', { text: 'Сохранение смены' }),
@@ -1073,6 +1076,16 @@ window.WC = window.WC || {};
         U.$$('#speed-seg button').forEach(function (b) { b.classList.toggle('on', Number(b.getAttribute('data-speed')) === speed); });
       });
     });
+    var voiceButton = q('btn-voice');
+    if (voiceButton) voiceButton.addEventListener('click', function () {
+      var next = !WC.voice.isEnabled();
+      if (!WC.voice.setEnabled(next)) {
+        U.toast('Нет локального русского голоса: реплики остаются в тексте', 'warn', 3500);
+        return;
+      }
+      syncVoiceButton();
+      U.toast(next ? 'Озвучка включена: локальный голос устройства' : 'Озвучка выключена', 'info', 2200);
+    });
     q('btn-pause').addEventListener('click', function () { game.setPaused(!game.state.paused); });
     if (q('btn-truck')) {
       q('btn-truck').addEventListener('click', function () {
@@ -1242,6 +1255,27 @@ window.WC = window.WC || {};
     });
   }
 
+  function syncVoiceButton() {
+    var button = q('btn-voice');
+    if (!button) return;
+    var enabled = WC.voice.isEnabled();
+    button.classList.toggle('on', enabled);
+    button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    button.querySelector('b').textContent = 'Озвучка: ' + (enabled ? 'вкл' : 'выкл');
+  }
+
+  var subtitleTimer = null;
+  function showDialogue(line) {
+    var box = q('dialogue-subtitle');
+    if (box) {
+      box.textContent = line.name + ': «' + line.text + '»';
+      box.hidden = false;
+      clearTimeout(subtitleTimer);
+      subtitleTimer = setTimeout(function () { box.hidden = true; }, 4500);
+    }
+    if (WC.voice) WC.voice.speak(line);
+  }
+
   function syncLightingControls() {
     U.$$('#lighting-seg button').forEach(function (button) {
       var active = button.getAttribute('data-lighting') === game.api.shiftMode;
@@ -1253,6 +1287,7 @@ window.WC = window.WC || {};
   function init() {
     cacheDom();
     syncLightingControls();
+    syncVoiceButton();
     if (WC.layout) WC.layout.init();
     sheet.init();
     wireRipple();
@@ -1268,7 +1303,13 @@ window.WC = window.WC || {};
       button.classList.toggle('on', button.getAttribute('data-view') === WC.world.getMode());
     });
     game.api.onEvent = function (type, payload) {
-      if (type === 'delivered') {
+      if (type === 'dialogue') {
+        showDialogue(payload);
+      } else if (type === 'restart') {
+        var subtitle = q('dialogue-subtitle');
+        if (subtitle) subtitle.hidden = true;
+        clearTimeout(subtitleTimer);
+      } else if (type === 'delivered') {
         var points = payload.result.points;
         U.toast('+' + points + ' · ' + payload.order.code + ' уложен', 'good', 1800);
         if (payload.order.urgent) WC.audio.urgent();

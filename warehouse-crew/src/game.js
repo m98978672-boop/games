@@ -6,6 +6,7 @@ WC.game = (function () {
 
   var cfg = null;
   var socialRng = null;
+  var dialogueBatch = false;
   var S = {
     time: 0,
     paused: false,
@@ -31,6 +32,7 @@ WC.game = (function () {
     engineStats: null,
     ready: false,
     shiftMode: 'day',
+    dialogueState: null,
     log: [],
     onEvent: null,
     onShiftEnd: null,
@@ -74,6 +76,16 @@ WC.game = (function () {
 
   function emit(type, payload) {
     if (typeof api.onEvent === 'function') api.onEvent(type, payload);
+  }
+
+  function emitLine(line) {
+    if (!line) return;
+    pushLog(line.name + ': «' + line.text + '»', 'info');
+    emit('dialogue', line);
+  }
+
+  function reactToEvent(worker, kind) {
+    if (api.dialogueState && api.sim) emitLine(WC.dialogue.event(api.dialogueState, worker, kind, api.sim.state.time));
   }
 
   function loadJson(url) {
@@ -172,6 +184,7 @@ WC.game = (function () {
         onDelivered: function (w, order, result) {
           pushLog(w.name + ' закрыл ' + order.code + ' (+' + result.points + ')', result.late ? 'warn' : 'good');
           WC.audio.delivered();
+          reactToEvent(worker, 'delivered');
           emit('delivered', { worker: worker, order: order, result: result });
         },
         onInjury: function (w, injury) {
@@ -179,6 +192,7 @@ WC.game = (function () {
           if (WC.audio && WC.audio.drop) WC.audio.drop();
           if (injury.severity >= 0.2 && api.sim.emitBlood) api.sim.emitBlood(w.pos.x, w.pos.y, injury.severity);
           if (WC.world && WC.world.kick) WC.world.kick(0.5);
+          reactToEvent(worker, 'injury');
           emit('injury', { worker: worker, injury: injury });
         },
         onRefused: function (w, order, reason) {
@@ -188,11 +202,13 @@ WC.game = (function () {
         onLoaded: function (w, order, result) {
           pushLog(w.name + ' загрузил ' + order.code + ' в фуру (+' + result.points + ')', 'good');
           if (WC.audio && WC.audio.delivered) WC.audio.delivered();
+          reactToEvent(worker, 'loaded');
           emit('loaded', { worker: worker, order: order, result: result });
         },
         onDropped: function (w, order, outcome) {
           pushLog(w.name + ' уронил ' + order.code + ' — ' + Math.round(order.damage * 100) + '% повреждений', 'bad');
           WC.audio.drop();
+          reactToEvent(worker, 'dropped');
           emit('dropped', { worker: worker, order: order, outcome: outcome });
         },
       onCaught: function (w) {
@@ -208,6 +224,7 @@ WC.game = (function () {
   }
 
   function createSim() {
+    api.dialogueState = WC.dialogue.create(0);
     socialRng = window.WarehouseSim.createRng(cfg.seed + 7719);
     api.sim = window.WarehouseSim.createWarehouse({
       seed: cfg.seed,
@@ -675,6 +692,7 @@ WC.game = (function () {
       pushLog(worker.state.name + ': ' + (res.reason || 'не получилось'), 'warn');
       emit('command-failed', { worker: worker, cmd: cmd, result: res });
     }
+    if (!dialogueBatch) emitLine(WC.dialogue.command(worker, cmd, res));
     return res;
   }
 
@@ -691,19 +709,31 @@ WC.game = (function () {
 
   function teamCommand(kind) {
     var results = [];
-    api.crew.forEach(function (worker) {
-      if (kind === 'intake') results.push(command(worker.id, 'pick', { keepAuto: true }));
-      else if (kind === 'store') results.push(command(worker.id, 'store', { keepAuto: true }));
-      else if (kind === 'rest') results.push(command(worker.id, 'rest', { keepAuto: true }));
-      else if (kind === 'auto') results.push(command(worker.id, 'auto'));
-    });
+    var cmd = { intake: 'pick', store: 'store', rest: 'rest', auto: 'auto' }[kind];
+    dialogueBatch = true;
+    try {
+      api.crew.forEach(function (worker) {
+        if (cmd) results.push(command(worker.id, cmd, kind === 'auto' ? {} : { keepAuto: true }));
+      });
+    } finally { dialogueBatch = false; }
     pushLog('Приказ бригаде: ' + ({ intake: 'разгрузить приёмку', store: 'все на стеллаж', rest: 'общий перерыв', auto: 'автономия' }[kind] || kind), 'info');
     emit('team', { kind: kind, results: results });
+    // Один слышимый ответ на бригадный приказ, в том числе при общем отказе.
+    var response = null;
+    [true, false].some(function (ok) {
+      return results.some(function (result, index) {
+        if (result.ok !== ok || !api.crew[index]) return false;
+        response = WC.dialogue.command(api.crew[index], cmd, result);
+        return Boolean(response);
+      });
+    });
+    emitLine(response);
     return results;
   }
 
   function setPaused(value) {
     S.paused = Boolean(value);
+    if (S.paused && WC.voice) WC.voice.cancel();
     var flag = document.getElementById('pause-flag');
     if (flag) flag.classList.toggle('show', S.paused);
     var btn = document.getElementById('btn-pause');
@@ -735,6 +765,7 @@ WC.game = (function () {
   }
 
   function restart() {
+    if (WC.voice) WC.voice.cancel();
     api.shiftsPlayed += 1;
     api.best = {
       score: Math.max((api.best && api.best.score) || 0, api.sim.state.stats.score || 0),
@@ -844,6 +875,7 @@ WC.game = (function () {
         detectBodyEvents(worker);
       });
       if (api.needsCleanup) cleanupDead();
+      emitLine(WC.dialogue.step(api.dialogueState, api.crew, api.sim.state.time, api.shiftMode, window.WarehouseWorker.pathBlocked));
       if (api.sim.state.day !== api.day) {
         api.day = api.sim.state.day;
         hireReplacements();
@@ -860,7 +892,7 @@ WC.game = (function () {
   // Только данные: функции, ссылки окружения и тела Cannon живут в фабриках.
   function captureCheckpoint() {
     return JSON.parse(JSON.stringify({
-      version: 2, shiftMode: api.shiftMode, runtime: S, warehouse: api.sim.captureCheckpoint(),
+      version: 2, shiftMode: api.shiftMode, dialogueState: api.dialogueState, runtime: S, warehouse: api.sim.captureCheckpoint(),
       crew: api.crew.map(function (worker) {
         return { state: worker.state, brain: api.envs[worker.id].brain,
           rng: api.envs[worker.id].rng.getState() };
@@ -964,6 +996,7 @@ WC.game = (function () {
     });
     api.sim.restoreCheckpoint(saved.warehouse, workers.map(function (worker) { return worker.state; }));
     api.shiftMode = restoredMode;
+    api.dialogueState = saved.dialogueState == null ? WC.dialogue.create(saved.warehouse.state.time) : WC.dialogue.validate(saved.dialogueState);
     api.crew = workers; api.staff = staff; api.envs = {};
     workers.forEach(function (worker, i) {
       api.envs[worker.id] = makeEnv(worker);
