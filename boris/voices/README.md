@@ -8,3 +8,8 @@
 - Чёткость голоса даёт DSP-цепочка в `boris/prologue.py` / `boris/shorts.py`
   (highpass, срез мути, презенс +3 дБ, компрессор 3:1, loudnorm −14/−16 LUFS).
 - Полный манифест: `voices.json`. Голоса не менять без явной просьбы пользователя.
+
+## настоящие мяу
+Записи мяуканья — из репозитория `bugITwhisperer/Claude-Code-cat-meow-hook-notifications`
+(лицензия MIT), файлы `assets/stop/meow.mp3` и `assets/notification/angry_cat.mp3`.
+Варианты (`meow_q`, `mew`, `meow_happy`) получены питч-сдвигом без смены длины.

@@ -334,6 +334,7 @@ def mix_audio(mode, P, TMP):
 
 
 def build(mode):
+    R.set_fps(50)
     R.set_mode(mode)
     W, H = (1080, 1920) if mode == "shorts" else (1920, 1080)
     TMP = os.path.join(B.TMP, TMPNAME + "_" + mode)
@@ -357,7 +358,7 @@ def build(mode):
     fc.append(f"{cur}format=yuv420p[v]")
     vid = os.path.join(TMP, "video_only.mp4")
     subprocess.run([FF, "-y", *sum([["-i", p] for p in segs], []), "-filter_complex", ";".join(fc),
-                    "-map", "[v]", "-r", str(B.FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+                    "-map", "[v]", "-r", str(R.FPS), "-c:v", "libx264", "-preset", "medium", "-crf", "20",
                     "-pix_fmt", "yuv420p", vid], capture_output=True, check=True)
     vp, sp = mix_audio(mode, P, TMP)
     I = "-14" if mode == "shorts" else "-16"
@@ -381,6 +382,7 @@ PREV_T = {7: 5.4, 8: 5.1, 9: 6.2, 10: 4.6, 11: 5.6}
 
 
 def preview(mode):
+    R.set_fps(25)
     R.set_mode(mode)
     W, H = (1080, 1920) if mode == "shorts" else (1920, 1080)
     TMP = os.path.join(B.TMP, TMPNAME + "_" + mode)

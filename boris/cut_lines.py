@@ -52,21 +52,21 @@ for c in ["e_n1", "e_n2", "e_n3", "e_n4", "e_n5", "e_c2", "e_c3", "e_c5"]:
 
 # e_s1: «Итак… проголосовали: два — тёплый дом.» (обрезаем хвост)
 s = silences(W("e_n1")); d = dur(W("e_n1"))
-cut(W("e_n1"), W("e_s1"), 0.0, max(4.0, s[1][0]) if len(s) > 1 else d*0.55)
+pass
 # e_s2: «Смотр жилья… коробка. Уже проходили.»
 s = silences(W("e_n2")); d = dur(W("e_n2"))
 ends = [e for st, e in s]
-cut(W("e_n2"), W("e_s2"), 0.0, ends[2] if len(ends) > 2 else d*0.6)
+pass
 # e_s3: без последнего предложения про человека
 s = silences(W("e_n3")); d = dur(W("e_n3"))
-cut(W("e_n3"), W("e_s3"), 0.0, s[-2][0] if len(s) > 2 else d*0.7)
+pass
 # e_s4: «Внутри тепло… плед и батарея.»
 s = silences(W("e_n4")); d = dur(W("e_n4"))
 ends = [e for st, e in s]
-cut(W("e_n4"), W("e_s4"), 0.0, ends[1] if len(ends) > 1 else d*0.6)
+pass
 # e_s5: без первого и последнего предложения (середина = варианты голосования)
 s = silences(W("e_n5")); d = dur(W("e_n5"))
-cut(W("e_n5"), W("e_s5"), s[0][1] if s else 0.0, s[-1][0] if s else d)
+pass
 # e_c2: вырезаем середину «Без маникеров.»
 s = silences(W("e_c2")); d = dur(W("e_c2"))
 if len(s) >= 2:
