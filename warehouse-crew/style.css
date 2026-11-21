@@ -760,6 +760,22 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
   from { opacity: 0; transform: translateY(16px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* Снимок смены: прокручивается отдельно от заголовка и кнопок. */
+.shift-report { width: min(720px, calc(100vw - 32px)); }
+.report-content { min-height: 0; flex: 1 1 auto; overflow-y: auto; padding: calc(14px * var(--ui)) calc(16px * var(--ui)); }
+.report-content:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -3px; }
+.report-note { color: var(--ink-dim); font-size: calc(10px * var(--ui)); line-height: 1.5; margin: 0 0 10px; }
+.report-warning { color: var(--accent-2); }
+.report-content .vitals-grid { margin-bottom: 12px; }
+.report-heading { color: var(--accent-2); font-size: calc(11px * var(--ui)); margin: 14px 0 8px; }
+.report-people { display: grid; gap: 6px; }
+.report-person { padding: 8px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink-dim); font-size: calc(10px * var(--ui)); line-height: 1.6; overflow-wrap: anywhere; }
+.report-person-head { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.report-person-head b { color: var(--ink); }
+.report-inspect { margin-top: 6px; }
+.report-actions { flex-shrink: 0; padding-top: 10px; border-top: 1px solid var(--line); }
+@media (max-width: 900px), (pointer: coarse) { .report-actions .btn, .report-inspect { min-height: 40px; } }
+
 .insp-head {
   display: flex; align-items: center; gap: 10px;
   padding: calc(12px * var(--ui)) calc(16px * var(--ui));
