@@ -186,6 +186,22 @@
       "note": "Вкладка «Торрент» — P2P-раздача игр (трекер, сигналинг, автоудаление плохих файлов)"
     },
     {
+      "id": "kvenya",
+      "path": "kvenya/index.html",
+      "kind": "ai-companion",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Вкладка «Общение с ИИ» — Квеня (Qwen3.5-0.8B + LoRA из папки qwen-home): разговор, журнал поисков в Википедии и дневник обучения читаются из её файлов"
+    },
+    {
+      "id": "youtube-bot",
+      "path": "youtube-bot/index.html",
+      "kind": "tool",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "YouTube Bot — планирование публикаций видео (подключён к движку задним числом: раздел появился без строки в реестре и ронял проверку покрытия)"
+    },
+    {
       "id": "razlom",
       "path": "razlom/index.html",
       "kind": "portal",

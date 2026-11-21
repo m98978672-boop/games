@@ -129,6 +129,7 @@
       <a href="#community-games" data-store-nav>Сообщество</a>
       <a class="nav-link-news" href="#news" data-portal-tab="news">📰 Новости <span class="nav-news-pill">News</span><span class="news-nav-badge" data-news-badge hidden>0</span></a>
       <a class="nav-link-chat" href="#chat" data-portal-tab="chat">💬 Общение <span class="nav-chat-pill">RatMes</span></a>
+      <a class="nav-link-ai" href="#ai" data-portal-tab="ai">🤖 Общение с ИИ <span class="nav-ai-pill">Квеня</span></a>
       <a class="nav-link-torrent" href="#torrent" data-portal-tab="torrent">🧲 Торрент <span class="nav-torrent-pill">P2P</span></a>
       <a href="developers/index.html">Разработчикам ↗</a>
     </nav>
@@ -142,6 +143,10 @@
       <button class="nav-icon-btn nav-chat-btn" type="button" data-portal-tab="chat" title="Вкладка «Общение» — RatMes" aria-label="Открыть вкладку Общение">
         <span aria-hidden="true">💬</span>
         <span class="nav-icon-label">Общение</span>
+      </button>
+      <button class="nav-icon-btn nav-ai-btn" type="button" data-portal-tab="ai" title="Вкладка «Общение с ИИ» — Квеня" aria-label="Открыть вкладку Общение с ИИ">
+        <span aria-hidden="true">🤖</span>
+        <span class="nav-icon-label">ИИ</span>
       </button>
       <button class="nav-icon-btn nav-torrent-btn" type="button" data-portal-tab="torrent" title="Вкладка «Торрент» — P2P-раздача игр" aria-label="Открыть вкладку Торрент">
         <span aria-hidden="true">🧲</span>
@@ -303,6 +308,24 @@
 
   <div class="portal-chat-frame-wrap portal-torrent-frame-wrap">
     <iframe id="torrentEmbedFrame" class="portal-chat-frame portal-torrent-frame" title="Games Torrent — P2P-раздача игр портала Games" data-src="torrent/index.html?embed=games" allow="clipboard-write"></iframe>
+  </div>
+</section>
+
+<!-- Вкладка «Общение с ИИ» — Квеня, нейросеть Qwen3.5-0.8B из папки qwen-home -->
+<section id="portal-ai-panel" class="portal-chat-panel portal-ai-panel" hidden aria-label="Вкладка Общение с ИИ — Квеня">
+  <div class="portal-chat-bar portal-ai-bar">
+    <div class="portal-chat-bar-left">
+      <button type="button" class="btn btn-steam-ghost portal-back-btn" data-portal-tab="games">← Магазин</button>
+      <span class="portal-chat-badge portal-ai-badge">Квеня · Qwen3.5-0.8B + LoRA · живёт в qwen-home/</span>
+    </div>
+    <div class="portal-chat-actions">
+      <button type="button" class="btn btn-steam-ghost" id="btnAiFullscreen" aria-pressed="false" title="На весь экран (удобно на телефоне)">⛶</button>
+      <a class="btn btn-steam-blue portal-popout-link" href="kvenya/index.html" target="_blank" rel="noopener">Отдельное окно ↗</a>
+    </div>
+  </div>
+
+  <div class="portal-chat-frame-wrap portal-ai-frame-wrap">
+    <iframe id="aiEmbedFrame" class="portal-chat-frame portal-ai-frame" title="Квеня — общение с ИИ портала Games" data-src="kvenya/index.html?embed=games" allow="clipboard-write"></iframe>
   </div>
 </section>
 

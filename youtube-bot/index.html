@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0b0d12">
   <title>YouTube Bot — планирование публикаций</title>
+  <!-- Движок — ДО своих скриптов (закон репозитория) -->
+  <script src="../shared/engine.js"></script>
+  <script src="../shared/engine-bootstrap.js" defer></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root{color-scheme:dark;--bg:#0b0d12;--panel:#141821;--line:#282f3b;--muted:#9ba7b8;--text:#f3f5fa;--accent:#ff3854;--green:#50d6a0;--yellow:#ffd166}
@@ -15,6 +18,7 @@
 <main>
   <header class="top">
     <div class="brand"><div class="mark">▶</div><div><h1>YouTube Bot</h1><p>Планирование загрузки видео в ваш канал</p></div></div>
+    <div class="engine-hud-slot" data-engine-badge></div>
     <a class="button secondary" href="https://studio.youtube.com/" target="_blank" rel="noreferrer">Открыть YouTube Studio ↗</a>
   </header>
   <div id="notice" class="notice hidden" role="status"></div>

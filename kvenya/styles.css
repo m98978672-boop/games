@@ -1,0 +1,255 @@
+/* Квеня — вкладка «Общение с ИИ» портала Games.
+   Своя вёрстка в палитре витрины: тёмный Steam-фон, синий акцент,
+   фиолетовый — цвет самой Квени. */
+
+:root {
+  --bg: #171a21;
+  --bg-deep: #0e1621;
+  --panel: #1b2838;
+  --panel-2: #16202d;
+  --line: #2a3f5a;
+  --text: #c7d5e0;
+  --muted: #8f98a3;
+  --accent: #66c0f4;
+  --accent-2: #a4d007;
+  --violet: #a678ff;
+  --violet-soft: rgba(166, 120, 255, 0.14);
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  min-height: 100vh;
+}
+
+a { color: var(--accent); }
+code {
+  background: rgba(102, 192, 244, 0.12);
+  border: 1px solid rgba(102, 192, 244, 0.25);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 0.92em;
+}
+
+.kv-shell {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 18px 18px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- шапка ---------- */
+.kv-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: linear-gradient(135deg, #1b2838 0%, #241a3d 100%);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.kv-brand { display: flex; gap: 16px; align-items: flex-start; min-width: min(560px, 100%); }
+.kv-avatar {
+  flex: 0 0 auto;
+  width: 68px; height: 68px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 32px; font-weight: 900; color: #fff;
+  background: radial-gradient(circle at 32% 30%, #7a4fd0, #3d2a6e 70%);
+  border: 2px solid var(--violet);
+  box-shadow: 0 0 22px rgba(166, 120, 255, 0.45);
+}
+.kv-brand h1 { margin: 2px 0 6px; font-size: 30px; line-height: 1.05; color: #fff; }
+.kv-brand p { margin: 0; color: var(--text); line-height: 1.45; max-width: 560px; }
+.kv-head-actions {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+
+.pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12.5px; color: var(--text);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 11px;
+}
+.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: #e8b45a; }
+.pill.is-ok .dot { background: var(--accent-2); }
+.pill.is-err .dot { background: #e35b5b; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: inherit; font-size: 14px; font-weight: 600;
+  border-radius: 8px; padding: 9px 14px;
+  border: 1px solid transparent; cursor: pointer;
+  text-decoration: none; white-space: nowrap;
+}
+.btn-primary {
+  background: linear-gradient(180deg, #7a5cff, #5b3df0);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(122, 92, 255, 0.35);
+}
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-ghost {
+  color: var(--text);
+  background: rgba(102, 192, 244, 0.08);
+  border-color: var(--line);
+}
+.btn-ghost:hover { border-color: var(--accent); color: #fff; }
+
+/* ---------- статистика ---------- */
+.kv-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.stat-card span { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.stat-card b { font-size: 21px; color: #fff; line-height: 1.15; }
+.stat-card small { color: var(--muted); font-size: 12px; }
+.stat-card.is-accent { border-color: rgba(166, 120, 255, 0.55); background: linear-gradient(160deg, #241a3d, var(--panel)); }
+.stat-card.is-good b { color: var(--accent-2); font-size: 19px; }
+
+/* ---------- сетка и карточки ---------- */
+.kv-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(300px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.kv-side { display: flex; flex-direction: column; gap: 14px; }
+.kv-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.kv-card h2 { margin: 0 0 10px; font-size: 19px; color: #fff; }
+.kv-note { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 8px 0; }
+.kv-more { display: inline-block; margin-top: 10px; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+.kv-more:hover { text-decoration: underline; }
+
+/* ---------- чат ---------- */
+.kv-chat {
+  display: flex; flex-direction: column; gap: 9px;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  max-height: 620px;
+  overflow-y: auto;
+}
+.kv-loading { color: var(--muted); font-size: 14px; padding: 8px 2px; }
+.msg {
+  max-width: 86%;
+  border-radius: 12px;
+  padding: 9px 12px;
+  line-height: 1.45;
+  font-size: 14.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.msg .msg-who {
+  display: block;
+  font-size: 11px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin-bottom: 4px; opacity: 0.85;
+}
+.msg.kvenya {
+  align-self: flex-start;
+  background: var(--violet-soft);
+  border: 1px solid rgba(166, 120, 255, 0.45);
+  border-bottom-left-radius: 4px;
+  color: #e9e2ff;
+}
+.msg.kvenya .msg-who { color: var(--violet); }
+.msg.owner {
+  align-self: flex-end;
+  background: #2a475e;
+  border: 1px solid #3d6a8a;
+  border-bottom-right-radius: 4px;
+  color: #eaf6ff;
+}
+.msg.owner .msg-who { color: var(--accent); text-align: right; }
+.msg.pending {
+  align-self: flex-end;
+  background: transparent;
+  border: 1.5px dashed #e8b45a;
+  color: #ffe1a8;
+}
+.msg.pending .msg-who { color: #e8b45a; text-align: right; }
+.msg .msg-wait {
+  display: block; margin-top: 5px;
+  font-size: 11.5px; color: #e8b45a;
+}
+.msg .msg-remove {
+  margin-left: 8px;
+  background: none; border: none; cursor: pointer;
+  color: #e8b45a; font: inherit; font-size: 11.5px;
+  text-decoration: underline; padding: 0;
+}
+
+.kv-composer { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.kv-composer-label { font-weight: 700; color: #fff; font-size: 14px; }
+.kv-composer textarea {
+  width: 100%;
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit; font-size: 14.5px;
+  padding: 10px 12px;
+  resize: vertical; min-height: 64px;
+}
+.kv-composer textarea:focus { outline: 2px solid rgba(166, 120, 255, 0.6); border-color: var(--violet); }
+.kv-composer-row { display: flex; gap: 9px; flex-wrap: wrap; }
+
+/* ---------- правая колонка ---------- */
+.kv-skills { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; line-height: 1.45; font-size: 14.5px; }
+.kv-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.kv-links li { display: flex; flex-direction: column; }
+.kv-links a { font-weight: 700; text-decoration: none; font-size: 15px; }
+.kv-links a:hover { text-decoration: underline; }
+.kv-links span { color: var(--muted); font-size: 12.5px; }
+
+.search-entry, .diary-entry {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+}
+.search-entry + .search-entry, .diary-entry + .diary-entry { margin-top: 9px; }
+.search-entry .se-q { font-weight: 700; color: #fff; font-size: 14.5px; }
+.search-entry .se-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.search-entry .se-digest { color: var(--text); font-size: 13px; line-height: 1.45; margin-top: 6px; }
+.diary-entry .de-title { font-weight: 700; color: #fff; font-size: 14.5px; }
+.diary-entry .de-body { color: var(--muted); font-size: 13px; line-height: 1.45; margin-top: 4px; }
+
+.kv-honest { border-color: rgba(232, 180, 90, 0.5); background: linear-gradient(160deg, #2b2113, var(--panel)); }
+.kv-honest p { margin: 0; line-height: 1.55; font-size: 14.5px; }
+
+.kv-foot { color: var(--muted); font-size: 12.5px; text-align: center; padding: 4px 0 8px; }
+
+/* Встроенный режим: портал сам даёт шапку — свою прячем частично */
+body.is-embed .kv-back { display: none; }
+body.is-embed .kv-shell { padding-top: 12px; }
+
+@media (max-width: 980px) {
+  .kv-stats { grid-template-columns: repeat(2, 1fr); }
+  .kv-grid { grid-template-columns: 1fr; }
+  .kv-brand p { max-width: none; }
+}
