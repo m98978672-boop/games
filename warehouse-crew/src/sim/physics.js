@@ -205,7 +205,7 @@
       }
     }
     function remove(record) { world.removeBody(record.body); }
-    function step(orders, dt) {
+    function syncCargo(orders) {
       var active = new Set();
       orders.forEach(function (o) {
         if (!o.pose || ['ruined', 'missed', 'loaded', 'carried'].indexOf(o.status) !== -1) return;
@@ -248,6 +248,10 @@
         }
       });
       bodies.forEach(function (rec, o) { if (!active.has(o)) { remove(rec); bodies.delete(o); } });
+      return active;
+    }
+    function step(orders, dt) {
+      var active = syncCargo(orders);
       // Adaptive substeps limit displacement per step; this is not full CCD.
       var maxSpeed = 0;
       bodies.forEach(function (r) { if (r.dynamic) maxSpeed = Math.max(maxSpeed, r.body.velocity.length()); });
@@ -281,7 +285,48 @@
       });
       return bodies.size;
     }
-    return { step: step, world: world, syncActors: syncActors, syncForklift: syncForklift, syncFluidObstacles: syncFluidObstacles, beginRagdoll: beginRagdoll, endRagdoll: endRagdoll, stepFluid: stepFluid };
+    function bodyState(b) {
+      return { position: { x:b.position.x, y:b.position.y, z:b.position.z },
+        quaternion: { x:b.quaternion.x, y:b.quaternion.y, z:b.quaternion.z, w:b.quaternion.w },
+        velocity: { x:b.velocity.x, y:b.velocity.y, z:b.velocity.z },
+        angularVelocity: { x:b.angularVelocity.x, y:b.angularVelocity.y, z:b.angularVelocity.z },
+        sleeping: b.sleepState === C.Body.SLEEPING };
+    }
+    function applyBodyState(b, saved) {
+      if (!saved || !saved.position || !saved.quaternion || !saved.velocity || !saved.angularVelocity) throw new Error('Некорректное физическое тело');
+      var v = saved.position, q = saved.quaternion, vel = saved.velocity, ang = saved.angularVelocity;
+      if (![v.x,v.y,v.z,q.x,q.y,q.z,q.w,vel.x,vel.y,vel.z,ang.x,ang.y,ang.z].every(Number.isFinite)) throw new Error('Некорректная физика');
+      b.position.set(v.x,v.y,v.z); b.quaternion.set(q.x,q.y,q.z,q.w);
+      b.velocity.set(vel.x,vel.y,vel.z); b.angularVelocity.set(ang.x,ang.y,ang.z);
+      b.aabbNeedsUpdate = true;
+      if (saved.sleeping && b.type === C.Body.DYNAMIC) b.sleep(); else b.wakeUp();
+    }
+    function capturePhysics() {
+      var cargo = {}, fallen = {};
+      bodies.forEach(function (rec, o) { if (rec.dynamic) cargo[o.id] = bodyState(rec.body); });
+      ragdolls.forEach(function (rag, actor) {
+        var parts = {};
+        Object.keys(rag.parts).forEach(function (name) { parts[name] = bodyState(rag.parts[name]); });
+        fallen[actor.id] = parts;
+      });
+      return { cargo: cargo, fallen: fallen };
+    }
+    function restorePhysics(saved, orders, workers) {
+      saved = saved || { cargo: {}, fallen: {} };
+      syncCargo(orders);
+      bodies.forEach(function (rec, o) { if (rec.dynamic && saved.cargo && saved.cargo[o.id]) applyBodyState(rec.body, saved.cargo[o.id]); });
+      workers.forEach(function (actor) {
+        if (actor.state !== 'down') return;
+        beginRagdoll(actor);
+        var parts = saved.fallen && saved.fallen[actor.id];
+        if (parts) Object.keys(ragdolls.get(actor).parts).forEach(function (name) {
+          if (!parts[name]) throw new Error('Отсутствует сегмент тела');
+          applyBodyState(ragdolls.get(actor).parts[name], parts[name]);
+        });
+      });
+      syncRagdolls();
+    }
+    return { step: step, world: world, syncActors: syncActors, syncForklift: syncForklift, syncFluidObstacles: syncFluidObstacles, beginRagdoll: beginRagdoll, endRagdoll: endRagdoll, stepFluid: stepFluid, capture: capturePhysics, restore: restorePhysics };
   }
   return { create: create, C: C };
 });

@@ -720,7 +720,7 @@ WC.game = (function () {
   function restart() {
     api.shiftsPlayed += 1;
     api.best = {
-      score: Math.max((api.best && api.best.score) || 0, S.score || 0),
+      score: Math.max((api.best && api.best.score) || 0, api.sim.state.stats.score || 0),
       delivered: Math.max((api.best && api.best.delivered) || 0, api.sim.state.stats.delivered),
     };
     api.log.length = 0;
@@ -737,6 +737,9 @@ WC.game = (function () {
     S.accumulator = 0;
     setPaused(false);
     pushLog('Новая смена. Бригада на месте.', 'info');
+    WC.save.unprotect();
+    api.resumeStatus = 'new';
+    WC.save.autosave(WC.game);
     emit('restart', {});
   }
 
@@ -746,7 +749,7 @@ WC.game = (function () {
     S.paused = true;
     setPaused(true);
     WC.audio.shiftEnd();
-    WC.save.save(api);
+    WC.save.autosave(api);
     if (typeof api.onShiftEnd === 'function') api.onShiftEnd(summary());
   }
 
@@ -832,8 +835,128 @@ WC.game = (function () {
     api.state.autosaveClock = (api.state.autosaveClock || 0) + dt;
     if (api.state.autosaveClock > 25) {
       api.state.autosaveClock = 0;
-      WC.save.save(api);
+      WC.save.autosave(api);
     }
+  }
+
+  // Только данные: функции, ссылки окружения и тела Cannon живут в фабриках.
+  function captureCheckpoint() {
+    return JSON.parse(JSON.stringify({
+      version: 2, runtime: S, warehouse: api.sim.captureCheckpoint(),
+      crew: api.crew.map(function (worker) {
+        return { state: worker.state, brain: api.envs[worker.id].brain,
+          rng: api.envs[worker.id].rng.getState() };
+      }),
+      staff: api.staff, pair: api.pair, socialRng: socialRng.getState(),
+      purchases: api.purchases, deaths: api.deaths, day: api.day,
+      needsCleanup: api.needsCleanup, crewTarget: api.crewTarget,
+      activeWorkerId: api.activeWorkerId, log: api.log,
+    }));
+  }
+
+  // Обязательные поля проверяются по объектам фабрики до подмены данных.
+  function checkShape(value, template, path) {
+    if (template === null || typeof template === 'function') return;
+    if (Array.isArray(template)) {
+      if (!Array.isArray(value)) throw new Error('Ожидался список: ' + path);
+      if (value.length > 5000) throw new Error('Слишком длинный список: ' + path);
+      return;
+    }
+    if (typeof template === 'object') {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Ожидался объект: ' + path);
+      Object.keys(template).forEach(function (key) {
+        if (typeof template[key] !== 'function') checkShape(value[key], template[key], path + '.' + key);
+      });
+      return;
+    }
+    if (typeof value !== typeof template || (typeof value === 'number' && !Number.isFinite(value))) throw new Error('Некорректное поле: ' + path);
+  }
+
+  function restoreCheckpoint(saved) {
+    if (!saved || saved.version !== 2 || !Array.isArray(saved.crew) || saved.crew.length > 8 ||
+        !Array.isArray(saved.staff) || saved.staff.length > 2 || !Array.isArray(saved.deaths) || !Array.isArray(saved.log) ||
+        !Number.isInteger(saved.crewTarget) || saved.crewTarget < 0 || saved.crewTarget > 8 ||
+        !saved.warehouse || !saved.warehouse.state) throw new Error('Повреждён снимок смены');
+    function safeTree(value, depth) {
+      if (depth > 30) throw new Error('Слишком глубокое сохранение');
+      if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Некорректное число');
+      if (!value || typeof value !== 'object') return;
+      if (Array.isArray(value) && value.length > 5000) throw new Error('Слишком длинный список');
+      Object.keys(value).forEach(function (key) {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') throw new Error('Недопустимое поле');
+        safeTree(value[key], depth + 1);
+      });
+    }
+    safeTree(saved, 0);
+    checkShape(saved.runtime, S, 'runtime');
+    if ([1, 2, 4].indexOf(saved.runtime.speed) === -1 || saved.runtime.accumulator < 0) throw new Error('Повреждены часы смены');
+    checkShape(saved.warehouse.state, api.sim.state, 'warehouse');
+    checkShape(saved.pair, api.pair, 'pair');
+    checkShape(saved.purchases, api.purchases, 'purchases');
+    if (!Number.isFinite(saved.day) || typeof saved.needsCleanup !== 'boolean') throw new Error('Повреждены данные смены');
+    var ids = Object.create(null);
+    var workers = saved.crew.map(function (record) {
+      if (!record || !record.state || typeof record.state.id !== 'string' || !record.state.id || ids[record.state.id]) throw new Error('Повреждена бригада');
+      var st = record.state; ids[st.id] = true;
+      var worker = window.WarehouseWorker.createWorker({ id: st.id, name: st.name, role: st.role,
+        gender: st.gender, palette: st.palette, traits: st.traits, model: window.WarehouseModel,
+        layout: api.sim.layout, spawn: st.pos, heading: st.heading });
+      checkShape(st, worker.state, 'worker');
+      if (!record.brain || !Array.isArray(record.brain.layers) || !record.brain.layers.length || record.brain.layers.length > 8) throw new Error('Повреждён мозг рабочего');
+      var inputs = 18;
+      record.brain.layers.forEach(function (layer) {
+        if (!layer || !Array.isArray(layer.b) || !Array.isArray(layer.w) || layer.b.length < 1 || layer.b.length > 128 ||
+            layer.w.length !== inputs * layer.b.length || !layer.w.every(Number.isFinite) || !layer.b.every(Number.isFinite)) throw new Error('Повреждены веса мозга');
+        inputs = layer.b.length;
+      });
+      if (inputs !== 6) throw new Error('Неверный выход мозга');
+      // Замыкание рабочего хранит исходное тело: обновляем его, а не меняем ссылку.
+      Object.assign(worker.body, st.body);
+      Object.assign(worker.traits, st.traits);
+      Object.assign(worker.state, st);
+      worker.state.body = worker.body; worker.state.traits = worker.traits;
+      return worker;
+    });
+    var staff = saved.staff.map(function (record) {
+      if (!record || !STAFF_DEFS[record.kind] || ids['staff-' + record.kind]) throw new Error('Повреждён персонал');
+      ids['staff-' + record.kind] = true;
+      var member = createStaffMember(record.kind);
+      checkShape(record, member, 'staff');
+      Object.assign(member.body, record.body);
+      Object.assign(member, record); member.body = record.body;
+      return member;
+    });
+    if (saved.activeWorkerId !== null && !workers.some(function (worker) { return worker.id === saved.activeWorkerId; })) throw new Error('Нет выбранного рабочего');
+    var ws = saved.warehouse.state;
+    ws.slots.forEach(function (slot, i) { checkShape(slot, api.sim.state.slots[i] || {}, 'slot'); });
+    var orderIds = Object.create(null);
+    ws.orders.forEach(function (order) {
+      if (!order || typeof order.id !== 'string' || !order.id || orderIds[order.id] ||
+          typeof order.status !== 'string' || !Number.isFinite(order.x) || !Number.isFinite(order.y) ||
+          !Number.isFinite(order.mass) || !Number.isFinite(order.deadline) || !Number.isFinite(order.priority) ||
+          !Number.isFinite(order.damage) || !order.pose || !Number.isFinite(order.pose.x) || !Number.isFinite(order.pose.y) || !Number.isFinite(order.pose.z)) throw new Error('Повреждён заказ');
+      orderIds[order.id] = true;
+    });
+    ws.trucks.forEach(function (truck) {
+      if (!truck || typeof truck.id !== 'string' || !truck.stand || !truck.door || !truck.handle ||
+          !Number.isFinite(truck.x) || !Number.isFinite(truck.y) || typeof truck.status !== 'string') throw new Error('Повреждена фура');
+    });
+    api.sim.restoreCheckpoint(saved.warehouse, workers.map(function (worker) { return worker.state; }));
+    api.crew = workers; api.staff = staff; api.envs = {};
+    workers.forEach(function (worker, i) {
+      api.envs[worker.id] = makeEnv(worker);
+      api.envs[worker.id].brain = saved.crew[i].brain;
+      api.brains[worker.id] = saved.crew[i].brain;
+      api.envs[worker.id].rng.setState(saved.crew[i].rng);
+    });
+    socialRng.setState(saved.socialRng);
+    api.pair = saved.pair; api.purchases = saved.purchases; api.deaths = saved.deaths;
+    api.day = saved.day; api.needsCleanup = saved.needsCleanup; api.crewTarget = saved.crewTarget;
+    api.activeWorkerId = saved.activeWorkerId; api.log = saved.log;
+    Object.assign(S, saved.runtime);
+    // Автосохранение не должно заново запускаться сразу после загрузки.
+    S.autosaveClock = 0;
+    setPaused(S.paused || S.shiftEnded);
   }
 
   function boot() {
@@ -850,7 +973,26 @@ WC.game = (function () {
       var meshStats = WC.meshes.buildAll(engine, palettesById());
       api.engineStats = meshStats;
       api.sim = createSim();
-      pushLog('Смена началась: ' + cfg.crew.length + ' рабочих, мозги загружены из файлов игры', 'good');
+      if (loaded && loaded.checkpoint) {
+        var brainsBeforeRestore = Object.assign({}, api.brains);
+        try {
+          restoreCheckpoint(loaded.checkpoint);
+          api.resumeStatus = 'restored';
+          pushLog('Смена восстановлена из сохранения', 'good');
+        } catch (err) {
+          console.warn('[warehouse-crew] сохранение не восстановлено:', err);
+          WC.save.protect();
+          api.brains = brainsBeforeRestore;
+          api.staff = []; api.purchases = { medic: 0, watchman: 0 }; api.deaths = []; api.log = [];
+          Object.assign(S, { time: 0, paused: false, speed: 1, shiftEnded: false, autosaveClock: 0, accumulator: 0, totalReal: 0 });
+          createSim();
+          api.resumeStatus = 'failed';
+          pushLog('Сохранение повреждено: автозапись отключена, старые данные сохранены', 'warn');
+        }
+      } else {
+        api.resumeStatus = WC.save.isProtected() ? 'failed' : 'new';
+        pushLog('Смена началась: ' + cfg.crew.length + ' рабочих, мозги загружены из файлов игры', 'good');
+      }
       api.ready = true;
       return api;
     });
@@ -902,6 +1044,7 @@ WC.game = (function () {
     setSpeed: setSpeed,
     qualityPercent: qualityPercent,
     snapshotForUi: snapshotForUi,
+    captureCheckpoint: captureCheckpoint,
     pushLog: pushLog,
     api: api,
     get state() { return S; },

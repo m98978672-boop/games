@@ -675,10 +675,16 @@ window.WC = window.WC || {};
         U.el('p', { html: 'Пульт — <b>нижняя шторка</b>: потяни за «язычок» вверх или тапни по нему. Снизу всегда висят <b>быстрые приказы</b> (Взять · Нести · Перерыв · Авто) — один тап, без меню. Тап по <b>метке над рабочим</b> выбирает его. Кнопка <b>⤢</b> разворачивает игру на весь экран.' }),
         U.el('h3', { text: 'Клавиши' }),
         U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
+        U.el('h3', { text: 'Сохранение смены' }),
+        U.el('p', { text: 'Смена автоматически сохраняется в браузере каждые 25 секунд и при закрытии страницы. При следующем запуске она продолжится с прежней бригадой, грузами и состоянием здоровья. Кнопка сохранения и клавиша S записывают смену сразу.' }),
         U.el('h3', { text: 'Движок' }),
         U.el('p', { text: 'Игра работает на RatCore v1.0.0: логика, ГПСЧ, время и вся геометрия (меши запечатаны ToolGuard и экспортированы мостом bridge.exportMesh) — из движка. Ни одного внешнего CDN.' }),
       ]),
       U.el('div', { class: 'help-actions' }, [
+        U.el('button', { class: 'btn', type: 'button', text: 'Новая смена', onclick: function () {
+          if (!window.confirm('Начать новую смену? Текущее сохранение будет заменено.')) return;
+          closeModal(); game.restart();
+        } }),
         U.el('button', { class: 'btn', type: 'button', text: 'Понятно', onclick: closeModal }),
       ]),
     ]);
@@ -948,7 +954,7 @@ window.WC = window.WC || {};
           ]);
         })),
         U.el('div', { class: 'brain-note', text: shiftVerdict(summary) }),
-        U.el('div', { class: 'brain-note', text: 'Прогресс сохранён автоматически. Хочешь — скачай отчёт смены в JSON.' }),
+        U.el('div', { class: 'brain-note', text: WC.save.isProtected() ? 'Сохранение защищено от перезаписи. Можно скачать отчёт смены в JSON.' : 'Проверь индикатор сохранения; отчёт смены можно скачать в JSON.' }),
       ]),
       U.el('div', { class: 'help-actions' }, [
         U.el('button', { class: 'btn', type: 'button', text: 'Новая смена', onclick: function () { closeModal(); game.restart(); } }),
@@ -1209,8 +1215,8 @@ window.WC = window.WC || {};
       } else if (key === 'f') {
         toggleFullscreen();
       } else if (key === 's') {
-        WC.save.save(game);
-        U.toast('Смена сохранена', 'good', 1600);
+        var saved = WC.save.save(game);
+        U.toast(saved ? 'Смена сохранена' : 'Не удалось сохранить', saved ? 'good' : 'bad', 1600);
       } else if (key === 'escape') {
         closeModal();
       } else if (/^[1-9]$/.test(key)) {
@@ -1270,6 +1276,7 @@ window.WC = window.WC || {};
   }
 
   function startToast() {
+    if (game.api.resumeStatus !== 'new') return;
     var touch = document.body.classList.contains('is-phone') || document.body.classList.contains('is-tablet');
     if (touch) {
       U.toast('Смена началась. Приказы — на панели снизу, потяни «пульт» вверх.', 'info', 3200);

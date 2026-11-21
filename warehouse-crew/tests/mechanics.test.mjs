@@ -226,6 +226,66 @@ console.log('Безопасное назначение заказов');
   check(!carryingAttempt.ok && owner.state.carryingId === first.id && first.status === 'carried', 'нельзя подменить заказ с коробкой в руках');
 }
 
+console.log('Автономия: усталость, срочность и обход');
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const worker = workers[0]; worker.body.energy = .2;
+  const order = warehouse.spawnOrder(); order.mass = 8;
+  worker.update(.1, envs[worker.id]);
+  check(worker.state.state === 'toRest' && !worker.orderId && order.status === 'pending', 'сильно уставший сначала идёт отдыхать');
+}
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const worker = workers[0];
+  const a = warehouse.spawnOrder(), b = warehouse.spawnOrder();
+  a.mass = b.mass = 8; a.priority = b.priority = .5;
+  a.deadline = warehouse.state.time + 15; b.deadline = warehouse.state.time + 100;
+  a.x = -8; a.y = 0; b.x = -7; b.y = 0;
+  worker.update(.1, envs[worker.id]);
+  check(worker.orderId === a.id, 'срочный заказ выбирается раньше обычного');
+}
+{
+  const { warehouse, workers } = makeWorld();
+  const w = workers[0], peer = workers[1];
+  w.state.pos = {x:-5,y:0}; peer.state.pos = {x:-9,y:0};
+  workers[2].command('wait', warehouse);
+  const a = warehouse.spawnOrder(), b = warehouse.spawnOrder();
+  a.mass = b.mass = 8; a.priority = b.priority = .5; a.deadline = b.deadline = 100;
+  a.x = -9; a.y = 0; b.x = -8; b.y = 5;
+  check(w.chooseOrder(warehouse,[w]).id === a.id && w.chooseOrder(warehouse,workers).id === b.id,
+    'свободному соседу оставляют ближайший обычный заказ');
+}
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const w = workers[0], blocker = workers[1];
+  w.state.pos = { x: -5.7, y: 0 }; blocker.state.pos = { x: -7.1, y: 0 };
+  workers[2].state.pos = { x: -5, y: 4 }; blocker.command('wait', warehouse);
+  const order = warehouse.spawnOrder(); order.mass = 8; order.x = -9.4; order.y = 0;
+  w.command('pick', warehouse, {orderId:order.id});
+  let min = Infinity;
+  for (let i=0; i<150 && !w.carryingId; i++) {
+    w.update(.05, envs[w.id]);
+    min = Math.min(min, Math.hypot(w.pos.x-blocker.pos.x,w.pos.y-blocker.pos.y));
+  }
+  check(Boolean(w.carryingId), 'рабочий обходит стоящего коллегу и берёт коробку', {x:w.pos.x,y:w.pos.y,min});
+  check(min > .65, 'обход сохраняет дистанцию', {min});
+}
+
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const w = workers[0];
+  w.state.pos = {x:-5.7,y:0}; workers[1].state.pos = {x:-5,y:4}; workers[2].state.pos = {x:-5,y:-4};
+  warehouse.state.forklift.x = -7.1; warehouse.state.forklift.y = 0;
+  const order = warehouse.spawnOrder(); order.mass = 8; order.x = -9.4; order.y = 0;
+  w.command('pick', warehouse, {orderId: order.id});
+  let min = Infinity;
+  for (let i=0; i<200 && !w.carryingId; i++) {
+    w.update(.05, envs[w.id]);
+    min = Math.min(min, Math.hypot(w.pos.x+7.1,w.pos.y));
+  }
+  check(Boolean(w.carryingId) && min > 1.05, 'рабочий обходит стоящий погрузчик', {min,x:w.pos.x,y:w.pos.y});
+}
+
 console.log('');
 if (failures) {
   console.log(`✗ Провалов: ${failures} из ${checks}`);

@@ -59,6 +59,28 @@ try {
   assert(actual.sorted && actual.assigned && actual.disabled);
   assert(actual.stats.every((r, i) => r.left >= 0 && r.right <= (portrait ? 390 : 844) && r.top >= actual.actions.bottom - 1 && (i === 0 || r.left >= actual.stats[i - 1].right)));
   assert(actual.header.bottom < (portrait ? 125 : 120), 'заголовок не должен занимать слишком много экрана');
+  const saved = await page.evaluate(() => {
+    const g = WC.game;
+    g.sim.state.stats.score = 1000;
+    const hired = g.hireWorker(); const medic = g.buyStaff('medic');
+    g.api.crew[0].body.energy = .41;
+    g.setSpeed(4); g.setPaused(true);
+    return {ok: hired.ok && medic.ok && WC.save.save(g), time: g.sim.state.time,
+      id: g.api.crew[3].id, orders: g.sim.state.orders.length};
+  });
+  assert(saved.ok);
+  await page.reload({waitUntil:'load'});
+  try { await page.waitForFunction(() => window.WC?.game?.api?.ready && document.body.classList.contains('ready'), null, {timeout:20000}); }
+  catch (error) { throw new Error('Повторный запуск: ' + errors.join(' | ') + ' modal=' + await page.locator('#modal-root').innerText()); }
+  const resumed = await page.evaluate(() => ({ status: WC.game.api.resumeStatus,
+    crew: WC.game.api.crew.length, staff: WC.game.api.staff.length, id: WC.game.api.crew[3]?.id,
+    time: WC.game.sim.state.time, orders: WC.game.sim.state.orders.length,
+    energy: WC.game.api.crew[0].body.energy, paused: WC.game.state.paused, speed: WC.game.state.speed,
+    speedOn: document.querySelector('#speed-seg button.on')?.getAttribute('data-speed') }));
+  assert.deepEqual(resumed, {status:'restored', crew:4, staff:1, id:saved.id, time:saved.time, orders:saved.orders,
+    energy:.41, paused:true, speed:4, speedOn:'4'});
+  assert.equal(errors.length, 0, errors.join('\n'));
+  console.log('✓ Сохранение и перезагрузка в настоящем браузере');
   console.log('✓ WebGL, непрозрачные руки, очередь и мобильная шапка (' + (portrait ? 'портрет' : 'ландшафт') + ')');
 } finally {
   await browser.close();
