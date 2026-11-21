@@ -56,6 +56,8 @@ func run_tests() -> void:
 	check(courier_motion.idle_fidget > 0 and courier_motion.idle_fidget_arm == "ArmR", "An idle courier begins a staggered sleeve-adjustment fidget")
 	courier_motion.advance(0.3, 0)
 	check(courier_motion.joints.ArmR.rotation.z > 0.02, "Fidget visibly moves the shoulder and arm before settling")
+	# Evaluate the same viewmodel pose update explicitly; the initial pause menu suspends Player._process.
+	game.player._process(1.0 / 60)
 	var player_glove: Node3D = game.player.left_arm.hand
 	var player_finger: Node3D = player_glove.get_node("Finger0") as Node3D
 	var player_finger_segment := player_finger.get_child(0) as MeshInstance3D
@@ -64,6 +66,8 @@ func run_tests() -> void:
 	check(player_glove.get_node("Thumb").position.x < 0 and player_right_glove.get_node("Thumb").position.x > 0, "Left and right IK gloves have opposite, anatomically correct thumbs")
 	check(not game.player.gun.get_node("LeftHand/Palm/Visual").visible and not game.player.gun.get_node("RightHand/Palm/Visual").visible and player_glove.visible and player_right_glove.visible, "Duplicate weapon hands are hidden while both IK gloves remain visible")
 	check(not guard.carried_weapon.get_node("LeftHand/Palm/Visual").visible and not guard.carried_weapon.get_node("RightHand/Palm/Visual").visible, "Guards also draw one coherent pair of IK hands")
+	var right_hand: Node3D = player_right_glove
+	check(player_glove.position.x < -0.12 and right_hand.position.x > 0.12 and player_glove.position.y > -0.28 and right_hand.position.y > -0.28, "Unarmed fists stay separated in the lower view instead of dropping below the frame")
 	check(player_glove.scale.x < 1.0 and player_glove.scale.y < 1.0, "First-person IK gloves are scaled down to keep the center of view clear")
 	var surface := RazlomArt.material(Color.WHITE, "brick")
 	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")

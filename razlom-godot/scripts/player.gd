@@ -255,8 +255,10 @@ func _process(delta: float) -> void:
 			left_arm.solve(Vector3(-0.18, -0.4, -0.02), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
 			right_arm.solve(Vector3(0.22, -0.4, 0.02), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
 		else:
-			left_arm.solve(Vector3(-0.18, -0.4, -0.02), Vector3(-0.23, -0.31, -0.36), -1.0)
-			right_arm.solve(Vector3(0.22, -0.4, 0.02), Vector3(0.23, -0.31, -0.36), 1.0)
+			# Keep unarmed fists in the lower outer corners, not down below the
+			# viewport or stacked over the crosshair—especially in portrait view.
+			left_arm.solve(Vector3(-0.24, -0.34, -0.04), Vector3(-0.17, -0.18, -0.48), -1.0)
+			right_arm.solve(Vector3(0.24, -0.34, -0.04), Vector3(0.17, -0.18, -0.48), 1.0)
 	if game.mobile_mode and not game.ended:
 		advance_touch_look(delta)
 
