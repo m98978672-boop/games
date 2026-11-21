@@ -123,7 +123,6 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	var hand_z := hand_x.cross(hand_y).normalized()
 	hand.basis = Basis(hand_x, hand_y, hand_z)
 	hand.scale = Vector3.ONE * 0.82
-	hand.rotation.z += sin(Time.get_ticks_msec() * 0.003 + side) * 0.018
 	for i in range(hand_knuckles.size()):
 		var curl := -0.62 if fist_mode else -0.12
 		hand_knuckles[i].rotation.x = curl + sin(Time.get_ticks_msec() * 0.002 + i * 0.4 + side) * 0.02
