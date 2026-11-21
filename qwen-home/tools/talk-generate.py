@@ -134,18 +134,25 @@ def digest(extract, query):
         return '', 0
     keywords = [w.lower()[:5] for w in re.findall(r'[\u0400-\u04FFA-Za-z]{4,}', query) if w.lower() not in QUERY_STOP]
     year_bonus = bool(re.search(r'(году|когда|основан|основан|дата|лет)', query.lower()))
+    founding_q = bool(re.search(r'(основан|основан|когда|году)', query.lower()))
     scored = []
     for i, sentence in enumerate(sentences):
         low = sentence.lower()
         score = sum(1 for k in keywords if k in low)
         if year_bonus and re.search(r'\b\d{3,4}\b', sentence):
             score += 2  # вопрос про год — предложение с годом важнее прочих
-        scored.append((score, i, sentence))
-    best = sorted(scored, key=lambda t: (-t[0], t[1]))[:2]
+        hit = founding_q and bool(re.search(r'(основа|упомина|впервы)', low))
+        if hit:
+            score += 3  # вопрос про основание — фраза об основании важнее случайной даты из истории города
+        scored.append((score, i, sentence, hit))
+    # Если в статье есть фраза именно об основании — даём только такие:
+    # маленькой модели нельзя подсовывать соседние даты, она выберет любую.
+    pool = [t for t in scored if t[3]] or scored
+    best = sorted(pool, key=lambda t: (-t[0], t[1]))[:2]
     if not best or best[0][0] == 0:
-        return ' '.join(s for _, _, s in sorted(scored[:2], key=lambda t: t[1]))[:500], 0
+        return ' '.join(s for _, _, s, *_ in sorted(scored[:2], key=lambda t: t[1]))[:500], 0
     chosen = sorted(best, key=lambda t: t[1])
-    return ' '.join(s for _, _, s in chosen)[:500], best[0][0]
+    return ' '.join(s for _, _, s, *_ in chosen)[:500], best[0][0]
 
 
 def keyword_query(query):
