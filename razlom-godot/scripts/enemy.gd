@@ -43,7 +43,7 @@ var near_misses := 0
 # Keeping the gun out of the shoulder hierarchy prevents IK feedback and flipping.
 var weapon_raised_pos := Vector3(0.15, 1.32, -0.34)
 var weapon_raised_rot := Vector3.ZERO
-var weapon_lowered_pos := Vector3(0.34, 0.78, -0.03)
+var weapon_lowered_pos := Vector3(0.25, 0.78, 0.0)
 var weapon_lowered_rot := Vector3(-0.35, 0.15, 0.20)
 const RAISE_TIME := 0.65
 const LOWER_TIME := 0.45
@@ -92,10 +92,10 @@ func _ready() -> void:
 	# the first-person rigs retain their separate, already-tuned pole direction.
 	left_arm.pole_bias = Vector3(-0.28, -1.0, 0.1)
 	right_arm.pole_bias = Vector3(0.28, -1.0, 0.1)
-	left_arm.bone_length = 0.39
-	left_arm.max_reach = 0.77
-	right_arm.bone_length = 0.39
-	right_arm.max_reach = 0.77
+	left_arm.bone_length = 0.45
+	left_arm.max_reach = 0.89
+	right_arm.bone_length = 0.45
+	right_arm.max_reach = 0.89
 	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home
