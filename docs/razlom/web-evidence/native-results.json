@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 46.137,
+  "elapsedSeconds": 48.209,
   "checks": [
     {
       "name": "import",
@@ -101,8 +101,8 @@
     },
     {
       "name": "presentation",
-      "exitCode": 1,
-      "passed": false,
+      "exitCode": 0,
+      "passed": true,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -111,11 +111,9 @@
         "--script",
         "res://tests/presentation.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nPresentation checks: 32; failures: 1\nFAIL: Hit reaction settles without lasting tilt\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nPresentation checks: 32; failures: 0\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": [
-        "FAIL: Hit reaction settles without lasting tilt"
-      ]
+      "unexpectedDiagnostics": []
     },
     {
       "name": "ai-memory",
@@ -294,7 +292,7 @@
       "unexpectedDiagnostics": []
     }
   ],
-  "passed": false,
+  "passed": true,
   "limitations": [
     "Headless dummy renderer; no image/audio validation",
     "Automated mission uses teleportation and frozen enemy ticks for isolation",
