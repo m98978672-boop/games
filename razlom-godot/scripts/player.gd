@@ -56,12 +56,8 @@ func _ready() -> void:
 	gun.scale = Vector3.ONE * 0.85
 	gun.position = Vector3(0.18, -0.28, -0.68)
 	weapon_motion = RazlomWeaponMotion.new(gun)
-	# Keep the weapon's hand pivots for IK/reload targets, but draw only the
-	# articulated camera-rig hands to avoid two gloves fighting for the same space.
-	for hand_path in ["LeftHand", "RightHand"]:
-		var weapon_hand := gun.get_node(hand_path) as Node3D
-		for visual in weapon_hand.find_children("*", "MeshInstance3D", true, false):
-			(visual as MeshInstance3D).hide()
+	# Keep the authored hands and sleeves on the weapon as the only first-person
+	# pair; the camera-space IK rigs are reserved for world characters.
 	bandage = RazlomArt.box(gun.get_node("LeftHand"), Vector3(0, 0.035, 0), Vector3(0.055, 0.05, 0.09), RazlomArt.material(Color("dedbc4")))
 	bandage.hide()
 	scanner = Node3D.new()
@@ -252,19 +248,21 @@ func advance_touch_look(delta: float) -> void:
 func _process(delta: float) -> void:
 	if is_instance_valid(gun):
 		if game.state.rifle_owned:
-			left_arm.solve(Vector3(-0.18, -0.32, -0.34), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
-			right_arm.solve(Vector3(0.18, -0.32, -0.34), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
+			left_arm.solve(Vector3(-0.18, -0.28, 0.02), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
+			right_arm.solve(Vector3(0.22, -0.28, 0.04), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
 		else:
-			# Keep compact fists at the lower outer edges, away from the
-			# crosshair; forward anchors prevent the sleeves swelling in view.
-			left_arm.solve(Vector3(-0.18, -0.34, -0.42), Vector3(-0.27, -0.22, -0.65), -1.0)
-			right_arm.solve(Vector3(0.18, -0.34, -0.42), Vector3(0.27, -0.22, -0.65), 1.0)
+			left_arm.solve(Vector3(-0.18, -0.28, 0.02), Vector3(-0.23, -0.31, -0.36), -1.0)
+			right_arm.solve(Vector3(0.22, -0.28, 0.04), Vector3(0.23, -0.31, -0.36), 1.0)
 	if game.mobile_mode and not game.ended:
 		advance_touch_look(delta)
 
 func sync_weapon_state() -> void:
 	var owned: bool = game.state.rifle_owned
 	gun.visible = owned
+	# The weapon scene contains its own articulated hands. Do not layer a second
+	# camera-space pair over them (or show fists when the player is unarmed).
+	left_arm.set_visible(false)
+	right_arm.set_visible(false)
 	left_arm.set_fist_mode(not owned)
 	right_arm.set_fist_mode(not owned)
 	if not owned:
@@ -351,6 +349,6 @@ func reset_death_pose() -> void:
 	camera.position = Vector3(0, 1.6, 0)
 	camera.rotation.z = 0
 	gun.show()
-	left_arm.set_visible(true)
-	right_arm.set_visible(true)
+	left_arm.set_visible(false)
+	right_arm.set_visible(false)
 	reflex_time = 0

@@ -64,11 +64,14 @@ func run_tests() -> void:
 	check(player_glove.has_node("Palm") and player_finger_segment.mesh is BoxMesh and not player_glove.has_node("KnuckleRidge0"), "First-person glove keeps attached block-built fingers without floating ornaments")
 	var player_right_glove: Node3D = game.player.right_arm.hand
 	check(player_glove.get_node("Thumb").position.x < 0 and player_right_glove.get_node("Thumb").position.x > 0, "Left and right IK gloves have opposite, anatomically correct thumbs")
-	check(not game.player.gun.get_node("LeftHand/Palm/Visual").visible and not game.player.gun.get_node("RightHand/Palm/Visual").visible and player_glove.visible and player_right_glove.visible, "Duplicate weapon hands are hidden while both IK gloves remain visible")
-	check(not guard.carried_weapon.get_node("LeftHand/Palm/Visual").visible and not guard.carried_weapon.get_node("RightHand/Palm/Visual").visible, "Guards also draw one coherent pair of IK hands")
-	var right_hand: Node3D = player_right_glove
-	check(player_glove.position.x < -0.22 and right_hand.position.x > 0.22 and player_glove.position.y > -0.28 and right_hand.position.y > -0.28 and player_glove.position.z < -0.55 and right_hand.position.z < -0.55, "Compact unarmed fists sit at the lower outer edges, clear of the crosshair")
-	check(player_glove.scale.x < 1.0 and player_glove.scale.y < 1.0, "First-person IK gloves are scaled down to keep the center of view clear")
+	check(not player_glove.visible and not player_right_glove.visible and game.player.gun.get_node("LeftHand/Palm/Visual").visible and game.player.gun.get_node("RightHand/Palm/Visual").visible, "Unarmed player has no floating IK fists; the authored weapon hands remain intact")
+	check(not guard.carried_weapon.get_node("LeftHand/Palm/Visual").visible and not guard.carried_weapon.get_node("RightHand/Palm/Visual").visible, "Guards draw only their articulated IK hands, not duplicate weapon hands")
+	check(game.player.gun.scale.x < 1.0 and game.player.gun.position.y < -0.25 and game.player.gun.position.z < -0.6, "First-person viewmodel is smaller and lowered away from the sightline")
+	game.state.rifle_owned = true
+	game.player.sync_weapon_state()
+	check(game.player.gun.visible and game.player.gun.get_node("LeftHand/Palm/Visual").visible and game.player.gun.get_node("RightHand/Palm/Visual").visible and not player_glove.visible and not player_right_glove.visible, "Equipped rifle uses one attached pair of authored hands without IK overlap")
+	game.state.rifle_owned = false
+	game.player.sync_weapon_state()
 	var surface := RazlomArt.material(Color.WHITE, "brick")
 	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")
 	check(surface.roughness_texture != null, "Surface roughness map is bound")

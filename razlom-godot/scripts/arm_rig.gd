@@ -34,14 +34,14 @@ func _init(host: Node3D, hand_side: float = -1.0) -> void:
 	joint = MeshInstance3D.new()
 	joint.set_meta("arm_rig_part", true)
 	var joint_mesh := BoxMesh.new()
-	joint_mesh.size = Vector3(0.065, 0.065, 0.065)
+	joint_mesh.size = Vector3(0.09, 0.09, 0.09)
 	joint.mesh = joint_mesh
 	joint.material_override = cloth
 	host.add_child(joint)
 	# Palm, knuckles and fingers are separate square pieces, never round beads.
 	hand = Node3D.new()
 	hand.name = "IKHand"
-	hand.scale = Vector3.ONE * 0.62
+	hand.scale = Vector3.ONE * 0.82
 	host.add_child(hand)
 	var glove := RazlomArt.material(Color("39463f"), "cloth")
 	var glove_highlight := RazlomArt.material(Color("56645a"), "cloth")
@@ -105,7 +105,7 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	hand.position = wrist
 	var hand_up := Vector3.UP if absf(direction.dot(Vector3.UP)) < 0.95 else Vector3.FORWARD
 	hand.basis = Basis.looking_at(direction, hand_up)
-	hand.scale = Vector3.ONE * 0.62
+	hand.scale = Vector3.ONE * 0.82
 	hand.rotation.z += sin(Time.get_ticks_msec() * 0.003 + side) * 0.018
 	for i in range(hand_knuckles.size()):
 		var curl := -0.62 if fist_mode else -0.12
@@ -118,7 +118,7 @@ func place(segment: Node3D, start: Vector3, finish: Vector3) -> void:
 	segment.position = (start + finish) * 0.5
 	var direction := (finish - start).normalized()
 	var up := Vector3.UP if absf(direction.dot(Vector3.UP)) < 0.95 else Vector3.FORWARD
-	segment.basis = Basis.looking_at(direction, up) * Basis.from_scale(Vector3(0.62, 0.62, maxf(0.001, start.distance_to(finish))))
+	segment.basis = Basis.looking_at(direction, up) * Basis.from_scale(Vector3(0.84, 0.84, maxf(0.001, start.distance_to(finish))))
 
 func set_visible(value: bool) -> void:
 	for segment in segments: segment.visible = value
