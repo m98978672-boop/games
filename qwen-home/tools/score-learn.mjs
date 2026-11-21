@@ -8,14 +8,31 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
+const LEGAL_ACTIONS = new Set(['none', 'supply', 'build', 'hold']);
+
+/** Формат ответа: think — блок рассуждения; json — команда командира. */
+export function formatOk(output, format) {
+  const text = String(output || '').trim();
+  if (format === 'think') return /<think>[\s\S]*<\/think>/.test(text);
+  if (format === 'json') {
+    try {
+      const parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ''));
+      return LEGAL_ACTIONS.has(parsed.action);
+    } catch { return false; }
+  }
+  return true;
+}
+
 export function scoreOutputs(results) {
   const models = {};
   for (const name of ['base', 'adapter']) {
     if (!results.some((r) => typeof r[name] === 'string')) continue;
     let passed = 0;
     for (const row of results) {
-      const out = String(row[name] || '').toLowerCase();
-      const ok = (row.mustContain || []).every((word) => out.includes(String(word).toLowerCase()));
+      const raw = String(row[name] || '');
+      const out = raw.toLowerCase();
+      const ok = (row.mustContain || []).every((word) => out.includes(String(word).toLowerCase()))
+        && formatOk(raw, row.mustFormat);
       if (ok) passed++;
     }
     models[name] = { passed, total: results.length };

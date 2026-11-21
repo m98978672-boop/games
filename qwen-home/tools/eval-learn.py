@@ -47,6 +47,8 @@ def main():
         models.append(('adapter', adapter_model))
     for row in rows:
         item = {'id': row['id'], 'instruction': row['instruction'], 'mustContain': row.get('mustContain', [])}
+        if row.get('mustFormat'):
+            item['mustFormat'] = row['mustFormat']
         for name, model in models:
             item[name] = generate(model, tokenizer, manifest['systemPrompt'], row['instruction'], args.max_new)
             print(f"{row['id']} [{name}] done", flush=True)
