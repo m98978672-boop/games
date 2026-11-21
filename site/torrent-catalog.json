@@ -7,7 +7,7 @@
     "storefront": 18,
     "collection": 216,
     "files": 2150,
-    "totalBytes": 52823337,
+    "totalBytes": 52823567,
     "chunks": 399,
     "blockedFiles": 5
   },
@@ -6233,8 +6233,8 @@
       "play": "frontline-steel-and-drones/play.html",
       "cover": "site/assets/frontline.webp",
       "dir": "frontline-steel-and-drones",
-      "infoHash": "c41bceac5b634652646a31e8c06eb8c254cec9d4b99100efec85baefdf8933ae",
-      "totalSize": 435923,
+      "infoHash": "766d1b8f5ae4b523fc5d8543f889f16caea530f2007f3d9b6ee60f035a16edbc",
+      "totalSize": 436153,
       "chunkSize": 262144,
       "chunkCount": 2,
       "fileCount": 5,
@@ -6256,8 +6256,8 @@
         },
         {
           "path": "play.html",
-          "size": 217173,
-          "sha256": "a04389227a036adc8e9f233da2af40533754fe6d5f973d0b877fab6087388114"
+          "size": 217403,
+          "sha256": "68802d9fe3168ce78349876dd7b8d0a20ecc9e1fc98f44d19baf5c0ea961073d"
         },
         {
           "path": "style.css",
