@@ -99,20 +99,24 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			head_visual.mesh = head_mesh
 			head_visual.scale = Vector3.ONE
 			head_visual.material_override = skin
-		# Every facial feature is a small flat block aligned to the same front plane.
+		# Flat, evenly readable facial details on the same front plane.
+		var brow_mat := StandardMaterial3D.new()
+		brow_mat.albedo_color = Color("59483a")
+		brow_mat.roughness = 0.88
+		brow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		for side in [-1, 1]:
 			var ear := box(head, Vector3(side * 0.15, -0.018, -0.008), Vector3(0.045, 0.06, 0.055), skin)
 			ear.name = "EarL" if side < 0 else "EarR"
 			var eye := Node3D.new()
 			eye.name = "EyeL" if side < 0 else "EyeR"
-			eye.position = Vector3(side * 0.067, 0.033, -0.153)
+			eye.position = Vector3(side * 0.062, 0.034, -0.153)
 			head.add_child(eye)
-			var sclera := box(eye, Vector3.ZERO, Vector3(0.036, 0.02, 0.01), material(Color("eee2d2")))
+			var sclera := box(eye, Vector3.ZERO, Vector3(0.04, 0.024, 0.01), material(Color("eee2d2")))
 			sclera.name = "Sclera"
 			var iris := MeshInstance3D.new()
 			iris.name = "Iris"
 			var iris_mesh := BoxMesh.new()
-			iris_mesh.size = Vector3(0.011, 0.014, 0.004)
+			iris_mesh.size = Vector3(0.012, 0.016, 0.004)
 			iris.mesh = iris_mesh
 			iris.position = Vector3(0, 0, -0.007)
 			iris.material_override = material(Color("626c53"))
@@ -120,14 +124,14 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			var pupil := MeshInstance3D.new()
 			pupil.name = "Pupil"
 			var pupil_mesh := BoxMesh.new()
-			pupil_mesh.size = Vector3(0.005, 0.009, 0.003)
+			pupil_mesh.size = Vector3(0.006, 0.01, 0.003)
 			pupil.mesh = pupil_mesh
 			pupil.position = Vector3(0, 0, -0.011)
 			pupil.material_override = material(Color("282923"))
 			eye.add_child(pupil)
-			var brow := box(head, Vector3(side * 0.07, 0.071, -0.16), Vector3(0.032, 0.006, 0.01), material(Color("705844")))
+			var brow := box(head, Vector3(side * 0.062, 0.071, -0.16), Vector3(0.03, 0.007, 0.008), brow_mat)
 			brow.name = "BrowL" if side < 0 else "BrowR"
-			brow.rotation.z = side * -0.015
+			brow.rotation.z = side * -0.01
 		# Flat stepped nose and a short mouth line; no spherical details.
 		box(head, Vector3(0, -0.005, -0.16), Vector3(0.018, 0.035, 0.018), material(skin_color.lightened(0.035)))
 		var nose_tip := box(head, Vector3(0, -0.025, -0.17), Vector3(0.024, 0.014, 0.02), material(skin_color.lightened(0.035)))
@@ -140,15 +144,16 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			var old_hair := root.get_node_or_null("Hair") as Node3D
 			if old_hair != null:
 				old_hair.reparent(head, true)
-				old_hair.position = Vector3(0, 0.19, 0.025)
+				old_hair.position = Vector3(0, 0.18, 0.025)
 				var hair_visual := old_hair.get_node_or_null("Visual") as MeshInstance3D
 				if hair_visual != null:
 					hair_visual.material_override = hair_mat
-			# Three distinct voxel locks leave a clear skin gap above each brow.
-			for i in range(3):
-				var fringe := box(head, Vector3(-0.064 + i * 0.064, 0.135 - absf(i - 1) * 0.008, -0.15), Vector3(0.032, 0.034, 0.025), hair_mat)
-				fringe.name = "Fringe%d" % i
-				fringe.rotation.z = (i - 1) * 0.045
+					hair_visual.scale = Vector3(0.9, 0.75, 0.97)
+			# Hair frames the temples only; keep the forehead clear so it cannot
+			# merge with the brows into a bar or a third eyebrow.
+			for side in [-1, 1]:
+				var temple_lock := box(head, Vector3(side * 0.138, 0.045, -0.153), Vector3(0.016, 0.05, 0.02), hair_mat)
+				temple_lock.name = "TempleHairL" if side < 0 else "TempleHairR"
 			for i in range(5):
 				var braid := box(head, Vector3(0.105 + (i % 2) * 0.018, -0.06 - i * 0.04, 0.15), Vector3(0.034, 0.04, 0.04), hair_mat)
 				braid.name = "Braid%d" % i
