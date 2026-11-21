@@ -24,6 +24,8 @@ window.WC = window.WC || {};
     lastUiAt: 0,
     newsIndex: 0,
     orderRows: new Map(),
+    orderFilter: 'all',
+    orderVisibleLimit: 14,
     nums: {},
     sheet: 'half',
   };
@@ -48,6 +50,10 @@ window.WC = window.WC || {};
     dom.selectedCard = q('selected-card');
     dom.orderList = q('order-list');
     dom.queueCount = q('queue-count');
+    dom.queueSummary = q('queue-summary');
+    dom.queueShowing = q('queue-showing');
+    dom.queueEmpty = q('queue-empty');
+    dom.queueMore = q('queue-more');
     dom.side = q('side');
     dom.pauseFlag = q('pause-flag');
     dom.modalRoot = q('modal-root');
@@ -389,6 +395,7 @@ window.WC = window.WC || {};
     if (uiState.ordersSim !== game.sim) {
       uiState.orderRows.forEach(function (row) { if (row.parentNode) row.parentNode.removeChild(row); });
       uiState.orderRows.clear();
+      uiState.orderVisibleLimit = 14;
       uiState.ordersSim = game.sim;
     }
     // Ближайший дедлайн сверху — срочные заказы не теряются в очереди.
@@ -396,9 +403,28 @@ window.WC = window.WC || {};
       return a.deadline - b.deadline || a.createdAt - b.createdAt;
     });
     var now = game.sim.state.time;
+    var slots = game.sim.state.slots;
+    var free = slots.filter(function (slot) { return !slot.occupied; }).length;
+    var soon = active.filter(function (order) { return order.deadline - now <= 30; }).length;
+    dom.queueSummary.textContent = 'Свободных ячеек: ' + free + '/' + slots.length + ' · срок ≤ 30 с: ' + soon;
+    dom.queueSummary.title = 'Свободные ячейки не включают места, зарезервированные для заказов';
+    dom.queueSummary.classList.toggle('warning', free === 0 || soon > 0);
+    var filtered = active.filter(function (order) {
+      if (uiState.orderFilter === 'pending') return order.status === 'pending';
+      if (uiState.orderFilter === 'working') return order.status === 'claimed' || order.status === 'carried';
+      if (uiState.orderFilter === 'priority') return order.dispatchPriority === true;
+      if (uiState.orderFilter === 'soon') return order.deadline - now <= 30;
+      return true;
+    });
+    var visible = filtered.slice(0, uiState.orderVisibleLimit);
     var live = {};
     dom.queueCount.textContent = String(active.length);
-    active.slice(0, 14).forEach(function (order) {
+    dom.queueShowing.textContent = 'Показано ' + visible.length + ' из ' + filtered.length;
+    dom.queueEmpty.hidden = filtered.length > 0;
+    dom.queueEmpty.textContent = active.length ? 'Нет заказов для этого фильтра' : 'Активных заказов пока нет';
+    dom.queueMore.hidden = visible.length >= filtered.length;
+    dom.queueMore.textContent = 'Показать ещё (' + (filtered.length - visible.length) + ')';
+    visible.forEach(function (order, index) {
       live[order.id] = true;
       var row = uiState.orderRows.get(order.id);
       if (!row) {
@@ -438,7 +464,6 @@ window.WC = window.WC || {};
         dom.orderList.appendChild(row);
       }
       // Переставляем существующие карточки, сохраняя кнопки и их фокус.
-      var index = active.indexOf(order);
       if (dom.orderList.children[index] !== row) dom.orderList.insertBefore(row, dom.orderList.children[index] || null);
       var take = row.querySelector('.o-take');
       var selected = game.activeWorker();
@@ -481,6 +506,11 @@ window.WC = window.WC || {};
     });
     uiState.orderRows.forEach(function (row, id) {
       if (!live[id]) {
+        // При исчезновении карточки удерживаем фокус внутри управления очередью.
+        if (row.contains(document.activeElement)) {
+          var filterButton = document.querySelector('[data-order-filter="' + uiState.orderFilter + '"]');
+          if (filterButton) filterButton.focus({ preventScroll: true });
+        }
         if (row.parentNode) row.parentNode.removeChild(row);
         uiState.orderRows.delete(id);
       }
@@ -696,6 +726,8 @@ window.WC = window.WC || {};
         U.el('p', { html: 'Пульт — <b>нижняя шторка</b>: потяни за «язычок» вверх или тапни по нему. Снизу всегда висят <b>быстрые приказы</b> (Взять · Нести · Перерыв · Авто) — один тап, без меню. Тап по <b>метке над рабочим</b> выбирает его. Кнопка <b>⤢</b> разворачивает игру на весь экран.' }),
         U.el('h3', { text: 'Клавиши' }),
         U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
+        U.el('h3', { text: 'Обзор очереди' }),
+        U.el('p', { text: 'Фильтры показывают все заказы, свободные, занятые, приоритетные или те, у которых осталось не больше 30 секунд (включая просроченные). Сводка показывает число свободных ячеек без зарезервированных мест. Если заказов много, нажми «Показать ещё».' }),
         U.el('h3', { text: 'Приоритет заказа' }),
         U.el('p', { text: 'В очереди отметьте свободный заказ кнопкой «В приоритет». Бригада будет чаще выбирать его в автономном режиме; метка не переназначает занятый груз, не отменяет технику безопасности и не меняет награду. Её можно снять до назначения.' }),
         U.el('h3', { text: 'Реплики рабочих' }),
@@ -1048,6 +1080,24 @@ window.WC = window.WC || {};
 
   function wireControls() {
     wireShop();
+    U.$$('[data-order-filter]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        uiState.orderFilter = button.getAttribute('data-order-filter');
+        uiState.orderVisibleLimit = 14;
+        U.$$('[data-order-filter]').forEach(function (item) {
+          item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
+        });
+        renderOrders();
+      });
+    });
+    if (dom.queueMore) dom.queueMore.addEventListener('click', function () {
+      uiState.orderVisibleLimit += 14;
+      renderOrders();
+      if (dom.queueMore.hidden) {
+        var filterButton = document.querySelector('[data-order-filter="' + uiState.orderFilter + '"]');
+        if (filterButton) filterButton.focus({ preventScroll: true });
+      }
+    });
     var shopButton = q('btn-shop');
     if (shopButton) shopButton.addEventListener('click', function () {
       sheet.set('full', true);

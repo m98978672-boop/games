@@ -47,7 +47,9 @@ try {
     const stats = [...document.querySelectorAll('.top-stats .stat')].map(rect);
     const actions = rect(document.querySelector('.top-actions'));
     const header = rect(document.querySelector('.topbar'));
-    g.setPaused(true);
+    // The WebGL test can take longer on a busy runner: start with a fresh,
+    // paused shift so automatically spawned orders cannot affect assertions.
+    g.restart(); g.setPaused(true);
     g.api.crew.forEach(w => g.command(w.id, 'wait'));
     g.selectWorker(g.api.crew[0].id);
     const late = g.sim.spawnOrder(), soon = g.sim.spawnOrder();
@@ -78,7 +80,23 @@ try {
   await priorityButton.tap();
   assert.equal(await priorityButton.getAttribute('aria-pressed'), 'true');
   assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
-  await page.screenshot({path: '/tmp/wc-priority-' + (portrait ? 'portrait' : 'landscape') + '.png'});
+  const filter = name => page.locator('[data-order-filter="' + name + '"]');
+  const summary = await page.locator('#queue-summary').innerText();
+  assert.match(summary, /Свободных ячеек: 34\/36/);
+  assert.match(summary, /срок ≤ 30 с: 1/);
+  const pendingFilter = filter('pending'); await pendingFilter.scrollIntoViewIfNeeded();
+  const filterBounds = await pendingFilter.boundingBox();
+  assert(filterBounds.height >= 38 && filterBounds.x >= 0 && filterBounds.x + filterBounds.width <= (portrait ? 390 : 844));
+  await pendingFilter.tap();
+  assert.equal(await pendingFilter.getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('#order-list .order').count(), 1);
+  assert.equal(await page.locator('#order-list .o-code').innerText(), actual.lateCode);
+  await filter('working').tap(); assert.equal(await page.locator('#order-list .order').count(), 1);
+  await filter('priority').tap(); assert.equal(await page.locator('#order-list .o-code').innerText(), actual.lateCode);
+  await page.waitForTimeout(500);
+  await page.screenshot({path: '/tmp/wc-queue-' + (portrait ? 'portrait' : 'landscape') + '.png'});
+  await filter('soon').tap(); assert.equal(await page.locator('#order-list .order').count(), 1);
+  await filter('all').tap(); assert.equal(await page.locator('#order-list .order').count(), 2);
   await page.locator('#btn-voice').scrollIntoViewIfNeeded();
   assert.equal(await page.locator('#btn-voice').getAttribute('aria-pressed'), 'false');
   await page.locator('[data-lighting="night"]').scrollIntoViewIfNeeded();
@@ -120,7 +138,7 @@ try {
   assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
   assert.equal(await page.locator('#order-list .order').filter({hasText:actual.lateCode}).locator('.o-priority').getAttribute('aria-pressed'), 'true');
   assert.equal(errors.length, 0, errors.join('\n'));
-  console.log('✓ Приоритет заказа: мобильный тап и восстановление после перезагрузки');
+  console.log('✓ Фильтры, сводка и приоритет заказа: мобильный тап и восстановление после перезагрузки');
   console.log('✓ Субтитры, быстрый приказ и настройка озвучки на телефоне');
   console.log('✓ Ночной свет, карта и сохранение режима при перезагрузке в браузере');
   console.log('✓ WebGL, непрозрачные руки, очередь и мобильная шапка (' + (portrait ? 'портрет' : 'ландшафт') + ')');
