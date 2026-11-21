@@ -139,12 +139,49 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
     image.save(out, optimize=True)
 
 
+def ffmpeg_executable() -> str:
+    system_ffmpeg = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True).stdout.strip()
+    if system_ffmpeg:
+        return system_ffmpeg
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except (ImportError, RuntimeError) as exc:
+        raise RuntimeError("FFmpeg is required; install ffmpeg or the imageio-ffmpeg Python package.") from exc
+
+
+def render_silent_short(script: dict[str, Any], output: Path, workdir: Path, *, seconds_per_scene: float = 5.0) -> dict[str, Any]:
+    """Render a speech-bubble-only test Short; useful when a TTS engine isn't installed."""
+    ffmpeg = ffmpeg_executable()
+    if not 1.0 <= seconds_per_scene <= 10.0:
+        raise ValueError("seconds_per_scene must be from 1 to 10")
+    frames_dir = workdir / "frames"
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    frame_count = 0
+    for scene_index, scene in enumerate(script["scenes"]):
+        for frame in range(math.ceil(seconds_per_scene * FPS)):
+            path = frames_dir / f"frame-{frame_count:06d}.png"
+            render_frame(script, scene, scene_index, frame, path)
+            frame_count += 1
+    duration = frame_count / FPS
+    if not 15 <= duration <= 60:
+        raise ValueError(f"Short duration must be 15–60 seconds; rendered duration is {duration:.1f}s.")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    pattern = str(frames_dir / "frame-%06d.png")
+    process = subprocess.run([
+        ffmpeg, "-y", "-framerate", str(FPS), "-i", pattern,
+        "-vf", "scale=720:1280,fps=24,format=yuv420p", "-c:v", "libx264",
+        "-preset", "veryfast", "-crf", "22", "-an", "-movflags", "+faststart", str(output),
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+    if process.returncode:
+        raise RuntimeError(f"FFmpeg could not encode the test Short: {process.stderr[-1200:]}")
+    return {"path": str(output), "duration_seconds": round(duration, 2), "frames": frame_count, "audio": False}
+
+
 def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[str, Any]:
     if not Path("/usr/bin/espeak-ng").exists() and not subprocess.run(["which", "espeak-ng"], capture_output=True).stdout:
         raise RuntimeError("eSpeak-NG is required; install it with the espeak-ng system package.")
-    ffmpeg = subprocess.run(["which", "ffmpeg"], check=True, capture_output=True, text=True).stdout.strip()
-    if not ffmpeg:
-        raise RuntimeError("FFmpeg is required to render MP4.")
+    ffmpeg = ffmpeg_executable()
     frames_dir = workdir / "frames"
     audio_dir = workdir / "audio"
     frames_dir.mkdir(parents=True, exist_ok=True)

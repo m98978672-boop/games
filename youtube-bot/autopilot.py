@@ -5,10 +5,12 @@ its audience classification and an ISO-8601 future schedule in environment vars.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import shutil
 import sys
+import tempfile
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -114,6 +116,30 @@ def queue_for_scheduled_upload(video_path: Path, script: dict[str, Any], topic_i
     return job
 
 
+def render_demo(output: Path) -> dict[str, Any]:
+    """Create a short local demo without OAuth, model downloads, or audio binaries."""
+    from renderer import render_silent_short
+
+    script = validate_script({
+        "schema_version": 1,
+        "topic_id": "animal-comedy",
+        "title": "Кто спрятал луну?",
+        "hook": "Кролик нашёл коробку, из которой светилась луна!",
+        "scenes": [
+            {"speaker": "Кролик Лёва", "dialogue": "Я нашёл луну в коробке! Но как она туда поместилась?", "visual": "Кролик приоткрывает коробку, и серебряный свет заливает поляну.", "emotion": "surprised"},
+            {"speaker": "Сова Мира", "dialogue": "Погоди, Лёва. Почему луна отражается ещё и у твоих лап?", "visual": "Сова замечает круглое отражение в маленькой луже рядом.", "emotion": "curious"},
+            {"speaker": "Кролик Лёва", "dialogue": "Это фонарик! А настоящая луна всё это время была над нами!", "visual": "Друзья смеются: в коробке лежал фонарик, направленный в лужу.", "emotion": "happy"},
+        ],
+    }, expected_topic_id="animal-comedy")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    script_path = output.with_suffix(".json")
+    script_path.write_text(json.dumps(script, ensure_ascii=False, indent=2), encoding="utf-8")
+    with tempfile.TemporaryDirectory(prefix="youtube-short-render-") as temporary:
+        result = render_silent_short(script, output, Path(temporary))
+    result.update({"script_path": str(script_path), "status": "demo_rendered_no_audio_no_upload"})
+    return result
+
+
 def run_once(*, auto_publish: bool | None = None) -> dict[str, Any]:
     credentials = load_youtube_credentials()
     metrics = fetch_topic_metrics(credentials)
@@ -156,8 +182,13 @@ def run_once(*, auto_publish: bool | None = None) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run one YouTube Shorts autopilot cycle.")
+    parser.add_argument("--demo", action="store_true", help="Render a built-in sample Short without OAuth or Qwen.")
+    parser.add_argument("--output", type=Path, default=DATA_DIR / "episodes" / "demo-short.mp4", help="Demo MP4 output path.")
+    args = parser.parse_args()
     try:
-        print(json.dumps(run_once(), ensure_ascii=False, indent=2))
+        result = render_demo(args.output) if args.demo else run_once()
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     except Exception as exc:
         print(f"Autopilot stopped safely: {exc}", file=sys.stderr)
         raise SystemExit(1)
