@@ -26,6 +26,14 @@ try {
   await page.goto(new URL('/warehouse-crew/', base).href, { waitUntil: 'load' });
   await page.waitForFunction(() => window.WC?.game?.api?.ready && document.body.classList.contains('ready'), null, { timeout: 60000 });
   await page.waitForTimeout(1000);
+  await page.locator('[data-quick="rest"]').tap();
+  const subtitle = page.locator('#dialogue-subtitle');
+  assert(await subtitle.isVisible());
+  assert.match(await subtitle.innerText(), /передохну/);
+  assert.equal(await subtitle.evaluate(e => getComputedStyle(e).pointerEvents), 'none');
+  const subtitleBounds = await subtitle.boundingBox();
+  assert(subtitleBounds.x >= 0 && subtitleBounds.x + subtitleBounds.width <= (portrait ? 390 : 844));
+  await page.screenshot({path: '/tmp/wc-dialogue-' + (portrait ? 'portrait' : 'landscape') + '.png'});
   const actual = await page.evaluate(() => {
     const g = WC.game, gl = WC.world.renderer.getContext();
     WC.world.render(1 / 30, g);
@@ -61,6 +69,8 @@ try {
   assert(actual.header.bottom < (portrait ? 125 : 120), 'заголовок не должен занимать слишком много экрана');
   const dayLight = await page.evaluate(() => WC.world.scene.children.find(o => o.isHemisphereLight).intensity);
   await page.evaluate(() => WC.ui.sheet.set('full', true));
+  await page.locator('#btn-voice').scrollIntoViewIfNeeded();
+  assert.equal(await page.locator('#btn-voice').getAttribute('aria-pressed'), 'false');
   await page.locator('[data-lighting="night"]').scrollIntoViewIfNeeded();
   await page.locator('[data-lighting="night"]').click();
   const lighting = await page.evaluate((day) => {
@@ -98,6 +108,7 @@ try {
   assert.deepEqual(resumed, {status:'restored', crew:4, staff:1, id:saved.id, time:saved.time, orders:saved.orders,
     energy:.41, paused:true, speed:4, speedOn:'4', mode:'night', lightingOn:'night', lightLevel:lighting.night});
   assert.equal(errors.length, 0, errors.join('\n'));
+  console.log('✓ Субтитры, быстрый приказ и настройка озвучки на телефоне');
   console.log('✓ Ночной свет, карта и сохранение режима при перезагрузке в браузере');
   console.log('✓ WebGL, непрозрачные руки, очередь и мобильная шапка (' + (portrait ? 'портрет' : 'ландшафт') + ')');
 } finally {

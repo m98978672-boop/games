@@ -48,7 +48,7 @@ if (!JSDOM || !THREE) {
 
 const SCRIPTS = [
   'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
-  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js',
+  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/voice.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
 ];

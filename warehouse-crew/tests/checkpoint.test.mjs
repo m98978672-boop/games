@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const files = ['vendor/cannon-es.min.js','src/sim/physics.js','src/sim/model.js','src/ai/brain-net.js','src/sim/warehouse.js','src/sim/worker.js','src/config.js','data/brain-data.js','src/save.js','src/game.js'];
+const files = ['vendor/cannon-es.min.js','src/sim/physics.js','src/sim/model.js','src/ai/brain-net.js','src/sim/warehouse.js','src/sim/worker.js','src/config.js','data/brain-data.js','src/save.js','src/dialogue.js','src/game.js'];
 const data = new Map();
 const storage = {getItem: k => data.has(k) ? data.get(k) : null, setItem: (k,v) => data.set(k,String(v)), removeItem:k=>data.delete(k)};
 async function boot() {
@@ -21,6 +21,12 @@ async function boot() {
 let c = await boot(); let game = c.WC.game;
 assert.equal(game.api.resumeStatus,'new');
 assert.equal(game.api.shiftMode,'day');
+const lines=[]; game.api.onEvent=(type, payload) => { if (type === 'dialogue') lines.push(payload); };
+const first = game.api.crew[0];
+assert(game.command(first.id,'wait').ok); assert.match(lines.at(-1).text,/жду/);
+lines.length=0; game.teamCommand('auto'); assert.equal(lines.length,1);
+lines.length=0; game.teamCommand('store'); assert.equal(lines.length,1); assert.match(lines[0].text,/Не получится/);
+assert(game.api.log.some(entry => entry.text.includes(lines[0].text)));
 assert.equal(game.setShiftMode('night'),true);
 assert.equal(game.setShiftMode('invalid'),false);
 assert(game.api.crew.every(w => game.api.envs[w.id].shiftMode === 'night'));
@@ -46,6 +52,10 @@ if (order) { game.sim.drop(order,.2, -6, 2); game.sim.stepPhysics(.1); }
 worker.state.state = 'down'; worker.body.collapsed = true; worker.state.timers.down = 10;
 game.sim.beginRagdoll(worker.state); game.sim.stepPhysics(.1);
 game.setPaused(true); game.setSpeed(2);
+game.api.dialogueState.pending = {speaker:game.api.crew[1].id,listener:game.api.crew[2].id,topic:'greeting',at:game.sim.state.time+2.5};
+const pausedDialogue = JSON.stringify(game.api.dialogueState);
+lines.length=0; for(let i=0;i<40;i++) game.update(.1);
+assert.equal(JSON.stringify(game.api.dialogueState),pausedDialogue); assert.equal(lines.length,0);
 const snap = game.captureCheckpoint();
 assert(c.WC.save.save(game));
 const raw = data.get(c.WC.save.CHECKPOINT_KEY);
@@ -53,6 +63,7 @@ assert(raw && data.has(c.WC.save.CHECKPOINT_KEY));
 c = await boot(); game = c.WC.game;
 assert.equal(game.api.resumeStatus,'restored');
 assert.equal(game.api.shiftMode,'night');
+assert.deepEqual(JSON.parse(JSON.stringify(game.api.dialogueState)), JSON.parse(JSON.stringify(snap.dialogueState)));
 assert(game.api.crew.every(w => game.api.envs[w.id].shiftMode === 'night'));
 assert.equal(game.api.crew.length,4); assert.equal(game.api.staff.length,2);
 assert.equal(game.api.activeWorkerId,snap.activeWorkerId);
@@ -73,7 +84,8 @@ game.setPaused(false); for(let i=0;i<30;i++) game.update(.1);
 assert(game.sim.state.time > snap.warehouse.state.time);
 assert(game.api.crew[0].state.ragdoll.pelvis);
 // После завершения смены перезагрузка сохраняет финальное состояние, а рестарт создаёт новую.
-game.endShift();
+let cancelled=0; c.WC.voice={cancel(){cancelled++;}};
+game.endShift(); assert.equal(cancelled,1);
 c = await boot(); game = c.WC.game;
 assert.equal(game.api.resumeStatus,'restored'); assert.equal(game.state.shiftEnded,true);
 game.restart(); assert.equal(game.state.shiftEnded,false); assert.equal(game.sim.state.time,0);
@@ -84,7 +96,7 @@ const setItem = storage.setItem; storage.setItem = (key, value) => { if (key.end
 assert.equal(c.WC.save.save(game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),previous);
 storage.setItem = setItem;
 // v2 старого формата без поля режима должен оставаться доступным.
-const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode;
+const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode; delete oldV2.checkpoint.dialogueState;
 data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldV2));
 c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.shiftMode,'day');
 // Неизвестный режим блокирует перезапись.

@@ -827,6 +827,18 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
 }
 .help-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 calc(20px * var(--ui)) calc(18px * var(--ui)); }
 
+/* Краткие субтитры реплик не перехватывают управление сценой или пультом. */
+.dialogue-subtitle {
+  position: fixed; z-index: 32; top: calc(88px * var(--ui) + var(--safe-t)); left: 50%;
+  transform: translateX(-50%); max-width: min(380px, 90vw);
+  padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(232, 180, 90, .55);
+  background: rgba(11, 17, 16, .94); color: var(--ink); font-size: calc(12px * var(--ui));
+  line-height: 1.35; text-align: center; pointer-events: none;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .45);
+}
+.dialogue-subtitle[hidden] { display: none; }
+@media (max-width: 620px) { .dialogue-subtitle { top: calc(120px * var(--ui) + var(--safe-t)); } }
+
 /* ------------------------------- тосты ------------------------------- */
 
 .toasts { gap: 6px; bottom: calc(84px + var(--safe-b)); }
