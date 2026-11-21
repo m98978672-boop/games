@@ -75,8 +75,11 @@ export function examplesFromKnowledge(rec) {
   return out;
 }
 
-/** Командирские строки {input, response} → учебные примеры повтора. */
-export function convertCommander(rows, cap = 250) {
+/** Командирские строки {input, response} → учебные примеры повтора.
+   Потолок небольшой намеренно: в первом уроке повтор командира занял
+   250 из 312 примеров, и домашние навыки утонули. Повтор — напоминалка
+   о первой профессии, а не главный предмет. */
+export function convertCommander(rows, cap = 100) {
   return rows.slice(0, cap).map((row, i) => ({
     id: `commander-replay-${i}`, kind: 'commander',
     instruction: typeof row.input === 'string' ? row.input : JSON.stringify(row.input),
