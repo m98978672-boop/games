@@ -47,7 +47,7 @@ if (!JSDOM || !THREE) {
 }
 
 const SCRIPTS = [
-  'src/sim/model.js', 'src/ai/brain-net.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
+  'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
   'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
@@ -195,6 +195,13 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
         result.truckError = String(err && err.message);
       }
     }
+    const shopBtn = doc.getElementById('btn-shop');
+    if (shopBtn) {
+      shopBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      result.shopShortcut = body.getAttribute('data-sheet') === 'full' && doc.activeElement === doc.getElementById('shop-heading');
+    }
+    window.WC.world.render(1 / 30, game);
+    result.noCabinLetters = !doc.querySelector('[id^="cabin-sign-"]');
     // Плашка имени в quickbar должна переключать рабочего одним тапом
     const cycle = doc.getElementById('qb-cycle');
     if (cycle) {
@@ -261,6 +268,8 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       const medic = game.buyStaff('medic');
       const watch = game.buyStaff('watchman');
       result.staffBought = medic.ok && watch.ok && game.sim.state.stats.score === 30 && !game.buyStaff('medic').ok;
+      game.api.envs[game.api.crew[0].id].onCaught(game.api.crew[0].state);
+      result.caughtWorks = watch.member.state.stats.caught === 1;
       const patient = game.api.crew[0];
       window.WarehouseModel.addInjury(patient.body, { type: 'muscle', part: 'back', severity: 0.3, cause: 'тест' });
       medic.member.state.pos.x = patient.state.pos.x;
@@ -270,11 +279,32 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       result.medicWorks = patient.body.injuries.length === 0 || patient.body.injuries[0].severity < beforeInjury;
       window.WC.world.render(1 / 30, game);
       result.staffRenders = game.api.staff.length === 2;
+      let staffCrossing = false;
+      let staffDistance = 0;
+      for (let k = 0; k < 450; k++) {
+        const before = { ...watch.member.state.pos };
+        game.update(1 / 30);
+        const after = watch.member.state.pos;
+        staffDistance += Math.hypot(after.x - before.x, after.y - before.y);
+        if (window.WarehouseWorker.pathBlocked(before, after, 0.25)) staffCrossing = true;
+      }
+      result.staffNavigation = !staffCrossing && staffDistance > 1;
+      game.api.envs[patient.id].onInjury(patient.state, { severity: 0.5, text: 'тестовая травма' });
+      window.WC.world.render(1 / 30, game);
+      result.bloodRendered = game.sim.state.bloodDrops.length > 0;
+
       const victim = game.api.crew[0];
+      victim.state.pos.x = -5.6; victim.state.pos.y = 0;
+      victim.state.inToilet = false; victim.state.privacy = false;
+      victim.body.energy = 0; victim.body.collapsed = true;
+      for (let k = 0; k < 30; k++) game.update(1 / 30);
+      window.WC.world.render(1 / 30, game);
+      const normalRig = window.WC.world.scene.children.find(o => o.userData && o.userData.rig === victim.id);
+      result.ragdollWorks = !!victim.state.ragdoll && Object.keys(victim.state.ragdoll).length === 11 && normalRig && !normalRig.visible && victim.state.ragdoll.head.y < 1.5;
       victim.body.vitality = 0;
       victim.body.deceased = true;
       game.update(1 / 30);
-      result.deathWorks = game.api.crew.length === 2 && game.api.deaths.length === 1;
+      result.deathWorks = game.api.crew.length === 2 && game.api.deaths.length === 1 && game.api.deaths[0].name === victim.name;
       game.sim.state.time = game.sim.state.day * game.sim.state.dayLength + 0.01;
       game.update(1 / 30);
       window.WC.world.render(1 / 30, game);
@@ -309,6 +339,7 @@ for (const mode of modes) {
   check(r.meshes > 100, 'меши собраны движком', { meshes: r.meshes });
   check(r.bodyReady, 'body.ready выставлен');
   check(Boolean(r.quickbar), 'есть панель быстрых приказов');
+  check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');
   check(r.haloRecipe, 'рецепт подсветки halo в движке');
   check(r.cycleWorks !== false, 'тап по имени в quickbar переключает рабочего');
   check(r.crewCards === 3 && r.crewCardsAfter === 3, 'три карточки бригады без дублей', { n: r.crewCards, after: r.crewCardsAfter });
@@ -334,6 +365,8 @@ for (const mode of modes) {
   check(r.boxSunk === 0 && r.boxHovering === 0, 'коробки стоят на опоре (не тонут и не летают)',
     { sunk: r.boxSunk, hovering: r.boxHovering });
   check(r.boxStray === 0, 'коробку не уносит за рабочим после переноски', { stray: r.boxStray });
+  check(r.ragdollWorks, 'обморок отображается физическим ragdoll', { ragdoll: r.ragdollWorks, error: r.featureError });
+  check(r.staffNavigation && r.bloodRendered && r.caughtWorks, 'персонал обходит препятствия, частицы крови рисуются', { navigation: r.staffNavigation, blood: r.bloodRendered, error: r.featureError });
   check(!r.featureError && r.mapWorks && r.staffBought && r.medicWorks && r.staffRenders && r.deathWorks && r.hireWorks && r.restartWorks, '2D, магазин, медик, смерть и пополнение работают в игре', { error: r.featureError, map: r.mapWorks, staff: r.staffBought, medic: r.medicWorks, death: r.deathWorks, hire: r.hireWorks, restart: r.restartWorks });
     // У запасного (синтетического) мозга качество случайное — требуем доставку
     // только там, где загружены обученные веса.

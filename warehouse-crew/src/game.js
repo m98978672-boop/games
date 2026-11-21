@@ -169,36 +169,37 @@ WC.game = (function () {
         onDelivered: function (w, order, result) {
           pushLog(w.name + ' закрыл ' + order.code + ' (+' + result.points + ')', result.late ? 'warn' : 'good');
           WC.audio.delivered();
-          emit('delivered', { worker: w, order: order, result: result });
+          emit('delivered', { worker: worker, order: order, result: result });
         },
         onInjury: function (w, injury) {
-          pushLog(w.state.name + ' травмирован: ' + injury.text, 'bad');
+          pushLog(w.name + ' травмирован: ' + injury.text, 'bad');
           if (WC.audio && WC.audio.drop) WC.audio.drop();
+          if (injury.severity >= 0.2 && api.sim.emitBlood) api.sim.emitBlood(w.pos.x, w.pos.y, injury.severity);
           if (WC.world && WC.world.kick) WC.world.kick(0.5);
-          emit('injury', { worker: w, injury: injury });
+          emit('injury', { worker: worker, injury: injury });
         },
         onRefused: function (w, order, reason) {
-          pushLog(w.state.name + ' отказался от ' + order.code + ': ' + reason, 'warn');
-          emit('refused', { worker: w, order: order, reason: reason });
+          pushLog(w.name + ' отказался от ' + order.code + ': ' + reason, 'warn');
+          emit('refused', { worker: worker, order: order, reason: reason });
         },
         onLoaded: function (w, order, result) {
-          pushLog(w.state.name + ' загрузил ' + order.code + ' в фуру (+' + result.points + ')', 'good');
+          pushLog(w.name + ' загрузил ' + order.code + ' в фуру (+' + result.points + ')', 'good');
           if (WC.audio && WC.audio.delivered) WC.audio.delivered();
-          emit('loaded', { worker: w, order: order, result: result });
+          emit('loaded', { worker: worker, order: order, result: result });
         },
         onDropped: function (w, order, outcome) {
           pushLog(w.name + ' уронил ' + order.code + ' — ' + Math.round(order.damage * 100) + '% повреждений', 'bad');
           WC.audio.drop();
-          emit('dropped', { worker: w, order: order, outcome: outcome });
+          emit('dropped', { worker: worker, order: order, outcome: outcome });
         },
       onCaught: function (w) {
         api.staff.forEach(function (m) {
           if (m.kind === 'watchman') m.state.stats.caught += 1;
         });
-        emit('caught', { worker: w });
+        emit('caught', { worker: worker });
       },
       onDeath: function (w, cause) {
-        onWorkerDeath(w, cause);
+        onWorkerDeath(worker, cause);
       },
     };
   }
@@ -277,7 +278,7 @@ WC.game = (function () {
       patrol: kind === 'watchman' ? 0 : 0,
       state: {
         id: 'staff-' + kind, name: def.name, role: def.role, palette: def.palette,
-        pos: { x: gate.x + (kind === 'medic' ? 0.8 : -0.8), y: gate.y },
+        pos: { x: gate.x + (kind === 'medic' ? 1.0 : 0.5), y: gate.y },
         heading: Math.PI * 0.5,
         speedNow: 0,
         state: 'idle',
@@ -346,24 +347,40 @@ WC.game = (function () {
         member.patrol += dt * 0.14;
         goal = { x: -0.6 + Math.cos(member.patrol) * 5.4, y: 0.2 + Math.sin(member.patrol) * 4.4 };
       }
+      // Персонал использует ту же сетку обхода препятствий, что и бригада.
       var speed = 0;
       if (goal) {
-        var dx = goal.x - st.pos.x;
-        var dy = goal.y - st.pos.y;
-        var dist = Math.hypot(dx, dy);
-        var stopAt = member.kind === 'medic' ? 0.95 : 0.3;
-        if (dist > stopAt) {
-          speed = Math.min(dist / Math.max(dt, 1e-4), STAFF_DEFS[member.kind].speed * (1 - 0.25 * member.body.fatigue));
-          st.pos.x += (dx / dist) * speed * dt;
-          st.pos.y += (dy / dist) * speed * dt;
-          st.heading = Math.atan2(dy, dx);
-          st.stats.metres += speed * dt;
+        var nav = member.nav || (member.nav = { path: [], goal: null, timer: 0 });
+        nav.timer -= dt;
+        var deltaGoal = nav.goal ? Math.hypot(nav.goal.x - goal.x, nav.goal.y - goal.y) : Infinity;
+        if (nav.timer <= 0 || deltaGoal > 1.1) {
+          nav.path = window.WarehouseWorker.findPath(st.pos, goal) || [];
+          nav.goal = { x: goal.x, y: goal.y };
+          nav.timer = 1.5;
+        }
+        while (nav.path.length && Math.hypot(nav.path[0].x - st.pos.x, nav.path[0].y - st.pos.y) < 0.16) nav.path.shift();
+        var nextPoint = nav.path[0];
+        var distanceToGoal = Math.hypot(goal.x - st.pos.x, goal.y - st.pos.y);
+        if (nextPoint && distanceToGoal > (member.kind === 'medic' ? 0.95 : 0.3)) {
+          var dx = nextPoint.x - st.pos.x, dy = nextPoint.y - st.pos.y;
+          var dist = Math.hypot(dx, dy);
+          if (dist > 0.001) {
+            var desired = STAFF_DEFS[member.kind].speed * (1 - 0.25 * member.body.fatigue);
+            speed = Math.min(dist / Math.max(dt, 1e-4), desired, st.speedNow + 3 * dt);
+            var next = { x: st.pos.x + dx / dist * speed * dt, y: st.pos.y + dy / dist * speed * dt };
+            if (window.WarehouseWorker.insideWalk(next.x, next.y, api.sim.layout) &&
+                !window.WarehouseWorker.pathBlocked(st.pos, next, 0.30)) {
+              st.pos.x = next.x; st.pos.y = next.y;
+              st.heading = Math.atan2(dy, dx);
+              st.stats.metres += speed * dt;
+            } else { speed = 0; nav.path = []; nav.timer = 0; }
+          }
         }
       }
       st.speedNow = speed;
       if (member.kind === 'medic' && target) {
         var d = Math.hypot(target.state.pos.x - st.pos.x, target.state.pos.y - st.pos.y);
-        if (d < 1.8) {
+        if (d < 1.8 && !window.WarehouseWorker.pathBlocked(st.pos, target.state.pos, 0.02)) {
           var healed = window.WarehouseModel.healInjuries(target.body, dt, true, 8);
           target.body.vitality = Math.min(1, target.body.vitality + dt * 0.02);
           target.body.blood = Math.min(1, target.body.blood + dt * 0.01);
@@ -551,7 +568,7 @@ WC.game = (function () {
       recovery: rng.range(0.4, 0.8), coop: rng.range(0.4, 0.9),
     };
     var spawn = api.sim.layout.street
-      ? { x: api.sim.layout.street.gate.x + rng.range(-0.4, 0.4), y: 6.6 }
+      ? { x: api.sim.layout.street.gate.x + rng.range(0.5, 0.8), y: 6.1 }
       : api.sim.layout.spawns[0];
     var worker = window.WarehouseWorker.createWorker({
       id: 'hire-' + api.sim.state.day + '-' + (api.crew.length + 1) + '-' + seq,
@@ -765,6 +782,7 @@ WC.game = (function () {
     while (S.accumulator >= step && guard < 8) {
       S.accumulator -= step;
       guard += 1;
+      api.sim.syncActors(api.crew.concat(api.staff), step);
       api.sim.step(step);
       stepStaff(step);
       stepPair(step);

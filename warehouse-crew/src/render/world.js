@@ -59,7 +59,7 @@ WC.world = (function () {
     renderer.setClearColor(0x0a0d0c, 1);
     if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE_NS.SRGBColorSpace;
     renderer.toneMapping = THREE_NS.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 1.25;
 
     scene = new THREE_NS.Scene();
     scene.fog = new THREE_NS.Fog(0x0a0d0c, 26, 54);
@@ -130,7 +130,7 @@ WC.world = (function () {
   }
 
   function addLights() {
-    var hemi = new THREE_NS.HemisphereLight(0xbfd4e6, 0x141816, 0.55);
+    var hemi = new THREE_NS.HemisphereLight(0xd8e6f3, 0x485157, 1.05);
     scene.add(hemi);
 
     var sun = new THREE_NS.DirectionalLight(0xffe3b8, 1.05);
@@ -211,23 +211,28 @@ WC.world = (function () {
     addStatic('yardLine', 16.6, 0.01, 0, { castShadow: false, receiveShadow: false });
 
     buildStreet();
-    buildCabins();
+    buildToilet();
     buildHeavyZone();
 
-    // Стеллажи: 3 ряда по 3 уровня
-    var rackX = [-1.6, 2.2, 6.0];
-    rackX.forEach(function (x) {
-      for (var z = -5.7; z <= 5.71; z += 2.85) {
-        [-0.58, 0.58].forEach(function (dz) {
-          addStatic('shelfBeam', x + dz * 0, 0, z + dz, { castShadow: true });
+    // Стойки с двух сторон, поперечины и оранжевые балки — все детали
+    // построены из рецептов RatCore, высоты опор сохранены для симуляции.
+    [-1.6, 2.2, 6.0].forEach(function (x) {
+      [-5.7, -2.85, 0, 2.85, 5.7].forEach(function (z) {
+        [-0.54, 0.54].forEach(function (dx) {
+          addStatic('shelfBeam', x + dx, 0, z, { castShadow: true });
+          addStatic('rackFoot', x + dx, 0.01, z, { castShadow: true });
         });
-      }
+        [0.25, 1.05, 1.85].forEach(function (h) {
+          addStatic('rackCrossbar', x, h, z, { castShadow: false });
+        });
+      });
       [0.25, 1.05, 1.85].forEach(function (h) {
-        // Полки-слаты: доска не выглядит сплошной плитой
         [-0.38, 0, 0.38].forEach(function (dx) {
           addStatic('shelfSlat', x + dx, h, 0, {});
         });
-        addStatic('shelfLip', x + 0.56, h + 0.02, 0, { castShadow: false });
+        [-0.56, 0.56].forEach(function (dx) {
+          addStatic('shelfLip', x + dx, h + 0.02, 0, { castShadow: false });
+        });
       });
     });
 
@@ -247,8 +252,8 @@ WC.world = (function () {
     addStatic('monitor', -10.6, 0, 7.2, { rotationY: Math.PI * 0.5 });
     addStatic('screen', -10.6, 0, 7.2, { rotationY: Math.PI * 0.5, castShadow: false, material: meshes.makeMaterial({ emissive: '#5aa9e6', emissiveIntensity: 0.55, roughness: 0.4 }) });
     // Зона отдыха: лавка и кулер
-    addStatic('bench', -7.4, 0, 7.35, { rotationY: 0 });
-    [-8.3, -6.5].forEach(function (x) {
+    addStatic('bench', -6.2, 0, 7.35, { rotationY: 0 });
+    [-7.1, -5.3].forEach(function (x) {
       addStatic('benchLeg', x, 0, 7.35, {});
     });
   }
@@ -300,16 +305,42 @@ WC.world = (function () {
     });
   }
 
-  function buildCabins() {
-    (layoutConf().wc || []).forEach(function (cab) {
-      addStatic('wcCabin', cab.x, 0, cab.y, {});
-      addStatic('wcRoof', cab.x, 0, cab.y, { castShadow: true });
-      var doorName = cab.id === 'Ж' ? 'wcDoorF' : 'wcDoorM';
-      var signName = cab.id === 'Ж' ? 'wcSignF' : 'wcSignM';
-      addStatic(doorName, cab.x, 0.05, cab.y - cab.d / 2 - 0.03, { castShadow: false });
-      addStatic(signName, cab.x, 1.95, cab.y - cab.d / 2 - 0.08, { castShadow: false, receiveShadow: false, material: meshes.makeMaterial({ emissive: '#e8a0b8', emissiveIntensity: 0.25, roughness: 0.6 }) });
-      addStatic('wcLight', cab.x, 2.42, cab.y - 0.2, { castShadow: false, receiveShadow: false, material: meshes.makeMaterial({ emissive: '#f2e6c0', emissiveIntensity: 0.8, roughness: 0.5 }) });
+  var toiletDoor = null;
+  function buildToilet() {
+    var room = layoutConf().toilet;
+    if (!room) return;
+    var front = room.y - room.d / 2;
+    addStatic('toiletSide', room.x - room.w / 2, 0, room.y, {});
+    addStatic('toiletSide', room.x + room.w / 2, 0, room.y, {});
+    addStatic('toiletBack', room.x, 0, room.y + room.d / 2, {});
+    addStatic('toiletFront', room.x - 1.1, 0, front, {});
+    addStatic('toiletFront', room.x + 1.1, 0, front, {});
+    addStatic('toiletFloor', room.x, 0.015, room.y, { castShadow: false });
+    // Срезанная крыша открывает вид на интерьер сверху.
+    addStatic('toiletBowl', room.x + 0.55, 0.04, room.y + 0.48, {});
+    addStatic('toiletSeat', room.x + 0.55, 0.38, room.y + 0.48, {});
+    addStatic('toiletTank', room.x + 0.55, 0.33, room.y + 0.78, {});
+    addStatic('toiletSink', room.x - 0.87, 0.8, room.y + 0.35, {});
+    addStatic('toiletFaucet', room.x - 0.87, 0.92, room.y + 0.49, {});
+    toiletDoor = new THREE_NS.Group();
+    toiletDoor.position.set(room.x - room.doorWidth / 2, 0, front - 0.04);
+    var panel = meshes.mesh(engine, 'toiletDoor', null);
+    panel.position.set(room.doorWidth / 2, 0, 0);
+    toiletDoor.add(panel);
+    var handle = meshes.mesh(engine, 'toiletHandle', null);
+    handle.position.set(room.doorWidth - 0.16, 0.95, -0.06);
+    toiletDoor.add(handle);
+    scene.add(toiletDoor);
+  }
+
+  function updateToilet(game, dt) {
+    if (!toiletDoor) return;
+    var room = layoutConf().toilet;
+    var nearDoor = game.api.crew.some(function (w) {
+      return (w.state.state === 'toToilet' || w.state.state === 'fromToilet') &&
+        Math.abs(w.state.pos.y - (room.y - room.d / 2)) < 1.1 && Math.abs(w.state.pos.x - room.x) < 1;
     });
+    toiletDoor.rotation.y += ((nearDoor ? -1.25 : 0) - toiletDoor.rotation.y) * Math.min(1, dt * 6);
   }
 
   function buildHeavyZone() {
@@ -388,7 +419,8 @@ WC.world = (function () {
     // был свой цвет (движок склеивает рецепты в один цвет, поэтому не экономим).
     function part(parent, name, x, y, z) {
       var m = meshes.mesh(engine, name, palette);
-      if (x || y || z) m.position.set(x || 0, y || 0, z || 0);
+      // Смещение детали из рецепта сохраняется при установке на сустав.
+      m.position.x += x || 0; m.position.y += y || 0; m.position.z += z || 0;
       parent.add(m);
       return m;
     }
@@ -422,6 +454,8 @@ WC.world = (function () {
     neck.add(head);
     part(head, 'head', 0, 0, 0);
     part(head, 'hairBack', 0, 0, 0);
+    part(head, 'ear', -0.11, 0, 0);
+    part(head, 'ear', 0.11, 0, 0);
     part(head, 'nose', 0, 0, 0);
     part(head, 'mouth', 0, 0, 0);
     [-0.048, 0.048].forEach(function (dx) {
@@ -451,7 +485,8 @@ WC.world = (function () {
       wrist.position.y = -0.25;
       elbow.add(wrist);
       part(wrist, 'hand', 0, 0, 0);
-      part(wrist, 'thumb', 0, 0, 0);
+      var thumb = part(wrist, 'thumb', 0, 0, 0);
+      if (sign < 0) thumb.position.x *= -1;
       return { shoulder: shoulder, elbow: elbow, wrist: wrist, upper: upperMesh, fore: foreMesh };
     }
 
@@ -625,8 +660,14 @@ WC.world = (function () {
         var bottom = -Math.abs(Math.sin(tilt) * Math.sin(yaw)) * viewEntry.halfW
           - Math.abs(Math.sin(tilt) * Math.cos(yaw)) * viewEntry.halfD
           + Math.min(0, Math.cos(tilt) * viewEntry.height);
-        group.rotation.set(tilt, yaw, 0);
-        group.position.set(pose.x, (pose.z != null ? pose.z : floorSupport(order)) - bottom, pose.y);
+        if (pose.quaternion && Number.isFinite(pose.centerY)) {
+          group.quaternion.set(pose.quaternion.x, pose.quaternion.y, pose.quaternion.z, pose.quaternion.w);
+          var offset = new THREE_NS.Vector3(0, -viewEntry.height / 2, 0).applyQuaternion(group.quaternion);
+          group.position.set(pose.x + offset.x, pose.centerY + offset.y, pose.y + offset.z);
+        } else {
+          group.rotation.set(tilt, yaw, 0);
+          group.position.set(pose.x, (pose.z != null ? pose.z : floorSupport(order)) - bottom, pose.y);
+        }
         group.visible = true;
       }
     });
@@ -818,6 +859,43 @@ WC.world = (function () {
     return { shoulder: -(base - A), elbow: -(Math.PI - E) };
   }
 
+  function updateRagdollView(view, pose, visible) {
+    if (!view.ragdollRoot) {
+      var root = new THREE_NS.Group();
+      var pieces = {};
+      function piece(key, recipe) {
+        var pivot = new THREE_NS.Group();
+        var m = meshes.mesh(engine, recipe, view.palette);
+        var box = m.geometry.boundingBox;
+        m.position.set(0, -(box.min.y + box.max.y) / 2, 0);
+        pivot.add(m); root.add(pivot); pieces[key] = pivot;
+        return pivot;
+      }
+      piece('pelvis', 'pelvis');
+      var torso = piece('torso', 'torso');
+      var vest = meshes.mesh(engine, 'vest', view.palette); vest.position.set(0, -0.11, 0); torso.add(vest);
+      var head = piece('head', 'head');
+      var helmet = meshes.mesh(engine, 'hardhat', view.palette); helmet.position.set(0, 0.03, 0); helmet.scale.set(1.02, .62, 1.02); head.add(helmet);
+      ['L','R'].forEach(function (side) {
+        piece('upperArm' + side, 'upperArm');
+        var fore = piece('forearm' + side, 'forearm');
+        var hand = meshes.mesh(engine, 'hand', view.palette); hand.position.set(0, -.225, 0); fore.add(hand);
+        piece('thigh' + side, 'thigh');
+        var shin = piece('shin' + side, 'shin');
+        var foot = meshes.mesh(engine, 'foot', view.palette); foot.position.set(0, -.24, .045); shin.add(foot);
+      });
+      scene.add(root); view.ragdollRoot = root; view.ragdollPieces = pieces;
+    }
+    view.ragdollRoot.visible = visible;
+    Object.keys(view.ragdollPieces).forEach(function (name) {
+      var p = pose[name], object = view.ragdollPieces[name];
+      object.visible = !!p;
+      if (!p) return;
+      object.position.set(p.x, p.y, p.z);
+      object.quaternion.set(p.q.x, p.q.y, p.q.z, p.q.w);
+    });
+  }
+
   function updateCrew(dt, game) {
     // Рабочие и наёмный персонал (медик, сторож) — в одном проходе рига
     var actors = game.api.crew.concat(game.api.staff || []);
@@ -827,17 +905,28 @@ WC.world = (function () {
       var s = actor.state;
       var root = viewEntry.root;
       var body = actor.body || { injuries: [], fatigue: 0 };
-      // Погибшего рига больше нет, в кабинке — не видно: двери закрыты
-      if (s.dead) { root.visible = false; return; }
-      root.visible = !s.inCabin && !s.privacy;
+      // Во время использования туалета человека не видно снаружи.
+      if (s.dead) { root.visible = false; if (viewEntry.ragdollRoot) viewEntry.ragdollRoot.visible = false; return; }
+      var room = layoutConf().toilet;
+      var hiddenInside = room && Math.abs(s.pos.x - room.x) < room.w / 2 - 0.12 && s.pos.y > room.y - room.d / 2 + 0.12 && s.pos.y < room.y + room.d / 2;
+      var visible = !s.inToilet && !hiddenInside && !s.privacy;
+      if (s.ragdoll) {
+        root.visible = false;
+        updateRagdollView(viewEntry, s.ragdoll, visible);
+        return;
+      }
+      if (viewEntry.ragdollRoot) viewEntry.ragdollRoot.visible = false;
+      root.visible = visible;
       if (!root.visible) return;
 
-      root.position.x += (s.pos.x - root.position.x) * Math.min(1, dt * 18);
-      root.position.z += (s.pos.y - root.position.z) * Math.min(1, dt * 18);
+      // Симуляция уже интерполирует движение по маршруту: повторное
+      // сглаживание здесь срезало углы и проводило риг через стойку.
+      root.position.x = s.pos.x;
+      root.position.z = s.pos.y;
       var targetYaw = sceneYaw(s.heading);
       var delta = ((targetYaw - root.rotation.y + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
       root.rotation.y += delta * Math.min(1, dt * 12);
-      root.rotation.z = 0;
+      root.rotation.x = 0;
 
       var anim = s.anim || {};
       var walk = anim.walk || 0;
@@ -853,7 +942,7 @@ WC.world = (function () {
       var headTurn = anim.headTurn || 0;
 
       // ---------------------------------------------------------------- ноги
-      var stride = (0.5 + 0.55 * run) * walk;
+      var stride = (0.34 + 0.25 * run) * walk;
       if (sitting) {
         viewEntry.legL.hip.rotation.x = -1.25;
         viewEntry.legR.hip.rotation.x = -1.25;
@@ -864,14 +953,14 @@ WC.world = (function () {
       } else {
         viewEntry.legL.hip.rotation.x = Math.sin(phase) * stride;
         viewEntry.legR.hip.rotation.x = -Math.sin(phase) * stride;
-        viewEntry.legL.knee.rotation.x = Math.max(0, -Math.cos(phase)) * (0.85 + 0.7 * run) * walk;
-        viewEntry.legR.knee.rotation.x = Math.max(0, Math.cos(phase)) * (0.85 + 0.7 * run) * walk;
+        viewEntry.legL.knee.rotation.x = Math.max(0, -Math.cos(phase)) * (0.65 + 0.30 * run) * walk;
+        viewEntry.legR.knee.rotation.x = Math.max(0, Math.cos(phase)) * (0.65 + 0.30 * run) * walk;
         viewEntry.legL.ankle.rotation.x = -Math.sin(phase) * 0.18 * walk;
         viewEntry.legR.ankle.rotation.x = Math.sin(phase) * 0.18 * walk;
       }
 
       // ---------------------------------------------------------------- руки
-      var swing = Math.sin(phase) * (0.7 + 0.55 * run) * walk;
+      var swing = Math.sin(phase) * (0.38 + 0.22 * run) * walk;
       if (carrying) {
         var hugBox = viewEntry.carryHug == null ? 0.82 : viewEntry.carryHug;
         var boxDims = viewEntry.carryBox || { height: 0.4, halfD: 0.21 };
@@ -924,8 +1013,10 @@ WC.world = (function () {
       viewEntry.hips.rotation.y = twist * 0.55;
       viewEntry.neck.rotation.y = headTurn + Math.sin((anim.breath || 0) * 0.35) * 0.05;
       viewEntry.head.rotation.x = resting ? 0.22 : (down ? 0.5 : 0.02);
+      var fallTarget = s.fallMotion ? s.fallMotion.angle : (down ? 1.35 : 0);
+      viewEntry.fallAngle = (viewEntry.fallAngle || 0) + (fallTarget - (viewEntry.fallAngle || 0)) * (1 - Math.exp(-dt * 12));
+      root.rotation.z = viewEntry.fallAngle;
       if (down) {
-        root.rotation.z = 1.35;
         root.position.y = 0.18 * (1 - Math.min(1, Math.abs(root.rotation.z) / 1.35));
       } else {
         root.position.y += (0.0 - root.position.y) * Math.min(1, dt * 10);
@@ -1011,6 +1102,7 @@ WC.world = (function () {
     var entry = crewViews.get(id);
     if (!entry) return false;
     scene.remove(entry.root);
+    if (entry.ragdollRoot) scene.remove(entry.ragdollRoot);
     var marker = document.getElementById('marker-' + id);
     if (marker) marker.remove();
     crewViews.delete(id);
@@ -1227,8 +1319,8 @@ WC.world = (function () {
     var inside = Math.abs(point.x) <= 12.1 && Math.abs(point.z) <= 7.9;
     var outdoors = point.x >= street.x0 && point.x <= street.x1 && point.z >= 7.9 && point.z <= street.y1;
     if (!inside && !outdoors) return true;
-    var cabins = layoutConf().wc || [];
-    for (var c = 0; c < cabins.length; c++) if (Math.abs(point.x - cabins[c].x) < cabins[c].w / 2 + 0.15 && Math.abs(point.z - cabins[c].y) < cabins[c].d / 2 + 0.15) return true;
+    var room = layoutConf().toilet;
+    if (room && Math.abs(point.x - room.x) < room.w / 2 + 0.15 && Math.abs(point.z - room.y) < room.d / 2 + 0.15) return true;
     if (Math.abs(point.x - street.kiosk.x) < 1.0 && Math.abs(point.z - street.kiosk.y) < 0.9) return true;
     var rackX = [-1.6, 2.2, 6.0];
     for (var i = 0; i < rackX.length; i++) {
@@ -1337,15 +1429,6 @@ WC.world = (function () {
   function updateMarkers(game, activeId) {
     var host = document.getElementById('markers');
     if (!host) return;
-    (layoutConf().wc || []).forEach(function (cab) {
-      var id = 'cabin-sign-' + cab.id;
-      var sign = document.getElementById(id);
-      if (!sign) { sign = WC.util.el('span', { id: id, class: 'cabin-label', text: cab.id }); host.appendChild(sign); }
-      var labelPos = new THREE_NS.Vector3(cab.x, 2.45, cab.y).project(camera);
-      sign.style.left = ((labelPos.x * 0.5 + 0.5) * host.clientWidth).toFixed(1) + 'px';
-      sign.style.top = ((-labelPos.y * 0.5 + 0.5) * host.clientHeight).toFixed(1) + 'px';
-      sign.style.opacity = labelPos.z > -1 && labelPos.z < 1 ? '1' : '0';
-    });
     game.api.crew.forEach(function (worker) {
       var id = 'marker-' + worker.id;
       var node = document.getElementById(id);
@@ -1364,7 +1447,7 @@ WC.world = (function () {
       var y = (-pos.y * 0.5 + 0.5) * host.clientHeight;
       node.style.left = x.toFixed(1) + 'px';
       node.style.top = y.toFixed(1) + 'px';
-      node.style.opacity = visible && !worker.state.inCabin && !worker.state.privacy ? '1' : '0';
+      node.style.opacity = visible && !worker.state.inToilet && !worker.state.privacy ? '1' : '0';
       node.classList.toggle('active', worker.id === activeId);
       var bar = node.querySelector('.m-bar i');
       var energy = worker.body.energy;
@@ -1402,13 +1485,36 @@ WC.world = (function () {
     }
   }
 
+  // Меши частиц берём только из библиотеки рецептов движка.
+  var bloodViews = new Map();
+  function updateBlood(sim) {
+    var seen = {};
+    (sim.state.bloodDrops || []).concat(sim.state.bloodPools || []).forEach(function (item) {
+      var pool = item.age != null;
+      var id = (pool ? 'p' : 'd') + item.id;
+      seen[id] = true;
+      var mesh = bloodViews.get(id);
+      if (!mesh) {
+        mesh = meshes.mesh(engine, pool ? 'bloodPool' : 'bloodDrop', null, { castShadow: false });
+        scene.add(mesh); bloodViews.set(id, mesh);
+      }
+      mesh.position.set(item.x, pool ? (item.z || 0) + 0.008 : item.z, item.y);
+      if (pool) { var size = item.size * (1 + Math.min(0.3, item.age * 0.08)); mesh.scale.set(size, 1, size); }
+    });
+    bloodViews.forEach(function (mesh, id) {
+      if (!seen[id]) { scene.remove(mesh); bloodViews.delete(id); }
+    });
+  }
+
   function render(dt, game) {
     if (!state.ready) return;
     var sim = game.sim;
+    updateToilet(game, dt);
     updateCrew(dt, game);
     updateTrucks(sim, dt);
     updateForklift(sim);
     updateBoxes(sim);
+    updateBlood(sim);
     updateSlotMarkers(sim);
     updateAtmosphere(dt, game);
     updateCamera(dt, game);
