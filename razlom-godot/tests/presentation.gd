@@ -49,6 +49,12 @@ func run_tests() -> void:
 	check(absf(motion.model.get_node("Head").rotation.y) > 0.001, "Idle guard looks around")
 	check(absf(dog_motion.model.get_node("Head").rotation.y) > 0.001, "Waiting dog scans with its head")
 	check(game.interactions.medic_motion != null, "Vera has an idle animation driver")
+	var courier_motion: RazlomActorMotion = game.interactions.courier_motion
+	courier_motion.idle_fidget_wait = 0.01
+	courier_motion.advance(0.02, 0)
+	check(courier_motion.idle_fidget > 0 and courier_motion.idle_fidget_arm == "ArmR", "An idle courier begins a staggered sleeve-adjustment fidget")
+	courier_motion.advance(0.3, 0)
+	check(courier_motion.joints.ArmR.rotation.z > 0.02, "Fidget visibly moves the shoulder and arm before settling")
 	var surface := RazlomArt.material(Color.WHITE, "brick")
 	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")
 	check(surface.roughness_texture != null, "Surface roughness map is bound")
