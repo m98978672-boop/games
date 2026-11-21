@@ -5,7 +5,7 @@ const count=Number(process.argv.find(x=>x.startsWith('--seeds='))?.slice(8)||4),
 if(!Number.isInteger(count)||count<1||count>100||!Number.isInteger(steps)||steps<1||steps>12000||!Number.isInteger(start)||start<1)throw Error('bad arguments');
 const results=[];for(let seed=start;seed<start+count;seed++){
  const cfg=await loadConfig();cfg.flags.alg_deadlock=true;const g=new Game({cfg,seed,aiVsAi:true,difficulty:'regular'}),events=[];
- g._wallFollowMetrics={steps:0};
+ g._wallFollowMetrics={steps:0};g._doorYieldMetrics={chosen:0};
  g.events.on('pathFailed',e=>{const u=g.unitById(e.unitId);if(!u)return;const near=g.unitGrid.query(u.x,u.y,80).filter(v=>v!==u&&v.alive&&!v.downed&&Math.hypot(u.x-v.x,u.y-v.y)<80);
   const door=!!g.walls.refsInBox?.(u.x,u.y,150).some(r=>r.kind==='opening'&&Walls.distPointSegment(u.x,u.y,r.x1,r.y1,r.x2,r.y2).d<150);
   events.push({time:+g.time.toFixed(2),role:u.role,contact:!!u.perception?.hasContact,squad:!!u.squad,activity:u.activity,inBuilding:!!g.walls.buildingAtPoint(u.x,u.y),door,
@@ -14,5 +14,5 @@ const results=[];for(let seed=start;seed<start+count;seed++){
    blockedWait:!!u._occupancyWait,waitingSeconds:u._occupancyWait?+(g.time-u._occupancyWait.since).toFixed(2):0,
    goalDistance:u.goal?+Math.hypot(u.goal.x-u.x,u.goal.y-u.y).toFixed(1):null,reason:e.reason||'stuck'});
  });
- const t=performance.now();for(let i=0;i<steps&&!g.warOver;i++)g.step(.1);results.push({seed,time:+g.time.toFixed(2),events,kills:g.stats.kills,warOver:g.warOver,wallFollowSteps:g._wallFollowMetrics.steps,ms:Math.round(performance.now()-t)});console.error(`seed ${seed} (${seed-start+1}/${count})`);
+ const t=performance.now();for(let i=0;i<steps&&!g.warOver;i++)g.step(.1);results.push({seed,time:+g.time.toFixed(2),events,kills:g.stats.kills,warOver:g.warOver,wallFollowSteps:g._wallFollowMetrics.steps,doorYields:g._doorYieldMetrics.chosen,ms:Math.round(performance.now()-t)});console.error(`seed ${seed} (${seed-start+1}/${count})`);
 }console.log(JSON.stringify({results},null,2));

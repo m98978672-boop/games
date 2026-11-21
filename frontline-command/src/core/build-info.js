@@ -1,6 +1,6 @@
 // Метка именно этой локальной экспериментальной сборки, не утверждение о
 // содержимом GitHub Pages. Перед каждой публикацией идентификатор обновляют.
-export const BUILD_VERSION = '0.11.0-dev.crowd-coordination.3';
+export const BUILD_VERSION = '0.11.0-dev.crowd-coordination.4';
 
 // UI-only: выключенный флаг не добавляет DOM-узлов и не влияет на симуляцию.
 export function mountBuildVersion(doc, enabled, version = BUILD_VERSION) {
