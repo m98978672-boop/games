@@ -82,6 +82,10 @@ try {
   assert.ok(Math.hypot(after[0]-before[0], after[2]-before[2]) > .2);
  });
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
+ // Pointer lock requires a real canvas click in Chromium even after keyboard start.
+ // The unarmed click has no combat effect; it only activates mouse-look.
+ await page.mouse.click(720,450);
+ await page.waitForTimeout(150);
  // Inspect the rebuilt shelter glazing from the actual first-person camera.
  // The player starts facing +Z; this measured mouse turn faces the east wall.
  await page.mouse.move(720,450);
