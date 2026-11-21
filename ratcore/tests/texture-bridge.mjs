@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { createEngine } from '../ratcore.js';
+const engine = createEngine({ preset: 'minimal', packs: ['pack:ai-team'] });
+const texture = engine.tools.build.texGenerate({ width: 8, height: 8, kind: 'noise', seed: 7 });
+assert.equal(texture.ok, true);
+const first = engine.tools.bridge.exportTexture({ texture: texture.data });
+assert.equal(first.ok, true);
+assert.equal(first.data.pixels.length, 8 * 8 * 4);
+assert.equal(first.data.pixels[3], 255);
+const previous = first.data.pixels[0];
+first.data.pixels[0] ^= 255;
+const again = engine.tools.bridge.exportTexture({ texture: texture.data });
+assert.equal(again.ok, true);
+assert.equal(again.data.pixels[0], previous, 'export is a copy, not the live AssetVault');
+const fake = engine.tools.bridge.exportTexture({ texture: { id: texture.data.id } });
+assert.equal(fake.ok, false);
+assert.equal(fake.error.code, 'RC-102');
+console.log('✓ Texture bridge: sealed handle, RGBA copy, forged handles rejected');

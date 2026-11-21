@@ -1,6 +1,6 @@
 class_name RazlomArmRig
 extends RefCounted
-## Local-space two-bone solve. No world look_at on scaled/rotated parents.
+## Local-space two-bone solve with block-built, first-person limb geometry.
 var parent: Node3D
 var segments: Array[Node3D] = []
 var elbow := Vector3.ZERO
@@ -9,6 +9,7 @@ var joint: MeshInstance3D
 var hand: Node3D
 var hand_knuckles: Array[Node3D] = []
 var fist_mode := false
+
 func _init(host: Node3D) -> void:
 	parent = host
 	var cloth := RazlomArt.material(Color("65756b"), "cloth")
@@ -17,40 +18,33 @@ func _init(host: Node3D) -> void:
 		segment.set_meta("arm_rig_part", true)
 		host.add_child(segment)
 		var visual := MeshInstance3D.new()
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = 0.033 if i == 1 else 0.043
-		mesh.bottom_radius = 0.042 if i == 1 else 0.049
-		mesh.height = 1
-		mesh.radial_segments = 16
-		mesh.rings = 3
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.09, 0.09, 1.0)
 		visual.rotation.x = PI * 0.5
 		visual.mesh = mesh
 		visual.material_override = cloth
 		segment.add_child(visual)
-		# Stitched strips and cuff stay in segment space, not world space.
+		# Square stitched panels and cuffs keep the silhouette on the voxel grid.
 		RazlomArt.box(segment, Vector3(0, 0.035, 0), Vector3(0.016, 0.012, 0.64), RazlomArt.material(Color("738274"), "cloth"))
 		RazlomArt.box(segment, Vector3(0, 0, -0.37), Vector3(0.094, 0.065, 0.035), RazlomArt.material(Color("45534c"), "cloth"))
 		RazlomArt.box(segment, Vector3(0, 0, 0.36), Vector3(0.088, 0.06, 0.03), RazlomArt.material(Color("45534c"), "cloth"))
 		segments.append(segment)
 	joint = MeshInstance3D.new()
 	joint.set_meta("arm_rig_part", true)
-	var sphere := SphereMesh.new()
-	sphere.radius = 0.048
-	sphere.height = 0.096
-	sphere.radial_segments = 12
-	sphere.rings = 6
-	joint.mesh = sphere
+	var joint_mesh := BoxMesh.new()
+	joint_mesh.size = Vector3(0.09, 0.09, 0.09)
+	joint.mesh = joint_mesh
 	joint.material_override = cloth
 	host.add_child(joint)
-	# Rounded glove anatomy: padded palm, two soft finger joints, thumb and cuff.
-	# All pieces inherit the wrist pose from the IK solve instead of ending as cubes.
+	# Palm, knuckles and fingers are separate square pieces, never round beads.
 	hand = Node3D.new()
 	hand.name = "IKHand"
 	host.add_child(hand)
 	var glove := RazlomArt.material(Color("39463f"), "cloth")
 	var glove_highlight := RazlomArt.material(Color("56645a"), "cloth")
 	var seam := RazlomArt.material(Color("8b927e"))
-	RazlomArt.orb(hand, Vector3(0, 0, -0.035), Vector3(0.084, 0.06, 0.095), glove, "Palm")
+	var palm := RazlomArt.box(hand, Vector3(0, 0, -0.035), Vector3(0.078, 0.06, 0.09), glove)
+	palm.name = "Palm"
 	for i in range(4):
 		var finger := Node3D.new()
 		finger.name = "Finger%d" % i
@@ -58,35 +52,34 @@ func _init(host: Node3D) -> void:
 		finger.position = Vector3(-0.037 + i * 0.025, -0.012, -0.09)
 		for segment_index in range(3):
 			var segment := MeshInstance3D.new()
-			var mesh := CapsuleMesh.new()
-			mesh.radius = 0.008 if i in [0, 3] else 0.009
-			mesh.height = [0.036, 0.031, 0.026][segment_index]
-			mesh.radial_segments = 10
-			mesh.rings = 4
+			var mesh := BoxMesh.new()
+			mesh.size = Vector3(0.017 if i in [0, 3] else 0.019, [0.034, 0.03, 0.025][segment_index], 0.018)
 			segment.mesh = mesh
 			segment.material_override = glove
 			segment.rotation.x = -PI * 0.5
-			segment.position.z = -0.015 - segment_index * 0.026
+			segment.position.z = -0.014 - segment_index * 0.024
 			finger.add_child(segment)
-		var seam_mark := RazlomArt.box(finger, Vector3(0, 0.007, -0.078), Vector3(0.012, 0.003, 0.008), seam)
+		var knuckle := RazlomArt.box(finger, Vector3(0, 0.009, -0.074), Vector3(0.014, 0.004, 0.008), glove_highlight)
+		knuckle.name = "SquareKnuckle"
+		var seam_mark := RazlomArt.box(finger, Vector3(0, 0.009, -0.09), Vector3(0.01, 0.003, 0.003), seam)
 		seam_mark.name = "Stitch"
 		hand_knuckles.append(finger)
 	var thumb := MeshInstance3D.new()
-	var thumb_mesh := CapsuleMesh.new()
-	thumb_mesh.radius = 0.011
-	thumb_mesh.height = 0.052
-	thumb_mesh.radial_segments = 10
-	thumb_mesh.rings = 4
+	thumb.name = "Thumb"
+	var thumb_mesh := BoxMesh.new()
+	thumb_mesh.size = Vector3(0.024, 0.055, 0.02)
 	thumb.mesh = thumb_mesh
 	thumb.material_override = glove
 	thumb.position = Vector3(-0.06, 0.004, -0.045)
 	thumb.rotation = Vector3(-PI * 0.5, 0.0, -0.58)
 	hand.add_child(thumb)
-	var thumb_joint := RazlomArt.orb(hand, Vector3(-0.074, 0.002, -0.078), Vector3(0.014, 0.014, 0.016), glove_highlight, "ThumbJoint")
+	var thumb_joint := RazlomArt.box(hand, Vector3(-0.074, 0.002, -0.078), Vector3(0.026, 0.022, 0.02), glove_highlight)
+	thumb_joint.name = "ThumbJoint"
 	thumb_joint.rotation.z = -0.4
 	var wrist_cuff := RazlomArt.box(hand, Vector3(0, 0, 0.022), Vector3(0.105, 0.068, 0.04), cloth)
 	wrist_cuff.name = "Cuff"
 	RazlomArt.box(hand, Vector3(0, 0.008, 0.041), Vector3(0.075, 0.005, 0.004), seam)
+
 func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	var axis := target - shoulder
 	if axis.length_squared() < 0.000001:
@@ -113,13 +106,16 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	for i in range(hand_knuckles.size()):
 		var curl := -0.62 if fist_mode else -0.12
 		hand_knuckles[i].rotation.x = curl + sin(Time.get_ticks_msec() * 0.002 + i * 0.4 + side) * 0.02
+
 func set_fist_mode(value: bool) -> void:
 	fist_mode = value
+
 func place(segment: Node3D, start: Vector3, finish: Vector3) -> void:
 	segment.position = (start + finish) * 0.5
 	var direction := (finish - start).normalized()
 	var up := Vector3.UP if absf(direction.dot(Vector3.UP)) < 0.95 else Vector3.FORWARD
 	segment.basis = Basis.looking_at(direction, up) * Basis.from_scale(Vector3(1, 1, maxf(0.001, start.distance_to(finish))))
+
 func set_visible(value: bool) -> void:
 	for segment in segments: segment.visible = value
 	joint.visible = value

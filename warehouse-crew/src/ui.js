@@ -384,7 +384,17 @@ window.WC = window.WC || {};
   }
 
   function renderOrders() {
-    var active = game.sim.activeOrders();
+    // После новой смены идентификаторы заказов начинаются заново: старые
+    // обработчики кнопок и подписи нельзя переносить в другую симуляцию.
+    if (uiState.ordersSim !== game.sim) {
+      uiState.orderRows.forEach(function (row) { if (row.parentNode) row.parentNode.removeChild(row); });
+      uiState.orderRows.clear();
+      uiState.ordersSim = game.sim;
+    }
+    // Ближайший дедлайн сверху — срочные заказы не теряются в очереди.
+    var active = game.sim.activeOrders().slice().sort(function (a, b) {
+      return a.deadline - b.deadline || a.createdAt - b.createdAt;
+    });
     var now = game.sim.state.time;
     var live = {};
     dom.queueCount.textContent = String(active.length);
@@ -417,6 +427,15 @@ window.WC = window.WC || {};
         uiState.orderRows.set(order.id, row);
         dom.orderList.appendChild(row);
       }
+      // Переставляем существующие карточки, сохраняя кнопки и их фокус.
+      var index = active.indexOf(order);
+      if (dom.orderList.children[index] !== row) dom.orderList.insertBefore(row, dom.orderList.children[index] || null);
+      var take = row.querySelector('.o-take');
+      var selected = game.activeWorker();
+      var busy = selected && (selected.state.orderId || selected.state.carryingId);
+      take.disabled = order.status !== 'pending' || !selected || Boolean(busy);
+      take.textContent = order.status !== 'pending' ? 'в работе' : busy ? 'рабочий занят' : 'взять';
+      take.title = order.status !== 'pending' ? 'Заказ уже назначен' : busy ? 'Сначала завершите текущий заказ' : 'Назначить выбранному рабочему';
       row.classList.toggle('urgent', Boolean(order.urgent) && order.status !== 'stored');
       row.classList.toggle('carried', order.status === 'carried');
       var who = order.status === 'carried' ? 'несёт: ' + nameOf(order.carrier)
@@ -644,7 +663,7 @@ window.WC = window.WC || {};
       ]),
       U.el('div', { class: 'help-doc' }, [
         U.el('h3', { text: 'Пульт управления' }),
-        U.el('p', { html: 'Слева — <b>пульт</b>. Выбери рабочего вкладкой или цифрой <kbd>1</kbd>…<kbd>3</kbd>, затем жми приказ: «Взять коробку», «Нести к стеллажу», «Перерыв», «Ждать», «Автономия», «Помочь бригаде». Приказы бригаде действуют на всех сразу.' }),
+        U.el('p', { html: 'Слева — <b>пульт</b>. Выбери рабочего вкладкой или цифрой <kbd>1</kbd>…<kbd>8</kbd>, затем жми приказ: «Взять коробку», «Нести к стеллажу», «Перерыв», «Ждать», «Автономия», «Помочь бригаде». Приказы бригаде действуют на всех сразу.' }),
         U.el('h3', { text: 'Два взгляда на склад' }),
         U.el('p', { html: '<kbd>C</kbd> переключает <b>3-е лицо</b> (работа руками) и <b>тактический вид сверху</b> (приказы бригаде). Мышью вращай камеру, колесом — приближай.' }),
         U.el('h3', { text: 'Тела и мозги' }),
@@ -656,10 +675,16 @@ window.WC = window.WC || {};
         U.el('p', { html: 'Пульт — <b>нижняя шторка</b>: потяни за «язычок» вверх или тапни по нему. Снизу всегда висят <b>быстрые приказы</b> (Взять · Нести · Перерыв · Авто) — один тап, без меню. Тап по <b>метке над рабочим</b> выбирает его. Кнопка <b>⤢</b> разворачивает игру на весь экран.' }),
         U.el('h3', { text: 'Клавиши' }),
         U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
+        U.el('h3', { text: 'Сохранение смены' }),
+        U.el('p', { text: 'Смена автоматически сохраняется в браузере каждые 25 секунд и при закрытии страницы. При следующем запуске она продолжится с прежней бригадой, грузами и состоянием здоровья. Кнопка сохранения и клавиша S записывают смену сразу.' }),
         U.el('h3', { text: 'Движок' }),
         U.el('p', { text: 'Игра работает на RatCore v1.0.0: логика, ГПСЧ, время и вся геометрия (меши запечатаны ToolGuard и экспортированы мостом bridge.exportMesh) — из движка. Ни одного внешнего CDN.' }),
       ]),
       U.el('div', { class: 'help-actions' }, [
+        U.el('button', { class: 'btn', type: 'button', text: 'Новая смена', onclick: function () {
+          if (!window.confirm('Начать новую смену? Текущее сохранение будет заменено.')) return;
+          closeModal(); game.restart();
+        } }),
         U.el('button', { class: 'btn', type: 'button', text: 'Понятно', onclick: closeModal }),
       ]),
     ]);
@@ -929,7 +954,7 @@ window.WC = window.WC || {};
           ]);
         })),
         U.el('div', { class: 'brain-note', text: shiftVerdict(summary) }),
-        U.el('div', { class: 'brain-note', text: 'Прогресс сохранён автоматически. Хочешь — скачай отчёт смены в JSON.' }),
+        U.el('div', { class: 'brain-note', text: WC.save.isProtected() ? 'Сохранение защищено от перезаписи. Можно скачать отчёт смены в JSON.' : 'Проверь индикатор сохранения; отчёт смены можно скачать в JSON.' }),
       ]),
       U.el('div', { class: 'help-actions' }, [
         U.el('button', { class: 'btn', type: 'button', text: 'Новая смена', onclick: function () { closeModal(); game.restart(); } }),
@@ -948,12 +973,13 @@ window.WC = window.WC || {};
     if (dom.shopBalance) dom.shopBalance.textContent = String(score);
     U.$$('[data-buy]').forEach(function (card) {
       var kind = card.getAttribute('data-buy');
-      var bought = game.hasStaff(kind);
-      var cost = game.staffCost(kind);
+      var isWorker = kind === 'worker';
+      var bought = isWorker ? game.api.crewTarget >= cfg.shop.worker.max : game.hasStaff(kind);
+      var cost = isWorker ? cfg.shop.worker.cost : game.staffCost(kind);
       card.classList.toggle('bought', bought);
       card.classList.toggle('broke', !bought && score < cost);
       var price = card.querySelector('.shop-price');
-      if (price) price.textContent = bought ? 'нанят' : String(cost);
+      if (price) price.textContent = bought ? (isWorker ? 'максимум' : 'нанят') : String(cost);
       card.disabled = bought || score < cost;
     });
     if (!dom.staffList) return;
@@ -977,13 +1003,13 @@ window.WC = window.WC || {};
     U.$$('[data-buy]').forEach(function (card) {
       card.addEventListener('click', function () {
         var kind = card.getAttribute('data-buy');
-        var res = game.buyStaff(kind);
+        var res = kind === 'worker' ? game.hireWorker() : game.buyStaff(kind);
         if (!res.ok) {
           U.toast(res.reason || 'Не получилось', 'bad', 2400);
           buzz([16, 40, 16]);
           return;
         }
-        U.toast((kind === 'medic' ? 'Медик' : 'Сторож') + ' нанят за ' + res.cost + ' очков', 'good', 2400);
+        U.toast((kind === 'worker' ? res.worker.state.name : kind === 'medic' ? 'Медик' : 'Сторож') + ' нанят за ' + res.cost + ' очков', 'good', 2400);
         buzz(14);
         renderShop();
         renderSide();
@@ -993,6 +1019,17 @@ window.WC = window.WC || {};
 
   function wireControls() {
     wireShop();
+    var shopButton = q('btn-shop');
+    if (shopButton) shopButton.addEventListener('click', function () {
+      sheet.set('full', true);
+      var scroller = dom.panel && dom.panel.querySelector('.ctl-scroll');
+      var heading = q('shop-heading');
+      if (scroller && heading) {
+        scroller.scrollTop += heading.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 12;
+        heading.setAttribute('tabindex', '-1');
+        heading.focus({ preventScroll: true });
+      }
+    });
     U.$$('[data-command]').forEach(function (button) {
       button.addEventListener('click', function () {
         var cmd = button.getAttribute('data-command');
@@ -1178,8 +1215,8 @@ window.WC = window.WC || {};
       } else if (key === 'f') {
         toggleFullscreen();
       } else if (key === 's') {
-        WC.save.save(game);
-        U.toast('Смена сохранена', 'good', 1600);
+        var saved = WC.save.save(game);
+        U.toast(saved ? 'Смена сохранена' : 'Не удалось сохранить', saved ? 'good' : 'bad', 1600);
       } else if (key === 'escape') {
         closeModal();
       } else if (/^[1-9]$/.test(key)) {
@@ -1225,7 +1262,7 @@ window.WC = window.WC || {};
         U.toast('Новый работяга: ' + payload.worker.state.name, 'good', 3000);
         renderSide();
       } else if (type === 'privacy') {
-        if (payload.on) U.toast('Ж и М уединились — там приватно', 'info', 2600);
+        if (payload.on) U.toast('Рабочие уединились — там приватно', 'info', 2600);
       } else if (type === 'staff') {
         renderShop();
       } else if (type === 'caught') {
@@ -1239,6 +1276,7 @@ window.WC = window.WC || {};
   }
 
   function startToast() {
+    if (game.api.resumeStatus !== 'new') return;
     var touch = document.body.classList.contains('is-phone') || document.body.classList.contains('is-tablet');
     if (touch) {
       U.toast('Смена началась. Приказы — на панели снизу, потяни «пульт» вверх.', 'info', 3200);

@@ -40,6 +40,7 @@ WC.game = (function () {
     deaths: [],
     day: 1,
     needsCleanup: false,
+    crewTarget: 3,
     envs: {},
   };
 
@@ -169,36 +170,37 @@ WC.game = (function () {
         onDelivered: function (w, order, result) {
           pushLog(w.name + ' закрыл ' + order.code + ' (+' + result.points + ')', result.late ? 'warn' : 'good');
           WC.audio.delivered();
-          emit('delivered', { worker: w, order: order, result: result });
+          emit('delivered', { worker: worker, order: order, result: result });
         },
         onInjury: function (w, injury) {
-          pushLog(w.state.name + ' травмирован: ' + injury.text, 'bad');
+          pushLog(w.name + ' травмирован: ' + injury.text, 'bad');
           if (WC.audio && WC.audio.drop) WC.audio.drop();
+          if (injury.severity >= 0.2 && api.sim.emitBlood) api.sim.emitBlood(w.pos.x, w.pos.y, injury.severity);
           if (WC.world && WC.world.kick) WC.world.kick(0.5);
-          emit('injury', { worker: w, injury: injury });
+          emit('injury', { worker: worker, injury: injury });
         },
         onRefused: function (w, order, reason) {
-          pushLog(w.state.name + ' отказался от ' + order.code + ': ' + reason, 'warn');
-          emit('refused', { worker: w, order: order, reason: reason });
+          pushLog(w.name + ' отказался от ' + order.code + ': ' + reason, 'warn');
+          emit('refused', { worker: worker, order: order, reason: reason });
         },
         onLoaded: function (w, order, result) {
-          pushLog(w.state.name + ' загрузил ' + order.code + ' в фуру (+' + result.points + ')', 'good');
+          pushLog(w.name + ' загрузил ' + order.code + ' в фуру (+' + result.points + ')', 'good');
           if (WC.audio && WC.audio.delivered) WC.audio.delivered();
-          emit('loaded', { worker: w, order: order, result: result });
+          emit('loaded', { worker: worker, order: order, result: result });
         },
         onDropped: function (w, order, outcome) {
           pushLog(w.name + ' уронил ' + order.code + ' — ' + Math.round(order.damage * 100) + '% повреждений', 'bad');
           WC.audio.drop();
-          emit('dropped', { worker: w, order: order, outcome: outcome });
+          emit('dropped', { worker: worker, order: order, outcome: outcome });
         },
       onCaught: function (w) {
         api.staff.forEach(function (m) {
           if (m.kind === 'watchman') m.state.stats.caught += 1;
         });
-        emit('caught', { worker: w });
+        emit('caught', { worker: worker });
       },
       onDeath: function (w, cause) {
-        onWorkerDeath(w, cause);
+        onWorkerDeath(worker, cause);
       },
     };
   }
@@ -214,6 +216,7 @@ WC.game = (function () {
       truckEvery: cfg.truckEvery,
       firstTruckDelay: cfg.firstTruckDelay,
     });
+    api.crewTarget = cfg.crew.length;
     api.crew = cfg.crew.map(function (member, i) {
       return window.WarehouseWorker.createWorker({
         id: member.id,
@@ -277,7 +280,7 @@ WC.game = (function () {
       patrol: kind === 'watchman' ? 0 : 0,
       state: {
         id: 'staff-' + kind, name: def.name, role: def.role, palette: def.palette,
-        pos: { x: gate.x + (kind === 'medic' ? 0.8 : -0.8), y: gate.y },
+        pos: { x: gate.x + (kind === 'medic' ? 1.0 : 0.5), y: gate.y },
         heading: Math.PI * 0.5,
         speedNow: 0,
         state: 'idle',
@@ -346,24 +349,40 @@ WC.game = (function () {
         member.patrol += dt * 0.14;
         goal = { x: -0.6 + Math.cos(member.patrol) * 5.4, y: 0.2 + Math.sin(member.patrol) * 4.4 };
       }
+      // Персонал использует ту же сетку обхода препятствий, что и бригада.
       var speed = 0;
       if (goal) {
-        var dx = goal.x - st.pos.x;
-        var dy = goal.y - st.pos.y;
-        var dist = Math.hypot(dx, dy);
-        var stopAt = member.kind === 'medic' ? 0.95 : 0.3;
-        if (dist > stopAt) {
-          speed = Math.min(dist / Math.max(dt, 1e-4), STAFF_DEFS[member.kind].speed * (1 - 0.25 * member.body.fatigue));
-          st.pos.x += (dx / dist) * speed * dt;
-          st.pos.y += (dy / dist) * speed * dt;
-          st.heading = Math.atan2(dy, dx);
-          st.stats.metres += speed * dt;
+        var nav = member.nav || (member.nav = { path: [], goal: null, timer: 0 });
+        nav.timer -= dt;
+        var deltaGoal = nav.goal ? Math.hypot(nav.goal.x - goal.x, nav.goal.y - goal.y) : Infinity;
+        if (nav.timer <= 0 || deltaGoal > 1.1) {
+          nav.path = window.WarehouseWorker.findPath(st.pos, goal) || [];
+          nav.goal = { x: goal.x, y: goal.y };
+          nav.timer = 1.5;
+        }
+        while (nav.path.length && Math.hypot(nav.path[0].x - st.pos.x, nav.path[0].y - st.pos.y) < 0.16) nav.path.shift();
+        var nextPoint = nav.path[0];
+        var distanceToGoal = Math.hypot(goal.x - st.pos.x, goal.y - st.pos.y);
+        if (nextPoint && distanceToGoal > (member.kind === 'medic' ? 0.95 : 0.3)) {
+          var dx = nextPoint.x - st.pos.x, dy = nextPoint.y - st.pos.y;
+          var dist = Math.hypot(dx, dy);
+          if (dist > 0.001) {
+            var desired = STAFF_DEFS[member.kind].speed * (1 - 0.25 * member.body.fatigue);
+            speed = Math.min(dist / Math.max(dt, 1e-4), desired, st.speedNow + 3 * dt);
+            var next = { x: st.pos.x + dx / dist * speed * dt, y: st.pos.y + dy / dist * speed * dt };
+            if (window.WarehouseWorker.insideWalk(next.x, next.y, api.sim.layout) &&
+                !window.WarehouseWorker.pathBlocked(st.pos, next, 0.30)) {
+              st.pos.x = next.x; st.pos.y = next.y;
+              st.heading = Math.atan2(dy, dx);
+              st.stats.metres += speed * dt;
+            } else { speed = 0; nav.path = []; nav.timer = 0; }
+          }
         }
       }
       st.speedNow = speed;
       if (member.kind === 'medic' && target) {
         var d = Math.hypot(target.state.pos.x - st.pos.x, target.state.pos.y - st.pos.y);
-        if (d < 1.8) {
+        if (d < 1.8 && !window.WarehouseWorker.pathBlocked(st.pos, target.state.pos, 0.02)) {
           var healed = window.WarehouseModel.healInjuries(target.body, dt, true, 8);
           target.body.vitality = Math.min(1, target.body.vitality + dt * 0.02);
           target.body.blood = Math.min(1, target.body.blood + dt * 0.01);
@@ -506,6 +525,9 @@ WC.game = (function () {
       if (WC.world && WC.world.removeView) WC.world.removeView(w.state.id);
       return false;
     });
+    // После filter это новый массив: окружение каждого живого работника
+    // должно видеть актуальную бригаду, включая будущие наймы.
+    api.crew.forEach(function (w) { if (api.envs[w.id]) api.envs[w.id].workers = api.crew; });
     if (!workerById(api.activeWorkerId) && api.crew[0]) api.activeWorkerId = api.crew[0].state.id;
     if (api.pair && api.pair.phase !== 'idle') {
       var a = workerById(api.pair.a);
@@ -531,9 +553,9 @@ WC.game = (function () {
   ];
 
   function hireReplacements() {
-    var target = cfg.crew.length;
+    var target = api.crewTarget;
     var guard = 0;
-    while (api.crew.length < target && guard < 4) {
+    while (api.crew.length < target && guard < 8) {
       guard += 1;
       spawnReplacement();
     }
@@ -542,6 +564,10 @@ WC.game = (function () {
   function spawnReplacement() {
     var seq = api.sim.state.hires.length + api.deaths.length + api.crew.length;
     var person = HIRE_NAMES[seq % HIRE_NAMES.length];
+    for (var n = 0; n < HIRE_NAMES.length; n++) {
+      var candidate = HIRE_NAMES[(seq + n) % HIRE_NAMES.length];
+      if (!api.crew.some(function (w) { return w.state.name === candidate.name; })) { person = candidate; break; }
+    }
     var palette = HIRE_PALETTES[seq % HIRE_PALETTES.length];
     var rng = window.WarehouseSim.createRng((cfg.seed + api.sim.state.day * 977 + seq * 131) >>> 0);
     var traits = {
@@ -550,9 +576,20 @@ WC.game = (function () {
       paceTrait: rng.range(0.4, 0.85), neuroticism: rng.range(0.15, 0.6),
       recovery: rng.range(0.4, 0.8), coop: rng.range(0.4, 0.9),
     };
-    var spawn = api.sim.layout.street
-      ? { x: api.sim.layout.street.gate.x + rng.range(-0.4, 0.4), y: 6.6 }
-      : api.sim.layout.spawns[0];
+    // Ищем свободную точку в зоне отдыха, чтобы новички не появлялись друг в друге.
+    var spawnCandidates = [{ x:-8.05, y:6.1 }, { x:-7.3, y:5.65 }, { x:-6.45, y:5.7 },
+      { x:-5.65, y:5.6 }, { x:-7.9, y:7.0 }, { x:-6.3, y:6.3 }, { x:-5.6, y:6.5 }];
+    var spawn = spawnCandidates[0];
+    var bestClearance = -1;
+    spawnCandidates.forEach(function (candidate) {
+      if (!window.WarehouseWorker.insideWalk(candidate.x, candidate.y, api.sim.layout) ||
+          window.WarehouseWorker.pathBlocked(candidate, candidate, 0.35)) return;
+      var clearance = Infinity;
+      api.crew.concat(api.staff).forEach(function (other) {
+        clearance = Math.min(clearance, Math.hypot(other.state.pos.x - candidate.x, other.state.pos.y - candidate.y));
+      });
+      if (clearance > bestClearance) { bestClearance = clearance; spawn = candidate; }
+    });
     var worker = window.WarehouseWorker.createWorker({
       id: 'hire-' + api.sim.state.day + '-' + (api.crew.length + 1) + '-' + seq,
       name: person.name,
@@ -573,6 +610,18 @@ WC.game = (function () {
     pushLog('Новый работяга: ' + person.name + ' (' + person.role + ') вышел на смену', 'good');
     emit('hire', { worker: worker });
     return worker;
+  }
+
+  function hireWorker() {
+    var cost = cfg.shop.worker.cost, max = cfg.shop.worker.max;
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена ещё не началась или уже закончилась' };
+    if (api.crewTarget >= max) return { ok: false, reason: 'Бригада уже укомплектована: максимум ' + max };
+    if (api.sim.state.stats.score < cost) return { ok: false, reason: 'Не хватает очков: нужно ' + cost };
+    api.sim.state.stats.score -= cost;
+    api.crewTarget += 1;
+    var worker = spawnReplacement();
+    pushLog('Нанят дополнительный рабочий за ' + cost + ' очков', 'good');
+    return { ok: true, worker: worker, cost: cost };
   }
 
   function qualityPercent(game) {
@@ -671,7 +720,7 @@ WC.game = (function () {
   function restart() {
     api.shiftsPlayed += 1;
     api.best = {
-      score: Math.max((api.best && api.best.score) || 0, S.score || 0),
+      score: Math.max((api.best && api.best.score) || 0, api.sim.state.stats.score || 0),
       delivered: Math.max((api.best && api.best.delivered) || 0, api.sim.state.stats.delivered),
     };
     api.log.length = 0;
@@ -688,6 +737,9 @@ WC.game = (function () {
     S.accumulator = 0;
     setPaused(false);
     pushLog('Новая смена. Бригада на месте.', 'info');
+    WC.save.unprotect();
+    api.resumeStatus = 'new';
+    WC.save.autosave(WC.game);
     emit('restart', {});
   }
 
@@ -697,7 +749,7 @@ WC.game = (function () {
     S.paused = true;
     setPaused(true);
     WC.audio.shiftEnd();
-    WC.save.save(api);
+    WC.save.autosave(api);
     if (typeof api.onShiftEnd === 'function') api.onShiftEnd(summary());
   }
 
@@ -765,6 +817,7 @@ WC.game = (function () {
     while (S.accumulator >= step && guard < 8) {
       S.accumulator -= step;
       guard += 1;
+      api.sim.syncActors(api.crew.concat(api.staff), step);
       api.sim.step(step);
       stepStaff(step);
       stepPair(step);
@@ -782,8 +835,128 @@ WC.game = (function () {
     api.state.autosaveClock = (api.state.autosaveClock || 0) + dt;
     if (api.state.autosaveClock > 25) {
       api.state.autosaveClock = 0;
-      WC.save.save(api);
+      WC.save.autosave(api);
     }
+  }
+
+  // Только данные: функции, ссылки окружения и тела Cannon живут в фабриках.
+  function captureCheckpoint() {
+    return JSON.parse(JSON.stringify({
+      version: 2, runtime: S, warehouse: api.sim.captureCheckpoint(),
+      crew: api.crew.map(function (worker) {
+        return { state: worker.state, brain: api.envs[worker.id].brain,
+          rng: api.envs[worker.id].rng.getState() };
+      }),
+      staff: api.staff, pair: api.pair, socialRng: socialRng.getState(),
+      purchases: api.purchases, deaths: api.deaths, day: api.day,
+      needsCleanup: api.needsCleanup, crewTarget: api.crewTarget,
+      activeWorkerId: api.activeWorkerId, log: api.log,
+    }));
+  }
+
+  // Обязательные поля проверяются по объектам фабрики до подмены данных.
+  function checkShape(value, template, path) {
+    if (template === null || typeof template === 'function') return;
+    if (Array.isArray(template)) {
+      if (!Array.isArray(value)) throw new Error('Ожидался список: ' + path);
+      if (value.length > 5000) throw new Error('Слишком длинный список: ' + path);
+      return;
+    }
+    if (typeof template === 'object') {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Ожидался объект: ' + path);
+      Object.keys(template).forEach(function (key) {
+        if (typeof template[key] !== 'function') checkShape(value[key], template[key], path + '.' + key);
+      });
+      return;
+    }
+    if (typeof value !== typeof template || (typeof value === 'number' && !Number.isFinite(value))) throw new Error('Некорректное поле: ' + path);
+  }
+
+  function restoreCheckpoint(saved) {
+    if (!saved || saved.version !== 2 || !Array.isArray(saved.crew) || saved.crew.length > 8 ||
+        !Array.isArray(saved.staff) || saved.staff.length > 2 || !Array.isArray(saved.deaths) || !Array.isArray(saved.log) ||
+        !Number.isInteger(saved.crewTarget) || saved.crewTarget < 0 || saved.crewTarget > 8 ||
+        !saved.warehouse || !saved.warehouse.state) throw new Error('Повреждён снимок смены');
+    function safeTree(value, depth) {
+      if (depth > 30) throw new Error('Слишком глубокое сохранение');
+      if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Некорректное число');
+      if (!value || typeof value !== 'object') return;
+      if (Array.isArray(value) && value.length > 5000) throw new Error('Слишком длинный список');
+      Object.keys(value).forEach(function (key) {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') throw new Error('Недопустимое поле');
+        safeTree(value[key], depth + 1);
+      });
+    }
+    safeTree(saved, 0);
+    checkShape(saved.runtime, S, 'runtime');
+    if ([1, 2, 4].indexOf(saved.runtime.speed) === -1 || saved.runtime.accumulator < 0) throw new Error('Повреждены часы смены');
+    checkShape(saved.warehouse.state, api.sim.state, 'warehouse');
+    checkShape(saved.pair, api.pair, 'pair');
+    checkShape(saved.purchases, api.purchases, 'purchases');
+    if (!Number.isFinite(saved.day) || typeof saved.needsCleanup !== 'boolean') throw new Error('Повреждены данные смены');
+    var ids = Object.create(null);
+    var workers = saved.crew.map(function (record) {
+      if (!record || !record.state || typeof record.state.id !== 'string' || !record.state.id || ids[record.state.id]) throw new Error('Повреждена бригада');
+      var st = record.state; ids[st.id] = true;
+      var worker = window.WarehouseWorker.createWorker({ id: st.id, name: st.name, role: st.role,
+        gender: st.gender, palette: st.palette, traits: st.traits, model: window.WarehouseModel,
+        layout: api.sim.layout, spawn: st.pos, heading: st.heading });
+      checkShape(st, worker.state, 'worker');
+      if (!record.brain || !Array.isArray(record.brain.layers) || !record.brain.layers.length || record.brain.layers.length > 8) throw new Error('Повреждён мозг рабочего');
+      var inputs = 18;
+      record.brain.layers.forEach(function (layer) {
+        if (!layer || !Array.isArray(layer.b) || !Array.isArray(layer.w) || layer.b.length < 1 || layer.b.length > 128 ||
+            layer.w.length !== inputs * layer.b.length || !layer.w.every(Number.isFinite) || !layer.b.every(Number.isFinite)) throw new Error('Повреждены веса мозга');
+        inputs = layer.b.length;
+      });
+      if (inputs !== 6) throw new Error('Неверный выход мозга');
+      // Замыкание рабочего хранит исходное тело: обновляем его, а не меняем ссылку.
+      Object.assign(worker.body, st.body);
+      Object.assign(worker.traits, st.traits);
+      Object.assign(worker.state, st);
+      worker.state.body = worker.body; worker.state.traits = worker.traits;
+      return worker;
+    });
+    var staff = saved.staff.map(function (record) {
+      if (!record || !STAFF_DEFS[record.kind] || ids['staff-' + record.kind]) throw new Error('Повреждён персонал');
+      ids['staff-' + record.kind] = true;
+      var member = createStaffMember(record.kind);
+      checkShape(record, member, 'staff');
+      Object.assign(member.body, record.body);
+      Object.assign(member, record); member.body = record.body;
+      return member;
+    });
+    if (saved.activeWorkerId !== null && !workers.some(function (worker) { return worker.id === saved.activeWorkerId; })) throw new Error('Нет выбранного рабочего');
+    var ws = saved.warehouse.state;
+    ws.slots.forEach(function (slot, i) { checkShape(slot, api.sim.state.slots[i] || {}, 'slot'); });
+    var orderIds = Object.create(null);
+    ws.orders.forEach(function (order) {
+      if (!order || typeof order.id !== 'string' || !order.id || orderIds[order.id] ||
+          typeof order.status !== 'string' || !Number.isFinite(order.x) || !Number.isFinite(order.y) ||
+          !Number.isFinite(order.mass) || !Number.isFinite(order.deadline) || !Number.isFinite(order.priority) ||
+          !Number.isFinite(order.damage) || !order.pose || !Number.isFinite(order.pose.x) || !Number.isFinite(order.pose.y) || !Number.isFinite(order.pose.z)) throw new Error('Повреждён заказ');
+      orderIds[order.id] = true;
+    });
+    ws.trucks.forEach(function (truck) {
+      if (!truck || typeof truck.id !== 'string' || !truck.stand || !truck.door || !truck.handle ||
+          !Number.isFinite(truck.x) || !Number.isFinite(truck.y) || typeof truck.status !== 'string') throw new Error('Повреждена фура');
+    });
+    api.sim.restoreCheckpoint(saved.warehouse, workers.map(function (worker) { return worker.state; }));
+    api.crew = workers; api.staff = staff; api.envs = {};
+    workers.forEach(function (worker, i) {
+      api.envs[worker.id] = makeEnv(worker);
+      api.envs[worker.id].brain = saved.crew[i].brain;
+      api.brains[worker.id] = saved.crew[i].brain;
+      api.envs[worker.id].rng.setState(saved.crew[i].rng);
+    });
+    socialRng.setState(saved.socialRng);
+    api.pair = saved.pair; api.purchases = saved.purchases; api.deaths = saved.deaths;
+    api.day = saved.day; api.needsCleanup = saved.needsCleanup; api.crewTarget = saved.crewTarget;
+    api.activeWorkerId = saved.activeWorkerId; api.log = saved.log;
+    Object.assign(S, saved.runtime);
+    // Автосохранение не должно заново запускаться сразу после загрузки.
+    S.autosaveClock = 0;
+    setPaused(S.paused || S.shiftEnded);
   }
 
   function boot() {
@@ -800,7 +973,26 @@ WC.game = (function () {
       var meshStats = WC.meshes.buildAll(engine, palettesById());
       api.engineStats = meshStats;
       api.sim = createSim();
-      pushLog('Смена началась: ' + cfg.crew.length + ' рабочих, мозги загружены из файлов игры', 'good');
+      if (loaded && loaded.checkpoint) {
+        var brainsBeforeRestore = Object.assign({}, api.brains);
+        try {
+          restoreCheckpoint(loaded.checkpoint);
+          api.resumeStatus = 'restored';
+          pushLog('Смена восстановлена из сохранения', 'good');
+        } catch (err) {
+          console.warn('[warehouse-crew] сохранение не восстановлено:', err);
+          WC.save.protect();
+          api.brains = brainsBeforeRestore;
+          api.staff = []; api.purchases = { medic: 0, watchman: 0 }; api.deaths = []; api.log = [];
+          Object.assign(S, { time: 0, paused: false, speed: 1, shiftEnded: false, autosaveClock: 0, accumulator: 0, totalReal: 0 });
+          createSim();
+          api.resumeStatus = 'failed';
+          pushLog('Сохранение повреждено: автозапись отключена, старые данные сохранены', 'warn');
+        }
+      } else {
+        api.resumeStatus = WC.save.isProtected() ? 'failed' : 'new';
+        pushLog('Смена началась: ' + cfg.crew.length + ' рабочих, мозги загружены из файлов игры', 'good');
+      }
       api.ready = true;
       return api;
     });
@@ -843,6 +1035,7 @@ WC.game = (function () {
     command: command,
     teamCommand: teamCommand,
     buyStaff: buyStaff,
+    hireWorker: hireWorker,
     staffCost: staffCost,
     hasStaff: hasStaff,
     hireReplacements: hireReplacements,
@@ -851,6 +1044,7 @@ WC.game = (function () {
     setSpeed: setSpeed,
     qualityPercent: qualityPercent,
     snapshotForUi: snapshotForUi,
+    captureCheckpoint: captureCheckpoint,
     pushLog: pushLog,
     api: api,
     get state() { return S; },

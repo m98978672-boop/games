@@ -19,27 +19,58 @@ func has_natural_face(model: Node3D) -> bool:
 	if head == null:
 		return false
 	var face := head.get_node_or_null("Visual") as MeshInstance3D
-	if face == null or not face.mesh is SphereMesh:
+	if face == null or not face.mesh is BoxMesh:
 		return false
-	if not head.has_node("NoseTip") or not head.has_node("EyeL") or not head.has_node("EyeR"):
+	var head_size: Vector3 = (face.mesh as BoxMesh).size
+	if head_size != Vector3(0.30, 0.34, 0.30):
 		return false
-	if head.get_node("EyeL").position.z > -0.315 or head.get_node("EyeR").position.z > -0.315:
+	if not head.has_node("NoseTip") or not head.has_node("EyeL") or not head.has_node("EyeR") or not head.has_node("BrowL") or not head.has_node("BrowR"):
+		return false
+	var brow_l := head.get_node("BrowL") as Node3D
+	var brow_r := head.get_node("BrowR") as Node3D
+	if brow_l.get_child_count() == 0 or brow_r.get_child_count() == 0:
+		return false
+	var brow_l_visual := brow_l.get_child(0) as MeshInstance3D
+	var brow_r_visual := brow_r.get_child(0) as MeshInstance3D
+	if brow_l_visual == null or brow_r_visual == null or not brow_l_visual.mesh is BoxMesh or not brow_r_visual.mesh is BoxMesh:
+		return false
+	var brow_l_size: Vector3 = (brow_l_visual.mesh as BoxMesh).size
+	var brow_r_size: Vector3 = (brow_r_visual.mesh as BoxMesh).size
+	var brow_l_mat := brow_l_visual.material_override as StandardMaterial3D
+	var brow_r_mat := brow_r_visual.material_override as StandardMaterial3D
+	if brow_l_mat == null or brow_r_mat == null or brow_l_mat.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED or brow_r_mat.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED:
+		return false
+	if brow_r.position.x - brow_l.position.x - (brow_l_size.x + brow_r_size.x) * 0.5 < 0.03:
+		return false
+	if head.get_node("EyeL").position.z > -0.15 or head.get_node("EyeR").position.z > -0.15:
 		return false
 	for eye_name in ["EyeL", "EyeR"]:
 		var eye := head.get_node_or_null(eye_name) as Node3D
-		if eye == null or not eye.has_node("Iris") or not eye.has_node("Pupil"):
+		if eye == null or not eye.has_node("Iris") or not eye.has_node("Pupil") or not eye.has_node("Sclera"):
 			return false
-		var eye_white: Node3D = eye.get_child(0) as Node3D
-		if eye_white == null or eye_white.get_child_count() == 0:
+		var sclera_root := eye.get_node("Sclera") as Node3D
+		if sclera_root.get_child_count() == 0:
 			return false
-		var visual := eye_white.get_child(0) as MeshInstance3D
-		if visual == null or not visual.mesh is BoxMesh:
+		var sclera := sclera_root.get_child(0) as MeshInstance3D
+		if sclera == null or not sclera.mesh is BoxMesh:
 			return false
-		var size: Vector3 = (visual.mesh as BoxMesh).size
-		if size.x > 0.04 or size.y > 0.02 or size.z > 0.01:
+		var sclera_size: Vector3 = (sclera.mesh as BoxMesh).size
+		if sclera_size.x > 0.041 or sclera_size.y > 0.025 or sclera_size.z > 0.011:
 			return false
 		var iris := eye.get_node("Iris") as MeshInstance3D
-		if iris.scale.x > 0.01 or iris.scale.y > 0.012 or iris.scale.z > 0.005:
+		if iris == null or not iris.mesh is BoxMesh:
+			return false
+	return true
+func has_clean_forehead(model: Node3D) -> bool:
+	var head := model.get_node_or_null("Head") as Node3D
+	if head == null or head.has_node("Fringe0") or head.has_node("Fringe1") or head.has_node("Fringe2"):
+		return false
+	for name in ["TempleHairL", "TempleHairR"]:
+		var lock := head.get_node_or_null(name) as Node3D
+		if lock == null or lock.get_child_count() == 0 or absf(lock.position.x) < 0.11:
+			return false
+		var visual := lock.get_child(0) as MeshInstance3D
+		if visual == null or not visual.mesh is BoxMesh:
 			return false
 	return true
 func run_tests() -> void:
@@ -48,9 +79,10 @@ func run_tests() -> void:
 	await process_frame
 	var guard = game.enemies[0]
 	check(has_natural_face(guard.visual), "Guards have shaped heads and compact inset eyes")
-	check(guard.left_arm.hand.has_node("Palm") and guard.left_arm.hand.get_node("Finger0").get_child(0).mesh is CapsuleMesh, "Guard glove uses rounded palms and segmented fingers")
+	check(guard.left_arm.hand.has_node("Palm") and guard.left_arm.hand.get_node("Finger0").get_child(0).mesh is BoxMesh, "Guard glove uses block-built palms and segmented fingers")
 	var medic = game.interactions.medic_motion.model
 	check(has_natural_face(medic), "Vera has the same shaped head and compact inset eyes")
+	check(has_clean_forehead(medic), "Vera's temple hair leaves two brows separate and no third forehead bar")
 	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")
 	var vera_hand: Node3D = medic.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
 	check(vera_hand.has_node("Finger0J0") and vera_hand.has_node("Finger3J1") and vera_hand.has_node("Thumb"), "Vera's hands have knuckles, separated fingers and a thumb")

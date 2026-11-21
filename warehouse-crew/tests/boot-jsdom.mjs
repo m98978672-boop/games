@@ -47,7 +47,7 @@ if (!JSDOM || !THREE) {
 }
 
 const SCRIPTS = [
-  'src/sim/model.js', 'src/ai/brain-net.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
+  'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
   'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
@@ -76,7 +76,7 @@ function check(ok, label, extra) {
   }
 }
 
-async function boot({ allowFetch, allowInline, label, width, height, touch }) {
+async function boot({ allowFetch, allowInline, label, width, height, touch, textureBridge }) {
   const html = fs.readFileSync(path.join(gameDir, 'index.html'), 'utf8');
   const dom = new JSDOM(html, {
     url: 'http://localhost/warehouse-crew/',
@@ -90,7 +90,11 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
     writable: true,
     value: (query) => ({ matches: touch && /coarse/.test(query), media: query, addEventListener() {}, removeEventListener() {} }),
   });
-  window.THREE = Object.assign({}, THREE, { WebGLRenderer: StubRenderer });
+  // jsdom has no image decoder or WebGL: verify the material's shader hook
+  // with a local stand-in texture, while keeping the real Three material/mesh.
+  window.eval(fs.readFileSync(path.join(repoRoot, 'shooter/three.min.js'), 'utf8'));
+  const browserThree = window.THREE;
+  window.THREE = Object.assign({}, browserThree, { WebGLRenderer: StubRenderer });
   window.TextEncoder = TextEncoder;
   window.TextDecoder = TextDecoder;
   const errors = [];
@@ -108,6 +112,17 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
 
   // Настоящий движок и настоящий мост — никаких заглушек API.
   window.eval(fs.readFileSync(path.join(repoRoot, 'ratcore/ratcore.bundle.js'), 'utf8'));
+  if (textureBridge) {
+    // Настоящий RatCore без новой функции, как в старом кэше браузера;
+    // или движок, в котором экспорт текстуры неожиданно бросает исключение.
+    const createEngine = window.RatCore.createEngine;
+    window.RatCore.createEngine = function (...args) {
+      const engine = createEngine(...args);
+      if (textureBridge === 'missing') delete engine.tools.bridge.exportTexture;
+      if (textureBridge === 'throws') engine.tools.bridge.exportTexture = () => { throw new Error('texture unavailable'); };
+      return engine;
+    };
+  }
   window.eval(fs.readFileSync(path.join(repoRoot, 'shared/engine.js'), 'utf8'));
   if (!window.GamesEngine) throw new Error('shared/engine.js не объявил GamesEngine');
 
@@ -190,11 +205,49 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
         window.WC.world.render(1 / 30, window.WC.game);
         result.truckRendered = true;
         result.truckMeshes = window.WC.world.scene.children.length;
+        const vehicle = window.WC.world.scene.children.find(o => o.userData.vehicle === 'truck');
+        const wheels = vehicle && vehicle.userData.wheels;
+        const wheelRotation = wheels && wheels[0].rotation.z;
+        game.update(0.1); window.WC.world.render(.1, game);
+        const lift = window.WC.world.scene.children.find(o => o.userData.vehicle === 'forklift');
+        result.transportDetails = !!vehicle && wheels.length === 6 && Math.abs(wheels[0].rotation.z - wheelRotation) > .01 &&
+          !!lift && lift.userData.wheels.length === 4 && !!lift.userData.forks && !!lift.userData.beacon;
       } catch (err) {
         result.truckRendered = false;
         result.truckError = String(err && err.message);
       }
     }
+    const shopBtn = doc.getElementById('btn-shop');
+    if (shopBtn) {
+      shopBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      result.shopShortcut = body.getAttribute('data-sheet') === 'full' && doc.activeElement === doc.getElementById('shop-heading');
+    }
+    window.WC.world.render(1 / 30, game);
+    window.WC.world.scene.updateMatrixWorld(true);
+    const rig = window.WC.world.scene.children.find(o => o.userData?.rig === game.api.crew[0].id);
+    const armMeshes = [];
+    rig.traverse(o => { if (['upperArm', 'forearm', 'shoulderPad', 'elbowPad', 'hand'].includes(o.userData?.recipe)) armMeshes.push(o); });
+    result.opaqueArms = armMeshes.length >= 10 && armMeshes.every(o => !o.material.transparent && o.material.opacity === 1 && o.material.depthWrite &&
+      (o.userData.recipe === 'hand' || o.material.side === browserThree.DoubleSide));
+    const findPart = name => window.WC.world.scene.children.find(o => o.userData && o.userData.scenePart === name);
+    const floor = findPart('floor'), yard = findPart('yard'), stripe = findPart('floorStripe');
+    const floorTop = new THREE.Box3().setFromObject(floor).max.y;
+    const yardTop = new THREE.Box3().setFromObject(yard).max.y;
+    const stripeTop = new THREE.Box3().setFromObject(stripe).max.y;
+    const heavyPadTop = new THREE.Box3().setFromObject(findPart('heavyPad')).max.y;
+    const heavyStripeTop = new THREE.Box3().setFromObject(findPart('heavyStripe')).max.y;
+    const roadTop = new THREE.Box3().setFromObject(findPart('streetSlab')).max.y;
+    const dashTop = new THREE.Box3().setFromObject(findPart('roadDash')).max.y;
+    const shader = { uniforms: {}, vertexShader: browserThree.ShaderLib.standard.vertexShader, fragmentShader: browserThree.ShaderLib.standard.fragmentShader };
+    floor.material.onBeforeCompile(shader);
+    result.textureFallback = !floor.material.userData.surfaceTexture && !yard.material.userData.surfaceTexture;
+    result.textureMaterial = floor.material.userData.textureId?.startsWith('tex_') &&
+      floor.material.userData.surfaceTexture?.image?.data?.length === 128 * 128 * 4 &&
+      shader.uniforms.warehouseSurface.value === floor.material.userData.surfaceTexture && shader.vertexShader.includes('warehouseSurfacePos =') && shader.fragmentShader.includes('texture2D(warehouseSurface') &&
+      yard.material.userData.textureId?.startsWith('tex_');
+    result.floorSurfaces = { floorTop, yardTop, stripeTop, heavyPadTop, heavyStripeTop, roadTop, dashTop };
+    result.floorSeparation = Math.abs(floorTop) < 1e-5 && yardTop < floorTop - 0.02 && stripeTop > floorTop + 0.01 && heavyStripeTop > heavyPadTop + .01 && dashTop > roadTop + .01;
+    result.noCabinLetters = !doc.querySelector('[id^="cabin-sign-"]');
     // Плашка имени в quickbar должна переключать рабочего одним тапом
     const cycle = doc.getElementById('qb-cycle');
     if (cycle) {
@@ -261,6 +314,8 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       const medic = game.buyStaff('medic');
       const watch = game.buyStaff('watchman');
       result.staffBought = medic.ok && watch.ok && game.sim.state.stats.score === 30 && !game.buyStaff('medic').ok;
+      game.api.envs[game.api.crew[0].id].onCaught(game.api.crew[0].state);
+      result.caughtWorks = watch.member.state.stats.caught === 1;
       const patient = game.api.crew[0];
       window.WarehouseModel.addInjury(patient.body, { type: 'muscle', part: 'back', severity: 0.3, cause: 'тест' });
       medic.member.state.pos.x = patient.state.pos.x;
@@ -270,11 +325,32 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       result.medicWorks = patient.body.injuries.length === 0 || patient.body.injuries[0].severity < beforeInjury;
       window.WC.world.render(1 / 30, game);
       result.staffRenders = game.api.staff.length === 2;
+      let staffCrossing = false;
+      let staffDistance = 0;
+      for (let k = 0; k < 450; k++) {
+        const before = { ...watch.member.state.pos };
+        game.update(1 / 30);
+        const after = watch.member.state.pos;
+        staffDistance += Math.hypot(after.x - before.x, after.y - before.y);
+        if (window.WarehouseWorker.pathBlocked(before, after, 0.25)) staffCrossing = true;
+      }
+      result.staffNavigation = !staffCrossing && staffDistance > 1;
+      game.api.envs[patient.id].onInjury(patient.state, { severity: 0.5, text: 'тестовая травма' });
+      window.WC.world.render(1 / 30, game);
+      result.bloodRendered = game.sim.state.bloodDrops.length > 0;
+
       const victim = game.api.crew[0];
+      victim.state.pos.x = -5.6; victim.state.pos.y = 0;
+      victim.state.inToilet = false; victim.state.privacy = false;
+      victim.body.energy = 0; victim.body.collapsed = true;
+      for (let k = 0; k < 30; k++) game.update(1 / 30);
+      window.WC.world.render(1 / 30, game);
+      const normalRig = window.WC.world.scene.children.find(o => o.userData && o.userData.rig === victim.id);
+      result.ragdollWorks = !!victim.state.ragdoll && Object.keys(victim.state.ragdoll).length === 15 && normalRig && !normalRig.visible && victim.state.ragdoll.head.y < 1.5;
       victim.body.vitality = 0;
       victim.body.deceased = true;
       game.update(1 / 30);
-      result.deathWorks = game.api.crew.length === 2 && game.api.deaths.length === 1;
+      result.deathWorks = game.api.crew.length === 2 && game.api.deaths.length === 1 && game.api.deaths[0].name === victim.name;
       game.sim.state.time = game.sim.state.day * game.sim.state.dayLength + 0.01;
       game.update(1 / 30);
       window.WC.world.render(1 / 30, game);
@@ -283,6 +359,49 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       game.restart();
       window.WC.world.render(1 / 30, game);
       result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
+      // Очередь сортируется по сроку, занятые заказы нельзя назначить;
+      // после перезапуска клики работают с новыми объектами симуляции.
+      game.api.crew.forEach(w => game.command(w.id, 'wait'));
+      game.selectWorker(game.api.crew[0].id);
+      const qLate = game.sim.spawnOrder(), qSoon = game.sim.spawnOrder();
+      qLate.mass = qSoon.mass = 8; qLate.deadline = 100; qSoon.deadline = 20;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      const rows = [...doc.querySelectorAll('#order-list .order')];
+      result.queueSorted = rows.length >= 2 && rows[0].querySelector('.o-code').textContent === qSoon.code;
+      rows[0].querySelector('.o-take').click();
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      result.queueAssigned = qSoon.status === 'claimed' && qSoon.carrier === game.api.crew[0].id && rows[0].querySelector('.o-take').disabled && rows[1].querySelector('.o-take').disabled;
+      game.restart(); game.api.crew.forEach(w => game.command(w.id, 'wait'));
+      const newOrder = game.sim.spawnOrder(); newOrder.mass = 8;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      const newButton = doc.querySelector('#order-list .o-take');
+      newButton.click();
+      result.queueRestart = newOrder.status === 'claimed' && newOrder.carrier === game.api.crew[0].id;
+      game.restart();
+      const hireButton = doc.querySelector('[data-buy="worker"]');
+      game.sim.state.stats.score = 400;
+      window.WC.ui.state.lastUiAt = -Infinity;
+      window.WC.ui.frame(1 / 30);
+      for (let i = 0; i < 5; i++) hireButton.click();
+      window.WC.ui.renderSide();
+      result.extraCrew = game.api.crew.length === 8 && game.api.crewTarget === 8 && game.sim.state.stats.score === 0 && hireButton.disabled;
+      result.extraTabs = doc.querySelectorAll('#crew-tabs [data-worker]').length === 8;
+      const hire = game.api.crew[7];
+      result.extraControllable = game.command(hire.id, 'auto').ok && game.api.envs[hire.id].brain === game.api.baseBrain;
+      game.sim.state.stats.score = 80;
+      result.maxCrew = !game.hireWorker().ok && game.sim.state.stats.score === 80;
+      game.api.crew.forEach(w => game.command(w.id, 'wait'));
+      const hireOrder = game.sim.spawnOrder();
+      hireOrder.mass = 8;
+      result.hireCommand = game.command(hire.id, 'pick', { orderId: hireOrder.id }).ok;
+      for (let k = 0; k < 1200 && hire.state.stats.picked < 1; k++) game.update(1 / 30);
+      result.hireActuallyWorks = hire.state.stats.picked > 0;
+      const oldId = hire.id;
+      hire.body.vitality = 0; hire.body.deceased = true;
+      game.update(1 / 30);
+      game.sim.state.time = game.sim.state.day * game.sim.state.dayLength + 0.01;
+      game.update(1 / 30);
+      result.extraReplaced = game.api.crew.length === 8 && !game.api.crew.some(w => w.id === oldId) && game.api.crew.every(w => game.api.envs[w.id].workers === game.api.crew);
     } catch (err) { result.featureError = String(err && err.stack || err); }
   }
   window.close();
@@ -296,6 +415,8 @@ const modes = [
   { allowFetch: false, allowInline: true, label: 'file://: fetch запрещён', width: 1440, height: 900, touch: false },
   { allowFetch: false, allowInline: false, label: 'без данных: запасной мозг', width: 1440, height: 900, touch: false },
   { allowFetch: true, allowInline: true, label: 'телефон 390×844 (touch)', width: 390, height: 844, touch: true },
+  { allowFetch: true, allowInline: true, label: 'старый движок без exportTexture', width: 844, height: 390, touch: true, textureBridge: 'missing' },
+  { allowFetch: true, allowInline: true, label: 'ошибка экспорта текстуры', width: 1440, height: 900, touch: false, textureBridge: 'throws' },
 ];
 
 for (const mode of modes) {
@@ -309,6 +430,12 @@ for (const mode of modes) {
   check(r.meshes > 100, 'меши собраны движком', { meshes: r.meshes });
   check(r.bodyReady, 'body.ready выставлен');
   check(Boolean(r.quickbar), 'есть панель быстрых приказов');
+  if (mode.textureBridge) check(r.textureFallback, 'игра работает без текстуры при несовместимом движке');
+  else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
+  check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
+  check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
+  check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
+  check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');
   check(r.haloRecipe, 'рецепт подсветки halo в движке');
   check(r.cycleWorks !== false, 'тап по имени в quickbar переключает рабочего');
   check(r.crewCards === 3 && r.crewCardsAfter === 3, 'три карточки бригады без дублей', { n: r.crewCards, after: r.crewCardsAfter });
@@ -319,6 +446,7 @@ for (const mode of modes) {
   check(Array.isArray(r.cameraCycle) && r.cameraCycle[0] === 'follow' && r.cameraCycle[1] === 'top', 'C переключает 3-е лицо → сверху за ним → весь цех', { cycle: r.cameraCycle });
   check(r.followMode === 'follow' && r.followClass, 'камера «сверху за рабочим» включается', { mode: r.followMode });
   check(r.truckSpawned && r.truckOrders > 0, 'фура приезжает на док с грузом', { orders: r.truckOrders });
+  check(r.transportDetails, 'фуры и погрузчик имеют детали и вращающиеся колёса');
   check(r.truckRendered === true, 'фура рисуется мешами движка без ошибок', { err: r.truckError });
   if (mode.touch) {
     check(r.device === 'phone', 'layout.js распознал телефон', { device: r.device });
@@ -334,6 +462,9 @@ for (const mode of modes) {
   check(r.boxSunk === 0 && r.boxHovering === 0, 'коробки стоят на опоре (не тонут и не летают)',
     { sunk: r.boxSunk, hovering: r.boxHovering });
   check(r.boxStray === 0, 'коробку не уносит за рабочим после переноски', { stray: r.boxStray });
+  check(r.extraCrew && r.extraTabs && r.extraControllable && r.maxCrew && r.extraReplaced && r.hireCommand && r.hireActuallyWorks, 'найм до восьми, управление и замена дополнительных рабочих', { extraCrew: r.extraCrew, tabs: r.extraTabs, controllable: r.extraControllable, max: r.maxCrew, replaced: r.extraReplaced, command: r.hireCommand, works: r.hireActuallyWorks, error: r.featureError });
+  check(r.ragdollWorks, 'обморок отображается физическим ragdoll', { ragdoll: r.ragdollWorks, error: r.featureError });
+  check(r.staffNavigation && r.bloodRendered && r.caughtWorks, 'персонал обходит препятствия, частицы крови рисуются', { navigation: r.staffNavigation, blood: r.bloodRendered, error: r.featureError });
   check(!r.featureError && r.mapWorks && r.staffBought && r.medicWorks && r.staffRenders && r.deathWorks && r.hireWorks && r.restartWorks, '2D, магазин, медик, смерть и пополнение работают в игре', { error: r.featureError, map: r.mapWorks, staff: r.staffBought, medic: r.medicWorks, death: r.deathWorks, hire: r.hireWorks, restart: r.restartWorks });
     // У запасного (синтетического) мозга качество случайное — требуем доставку
     // только там, где загружены обученные веса.

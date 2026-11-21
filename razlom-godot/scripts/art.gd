@@ -3,8 +3,6 @@ extends RefCounted
 ## Original modular art. Shared meshes/materials; no per-frame asset construction.
 static var materials: Dictionary = {}
 static var meshes: Dictionary = {}
-static var sphere_mesh: SphereMesh
-
 static func material(color: Color, texture: String = "", glow: float = 0.0) -> StandardMaterial3D:
 	var key := str(color) + texture + str(glow)
 	if materials.has(key):
@@ -51,20 +49,6 @@ static func box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material, soli
 		root.add_child(collision)
 	return root
 
-static func orb(parent: Node3D, pos: Vector3, scale: Vector3, mat: Material, name: String = "Detail") -> MeshInstance3D:
-	if sphere_mesh == null:
-		sphere_mesh = SphereMesh.new()
-		sphere_mesh.radial_segments = 16
-		sphere_mesh.rings = 8
-	var visual := MeshInstance3D.new()
-	visual.name = name
-	visual.mesh = sphere_mesh
-	visual.material_override = mat
-	visual.position = pos
-	visual.scale = scale
-	parent.add_child(visual)
-	return visual
-
 static func sign_text(parent: Node3D, text: String, pos: Vector3, font_size: int = 48, color: Color = Color("e6d8ad")) -> Label3D:
 	var label := Label3D.new()
 	parent.add_child(label)
@@ -109,54 +93,71 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 		var skin := material(skin_color)
 		var head_visual := head.get_node_or_null("Visual") as MeshInstance3D
 		if head_visual != null:
-			var head_mesh := SphereMesh.new()
-			head_mesh.radius = 0.5
-			head_mesh.height = 1.0
-			head_mesh.radial_segments = 24
-			head_mesh.rings = 16
+			# Match the square, stepped silhouette of the world instead of a smooth ball.
+			var head_mesh := BoxMesh.new()
+			head_mesh.size = Vector3(0.30, 0.34, 0.30)
 			head_visual.mesh = head_mesh
-			head_visual.scale = Vector3(0.3, 0.35, 0.31)
+			head_visual.scale = Vector3.ONE
 			head_visual.material_override = skin
-		# One continuous head silhouette; small inset eyes, brow, nose and mouth
-		# provide human cues without separate oversized oval pieces.
+		# Flat, evenly readable facial details on the same front plane.
+		var brow_mat := StandardMaterial3D.new()
+		brow_mat.albedo_color = Color("59483a")
+		brow_mat.roughness = 0.88
+		brow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		for side in [-1, 1]:
-			var ear := orb(head, Vector3(side * 0.145, -0.015, -0.005), Vector3(0.018, 0.032, 0.014), skin, "EarL" if side < 0 else "EarR")
-			ear.rotation.z = side * -0.12
+			var ear := box(head, Vector3(side * 0.15, -0.018, -0.008), Vector3(0.045, 0.06, 0.055), skin)
+			ear.name = "EarL" if side < 0 else "EarR"
 			var eye := Node3D.new()
 			eye.name = "EyeL" if side < 0 else "EyeR"
-			eye.position = Vector3(side * 0.069, 0.035, -0.323)
+			eye.position = Vector3(side * 0.062, 0.034, -0.153)
 			head.add_child(eye)
-			box(eye, Vector3.ZERO, Vector3(0.037, 0.017, 0.006), material(Color("eee2d2")))
-			orb(eye, Vector3(0, 0, -0.004), Vector3(0.007, 0.009, 0.003), material(Color("626c53")), "Iris")
-			orb(eye, Vector3(0, 0, -0.006), Vector3(0.0035, 0.005, 0.002), material(Color("282923")), "Pupil")
-			orb(eye, Vector3(-0.002, 0.003, -0.008), Vector3(0.0017, 0.0017, 0.001), material(Color("fff0d9")), "Catchlight")
-			var brow := box(head, Vector3(side * 0.07, 0.063, -0.321), Vector3(0.047, 0.009, 0.008), material(Color("594337")))
-			brow.rotation.z = side * -0.08
-			if medic:
-				box(head, Vector3(side * 0.103, -0.026, -0.296), Vector3(0.025, 0.008, 0.003), material(Color("bf887a")))
-		# A softly shaded bridge and a small rounded tip sit on the face plane.
-		box(head, Vector3(0, -0.006, -0.326), Vector3(0.018, 0.042, 0.014), skin)
-		orb(head, Vector3(0, -0.03, -0.344), Vector3(0.012, 0.01, 0.009), material(skin_color.lightened(0.035)), "NoseTip")
-		box(head, Vector3(0, -0.078, -0.32), Vector3(0.046, 0.006, 0.005), material(Color("9a6259") if medic else Color("765449")))
-		box(head, Vector3(0, -0.083, -0.319), Vector3(0.025, 0.003, 0.004), material(Color("d0a092")))
+			var sclera := box(eye, Vector3.ZERO, Vector3(0.04, 0.024, 0.01), material(Color("eee2d2")))
+			sclera.name = "Sclera"
+			var iris := MeshInstance3D.new()
+			iris.name = "Iris"
+			var iris_mesh := BoxMesh.new()
+			iris_mesh.size = Vector3(0.012, 0.016, 0.004)
+			iris.mesh = iris_mesh
+			iris.position = Vector3(0, 0, -0.007)
+			iris.material_override = material(Color("626c53"))
+			eye.add_child(iris)
+			var pupil := MeshInstance3D.new()
+			pupil.name = "Pupil"
+			var pupil_mesh := BoxMesh.new()
+			pupil_mesh.size = Vector3(0.006, 0.01, 0.003)
+			pupil.mesh = pupil_mesh
+			pupil.position = Vector3(0, 0, -0.011)
+			pupil.material_override = material(Color("282923"))
+			eye.add_child(pupil)
+			var brow := box(head, Vector3(side * 0.062, 0.071, -0.16), Vector3(0.03, 0.007, 0.008), brow_mat)
+			brow.name = "BrowL" if side < 0 else "BrowR"
+			brow.rotation.z = side * -0.01
+		# Flat stepped nose and a short mouth line; no spherical details.
+		box(head, Vector3(0, -0.005, -0.16), Vector3(0.018, 0.035, 0.018), material(skin_color.lightened(0.035)))
+		var nose_tip := box(head, Vector3(0, -0.025, -0.17), Vector3(0.024, 0.014, 0.02), material(skin_color.lightened(0.035)))
+		nose_tip.name = "NoseTip"
+		box(head, Vector3(0, -0.078, -0.157), Vector3(0.042, 0.006, 0.01), material(Color("805a50")))
 		var cap := root.get_node_or_null("Cap") as Node3D
 		if cap != null: cap.reparent(head, true)
 		var hair_mat := material(Color("544435"))
-		var scalp := orb(head, Vector3(0, 0.135, 0.012), Vector3(0.16, 0.09, 0.16), hair_mat, "VeraHairline" if medic else "HairCap")
 		if medic:
 			var old_hair := root.get_node_or_null("Hair") as Node3D
 			if old_hair != null:
 				old_hair.reparent(head, true)
-				old_hair.position = Vector3(0, 0.12, 0.055)
+				old_hair.position = Vector3(0, 0.18, 0.025)
+				var hair_visual := old_hair.get_node_or_null("Visual") as MeshInstance3D
+				if hair_visual != null:
+					hair_visual.material_override = hair_mat
+					hair_visual.scale = Vector3(0.9, 0.75, 0.97)
+			# Hair frames the temples only; keep the forehead clear so it cannot
+			# merge with the brows into a bar or a third eyebrow.
 			for side in [-1, 1]:
-				var lock := orb(head, Vector3(side * 0.13, 0.015, -0.16), Vector3(0.035, 0.13, 0.1), material(Color("594337")), "TempleLock")
-				lock.rotation.z = side * -0.12
-			for i in range(3):
-				var fringe := box(head, Vector3(-0.075 + i * 0.075, 0.115 - absf(i - 1) * 0.012, -0.29), Vector3(0.07, 0.055, 0.028), material(Color("694c3d")))
-				fringe.rotation.z = (i - 1) * 0.14
+				var temple_lock := box(head, Vector3(side * 0.138, 0.045, -0.153), Vector3(0.016, 0.05, 0.02), hair_mat)
+				temple_lock.name = "TempleHairL" if side < 0 else "TempleHairR"
 			for i in range(5):
-				var braid := orb(head, Vector3(0.105 + sin(i * 2.0) * 0.014, -0.06 - i * 0.045, 0.16), Vector3(0.036, 0.038, 0.04), material(Color("594337")), "Braid%d" % i)
-			box(head, Vector3(0.105, -0.29, 0.16), Vector3(0.06, 0.018, 0.06), material(Color("b6c8b8")))
+				var braid := box(head, Vector3(0.105 + (i % 2) * 0.018, -0.06 - i * 0.04, 0.15), Vector3(0.034, 0.04, 0.04), hair_mat)
+				braid.name = "Braid%d" % i
+			box(head, Vector3(0.114, -0.27, 0.15), Vector3(0.06, 0.025, 0.055), material(Color("b6c8b8")))
 	var torso := root.get_node("Coat") as Node3D
 	var fabric := material(Color("e0e7d5") if medic else Color("768575"), "cloth")
 	for side in [-1, 1]:
@@ -173,15 +174,15 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 		var rust_red := material(Color("ad6558"))
 		box(root, Vector3(0, 1.34, -0.01), Vector3(0.24, 0.09, 0.28), teal).reparent(torso, true)
 		for y in [1.04, 1.15, 1.26]:
-			orb(root, Vector3(0.015, y, -0.161), Vector3(0.018, 0.018, 0.012), material(Color("b69c6e")), "CoatButton").reparent(torso, true)
+			box(root, Vector3(0.015, y, -0.161), Vector3(0.022, 0.022, 0.014), material(Color("b69c6e")), false).reparent(torso, true)
 		box(root, Vector3(0.225, 1.31, -0.01), Vector3(0.012, 0.14, 0.13), linen).reparent(torso, true)
 		box(root, Vector3(0.225, 1.31, -0.01), Vector3(0.014, 0.08, 0.03), rust_red).reparent(torso, true)
 		box(root, Vector3(0.225, 1.31, -0.01), Vector3(0.014, 0.026, 0.08), rust_red).reparent(torso, true)
 		box(root, Vector3(-0.2, 1.08, -0.18), Vector3(0.12, 0.07, 0.025), material(Color("e0d1ad"))).reparent(torso, true)
 		box(root, Vector3(-0.2, 1.08, -0.198), Vector3(0.02, 0.05, 0.009), rust_red).reparent(torso, true)
 		box(root, Vector3(-0.2, 1.08, -0.2), Vector3(0.05, 0.016, 0.009), rust_red).reparent(torso, true)
-		# A small pendant and stitched cuffs distinguish her silhouette in motion.
-		orb(root, Vector3(0, 1.27, -0.2), Vector3(0.025, 0.038, 0.012), material(Color("d0ad69")), "Pendant").reparent(torso, true)
+		# A small rectangular pendant and stitched cuffs suit the block-built kit.
+		box(root, Vector3(0, 1.27, -0.2), Vector3(0.025, 0.038, 0.012), material(Color("d0ad69"))).reparent(torso, true)
 		for side in [-1, 1]:
 			box(root, Vector3(side * 0.32, 0.91, -0.08), Vector3(0.06, 0.09, 0.24), teal).reparent(torso, true)
 	if medic:
@@ -200,47 +201,31 @@ static func add_actor_hands(root: Node3D, bare_hands: bool = false) -> void:
 		hand.name = "CharacterHand"
 		hand.position = Vector3(0, -0.32, -0.015)
 		arm.add_child(hand)
-		orb(hand, Vector3(0, -0.005, -0.012), Vector3(0.066, 0.078, 0.034), hand_mat, "Palm")
+		var palm := box(hand, Vector3(0, -0.005, -0.012), Vector3(0.072, 0.078, 0.034), hand_mat)
+		palm.name = "Palm"
 		box(hand, Vector3(0, 0.065, 0), Vector3(0.105, 0.05, 0.095), cuff_mat)
 		for i in range(4):
 			var x := -0.039 + i * 0.026
-			orb(hand, Vector3(x, -0.045, -0.032), Vector3(0.013, 0.018, 0.009), knuckle_mat, "Knuckle%d" % i)
+			var knuckle := box(hand, Vector3(x, -0.045, -0.032), Vector3(0.015, 0.016, 0.012), knuckle_mat)
+			knuckle.name = "Knuckle%d" % i
 			for joint in range(2):
-				var finger := MeshInstance3D.new()
+				var finger := box(hand, Vector3(x, -0.073 - joint * 0.035, -0.03), Vector3(0.016, 0.043 if joint == 0 else 0.036, 0.02), hand_mat)
 				finger.name = "Finger%dJ%d" % [i, joint]
-				var finger_mesh := CapsuleMesh.new()
-				finger_mesh.radius = 0.009 if i in [0, 3] else 0.010
-				finger_mesh.height = 0.043 if joint == 0 else 0.036
-				finger_mesh.radial_segments = 10
-				finger_mesh.rings = 4
-				finger.mesh = finger_mesh
-				finger.material_override = hand_mat
-				finger.position = Vector3(x, -0.073 - joint * 0.035, -0.03)
-				hand.add_child(finger)
-			box(hand, Vector3(x, -0.127, -0.039), Vector3(0.011, 0.008, 0.003), nail_mat)
-		var thumb := MeshInstance3D.new()
+			var nail := box(hand, Vector3(x, -0.127, -0.039), Vector3(0.011, 0.008, 0.003), nail_mat)
+			nail.name = "Nail%d" % i
+		var thumb := box(hand, Vector3(-0.065, -0.025, -0.02), Vector3(0.022, 0.065, 0.022), hand_mat)
 		thumb.name = "Thumb"
-		var thumb_mesh := CapsuleMesh.new()
-		thumb_mesh.radius = 0.012
-		thumb_mesh.height = 0.065
-		thumb_mesh.radial_segments = 10
-		thumb.mesh = thumb_mesh
-		thumb.material_override = hand_mat
-		thumb.position = Vector3(-0.065, -0.025, -0.02)
 		thumb.rotation.z = -0.62
-		hand.add_child(thumb)
+		var thumb_joint := box(hand, Vector3(-0.074, -0.045, -0.035), Vector3(0.024, 0.022, 0.018), knuckle_mat)
+		thumb_joint.name = "ThumbJoint"
 		box(hand, Vector3(-0.085, -0.045, -0.035), Vector3(0.014, 0.01, 0.004), nail_mat)
 
 static func protection_pickup(parent: Node3D, helmet: bool) -> void:
 	var canvas := material(Color("606c5c"), "cloth")
 	if helmet:
 		var visual := MeshInstance3D.new()
-		var mesh := SphereMesh.new()
-		mesh.radius = 0.24
-		mesh.height = 0.44
-		mesh.is_hemisphere = true
-		mesh.radial_segments = 16
-		mesh.rings = 8
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.46, 0.22, 0.42)
 		visual.mesh = mesh
 		visual.material_override = material(Color("69735c"), "metal")
 		parent.add_child(visual)

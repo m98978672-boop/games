@@ -5,6 +5,8 @@ WC.save = (function () {
   'use strict';
 
   var KEY = 'warehouse-crew-save-v1';
+  var CHECKPOINT_KEY = 'warehouse-crew-save-v2';
+  var protectedSave = false;
 
   function storage() {
     try {
@@ -21,22 +23,30 @@ WC.save = (function () {
   function load() {
     var store = storage();
     if (!store) return null;
+    var legacy = null;
     try {
-      var raw = store.getItem(KEY);
-      if (!raw) return null;
+      var old = store.getItem(KEY);
+      if (old) { legacy = JSON.parse(old); if (!legacy || legacy.version !== 1) legacy = null; }
+    } catch (err) { legacy = null; }
+    try {
+      var raw = store.getItem(CHECKPOINT_KEY);
+      if (!raw) return legacy;
+      if (raw.length > 8 * 1024 * 1024) throw new Error('Слишком большой снимок');
       var data = JSON.parse(raw);
-      if (!data || data.version !== 1) return null;
+      if (!data || data.version !== 2 || !data.checkpoint || data.checkpoint.version !== 2) throw new Error('Неверная версия');
       return data;
     } catch (err) {
-      return null;
+      protectedSave = true;
+      return legacy;
     }
   }
 
   function write(data) {
     var store = storage();
-    if (!store) return false;
+    if (!store || protectedSave) return false;
     try {
-      store.setItem(KEY, JSON.stringify(data));
+      // setItem атомарен: при ошибке квоты предыдущее значение остаётся целым.
+      store.setItem(CHECKPOINT_KEY, JSON.stringify(data));
       flash();
       return true;
     } catch (err) {
@@ -84,11 +94,25 @@ WC.save = (function () {
   }
 
   function save(game) {
-    return write(collect(game));
+    if (protectedSave) return false;
+    try {
+      var data = collect(game);
+      data.version = 2;
+      data.checkpoint = WC.game.captureCheckpoint();
+      return write(data);
+    } catch (err) {
+      console.warn('[warehouse-crew] сохранение не удалось:', err);
+      return false;
+    }
   }
 
   function autosave(game) {
-    save(game);
+    var ok = save(game);
+    if (!ok) {
+      var bar = document.getElementById('save-indicator');
+      if (bar) bar.textContent = protectedSave ? '● сохранение защищено' : '● ошибка сохранения';
+    }
+    return ok;
   }
 
   function download(game) {
@@ -108,5 +132,7 @@ WC.save = (function () {
     return payload;
   }
 
-  return { load: load, save: save, autosave: autosave, download: download, KEY: KEY };
+  return { load: load, save: save, autosave: autosave, download: download, KEY: KEY,
+    CHECKPOINT_KEY: CHECKPOINT_KEY, protect: function () { protectedSave = true; },
+    unprotect: function () { protectedSave = false; }, isProtected: function () { return protectedSave; } };
 })();

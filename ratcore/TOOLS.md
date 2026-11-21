@@ -106,6 +106,8 @@
 | `build.tex.makeDamaged` | `{ texture: TextureHandle, wear: 0.45..0.9, seed? }` | `A-24` (трещины Voronoi + сколы) + слот `t + 2048` | `TextureHandle` (повреждённая пара) |
 | `build.tex.packAtlas` | `{ textures: TextureHandle[], tileSize?, padding? }` | `A-25` (Shelf/Grid Bin Packing) | `AtlasHandle` + таблица UV-слотов `0..4094` |
 
+Для внешнего рендера `bridge.exportTexture({ texture })` отдаёт независимую копию RGBA-пикселей запечатанной текстуры; исходные буферы хранилища не раскрываются.
+
 ### 1.3. Постройка карт и объектов мира (`tools.build.map.*`)
 | Инструмент | Основные аргументы | Алгоритм / Формула | Результат |
 |---|---|---|---|

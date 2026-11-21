@@ -24,7 +24,7 @@ const { JSDOM } = req('jsdom');
 const THREE = req('three');
 
 const SCRIPTS = [
-  'src/sim/model.js', 'src/ai/brain-net.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
+  'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
   'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
@@ -62,8 +62,13 @@ const scene = window.WC.world.scene;
 
 // --- сценарий: заставить одного рабочего нести коробку -------------------
 const sim = game.sim;
+if (process.env.TRUCK === '1') sim.spawnTruck('unload');
 for (let i = 0; i < 120; i++) game.update(1 / 30);
 const worker = game.api.crew[Number(process.env.WORKER || 0)];
+if (process.env.FALL === '1') {
+  worker.body.energy = 0; worker.body.collapsed = true;
+  for (let i = 0; i < 35; i++) game.update(1 / 30);
+}
 const order = sim.state.orders.find((o) => o.status === 'pending') || sim.state.orders[0];
 if (!order) { console.log('нет заказов'); process.exit(1); }
 console.log('заказ', order.code, order.size, 'статус', order.status, 'масса', order.mass);
@@ -149,7 +154,7 @@ const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
 root.updateMatrixWorld(true);
 const drawRoot = lineup ? scene : ((sceneCam && sceneLook) ? scene : root);
 scene.updateMatrixWorld(true);
-drawRoot.traverse((obj) => {
+drawRoot.traverseVisible((obj) => {
   if (!obj.isMesh || !obj.geometry || !obj.visible) return;
   const geo = obj.geometry;
   const pos = geo.getAttribute('position');

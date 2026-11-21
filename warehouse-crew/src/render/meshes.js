@@ -19,6 +19,7 @@ WC.meshes = (function () {
     belt: { parts: [{ shape: 'box', sx: 0.335, sy: 0.055, sz: 0.235, offset: [0, -0.05, 0], color: 'boots' }] },
     neck: { parts: [{ shape: 'cylinder', radius: 0.05, height: 0.085, segments: 8, offset: [0, 0, 0], color: 'skin' }] },
     head: { parts: [{ shape: 'box', sx: 0.195, sy: 0.205, sz: 0.20, offset: [0, 0, 0], color: 'skin' }] },
+    ear: { parts: [{ shape: 'sphere', radius: 0.028, segments: 10, offset: [0, 0.06, 0], color: 'skin' }] },
     hair: { parts: [{ shape: 'box', sx: 0.205, sy: 0.075, sz: 0.21, offset: [0, 0.135, 0], color: 'hair' }] },
     hairBack: { parts: [{ shape: 'box', sx: 0.20, sy: 0.13, sz: 0.045, offset: [0, 0.035, -0.09], color: 'hair' }] },
     eye: { parts: [{ shape: 'box', sx: 0.045, sy: 0.038, sz: 0.02, offset: [0, 0.056, 0.096], color: '#f6f2e9' }] },
@@ -34,6 +35,8 @@ WC.meshes = (function () {
     foot: { parts: [{ shape: 'box', sx: 0.13, sy: 0.07, sz: 0.235, offset: [0, -0.07, 0.045], color: 'boots' }] },
     badge: { parts: [{ shape: 'box', sx: 0.075, sy: 0.045, sz: 0.018, offset: [0.095, 0.20, 0.116], color: '#f2ecdf' }] },
     strap: { parts: [{ shape: 'box', sx: 0.33, sy: 0.035, sz: 0.012, offset: [0, 0.145, 0.122], color: '#f4e6b8' }] },
+    vestBackReflective: { parts: [{ shape: 'box', sx: 0.37, sy: 0.025, sz: 0.012, offset: [0, 0.21, -0.126], color: '#f4e6b8' }] },
+    vestReflective: { parts: [{ shape: 'box', sx: 0.37, sy: 0.025, sz: 0.012, offset: [0, 0.27, 0.122], color: '#f4e6b8' }] },
     strap2: { parts: [{ shape: 'box', sx: 0.33, sy: 0.03, sz: 0.012, offset: [0, 0.20, 0.122], color: '#f4e6b8' }] },
     collar: { parts: [{ shape: 'cylinder', radius: 0.082, height: 0.05, segments: 10, offset: [0, 0.35, 0], color: 'shirtDark' }] },
     buckle: { parts: [{ shape: 'box', sx: 0.055, sy: 0.04, sz: 0.014, offset: [0, -0.045, 0.126], color: '#c9cfd4' }] },
@@ -46,7 +49,11 @@ WC.meshes = (function () {
     hipPad: { parts: [{ shape: 'sphere', radius: 0.077, segments: 8, offset: [0, -0.077, 0], color: 'pants' }] },
     kneePad: { parts: [{ shape: 'sphere', radius: 0.058, segments: 8, offset: [0, -0.058, 0], color: 'pantsDark' }] },
     anklePad: { parts: [{ shape: 'sphere', radius: 0.048, segments: 8, offset: [0, -0.048, 0], color: 'boots' }] },
+    gloveSeam: { parts: [{ shape: 'box', sx: 0.065, sy: 0.012, sz: 0.012, offset: [0, -0.055, 0.036], color: '#d5c8ae' }] },
+    sleeveCuff: { parts: [{ shape: 'cylinder', radius: 0.053, height: 0.035, segments: 10, offset: [0, -0.27, 0], color: 'shirtDark' }] },
+    kneeGuard: { parts: [{ shape: 'box', sx: 0.11, sy: 0.11, sz: 0.025, offset: [0, -0.085, 0.065], color: 'pantsDark' }] },
     thumb: { parts: [{ shape: 'box', sx: 0.03, sy: 0.055, sz: 0.032, offset: [-0.05, -0.085, 0.03], color: 'gloves' }] },
+    bootLaces: { parts: [{ shape: 'box', sx: 0.08, sy: 0.02, sz: 0.04, offset: [0, -0.02, 0.16], color: '#c3b999' }] },
     sole: { parts: [{ shape: 'box', sx: 0.14, sy: 0.032, sz: 0.25, offset: [0, -0.102, 0.05], color: 'bootsDark' }] },
     // Каска: купол, поля и лямка под подбородком
     // Купол каски лежит на макушке (голова 0..0.205), поля — по лбу.
@@ -56,14 +63,18 @@ WC.meshes = (function () {
     hatBand: { parts: [{ shape: 'cylinder', radius: 0.108, height: 0.026, segments: 16, offset: [0, 0.166, 0], color: 'hatBand' }] },
 
     // --- склад ---
-    floor: { parts: [{ shape: 'box', sx: 26, sy: 0.2, sz: 17, offset: [0, -0.2, 0], color: '#262b2c' }] },
+    floor: { parts: [{ shape: 'box', sx: 26, sy: 0.2, sz: 17, offset: [0, -0.2, 0], color: '#3c494b' }] },
+    floorSeamX: { parts: [{ shape: 'box', sx: 26, sy: 0.003, sz: 0.025, offset: [0, 0, 0], color: '#364346' }] },
+    floorSeamZ: { parts: [{ shape: 'box', sx: 0.025, sy: 0.003, sz: 17, offset: [0, 0, 0], color: '#364346' }] },
     floorStripe: { parts: [{ shape: 'box', sx: 26, sy: 0.02, sz: 0.18, offset: [0, 0, 0], color: '#6a5a38' }] },
-    wall: { parts: [{ shape: 'box', sx: 26, sy: 3.4, sz: 0.2, offset: [0, 0, 0], color: '#1b2022' }] },
-    wallSide: { parts: [{ shape: 'box', sx: 0.2, sy: 3.4, sz: 17, offset: [0, 0, 0], color: '#191e20' }] },
-    shelfBeam: { parts: [{ shape: 'box', sx: 0.09, sy: 2.35, sz: 0.09, offset: [0, 0, 0], color: '#4f6577' }] },
+    wall: { parts: [{ shape: 'box', sx: 26, sy: 3.4, sz: 0.2, offset: [0, 0, 0], color: '#34414a' }] },
+    wallSide: { parts: [{ shape: 'box', sx: 0.2, sy: 3.4, sz: 17, offset: [0, 0, 0], color: '#303d45' }] },
+    shelfBeam: { parts: [{ shape: 'box', sx: 0.10, sy: 2.35, sz: 0.10, offset: [0, 0, 0], color: '#456f91' }] },
+    rackFoot: { parts: [{ shape: 'box', sx: 0.20, sy: 0.05, sz: 0.20, offset: [0, 0, 0], color: '#b8a059' }] },
+    rackCrossbar: { parts: [{ shape: 'box', sx: 1.14, sy: 0.08, sz: 0.09, offset: [0, 0, 0], color: '#d8873f' }] },
     shelfBoard: { parts: [{ shape: 'box', sx: 1.15, sy: 0.06, sz: 11.4, offset: [0, 0, 0], color: '#7d8f9c' }] },
-    shelfSlat: { parts: [{ shape: 'box', sx: 0.25, sy: 0.05, sz: 11.4, offset: [0, 0, 0], color: '#8697a3' }] },
-    shelfLip: { parts: [{ shape: 'box', sx: 0.035, sy: 0.11, sz: 11.4, offset: [0, 0, 0], color: '#5c7182' }] },
+    shelfSlat: { parts: [{ shape: 'box', sx: 0.25, sy: 0.05, sz: 11.4, offset: [0, 0, 0], color: '#9cabb2' }] },
+    shelfLip: { parts: [{ shape: 'box', sx: 0.035, sy: 0.11, sz: 11.4, offset: [0, 0, 0], color: '#d8873f' }] },
     pallet: { parts: [{ shape: 'box', sx: 1.2, sy: 0.12, sz: 1.0, offset: [0, 0, 0], color: '#8a6a41' }] },
     palletEdge: { parts: [{ shape: 'box', sx: 1.2, sy: 0.04, sz: 0.12, offset: [0, 0.12, 0.44], color: '#a5814f' }] },
     despatch: { parts: [{ shape: 'box', sx: 1.5, sy: 0.95, sz: 3.2, offset: [0, 0, 0], color: '#3c4a52' }] },
@@ -84,6 +95,9 @@ WC.meshes = (function () {
     boxBig: { parts: [{ shape: 'box', sx: 0.62, sy: 0.52, sz: 0.50, offset: [0, 0, 0], color: '#a2763f' }] },
     tape: { parts: [{ shape: 'box', sx: 0.10, sy: 0.012, sz: 0.44, offset: [0, 0.001, 0], color: '#e6d9bd' }] },
     label: { parts: [{ shape: 'box', sx: 0.18, sy: 0.01, sz: 0.13, offset: [0, 0.002, 0], color: '#f2ecdf' }] },
+
+    bloodDrop: { parts: [{ shape: 'sphere', radius: 0.035, segments: 8, offset: [0, 0, 0], color: '#a52e32' }] },
+    bloodPool: { parts: [{ shape: 'cylinder', radius: 0.12, height: 0.008, segments: 12, offset: [0, 0, 0], color: '#762629' }] },
 
     // --- анатомия для инспектора ---
     skinTorso: { parts: [{ shape: 'box', sx: 0.40, sy: 0.52, sz: 0.24, offset: [0, -0.26, 0], color: '#d9a982' }] },
@@ -115,6 +129,22 @@ WC.meshes = (function () {
     truckDoor: { parts: [{ shape: 'box', sx: 0.14, sy: 2.3, sz: 2.3, offset: [0, 1.9, 0], color: '#b9c0c4' }] },
     truckWheel: { parts: [{ shape: 'cylinder', radius: 0.46, height: 0.3, segments: 12, offset: [0, 0, 0], color: '#191d1f' }] },
     truckChassis: { parts: [{ shape: 'box', sx: 6.4, sy: 0.24, sz: 2.1, offset: [0, 0.78, 0], color: '#2b3236' }] },
+    truckHub: { parts: [{ shape: 'cylinder', radius: 0.22, height: 0.04, segments: 16, offset: [0, 0, 0], color: '#9babb1' }] },
+    truckBumper: { parts: [{ shape: 'box', sx: 0.24, sy: 0.28, sz: 2.2, offset: [0, 0, 0], color: '#28343a' }] },
+    truckGrille: { parts: [{ shape: 'box', sx: 0.035, sy: 0.32, sz: 1.18, offset: [0, 0, 0], color: '#202b30' }] },
+    truckLight: { parts: [{ shape: 'box', sx: 0.045, sy: 0.16, sz: 0.31, offset: [0, 0, 0], color: '#f6e2a4' }] },
+    truckMirror: { parts: [{ shape: 'box', sx: 0.18, sy: 0.25, sz: 0.10, offset: [0, 0, 0], color: '#223238' }] },
+    truckSideWindow: { parts: [{ shape: 'box', sx: 0.85, sy: 0.55, sz: 0.025, offset: [0, 0, 0], color: '#526f7a' }] },
+    truckHandle: { parts: [{ shape: 'box', sx: 0.25, sy: 0.045, sz: 0.025, offset: [0, 0, 0], color: '#bbc5c7' }] },
+    truckTailLight: { parts: [{ shape: 'box', sx: 0.04, sy: 0.16, sz: 0.24, offset: [0, 0, 0], color: '#b32f29' }] },
+    truckStep: { parts: [{ shape: 'box', sx: 0.70, sy: 0.07, sz: 0.18, offset: [0, 0, 0], color: '#69777c' }] },
+    truckRail: { parts: [{ shape: 'box', sx: 4.9, sy: 0.08, sz: 0.06, offset: [0, 0, 0], color: '#e4aa4e' }] },
+    forkliftWheelControl: { parts: [{ shape: 'cylinder', radius: 0.18, height: 0.035, segments: 16, offset: [0, 0, 0], color: '#252a2b' }] },
+    forkliftColumn: { parts: [{ shape: 'box', sx: 0.08, sy: 0.42, sz: 0.08, offset: [0, 0, 0], color: '#30383a' }] },
+    forkliftRoof: { parts: [{ shape: 'box', sx: 1.25, sy: 0.09, sz: 1.05, offset: [0, 0, 0], color: '#3d4246' }] },
+    forkliftHub: { parts: [{ shape: 'cylinder', radius: 0.13, height: 0.04, segments: 12, offset: [0, 0, 0], color: '#a7b2b4' }] },
+    forkliftLamp: { parts: [{ shape: 'box', sx: 0.08, sy: 0.12, sz: 0.18, offset: [0, 0, 0], color: '#fff0c0' }] },
+    forkliftHydraulic: { parts: [{ shape: 'box', sx: 0.10, sy: 1.4, sz: 0.10, offset: [0, 0, 0], color: '#96a8ad' }] },
     cargoStack: { parts: [{ shape: 'box', sx: 1.0, sy: 0.9, sz: 1.6, offset: [0, 1.1, 0], color: '#9d7240' }] },
 
     // --- улица за южной стеной ---
@@ -131,14 +161,18 @@ WC.meshes = (function () {
     fencePost: { parts: [{ shape: 'box', sx: 0.08, sy: 1.5, sz: 0.08, offset: [0, 0, 0], color: '#3d464b' }] },
     fenceBar: { parts: [{ shape: 'box', sx: 1.6, sy: 0.05, sz: 0.05, offset: [0, 0, 0], color: '#4a555c' }] },
 
-    // --- кабинки Ж и М ---
-    wcCabin: { parts: [{ shape: 'box', sx: 1.5, sy: 2.3, sz: 1.5, offset: [0, 0, 0], color: '#3b4a4f' }] },
-    wcRoof: { parts: [{ shape: 'box', sx: 1.7, sy: 0.12, sz: 1.7, offset: [0, 2.3, 0], color: '#2c383c' }] },
-    wcDoorF: { parts: [{ shape: 'box', sx: 0.62, sy: 1.85, sz: 0.08, offset: [0, 0, 0], color: '#8a6a7c' }] },
-    wcDoorM: { parts: [{ shape: 'box', sx: 0.62, sy: 1.85, sz: 0.08, offset: [0, 0, 0], color: '#5c7a8a' }] },
-    wcSignF: { parts: [{ shape: 'box', sx: 0.26, sy: 0.26, sz: 0.03, offset: [0, 0, 0], color: '#e8a0b8' }] },
-    wcSignM: { parts: [{ shape: 'box', sx: 0.26, sy: 0.26, sz: 0.03, offset: [0, 0, 0], color: '#8fc0dc' }] },
-    wcLight: { parts: [{ shape: 'sphere', radius: 0.07, segments: 8, offset: [0, 0, 0], color: '#f2e6c0' }] },
+    // --- туалет: отдельная комната и санитарное оборудование ---
+    toiletSide: { parts: [{ shape: 'box', sx: 0.08, sy: 2.5, sz: 2.0, offset: [0, 0, 0], color: '#9ba9a4' }] },
+    toiletBack: { parts: [{ shape: 'box', sx: 2.8, sy: 2.5, sz: 0.08, offset: [0, 0, 0], color: '#9ba9a4' }] },
+    toiletFront: { parts: [{ shape: 'box', sx: 0.6, sy: 2.5, sz: 0.08, offset: [0, 0, 0], color: '#899b97' }] },
+    toiletDoor: { parts: [{ shape: 'box', sx: 1.55, sy: 2.1, sz: 0.07, offset: [0, 0, 0], color: '#54716d' }] },
+    toiletHandle: { parts: [{ shape: 'sphere', radius: 0.045, segments: 10, offset: [0, 0, 0], color: '#e5dbb8' }] },
+    toiletFloor: { parts: [{ shape: 'box', sx: 2.65, sy: 0.025, sz: 1.85, offset: [0, 0, 0], color: '#c0c9bf' }] },
+    toiletBowl: { parts: [{ shape: 'cylinder', radius: 0.25, height: 0.34, segments: 16, offset: [0, 0, 0], color: '#eef0df' }] },
+    toiletTank: { parts: [{ shape: 'box', sx: 0.40, sy: 0.40, sz: 0.17, offset: [0, 0, 0], color: '#e8ece1' }] },
+    toiletSeat: { parts: [{ shape: 'cylinder', radius: 0.23, height: 0.05, segments: 16, offset: [0, 0, 0], color: '#536b6a' }] },
+    toiletFaucet: { parts: [{ shape: 'box', sx: 0.055, sy: 0.19, sz: 0.055, offset: [0, 0, 0], color: '#718887' }] },
+    toiletSink: { parts: [{ shape: 'box', sx: 0.46, sy: 0.12, sz: 0.34, offset: [0, 0, 0], color: '#e8ece1' }] },
 
     // --- отдел тяжёлого груза и техника ---
     heavyPad: { parts: [{ shape: 'box', sx: 4.6, sy: 0.03, sz: 3.0, offset: [0, 0, 0], color: '#3a4144' }] },
@@ -258,6 +292,13 @@ WC.meshes = (function () {
     opts = opts || {};
     var entry = buildOne(engine, name, palette || null);
     var m = new THREE.Mesh(entry.geometry, opts.material || makeMaterial(opts));
+    // Некоторые круглые примитивы RatCore после отражения оси имеют обратный
+    // порядок граней. Рисуем обе стороны непрозрачного материала: иначе руки,
+    // суставы и колёса исчезают с некоторых ракурсов из-за back-face culling.
+    if (!opts.material && opts.side == null && RECIPES[name].parts.some(function (part) {
+      return part.shape === 'cylinder' || part.shape === 'sphere' || part.shape === 'cone';
+    })) m.material.side = THREE.DoubleSide;
+    m.userData.recipe = name;
     if (entry.offset) m.position.set(entry.offset[0], entry.offset[1], entry.offset[2]);
     m.castShadow = opts.castShadow !== false;
     m.receiveShadow = opts.receiveShadow !== false;
@@ -272,7 +313,7 @@ WC.meshes = (function () {
     ['boxSmall', 'boxMedium', 'boxBig', 'tape', 'label'].forEach(function (name) { buildOne(engine, name, null); });
     Object.keys(palettes || {}).forEach(function (id) {
       var palette = palettes[id];
-      ['pelvis', 'torso', 'vest', 'belt', 'strap', 'strap2', 'collar', 'buckle', 'pocket', 'neck', 'head', 'hair', 'hairBack', 'eye', 'pupil', 'brow', 'nose', 'mouth', 'upperArm', 'forearm', 'hand', 'thumb', 'thigh', 'shin', 'foot', 'sole', 'badge', 'shoulderPad', 'elbowPad', 'hipPad', 'kneePad', 'anklePad', 'hardhat', 'hatBrim', 'hatPeak', 'hatBand'].forEach(function (name) {
+      ['pelvis', 'torso', 'vest', 'belt', 'strap', 'strap2', 'collar', 'buckle', 'pocket', 'neck', 'head', 'ear', 'hair', 'hairBack', 'eye', 'pupil', 'brow', 'nose', 'mouth', 'upperArm', 'forearm', 'hand', 'thumb', 'thigh', 'shin', 'foot', 'sole', 'badge', 'shoulderPad', 'elbowPad', 'hipPad', 'kneePad', 'anklePad', 'hardhat', 'hatBrim', 'hatPeak', 'hatBand'].forEach(function (name) {
         buildOne(engine, name, palette);
       });
     });

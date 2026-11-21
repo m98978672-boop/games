@@ -21,10 +21,17 @@
     RECTS.push({ x1: layout.intake[0].x - 0.62, x2: layout.intake[0].x + 0.62, y1: -6.6, y2: 6.6, id: 'intake' });
     // Стол отгрузки — компактный, чтобы не перекрывать док загрузки
     RECTS.push({ x1: 10.0, x2: 11.2, y1: -2.6, y2: 2.6, id: 'despatch' });
-    // Кабинки Ж и М: внутрь заходят, поэтому габарит — препятствие для всех
-    (layout.wc || []).forEach(function (c) {
-      RECTS.push({ x1: c.x - c.w / 2, x2: c.x + c.w / 2, y1: c.y - c.d / 2, y2: c.y + c.d / 2, id: 'wc-' + c.id });
-    });
+    // Настоящая комната: три стены и проём в четвёртой, без невидимого блока.
+    if (layout.toilet) {
+      var t = layout.toilet, x1 = t.x - t.w / 2, x2 = t.x + t.w / 2;
+      var y1 = t.y - t.d / 2, y2 = t.y + t.d / 2, wall = 0.08;
+      var doorL = t.x - t.doorWidth / 2, doorR = t.x + t.doorWidth / 2;
+      RECTS.push({ x1: x1, x2: x1 + wall, y1: y1, y2: y2, id: 'toilet-left' });
+      RECTS.push({ x1: x2 - wall, x2: x2, y1: y1, y2: y2, id: 'toilet-right' });
+      RECTS.push({ x1: x1, x2: x2, y1: y2 - wall, y2: y2, id: 'toilet-back' });
+      RECTS.push({ x1: x1, x2: doorL, y1: y1, y2: y1 + wall, id: 'toilet-front-left' });
+      RECTS.push({ x1: doorR, x2: x2, y1: y1, y2: y1 + wall, id: 'toilet-front-right' });
+    }
     // Паллета отдела тяжёлого груза
     if (layout.heavy) {
       RECTS.push({
@@ -37,7 +44,10 @@
       var k = layout.street.kiosk;
       RECTS.push({ x1: k.x - 0.9, x2: k.x + 0.9, y1: k.y - 0.8, y2: k.y + 0.8, id: 'kiosk' });
     }
-    // зона отдыха — свободный пятачок у стены, препятствием не считается
+    // Стол начальника и опоры лавки: те же габариты, что у сцены.
+    RECTS.push({ x1: -11.0, x2: -10.2, y1: 6.25, y2: 8.15, id: 'desk' });
+    RECTS.push({ x1: -7.1, x2: -5.3, y1: 7.08, y2: 7.62, id: 'bench' });
+    // Остальная зона отдыха доступна.
     return RECTS;
   }
 
@@ -150,7 +160,9 @@
     var startCell = nearestFreeCell(toCell(from.x, from.y));
     var goalCell = nearestFreeCell(toCell(to.x, to.y));
     if (!startCell || !goalCell) return null;
-    if (startCell.x === goalCell.x && startCell.y === goalCell.y) return [{ x: to.x, y: to.y }];
+    var safeGoal = insideWalk(to.x, to.y, GRID.layout) && !RECTS.some(function (r) { return pointInRect(to.x, to.y, r, 0.38); });
+    var endPoint = safeGoal ? { x: to.x, y: to.y } : fromCell(goalCell.x, goalCell.y);
+    if (startCell.x === goalCell.x && startCell.y === goalCell.y) return [{ x: endPoint.x, y: endPoint.y }];
 
     var cols = GRID.cols;
     var rows = GRID.rows;
@@ -208,7 +220,7 @@
     cells.push(startIdx);
     cells.reverse();
     var points = cells.map(function (idx) { return fromCell(idx % cols, Math.floor(idx / cols)); });
-    points.push({ x: to.x, y: to.y });
+    points.push(endPoint);
     // Сглаживание: выбрасываем точки, до которых есть прямая видимость
     var smooth = [];
     var anchor = { x: from.x, y: from.y };
@@ -322,13 +334,10 @@
       turnRate: 0,
       lastHeading: opts.heading || 0,
       safety: { fear: 0, strikes: 0, injuries: 0, grace: 0, lastRule: null, refusals: 0, lastRefusalAt: -99 },
-      // Пол — от него зависит, в какую кабинку идти
       gender: opts.gender || (String(opts.name || '').slice(-1) === 'а' ? 'ж' : 'м'),
       dead: false,
       deathCause: null,
-      inCabin: null,          // 'Ж' | 'М' — сейчас внутри кабинки
-      cabinId: null,
-      cabinDoor: null,
+      inToilet: false,
       privacy: false,         // уединённое место: снаружи не видно
       onForklift: false,      // едет на погрузчике
       techOrderId: null,
@@ -467,7 +476,7 @@
     function computePath(from, to) {
       var planned = GRID ? findPath(from, to) : null;
       if (planned && planned.length) return planned;
-      return [{ x: to.x, y: to.y }];
+      return []; // Непроходимый путь — стоим, а не идём сквозь препятствие.
     }
 
     // Поворот не мгновенный: с грузом корпус разворачивается медленнее
@@ -482,10 +491,11 @@
       if (!w.goal) return 0;
       if (!w.path || !w.path.length) w.path = computePath(w.pos, w.goal);
       var waypoint = w.path[0];
-      if (!waypoint) { w.goal = null; return 0; }
+      if (!waypoint) { w.speedNow = 0; return 0; }
       if (pathBlocked(w.pos, waypoint)) {
         w.path = computePath(w.pos, w.goal);
         waypoint = w.path[0];
+        if (!waypoint) { w.speedNow = 0; return 0; }
       }
       var dx = waypoint.x - w.pos.x;
       var dy = waypoint.y - w.pos.y;
@@ -506,10 +516,52 @@
       if (body.collapsed) factor *= 0.25;
       if (w.onForklift) factor *= 2.15;     // техника едет, а не идёт
       if (w.urgentRush) factor *= 1.32;      // побежал: заказ вот-вот просрочат
-      var speed = Math.min(dist / Math.max(dt, 1e-6), base * factor);
+      // Разгон и торможение ограничены, скорость не скачет на каждом кадре.
+      var desiredSpeed = Math.min(dist / Math.max(dt, 1e-6), base * factor);
+      var speed = Math.max(0, Math.min(desiredSpeed, w.speedNow + 3.5 * dt));
       var step = speed * dt;
-      w.pos.x += (dx / dist) * step;
-      w.pos.y += (dy / dist) * step;
+      var next = { x: w.pos.x + (dx / dist) * step, y: w.pos.y + (dy / dist) * step };
+      // Предсказуемый боковой обход: уступаем живым коллегам и занятой технике,
+      // но не закрываем себе подход к погрузчику, когда он является целью.
+      var obstacles = (lastEnv && lastEnv.workers || []).filter(function (peer) {
+        return peer.id !== w.id && peer.pos && !(peer.state && peer.state.dead) && !(peer.state && peer.state.privacy);
+      }).map(function (peer) { return { x: peer.pos.x, y: peer.pos.y, radius: 0.78 }; });
+      var vehicle = warehouse.state.forklift;
+      if (vehicle && vehicle.rider !== w.id && !w.onForklift && w.state !== 'toTech') obstacles.push({ x: vehicle.x, y: vehicle.y, radius: 1.15 });
+      var closest = null, proximity = Infinity;
+      obstacles.forEach(function (item) {
+        var d = Math.hypot(next.x - item.x, next.y - item.y);
+        if (d < item.radius && d < proximity) { closest = item; proximity = d; }
+      });
+      if (closest) {
+        var rx = w.pos.x - closest.x, ry = w.pos.y - closest.y;
+        var before = Math.hypot(rx, ry);
+        // Если уже тесно, не мешаем отходить от препятствия.
+        if (proximity < before + 0.01) {
+          var side = (dx * ry - dy * rx >= 0) ? 1 : -1;
+          var options = [side, -side].map(function (sign) {
+            var vx = dx / dist * 0.12 - dy / dist * sign * 0.96 + rx / Math.max(before, 0.001) * 0.25;
+            var vy = dy / dist * 0.12 + dx / dist * sign * 0.96 + ry / Math.max(before, 0.001) * 0.25;
+            var length = Math.hypot(vx, vy) || 1;
+            return { x: w.pos.x + vx / length * step, y: w.pos.y + vy / length * step };
+          });
+          var alternative = options.find(function (candidate) {
+            return insideWalk(candidate.x, candidate.y, layout) && !pathBlocked(w.pos, candidate, 0.30) &&
+              obstacles.every(function (item) {
+                var oldD = Math.hypot(w.pos.x - item.x, w.pos.y - item.y);
+                var newD = Math.hypot(candidate.x - item.x, candidate.y - item.y);
+                return newD >= Math.min(item.radius, oldD) - 0.002;
+              });
+          });
+          if (alternative) next = alternative;
+          else { w.speedNow = 0; return 0; }
+        }
+      }
+      if (pathBlocked(w.pos, next, 0.30) || !insideWalk(next.x, next.y, layout)) {
+        w.path = []; w.speedNow = 0; return 0;
+      }
+      w.pos.x = next.x;
+      w.pos.y = next.y;
       turnTowards(Math.atan2(dy, dx), dt, w.carryingId ? 3.2 : 6);
       w.speedNow = speed;
       w.stats.metres += step;
@@ -690,20 +742,13 @@
       { x: 7.4, y: -6.5 }, { x: 9.6, y: -6.4 },
     ];
 
-    function cabinFor(gender) {
-      var list = layout.wc || [];
-      for (var i = 0; i < list.length; i++) if (list[i].id === gender) return list[i];
-      return list[0] || null;
-    }
-
-    function goToWc() {
-      var cab = cabinFor(w.gender);
-      if (!cab) return false;
-      w.cabinId = cab.id;
-      w.cabinDoor = { x: cab.x, y: cab.y - cab.d / 2 - 0.55 };
-      setState('toWc');
-      setGoal({ x: w.cabinDoor.x, y: w.cabinDoor.y }, 'wc:' + cab.id);
-      emit('Отходит в кабинку ' + cab.id, 'info');
+    function goToToilet(warehouse) {
+      var room = layout.toilet;
+      if (!room || !warehouse || (warehouse.state.toiletOccupant && warehouse.state.toiletOccupant !== w.id)) return false;
+      warehouse.state.toiletOccupant = w.id;
+      setState('toToilet');
+      setGoal({ x: room.x, y: room.y }, 'toilet');
+      emit('Идёт в туалет', 'info');
       return true;
     }
 
@@ -760,6 +805,7 @@
 
     function die(warehouse, cause) {
       if (w.dead) return;
+      if (warehouse && warehouse.endRagdoll) warehouse.endRagdoll(w);
       w.dead = true;
       w.deathCause = cause || 'несчастный случай';
       body.deceased = true;
@@ -773,7 +819,8 @@
       w.carryingId = null;
       releaseOrder(warehouse);
       w.orderId = null;
-      w.inCabin = null;
+      w.inToilet = false;
+      if (warehouse && warehouse.state.toiletOccupant === w.id) warehouse.state.toiletOccupant = null;
       dismountTech();
       w.speedNow = 0;
       setState('dead');
@@ -790,13 +837,13 @@
       if (lastEnv && typeof lastEnv.onDeath === 'function') lastEnv.onDeath(w, w.deathCause);
     }
 
-    // Текущие нужды: кабинка, улица, техника. Работа важнее, но не навсегда.
+    // Текущие нужды: туалет, улица, техника. Работа важнее, но не навсегда.
     function updateNeeds(dt, warehouse, env, order, rng) {
       if (w.dead) return;
       w.playCooldown = Math.max(0, (w.playCooldown || 0) - dt);
       w.streetClock = (w.streetClock || 0) + dt;
       var busy = w.carryingId || order;
-      if (body.bladder > 0.84 && !busy && w.state !== 'toWc' && w.state !== 'wc') goToWc();
+      if (body.bladder > 0.84 && !busy && w.state !== 'toToilet' && w.state !== 'toilet' && w.state !== 'fromToilet') goToToilet(warehouse);
       if (!busy && w.mode === 'auto' && w.state === 'idle' &&
           w.streetClock > 75 && body.stress > 0.66) {
         goToStreet('Вышел на улицу: стресс ' + Math.round(body.stress * 100) + '%');
@@ -825,14 +872,19 @@
       opts2 = opts2 || {};
       if (warehouse) lastWarehouse = warehouse;
       if (w.dead) return { ok: false, reason: 'Рабочий погиб' };
-      if (w.inCabin && cmd !== 'auto') return { ok: false, reason: 'Рабочий в кабинке' };
+      if ((w.state === 'toToilet' || w.state === 'toilet' || w.state === 'fromToilet') && cmd !== 'auto') return { ok: false, reason: 'Рабочий занят посещением туалета' };
       switch (cmd) {
         case 'auto':
           w.mode = 'auto';
           emit('Режим: автономия нейросети', 'info');
           return { ok: true, state: w.state };
         case 'pick': {
-          w.mode = opts2.keepAuto ? w.mode : 'manual';
+          // Явный выбор в очереди не должен молча переключать на другой
+          // заказ или освобождать груз, принадлежащий другому работнику.
+          if (opts2.orderId && ((w.orderId && w.orderId !== opts2.orderId) ||
+              (w.carryingId && w.carryingId !== opts2.orderId))) {
+            return { ok: false, reason: 'Сначала завершите текущий заказ' };
+          }
           var order = null;
           if (opts2.orderId) {
             for (var i = 0; i < warehouse.state.orders.length; i++) {
@@ -841,6 +893,10 @@
           } else if (!w.carryingId && !w.orderId) {
             order = warehouse.nearestPending(w.pos);
           }
+          if (opts2.orderId && !w.orderId && !w.carryingId && order && order.status !== 'pending') {
+            return { ok: false, reason: 'Заказ уже занят или завершён' };
+          }
+          w.mode = opts2.keepAuto ? w.mode : 'manual';
           if (w.carryingId) return command('store', warehouse, opts2);
           if (w.orderId) {
             var current = activeOrder(warehouse);
@@ -920,12 +976,13 @@
           w.coopBoost = 0.25;
           emit('Подключается к бригаде', 'info');
           return { ok: true, state: w.state };
-        case 'wc':
-          w.mode = opts2.keepAuto ? w.mode : 'manual';
+        case 'toilet':
           if (w.carryingId) return { ok: false, reason: 'Сначала поставь коробку' };
+          if (!layout.toilet || !warehouse || (warehouse.state.toiletOccupant && warehouse.state.toiletOccupant !== w.id)) return { ok: false, reason: 'Туалет занят или недоступен' };
+          w.mode = opts2.keepAuto ? w.mode : 'manual';
           releaseOrder(warehouse);
           if (w.onForklift) dismountTech();
-          if (!goToWc()) return { ok: false, reason: 'Кабинки нет' };
+          if (!goToToilet(warehouse)) return { ok: false, reason: 'Туалет занят или недоступен' };
           return { ok: true, state: w.state };
         case 'street':
           w.mode = opts2.keepAuto ? w.mode : 'manual';
@@ -1023,7 +1080,7 @@
         teamSupport: w.decision.coop,
         reward: 0,
         eating: w.state === 'rest',
-        toilet: w.state === 'wc',
+        toilet: w.state === 'toilet',
         medical: Boolean(w.medicalAid),
       });
 
@@ -1032,6 +1089,7 @@
       // 3. Обморок
       if (body.collapsed && w.state !== 'down') {
         setState('down');
+        if (warehouse.beginRagdoll) warehouse.beginRagdoll(w);
         w.timers.down = 9;
         if (w.carryingId && order) {
           warehouse.drop(order, 0.35, w.pos.x, w.pos.y);
@@ -1063,9 +1121,11 @@
 
       // 4. Автономия: решения о задачах
       if (w.mode === 'auto' && !body.collapsed) {
-        var NEED_STATES = { toRest: 1, rest: 1, toWc: 1, wc: 1, toStreet: 1, street: 1, toTech: 1, play: 1, toMeet: 1, meet: 1 };
+        var NEED_STATES = { toRest: 1, rest: 1, toToilet: 1, toilet: 1, fromToilet: 1, toStreet: 1, street: 1, toTech: 1, play: 1, toMeet: 1, meet: 1 };
         if (!w.orderId && !NEED_STATES[w.state]) {
-          var wantsRest = w.decision.rest > 0.62 && body.energy < 0.48 + 0.1 * (1 - w.traits.endurance);
+          var wantsRest = body.energy < 0.24 || body.fatigue > 0.83 ||
+            (model.injuryLevel(body) > 0.55 && body.energy < 0.48) ||
+            (w.decision.rest > 0.62 && body.energy < 0.48 + 0.1 * (1 - w.traits.endurance));
           if (wantsRest) {
             setState('toRest');
             setGoal({ x: layout.restArea.x + (w.id.length % 3 - 1) * 0.5, y: layout.restArea.y }, 'rest');
@@ -1099,37 +1159,48 @@
           w.speedNow = 0;
           w.timers.down -= dt;
           if (w.timers.down <= 0 && !body.collapsed) {
-            setState('idle');
-            setGoal(null);
+            if (w.ragdoll && w.ragdoll.pelvis) {
+              var p = w.ragdoll.pelvis;
+              if (insideWalk(p.x, p.z, layout) && !pathBlocked(w.pos, { x: p.x, y: p.z }, 0.3)) { w.pos.x = p.x; w.pos.y = p.z; }
+            }
+            if (warehouse.endRagdoll) warehouse.endRagdoll(w);
+            if (warehouse.state.toiletOccupant === w.id) {
+              setState('fromToilet');
+              setGoal({ x: layout.toilet.x, y: layout.toilet.y - layout.toilet.d / 2 - 0.7 }, 'toilet-exit');
+            } else { setState('idle'); setGoal(null); }
             emit('Поднялся и вернулся в строй', 'warn');
           }
           break;
         }
-        case 'toWc': {
+        case 'toToilet': {
           if (w.goal) stepTowards(dt, warehouse, 0.95);
           if (!w.goal) {
-            var cab = cabinFor(w.gender);
-            w.inCabin = w.cabinId || w.gender;
-            if (cab) { w.pos.x = cab.x; w.pos.y = cab.y; }
-            w.timers.wc = 0;
+            w.inToilet = true;
+            w.timers.toilet = 0;
             w.resting = false;
-            setState('wc');
-            emit('Занял кабинку ' + w.inCabin, 'info');
+            setState('toilet');
+            emit('Вошёл в туалет', 'info');
           }
           break;
         }
-        case 'wc': {
+        case 'toilet': {
           w.speedNow = 0;
-          w.timers.wc = (w.timers.wc || 0) + dt;
-          var needWc = 9 + (w.id.length % 4) * 2.4;
-          if (w.timers.wc >= needWc) {
-            var cabOut = cabinFor(w.gender);
-            w.inCabin = null;
-            w.timers.wc = 0;
-            if (cabOut) { w.pos.x = cabOut.x; w.pos.y = cabOut.y - cabOut.d / 2 - 0.62; }
+          w.timers.toilet = (w.timers.toilet || 0) + dt;
+          if (w.timers.toilet >= 9 + (w.id.length % 4) * 2.4) {
+            setState('fromToilet');
+            setGoal({ x: layout.toilet.x, y: layout.toilet.y - layout.toilet.d / 2 - 0.7 }, 'toilet-exit');
+          }
+          break;
+        }
+        case 'fromToilet': {
+          if (w.goal) stepTowards(dt, warehouse, 0.95);
+          if (layout.toilet && w.pos.y < layout.toilet.y - layout.toilet.d / 2 - 0.1) w.inToilet = false;
+          if (!w.goal) {
+            w.inToilet = false;
+            w.timers.toilet = 0;
+            if (warehouse.state.toiletOccupant === w.id) warehouse.state.toiletOccupant = null;
             setState('idle');
-            setGoal(null);
-            emit('Вернулся из кабинки', 'info');
+            emit('Вышел из туалета', 'info');
           }
           break;
         }
@@ -1436,8 +1507,8 @@
           setState('idle');
       }
 
-      // 6. Расталкивание и границы (в кабинке рабочего не трогаем)
-      if (!w.inCabin) pushOutOfRects(w.pos, layout);
+      // 6. Столкновения со стенами и другими работниками.
+      pushOutOfRects(w.pos, layout);
       for (var i = 0; i < allWorkers.length; i++) {
         var other = allWorkers[i];
         if (other.id === w.id) continue;
@@ -1446,8 +1517,10 @@
         var dist = Math.hypot(dx, dy);
         if (dist > 0.001 && dist < 0.75) {
           var push = (0.75 - dist) * 0.5;
-          w.pos.x += (dx / dist) * push;
-          w.pos.y += (dy / dist) * push;
+          var separated = { x: w.pos.x + (dx / dist) * push, y: w.pos.y + (dy / dist) * push };
+          if (insideWalk(separated.x, separated.y, layout) && !pathBlocked(w.pos, separated, 0.30)) {
+            w.pos.x = separated.x; w.pos.y = separated.y;
+          }
         }
       }
 
@@ -1526,6 +1599,16 @@
         var urgencyScore = (1 - Math.min(1, timeLeft / 100)) * (0.6 + 1.8 * urgency);
         var massScore = -Math.max(0, o.mass - model.carryCapacity(body)) * 0.12;
         var s = urgencyScore * 6 + o.priority * (1 + 2 * urgency) - dist * 0.14 - o.damage * 2 + massScore;
+        // Отдаём близкий обычный заказ свободному, здоровому коллеге; срочные
+        // грузы всё равно перевешивают этот штраф и не остаются без исполнителя.
+        var closer = allWorkers.some(function (peer) {
+          if (peer.id === w.id || !peer.body || !peer.pos || peer.orderId || peer.carryingId ||
+              peer.mode !== 'auto' || peer.body.collapsed || peer.body.energy < 0.3 || peer.body.fatigue > 0.8 ||
+              (peer.state && (peer.state.dead || peer.state.state !== 'idle'))) return false;
+          return Math.hypot(o.x - peer.pos.x, o.y - peer.pos.y) + 2.5 < dist &&
+            (o.mass <= model.safeLift(peer.body) || !techNeeded);
+        });
+        if (closer) s -= Math.min(2.5, (dist - 2.5) * 0.22) * Math.min(1, timeLeft / 25);
         if (o.truckId) s += 1.8; // фуру не заставишь ждать
         if (o.mass > model.safeLift(body)) s -= 1.2; // тяжесть — техникой, но не в первую очередь
         if (o.heavy) s += 1.4;                      // тяжёлый груз не должен лежать до просрочки

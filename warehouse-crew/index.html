@@ -4,13 +4,13 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Северный узел — склад с живыми рабочими</title>
-<meta name="description" content="Склад-симулятор на движке RatCore: три рабочих с обученными нейросетями-мозгами, органами и гормонами. Управляй бригадой с пульта: 3D-вид от третьего лица и тактический вид сверху, инспектор тела с разрезом." />
+<meta name="description" content="Склад-симулятор на движке RatCore: бригада до восьми рабочих с нейросетями-мозгами, органами и гормонами. Управляй бригадой с пульта: 3D-вид от третьего лица и тактический вид сверху, инспектор тела с разрезом." />
 <meta name="theme-color" content="#0b0d0c" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="icon" href="cover.svg" type="image/svg+xml" />
-<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="style.css?v=20261121-4" />
 </head>
 <body data-sheet="hidden">
 <!-- Иконки: одна спрайт-карта на всю страницу (никаких CDN и шрифтов) -->
@@ -35,7 +35,7 @@
 
 <!-- Игровое поле -->
 <div id="stage">
-  <canvas id="scene" aria-label="Склад: стеллажи, приёмка и трое рабочих"></canvas>
+  <canvas id="scene" aria-label="Склад: стеллажи, приёмка и рабочая бригада"></canvas>
   <div id="tactical-grid" class="tactical-grid" aria-hidden="true"></div>
   <div id="vignette" class="vignette" aria-hidden="true"></div>
   <div id="markers" class="markers" aria-hidden="true"></div>
@@ -63,6 +63,7 @@
     <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
     <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза"><svg class="ico"><use href="#i-pause"/></svg></button>
     <button id="btn-camera" class="icon-btn" title="Сменить вид (C)" aria-label="Сменить вид"><svg class="ico"><use href="#i-camera"/></svg></button>
+    <button id="btn-shop" class="shop-shortcut" type="button" title="Открыть магазин">✚ <span>Магазин</span></button>
     <button id="btn-map" class="icon-btn" title="2D-вид сверху (T)" aria-label="2D-вид сверху"><span class="map-ico">2D</span></button>
     <button id="btn-inspector" class="icon-btn" title="Инспектор тела (I)" aria-label="Инспектор тела"><svg class="ico"><use href="#i-heart"/></svg></button>
     <button id="btn-sound" class="icon-btn" title="Звук (M)" aria-label="Звук"><svg class="ico"><use href="#i-sound"/></svg></button>
@@ -120,7 +121,7 @@
         <button class="cmd" data-command="wait"><b>Ждать указаний</b><i>освободить заказ</i></button>
         <button class="cmd" data-command="auto"><b>Автономия</b><i>решает нейросеть</i></button>
         <button class="cmd" data-command="help"><b>Помочь бригаде</b><i>срочные заказы</i></button>
-        <button class="cmd" data-command="wc"><b>В кабинку</b><i>снять нужду</i></button>
+        <button class="cmd" data-command="toilet"><b>В туалет</b><i>снять нужду</i></button>
         <button class="cmd" data-command="street"><b>На улицу</b><i>передохнуть</i></button>
         <button class="cmd" data-command="play"><b>Покататься</b><i>погрузчик</i></button>
         <button class="cmd" data-command="meet"><b>Уединиться</b><i>тихое место</i></button>
@@ -140,8 +141,13 @@
     </div>
 
     <div class="ctl-group">
-      <div class="ctl-label">Магазин смены <span id="shop-balance" class="queue-count">0</span></div>
+      <div id="shop-heading" class="ctl-label">Магазин смены <span id="shop-balance" class="queue-count">0</span></div>
       <div id="shop-list" class="shop-list">
+        <button class="shop-card" type="button" data-buy="worker">
+          <span class="shop-mark">＋</span>
+          <span class="shop-text"><b>Нанять рабочего</b><i>дополнительный участник бригады, до 8</i></span>
+          <span class="shop-price">80</span>
+        </button>
         <button class="shop-card" type="button" data-buy="medic">
           <span class="shop-mark">✚</span>
           <span class="shop-text"><b>Медик</b><i>лечит травмы и поддерживает здоровье</i></span>
@@ -201,24 +207,26 @@
 <script src="../shared/engine.js"></script>
 <script src="../shared/engine-bootstrap.js" defer></script>
 <script src="../shooter/three.min.js"></script>
-<script src="../ratcore/ratcore.bundle.js"></script>
+<script src="../ratcore/ratcore.bundle.js?v=20261121-4"></script>
 <!-- Мозги «в коде»: нужны, чтобы игра шла и без fetch (открытие с диска, file://) -->
 <script src="data/brain-data.js"></script>
-<script src="src/sim/model.js"></script>
-<script src="src/ai/brain-net.js"></script>
-<script src="src/sim/warehouse.js"></script>
-<script src="src/sim/worker.js"></script>
-<script src="src/config.js"></script>
-<script src="src/util.js"></script>
-<script src="src/layout.js"></script>
-<script src="src/save.js"></script>
-<script src="src/audio.js"></script>
-<script src="src/render/meshes.js"></script>
-<script src="src/render/world.js"></script>
-<script src="src/render/bodyview.js"></script>
-<script src="src/render.js"></script>
-<script src="src/game.js"></script>
-<script src="src/ui.js"></script>
-<script src="src/main.js"></script>
+<script src="src/sim/model.js?v=20261121-4"></script>
+<script src="src/ai/brain-net.js?v=20261121-4"></script>
+<script src="vendor/cannon-es.min.js"></script>
+<script src="src/sim/physics.js?v=20261121-4"></script>
+<script src="src/sim/warehouse.js?v=20261121-4"></script>
+<script src="src/sim/worker.js?v=20261121-4"></script>
+<script src="src/config.js?v=20261121-4"></script>
+<script src="src/util.js?v=20261121-4"></script>
+<script src="src/layout.js?v=20261121-4"></script>
+<script src="src/save.js?v=20261121-4"></script>
+<script src="src/audio.js?v=20261121-4"></script>
+<script src="src/render/meshes.js?v=20261121-4"></script>
+<script src="src/render/world.js?v=20261121-4"></script>
+<script src="src/render/bodyview.js?v=20261121-4"></script>
+<script src="src/render.js?v=20261121-4"></script>
+<script src="src/game.js?v=20261121-4"></script>
+<script src="src/ui.js?v=20261121-4"></script>
+<script src="src/main.js?v=20261121-4"></script>
 </body>
 </html>
