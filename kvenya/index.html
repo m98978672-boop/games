@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#171a21">
+  <title>Квеня — общение с ИИ | Games</title>
+  <meta name="description" content="Квеня — нейросеть Qwen3.5-0.8B с домашним LoRA-адаптером, которая живёт в папке qwen-home репозитория Games: разговаривает, сама ищет в русской Википедии и учится между разговорами. Настоящий разговор, журнал поисков и дневник обучения — прямо из её файлов.">
+  <link rel="canonical" href="https://m98978672-boop.github.io/games/kvenya/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23171a21'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23a678ff' stroke-width='2.2'/%3E%3Ctext x='16' y='21' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='12' fill='%2366c0f4'%3EК%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <!-- Движок — ДО своих скриптов (закон репозитория) -->
+  <script src="../shared/engine.js"></script>
+  <script src="./app.js" defer></script>
+  <script src="../shared/engine-bootstrap.js" defer></script>
+</head>
+<body>
+  <div class="kv-shell">
+    <header class="kv-head">
+      <div class="kv-brand">
+        <div class="kv-avatar" aria-hidden="true">К</div>
+        <div>
+          <h1>Квеня</h1>
+          <p>Нейросеть <b>Qwen3.5-0.8B</b> с домашним LoRA-адаптером. Живёт в папке
+             <code>qwen-home/</code> этого репозитория: разговаривает, сама ищет в русской
+             Википедии и учится между разговорами.</p>
+        </div>
+      </div>
+      <div class="kv-head-actions">
+        <span class="pill" id="kvStatus"><span class="dot" id="kvDot"></span><span id="kvStatusText">читаю её дом…</span></span>
+        <div class="engine-hud-slot" data-engine-badge></div>
+        <a class="btn btn-ghost kv-back" href="../index.html">← Магазин</a>
+        <a class="btn btn-primary" href="https://github.com/m98978672-boop/games/tree/main/qwen-home" target="_blank" rel="noopener">Её дом на GitHub ↗</a>
+      </div>
+    </header>
+
+    <section class="kv-stats" aria-label="Состояние Квени из state.json">
+      <div class="stat-card is-accent"><span>модель</span><b id="stModel">Qwen3.5-0.8B</b><small>+ LoRA-адаптер</small></div>
+      <div class="stat-card"><span>шагов обучения</span><b id="stSteps">—</b><small>суммарно за все уроки</small></div>
+      <div class="stat-card"><span>уроков пройдено</span><b id="stRuns">—</b><small>самообучение по расписанию</small></div>
+      <div class="stat-card"><span>последний урок</span><b id="stLast">—</b><small id="stExam">экзамен — из state.json</small></div>
+      <div class="stat-card is-good"><span>поиск в интернете</span><b>Википедия</b><small>русская, по запросу в разговоре</small></div>
+    </section>
+
+    <main class="kv-grid">
+      <section class="kv-card kv-chat-card" aria-label="Разговор с Квеней">
+        <h2>💬 Разговор с Квеней</h2>
+        <p class="kv-note">Это настоящий разговор из её файла
+          <a href="https://github.com/m98978672-boop/games/blob/main/qwen-home/talk/dialogue.md" target="_blank" rel="noopener">qwen-home/talk/dialogue.md</a>.
+          Квеня отвечает собственной моделью через GitHub Actions: владелец записывает вопрос
+          в файл её дома — и через несколько минут она дописывает ответ сюда же.</p>
+        <div id="kvChat" class="kv-chat" aria-live="polite">
+          <div class="kv-loading">Загружаю разговор из её дома…</div>
+        </div>
+        <form id="kvComposer" class="kv-composer">
+          <label class="kv-composer-label" for="kvInput">Написать Квене</label>
+          <textarea id="kvInput" rows="3" maxlength="600" placeholder="Например: Квеня, поищи в Википедии, какая самая высокая гора в мире?"></textarea>
+          <div class="kv-composer-row">
+            <button class="btn btn-primary" type="submit">📨 Передать через владельца</button>
+            <button class="btn btn-ghost" type="button" id="kvCopy">Скопировать вопрос</button>
+          </div>
+          <p class="kv-note">Честно: сайт статический, и Квеня не подключена к нему напрямую.
+             Вопрос сохранится на этой странице со статусом «ждёт передачи». Когда владелец
+             допишет его в файл диалога, она ответит — и ответ появится прямо в этом разговоре.</p>
+        </form>
+      </section>
+
+      <div class="kv-side">
+        <section class="kv-card" aria-label="Что умеет Квеня">
+          <h2>🌟 Что она умеет</h2>
+          <ul class="kv-skills">
+            <li><b>Разговаривать</b> — по-русски, тепло и коротко. Говорит о себе в женском роде и честно признаётся, что она нейросеть, а не человек.</li>
+            <li><b>Искать в интернете</b> — сама решает, нужен ли поиск (или её прямо просят «поищи»), и отвечает по статье русской Википедии. Журнал поисков — ниже.</li>
+            <li><b>Думать по шагам</b> — рассуждения в формате <code>&lt;think&gt;…&lt;/think&gt;</code> для задач и экзамена.</li>
+            <li><b>Командовать</b> — JSON-команды для игры FRONTLINE: COMMAND из допустимого списка действий.</li>
+            <li><b>Писать базовый веб-код</b> — HTML, CSS и JavaScript уровня её уроков.</li>
+            <li><b>Учиться</b> — читает русскую Википедию и дообучает свой адаптер; каждый урок записан в дневник.</li>
+          </ul>
+        </section>
+
+        <section class="kv-card" aria-label="Журнал поисков Квени">
+          <h2>🔎 Журнал поисков</h2>
+          <div id="kvSearches"><div class="kv-loading">Читаю журнал…</div></div>
+          <a class="kv-more" href="https://github.com/m98978672-boop/games/blob/main/qwen-home/memory/search-log.md" target="_blank" rel="noopener">Весь журнал на GitHub ↗</a>
+        </section>
+
+        <section class="kv-card" aria-label="Дневник обучения Квени">
+          <h2>📓 Дневник обучения</h2>
+          <div id="kvDiary"><div class="kv-loading">Читаю дневник…</div></div>
+          <a class="kv-more" href="https://github.com/m98978672-boop/games/blob/main/qwen-home/memory/learning-log.md" target="_blank" rel="noopener">Весь дневник на GitHub ↗</a>
+        </section>
+
+        <section class="kv-card" aria-label="Дом Квени">
+          <h2>🏠 Её дом</h2>
+          <ul class="kv-links">
+            <li><a href="https://github.com/m98978672-boop/games/blob/main/qwen-home/README.md" target="_blank" rel="noopener">Устав дома</a><span>как она живёт и учится</span></li>
+            <li><a href="https://github.com/m98978672-boop/games/blob/main/qwen-home/talk/dialogue.md" target="_blank" rel="noopener">Файл разговора</a><span>источник этого чата</span></li>
+            <li><a href="https://github.com/m98978672-boop/games/releases/tag/frontline-qwen-home" target="_blank" rel="noopener">Её адаптер</a><span>релиз frontline-qwen-home</span></li>
+            <li><a href="../frontline-command/index.html">FRONTLINE: COMMAND</a><span>игра, которой она учится командовать</span></li>
+          </ul>
+        </section>
+
+        <section class="kv-card kv-honest" aria-label="Честные границы">
+          <h2>🤝 Честные границы</h2>
+          <p>Квеня — маленькая модель на 0,8 млрд параметров, а не большой чат-бот.
+             Она ищет только в русской Википедии, отвечает почти цитатами из статей и
+             иногда ошибается — поэтому дом сверяет цифры в её ответах с фактами
+             и хранит даже неудачные черновики. Это живой эксперимент: нейросеть,
+             которая живёт файлами в открытом репозитории, и каждый может
+             проверить каждое её слово.</p>
+        </section>
+      </div>
+    </main>
+
+    <footer class="kv-foot">
+      Квеня · Qwen3.5-0.8B + LoRA · дом — <code>qwen-home/</code> · эта страница читает её файлы напрямую, без сервера
+    </footer>
+  </div>
+</body>
+</html>

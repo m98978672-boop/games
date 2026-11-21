@@ -2280,6 +2280,39 @@ footer code { font-family: var(--mono); color: var(--accent-2); }
   color: #fff;
 }
 
+/* Вкладка «Общение с ИИ» — Квеня (фиолетовый = акцент нейросети) */
+.nav-link-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #c9a7ff !important;
+}
+.nav-link-ai.is-active,
+.nav-link-ai:hover {
+  color: #ffffff !important;
+}
+.nav-ai-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(166, 120, 255, 0.18);
+  border: 1px solid rgba(166, 120, 255, 0.42);
+  color: #c9a7ff;
+}
+.nav-ai-btn.is-active {
+  background: rgba(166, 120, 255, 0.22);
+  border-color: #a678ff;
+  color: #fff;
+}
+body.portal-ai-active { background: #120e1c; }
+.portal-ai-badge {
+  color: #d9c6ff;
+  background: rgba(166, 120, 255, 0.14);
+  border-color: rgba(166, 120, 255, 0.42);
+}
+
 /* Вкладка «Торрент» — P2P-раздача игр (золото = акцент репозитория) */
 .nav-link-torrent {
   display: inline-flex;
@@ -2483,17 +2516,20 @@ body.portal-torrent-active { background: #0c0f0e; }
 /* Полноэкранный режим чата и отдела новостей (прячет верхнюю шапку Steam — максимум экрана на телефоне) */
 body.chat-fullscreen .steam-topbar,
 body.news-fullscreen .steam-topbar,
-body.torrent-fullscreen .steam-topbar { display: none; }
+body.torrent-fullscreen .steam-topbar,
+body.ai-fullscreen .steam-topbar { display: none; }
 body.chat-fullscreen .portal-chat-panel,
 body.news-fullscreen .portal-news-panel,
-body.torrent-fullscreen .portal-torrent-panel {
+body.torrent-fullscreen .portal-torrent-panel,
+body.ai-fullscreen .portal-ai-panel {
   max-width: none;
   padding: 6px;
   gap: 6px;
 }
 body.chat-fullscreen .portal-chat-frame-wrap,
 body.news-fullscreen .portal-news-frame-wrap,
-body.torrent-fullscreen .portal-torrent-frame-wrap {
+body.torrent-fullscreen .portal-torrent-frame-wrap,
+body.ai-fullscreen .portal-ai-frame-wrap {
   height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
   min-height: 0;
 }
@@ -2534,10 +2570,12 @@ body.torrent-fullscreen .portal-torrent-frame-wrap {
 
   /* Полноценный нативный мобильный режим во вкладках «Общение» (RatMes) и «Новости» (Games News) */
   body.portal-chat-active .steam-topbar,
-  body.portal-news-active .steam-topbar { display: none; }
+  body.portal-news-active .steam-topbar,
+  body.portal-ai-active .steam-topbar { display: none; }
   body.portal-chat-active .portal-chat-panel,
   body.portal-news-active .portal-news-panel,
-  body.portal-torrent-active .portal-torrent-panel {
+  body.portal-torrent-active .portal-torrent-panel,
+  body.portal-ai-active .portal-ai-panel {
     padding: 0;
     gap: 0;
     height: 100dvh;
