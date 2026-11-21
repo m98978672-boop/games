@@ -68,6 +68,7 @@ func _ready() -> void:
 	gun.get_node("RightHand/Sleeve").hide()
 	left_arm = RazlomArmRig.new(camera)
 	right_arm = RazlomArmRig.new(camera)
+	sync_weapon_state()
 	light = SpotLight3D.new()
 	light.position = Vector3(0.12, -0.1, -0.15)
 	light.light_color = Color("dce4ba")
@@ -117,7 +118,10 @@ func _physics_process(delta: float) -> void:
 	var input := Input.get_vector("left", "right", "forward", "back")
 	if game.mobile_mode and is_instance_valid(game.touch_ui):
 		input = (input + game.touch_ui.movement).limit_length(1)
-	aiming = Input.is_action_pressed("aim") and game.state.left_arm_wound < 30 and reflex_time <= 0
+	if Input.is_action_just_pressed("aim"):
+		toggle_aim()
+	if not game.state.rifle_owned or game.state.left_arm_wound >= 30 or reflex_time > 0:
+		aiming = false
 	var running: bool = (Input.is_action_pressed("sprint") or (game.mobile_mode and input.length() > 0.95)) and input.length() > 0.1 and game.state.stamina > 5 and not aiming and not crouched
 	var speed := 6.6 if running else 3.8
 	if aiming:
@@ -243,10 +247,28 @@ func advance_touch_look(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	if is_instance_valid(gun):
-		left_arm.solve(Vector3(-0.18, -0.28, 0.02), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
-		right_arm.solve(Vector3(0.22, -0.28, 0.04), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
+		if game.state.rifle_owned:
+			left_arm.solve(Vector3(-0.18, -0.28, 0.02), camera.to_local(gun.get_node("LeftHand").global_position), -1.0)
+			right_arm.solve(Vector3(0.22, -0.28, 0.04), camera.to_local(gun.get_node("RightHand").global_position), 1.0)
+		else:
+			left_arm.solve(Vector3(-0.18, -0.28, 0.02), Vector3(-0.23, -0.31, -0.36), -1.0)
+			right_arm.solve(Vector3(0.22, -0.28, 0.04), Vector3(0.23, -0.31, -0.36), 1.0)
 	if game.mobile_mode and not game.ended:
 		advance_touch_look(delta)
+
+func sync_weapon_state() -> void:
+	var owned: bool = game.state.rifle_owned
+	gun.visible = owned
+	left_arm.set_fist_mode(not owned)
+	right_arm.set_fist_mode(not owned)
+	if not owned:
+		aiming = false
+
+func toggle_aim() -> void:
+	if not game.state.rifle_owned or game.state.left_arm_wound >= 30 or reflex_time > 0:
+		aiming = false
+		return
+	aiming = not aiming
 
 func on_shot() -> void:
 	if game.quests.scan_time > 0:
@@ -307,7 +329,7 @@ func sample_shot_direction(rng: RandomNumberGenerator) -> Vector3:
 	return (-camera.global_basis.z + camera.global_basis.x * cos(angle) * radius + camera.global_basis.y * sin(angle) * radius).normalized()
 
 func can_fire() -> bool:
-	return not game.ended and game.state.health > 0 and reflex_time <= 0 and game.state.right_arm_wound < 60
+	return game.state.rifle_owned and not game.ended and game.state.health > 0 and reflex_time <= 0 and game.state.right_arm_wound < 60
 
 func begin_death() -> void:
 	gun.hide()

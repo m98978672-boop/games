@@ -31,6 +31,18 @@ func run_tests() -> void:
 	var player = game.player
 	player.position = Vector3(45, 0.3, 40)
 	player.rotation = Vector3.ZERO
+	game.world_rng.seed = 20261119
+	var lowest_target := INF
+	var highest_target := -INF
+	var lateral_targets := 0
+	for i in range(240):
+		var sample: Vector3 = game.sample_enemy_aim_point()
+		var local_sample: Vector3 = player.to_local(sample)
+		lowest_target = minf(lowest_target, local_sample.y)
+		highest_target = maxf(highest_target, local_sample.y)
+		if absf(local_sample.x) > 0.20:
+			lateral_targets += 1
+	check(lowest_target < 0.8 and highest_target > 1.1 and highest_target < 1.35 and lateral_targets > 20, "Enemy aim naturally varies over torso, limbs and left/right without targetting head height")
 	player.receive_bullet(player.to_global(Vector3(0, 0.4, 0)), Vector3(45, 1.8, 0))
 	check(game.state.health > 0 and game.state.health < 100, "Leg hit wounds rather than instant death")
 	check(game.state.leg_wound > 0 and game.state.pain > 0, "Leg wound and pain persist")

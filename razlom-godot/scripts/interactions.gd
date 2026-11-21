@@ -29,6 +29,7 @@ func spawn_shelter(parent: Node3D) -> void:
 	parent.add_child(courier)
 	courier.position = Vector3(-10, 0.2, 12)
 	var courier_model := RazlomArt.humanoid(courier)
+	RazlomArt.add_actor_hands(courier_model)
 	courier_model.get_node("Weapon").hide()
 	courier_motion = RazlomActorMotion.new(courier_model)
 	courier_model.rotation.y = PI * 0.5

@@ -110,9 +110,11 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			var eye := box(head, Vector3(side * 0.085, 0.015, -0.178), Vector3(0.065, 0.035, 0.018), material(Color("e5ded0")))
 			eye.name = "EyeL" if side < 0 else "EyeR"
 			var iris_color := Color("718c78") if medic else Color("556d5b")
-			orb(eye, Vector3(0, 0, -0.012), Vector3(0.34, 0.43, 0.42), material(iris_color), "Iris")
-			orb(eye, Vector3(0, 0, -0.016), Vector3(0.17, 0.24, 0.2), eye_mat, "Pupil")
-			orb(eye, Vector3(-0.012, 0.009, -0.019), Vector3(0.07, 0.08, 0.08), material(Color("fff4df")), "Catchlight")
+			# These are deliberately tiny, flat details fitted inside the eye socket.
+			# The old values were treated as world scale, making two giant egg-shaped eyes.
+			orb(eye, Vector3(0, 0, -0.014), Vector3(0.022, 0.026, 0.006), material(iris_color), "Iris")
+			orb(eye, Vector3(0, 0, -0.018), Vector3(0.010, 0.016, 0.004), eye_mat, "Pupil")
+			orb(eye, Vector3(-0.006, 0.007, -0.021), Vector3(0.004, 0.005, 0.002), material(Color("fff4df")), "Catchlight")
 			box(head, Vector3(side * 0.085, 0.065, -0.18), Vector3(0.07, 0.012 if medic else 0.018, 0.018), material(Color("574533")))
 			if medic:
 				orb(head, Vector3(side * 0.18, -0.005, -0.13), Vector3(0.075, 0.055, 0.035), material(Color("c58d83")), "SoftCheek")
@@ -171,6 +173,28 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 		orb(root, Vector3(0, 1.27, -0.2), Vector3(0.025, 0.038, 0.012), material(Color("d0ad69")), "Pendant").reparent(torso, true)
 		for side in [-1, 1]:
 			box(root, Vector3(side * 0.32, 0.91, -0.08), Vector3(0.06, 0.09, 0.24), teal).reparent(torso, true)
+	if medic:
+		add_actor_hands(root, true)
+
+static func add_actor_hands(root: Node3D, bare_hands: bool = false) -> void:
+	var hand_mat := material(Color("b99978") if bare_hands else Color("39463f"), "")
+	var cuff_mat := material(Color("e0e7d5") if bare_hands else Color("65756b"), "cloth")
+	for side in ["ArmL", "ArmR"]:
+		var arm := root.get_node_or_null(NodePath(side)) as Node3D
+		if arm == null or arm.has_node("CharacterHand"):
+			continue
+		var hand := Node3D.new()
+		hand.name = "CharacterHand"
+		hand.position = Vector3(0, -0.32, -0.015)
+		arm.add_child(hand)
+		orb(hand, Vector3(0, -0.005, -0.012), Vector3(0.072, 0.085, 0.045), hand_mat, "Palm")
+		box(hand, Vector3(0, 0.065, 0), Vector3(0.13, 0.055, 0.16), cuff_mat)
+		for i in range(4):
+			var x := -0.045 + i * 0.03
+			orb(hand, Vector3(x, -0.072, -0.018), Vector3(0.018, 0.052, 0.022), hand_mat, "Finger%dA" % i)
+			orb(hand, Vector3(x, -0.115, -0.03), Vector3(0.016, 0.042, 0.02), hand_mat, "Finger%dB" % i)
+		var thumb := orb(hand, Vector3(-0.075, -0.025, -0.005), Vector3(0.026, 0.048, 0.024), hand_mat, "Thumb")
+		thumb.rotation.z = -0.55
 
 static func protection_pickup(parent: Node3D, helmet: bool) -> void:
 	var canvas := material(Color("606c5c"), "cloth")
