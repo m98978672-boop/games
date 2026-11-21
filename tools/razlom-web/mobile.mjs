@@ -42,14 +42,6 @@ try{
  await tapRect(await page.evaluate(()=>window.__razlomStatus.startButton));
  await page.waitForFunction(()=>window.__razlomStatus.started && !window.__razlomStatus.paused);
  await check('Start is tappable without keyboard or pointer lock',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.touch.visible),true));
- const before=await page.evaluate(()=>window.__razlomStatus.position);
- const origin=await page.evaluate(()=>window.__razlomStatus.touch.origin);
- await dispatch('touchStart',[await point(origin[0],origin[1])]);
- await dispatch('touchMove',[await point(origin[0],origin[1]-52)]);
- await page.waitForTimeout(650);
- await dispatch('touchEnd',[]);
- await page.waitForTimeout(400);
- await check('Virtual stick moves real physics player',async()=>{const a=await page.evaluate(()=>window.__razlomStatus.position);assert.ok(Math.hypot(a[0]-before[0],a[2]-before[2])>.2);});
  const view=await page.evaluate(()=>window.__razlomStatus.view);
  const yaw=await page.evaluate(()=>window.__razlomStatus.yaw);
  await dispatch('touchStart',[await point(view[0]*.6,view[1]*.4)]);
@@ -57,20 +49,15 @@ try{
  await dispatch('touchEnd',[]);
  await page.waitForTimeout(450);
  await check('Right-side drag turns the camera',async()=>assert.ok(Math.abs(await page.evaluate(()=>window.__razlomStatus.yaw)-yaw)>.03));
- // Turn back toward the starter rifle on the shelter wall, then tap down toward it.
- // This captures the equipped first-person view instead of only testing bare hands.
- for(let i=0;i<5;i++){
+ // At the spawn point, turn to the wall rifle and tilt slightly down before
+ // moving away from the shelter; capture the actual equipped view on mobile.
+ for(let i=0;i<3;i++){
   await dispatch('touchStart',[await point(150,280)]);
   await dispatch('touchMove',[await point(330,280)]);
   await page.waitForTimeout(90);
   await dispatch('touchEnd',[]);
   await page.waitForTimeout(120);
  }
- await dispatch('touchStart',[await point(150,280)]);
- await dispatch('touchMove',[await point(187,280)]);
- await page.waitForTimeout(100);
- await dispatch('touchEnd',[]);
- await page.waitForTimeout(120);
  await dispatch('touchStart',[await point(150,280)]);
  await dispatch('touchMove',[await point(150,330)]);
  await page.waitForTimeout(120);
@@ -80,6 +67,14 @@ try{
  try{await page.waitForFunction(()=>window.__razlomStatus?.rifleOwned,null,{timeout:10000});}
  catch(error){throw new Error(`Touch rifle pickup failed: ${JSON.stringify(await page.evaluate(()=>window.__razlomStatus))}`,{cause:error});}
  await check('Touch interaction equips the actual shelter rifle',async()=>assert.equal(await page.evaluate(()=>window.__razlomStatus.rifleOwned),true));
+ const before=await page.evaluate(()=>window.__razlomStatus.position);
+ const origin=await page.evaluate(()=>window.__razlomStatus.touch.origin);
+ await dispatch('touchStart',[await point(origin[0],origin[1])]);
+ await dispatch('touchMove',[await point(origin[0],origin[1]+52)]);
+ await page.waitForTimeout(650);
+ await dispatch('touchEnd',[]);
+ await page.waitForTimeout(400);
+ await check('Virtual stick moves real physics player',async()=>{const a=await page.evaluate(()=>window.__razlomStatus.position);assert.ok(Math.hypot(a[0]-before[0],a[2]-before[2])>.2);});
  const ammo=await page.evaluate(()=>window.__razlomStatus.ammo);
  const hasRifle=await page.evaluate(()=>window.__razlomStatus.rifleOwned);
  await tapRect(await page.evaluate(()=>window.__razlomStatus.touch.zones.fire));
