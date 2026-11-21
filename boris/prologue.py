@@ -68,6 +68,16 @@ DEFS = [
 
 CLIPS = ["p_n1", "p_c1", "p_n2", "p_c2", "p_n3", "p_c3", "p_n4", "p_c4", "p_n5", "p_c5"]
 
+# настраиваемые вещи серии (эпизод 2 переопределяет их из episode2.py)
+TMPNAME = "pro"
+OUTNAMES = {"wide": "boris_life.mp4", "shorts": "boris_life_shorts.mp4"}
+TITLE = ("БОРИС", "ПРОСТО ЖИЗНЬ КОТА")
+END_T = ("БОРИС ПРОСТО ЖИВЁТ", "продолжение будет, если автор ничего не забудет")
+STAMP_T = "ТЕКСТУРЫ: ГОТОВО"
+SHORTS_DROP = set()
+SHORTS_REPLACE = {}
+RATE_SHORTS = 1.35
+
 
 # ---------- звук ----------
 def load_wav(p):
@@ -170,7 +180,7 @@ def title_png(path, W, H):
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
     f1 = _font(118 if vert else 148)
     f2 = _font(40 if vert else 54, bold=False)
-    t1, t2 = "БОРИС", "ПРОСТО ЖИЗНЬ КОТА"
+    t1, t2 = TITLE
     w1, w2 = d.textlength(t1, font=f1), d.textlength(t2, font=f2)
     h1 = 132 if vert else 168
     bw = max(w1, w2) + 96
@@ -187,7 +197,7 @@ def stamp_png(path, W, H):
     vert = H > W
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
     f = _font(40 if vert else 50)
-    t = "ТЕКСТУРЫ: ГОТОВО"
+    t = STAMP_T
     tw = d.textlength(t, font=f)
     bw, bh = tw + 70, (56 if vert else 74) + 26
     x0, y0 = (W - bw) / 2, 150 if vert else 84
@@ -202,8 +212,8 @@ def end_png(path, W, H):
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
     f1 = _font(74 if vert else 104)
     f2 = _font(34 if vert else 46, bold=False)
-    t1 = "БОРИС ПРОСТО ЖИВЁТ"
-    t2 = textwrap.fill("продолжение будет, если автор ничего не забудет", 26 if vert else 48).split("\n")
+    t1 = END_T[0]
+    t2 = textwrap.fill(END_T[1], 26 if vert else 48).split("\n")
     w1 = d.textlength(t1, font=f1)
     w2 = max(d.textlength(l, font=f2) for l in t2)
     h1 = 84 if vert else 118
@@ -216,6 +226,25 @@ def end_png(path, W, H):
     _center(d, t1, f1, y + 18, W, COL_C + (255,))
     for i, l in enumerate(t2):
         _center(d, l, f2, y + 18 + h1 + 12 + i * lh, W, (242, 242, 242, 235))
+    im.save(path)
+
+
+def plate_png(path, W, H, head, items):
+    vert = H > W
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    fh = _font(40 if vert else 50)
+    fi = _font(34 if vert else 42)
+    lh = (46 if vert else 56)
+    ws = [d.textlength(head, font=fh)] + [d.textlength(x, font=fi) for x in items]
+    bw = max(ws) + 80
+    bh = 66 + lh * len(items) + 34
+    x0 = (W - bw) / 2
+    y0 = 180 if vert else 96
+    d.rounded_rectangle([x0, y0, x0 + bw, y0 + bh], radius=22, fill=(10, 10, 12, 185),
+                        outline=(255, 172, 74, 255), width=3)
+    _center(d, head, fh, y0 + 16, W, COL_C + (255,))
+    for i, x in enumerate(items):
+        _center(d, x, fi, y0 + 66 + i * lh, W, (244, 244, 244, 240))
     im.save(path)
 
 
@@ -241,7 +270,7 @@ def make_overlays(scenes, W, H, TMP):
 
 # ---------- сборка ----------
 def plan(mode):
-    rate = 1.35 if mode == "shorts" else 1.0
+    rate = RATE_SHORTS if mode == "shorts" else 1.0
     lead, gap, tail = (0.14, 0.18, 0.30) if mode == "shorts" else (0.30, 0.50, 0.95)
     D = {}
     for c in CLIPS:
@@ -249,14 +278,22 @@ def plan(mode):
         if not os.path.exists(wp):
             speech(c, 1.0)
         D[c] = dur_wav(wp)
+    if mode == "shorts":
+        for c in set(SHORTS_REPLACE.values()):
+            D[c] = dur_wav(os.path.join(AUD, c + ".wav"))
     scenes = []
     for d in DEFS:
         subs, t = [], lead
         for who, clip in d["lines"]:
+            if mode == "shorts":
+                if clip in SHORTS_DROP:
+                    continue
+                clip = SHORTS_REPLACE.get(clip, clip)
             dd = D[clip] / rate
             subs.append((who, clip, round(t, 2), round(t + dd, 2)))
             t += dd + gap
-        Dt = round(t - gap + tail + (1.0 if d["k"] == 11 else 0.0), 2)
+        pad = d.get("pad_s", 0.0) if mode == "shorts" else d.get("pad_w", 0.0)
+        Dt = round(t - gap + tail + (1.0 if d["k"] == 11 else 0.0) + pad, 2)
         scenes.append(dict(k=d["k"], sub=subs, D=Dt, sfx=d["sfx"], ov=d["ov"],
                            tscale=round(ANIM[d["k"]] / Dt, 4)))
     FADE = 0.35 if mode == "shorts" else 0.5
@@ -274,7 +311,7 @@ def mix_audio(mode, P, TMP):
     amb = np.zeros(N, np.float32)
     one = np.zeros(N, np.float32)
     voi = np.zeros(N, np.float32)
-    SP = {c: speech(c, rate) for c in CLIPS}
+    SP = {clip: speech(clip, rate) for s in P["scenes"] for _, clip, _, _ in s["sub"]}
     for k, s in enumerate(P["scenes"]):
         off = 0.0 if k == 0 else P["offs"][k - 1]
         sc = 1.0 / s["tscale"]          # анимационное время -> время монтажа
@@ -299,7 +336,7 @@ def mix_audio(mode, P, TMP):
 def build(mode):
     R.set_mode(mode)
     W, H = (1080, 1920) if mode == "shorts" else (1920, 1080)
-    TMP = os.path.join(B.TMP, "pro_" + mode)
+    TMP = os.path.join(B.TMP, TMPNAME + "_" + mode)
     os.makedirs(TMP, exist_ok=True)
     P = plan(mode)
     print(f"[{mode}] scenes:", [(s["k"], s["D"], s["tscale"]) for s in P["scenes"]])
@@ -333,7 +370,7 @@ def build(mode):
                     f"[v][s]amix=inputs=2:normalize=0:duration=longest,afade=t=in:d=0.9,"
                     f"afade=t=out:st={P['TOTAL']-1.6}:d=1.6,loudnorm=I={I}:TP=-1.0:LRA=10[a]",
                     "-map", "[a]", "-ac", "2", "-ar", "44100", aud], capture_output=True, check=True)
-    out = os.path.join(BASE, "boris_life.mp4" if mode == "wide" else "boris_life_shorts.mp4")
+    out = os.path.join(BASE, OUTNAMES[mode])
     subprocess.run([FF, "-y", "-i", vid, "-i", aud, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
                     "-shortest", "-movflags", "+faststart", out], capture_output=True, check=True)
     print("DONE:", out, os.path.getsize(out) // 1024, "KB,", P["TOTAL"], "c")
@@ -346,7 +383,7 @@ PREV_T = {7: 5.4, 8: 5.1, 9: 6.2, 10: 4.6, 11: 5.6}
 def preview(mode):
     R.set_mode(mode)
     W, H = (1080, 1920) if mode == "shorts" else (1920, 1080)
-    TMP = os.path.join(B.TMP, "pro_" + mode)
+    TMP = os.path.join(B.TMP, TMPNAME + "_" + mode)
     os.makedirs(TMP, exist_ok=True)
     P = plan(mode)
     ovl = make_overlays(P["scenes"], W, H, TMP)

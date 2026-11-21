@@ -28,3 +28,4 @@ tools/training/__pycache__/
 # python-кэш
 __pycache__/
 node_modules/
+/boris/audio_ep2/*.wav

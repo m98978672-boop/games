@@ -290,6 +290,55 @@ def music(dur=80., bpm=86, peak=0.55):
     return x * adsr(t, 1.2, dur, 2.5) * peak
 
 
+
+def wind(dur=16., peak=0.7):
+    """Зимний ветер: гул с порывами."""
+    t = T(dur)
+    n = rng.standard_normal(len(t))
+    x = lp(n, 320., 1) * .8 + bp(n, 700., 420.) * .35
+    g = .6 + .4*np.sin(2*np.pi*.11*t) * np.sin(2*np.pi*.043*t + 1.2)
+    return x * np.clip(g, .25, 1.) * adsr(t, 1.2, dur, 1.4) * peak
+
+
+def hum(dur=14., peak=0.5):
+    """Тёплый радиатор: мягкий низкий гул."""
+    t = T(dur)
+    x = np.zeros_like(t)
+    for f, a in ((98., 1.), (196., .5), (294., .28), (49., .6)):
+        x += a * np.sin(2*np.pi*f*t + rng.random()*6.) * (1 + .12*np.sin(2*np.pi*.7*t))
+    x = lp(x, 600., 1) * .5 + lp(rng.standard_normal(len(t)), 240., 2) * .3
+    return x * adsr(t, 1.0, dur, 1.2) * peak
+
+
+def knock(dur=1.2, peak=0.8):
+    """Тук-тук: картон/домик поставили на землю."""
+    t = T(dur); x = np.zeros_like(t)
+    for i, t0 in enumerate((0.0, 0.34, 0.62)):
+        L = int(.22*SR); tt = np.arange(L)/SR
+        seg = (lp(rng.standard_normal(L), 260., 2)*1.5 + np.sin(2*np.pi*110.*tt)*.8) * np.exp(-tt*26.)
+        place(x, seg, t0, 1. - .18*i)
+    return x * peak
+
+
+def honk(dur=0.45, peak=0.8):
+    """Клаксон: два гудка-тона."""
+    t = T(dur)
+    f = 392.0
+    x = sum(np.sin(2*np.pi*f*k*t)/k for k in (1, 2, 3, 4))
+    x += 0.6*sum(np.sin(2*np.pi*(f*0.76)*k*t)/k for k in (1, 2, 3))
+    return bp(x, 900., 700.) * adsr(t, .02, dur, .12) * peak
+
+
+def creak(dur=1.4, peak=0.5):
+    """Скрип двери/старого дерева."""
+    t = T(dur)
+    f = np.interp(t/dur, [0, .3, .6, 1], [180., 240., 205., 260.]) * (1 + .05*np.sin(2*np.pi*9.*t))
+    ph = 2*np.pi*np.cumsum(f)/SR
+    x = sum(np.sin(k*ph)/k for k in (1, 2, 3, 5))
+    x = bp(x, 420., 260.) * adsr(t, .25, dur, .5) * (.6 + .4*np.sin(2*np.pi*3.1*t))
+    return x * peak
+
+
 if __name__ == "__main__":
     lib = {
         "meow_q":     lambda: meow(.62, f0=560., f1=470., f2=700., nasal=.5, vib=7.5, vibd=.05),
@@ -314,6 +363,11 @@ if __name__ == "__main__":
         "sting_up":   lambda: sting_up(1.7),
         "sting_sad":  lambda: sting_sad(2.2),
         "music":      lambda: music(84.),
+        "wind":       lambda: wind(18.),
+        "hum":        lambda: hum(15.),
+        "knock":      lambda: knock(1.2),
+        "creak":      lambda: creak(1.4),
+        "honk":       lambda: honk(0.45),
     }
     for k, fn in lib.items():
         save(k, fn())
