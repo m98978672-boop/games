@@ -41,6 +41,7 @@ if PUBLIC_BASE_URL.startswith("https://") and not APP_ACCESS_PASSWORD:
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
 ]
 MAX_VIDEO_BYTES = 10 * 1024 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".mpeg", ".mpg", ".avi", ".wmv", ".flv", ".webm", ".3gpp"}
