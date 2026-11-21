@@ -41,6 +41,7 @@ func _init(host: Node3D, hand_side: float = -1.0) -> void:
 	# Palm, knuckles and fingers are separate square pieces, never round beads.
 	hand = Node3D.new()
 	hand.name = "IKHand"
+	hand.scale = Vector3.ONE * 0.82
 	host.add_child(hand)
 	var glove := RazlomArt.material(Color("39463f"), "cloth")
 	var glove_highlight := RazlomArt.material(Color("56645a"), "cloth")
