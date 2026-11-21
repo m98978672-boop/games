@@ -12,6 +12,10 @@ TMP = B.TMP
 F = 1500.0
 MODE = "wide"
 
+def set_fps(f):
+    global FPS
+    FPS = f
+
 def set_mode(m):
     global MODE, W, H, F
     MODE = m
@@ -99,6 +103,7 @@ def cat_faces(P):
     """P: x,z,yaw,lift,pitch,walk,head_yaw,head_pitch,sit,rear,tp,tail_t,blink,detach,paper,crouch,grey,ear_tw"""
     faces, lines = [], []
     lift = P.get("lift", 0.0) + (0.015*abs(math.sin(P["walk"]*math.pi*2)) if P.get("walk") else 0.0)
+    lift += 0.010*math.sin(P.get("breath", P.get("tail_t", 0.0))*2.3)   # дыхание
     if P.get("crouch"): lift -= 0.13
     bp = P.get("pitch", 0.0)
     def body(p):
@@ -266,10 +271,10 @@ WET = (58, 64, 78)
 def _xform(items, fn):
     return [tuple([[fn(p) for p in it[0]]] + list(it[1:])) for it in items]
 
-def pigeon_faces(x, z, yaw, t, fly=0.0, peck=0.0, scale=1.0):
+def pigeon_faces(x, z, yaw, t, fly=0.0, peck=0.0, scale=1.0, y=None):
     """Низкополигональный голубь: тело, голова, клюв, хвост, лапки, машущие крылья."""
     s = scale
-    y0 = 0.14*s + fly*1.45
+    y0 = (0.14*s if y is None else y) + fly*1.45
     def T_(p):
         q = ry(p, yaw)
         return (q[0]+x, q[1]+y0, q[2]+z)
@@ -352,19 +357,33 @@ def heart_faces(cx, cy, cz, s):
     f += box((cx, cy - 0.11*s, cz), (0.30*s, 0.24*s, 0.07*s), PINK)
     return f
 
-def car_faces(x, z, yaw=0.0, s=1.0, col=(72, 92, 122)):
+def car_faces(x, z, yaw=0.0, s=1.0, col=(72, 92, 122), y=0.0, shake=0.0):
     def T_(q):
         r = ry(q, yaw)
-        return (r[0]+x, r[1], r[2]+z)
-    f = _xform(box((0, 0.52*s, 0), (2.1*s, 0.42*s, 1.0*s), col), T_)
-    f += _xform(box((-0.25*s, 0.92*s, 0), (1.0*s, 0.40*s, 0.88*s), (58, 74, 100)), T_)
+        j = shake*math.sin(r[0]*31.0 + r[2]*17.0)
+        return (r[0]+x, r[1]+y+j, r[2]+z)
+    f = _xform(box((0, 0.52*s, 0), (2.1*s, 0.40*s, 1.0*s), col), T_)
+    f += _xform(box((0, 0.70*s, 0), (2.14*s, 0.06*s, 1.02*s), (64, 82, 110)), T_)          # молдинг
+    f += _xform(box((-0.25*s, 0.92*s, 0), (1.05*s, 0.38*s, 0.90*s), (58, 74, 100)), T_)
+    f += _xform(box((-0.25*s, 1.12*s, 0), (1.0*s, 0.04*s, 0.86*s), (52, 66, 90)), T_)       # крыша
+    for wz in (-0.46, 0.46):                                                               # стёкла боков
+        f += _xform([([(-0.68*s, 0.80*s, wz*s), (0.16*s, 0.80*s, wz*s), (0.10*s, 1.06*s, wz*s), (-0.60*s, 1.06*s, wz*s)], (168, 196, 214), False)], T_)
+    f += _xform([([(0.24*s, 0.80*s, -0.44*s), (0.24*s, 0.80*s, 0.44*s), (0.30*s, 1.06*s, 0.40*s), (0.30*s, 1.06*s, -0.40*s)], (178, 204, 220), False)], T_)  # лобовое
+    f += _xform([([(-0.74*s, 0.80*s, -0.44*s), (-0.74*s, 0.80*s, 0.44*s), (-0.80*s, 1.06*s, 0.40*s), (-0.80*s, 1.06*s, -0.40*s)], (178, 204, 220), False)], T_)  # заднее
+    f += _xform(box((0.10*s, 0.62*s, -0.50*s), (0.02*s, 0.26*s, 0.02*s), (40, 52, 70)), T_)  # шов двери
+    f += _xform(box((0.28*s, 0.66*s, -0.51*s), (0.10*s, 0.03*s, 0.02*s), (200, 204, 210)), T_)  # ручка
+    f += _xform(box((1.08*s, 0.50*s, 0), (0.10*s, 0.16*s, 1.02*s), (190, 194, 200)), T_)    # бампер пер.
+    f += _xform(box((-1.08*s, 0.50*s, 0), (0.10*s, 0.16*s, 1.02*s), (190, 194, 200)), T_)   # бампер зад.
+    f += _xform(box((1.06*s, 0.62*s, 0), (0.05*s, 0.10*s, 0.72*s), (244, 236, 190)), T_)    # фары
+    f += _xform(box((-1.06*s, 0.62*s, 0), (0.05*s, 0.10*s, 0.72*s), (190, 60, 55)), T_)     # фонари
+    f += _xform(box((0.30*s, 1.02*s, -0.52*s), (0.10*s, 0.06*s, 0.10*s), (58, 74, 100)), T_)  # зеркало
     for wx in (-0.72, 0.72):
-        for wz in (-0.52, 0.52):
-            f += _xform(box((wx*s, 0.26*s, wz*s), (0.34*s, 0.34*s, 0.12*s), (30, 30, 32)), T_)
-    f += _xform(box((1.06*s, 0.55*s, 0), (0.06*s, 0.12*s, 0.7*s), (240, 230, 180)), T_)
+        for wz in (-0.54, 0.54):
+            f += _xform(box((wx*s, 0.26*s, wz*s), (0.36*s, 0.36*s, 0.14*s), (28, 28, 30)), T_)
+            f += _xform(box((wx*s, 0.26*s, wz*s + (0.08*s if wz > 0 else -0.08*s)), (0.16*s, 0.16*s, 0.04*s), (176, 178, 182)), T_)  # hub
     return f
 
-def cat_house(x, z, yaw=0.0, s=1.0, glow=1.0, night=False):
+def cat_house(x, z, yaw=0.0, s=1.0, glow=1.0, night=False, snow_roof=0.0):
     def T_(q):
         r = ry(q, yaw)
         return (r[0]+x, r[1], r[2]+z)
@@ -377,8 +396,22 @@ def cat_house(x, z, yaw=0.0, s=1.0, glow=1.0, night=False):
     f += _xform(box((0.27*s, 0.30*s, -0.36*s), (0.14*s, 0.56*s, 0.12*s), col), T_)
     f += _xform(box((0, 0.52*s, -0.36*s), (0.40*s, 0.12*s, 0.12*s), col), T_)
     f += _xform(box((0, 0.30*s, 0.06*s), (0.58*s, 0.50*s, 0.54*s), (34, 30, 28)), T_)
-    f += _xform([([(-0.46*s, 0.58*s, -0.46*s), (0, 0.92*s, -0.46*s), (0, 0.92*s, 0.46*s), (-0.46*s, 0.58*s, 0.46*s)], (122, 62, 48), False)], T_)
-    f += _xform([([(0.46*s, 0.58*s, -0.46*s), (0, 0.92*s, -0.46*s), (0, 0.92*s, 0.46*s), (0.46*s, 0.58*s, 0.46*s)], (122, 62, 48), False)], T_)
+    f += _xform([([(-0.52*s, 0.56*s, -0.52*s), (0, 0.94*s, -0.52*s), (0, 0.94*s, 0.52*s), (-0.52*s, 0.56*s, 0.52*s)], (122, 62, 48), False)], T_)
+    f += _xform([([(0.52*s, 0.56*s, -0.52*s), (0, 0.94*s, -0.52*s), (0, 0.94*s, 0.52*s), (0.52*s, 0.56*s, 0.52*s)], (122, 62, 48), False)], T_)
+    f += _xform(box((0, 0.95*s, 0), (0.10*s, 0.06*s, 1.06*s), (96, 48, 38)), T_)          # конёк
+    for i in (-1, 0, 1):                                                                  # доски стен
+        f += _xform(box((i*0.14*s, 0.30*s, -0.425*s), (0.02*s, 0.54*s, 0.02*s), (120, 76, 44)), T_)
+        f += _xform(box((i*0.14*s, 0.30*s, 0.425*s), (0.02*s, 0.54*s, 0.02*s), (120, 76, 44)), T_)
+    f += _xform(box((-0.425*s, 0.30*s, 0), (0.02*s, 0.54*s, 0.5*s), (120, 76, 44)), T_)
+    f += _xform(box((0.425*s, 0.30*s, 0), (0.02*s, 0.54*s, 0.5*s), (120, 76, 44)), T_)
+    f += _xform([([(-0.21*s, 0.04*s, -0.44*s), (0.21*s, 0.04*s, -0.44*s), (0.21*s, 0.48*s, -0.44*s), (-0.21*s, 0.48*s, -0.44*s)], (176, 128, 84), False)], T_)  # наличник
+    f += _xform([([(-0.13*s, 0.08*s, -0.445*s), (0.13*s, 0.08*s, -0.445*s), (0.13*s, 0.44*s, -0.445*s), (-0.13*s, 0.44*s, -0.445*s)], (26, 22, 20), False)], T_)   # проём
+    f += _xform([([(0.30*s, 0.34*s, -0.43*s), (0.40*s, 0.34*s, -0.43*s), (0.40*s, 0.44*s, -0.43*s), (0.30*s, 0.44*s, -0.43*s)], (250, 200, 120), True)], T_)      # окошко-сердечко
+    if snow_roof > 0.02:
+        sn = snow_roof
+        ex, ey = (0.02 + 0.48*sn)*s, (0.99 - 0.37*sn)*s
+        f += _xform([([(-0.02*s, 0.99*s, -0.50*s), (-0.02*s, 0.99*s, 0.50*s), (-ex, ey, 0.50*s), (-ex, ey, -0.50*s)], (242, 246, 252), False)], T_)
+        f += _xform([([(0.02*s, 0.99*s, -0.50*s), (0.02*s, 0.99*s, 0.50*s), (ex, ey, 0.50*s), (ex, ey, -0.50*s)], (236, 240, 248), False)], T_)
     gcol = tuple(int(200 + 50*glow) if i == 0 else int(150 + 45*glow) if i == 1 else int(80 + 30*glow) for i in range(3))
     f += _xform([([(-0.17*s, 0.06*s, -0.435*s), (0.17*s, 0.06*s, -0.435*s), (0.17*s, 0.46*s, -0.435*s), (-0.17*s, 0.46*s, -0.435*s)], gcol, True)], T_)
     return f
@@ -723,7 +756,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
         shadow = (cx, 0)
         bs = box((-1.6, 0.17, 0), (0.62, 0.34, 0.5), BROWN)
         faces += [bs[i] for i in (0, 1, 4, 5)] + box((-1.6, 0.02, 0), (0.6, 0.04, 0.48), BROWN)
-        faces += car_faces(1.9, 0.0, 0.0, 1.0)
+        faces += car_faces(1.9, 0.0, 0.0, 1.0, shake=0.010 if 8.0 < t < 9.6 else 0.0)
         faces += box((-3.6, 1.4, 3.4), (2.4, 2.8, 3), GREY) + box((3.9, 1.2, 5.4), (2.2, 2.4, 3), GREY_D)
         cf, cl = cat_faces(P); faces += cf; lines += cl
         if MODE == "shorts":
@@ -779,6 +812,9 @@ def render_frame(k, t, ovl_imgs, ot=None):
         faces += quad((-0.75, 1.15, 4.15), (0.75, 1.15, 4.15), (0.75, 2.25, 4.15), (-0.75, 2.25, 4.15), (206, 217, 233), True)
         faces += box((0, 1.7, 4.10), (1.66, 0.10, 0.08), (230, 226, 218)) + box((0, 1.15, 4.10), (1.66, 0.10, 0.08), (230, 226, 218))
         faces += box((0, 1.70, 4.10), (0.08, 1.2, 0.08), (230, 226, 218))
+        for sgn in (-1, 1):
+            swy = 0.05*math.sin(t*1.4 + sgn)
+            faces += [([ (sgn*0.72, 1.18, 4.12), (sgn*0.72, 2.22, 4.12), (sgn*0.72 - 0.16 + swy, 2.22, 4.12), (sgn*0.72 - 0.20 + swy, 1.18, 4.12) ], (176, 96, 92), False)]
         for i in range(9):
             fx = -0.66 + i*0.165
             fy = 2.2 - ((t*0.35 + i*0.23) % 1.0)
@@ -807,7 +843,10 @@ def render_frame(k, t, ovl_imgs, ot=None):
         faces += box((0, 1.5, 3.35), (6.4, 3.0, 0.3), (74, 66, 62))
         faces += box((-1.3, 1.0, 3.16), (0.95, 2.0, 0.1), (58, 46, 38))
         faces += box((-1.3, 0.06, 2.95), (1.1, 0.12, 0.5), (66, 58, 52))
-        faces += cat_house(0.6, 2.2, 0.0, 1.0, glow=glow, night=True)
+        faces += cat_house(0.6, 2.2, 0.0, 1.0, glow=glow, night=True, snow_roof=smooth(0, 9, t))
+        faces += pigeon_faces(0.6 + 0.30*math.sin(t*0.22), 2.35, math.pi*0.9 + 0.3*math.sin(t*0.3),
+                              t, fly=0.0, peck=(0.5+0.5*math.sin(t*4.0))*(1 if 4.0 < t < 7.0 else 0), scale=0.8, y=0.98)
+        faces += pigeon_faces(-0.05, 2.35, math.pi*0.6, t+1.3, fly=smooth(8.0, 9.0, t), peck=0.0, scale=0.75)
         faces += box((-3.4, 1.3, 1.0), (2.2, 2.6, 2.6), (60, 54, 50))
         faces += box((2.9, 1.5, 1.4), (0.08, 3.0, 0.08), (64, 62, 66)) + box((2.9, 3.05, 1.4), (0.5, 0.14, 0.3), (250, 232, 178), )
         cf, cl = cat_faces(P); faces += cf; lines += cl
