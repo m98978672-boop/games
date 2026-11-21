@@ -27,6 +27,7 @@ with tempfile.TemporaryDirectory(prefix='razlom-runtime-') as runtime:
         ('mission', ['--script', 'res://tests/mission.gd'], 'failures: 0', 90),
         ('perception', ['--script', 'res://tests/perception.gd'], 'failures: 0', 60),
         ('destruction', ['--script', 'res://tests/destruction.gd'], 'failures: 0', 60),
+        ('building-geometry', ['--script', 'res://tests/building_geometry.gd'], 'failures: 0', 60),
         ('presentation', ['--script', 'res://tests/presentation.gd'], 'failures: 0', 60),
         ('ai-memory', ['--script', 'res://tests/ai_memory.gd'], 'failures: 0', 60),
         ('mobile-story', ['--script', 'res://tests/mobile_story.gd'], 'failures: 0', 60),

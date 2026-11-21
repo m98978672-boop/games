@@ -30,7 +30,7 @@ func run_tests() -> void:
 	root.add_child(game)
 	await process_frame
 	check(paused, "Start menu pauses simulation")
-	check(game.blocks.size() == 236, "Warehouse has 236 identified sections")
+	check(game.blocks.size() == 250, "Warehouse has 250 identified masonry units")
 	check(game.world.get_node_or_null("Vera") != null, "Vera has a physical scene")
 	game.resume()
 	freeze_guards()
@@ -120,12 +120,12 @@ func run_tests() -> void:
 	game.blocks["back_8_0"].hit(999)
 	await process_frame
 	await process_frame
-	check(game.blocks.size() < 236, "Structural failure removes supported column")
+	check(game.blocks.size() < 250, "Structural failure removes supported column")
 	check(game.active_debris <= 32, "Active rigid-body budget holds")
 	check(game.load_game(), "Older checkpoint loads")
 	freeze_guards()
 	await process_frame
-	check(game.blocks.size() == 236, "Older checkpoint restores destroyed blocks")
+	check(game.blocks.size() == 250, "Older checkpoint restores destroyed blocks")
 	check(not game.state.pump and not game.state.complete, "Older checkpoint restores quest flags")
 	var pump_count := 0
 	for item in get_nodes_in_group("loot"):

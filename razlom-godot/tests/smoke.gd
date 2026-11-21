@@ -25,7 +25,7 @@ func run_tests() -> void:
 	var scene = load("res://scenes/main.tscn").instantiate()
 	root.add_child(scene)
 	await process_frame
-	assert(scene.blocks.size() == 236)
+	assert(scene.blocks.size() == 250)
 	assert(scene.enemies.size() == 3)
 	assert(scene.player.camera != null)
 	assert(scene.state.pump == false)

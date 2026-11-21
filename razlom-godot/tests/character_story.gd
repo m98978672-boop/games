@@ -14,24 +14,32 @@ func press_named(game, prefix: String) -> bool:
 			child.pressed.emit()
 			return true
 	return false
-func has_flat_eye_marks(model: Node3D) -> bool:
+func has_natural_face(model: Node3D) -> bool:
 	var head := model.get_node_or_null("Head") as Node3D
 	if head == null:
 		return false
-	for feature in head.find_children("*", "MeshInstance3D", true, false):
-		if (feature as MeshInstance3D).mesh is SphereMesh:
-			return false
+	var face := head.get_node_or_null("Visual") as MeshInstance3D
+	if face == null or not face.mesh is SphereMesh:
+		return false
+	if not head.has_node("NoseTip") or not head.has_node("EyeL") or not head.has_node("EyeR"):
+		return false
+	if head.get_node("EyeL").position.z > -0.28 or head.get_node("EyeR").position.z > -0.28:
+		return false
 	for eye_name in ["EyeL", "EyeR"]:
 		var eye := head.get_node_or_null(eye_name) as Node3D
-		if eye == null or eye.has_node("Iris"):
+		if eye == null or not eye.has_node("Iris") or not eye.has_node("Pupil"):
 			return false
-		if eye.get_child_count() == 0:
+		var eye_white: Node3D = eye.get_child(0) as Node3D
+		if eye_white == null or eye_white.get_child_count() == 0:
 			return false
-		var visual := eye.get_child(0) as MeshInstance3D
+		var visual := eye_white.get_child(0) as MeshInstance3D
 		if visual == null or not visual.mesh is BoxMesh:
 			return false
 		var size: Vector3 = (visual.mesh as BoxMesh).size
-		if size.x > 0.05 or size.y > 0.015 or size.z > 0.01:
+		if size.x > 0.04 or size.y > 0.02 or size.z > 0.01:
+			return false
+		var iris := eye.get_node("Iris") as MeshInstance3D
+		if iris.scale.x > 0.01 or iris.scale.y > 0.012 or iris.scale.z > 0.005:
 			return false
 	return true
 func run_tests() -> void:
@@ -39,13 +47,15 @@ func run_tests() -> void:
 	root.add_child(game)
 	await process_frame
 	var guard = game.enemies[0]
-	check(has_flat_eye_marks(guard.visual), "Guards use tiny flat eye marks rather than bulging oval eyes")
+	check(has_natural_face(guard.visual), "Guards have shaped heads and compact inset eyes")
 	check(guard.left_arm.hand.has_node("Palm") and guard.left_arm.hand.get_node("Finger0").get_child(0).mesh is CapsuleMesh, "Guard glove uses rounded palms and segmented fingers")
 	var medic = game.interactions.medic_motion.model
-	check(has_flat_eye_marks(medic), "Vera's face also has only small, flush eye marks")
+	check(has_natural_face(medic), "Vera has the same shaped head and compact inset eyes")
 	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")
+	var vera_hand: Node3D = medic.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
+	check(vera_hand.has_node("Finger0J0") and vera_hand.has_node("Finger3J1") and vera_hand.has_node("Thumb"), "Vera's hands have knuckles, separated fingers and a thumb")
 	var pavel: Node3D = game.world.get_node("Pavel").find_child("guard", true, false) as Node3D
-	check(pavel != null and has_flat_eye_marks(pavel), "Pavel uses the same flat, understated face design")
+	check(pavel != null and has_natural_face(pavel), "Pavel uses the same shaped head and compact eyes")
 	check(game.world.has_node("Pavel/Guard/ArmLJoint/ArmL/CharacterHand/Palm") or game.world.get_node("Pavel").find_child("CharacterHand", true, false) != null, "Pavel also has visible articulated hands")
 	check(game.world.has_node("Pavel"), "Courier exists in playable world")
 	var count: int = guard.visual.get_child_count()
