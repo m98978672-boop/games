@@ -116,8 +116,8 @@ def search_wikipedia(query, limit=3):
     params = urllib.parse.urlencode({
         'action': 'query', 'format': 'json', 'formatversion': '2',
         'generator': 'search', 'gsrnamespace': '0', 'gsrsearch': query,
-        'gsrlimit': str(limit), 'prop': 'extracts|info', 'inprop': 'url',
-        'explaintext': '1',
+        'gsrlimit': str(limit + 2), 'prop': 'extracts|info', 'inprop': 'url',
+        'explaintext': '1', 'exlimit': 'max',
     })
     request = urllib.request.Request(f'{WIKI_API}?{params}', headers={'User-Agent': 'KvenyaHome/1.0 (qwen-home talk search)'})
     try:
@@ -132,7 +132,7 @@ def search_wikipedia(query, limit=3):
         extract = re.sub(r'\s+', ' ', page.get('extract', '')).strip()
         if page.get('title') and extract:
             results.append({'title': page['title'], 'url': page.get('fullurl', ''), 'extract': extract[:1200]})
-    return results
+    return results[:limit]
 
 
 def log_search(query, results):
@@ -175,19 +175,20 @@ def main():
     else:
         query = decide_search(model, tokenizer, owner_text)
     results = search_wikipedia(query) if query else []
+    context_note = ''
     if query:
         log_search(query, results)
         print(f'Поиск «{query}»: найдено статей: {len(results)}', flush=True)
         if results:
-            found = '\n\n'.join(f'[{i}] Статья «{r["title"]}» ({r["url"]}):\n{r["extract"]}' for i, r in enumerate(results, 1))
-            persona += f'\n\nДом уже поискал за тебя в русской Википедии по запросу «{query}». Вот найденное:\n{found}\nОтвечай владельцу по этому тексту: скажи, что поискала, назови статью и дай ответ из неё. Если ответа в тексте нет — честно скажи, что в найденном этого нет.'
+            found = '\n'.join(f'— Статья «{r["title"]}»: {r["extract"]}' for r in results)
+            context_note = f'\n\n(Дом поискал за тебя в русской Википедии по запросу «{query}». Нашлось:\n{found}\nОтвечай владельцу СВОИМИ СЛОВАМИ по этим текстам: начни с «Поискала в Википедии!», назови статью и дай ответ из неё. Не копируй тексты дословно и не пиши ссылки. Если ответа в текстах нет — честно скажи об этом.)'
         else:
-            persona += f'\n\nТы попросила поиск в Википедии по запросу «{query}», но ничего не нашлось. Честно скажи владельцу, что поискала и не нашла.'
+            context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
     history = turns[-(9):-1] if len(turns) > 1 else []
     messages = [{'role': 'system', 'content': persona}]
     for role, body in history:
         messages.append({'role': role, 'content': body})
-    messages.append({'role': 'user', 'content': owner_text})
+    messages.append({'role': 'user', 'content': owner_text + context_note})
     torch.manual_seed(42 + len(turns))
     reply = clean_reply(generate(model, tokenizer, messages, max_new=args.max_new, sample=True))
     if not reply:
