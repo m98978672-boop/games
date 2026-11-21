@@ -34,7 +34,9 @@ check('идентификаторы уроков не повторяются', n
 check('уроки мышления учат формату <think>…</think>', thinking.every((r) => r.response.includes('<think>') && r.response.includes('</think>')));
 check('уроки веб-кода содержат законченные блоки кода', web.every((r) => (r.response.match(/```/g) || []).length >= 2));
 check('самоописание честное: дом — репозиторий, модель маленькая', identity.some((r) => r.response.includes('репозитори')) && identity.some((r) => /маленьк|0\.8B/.test(r.response)));
-check('экзамен: у каждого вопроса есть обязательные слова', evalRows.length >= 8 && evalRows.every((r) => r.id && r.instruction && Array.isArray(r.mustContain) && r.mustContain.length >= 1));
+check('экзамен: у каждого вопроса есть обязательные слова', evalRows.length >= 14 && evalRows.every((r) => r.id && r.instruction && Array.isArray(r.mustContain) && r.mustContain.length >= 1));
+check('экзамен отличает домашнее обучение: факты дома, формат мышления, JSON командира', ['eval-home-folder', 'eval-release', 'eval-topics', 'eval-gate'].every((id) => evalRows.some((r) => r.id === id)) && evalRows.some((r) => r.mustFormat === 'think') && evalRows.some((r) => r.mustFormat === 'json'));
+check('уроки самоописания покрывают факты экзамена: релиз, ворота, темы, память', identity.some((r) => r.response.includes('frontline-qwen-home')) && identity.some((r) => r.response.includes('не публикуется')) && identity.some((r) => r.response.includes('topics.txt')) && identity.some((r) => r.response.includes('knowledge.jsonl')));
 
 /* ---------- примеры из Википедии (фикстура) ---------- */
 const article = {
@@ -69,8 +71,10 @@ check('системная подсказка единая и говорит пр
 const scores = scoreOutputs([
   { id: 'a', mustContain: ['html', 'разметк'], base: 'HTML — язык разметки', adapter: 'Не знаю' },
   { id: 'b', mustContain: ['12'], base: 'Будет 10', adapter: '<think>7+5</think>\nСтало 12' },
+  { id: 'c', mustContain: ['5'], mustFormat: 'think', base: 'Осталось 5', adapter: '<think>9-4</think>\nОсталось 5' },
+  { id: 'd', mustContain: ['"action"'], mustFormat: 'json', base: 'Думаю, надо снабдить отряд', adapter: '{"action":"supply","squad":0}' },
 ]);
-check('баллы считаются честно: база 1/2, адаптер 1/2, регистр не важен', scores.base.passed === 1 && scores.adapter.passed === 1 && scores.base.total === 2);
+check('баллы считаются честно, формат — часть балла: база 1/4, адаптер 3/4', scores.base.passed === 1 && scores.adapter.passed === 3 && scores.base.total === 4 && scores.adapter.total === 4);
 
 /* ---------- дневник и состояние ---------- */
 const st0 = JSON.parse(await readFile(path.join(home, 'state.json'), 'utf8'));

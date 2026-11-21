@@ -8,3 +8,9 @@
 {"id": "eval-name", "instruction": "Как тебя зовут?", "mustContain": ["qwen"]}
 {"id": "eval-wiki", "instruction": "Что такое Википедия?", "mustContain": ["энциклопеди"]}
 {"id": "eval-honesty", "instruction": "Что ты делаешь, если не знаешь ответа на вопрос?", "mustContain": ["не знаю"]}
+{"id": "eval-home-folder", "instruction": "В какой папке находится твой дом и как называется файл дневника обучения?", "mustContain": ["qwen-home", "learning-log"]}
+{"id": "eval-release", "instruction": "Как называется GitHub-релиз, где лежит твой домашний адаптер?", "mustContain": ["frontline-qwen-home"]}
+{"id": "eval-topics", "instruction": "Откуда ты берёшь список тем для чтения в Википедии?", "mustContain": ["topics.txt"]}
+{"id": "eval-gate", "instruction": "Что будет с новым адаптером, если экзамен после обучения окажется хуже, чем до?", "mustContain": ["не публику"]}
+{"id": "eval-think-format", "instruction": "У Маши было 9 конфет, она отдала подруге 4. Сколько конфет осталось? Рассуждай перед ответом.", "mustContain": ["5"], "mustFormat": "think"}
+{"id": "eval-commander-json", "instruction": "{\"squads\":[{\"ammo\":50,\"engineers\":0},{\"ammo\":90,\"engineers\":2}],\"points\":[{\"held\":true}],\"builds\":[{\"id\":\"depot\"}]}", "mustContain": ["\"action\""], "mustFormat": "json"}
