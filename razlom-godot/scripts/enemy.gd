@@ -88,6 +88,10 @@ func _ready() -> void:
 		(visual.get_node(arm_path) as Node3D).hide()
 	left_arm = RazlomArmRig.new(visual, -1.0)
 	right_arm = RazlomArmRig.new(visual, 1.0)
+	# Keep both elbows tucked below the shoulders while the hands hold the rifle;
+	# the first-person rigs retain their separate, already-tuned pole direction.
+	left_arm.pole_bias = Vector3(-0.28, -1.0, 0.1)
+	right_arm.pole_bias = Vector3(0.28, -1.0, 0.1)
 	weapon_motion = RazlomWeaponMotion.new(weapon)
 	home = position
 	last_seen = home

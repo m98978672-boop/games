@@ -10,6 +10,7 @@ var hand: Node3D
 var hand_knuckles: Array[Node3D] = []
 var fist_mode := false
 var handedness := -1.0
+var pole_bias := Vector3.ZERO
 var last_pole := Vector3.ZERO
 const BONE_LENGTH := 0.52
 const MAX_REACH := 1.01
@@ -17,6 +18,7 @@ const MAX_REACH := 1.01
 func _init(host: Node3D, hand_side: float = -1.0) -> void:
 	parent = host
 	handedness = -1.0 if hand_side < 0 else 1.0
+	pole_bias = Vector3(-1.0 if handedness < 0 else 1.0, -0.75, 0.28)
 	var cloth := RazlomArt.material(Color("65756b"), "cloth")
 	for i in range(2):
 		var segment := Node3D.new()
@@ -93,7 +95,7 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	var distance := clampf(axis.length(), 0.06, MAX_REACH)
 	var direction := axis.normalized()
 	wrist = shoulder + direction * distance
-	var pole := Vector3(-1.0 if side < 0.0 else 1.0, -0.75, 0.28)
+	var pole := pole_bias
 	pole -= direction * pole.dot(direction)
 	if pole.length_squared() < 0.001 and last_pole.length_squared() > 0.001:
 		pole = last_pole - direction * last_pole.dot(direction)
