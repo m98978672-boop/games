@@ -25,7 +25,9 @@ func has_flat_eye_marks(model: Node3D) -> bool:
 		var eye := head.get_node_or_null(eye_name) as Node3D
 		if eye == null or eye.has_node("Iris"):
 			return false
-		var visual := eye.find_child("*", "MeshInstance3D", false, false) as MeshInstance3D
+		if eye.get_child_count() == 0:
+			return false
+		var visual := eye.get_child(0) as MeshInstance3D
 		if visual == null or not visual.mesh is BoxMesh:
 			return false
 		var size: Vector3 = (visual.mesh as BoxMesh).size
