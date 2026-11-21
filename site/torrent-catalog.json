@@ -6,8 +6,8 @@
     "games": 234,
     "storefront": 18,
     "collection": 216,
-    "files": 2150,
-    "totalBytes": 52920378,
+    "files": 2153,
+    "totalBytes": 53068326,
     "chunks": 400,
     "blockedFiles": 5
   },
@@ -5029,11 +5029,11 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "7681bd2c0f2fbdacf7e9095c6b1ac98099c82647fd613ce7a2ac86ec91351693",
-      "totalSize": 1668612,
+      "infoHash": "3b44c795136c68d4e9b0a981c11a0666bd4e8e0c137fb7106927bf5088be8829",
+      "totalSize": 1816560,
       "chunkSize": 262144,
       "chunkCount": 7,
-      "fileCount": 30,
+      "fileCount": 33,
       "files": [
         {
           "path": "cover.svg",
@@ -5082,8 +5082,8 @@
         },
         {
           "path": "index.html",
-          "size": 16132,
-          "sha256": "3d286eacbff58828c763402f337942e7dd557bbf2a694e4ec1ece1afdb352145"
+          "size": 16384,
+          "sha256": "ce82242aa051b304b9c6b4ce752fc99a0c5ab1f2a35a431d3b5caae602a9c1d3"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5097,13 +5097,13 @@
         },
         {
           "path": "src/config.js",
-          "size": 4609,
-          "sha256": "7066e066652ce5cf2535683d4799cab294025841782b73baf3481276e0fa7b59"
+          "size": 4669,
+          "sha256": "fd9fb090fdfab8acfa6e7d819ece28aa345cbc87bcad287b46de79fed4c4495b"
         },
         {
           "path": "src/game.js",
-          "size": 33394,
-          "sha256": "9265d697ed3def778617a8f619cc6f0f8b226f13e416c991b9957557c2a53053"
+          "size": 34828,
+          "sha256": "9cb376e30d0e455329d57dd04ccf95a34350ae219b0f3626819b45ac3e3647f1"
         },
         {
           "path": "src/layout.js",
@@ -5127,13 +5127,13 @@
         },
         {
           "path": "src/render/meshes.js",
-          "size": 22467,
-          "sha256": "f36719fd54f776d913ef845a4ef8d5d8cb307b0e58aaa9e0ef9d0c17425ab4b1"
+          "size": 23649,
+          "sha256": "15842a46ade8595a7bed0e2367cdb772a14ca27ad20994dcfc06d543a431a3b0"
         },
         {
           "path": "src/render/world.js",
-          "size": 64444,
-          "sha256": "0195b91d702841ccfbdf488c12b468d09470499974cfb0daf8255086c7ba1b18"
+          "size": 69471,
+          "sha256": "64fc1472f10f8d604735c0a620f4c642d03ed08e6cfe9fafaf548ee68372b2f6"
         },
         {
           "path": "src/save.js",
@@ -5146,19 +5146,24 @@
           "sha256": "e710b9fb5d3232466e27884abc86779b5618b5cde8dd0cf6c225472cb80c499d"
         },
         {
+          "path": "src/sim/physics.js",
+          "size": 11649,
+          "sha256": "2b5d8fe2aca64edc743b8f4b7651b6f161784d3c5db8a5d57cda78e1242998ed"
+        },
+        {
           "path": "src/sim/warehouse.js",
-          "size": 37654,
-          "sha256": "4cafc44a4424f354460d6cd3d89acfe602884f8158c652c2cb38d8dfdc809610"
+          "size": 37246,
+          "sha256": "a77925bc55a4d477e1f1d047f7e770c785f6374121f76e10f3c45a1c48231d1a"
         },
         {
           "path": "src/sim/worker.js",
-          "size": 68901,
-          "sha256": "70b9a840120f4730406fe5852b9d9dcd56a77c56b274d3ef20d4a9e659b0835b"
+          "size": 71517,
+          "sha256": "ac05673caf99d375f8236d55facb70be04350c2668e1975404c107d946fecba9"
         },
         {
           "path": "src/ui.js",
-          "size": 63139,
-          "sha256": "d07b9df35f2cc26a03e9b1bc6db454be8e6fb92c44c31af444f0d58e3f6f5b3f"
+          "size": 63652,
+          "sha256": "9e4203f52c492e3c911f8f2a9c12a457f810238f631b47670d9a850b4aea2f83"
         },
         {
           "path": "src/util.js",
@@ -5167,13 +5172,13 @@
         },
         {
           "path": "style.css",
-          "size": 48436,
-          "sha256": "5e78386832248058161f4412e9a7bee6fb72fa553ed7affba2f3265b2bdc408b"
+          "size": 48741,
+          "sha256": "9618f5ec89a9103ebb9f2eda3d5f62ea6a0f0dc3c1b45a96344d1b8e14df4051"
         },
         {
           "path": "tools/crew-shot.mjs",
-          "size": 12626,
-          "sha256": "ed7629b96c835f85089f56c4c7f84bc38e2c854ce90b7d69c83b03c452da0871"
+          "size": 12824,
+          "sha256": "301d0d88a0a9ba99f7a9379f3c9d8cbb3a2490c1e9fbc8ed721ac3ef94ff70e1"
         },
         {
           "path": "tools/embed-brains.mjs",
@@ -5184,6 +5189,16 @@
           "path": "training/train-brain.mjs",
           "size": 17273,
           "sha256": "b90ff7a3c2125ded8de37b52e7707d089b730c270bc9b23c3b0b95e654edac27"
+        },
+        {
+          "path": "vendor/CANNON-LICENSE.txt",
+          "size": 1125,
+          "sha256": "4714d0272f50cb21fe46fe29333c7c600d3c85b5ebd2a80f4db07e8cfccbf5b2"
+        },
+        {
+          "path": "vendor/cannon-es.min.js",
+          "size": 123995,
+          "sha256": "fe74f2f02bfc1d6646a610b5e6aaf2048edef99c35663b11e17f975097af9529"
         }
       ],
       "blocked": [],
