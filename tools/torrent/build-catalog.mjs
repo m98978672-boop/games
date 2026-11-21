@@ -13,7 +13,7 @@
 //   node tools/torrent/build-catalog.mjs --game 1in8b
 // ============================================================================
 import crypto from 'node:crypto';
-import { readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -26,13 +26,17 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
 const catalogPath = path.join(repoRoot, 'site/torrent-catalog.json');
 const gamesDataPath = path.join(repoRoot, 'site/games-data.js');
+// Коллекция привезённых игр (collection/) — живёт ТОЛЬКО в торренте и не
+// попадает в витрину, пока игрок сам её не скачает (импорт в библиотеку).
+const collectionDir = path.join(repoRoot, 'collection');
+const collectionManifestPath = path.join(collectionDir, 'manifest.json');
 
 const CHUNK_SIZE = 256 * 1024;
 
 // Файлы, которые не нужны внутри раздачи игры (ломают запуск после распаковки
 // или являются служебными для репозитория, но не для игры).
 const EXCLUDE_DIRS = new Set(['.git', 'node_modules', '.arena', 'dist', 'build', 'out', 'target', '.cache']);
-const EXCLUDE_FILE_RE = /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.env(\..*)?)$/i;
+const EXCLUDE_FILE_RE = /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.env(\..*)?|manifest\.json)$/i;
 // Раздача — это ИГРА, а не git-копия папки: тяжёлые скриншоты документации,
 // тесты и служебные файлы репозитория игре для запуска не нужны. Это не
 // «плохие файлы» (их автоочистка не трогает), а просто лишний вес — поэтому
@@ -75,6 +79,18 @@ async function walk(dir, base, acc) {
   for (const entry of entries) {
     const abs = path.join(dir, entry.name);
     const rel = base ? `${base}/${entry.name}` : entry.name;
+    // Точка входа должна называться ровно index.html: её ищет и наш плеер, и
+    // браузер при открытии файла. В открытых коллекциях встречается
+    // «Index.html» — такая игра молча не запускалась бы. Исправляем на диске,
+    // а не только в манифесте: иначе сервер не найдёт файл по новому пути.
+    if (!base && /^index\.html?$/i.test(entry.name) && entry.name !== 'index.html') {
+      const fixedAbs = path.join(dir, 'index.html');
+      try {
+        await rename(abs, fixedAbs);
+        entries.push({ name: 'index.html', isFile: () => true, isDirectory: () => false });
+        continue;
+      } catch { /* не смогли переименовать — пойдёт как есть */ }
+    }
     if (entry.isDirectory()) {
       if (EXCLUDE_DIRS.has(entry.name)) continue;
       await walk(abs, rel, acc);
@@ -210,6 +226,114 @@ async function buildOne(game) {
   };
 }
 
+// Проверка «игра действительно запускается», а не просто «файлы на месте».
+// bughunt уже находил в импортированных играх битые url() в CSS и скрипты,
+// которые падают при загрузке: сам по себе index.html этого не ловит.
+async function checkCollectionGame(absDir) {
+  const problems = [];
+  const skip = new Set(['manifest.json']);
+  // Свой обход: нужны абсолютные пути (walk() отдаёт только относительные).
+  const files = [];
+  const collect = async (dir, base) => {
+    for (const e of await readdir(dir, { withFileTypes: true })) {
+      const rel = base ? `${base}/${e.name}` : e.name;
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory()) await collect(abs, rel);
+      else files.push({ rel, abs });
+    }
+  };
+  await collect(absDir, '');
+  const known = new Set(files.map((f) => f.rel));
+
+  const existsRef = (ref, dirOf) => {
+    const clean = String(ref).split('#')[0].split('?')[0].trim();
+    if (!clean || /^(https?:|data:|blob:|mailto:|javascript:|\/\/|#)/i.test(clean)) return true;
+    const rel = path.posix.normalize(path.posix.join(dirOf, clean)).replace(/^\.\//, '');
+    return known.has(rel) || known.has(rel.replace(/^\//, ''));
+  };
+
+  for (const f of files) {
+    if (skip.has(f.rel)) continue;
+    const dirOf = path.posix.dirname(f.rel);
+    if (/\.html?$/i.test(f.rel)) {
+      const text = await readFile(f.abs, 'utf8');
+      for (const m of text.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
+        if (!existsRef(m[1], dirOf)) problems.push(`ссылка ${m[1]} в ${f.rel}`);
+      }
+    } else if (/\.css$/i.test(f.rel)) {
+      const text = await readFile(f.abs, 'utf8');
+      for (const m of text.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/gi)) {
+        if (!existsRef(m[1], dirOf)) problems.push(`css-url ${m[1]} в ${f.rel}`);
+      }
+    }
+  }
+  return problems;
+}
+
+// Раздача одной игры коллекции: папка collection/<id>/ уже проверена
+// (автономна, без внешних ссылок), но автоудаление плохих файлов всё равно
+// прогоняется — правило одно и то же для всех раздач.
+async function buildCollectionOne(entry, index) {
+  const dir = `collection/${entry.id}`;
+  const entryProblems = await checkCollectionGame(path.join(repoRoot, dir));
+  if (entryProblems.length) {
+    console.error(`  ✗ ${entry.id}: пропущена (${entryProblems.slice(0, 2).join('; ')})`);
+    return null;
+  }
+  const collected = await collectFiles(dir, entry.id);
+  const blocked = collected.filter((f) => f.blocked).map((f) => ({
+    path: f.rel, rule: f.blocked.rule, kind: f.blocked.kind, size: f.size,
+  }));
+  const clean = [];
+  for (const file of collected) {
+    if (file.blocked) continue;
+    let sha = file.sha256;
+    let size = file.size;
+    if (!sha) {
+      const hashed = await hashFile(file.abs);
+      sha = hashed.sha256;
+      size = hashed.size;
+    }
+    clean.push({ path: file.rel, size, sha256: sha });
+  }
+  if (!clean.length) return null;
+
+  const manifest = await P2P.buildManifest({
+    gameId: entry.id,
+    title: entry.title,
+    version: 'v1',
+    description: 'Игра из открытой коллекции',
+    chunkSize: CHUNK_SIZE,
+    files: clean,
+    createdAt: '2026-11-18T00:00:00.000Z',
+  });
+
+  return {
+    gameId: entry.id,
+    title: entry.title,
+    subtitle: entry.license ? `${entry.license} · ${entry.author || 'открытый источник'}` : 'Открытая коллекция',
+    accent: ['#e8b45a', '#78d4a0', '#7fb2f0', '#d98cae', '#c9a0ff'][index % 5],
+    version: 'v1',
+    play: `${dir}/index.html`,
+    cover: '',
+    dir,
+    source: 'collection',
+    license: entry.license || '',
+    author: entry.author || '',
+    sourceUrl: entry.sourceUrl || '',
+    infoHash: manifest.infoHash,
+    totalSize: manifest.totalSize,
+    chunkSize: manifest.chunkSize,
+    chunkCount: manifest.chunkCount,
+    fileCount: manifest.fileCount,
+    files: manifest.files,
+    blocked,
+    blockedCount: blocked.length,
+    blockedBytes: blocked.reduce((n, b) => n + (b.size || 0), 0),
+    addedAt: '2026-11-18T00:00:00.000Z',
+  };
+}
+
 async function main() {
   const args = new Set(process.argv.slice(2));
   const check = args.has('--check');
@@ -233,18 +357,41 @@ async function main() {
     }
   }
 
+  // --- Коллекция: 216 игр из открытых репозиториев (только торрент) ---
+  let collectionEntries = [];
+  if (!only) {
+    let collectionList = [];
+    try {
+      collectionList = JSON.parse(await readFile(collectionManifestPath, 'utf8'));
+    } catch {
+      console.error('  (collection/manifest.json не найден — коллекция пропущена)');
+    }
+    for (const item of collectionList) {
+      const entry = await buildCollectionOne(item, collectionEntries.length);
+      if (entry) collectionEntries.push(entry);
+    }
+    console.error(
+      `  Коллекция: ${collectionEntries.length} игр · ` +
+      `${P2P.formatBytes(collectionEntries.reduce((n, e) => n + e.totalSize, 0))} · ` +
+      `чанков ${collectionEntries.reduce((n, e) => n + e.chunkCount, 0)}`,
+    );
+  }
+
+  const allEntries = [...entries, ...collectionEntries];
   const payload = {
     schema: 'games-torrent-catalog/1',
     generatedAt: '2026-11-18T00:00:00.000Z',
     chunkSize: CHUNK_SIZE,
     stats: {
-      games: entries.length,
-      files: entries.reduce((n, e) => n + e.fileCount, 0),
-      totalBytes: entries.reduce((n, e) => n + e.totalSize, 0),
-      chunks: entries.reduce((n, e) => n + e.chunkCount, 0),
-      blockedFiles: entries.reduce((n, e) => n + e.blockedCount, 0),
+      games: allEntries.length,
+      storefront: entries.length,
+      collection: collectionEntries.length,
+      files: allEntries.reduce((n, e) => n + e.fileCount, 0),
+      totalBytes: allEntries.reduce((n, e) => n + e.totalSize, 0),
+      chunks: allEntries.reduce((n, e) => n + e.chunkCount, 0),
+      blockedFiles: allEntries.reduce((n, e) => n + e.blockedCount, 0),
     },
-    games: entries,
+    games: allEntries,
   };
 
   const json = `${JSON.stringify(payload, null, 2)}\n`;

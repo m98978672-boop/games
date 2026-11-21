@@ -87,7 +87,8 @@
       elapsed: 0,
       flowTimer: 0,
       kills: 0,
-      encounterDay: 0
+      encounterDay: 0,
+      evacuated: false
     };
 
     if (saved && saved.player) {
@@ -101,6 +102,7 @@
       if (saved.util) state.util = saved.util;
       if (saved.storage && typeof saved.storage === 'object') state.storage = saved.storage;
       if (Number.isFinite(saved.encounterDay)) state.encounterDay = saved.encounterDay;
+      if (saved.evacuated === true) state.evacuated = true;
       addToast('Сохранение загружено.');
     }
 
@@ -291,6 +293,13 @@
 
     if (state.health.dead) {
       showDeathScreen(state.health.deathCause);
+      return;
+    }
+
+    // Победа: дожили до дня эвакуации. Проверяем после смерти, чтобы
+    // гибель на седьмой день не засчитывалась как победа.
+    if (evacuationDue()) {
+      showWinScreen();
       return;
     }
 
@@ -843,9 +852,58 @@
     if (dO) dO.hidden = false;
   }
 
+  /* ---------------------------------------------- финал выживания
+     У игры был только экран смерти: сколько ни держись, «победить» было
+     нельзя. Теперь у выживания есть цель — дожить до седьмого дня, когда
+     район покидает последний конвой. Победа не отменяет смерть: если
+     погибнуть на седьмой день утром, экран смерти придёт как обычно.
+     После победы можно остаться в районе и играть дальше бесконечно —
+     это выбор игрока, а не навязанное продолжение. */
+  var EVAC_DAY = 7;
+
+  function evacuationDue() {
+    return state && !state.evacuated && state.tw && state.tw.day >= EVAC_DAY && !state.health.dead;
+  }
+
+  function showWinScreen() {
+    closeModals();
+    state.evacuated = true;
+    state.paused = true;
+    var wO = document.getElementById('win-overlay');
+    var wr = document.getElementById('win-reason');
+    var ws = document.getElementById('win-stats');
+    if (wr) {
+      wr.textContent = 'Вы дожили до эвакуации: ' + state.tw.day + '-й день в районе.';
+    }
+    if (ws) {
+      var kills = state.kills || 0;
+      // Инвентарь — это { items: [{ id, qty, freshness }] }, а не словарь:
+      // перебор ключей объекта дал бы «[object Object]» и нули.
+      var items = 0;
+      var list = (state.inv && Array.isArray(state.inv.items)) ? state.inv.items : [];
+      for (var i = 0; i < list.length; i++) items += Number(list[i].qty) || 0;
+      ws.textContent = 'Убито зомби: ' + kills + ' · Дней в районе: ' + state.tw.day
+        + ' · Запас: ' + Math.round(items) + ' ед. · Кровь: '
+        + Math.round(state.health.bloodMl) + ' / ' + state.health.maxBloodMl + ' мл';
+    }
+    if (wO) wO.hidden = false;
+  }
+
+  function stayInDistrict() {
+    var wO = document.getElementById('win-overlay');
+    if (wO) wO.hidden = true;
+    state.paused = false;
+    addToast('Вы остались в районе. Дальше — сколько выдержите.');
+  }
+
   function loop(ts) {
+    // Битая отметка времени не должна отравлять симуляцию: NaN через
+    // Math.max/Math.min проходит насквозь и ломает физику зомби.
+    if (!Number.isFinite(ts)) ts = lastTime || 0;
     if (!lastTime) lastTime = ts;
-    var dt = Math.min(0.05, Math.max(0.001, (ts - lastTime) / 1000));
+    var raw = (ts - lastTime) / 1000;
+    if (!Number.isFinite(raw) || raw < 0) raw = 0;
+    var dt = Math.min(0.05, Math.max(0.001, raw));
     lastTime = ts;
     stepSimulation(dt);
     DD.Renderer.renderFrame(canvasEl, state);
@@ -869,7 +927,7 @@
     onClick('btn-flash', function () { if (state) { state.player.flashlightOn = !state.player.flashlightOn; recomputeFovAndFlow(); } });
     onClick('btn-reload', performReload);
     onClick('btn-save', function () {
-      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay, storage: state.storage })) {
+      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay, storage: state.storage, evacuated: state.evacuated })) {
         addToast('Игра сохранена!');
       }
     });
@@ -898,11 +956,17 @@
     if (storageSearch) storageSearch.addEventListener('input', function () { if (activeStorage) renderStorage(); });
     onClick('btn-resume', function () { if (state) { state.paused = false; closeModals(); } });
     onClick('btn-pause-save', function () {
-      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay, storage: state.storage })) addToast('Сохранено!');
+      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay, storage: state.storage, evacuated: state.evacuated })) addToast('Сохранено!');
     });
     onClick('btn-pause-load', function () { newGame(true); });
     onClick('btn-pause-new', function () { newGame(false); });
     onClick('btn-death-restart', function () { newGame(false); });
+    onClick('btn-win-endless', function () { stayInDistrict(); });
+    onClick('btn-win-restart', function () {
+      var wO = document.getElementById('win-overlay');
+      if (wO) wO.hidden = true;
+      newGame(false);
+    });
 
     // Сенсорная крестовина на телефоне
     var bindHold = function (id, dx, dy) {

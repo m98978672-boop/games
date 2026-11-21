@@ -54,6 +54,10 @@ export class StrategicAI {
     const used = new Set();
     const hq = game.world.hqOf(faction);
 
+    /* Последний расчёт по секторам — для HUD и проверок: видно, какой
+       вклад дали города. Без этого «мозги поверх» неотличимы от чисел
+       внутри стратега. */
+    this.lastPlan = null;
     // 1. Оценка секторов (атака и оборона)
     const scored = game.world.sectors.map((s) => {
       const points = game.world.points.filter((p) => game.world.sectorAt(p.x, p.y)?.id === s.id);
@@ -71,15 +75,42 @@ export class StrategicAI {
       // Our own past retreats near this sector make it a little less attractive;
       // fresh captures reduce that warning. This never bans a target.
       const rememberedRisk = game.battleMemory?.attackPenalty(faction, s.id) || 0;
-      const attack = attackable
-        ? (weakness * w.weakness + value * w.value - d * w.distance - (enemyPower > ownPower * 1.8 ? w.risk : 0)) * persona.attack - rememberedRisk
+      /* Совет городов: мэр знает о своём городе то, чего не видит штаб, —
+         переполненное жильё, усталость, пробки, свежесть захвата. Его
+         поправка меняет оценку сектора, но не отменяет её: штаб всё
+         равно смотрит на силу и цену точки. */
+      const advice = game.mayors?.adviceForSector?.(s.id) || null;
+      /* Потолок ниже штрафа памяти: город подталкивает, но не отменяет. */
+      const advAttack = advice ? clamp(advice.attack, -1.2, 0.44) : 0;
+      const advDefense = advice ? clamp(advice.defense, -1.2, 1.2) : 0;
+      const advSupply = advice ? clamp(advice.supply, -1, 1) : 0;
+      /* Порядок важен: сначала штаб и города, потом — память.
+         Память о собственных отступлениях здесь не «ещё один плюс», а
+         предупреждение, которое не отменяется мнением мэра: если сектор
+         уже дважды стоил нам армии, тёплые слова города его не спасают.
+         Пока память складывалась с советом в одну сумму, совет её
+         перекрывал — и ИИ снова шёл туда, где его били. */
+      /* Совет «идти вперёд» относится только к ЧУЖИМ секторам: мэр просит
+         отбить конкретный город у противника. Ничейная земля и свой тыл
+         его не касаются — там он говорит об обороне (advDefense ниже).
+         Иначе мэр «подталкивал» бы штурм пустого поля, и предупреждение
+         памяти о потерях под этим сектором теряло бы вес. */
+      const advAttackHere = s.owner !== -1 && s.owner !== faction ? advAttack : 0;
+      const attackBase = attackable
+        ? (weakness * w.weakness + value * w.value - d * w.distance - (enemyPower > ownPower * 1.8 ? w.risk : 0)) * persona.attack + advAttackHere
         : -99;
+      const attack = attackBase > -50 ? attackBase - rememberedRisk : -99;
       const threat = enemyPower + (s.owner === faction ? 1 : 0) + (adjacentEnemy ? 0.3 : 0);
       const defense = s.owner === faction
-        ? (threat * w.threat + value * w.value + clamp(s.influence * (faction === 0 ? 1 : -1), 0, 1)) * persona.defense
+        ? (threat * w.threat + value * w.value + clamp(s.influence * (faction === 0 ? 1 : -1), 0, 1)) * persona.defense + advDefense
         : -99;
-      return { sector: s, points, value, attack, defense, ownPower, enemyPower, enemyPoints, neutralPoints, hasEnemyHQ: enemyPoints.some((p) => p.type === 'hq') };
+      return { sector: s, points, value, attack, defense, ownPower, enemyPower, enemyPoints, neutralPoints, advice, advSupply, hasEnemyHQ: enemyPoints.some((p) => p.type === 'hq') };
     });
+    this.lastPlan = scored.map((t) => ({
+      sectorId: t.sector.id,
+      attack: t.attack, defense: t.defense, supply: t.advSupply,
+      advice: t.advice || null,
+    }));
     // Добивание: когда враг почти разбит, стратег снижает порог сил и идёт на штаб —
     // война должна заканчиваться, а не тянуться до тайм-аута.
     const enemyUnits = [...game.units.values()].filter((u) => u.alive && u.faction === enemy).length;
@@ -118,7 +149,8 @@ export class StrategicAI {
       const sq = this.pickSquad(free, t.sector, used, t.enemyPower);
       if (!sq) continue;
       const point = t.points.find((p) => p.owner === faction) || null;
-      this.issue(sq, 'hold', t.sector, point, 'defense_depth', 'оборона угрожаемого сектора');
+      const cityWhy = t.advice && t.advice.notes.length ? ' · ' + t.advice.notes.slice(0, 2).join(' · ') : '';
+      this.issue(sq, 'hold', t.sector, point, 'defense_depth', 'оборона угрожаемого сектора' + cityWhy);
       used.add(sq.id);
       assigned.set(sq.id, { target: t.sector.id, at: game.time });
     }
@@ -148,7 +180,19 @@ export class StrategicAI {
       // оцениваем, хватит ли сил: сила отрядов против силы врага в секторе и рядом
       let need = (t.enemyPower + 1) * (finishing ? (cfg.finishPowerFactor ?? 1) : 1.25);
       need *= 1 + (cfg.openingPowerMult ?? 0) * opening;
+      /* Снабжение сектора — третий совет городов, и он работает здесь, а
+         не в оценке цели: склады города не делают врага слабее, но через
+         них группа снабжается быстрее и ей нужен меньший запас сил.
+         Пробки действуют наоборот. Поправка ограничена ±12%: логистика
+         мэра облегчает или усложняет наступление, но штаб по-прежнему
+         не ведёт отряды в заведомо проигрышный бой. */
+      need *= this.supplyNeedFactor(t.advSupply);
       if (allIn) need = Math.max(1, need * (cfg.allInPowerFactor ?? 0.55));
+      const atkWhy = t.advice && t.advice.attack > 0.15 && t.advice.notes.length
+        ? ' · город просит: ' + t.advice.notes.slice(0, 2).join(' · ') : '';
+      const supplyWhy = t.advSupply >= 0.3
+        ? ' · склады города поддерживают наступление'
+        : t.advSupply <= -0.3 ? ' · город предупреждает: снабжение слабое' : '';
       const group = [];
       let power = 0;
       const candidates = free.filter((s) => !used.has(s.id))
@@ -161,7 +205,7 @@ export class StrategicAI {
       if (!group.length || power < need) continue;
       const strategy = this.chooseStrategy(group[0], t, count, persona);
       for (const sq of group) {
-        this.issue(sq, 'capture', t.sector, point, strategy, `атака: ${point.name}`);
+        this.issue(sq, 'capture', t.sector, point, strategy, `атака: ${point.name}` + atkWhy + supplyWhy);
         used.add(sq.id);
         assigned.set(sq.id, { target: t.sector.id, at: game.time });
       }
@@ -207,6 +251,14 @@ export class StrategicAI {
       topAttack: attacks.slice(0, 3).map((a) => `${a.sector.name}:${a.attack.toFixed(2)}`),
     });
     if (this.journal.length > 60) this.journal.shift();
+  }
+
+  /* Множитель нужных сил от снабжения сектора: 1 — города молчат или
+     снабжение обычное, 0.88 — склады города помогают, 1.12 — пробки
+     мешают. Отдельным методом, чтобы предел поправки можно было
+     проверить без разыгрывания целой войны. */
+  supplyNeedFactor(advSupply) {
+    return 1 - clamp(advSupply, -1, 1) * 0.12;
   }
 
   pickSquad(free, sector, used, enemyPower) {

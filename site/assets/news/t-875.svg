@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="T-875">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#102a43"/>
+      <stop offset="100%" stop-color="#22b8cf"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <circle cx="1120" cy="120" r="230" fill="#ffffff" opacity="0.07"/>
+  <circle cx="180" cy="640" r="190" fill="#ffffff" opacity="0.05"/>
+  <text x="72" y="120" font-family="Inter, Segoe UI, sans-serif" font-size="128">🤖</text>
+  <rect x="72" y="180" width="196" height="52" rx="26" fill="#ffffff" opacity="0.16"/>
+  <text x="98" y="216" font-family="Inter, Segoe UI, sans-serif" font-size="26" font-weight="700" fill="#ffffff">T-875</text>
+  <text x="72" y="330" font-family="Inter, Segoe UI, sans-serif" font-size="44" font-weight="700" fill="#ffffff">iFixit: ремонт Apple HomeView</text>\n  <text x="72" y="384" font-family="Inter, Segoe UI, sans-serif" font-size="44" font-weight="700" fill="#ffffff">оказался «неоправданно сложным»</text>
+  <text x="72" y="620" font-family="Inter, Segoe UI, sans-serif" font-size="28" font-weight="600" fill="#ffffff" opacity="0.78">Хабр Новости · Games News</text>
+</svg>

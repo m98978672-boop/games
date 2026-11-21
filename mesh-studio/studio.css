@@ -1,0 +1,394 @@
+/* MESH STUDIO — интерфейс редактора.
+   Тёмная схема в тон остальным разделам, крупные кнопки под палец,
+   сетка на десктопе и одна колонка на телефоне. */
+
+:root {
+  --ms-bg: #0d1016;
+  --ms-panel: #151a23;
+  --ms-panel-2: #1b222d;
+  --ms-line: #2a3442;
+  --ms-text: #dde5f0;
+  --ms-muted: #8b9bb0;
+  --ms-accent: #5ea9e8;
+  --ms-accent-2: #7bd88f;
+  --ms-danger: #e8665e;
+  --ms-radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--ms-bg);
+  color: var(--ms-text);
+  font: 14px/1.45 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overscroll-behavior: none;
+}
+
+body { overflow: hidden; }
+
+.studio {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* ---------- верхняя полоса ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #171d27, #121721);
+  border-bottom: 1px solid var(--ms-line);
+  flex: 0 0 auto;
+}
+
+.back {
+  color: var(--ms-muted);
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: .08em;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.back:hover, .back:focus-visible { color: var(--ms-text); background: var(--ms-panel-2); }
+
+.title { flex: 1 1 auto; min-width: 0; }
+.title .eyebrow {
+  display: block;
+  font-size: 10px;
+  letter-spacing: .22em;
+  color: var(--ms-muted);
+  text-transform: uppercase;
+}
+.title h1 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: .06em;
+  font-weight: 650;
+}
+
+.stats { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  background: var(--ms-panel-2);
+  border: 1px solid var(--ms-line);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 12px;
+  color: var(--ms-muted);
+  white-space: nowrap;
+}
+.chip strong { color: var(--ms-text); font-weight: 600; }
+
+/* ---------- рабочая область ---------- */
+.workspace {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: 268px minmax(0, 1fr) 268px;
+  min-height: 0;
+}
+
+.panel {
+  background: var(--ms-panel);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.panel.left { border-right: 1px solid var(--ms-line); }
+.panel.right { border-left: 1px solid var(--ms-line); }
+
+.block {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ms-line);
+}
+.block.grow { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 120px; }
+.block h2 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ms-muted);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.muted { color: var(--ms-muted); font-weight: 400; }
+
+/* ---------- кнопки форм ---------- */
+.grid-shapes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.shape-btn {
+  background: var(--ms-panel-2);
+  border: 1px solid var(--ms-line);
+  color: var(--ms-text);
+  border-radius: 8px;
+  padding: 9px 6px;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .08s;
+  font-family: inherit;
+}
+.shape-btn:hover { border-color: var(--ms-accent); background: #1e2734; }
+.shape-btn:active { transform: scale(.97); }
+.shape-btn:focus-visible { outline: 2px solid var(--ms-accent); outline-offset: 1px; }
+
+/* ---------- поля ---------- */
+.field {
+  display: block;
+  margin-bottom: 9px;
+  font-size: 11.5px;
+  color: var(--ms-muted);
+}
+.field span { display: block; margin-bottom: 4px; }
+.field input {
+  width: 100%;
+  background: #0f141c;
+  border: 1px solid var(--ms-line);
+  color: var(--ms-text);
+  border-radius: 7px;
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 12.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.field input:focus {
+  outline: none;
+  border-color: var(--ms-accent);
+  box-shadow: 0 0 0 2px rgba(94, 169, 232, .18);
+}
+.field.compact { margin-bottom: 0; }
+.field.compact input[type="color"] {
+  height: 34px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.btn {
+  width: 100%;
+  background: var(--ms-panel-2);
+  border: 1px solid var(--ms-line);
+  color: var(--ms-text);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .08s;
+}
+.btn:hover:not(:disabled) { border-color: var(--ms-accent); background: #1e2734; }
+.btn:active:not(:disabled) { transform: scale(.98); }
+.btn:disabled { opacity: .42; cursor: default; }
+.btn.primary {
+  background: linear-gradient(180deg, #2c6f9e, #24587c);
+  border-color: #3679a8;
+}
+.btn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #3380b4, #2a6389); }
+.btn.danger:hover:not(:disabled) { border-color: var(--ms-danger); }
+
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* ---------- цвета ---------- */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform .1s, border-color .15s;
+}
+.swatch:hover { transform: scale(1.1); }
+.swatch[aria-pressed="true"] { border-color: #fff; }
+
+/* ---------- сцена ---------- */
+.viewport {
+  position: relative;
+  background: radial-gradient(ellipse at 50% 35%, #1b2530 0%, #0b0e13 78%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  overflow: hidden;
+}
+#view {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  image-rendering: auto;
+  touch-action: none;
+}
+#view:active { cursor: grabbing; }
+
+.viewport-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 14, 20, .82);
+  border: 1px solid var(--ms-line);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  color: var(--ms-muted);
+  pointer-events: none;
+  white-space: nowrap;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viewport-tools {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.vbtn {
+  background: rgba(21, 26, 35, .92);
+  border: 1px solid var(--ms-line);
+  color: var(--ms-muted);
+  border-radius: 7px;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.vbtn:hover { color: var(--ms-text); border-color: var(--ms-accent); }
+
+.viewport-error {
+  position: absolute;
+  inset: auto 16px 16px;
+  background: rgba(60, 22, 20, .95);
+  border: 1px solid var(--ms-danger);
+  border-radius: var(--ms-radius);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  color: #ffd9d6;
+}
+.viewport-error b { display: block; margin-bottom: 3px; }
+
+/* ---------- список сцены ---------- */
+.scene-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.scene-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .12s, border-color .12s;
+}
+.scene-item:hover { background: var(--ms-panel-2); }
+.scene-item[aria-selected="true"] {
+  background: #1d2a38;
+  border-color: var(--ms-accent);
+}
+.scene-dot {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, .22);
+}
+.scene-name {
+  flex: 1 1 auto;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scene-tris { font-size: 11px; color: var(--ms-muted); flex: 0 0 auto; }
+.scene-empty {
+  color: var(--ms-muted);
+  font-size: 12px;
+  padding: 10px 4px;
+  line-height: 1.5;
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  color: var(--ms-muted);
+  line-height: 1.5;
+}
+
+/* ---------- нижняя строка ---------- */
+.statusbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  background: #0f141c;
+  border-top: 1px solid var(--ms-line);
+  font-size: 11.5px;
+  color: var(--ms-muted);
+  min-height: 32px;
+}
+.statusbar .spacer { flex: 1 1 auto; }
+#status-text { color: var(--ms-text); }
+#status-text.error { color: var(--ms-danger); }
+#status-text.ok { color: var(--ms-accent-2); }
+
+/* ---------- телефон ---------- */
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .studio { height: auto; min-height: 100dvh; }
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-areas: "view" "left" "right";
+  }
+  .viewport { grid-area: view; height: 52vh; min-height: 280px; }
+  .panel.left { grid-area: left; border-right: none; border-top: 1px solid var(--ms-line); }
+  .panel.right { grid-area: right; border-left: none; border-top: 1px solid var(--ms-line); }
+  .block.grow { min-height: 0; }
+  .scene-list { max-height: 220px; }
+  .grid-shapes { grid-template-columns: 1fr 1fr 1fr; }
+  .viewport-hint { display: none; }
+  .topbar { flex-wrap: wrap; gap: 8px; }
+  .title h1 { font-size: 16px; }
+  .stats { width: 100%; }
+  .chip { font-size: 11px; padding: 3px 9px; }
+  .shape-btn { padding: 12px 6px; font-size: 13px; }
+  .btn, .vbtn { padding: 11px 10px; font-size: 13px; }
+}
+
+@media (max-width: 420px) {
+  .grid-shapes { grid-template-columns: 1fr 1fr; }
+  .actions { grid-template-columns: 1fr; }
+}
+
+/* Уважаем настройку «меньше движения». */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

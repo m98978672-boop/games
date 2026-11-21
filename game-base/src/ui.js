@@ -141,6 +141,8 @@
       }
       set('hud-best', U().fmt(s.best || 0));
       set('hud-combo', '×' + s.combo);
+      const streakEl = ui.els['hud-streak'];
+      if (streakEl) streakEl.textContent = String(s.streak || 0);
       set('hud-time', String(Math.ceil(s.timeLeftMs / 1000)));
     },
 
@@ -157,11 +159,28 @@
           <div><span>Поймано</span><b class="gold">${s.caught}</b></div>
           <div><span>Сбежало</span><b>${s.missed}</b></div>
           <div><span>Комбо</span><b class="gold">×${s.combo}</b></div>
+          <div><span>Серия</span><b class="gold">${s.streak}</b></div>
           <div><span>Рекорд</span><b>${U().fmt(s.best || 0)}</b></div>
+          <div><span>Лучшая серия</span><b>${s.bestStreak || 0}</b></div>
         </div>
-        <p class="side-note">Лови подряд — комбо растёт до ×${c.comboMax}. Один промах — и всё сгорает.</p>
+        <p class="side-note">${GB.game.MODES[s.mode].note} Комбо растёт до ×${c.comboMax}, промах сбрасывает серию.</p>
+        <div class="mode-row" role="group" aria-label="Режим мини-игры">
+          ${Object.keys(GB.game.MODES).map((id) => `
+            <button class="mode-btn${id === s.mode ? ' on' : ''}" data-mode="${id}">${GB.game.MODES[id].title}</button>`).join('')}
+        </div>
         <button class="btn btn-primary" id="btn-new-round">Ещё раунд!</button>`;
       U().on(U().el('btn-new-round'), 'click', () => { GB.audio.play('click'); GB.game.restart(); });
+      // Переключение режима начинает новый раунд в той же сессии: ничего не теряется.
+      Array.from(ui.els.side.querySelectorAll('.mode-btn')).forEach((btn) => {
+        btn.onclick = () => {
+          if (btn.dataset.mode === GB.game.state.mode) return;
+          GB.audio.play('click');
+          GB.game.newRound(btn.dataset.mode);
+          GB.ui.renderSide();
+          GB.ui.setHint(GB.game.MODES[GB.game.state.mode].note);
+          GB.ui.setNews('Режим: ' + GB.game.MODES[GB.game.state.mode].title);
+        };
+      });
     },
 
     // --- модальные окна ---

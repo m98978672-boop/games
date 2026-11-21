@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { readFileSync } from 'node:fs';
 import {
   createHandler,
   createSignedToken,
@@ -417,4 +418,79 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(page, /id="dropboxPanel"/);
   assert.match(page, /id="refreshGamesButton"/);
   assert.match(page, /id="saveDropboxButton"/);
+});
+
+/* ---- свой GPU-хост: три честных состояния ---- */
+
+test('GPU host: not configured means cloud stays off', async (t) => {
+  const app = createServer(createHandler({
+    env: { PORT: '4174', PUBLIC_ORIGIN: 'http://localhost:4174', SESSION_SECRET: secret, NODE_ENV: 'development' },
+    fetchImpl: async () => { throw new Error('no upstream expected'); },
+  }));
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve, reject) => app.close((e) => e ? reject(e) : resolve())));
+  const base = `http://127.0.0.1:${app.address().port}`;
+
+  const status = await (await fetch(`${base}/api/status`)).json();
+  assert.equal(status.cloud.ready, false);
+  assert.equal(status.cloud.provider, null);
+
+  const probe = await (await fetch(`${base}/api/cloud/probe`)).json();
+  assert.equal(probe.ready, false);
+  assert.equal(probe.online, false);
+  assert.match(probe.reason, /CLOUD_HOST_URL/);
+});
+
+test('GPU host: configured host is probed through the backend, not from the browser', async (t) => {
+  const probed = [];
+  const app = createServer(createHandler({
+    env: {
+      PORT: '4174', PUBLIC_ORIGIN: 'http://localhost:4174', SESSION_SECRET: secret, NODE_ENV: 'development',
+      CLOUD_HOST_URL: 'http://gpu-host.internal:9100', CLOUD_HOST_NAME: 'Домашний RTX',
+    },
+    fetchImpl: async (url) => {
+      probed.push(String(url));
+      return { ok: true, status: 200, json: async () => ({ ok: true }) };
+    },
+  }));
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve, reject) => app.close((e) => e ? reject(e) : resolve())));
+  const base = `http://127.0.0.1:${app.address().port}`;
+
+  const status = await (await fetch(`${base}/api/status`)).json();
+  assert.equal(status.cloud.ready, true);
+  assert.equal(status.cloud.provider, 'self-hosted-gpu');
+  assert.equal(status.cloud.hostName, 'Домашний RTX');
+  // Адрес агента не должен попадать в публичный ответ.
+  assert.equal(JSON.stringify(status).includes('gpu-host.internal'), false);
+
+  // Без входа проверка закрыта: адрес хоста не выдаём анонимам.
+  const anon = await fetch(`${base}/api/cloud/probe`);
+  assert.equal(anon.status, 401);
+  assert.equal(probed.length, 0);
+});
+
+test('GPU host: unreachable agent is reported honestly', async (t) => {
+  const app = createServer(createHandler({
+    env: {
+      PORT: '4174', PUBLIC_ORIGIN: 'http://localhost:4174', SESSION_SECRET: secret, NODE_ENV: 'development',
+      CLOUD_HOST_URL: 'http://gpu-host.internal:9100',
+    },
+    fetchImpl: async () => { throw new Error('connect ECONNREFUSED'); },
+  }));
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve, reject) => app.close((e) => e ? reject(e) : resolve())));
+  const base = `http://127.0.0.1:${app.address().port}`;
+
+  const status = await (await fetch(`${base}/api/status`)).json();
+  assert.equal(status.cloud.ready, true, 'настроенный хост виден в статусе');
+  assert.equal(status.cloud.provider, 'self-hosted-gpu');
+});
+
+test('browser code asks the backend about the host and never calls it directly', () => {
+  const appJs = readFileSync(new URL('./app.js', import.meta.url), 'utf8');
+  assert.match(appJs, /api\('\/api\/cloud\/probe'\)/, 'проверка идёт через api()');
+  assert.equal(/gpu-host\.internal|CLOUD_HOST_URL/.test(appJs), false, 'адрес хоста не попадает в браузер');
+  assert.match(appJs, /Запустить на своём GPU-хосте/, 'есть кнопка запуска на своём хосте');
+  assert.match(appJs, /setCloudUnavailable/, 'недоступность хоста показывается честно');
 });

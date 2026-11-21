@@ -176,6 +176,10 @@ class Game {
 
     // ---- лодка: плавает по волнам, на ней можно уйти к другим островам ----
     this.boat = null;
+    /* Спасение: пока плот не построен и не отплыл, игра идёт в прежнем
+       режиме. Флаг живёт в сейве, чтобы финал нельзя было «забыть». */
+    this.escaped = false;
+    this.raft = null;
     this.sailing = false;
     this.shadowDirty = true;   // карту теней пересобрать на первом кадре
 
@@ -1203,6 +1207,76 @@ class Game {
   }
 
   // ------------------------------------------------------------
+  //  Спасение: плот и отплытие
+  // ------------------------------------------------------------
+
+  /** Можно ли строить плот именно здесь: нужна кромка воды у берега */
+  raftSpotOk(x, z) {
+    if (this.underground) return { ok: false, why: 'Под землёй плот не построить — выходи на берег' };
+    const h = this.world.heightAt(x, z);
+    if (h < 0.35) return { ok: false, why: 'Слишком глубоко: встань у самой кромки воды' };
+    if (h > 1.6) return { ok: false, why: 'Плоту нужна вода: подойди к берегу' };
+    return { ok: true };
+  }
+
+  /** Построить плот на воде рядом с игроком и уплыть (финал игры) */
+  buildRaft() {
+    if (this.escaped) return false;
+    if (!this.running || this.paused || this.dead) return false;
+    if ((this.state.inventory.raft || 0) <= 0) {
+      this.ui.toast('Сначала собери плот: 12 палок, 4 верёвки, 2 железа (C)', true);
+      return false;
+    }
+    // ищем воду впереди игрока и по сторонам
+    const p = this.player.position;
+    let spot = null;
+    for (let d = 2; d <= 9 && !spot; d += 0.5) {
+      for (let a = 0; a < 8 && !spot; a++) {
+        const ang = this.player.facing + (a * Math.PI) / 4;
+        const x = p.x + Math.sin(ang) * d;
+        const z = p.z + Math.cos(ang) * d;
+        if (this.raftSpotOk(x, z).ok && this.world.heightAt(x, z) < 0.5) spot = { x, z };
+      }
+    }
+    if (!spot) {
+      this.ui.toast('Не видно воды: подойди к берегу и повернись к морю', true);
+      return false;
+    }
+    this.takeItem('raft', 1);
+    this.escaped = true;
+    this.audio.craft?.();
+    this.ui.showEscape(this.escapeSummary(), this.sky.day);
+    this.running = false;
+    // сейв победы отдельно от обычного: забег завершён
+    try {
+      localStorage.setItem(SAVE_KEY + '.victory', JSON.stringify({
+        day: this.sky.day,
+        cause: 'raft',
+        summary: this.escapeSummary(),
+        savedAt: Date.now(),
+      }));
+      localStorage.removeItem(SAVE_KEY);
+    } catch (err) { /* приватный режим — просто не сохраняем рекорд */ }
+    if (document.pointerLockElement) document.exitPointerLock();
+    return true;
+  }
+
+  /** Итоги выживания для экрана спасения */
+  escapeSummary() {
+    return {
+      days: this.sky.day,
+      health: Math.round(this.state.health),
+      hunger: Math.round(this.state.hunger),
+      thirst: Math.round(this.state.thirst),
+      wood: this.state.inventory.wood || 0,
+      stone: this.state.inventory.stone || 0,
+      iron: this.state.inventory.iron || 0,
+      storms: this.state.stormsSeen || 0,
+      nights: Math.max(0, this.sky.day - 1),
+    };
+  }
+
+  // ------------------------------------------------------------
   //  Верстак и точильный станок
   // ------------------------------------------------------------
 
@@ -2217,6 +2291,17 @@ class Game {
     for (const [id, need] of Object.entries(recipe.need)) this.takeItem(id, need);
     for (const [id, give] of Object.entries(recipe.gives)) this.addItem(id, give);
 
+    /* Плот — не вещь в сумке, а выход с острова. Собирать его разрешаем
+       только у воды: иначе игрок уходит вглубь и «спасается» на пляже. */
+    if (recipe.id === 'raft') {
+      const spot = this.raftSpotOk(this.player.position.x, this.player.position.z);
+      if (!spot.ok) {
+        this.ui.toast(`${spot.why} — плот ставится у самой воды`, true);
+      } else {
+        this.ui.toast('Плот готов. Поставь его: F у берега — и уплывай');
+      }
+    }
+
     this.audio.craft?.();
     this.ui.toast(`Сделано: ${recipe.name}`);
     this.ui._lastCraftSig = '';
@@ -2233,6 +2318,7 @@ class Game {
     const id = this.equippedId();
     if (id === 'workbench') this.placeStation('bench');
     else if (id === 'grindstone') this.placeStation('grind');
+    else if (id === 'raft') this.buildRaft();
     else this.placeCampfire();
   }
 
@@ -2643,7 +2729,7 @@ class Game {
   // ------------------------------------------------------------
 
   save() {
-    if (!this.running || this.dead) return false;
+    if (!this.running || this.dead || this.escaped) return false;
     try {
       const data = {
         v: 1,
@@ -3134,6 +3220,11 @@ function initMenu() {
     if (t.closest('#btn-continue')) { scheduleBoot(true); return; }
     if (t.closest('#btn-resume') && window.__game) { window.__game.resume(); return; }
     if (t.closest('#btn-restart')) {
+      try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
+      window.location.reload();
+    }
+    // «Ещё раз» с экрана спасения: рекорд спасения остаётся, забег новый
+    if (t.closest('#btn-escape-again')) {
       try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
       window.location.reload();
     }

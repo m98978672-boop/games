@@ -422,11 +422,61 @@ function updateCloudStatus(status) {
   /* Панель может быть уже выгружена из DOM: без проверки это TypeError
      «после хода», и он роняет страницу, пока игрок смотрит на другое. */
   if (!elements.cloudState) return;
+  const cloud = (status && status.cloud) || null;
+  const strong = $('strong', elements.cloudState);
+  const small = $('small', elements.cloudState);
+
+  /* Три честных состояния вместо одной заглушки:
+     не настроен → хост настроен, но не отвечает → хост на связи. */
+  if (!cloud || !cloud.ready) {
+    elements.cloudState.dataset.state = 'offline';
+    if (strong) strong.textContent = 'GPU-хост не подключён';
+    if (small) small.textContent = 'Нужны безопасное сопряжение и реальный видеопоток';
+    elements.cloudButton.disabled = true;
+    elements.cloudButton.textContent = 'Облачный запуск недоступен';
+    return;
+  }
+
+  if (strong) strong.textContent = cloud.hostName || 'Свой GPU-хост';
+  if (small) small.textContent = 'Хост настроен · проверяю связь…';
+  elements.cloudButton.disabled = true;
+  elements.cloudButton.textContent = 'Проверяю хост…';
+  probeCloudHost();
+}
+
+let cloudProbeInFlight = false;
+async function probeCloudHost() {
+  if (cloudProbeInFlight) return;
+  cloudProbeInFlight = true;
+  try {
+    const data = await api('/api/cloud/probe');
+    const strong = $('strong', elements.cloudState);
+    const small = $('small', elements.cloudState);
+    if (data.online) {
+      elements.cloudState.dataset.state = 'online';
+      if (strong) strong.textContent = data.hostName || 'Свой GPU-хост';
+      if (small) small.textContent = 'Хост на связи · видеопоток запускается с него';
+      elements.cloudButton.disabled = false;
+      elements.cloudButton.textContent = 'Запустить на своём GPU-хосте';
+      elements.cloudButton.classList.remove('button-disabled');
+    } else {
+      setCloudUnavailable(data.reason || 'Агент не отвечает.');
+    }
+  } catch (err) {
+    // 401 — вход не выполнен, остальное — сеть или сам хост.
+    if (err && err.status === 401) setCloudUnavailable('Нужен вход через Steam, чтобы проверить свой хост.');
+    else setCloudUnavailable('Сервер не ответил на проверку хоста.');
+  } finally {
+    cloudProbeInFlight = false;
+  }
+}
+
+function setCloudUnavailable(reason) {
   elements.cloudState.dataset.state = 'offline';
   const strong = $('strong', elements.cloudState);
   const small = $('small', elements.cloudState);
-  if (strong) strong.textContent = 'GPU-хост не подключён';
-  if (small) small.textContent = 'Нужны безопасное сопряжение и реальный видеопоток';
+  if (strong) strong.textContent = 'GPU-хост не отвечает';
+  if (small) small.textContent = reason;
   elements.cloudButton.disabled = true;
   elements.cloudButton.textContent = 'Облачный запуск недоступен';
 }

@@ -134,6 +134,15 @@ export function playGame(root, project, opts = {}) {
   safely('долгая игра падает', () => tick(timers, opts.longFrames || 120));
 
   /* состояние после игры: NaN в числах — почти всегда баг расчёта */
+  // Infinity — не всегда баг. Библиотеки камер и физики штатно используют
+  // ±1/0 как «без ограничения» (OrbitControls.maxDistance, maxZoom,
+  // maxTargetRadius, min/maxAzimuthAngle). Такой шум прятал настоящие
+  // находки, поэтому бесконечности в известных пределах считаем нормой,
+  // а NaN и бесконечности в игровых числах — по-прежнему багом.
+  const LIMIT_NAME = /^(min|max)[A-Z]/;
+  const isLibraryLimit = (name, value) => typeof value === 'number'
+    && Number.isFinite(value) === false && !Number.isNaN(value)
+    && LIMIT_NAME.test(name);
   const nan = [];
   const seen = new Set();
   const look = (obj, path, depth) => {
@@ -142,8 +151,9 @@ export function playGame(root, project, opts = {}) {
     for (const k of Object.keys(obj)) {
       let v;
       try { v = obj[k]; } catch { continue; }
-      if (typeof v === 'number' && !Number.isFinite(v)) nan.push(path + '.' + k + ' = ' + v);
-      else if (v && typeof v === 'object') look(v, path + '.' + k, depth + 1);
+      if (typeof v === 'number' && !Number.isFinite(v)) {
+        if (!isLibraryLimit(k, v)) nan.push(path + '.' + k + ' = ' + v);
+      } else if (v && typeof v === 'object') look(v, path + '.' + k, depth + 1);
     }
   };
   for (const key of Object.keys(win)) {

@@ -980,8 +980,17 @@ export class Mobs {
     const distHome = Math.hypot(mob.x - mob.home.x, mob.z - mob.home.z);
     const aggressive = def.damage > 0;
 
-    // раненый и напуганный — отходит
-    if (hpRatio <= def.fleeBelow && mob.state !== 'retreat' && mob.state !== 'rest') {
+    /* Раненый и напуганный — отходит.
+       Осторожно с fleeBelow === 1: у травоядных это значит «пугается
+       каждого шороха». Но hpRatio <= 1 верно ВСЕГДА, поэтому прежняя
+       проверка срабатывала каждый кадр: зверь вставал в flee, _think
+       тут же возвращался, состояние никогда не менялось — и он стоял
+       на месте до конца партии. Тест «звери не застревают» честно
+       показывал 0.00 м. Теперь постоянная тревога действует только
+       если зверь действительно кого-то чует, иначе он живёт обычной
+       жизнью (пасётся, патрулирует, спит). */
+    const scared = hpRatio < def.fleeBelow || (def.fleeBelow >= 1 && seesPlayer && dist < def.detect * 1.3);
+    if (scared && mob.state !== 'retreat' && mob.state !== 'rest') {
       this.setState(mob, aggressive ? 'retreat' : 'flee');
       return;
     }
@@ -1192,9 +1201,6 @@ export class Mobs {
         mob.stuckTime = 0;
         // разворачиваемся и ищем другую цель; в бою — просто обходим игрока
         if (mob.state === 'chase' || mob.state === 'attack') {
-          mob.state = 'patrol';
-          this.setState(mob, 'patrol');
-        } else {
           mob.facing += Math.PI * (0.5 + this.rng());
           this._pickPatrolPoint(mob);
           this.setState(mob, 'patrol');

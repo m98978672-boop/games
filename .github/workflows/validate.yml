@@ -43,6 +43,13 @@ jobs:
           fi
           node tools/torrent/test.mjs
           node tools/p2p-server/test.mjs
+      - name: Test MESH STUDIO — редактор моделей на движке (ядро, стык, собранный бандл)
+        run: |
+          # Редактор живёт на том же движке, поэтому его стык проверяется здесь
+          # же. Браузера в CI нет — бандл запускается на минимальной странице.
+          node mesh-studio/tests/core.mjs
+          node mesh-studio/tests/engine.mjs
+          node mesh-studio/tests/browser.mjs
       - name: Test bridges between RatCore and other engines (route-engine, «Переплёт»)
         run: |
           (cd route-engine && npm test)
@@ -91,6 +98,8 @@ jobs:
             python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"frontline-test.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
           fi
           exit "$status"
+      - name: Test frontline city brains (мэры country-atlas поверх штаба)
+        run: node frontline-command/tests/mayors.mjs
       - name: Test Frontline battlefield visuals (Chromium)
         run: npm run test:battlefield:browser --prefix frontline-command
       - name: Test shooter-2 structure and offline rules
@@ -108,6 +117,7 @@ jobs:
           node dead-district/tests/interaction-targets.mjs
           node dead-district/tests/storage.mjs
           node dead-district/tests/model-views.mjs
+          node dead-district/tests/evacuation.mjs
           node dead-district/tests/isometric-textures.mjs
           node dead-district/tools/static_gd_check.mjs
       - name: Test PLAYBRIDGE backend
@@ -120,6 +130,83 @@ jobs:
         run: |
           node tools/tests/hidden-attribute.mjs
           node ratmes/tests/close-buttons.mjs
+      - name: Guard that every game loop survives a broken animation timestamp
+        run: node tools/tests/frame-dt.mjs
+      - name: Test truck-haul logic (contracts, gearbox, wear, payouts, init order)
+        run: node truck-haul/tests/logic.mjs
+      - name: Test shooter touch controls (стик, свайп, огонь, перезарядка)
+        run: node shooter/tests/touch.mjs
+      - name: Test cascade-hydro finale (вехи, экран финала)
+        run: |
+          cd cascade-hydro
+          npm ci
+          node tests/finale.mjs
+      - name: Test last-shore rocks and animals (переступание, звери не застревают)
+        run: |
+          cd last-shore
+          # Зависимости ставим здесь же. Раньше npm ci был только в шаге
+          # escape, который идёт ниже, — и этот шаг падал с
+          # ERR_MODULE_NOT_FOUND: jsdom, потому что в тестах v018/mobs
+          # используется jsdom, а его не было. Выглядело как «звери
+          # застревают», хотя тест не запускался вовсе.
+          npm ci
+          npm run test:build
+          node tests/v018.mjs
+      - name: Test euro-haul smoke (карьера, рейс, сохранение) — без флака
+        run: |
+          cd euro-haul
+          # Зависимости (jsdom) нужны самому тесту: без npm ci шаг падал
+          # на импорте, а выглядел как провал игры.
+          npm ci --no-audit --no-fund
+          node tests/smoke.mjs
+      - name: Test last-shore escape (плот, спасение, экран финала)
+        run: |
+          cd last-shore
+          npm ci
+          npm run build
+          npm run test:build
+          node tests/escape.mjs
+      - name: Test truck-showroom model details (трубы, LED-оптика, габариты)
+        run: |
+          cd truck-showroom
+          npm ci --no-audit --no-fund
+          node tests/details.mjs
+      - name: Test road-tycoon victory (финал, сохранение, свободная игра)
+        run: node road-tycoon/tests/victory.test.js
+      - name: Guard finale coverage (у каждой игры есть конец, и он закреплён тестом)
+        run: node tools/tests/finale-coverage.mjs
+      - name: Test game endings — у каждой игры должен быть финал
+        run: |
+          # Раньше у этих игр не было концовки ни в каком виде: рейсы и
+          # истории шли по кругу, а выживалка умела только убивать.
+          node truck-haul/tests/career.mjs
+          node night-taxi/tests/finale.mjs
+          node euro-haul/tests/career-end.mjs
+      - name: Test country-atlas (карта, реки, дороги, ИИ, старт) — 33 набора
+        run: |
+          # Раньше этот раздел не проверялся в CI вовсе, и `npm test` падал с
+          # чистой установки: тесты требовали @napi-rs/canvas, которого не было
+          # в зависимостях. Теперь зависимость объявлена и прогон обязателен.
+          cd country-atlas
+          npm ci --no-audit --no-fund
+          # Лог шага недоступен снаружи, поэтому при падении хвост вывода
+          # уезжает в аннотацию — как уже сделано для багханта выше.
+          set +e
+          npm test > "$RUNNER_TEMP/country-atlas.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/country-atlas.log"
+          if [ "$status" -ne 0 ]; then
+            python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"country-atlas.log"); s="".join(open(p,errors="replace").readlines()[-60:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit $status
+      - name: Test Folder OS (apps, terminal, disk export)
+        run: node folder-os/tests/smoke.mjs
+      - name: Test the bug-hunting bot keeps distinguishing real NaN from library limits
+        run: node tools/bughunt/tests/nonfinite-rule.mjs
+      - name: Test knowledge collector and bug benchmark (data quality, no duplicates, real defects)
+        run: |
+          node tools/training/test-build-knowledge.mjs
+          node tools/training/test-training.mjs
 
   malware-scan:
     name: Scan changed files with ClamAV

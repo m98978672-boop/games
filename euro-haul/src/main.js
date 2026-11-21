@@ -10,6 +10,12 @@ import { buildRouteGeometry, buildNetwork, junctionAhead, networkRouteKm, speedL
 import { CITY_BY_ID, COUNTRIES } from './data/cities.js';
 import { TRUCK_MODELS, PAINT_COLORS, UPGRADES, levelForXp, SKILLS } from './data/trucks.js';
 import { TruckSim } from './core/physics.js';
+
+/* Цель карьеры: сорок доставок. Игра была бесконечной — уровни росли без
+   предела, а «конца» не было ни в каком виде. Сорок рейсов — это несколько
+   вечеров игры: достаточно долго, чтобы карьера ощущалась, и достаточно
+   коротко, чтобы до финала реально доходили. */
+const CAREER_GOAL = 40;
 import { AssetLibrary } from './core/assets.js';
 import { qualityProfile } from './core/quality.js';
 import { AudioSystem } from './core/audio.js';
@@ -908,6 +914,16 @@ class Game {
     this.offers = makeOffers(this.profile, this.profile.currentCity, 10, now, seedBase);
   }
 
+  /* После финала карьеры: вольная езда. Игра не заканчивается насильно —
+     игрок сам решает, что рейсы за целью ему больше не нужны. */
+  startFreeMode() {
+    if (!this.profile) return;
+    this.profile.freeMode = true;
+    this.saveNow();
+    this.enterGarage('jobs');
+    this.ui.toast('Вольная езда: карьера пройдена, можно просто ездить', 'good', 5200);
+  }
+
   freeDrive(cityId) {
     if (!cityId || cityId === this.profile.currentCity) {
       this.ui.toast('Выберите другой город для поездки', 'info');
@@ -1398,7 +1414,12 @@ class Game {
 
   // ---------------------------------------------------------------- Игровой цикл
   loop(now) {
-    const dt = Math.min(0.05, (now - this.last) / 1000);
+    // Битая отметка времени рвёт физику грузовика: NaN через Math.min
+    // проходит насквозь, и машина улетает в бесконечность.
+    if (!Number.isFinite(now)) now = (typeof performance !== 'undefined' ? performance.now() : this.last);
+    let raw = (now - this.last) / 1000;
+    if (!Number.isFinite(raw) || raw < 0) raw = 0;
+    const dt = Math.min(0.05, raw);
     this.last = now;
     this.fpsAccum += dt;
     this.fpsFrames++;
@@ -2204,6 +2225,10 @@ class Game {
     this.saveNow();
     this.disposeWorld();
     this.enterGarage('jobs');
+    // Карьера была бесконечной: уровни росли без предела, и «конца» не было
+    // ни в каком виде. Теперь у неё есть цель в CAREER_GOAL доставок.
+    const careerDone = !this.profile.careerDone && !this.profile.freeMode
+      && this.profile.stats.deliveries >= CAREER_GOAL;
     this.ui.deliveryResult({
       job,
       pay: result.total,
@@ -2211,7 +2236,19 @@ class Game {
       xp,
       stats: { distance: job.distance },
       levelUp: newLevel > prevLevel ? newLevel : null,
+      career: careerDone ? {
+        deliveries: this.profile.stats.deliveries,
+        earnings: this.profile.stats.earnings,
+        distance: this.profile.stats.distance,
+        level: newLevel,
+        late: this.profile.stats.late,
+        collisions: this.profile.stats.collisions,
+      } : null,
     });
+    if (careerDone) {
+      this.profile.careerDone = true;
+      this.saveNow();
+    }
     void beforeMoney;
   }
 

@@ -1,0 +1,48 @@
+{
+  "schema": "games-knowledge-v1",
+  "madeAt": "2026-11-20T10:47:49.689Z",
+  "seed": 7,
+  "counts": {
+    "total": 1589,
+    "train": 1430,
+    "eval": 159,
+    "byKind": {
+      "game-decision": 900,
+      "play-frontline": 7,
+      "bug-code": 400,
+      "game-rule": 10,
+      "balance": 13,
+      "bug-rule": 115,
+      "play-guide": 30,
+      "code-bench-broken": 15,
+      "defect-analysis": 13,
+      "game-edge": 12,
+      "code-bench-clean": 12,
+      "code-check": 3,
+      "repo-law": 14,
+      "engine-arch": 13,
+      "bug-severity": 10,
+      "code-defect": 9,
+      "code-dt": 2,
+      "code-ui": 1,
+      "code-clean": 2,
+      "code-security": 1,
+      "code-css": 1,
+      "repo-rule": 5,
+      "code-dom": 1
+    }
+  },
+  "files": {
+    "train": {
+      "name": "train.jsonl",
+      "count": 1430,
+      "sha256": "0ecc1ce6a2c4bfc95009260874dbc89a7adf3009c97eeb7d4a91dacf93de2899"
+    },
+    "eval": {
+      "name": "eval.jsonl",
+      "count": 159,
+      "sha256": "848f96364f5c0e1fed515ea726837cd9a1816fdb345cbcb7e36cec11f7437dd4"
+    }
+  },
+  "note": "Только настоящие данные репозитория: состояния боя Frontline, каталог правил баг-искателя и реальные исправления. Ничего выдуманного."
+}

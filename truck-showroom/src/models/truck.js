@@ -39,23 +39,41 @@ function fender(M, mat, r, width, x, y, z, side, opts = {}) {
   g.add(inner);
   // наружный обод: крыло читается объёмом, а не тонкой линией
   if (lip) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.005, 0.028, 7, 30, PI), mat);
+    // Полутор обода лежит в плоскости арки: 7 граней на 30 сегментов давали
+    // гранёную «ленту» вместо кромки, поэтому труба и сглаживание выше.
+    // Обод ставим ВНУТРЬ габарита крыла, а не снаружи: тор с трубой 0.028,
+    // вынесенный на край, торчал за кожух тонким полукругом и на виде сбоку
+    // читался тёмной «лопатой» выше и ниже шины.
+    const ringX = side * (width / 2 - 0.05);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.002, 0.022, 10, 40, PI), mat);
     ring.rotation.y = side > 0 ? -HALF : HALF;
-    ring.position.x = side * (width / 2 - 0.01);
+    ring.position.x = ringX;
     g.add(ring);
+    const ringInner = new THREE.Mesh(new THREE.TorusGeometry(r + 0.002, 0.018, 10, 40, PI), mat);
+    ringInner.rotation.y = side > 0 ? -HALF : HALF;
+    ringInner.position.x = -ringX;
+    g.add(ringInner);
   }
   // задний грязевой щиток на кронштейне.
   // Раньше щиток был повёрнут на 90°: тонкая грань смотрела назад, а широкое
   // полотно — вбок, и за колесом торчала «лопата». Щиток должен быть широким
   // ПОПЕРЁК колеса (ось X) и висеть позади покрышки, от кромки арки до земли.
   if (flap) {
-    const h = Math.max(0.4, r * 1.05);
+    // Щиток вешается за покрышкой на радиусе КОЛЕСА, а не арки: r здесь —
+    // радиус кожуха, он на 6 см больше шины. Из-за этого щиток уходил назад и
+    // его низ оказывался на уровне оси, торча между колёсами тёмным клином.
+    // Верх цепляем чуть выше шины, низ опускаем почти до земли.
+    const tireR = opts.tireR || r - 0.06;
+    // Верх цепляем чуть выше шины, но не выше кромки арки: длинный щиток
+    // снова залезал на покрышку и прорезал её. Ниже арки он и должен висеть.
+    const topY = -0.02;
+    const h = Math.min(tireR * 0.92, topY + tireR + 0.02);
     const flapMesh = new THREE.Mesh(new THREE.BoxGeometry(width * 0.92, h, 0.032), M.rubberTrim);
-    flapMesh.position.set(0, 0.02 - h / 2, r + 0.055);
+    flapMesh.position.set(0, topY - h / 2, tireR + 0.05);
     g.add(flapMesh);
     // кронштейн: короткая поперечная планка под кромкой арки
     const bar = new THREE.Mesh(new THREE.BoxGeometry(width * 0.9, 0.045, 0.05), M.darkSteel);
-    bar.position.set(0, 0.055, r + 0.02);
+    bar.position.set(0, topY + 0.01, tireR + 0.03);
     g.add(bar);
   }
   g.position.set(x, y, z);
@@ -125,8 +143,11 @@ export function buildTruck(unit, M) {
   for (const side of [-1, 1]) {
     const tank = cyl(chassis, tankR, tankR, tankLen, tankMat, side * 0.92, 0.72, tankZ, 22);
     tank.rotation.x = HALF;
+    // Хомут обхватывает бак, значит его кольцо должно лежать в плоскости YZ:
+    // тор по умолчанию лежит в XY, и поворот вокруг Y оставлял его «лежащим»
+    // горизонтально — плоский блин вокруг бака вместо стяжки.
     const strap = torus(chassis, tankR + 0.012, 0.025, M.darkSteel, side * 0.92, 0.72, tankZ, 20);
-    strap.rotation.y = HALF;
+    strap.rotation.x = HALF;
     // крышка бака
     const cap = cyl(chassis, 0.09, 0.09, 0.05, M.chromeDark, side * 0.92, 0.72, tankZ + tankLen / 2 - 0.16, 12);
     cap.rotation.x = HALF;
@@ -467,14 +488,32 @@ export function buildTruck(unit, M) {
     box(roof, 0.02, 0.34, 0.02, M.darkSteel, -0.95, roofY + roofAccent + 0.2, cabRearZ - 0.55);
     anchors.push({ pos: [0.52, roofY + roofAccent + 0.1, cabRearZ - 0.75], label: 'Люк кабины' });
   }
+  /* Светодиодная оптика: узкая полоса дневных ходовых огней под лобовым
+     стеклом и две фары-«полоски» внизу. Флаг led был у Orion X, но
+     никакой оптики, кроме обычных фар, модель не получала. */
+  if (unit.led) {
+    // дневная полоса во всю ширину кабины
+    box(root, cabW - 0.42, 0.045, 0.05, M.headlight, 0, wsBottom - 0.02, cabFront - 0.02);
+    for (const side of [-1, 1]) {
+      // фары-полоски в бампере
+      box(root, 0.34, 0.06, 0.05, M.headlight, side * 0.62, frameY - 0.22, cabFront - 0.04);
+      // поворотник-«клык» по краю
+      box(root, 0.05, 0.2, 0.05, M.amber, side * (cabW / 2 - 0.12), frameY - 0.12, cabFront - 0.03);
+    }
+    anchors.push({ pos: [0, wsBottom - 0.02, cabFront - 0.02], label: 'Дневные ходовые огни' });
+  }
+
   // габаритные огни на крыше
   for (const x of [-0.95, -0.5, 0.5, 0.95]) {
     const lamp = sphere(roof, 0.035, M.amber, x, roofY + roofAccent + 0.12, cabFront + 0.48, 8);
   }
   // козырёк над лобовым стеклом
   if (!isFuturistic) {
-    const visor = rbox(roof, cabW - 0.3, 0.1, 0.22, paint2, 0, roofY - 0.12, cabFront - 0.06, 0.03);
-    visor.rotation.x = 0.2;
+    // Козырёк был вынесен вперёд и вверх от крыши и висел в воздухе:
+    // опускаем его к кромке и наклоняем так, чтобы задняя грань касалась
+    // крыши, а передняя нависала над стеклом — как у настоящих тягачей.
+    const visor = rbox(roof, cabW - 0.3, 0.085, 0.34, paint2, 0, roofY - 0.02, cabFront + 0.02, 0.03);
+    visor.rotation.x = -0.34;
   }
   // боковые юбки: закрывают баки между кабиной и задними колёсами,
   // а сами колёса остаются открытыми — у них свои крылья
@@ -490,6 +529,26 @@ export function buildTruck(unit, M) {
         box(root, 0.085, 0.022, len - 0.16, accent, side * 1.225, 0.92, (z0 + z1) / 2);
         box(root, 0.085, 0.5, 0.03, paint2, side * 1.22, 0.72, z1 + 0.01);
       }
+    }
+  }
+
+  // ---------------------------------------------- выхлопные трубы (stacks)
+  /* Два вертикальных хромированных ствола за кабиной, с жарозащитным
+     кожухом и косым срезом — как на американских тягачах. В данных
+     флаг stacks стоял у Vulcan Titan, но сама деталь не строилась. */
+  if (unit.stacks) {
+    const pipeH = 2.15;
+    const pipeZ = cabRearZ - 0.18;
+    for (const side of [-1, 1]) {
+      const pipe = cyl(root, 0.085, 0.095, pipeH, M.chrome, side * (HALF_W - 0.14), frameY + pipeH / 2, pipeZ, 16);
+      // жарозащитный кожух
+      cyl(root, 0.13, 0.13, 0.9, M.chromeDark, side * (HALF_W - 0.14), frameY + 0.62, pipeZ, 16);
+      // косой срез: короткий наклонный цилиндр поверх трубы
+      const tip = cyl(root, 0.086, 0.086, 0.1, M.darkSteel, side * (HALF_W - 0.14), frameY + pipeH + 0.03, pipeZ, 16);
+      tip.rotation.z = side * 0.12;
+      // хомут крепления к кабине
+      box(root, 0.06, 0.05, 0.22, M.steel, side * (HALF_W - 0.14), frameY + pipeH - 0.45, pipeZ + 0.12);
+      anchors.push({ pos: [side * (HALF_W - 0.14), frameY + pipeH, pipeZ], label: 'Выхлопная труба' });
     }
   }
 
