@@ -207,6 +207,9 @@ Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(request.headers.get("origin")) });
   const route = new URL(request.url).pathname.replace(/^\/functions\/v1\/youtube-bot/, "") || "/";
   try {
+    // Opening the function base URL by itself should guide users back to the
+    // actual dashboard instead of exposing the low-level "Not found" response.
+    if (request.method === "GET" && route === "/") return Response.redirect(SITE_URL, 302);
     if (request.method === "GET" && route === "/auth/start") return await startOAuth(request);
     if (request.method === "GET" && route === "/oauth/callback") return await oauthCallback(request);
     if (request.method === "GET" && route === "/health") return Response.json({ ok: true, service: "youtube-bot" }, { headers: cors(request.headers.get("origin")) });
