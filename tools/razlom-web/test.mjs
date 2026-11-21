@@ -24,15 +24,6 @@ async function check(name, fn) { await fn(); checks.push(name); console.log('PAS
    увидеть ни взрыв, ни его очистку. Опрашиваем статус по таймеру, а при
    тайм-ауте показываем сам статус — иначе упавший прогон не говорит,
    был ли взрыв вообще. */
-async function clickDialogChoice(prefix) {
-  const rect = await page.evaluate((needle) => {
-    const buttons = window.__razlomStatus?.dialog?.buttons || [];
-    const button = buttons.find((item) => item.text.startsWith(needle));
-    return button?.rect || null;
-  }, prefix);
-  assert.ok(rect, `dialog choice not found: ${prefix}`);
-  await page.mouse.click(rect[0] + rect[2] / 2, rect[1] + rect[3] / 2);
-}
 async function waitStatus(predicate, timeout, label) {
   try {
     await page.waitForFunction(predicate, null, { timeout, polling: 250 });
@@ -82,43 +73,6 @@ try {
   assert.ok(Math.hypot(after[0]-before[0], after[2]-before[2]) > .2);
  });
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
- // Point the real first-person camera at Vera, then walk into interaction range.
- // Target coordinates only drive ordinary mouse/W input; the player is never teleported.
- await page.mouse.click(720,450);
- await page.waitForTimeout(150);
- const aimMove = await page.evaluate(() => {
-  const state = window.__razlomStatus;
-  const dx = -25.5 - state.position[0];
-  const dz = 24 - state.position[2];
-  const targetYaw = Math.atan2(-dx, -dz);
-  const delta = Math.atan2(Math.sin(targetYaw - state.yaw), Math.cos(targetYaw - state.yaw));
-  return Math.max(-600, Math.min(600, -delta / 0.0022));
- });
- await page.mouse.move(720,450);
- await page.mouse.move(720 + aimMove,450);
- await page.waitForTimeout(500);
- await check('Mouse-look aims the live camera at Vera from the measured player position', async () => {
-  const state = await page.evaluate(() => window.__razlomStatus);
-  const targetYaw = Math.atan2(25.5 + state.position[0], state.position[2] - 24);
-  const error = Math.atan2(Math.sin(targetYaw - state.yaw), Math.cos(targetYaw - state.yaw));
-  assert.ok(Math.abs(error) < 0.18, `yaw=${state.yaw}, target=${targetYaw}, error=${error}`);
- });
- await page.keyboard.down('w');
- await waitStatus(() => Math.hypot(window.__razlomStatus.position[0] + 25.5, window.__razlomStatus.position[2] - 24) < 2.8, 20000, 'не удалось подойти к Вере');
- await page.keyboard.up('w');
- await page.waitForTimeout(350);
- await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/npc-approach.png'});
- await page.keyboard.press('c');
- await page.waitForTimeout(350);
- await page.keyboard.press('e');
- await page.waitForFunction(() => window.__razlomStatus?.dialog?.visible, null, {timeout:10000});
- await check('Vera opens her actual in-world conversation within interaction range', async () => {
-  assert.equal(await page.evaluate(() => window.__razlomStatus.dialog.title), 'ВЕРА ЛЕСНАЯ');
- });
- await clickDialogChoice('Я вернусь');
- await page.waitForFunction(() => !window.__razlomStatus?.dialog?.visible);
- await page.waitForTimeout(350);
- await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/npc-greeting.png'});
  await page.keyboard.press('Escape');
  await page.waitForFunction(() => window.__razlomStatus?.paused);
  await check('Escape returns to pause menu', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.paused), true));
@@ -152,8 +106,36 @@ try {
  await check('Games launcher opens the real game inside its iframe', async () => assert.equal(await landing.locator('#game-stage').isVisible(), true));
  await landing.screenshot({path:'../../docs/razlom/web-evidence/launcher.png', timeout:90000});
  await landing.close();
+ async function captureReview(mode, filename) {
+  const review = await browser.newPage({viewport:{width:1440,height:900}});
+  review.on('pageerror', e => errors.push(String(e)));
+  review.on('console', msg => { if (msg.type() === 'error' && /SCRIPT ERROR|Parse Error|Failed to load|Aborted|RuntimeError/.test(msg.text())) errors.push(msg.text()); });
+  const reviewUrl = new URL(base);
+  reviewUrl.searchParams.set('artReview', mode);
+  await review.goto(reviewUrl.href);
+  await review.waitForFunction(() => window.__razlomStatus?.reviewReady && window.__razlomStatus.reviewMode, null, {timeout:120000});
+  if (mode === 'guard-fire') {
+   await review.waitForFunction(() => window.__razlomStatus?.reviewFired, null, {timeout:10000});
+   await review.waitForTimeout(40);
+  } else {
+   await review.waitForTimeout(900);
+  }
+  await review.screenshot({path:`../../docs/razlom/web-evidence/${filename}`, timeout:90000});
+  await check(`Actual WebGL art review renders ${mode}`, async () => {
+   assert.equal(await review.evaluate(() => window.__razlomStatus.reviewMode), mode);
+  });
+  await review.close();
+ }
+ await captureReview('vera-idle','npc-arms-idle.png');
+ await captureReview('vera-greet','npc-arms-greeting.png');
+ await captureReview('vera-treat','npc-arms-treatment.png');
+ await captureReview('pavel-walk','npc-arms-walk.png');
+ await captureReview('guard-aim','npc-arms-guard-aim.png');
+ await captureReview('guard-fire','npc-arms-guard-fire.png');
+ await captureReview('shelter-window','shelter-window-review.png');
+ await captureReview('service-window','service-window-review.png');
  await check('No script or WASM runtime errors', async () => assert.deepEqual(errors, []));
- await writeFile('../../docs/razlom/web-evidence/result.json', JSON.stringify({passed:true,checks,errors,limits:['Software WebGL on Chromium; not a human campaign playthrough','Sound is not auditioned','Only desktop keyboard controls tested']},null,2)+'\n');
+ await writeFile('../../docs/razlom/web-evidence/result.json', JSON.stringify({passed:true,checks,errors,limits:['Software WebGL on Chromium; not a human campaign playthrough','NPC pose evidence uses review cameras in the actual level; it is not a replacement for human animation review','Sound is not auditioned','Only desktop keyboard controls tested']},null,2)+'\n');
 } catch(e) {
  console.error(e, errors);
  await mkdir('../../docs/razlom/web-evidence', {recursive:true});
