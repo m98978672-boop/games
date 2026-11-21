@@ -107,12 +107,12 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			eye.name = "EyeL" if side < 0 else "EyeR"
 			eye.position = Vector3(side * 0.067, 0.033, -0.153)
 			head.add_child(eye)
-			var sclera := box(eye, Vector3.ZERO, Vector3(0.03, 0.016, 0.01), material(Color("eee2d2")))
+			var sclera := box(eye, Vector3.ZERO, Vector3(0.036, 0.02, 0.01), material(Color("eee2d2")))
 			sclera.name = "Sclera"
 			var iris := MeshInstance3D.new()
 			iris.name = "Iris"
 			var iris_mesh := BoxMesh.new()
-			iris_mesh.size = Vector3(0.009, 0.012, 0.004)
+			iris_mesh.size = Vector3(0.011, 0.014, 0.004)
 			iris.mesh = iris_mesh
 			iris.position = Vector3(0, 0, -0.007)
 			iris.material_override = material(Color("626c53"))
@@ -120,13 +120,13 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			var pupil := MeshInstance3D.new()
 			pupil.name = "Pupil"
 			var pupil_mesh := BoxMesh.new()
-			pupil_mesh.size = Vector3(0.004, 0.008, 0.003)
+			pupil_mesh.size = Vector3(0.005, 0.009, 0.003)
 			pupil.mesh = pupil_mesh
 			pupil.position = Vector3(0, 0, -0.011)
 			pupil.material_override = material(Color("282923"))
 			eye.add_child(pupil)
-			var brow := box(head, Vector3(side * 0.067, 0.061, -0.16), Vector3(0.042, 0.009, 0.012), material(Color("594337")))
-			brow.rotation.z = side * -0.04
+			var brow := box(head, Vector3(side * 0.067, 0.071, -0.16), Vector3(0.038, 0.006, 0.01), material(Color("705844")))
+			brow.rotation.z = side * -0.015
 		# Flat stepped nose and a short mouth line; no spherical details.
 		box(head, Vector3(0, -0.005, -0.16), Vector3(0.018, 0.035, 0.018), material(skin_color.lightened(0.035)))
 		var nose_tip := box(head, Vector3(0, -0.025, -0.17), Vector3(0.024, 0.014, 0.02), material(skin_color.lightened(0.035)))
