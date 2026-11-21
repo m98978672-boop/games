@@ -5,6 +5,7 @@ on:
     paths:
       - 'razlom-godot/**'
       - 'tools/razlom-web/**'
+      - 'razlom/web/**'
       - '.github/workflows/razlom-web.yml'
   pull_request:
     paths:
