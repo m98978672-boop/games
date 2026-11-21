@@ -34,9 +34,21 @@ export function mergeKnowledge(existing, fresh, cap = 300) {
 async function wikiQuery(lang, params) {
   const url = new URL(`https://${lang}.wikipedia.org/w/api.php`);
   for (const [k, v] of Object.entries({ format: 'json', formatversion: '2', redirects: '1', ...params })) url.searchParams.set(k, v);
-  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
-  if (!res.ok) throw new Error(`Wikipedia HTTP ${res.status} for ${url}`);
-  return res.json();
+  let lastError = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
+      if (!res.ok) {
+        const body = (await res.text()).slice(0, 200).replace(/\s+/g, ' ');
+        throw new Error(`Wikipedia HTTP ${res.status}: ${body}`);
+      }
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 function toRecord(page, lang, maxChars) {
@@ -90,10 +102,13 @@ async function main() {
     }
   }
   if (opt.random > 0) {
-    const recs = await fetchRandom(opt.random, opt.lang, opt.maxChars);
-    fresh.push(...recs);
-    console.log('случайных статей:', recs.length);
+    try {
+      const recs = await fetchRandom(opt.random, opt.lang, opt.maxChars);
+      fresh.push(...recs);
+      console.log('случайных статей:', recs.length);
+    } catch (err) { console.log('случайные статьи пропущены:', err.message); }
   }
+  if (!fresh.length) throw new Error('ничего не прочитано: ни одна статья не получена — обучение без свежего чтения не запускаем');
   const merged = mergeKnowledge(existing, fresh);
   await writeFile(opt.out, merged.map((r) => JSON.stringify(r)).join('\n') + '\n');
   console.log(`память: ${merged.length} статей (новых/обновлено: ${fresh.length})`);

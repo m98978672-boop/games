@@ -57,7 +57,14 @@ jobs:
           fi
           exit 0
       - name: Read Wikipedia (topics + fresh random articles)
-        run: node qwen-home/tools/collect-wikipedia.mjs --topics qwen-home/topics.txt --random "$RANDOM_ARTICLES" --out qwen-home/memory/knowledge.jsonl
+        run: |
+          set +e
+          node qwen-home/tools/collect-wikipedia.mjs --topics qwen-home/topics.txt --random "$RANDOM_ARTICLES" --out qwen-home/memory/knowledge.jsonl 2>&1 | tee "$RUNNER_TEMP/collect.log"
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"collect.log"); s="".join(open(p,errors="replace").readlines()[-40:]) if os.path.exists(p) else "лог пуст"; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit "$status"
       - name: Build the lesson dataset
         run: |
           if [ -f "$RUNNER_TEMP/long-data/commander/train.jsonl" ]; then
