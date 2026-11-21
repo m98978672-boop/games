@@ -6,8 +6,8 @@
     "games": 234,
     "storefront": 18,
     "collection": 216,
-    "files": 2148,
-    "totalBytes": 52814271,
+    "files": 2150,
+    "totalBytes": 52822686,
     "chunks": 399,
     "blockedFiles": 5
   },
@@ -2090,11 +2090,11 @@
       "play": "frontline-command/index.html",
       "cover": "frontline-command/cover.svg",
       "dir": "frontline-command",
-      "infoHash": "1974637195af31cae7e835746b7a44e7228726e7e1f3da2133c34e416d64e732",
-      "totalSize": 9971456,
+      "infoHash": "cad43373c50ed20a076d02b4c0f472136c7b91b5f499bb977ff7161ce88e2485",
+      "totalSize": 9979871,
       "chunkSize": 262144,
       "chunkCount": 39,
-      "fileCount": 579,
+      "fileCount": 581,
       "files": [
         {
           "path": ".gitattributes",
@@ -3348,8 +3348,8 @@
         },
         {
           "path": "data/feature_flags.json",
-          "size": 15902,
-          "sha256": "5f1592da9d4a40eb717caf9e5996881b617233d201a4721269996cc3f3f3d98d"
+          "size": 16154,
+          "sha256": "9b8367ca8663ec44a16e73746700cbe84a7a997c0a66493ecad0f52fd2fa7660"
         },
         {
           "path": "data/game_audit_contract.json",
@@ -3478,8 +3478,8 @@
         },
         {
           "path": "package.json",
-          "size": 15543,
-          "sha256": "015e67d42082f4c0c9d69365bd1b87c814a6f2a3247c97858f8305946a4128db"
+          "size": 15617,
+          "sha256": "81839888c07c2517b4f1237cb6e0c626c05745eeaa6ab16684248b9b31dda784"
         },
         {
           "path": "src/ai/commander-prompts.js",
@@ -3519,7 +3519,7 @@
         {
           "path": "src/core/build-info.js",
           "size": 848,
-          "sha256": "5302a75ed136ddea909b7fdef4b63195c8b03fbfad70aa0af8eec15b5f18c0a1"
+          "sha256": "4f1c04686af8c06dbf0e167ba7f0f3dc3a612c0bcb6bb39b3138ff176d1f48d3"
         },
         {
           "path": "src/core/config.js",
@@ -3637,6 +3637,11 @@
           "sha256": "6b47b610731288662da3af66ddc288233c034156f27543254d8274e857368350"
         },
         {
+          "path": "src/sim/door_yield_blocked.js",
+          "size": 3572,
+          "sha256": "6bd2cdd0e994ab3d1763eae97eaef805c76d31ecb7a03bb7c6d28093d7932788"
+        },
+        {
           "path": "src/sim/easystar_route.js",
           "size": 4526,
           "sha256": "9c986e434ba3b2e5351ff1c4d61431ca0137719925617cb535eb6cafd474209c"
@@ -3723,8 +3728,8 @@
         },
         {
           "path": "src/sim/units.js",
-          "size": 47520,
-          "sha256": "224e8c0f1db33decd598d7dbed0949e06189725e5243d5727360aab3d74aec71"
+          "size": 47941,
+          "sha256": "1b8557cc0e7af1994e1f2dc1b9c923232243c79690c96b2994c692431274dd5c"
         },
         {
           "path": "src/sim/vision_nav_policy.js",
@@ -4138,8 +4143,8 @@
         },
         {
           "path": "tools/crowd-fail-battles.mjs",
-          "size": 2210,
-          "sha256": "82d2aba1bbafc020334bc1e858460a3babc7879e77e8489e314c6f18b6f87a4d"
+          "size": 2279,
+          "sha256": "1879c9fe8f9b106e3efde162718f8d151b18b39e8b9493b5b96b671a745e7926"
         },
         {
           "path": "tools/crowd-fixes-combat.mjs",
@@ -4222,6 +4227,11 @@
           "sha256": "bbbde122281ae61a24470da1929f23794b3819754823a09bd5d145979c1f1055"
         },
         {
+          "path": "tools/door-opposing-orders.mjs",
+          "size": 3475,
+          "sha256": "5011de4eeab85e1bd78ef0309e78fc4faa062e0c703868831949058ad096c22c"
+        },
+        {
           "path": "tools/door-pair-combat.mjs",
           "size": 3087,
           "sha256": "5d5042229721682be8857cfb84597b43abeb1c3ac6f5aca7b69050719899df40"
@@ -4248,8 +4258,8 @@
         },
         {
           "path": "tools/door-traffic-probe.mjs",
-          "size": 3887,
-          "sha256": "1a56e06c1f9f99b2a76c9a49be9ad5eecc1ccf73cca02ab69be164a1ad11b31f"
+          "size": 4439,
+          "sha256": "7e71bf15f98c2dc4a4c54511479d2230281a39bf1afdb247f1ac29c5b0cfa7a8"
         },
         {
           "path": "tools/escape-bundle-base64.mjs",

@@ -13,6 +13,7 @@ import { chooseVisionNavigation } from './vision_nav_policy.js';
 import { wallSafeGoal } from './wall_goal.js';
 import { clearCrowdState, prepareCrowdNavigation, setCrowdDetour, crowdPositionFree } from './crowd_nav.js';
 import { trafficEscape } from './traffic_escape.js';
+import { blockedDoorYield } from './door_yield_blocked.js';
 
 export const NEAR_RADIUS = 40;
 // Счётчики для debug-оверлея (F3) и тестов баланса.
@@ -532,6 +533,12 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
   }
   const escape=occupancy && !yieldPoint && !doorLane && (!u._crowdActive || routeWithLargeGroup) ? trafficEscape(game,u,dx,dy) : null;
   if (escape) { dx=escape.x-u.x;dy=escape.y-u.y; }
+  const doorYield=occupancy && !yieldPoint && !doorLane && (u._occupancyWait || u._blockedDoorYield) ? blockedDoorYield(game,u) : null;
+  if (doorYield) {
+    u.stuck=0;
+    if(Math.hypot(doorYield.x-u.x,doorYield.y-u.y)<2)return;
+    dx=doorYield.x-u.x;dy=doorYield.y-u.y;
+  }
   const len = Math.hypot(dx, dy);
   if (len > 1) { dx /= len; dy /= len; }
   // расталкивание (steering separation)
@@ -565,6 +572,7 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
   }
   let step = speed * dt;
   if (yieldPoint) step=Math.min(step, Math.hypot(u.x-yieldPoint.x,u.y-yieldPoint.y));
+  if (doorYield) step=Math.min(step, Math.hypot(u.x-doorYield.x,u.y-doorYield.y));
   if (u._crowdActive && u._crowdPoint) step=Math.min(step, Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y));
   const nx = u.x + dx * step, ny = u.y + dy * step;
   const r = u.radius;

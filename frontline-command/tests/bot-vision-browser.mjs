@@ -53,6 +53,19 @@ try{
     return results;
   });
   assert.ok(distantWall.every(x=>x.steps===1&&Math.abs(x.dx)<1e-6&&Math.abs(x.dy)>.5),JSON.stringify(distantWall));
+  const doorYield=await page.evaluate(async()=>{
+    const {Game}=await import('/src/sim/game.js'),{blockedDoorYield}=await import('/src/sim/door_yield_blocked.js');
+    const results=[];
+    for(const faction of [0,1]){
+      const g=new Game({cfg:window.__frontline.cfg,seed:7,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.occupancyGrid.clear();g.squads.clear();
+      const b=g.world.buildings.find(x=>x.type==='hq'&&x.faction===faction&&g.walls.state(x)),o=g.walls.state(b).outline.openings.find(x=>x.type==='door'),x=b.x+o.cx,y=b.y+o.cy;
+      g.walls.openDoor(b,o.id);const u=g.spawnUnit(faction,'infantry',x+o.nx*8,y+o.ny*8),v=g.spawnUnit(faction,'infantry',x-o.nx*12,y-o.ny*12);
+      u.goal={x:x-o.nx*100,y:y-o.ny*100};v.goal={x:x+o.nx*100,y:y+o.ny*100};u.arrived=v.arrived=false;g.time=2;
+      u._occupancyWait={goalX:u.goal.x,goalY:u.goal.y,since:0,lastBlocked:2,blockerId:v.id};const goal=u.goal,p=blockedDoorYield(g,u);
+      u.perception.hasContact=true;results.push({created:!!p,preserved:u.goal===goal,cancelled:blockedDoorYield(g,u)===null});
+    }return results;
+  });
+  assert.ok(doorYield.every(x=>x.created&&x.preserved&&x.cancelled),JSON.stringify(doorYield));
   const wallOrders=await page.evaluate(async()=>{
     const {Game}=await import('/src/sim/game.js'),{Squad}=await import('/src/sim/squads.js');
     const results=[];
