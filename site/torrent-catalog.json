@@ -6,8 +6,8 @@
     "games": 234,
     "storefront": 18,
     "collection": 216,
-    "files": 2155,
-    "totalBytes": 53136927,
+    "files": 2156,
+    "totalBytes": 53144314,
     "chunks": 401,
     "blockedFiles": 5
   },
@@ -5029,11 +5029,11 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "760a2c6c53c344132a3dfe53ecd31da850c5b24f92787221f3949128cd27ca41",
-      "totalSize": 1885161,
+      "infoHash": "6b6e2d2df0c9ffaa2afb9b4c07c3483603239bbb2018522ca9ba95f1573c56f0",
+      "totalSize": 1892548,
       "chunkSize": 262144,
       "chunkCount": 8,
-      "fileCount": 35,
+      "fileCount": 36,
       "files": [
         {
           "path": "cover.svg",
@@ -5082,8 +5082,8 @@
         },
         {
           "path": "index.html",
-          "size": 18734,
-          "sha256": "53ed038cb9fdd5a82d0d72f848444c4a3ddcf0aad53b8e64f70f9f06975bb192"
+          "size": 19204,
+          "sha256": "18ea5a775361cf19f96ff6050c38219c24142f7b0a0dd37e3dafc7a01dbe3630"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5141,6 +5141,11 @@
           "sha256": "ed068089a10aeaa4258f1e9d2183b3f3894f326138809a47200bc8d1cc90ecd8"
         },
         {
+          "path": "src/safety.js",
+          "size": 2112,
+          "sha256": "49d45d72154697c9c903db03ad6318496e76024cb51ef0c5156508479caba4eb"
+        },
+        {
           "path": "src/save.js",
           "size": 4473,
           "sha256": "e6d20b790252280a1e345adf2791caf8f858e3f167c956e39ff81bfbc5e81e1c"
@@ -5167,8 +5172,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 75918,
-          "sha256": "0e24337be262e55dccb857c7d5e52cd4fd4a930f0e2876c3551c659b17003d20"
+          "size": 79309,
+          "sha256": "03e17694e79aec2062f3e41cad86729fc7010a318fccf56f4be13b1e88e4bf68"
         },
         {
           "path": "src/util.js",
@@ -5182,8 +5187,8 @@
         },
         {
           "path": "style.css",
-          "size": 51483,
-          "sha256": "1e893eed4bf93c901a837c759567ab3ca4591c638c8005d18cbcdb66ba6f9df9"
+          "size": 52897,
+          "sha256": "592f4f47387e2c72654637e56f074e590d8ede5a873db83abf59a2ee8aa60582"
         },
         {
           "path": "tools/crew-shot.mjs",

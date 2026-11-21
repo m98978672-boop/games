@@ -48,7 +48,7 @@ if (!JSDOM || !THREE) {
 
 const SCRIPTS = [
   'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
-  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/voice.js',
+  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/safety.js', 'src/voice.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
 ];
@@ -368,6 +368,29 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       game.restart();
       window.WC.world.render(1 / 30, game);
       result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
+      // Сводка не изменяет симуляцию, остаётся стабильной и ведёт к нужному рабочему.
+      const crew = game.api.crew;
+      crew[0].body.energy = .18;
+      crew[1].body.injuries.push({type:'muscle',part:'back',severity:.2,at:0,cause:'test'});
+      crew[2].body.collapsed = true;
+      const safetyBefore = JSON.stringify(game.captureCheckpoint());
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      const safetyRows = [...doc.querySelectorAll('#safety-list .safety-row')];
+      result.safetyDisplay = safetyRows.length === 3 && safetyRows[0].querySelector('.safety-name').textContent === crew[2].name &&
+        safetyRows[0].classList.contains('critical') && safetyRows[0].textContent.includes('обморок') &&
+        doc.getElementById('safety-count').textContent === '3' && JSON.stringify(game.captureCheckpoint()) === safetyBefore;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      result.safetyStable = doc.querySelector('#safety-list .safety-row') === safetyRows[0];
+      safetyRows[1].querySelector('.safety-actions button').click();
+      result.safetySelect = game.api.activeWorkerId === crew[0].id;
+      safetyRows[2].querySelectorAll('button')[1].click();
+      result.safetyInspect = window.WC.ui.state.inspectorOpen && window.WC.ui.state.inspectorWorkerId === crew[1].id;
+      window.WC.ui.closeModal();
+      const removedButton = safetyRows[0].querySelector('button'); removedButton.focus();
+      crew[0].body.energy = .8; crew[1].body.injuries = []; crew[2].body.collapsed = false;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      result.safetyClear = doc.getElementById('safety-count').textContent === '0' &&
+        !doc.getElementById('safety-empty').hidden && doc.activeElement === doc.getElementById('safety-heading');
       // Очередь сортируется по сроку, занятые заказы нельзя назначить;
       // после перезапуска клики работают с новыми объектами симуляции.
       game.api.crew.forEach(w => game.command(w.id, 'wait'));
@@ -439,6 +462,12 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       result.extraCrew = game.api.crew.length === 8 && game.api.crewTarget === 8 && game.sim.state.stats.score === 0 && hireButton.disabled;
       result.extraTabs = doc.querySelectorAll('#crew-tabs [data-worker]').length === 8;
       const hire = game.api.crew[7];
+      hire.body.energy = .19;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      const hiredAlert = [...doc.querySelectorAll('#safety-list .safety-row')].find(row => row.querySelector('.safety-name').textContent === hire.name);
+      result.safetyHired = Boolean(hiredAlert);
+      if (hiredAlert) { hiredAlert.querySelector('button').click(); result.safetyHired = result.safetyHired && game.api.activeWorkerId === hire.id; }
+      hire.body.energy = .8;
       result.extraControllable = game.command(hire.id, 'auto').ok && game.api.envs[hire.id].brain === game.api.baseBrain;
       game.sim.state.stats.score = 80;
       result.maxCrew = !game.hireWorker().ok && game.sim.state.stats.score === 80;
@@ -454,6 +483,8 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       game.sim.state.time = game.sim.state.day * game.sim.state.dayLength + 0.01;
       game.update(1 / 30);
       result.extraReplaced = game.api.crew.length === 8 && !game.api.crew.some(w => w.id === oldId) && game.api.crew.every(w => game.api.envs[w.id].workers === game.api.crew);
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      result.safetyHired = result.safetyHired && !window.WC.ui.state.safetyRows.has(oldId);
     } catch (err) { result.featureError = String(err && err.stack || err); }
   }
   window.close();
@@ -485,6 +516,7 @@ for (const mode of modes) {
   if (mode.textureBridge) check(r.textureFallback, 'игра работает без текстуры при несовместимом движке');
   else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
+  check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
   check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
