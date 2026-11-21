@@ -125,7 +125,7 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 			pupil.position = Vector3(0, 0, -0.011)
 			pupil.material_override = material(Color("282923"))
 			eye.add_child(pupil)
-			var brow := box(head, Vector3(side * 0.067, 0.071, -0.16), Vector3(0.038, 0.006, 0.01), material(Color("705844")))
+			var brow := box(head, Vector3(side * 0.07, 0.071, -0.16), Vector3(0.032, 0.006, 0.01), material(Color("705844")))
 			brow.name = "BrowL" if side < 0 else "BrowR"
 			brow.rotation.z = side * -0.015
 		# Flat stepped nose and a short mouth line; no spherical details.
@@ -146,7 +146,7 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 					hair_visual.material_override = hair_mat
 			# Three distinct voxel locks leave a clear skin gap above each brow.
 			for i in range(3):
-				var fringe := box(head, Vector3(-0.064 + i * 0.064, 0.13 - absf(i - 1) * 0.012, -0.15), Vector3(0.032, 0.034, 0.025), hair_mat)
+				var fringe := box(head, Vector3(-0.064 + i * 0.064, 0.135 - absf(i - 1) * 0.008, -0.15), Vector3(0.032, 0.034, 0.025), hair_mat)
 				fringe.name = "Fringe%d" % i
 				fringe.rotation.z = (i - 1) * 0.045
 			for i in range(5):

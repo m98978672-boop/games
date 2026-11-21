@@ -82,7 +82,7 @@ func has_separated_fringe(model: Node3D) -> bool:
 		if visual == null or not visual.mesh is BoxMesh:
 			return false
 		var size: Vector3 = (visual.mesh as BoxMesh).size
-		if fringe.position.y - size.y * 0.5 - highest_brow < 0.025:
+		if fringe.position.y - size.y * 0.5 - highest_brow < 0.03:
 			return false
 		if previous != null and fringe.position.x - previous.position.x - (previous_width + size.x) * 0.5 < 0.02:
 			return false
