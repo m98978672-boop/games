@@ -73,4 +73,5 @@ if len(s) >= 2:
     concat_gap([(W("e_c2"), 0.0, s[0][0] + 0.05), (W("e_c2"), s[1][1] - 0.05, d)], W("e_c2f"))
     os.replace(W("e_c2f"), W("e_c2"))
 for c in ["e_s1", "e_s2", "e_s3", "e_s4", "e_s5", "e_c2", "e_c3", "e_c5"]:
-    print(c, round(dur(W(c)), 2))
+    if os.path.exists(W(c)):
+        print(c, round(dur(W(c)), 2))
