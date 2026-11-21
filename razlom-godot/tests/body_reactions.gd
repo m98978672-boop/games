@@ -63,7 +63,7 @@ func run_tests() -> void:
 		check(absf(guard.left_arm.elbow.distance_to(Vector3(-0.3, 1.3, 0)) - 0.52) < 0.002 and absf(guard.left_arm.elbow.distance_to(guard.left_arm.wrist) - 0.52) < 0.002 and absf(guard.right_arm.elbow.distance_to(Vector3(0.3, 1.3, 0)) - 0.52) < 0.002 and absf(guard.right_arm.elbow.distance_to(guard.right_arm.wrist) - 0.52) < 0.002, "Guard upper arms and forearms keep fixed length instead of stretching")
 	guard.arm_wounds = Vector2(100, 100)
 	guard.update_arm_pose(1.0 / 60.0, 0.4, 0.0)
-	var stable_wounded_pose := guard.carried_weapon.transform
+	var stable_wounded_pose: Transform3D = guard.carried_weapon.transform
 	for i in range(30):
 		guard.update_arm_pose(1.0 / 60.0, 0.4, 0.0)
 	check(support_hand.transform.is_equal_approx(support_hand_local), "Support-hand damage does not drift the grip away from the gun")
