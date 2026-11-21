@@ -42,7 +42,7 @@ WIKI_API = 'https://ru.wikipedia.org/w/api.php'
 
 SEARCH_WORDS = re.compile(r'(поищи|найди|узнай|погугли|загугли|поиск)', re.I)
 STRIP_WORDS = re.compile(r'(квеня|поищи|найди|узнай|посмотри|пожалуйста|в википедии|в интернете|поиске|мне|ответь|своими словами|ещё раз|еще раз|одной фразой|скажи)', re.I)
-BAD_HISTORY = re.compile(r'(Нашлось:|Статья «|https?://|\nuser\n|\nassistant\n|Поискала в Википедии\.$)')
+BAD_HISTORY = re.compile(r'(Нашлось:|Статья «|https?://|\nuser\n|\nassistant\n|Поискала в Википедии\.$|написано:\s*$)')
 QUERY_STOP = {'каком', 'году', 'была', 'было', 'были', 'когда', 'какая', 'какой', 'какое', 'какие', 'сколько', 'ответь', 'своими', 'словами', 'одной', 'фразой', 'скажи', 'такой', 'такая'}
 
 
@@ -243,7 +243,7 @@ def main():
             exact = [r for r in results if r.get('exact')]
             best = exact[0] if exact else max(results, key=lambda r: r['score'])
             print(f'Отвечает по статье: {best["title"]!r} (совпадений: {best["score"]})', flush=True)
-            context_note = f'\n\n(Факты из русской Википедии: {best["digest"]}\nОтветь владельцу ровно одной фразой: начни её словами «Поискала в Википедии! В статье {best["title"]} написано:» — а дальше сразу, в той же фразе, допиши ответ из фактов СВОИМИ СЛОВАМИ. Ничего больше не пиши.)'
+            context_note = f'\n\n(Факты из русской Википедии: {best["digest"]}\nОтветь владельцу ровно одной фразой: начни её словами «Поискала в Википедии! В статье {best["title"]} написано, что» — а дальше сразу допиши конец фразы из фактов СВОИМИ СЛОВАМИ. Ничего больше не пиши.)'
         else:
             context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
     history = turns[-(9):-1] if len(turns) > 1 else []
@@ -254,7 +254,9 @@ def main():
         messages.append({'role': role, 'content': body})
     messages.append({'role': 'user', 'content': owner_text + context_note})
     torch.manual_seed(42 + len(turns))
-    reply = clean_reply(generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7, min_new=24 if results else 0))
+    raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7, min_new=24 if results else 0)
+    print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
+    reply = clean_reply(raw_reply)
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
     DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
