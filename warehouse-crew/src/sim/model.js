@@ -463,7 +463,11 @@
     body.sleepDebt = clamp01(body.sleepDebt + 0.00002 * dt);
 
     // --- Органы чувств и когниция ---
-    var visionTarget = clamp01(1 - 0.35 * body.fatigue - 0.3 * Math.max(0, 0.85 - body.oxygen) - 0.2 * body.pain);
+    // Свет — отдельный измеримый фактор: в темноте уставшим глазам труднее.
+    // При отсутствии контекста (старые тесты и обучение) используется дневной свет.
+    var light = Number.isFinite(ctx.light) ? clamp01(ctx.light) : 1;
+    var visionTarget = clamp01(1 - 0.35 * body.fatigue - 0.3 * Math.max(0, 0.85 - body.oxygen) - 0.2 * body.pain -
+      (1 - light) * (0.3 + 0.2 * body.fatigue));
     body.vision = approach(body.vision, visionTarget, 0.7, dt);
     var hearingTarget = clamp01(1 - 0.45 * noise - 0.15 * body.fatigue);
     body.hearing = approach(body.hearing, hearingTarget, 0.8, dt);

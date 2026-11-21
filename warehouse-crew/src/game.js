@@ -30,6 +30,7 @@ WC.game = (function () {
     best: null,
     engineStats: null,
     ready: false,
+    shiftMode: 'day',
     log: [],
     onEvent: null,
     onShiftEnd: null,
@@ -163,6 +164,7 @@ WC.game = (function () {
   function makeEnv(worker) {
     return {
         warehouse: api.sim,
+        shiftMode: api.shiftMode,
         workers: api.crew,
         brain: api.brains[worker.id] || api.baseBrain,
         brainApi: window.WarehouseBrain,
@@ -717,6 +719,21 @@ WC.game = (function () {
     return S.speed;
   }
 
+  function setShiftMode(mode) {
+    if (mode !== 'day' && mode !== 'night') return false;
+    if (api.shiftMode === mode) return true;
+    api.shiftMode = mode;
+    api.crew.forEach(function (worker) {
+      if (api.envs[worker.id]) api.envs[worker.id].shiftMode = mode;
+    });
+    if (api.ready && api.sim) {
+      pushLog(mode === 'night' ? 'Включён ночной режим освещения' : 'Включён дневной режим освещения', 'info');
+      WC.save.autosave(WC.game);
+      emit('lighting', { mode: mode });
+    }
+    return true;
+  }
+
   function restart() {
     api.shiftsPlayed += 1;
     api.best = {
@@ -757,6 +774,7 @@ WC.game = (function () {
     var stats = api.sim.state.stats;
     return {
       score: Math.round(stats.score),
+      lighting: api.shiftMode,
       delivered: stats.delivered,
       ruined: stats.ruined,
       missed: stats.missed,
@@ -842,7 +860,7 @@ WC.game = (function () {
   // Только данные: функции, ссылки окружения и тела Cannon живут в фабриках.
   function captureCheckpoint() {
     return JSON.parse(JSON.stringify({
-      version: 2, runtime: S, warehouse: api.sim.captureCheckpoint(),
+      version: 2, shiftMode: api.shiftMode, runtime: S, warehouse: api.sim.captureCheckpoint(),
       crew: api.crew.map(function (worker) {
         return { state: worker.state, brain: api.envs[worker.id].brain,
           rng: api.envs[worker.id].rng.getState() };
@@ -877,6 +895,9 @@ WC.game = (function () {
         !Array.isArray(saved.staff) || saved.staff.length > 2 || !Array.isArray(saved.deaths) || !Array.isArray(saved.log) ||
         !Number.isInteger(saved.crewTarget) || saved.crewTarget < 0 || saved.crewTarget > 8 ||
         !saved.warehouse || !saved.warehouse.state) throw new Error('Повреждён снимок смены');
+    // Снимки v2, созданные до появления ночного режима, считаются дневными.
+    var restoredMode = saved.shiftMode == null ? 'day' : saved.shiftMode;
+    if (restoredMode !== 'day' && restoredMode !== 'night') throw new Error('Неизвестный режим освещения');
     function safeTree(value, depth) {
       if (depth > 30) throw new Error('Слишком глубокое сохранение');
       if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Некорректное число');
@@ -942,6 +963,7 @@ WC.game = (function () {
           !Number.isFinite(truck.x) || !Number.isFinite(truck.y) || typeof truck.status !== 'string') throw new Error('Повреждена фура');
     });
     api.sim.restoreCheckpoint(saved.warehouse, workers.map(function (worker) { return worker.state; }));
+    api.shiftMode = restoredMode;
     api.crew = workers; api.staff = staff; api.envs = {};
     workers.forEach(function (worker, i) {
       api.envs[worker.id] = makeEnv(worker);
@@ -983,6 +1005,7 @@ WC.game = (function () {
           console.warn('[warehouse-crew] сохранение не восстановлено:', err);
           WC.save.protect();
           api.brains = brainsBeforeRestore;
+          api.shiftMode = 'day';
           api.staff = []; api.purchases = { medic: 0, watchman: 0 }; api.deaths = []; api.log = [];
           Object.assign(S, { time: 0, paused: false, speed: 1, shiftEnded: false, autosaveClock: 0, accumulator: 0, totalReal: 0 });
           createSim();
@@ -1042,6 +1065,7 @@ WC.game = (function () {
     spawnReplacement: spawnReplacement,
     setPaused: setPaused,
     setSpeed: setSpeed,
+    setShiftMode: setShiftMode,
     qualityPercent: qualityPercent,
     snapshotForUi: snapshotForUi,
     captureCheckpoint: captureCheckpoint,

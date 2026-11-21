@@ -68,6 +68,7 @@ WC.save = (function () {
         ruined: stats.ruined,
         missed: stats.missed,
         quality: WC.game.qualityPercent(game),
+        lighting: WC.game.api.shiftMode,
       },
       crew: game.crew.map(function (w) {
         return {

@@ -17,6 +17,8 @@ WC.world = (function () {
   var boxViews = new Map();
   var slotMarkers = new Map();
   var lamps = [];
+  var streetLamps = [];
+  var lighting = { mode: null, hemi: null, sun: null, fill: null };
   var halo = null;
   var clock = 0;
 
@@ -132,6 +134,7 @@ WC.world = (function () {
   function addLights() {
     var hemi = new THREE_NS.HemisphereLight(0xd8e6f3, 0x485157, 1.05);
     scene.add(hemi);
+    lighting.hemi = hemi;
 
     var sun = new THREE_NS.DirectionalLight(0xffe3b8, 1.05);
     sun.position.set(-9, 16, 9);
@@ -144,10 +147,12 @@ WC.world = (function () {
     sun.shadow.camera.bottom = -16;
     sun.shadow.bias = -0.0008;
     scene.add(sun);
+    lighting.sun = sun;
 
     var fill = new THREE_NS.DirectionalLight(0x6fa6c8, 0.32);
     fill.position.set(11, 9, -12);
     scene.add(fill);
+    lighting.fill = fill;
 
     // Лампы над стеллажами
     var lampSpots = [[-1.6, 0], [2.2, 0], [6.0, 0], [-7, -3.4], [-7, 3.4]];
@@ -162,6 +167,23 @@ WC.world = (function () {
         lamps.push(point);
       }
     });
+  }
+
+  function setShiftLighting(mode) {
+    mode = mode === 'night' ? 'night' : 'day';
+    if (!scene || !lighting.hemi || lighting.mode === mode) return;
+    lighting.mode = mode;
+    var night = mode === 'night';
+    lighting.hemi.intensity = night ? 0.38 : 1.05;
+    lighting.hemi.color.setHex(night ? 0x819fc6 : 0xd8e6f3);
+    lighting.sun.intensity = night ? 0.22 : 1.05;
+    lighting.sun.color.setHex(night ? 0x879ec8 : 0xffe3b8);
+    lighting.fill.intensity = night ? 0.20 : 0.32;
+    lamps.forEach(function (lamp) { lamp.userData.base = night ? 8.0 : 6.5; lamp.intensity = lamp.userData.base; });
+    streetLamps.forEach(function (lamp) { lamp.intensity = night ? 7.5 : 0.5; });
+    var color = night ? 0x080e1c : 0x0a0d0c;
+    renderer.setClearColor(color, 1);
+    if (scene.fog) scene.fog.color.setHex(color);
   }
 
   function addStatic(name, x, y, z, opts) {
@@ -343,6 +365,7 @@ WC.world = (function () {
       var light = new THREE_NS.PointLight(0xffe0a8, 0.5, 8, 2);
       light.position.set(lx, 3.5, st.y0 + 0.5);
       scene.add(light);
+      streetLamps.push(light);
     });
     // Киоск: визуально и как препятствие в навигации
     var kiosk = st.kiosk || { x: 6.4, y: 10.3 };
@@ -1337,7 +1360,7 @@ WC.world = (function () {
       state.cameraPos.copy(camera.position);
     } else {
       camera = perspCamera;
-      scene.fog = new THREE_NS.Fog(0x0a0d0c, 26, 54);
+      scene.fog = new THREE_NS.Fog(lighting.mode === 'night' ? 0x080e1c : 0x0a0d0c, 26, 54);
       state.cameraPos.copy(camera.position);
     }
     return view.mode;
@@ -1640,6 +1663,7 @@ WC.world = (function () {
   function render(dt, game) {
     if (!state.ready) return;
     var sim = game.sim;
+    setShiftLighting(game.api.shiftMode);
     updateToilet(game, dt);
     updateCrew(dt, game);
     updateTrucks(sim, dt);
@@ -1702,6 +1726,7 @@ WC.world = (function () {
     getZoom: function () { return view.zoom || 1; },
     resize: resize,
     setMode: setMode,
+    setShiftLighting: setShiftLighting,
     cycleMode: cycleMode,
     setFocus: setFocus,
     kick: kick,
