@@ -56,7 +56,8 @@ func run_tests() -> void:
 	check(courier_motion.idle_fidget > 0 and courier_motion.idle_fidget_arm == "ArmR", "An idle courier begins a staggered sleeve-adjustment fidget")
 	courier_motion.advance(0.3, 0)
 	check(courier_motion.joints.ArmR.rotation.z > 0.02, "Fidget visibly moves the shoulder and arm before settling")
-	var glove_ridge := game.player.left_arm.hand.get_node("KnuckleRidge0/Visual") as MeshInstance3D
+	var ridge_node: Node3D = game.player.left_arm.hand.get_node("KnuckleRidge0") as Node3D
+	var glove_ridge := ridge_node.get_child(0) as MeshInstance3D
 	check(glove_ridge.mesh is BoxMesh and (glove_ridge.mesh as BoxMesh).size.y < 0.01, "First-person glove has attached low-profile knuckle ridges, not floating beads")
 	var surface := RazlomArt.material(Color.WHITE, "brick")
 	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")
