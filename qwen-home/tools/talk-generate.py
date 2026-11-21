@@ -202,11 +202,13 @@ def search_wikipedia(query, limit=5):
     return results
 
 
-def log_search(query, results):
+def log_search(query, results, best=None):
     stamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
     lines = [f'## {stamp} — «{query}»', '']
     if results:
         lines += [f'- [{r["title"]}]({r["url"]})' for r in results]
+        if best:
+            lines += ['', f'Отвечала по статье «{best["title"]}», выжимка: {best["digest"]}']
     else:
         lines.append('- Ничего не нашлось.')
     lines.append('')
@@ -243,21 +245,26 @@ def main():
         query = decide_search(model, tokenizer, owner_text)
     results = search_wikipedia(query) if query else []
     context_note = ''
+    best = None
     if query:
-        log_search(query, results)
-        print(f'Поиск «{query}»: найдено статей: {len(results)}', flush=True)
         if results:
             exact = [r for r in results if r.get('exact')]
             best = exact[0] if exact else max(results, key=lambda r: r['score'])
+        log_search(query, results, best)
+        print(f'Поиск «{query}»: найдено статей: {len(results)}', flush=True)
+        if results:
             print(f'Отвечает по статье: {best["title"]!r} (совпадений: {best["score"]})', flush=True)
             context_note = f'\n\n(Ответь владельцу ровно одной фразой: начни её словами «Поискала в Википедии! В статье {best["title"]} написано, что» и сразу после «что» допиши ответ СВОИМИ СЛОВАМИ.\nВот факты из русской Википедии для твоего ответа: {best["digest"]})'
         else:
             context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
     history = turns[-(9):-1] if len(turns) > 1 else []
+    from_search = bool(results)
     messages = [{'role': 'system', 'content': persona}]
     for role, body in history:
         if role == 'assistant' and BAD_HISTORY.search(body):
             continue  # не подмешиваем ей в память собственные мусорные реплики
+        if role == 'assistant' and from_search and 'поискала в википедии' in body.lower():
+            continue  # отвечая по свежему поиску, она не должна повторять прошлые ответы: факты важнее привычки
         messages.append({'role': role, 'content': body})
     messages.append({'role': 'user', 'content': owner_text + context_note})
     torch.manual_seed(42 + len(turns))
