@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Северный узел — склад с живыми рабочими</title>
-<meta name="description" content="Склад-симулятор на движке RatCore: три рабочих с обученными нейросетями-мозгами, органами и гормонами. Управляй бригадой с пульта: 3D-вид от третьего лица и тактический вид сверху, инспектор тела с разрезом." />
+<meta name="description" content="Склад-симулятор на движке RatCore: бригада до восьми рабочих с нейросетями-мозгами, органами и гормонами. Управляй бригадой с пульта: 3D-вид от третьего лица и тактический вид сверху, инспектор тела с разрезом." />
 <meta name="theme-color" content="#0b0d0c" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -35,7 +35,7 @@
 
 <!-- Игровое поле -->
 <div id="stage">
-  <canvas id="scene" aria-label="Склад: стеллажи, приёмка и трое рабочих"></canvas>
+  <canvas id="scene" aria-label="Склад: стеллажи, приёмка и рабочая бригада"></canvas>
   <div id="tactical-grid" class="tactical-grid" aria-hidden="true"></div>
   <div id="vignette" class="vignette" aria-hidden="true"></div>
   <div id="markers" class="markers" aria-hidden="true"></div>
@@ -143,6 +143,11 @@
     <div class="ctl-group">
       <div id="shop-heading" class="ctl-label">Магазин смены <span id="shop-balance" class="queue-count">0</span></div>
       <div id="shop-list" class="shop-list">
+        <button class="shop-card" type="button" data-buy="worker">
+          <span class="shop-mark">＋</span>
+          <span class="shop-text"><b>Нанять рабочего</b><i>дополнительный участник бригады, до 8</i></span>
+          <span class="shop-price">80</span>
+        </button>
         <button class="shop-card" type="button" data-buy="medic">
           <span class="shop-mark">✚</span>
           <span class="shop-text"><b>Медик</b><i>лечит травмы и поддерживает здоровье</i></span>

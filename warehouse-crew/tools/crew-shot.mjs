@@ -62,6 +62,7 @@ const scene = window.WC.world.scene;
 
 // --- сценарий: заставить одного рабочего нести коробку -------------------
 const sim = game.sim;
+if (process.env.TRUCK === '1') sim.spawnTruck('unload');
 for (let i = 0; i < 120; i++) game.update(1 / 30);
 const worker = game.api.crew[Number(process.env.WORKER || 0)];
 if (process.env.FALL === '1') {

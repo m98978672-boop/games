@@ -168,7 +168,7 @@ console.log('Физическое падение тела');
   const names = Object.keys(w.state.ragdoll);
   for (let i = 0; i < 120; i++) warehouse.stepPhysics(1 / 120);
   const head = w.state.ragdoll.head;
-  check(names.length === 11 && names.includes('shinL'), 'тело состоит из связанных физических сегментов', { names });
+  check(names.length === 15 && names.includes('shinL') && names.includes('handL') && names.includes('footR'), 'тело состоит из связанных физических сегментов', { names });
   check(head.y < initialHeight - 0.2 && head.y > -0.05, 'тело упало под гравитацией и остановилось над полом', { initialHeight, head });
   warehouse.endRagdoll(w.state);
   check(!w.state.ragdoll, 'физические сегменты удаляются после восстановления');

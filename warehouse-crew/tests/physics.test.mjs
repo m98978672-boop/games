@@ -49,12 +49,15 @@ const bodyWorld = Physics.create(Wh.LAYOUT, dims, [{ height: .25 }, { height: 1.
 const baseline = bodyWorld.world.bodies.length;
 const actor = { pos: { x:-7, y:0 }, heading:0, state:'down' };
 bodyWorld.beginRagdoll(actor);
-assert.equal(bodyWorld.world.bodies.length, baseline + 11);
-assert.equal(bodyWorld.world.constraints.length, 10, 'articulated joints installed');
+assert.equal(bodyWorld.world.bodies.length, baseline + 15);
+assert.equal(bodyWorld.world.constraints.length, 14, 'articulated joints installed');
 let headStart = actor.ragdoll.head.y;
 for (let i = 0; i < 180; i++) bodyWorld.step([], 1/120);
 assert(actor.ragdoll.head.y < headStart - .2, 'head falls under gravity');
 assert(actor.ragdoll.head.y > -.03, 'head collides with floor');
+for (const name of ['handL', 'handR', 'footL', 'footR']) {
+  assert(actor.ragdoll[name] && actor.ragdoll[name].y > -.06, name + ' is independently simulated above the floor');
+}
 bodyWorld.endRagdoll(actor);
 assert.equal(bodyWorld.world.constraints.length, 0);
 assert.equal(bodyWorld.world.bodies.length, baseline, 'ragdoll cleanup removes bodies and joints');
@@ -72,3 +75,54 @@ for (let i = 0; i < 20; i++) {
 }
 assert(pushed.pose.x > -6.5, 'walking kinematic body pushes dynamic cargo');
 console.log('✓ Движущийся работник взаимодействует с динамической коробкой');
+
+// An unsecured stationary package becomes dynamic after an impact.
+const contactWorld = Physics.create(Wh.LAYOUT, dims, []);
+const striker = box(-7, 20, 5); striker.pose.z = .6;
+const waiting = box(-6.3, 8, 0); waiting.pose.z = .6;
+waiting._physicalDynamic = false; waiting.drops = 0; waiting.physics = false;
+for (let i = 0; i < 120; i++) contactWorld.step([striker, waiting], 1/120);
+assert(waiting._physicalDynamic && waiting.drops === 1 && waiting.pose.x > -6.2, 'unsecured box responds to impact');
+
+// The independent fluid solver mirrors cargo without advancing its simulation.
+const fluidWorld = Physics.create(Wh.LAYOUT, dims, []);
+const fluidBaseline = fluidWorld.world.bodies.length;
+const obstacle = box(-7, 8, 0); obstacle.status = 'stored'; obstacle._physicalDynamic = false; obstacle.pose.z = .8; obstacle.pose.y = 0;
+const falling = [{ x:-7, y:0, z:2, vx:0, vy:0, vz:-1, life:3 }];
+fluidWorld.syncFluidObstacles([obstacle]);
+let impactHeight = null;
+for (let i = 0; i < 140 && falling.length; i++) fluidWorld.stepFluid(falling, .01, d => { impactHeight = d.z; });
+assert(impactHeight > 1.1, 'blood droplet hits the top of the mirrored box');
+assert.equal(obstacle.pose.z, .8, 'fluid does not advance or change cargo state');
+fluidWorld.syncFluidObstacles([]);
+assert.equal(fluidWorld.world.bodies.length, fluidBaseline, 'mirrored cargo and droplets are removed');
+console.log('✓ Контакт с неподвижным грузом и столкновение жидкости с коробкой');
+
+const machineWorld = Physics.create(Wh.LAYOUT, dims, []);
+const vehicle = { x: -8, y: -7, yaw: 0 };
+const loose = box(-6.5, 7, 0); loose.pose.z = .1;
+machineWorld.syncForklift(vehicle, .05);
+machineWorld.step([loose], .05);
+for (let i = 0; i < 20; i++) {
+  vehicle.x += .05;
+  machineWorld.syncForklift(vehicle, .05);
+  machineWorld.step([loose], .05);
+}
+assert(loose.pose.x > -6.3, 'moving forklift collides with and pushes cargo');
+machineWorld.syncForklift(null, .05);
+console.log('✓ Движущийся погрузчик взаимодействует с грузом');
+
+// A driver shares the vehicle transform: do not leave a second collider
+// at the seat, and restore the walking collider after dismount.
+const riderWorld = Physics.create(Wh.LAYOUT, dims, []);
+const rider = { pos:{ x:-8, y:-7 }, heading:0, state:'idle', onForklift:false };
+const initial = riderWorld.world.bodies.length;
+riderWorld.syncActors([rider], .05);
+assert.equal(riderWorld.world.bodies.length, initial + 1);
+rider.onForklift = true;
+riderWorld.syncActors([rider], .05);
+assert.equal(riderWorld.world.bodies.length, initial, 'driver collider removed while aboard');
+rider.onForklift = false;
+riderWorld.syncActors([rider], .05);
+assert.equal(riderWorld.world.bodies.length, initial + 1, 'driver collider restored after dismount');
+console.log('✓ Коллайдер водителя не дублируется внутри погрузчика');

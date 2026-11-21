@@ -863,6 +863,19 @@ export function createRatCoreEngine(config = {}) {
             name: args.name || 'ratcore-mesh',
             vault,
           })),
+          // Export only a copy: the sealed AssetVault pixels never escape.
+          exportTexture: wrapTool('bridge.exportTexture', (args) => {
+            const entry = vault.readSealedTexture(args.texture, 'bridge.exportTexture');
+            const pixels = new Uint8Array(entry.pixels.length * 4);
+            for (let i = 0; i < entry.pixels.length; i++) {
+              const packed = entry.pixels[i] >>> 0;
+              pixels[i * 4] = packed & 255;
+              pixels[i * 4 + 1] = (packed >>> 8) & 255;
+              pixels[i * 4 + 2] = (packed >>> 16) & 255;
+              pixels[i * 4 + 3] = (packed >>> 24) & 255;
+            }
+            return { textureId: entry.id, width: entry.width, height: entry.height, pixels };
+          }),
           exportScene: wrapTool('bridge.exportScene', (args) => aiTeamSuite.bridgeExportScene({
             format: args.format || 'three-json',
             worldSnapshot: buildWorldSnapshotObj(),

@@ -16,6 +16,9 @@
     var ragdolls = new Map();
     var actors = new Map();
     var droplets = new Map();
+    var fluidObstacles = new Map();
+    var impacts = new Map();
+    var forkliftBody = null;
     var fluid = new C.SPHSystem();
     fluid.smoothingRadius = 0.16; fluid.density = 0.3; fluid.speedOfSound = 0.6; fluid.viscosity = 0.002;
     world.subsystems.push(fluid);
@@ -54,7 +57,7 @@
       var seen = new Set();
       list.forEach(function (wrapper) {
         var actor = wrapper.state && typeof wrapper.state === 'object' ? wrapper.state : wrapper;
-        if (!actor || !actor.pos || actor.dead || actor.state === 'down' || actor.inToilet || actor.privacy) return;
+        if (!actor || !actor.pos || actor.dead || actor.state === 'down' || actor.onForklift || actor.inToilet || actor.privacy) return;
         seen.add(actor);
         var body = actors.get(actor);
         if (!body) {
@@ -68,6 +71,24 @@
         body.aabbNeedsUpdate = true;
       });
       actors.forEach(function (body, actor) { if (!seen.has(actor)) { world.removeBody(body); actors.delete(actor); } });
+    }
+    // The vehicle is navigation-driven but has a moving Cannon collider. It can
+    // push loose cargo and contact ragdolls; it is not a wheel/suspension solver.
+    function syncForklift(forklift, dt) {
+      if (!forklift) {
+        if (forkliftBody) world.removeBody(forkliftBody);
+        forkliftBody = null; return;
+      }
+      if (!forkliftBody) {
+        forkliftBody = new C.Body({ mass: 0, type: C.Body.KINEMATIC,
+          shape: new C.Box(new C.Vec3(.78, .31, .475)) });
+        forkliftBody.position.set(forklift.x, .61, forklift.y);
+        world.addBody(forkliftBody);
+      }
+      forkliftBody.velocity.set((forklift.x - forkliftBody.position.x) / Math.max(dt, 1e-6), 0,
+        (forklift.y - forkliftBody.position.z) / Math.max(dt, 1e-6));
+      forkliftBody.quaternion.setFromAxisAngle(new C.Vec3(0,1,0), -forklift.yaw || 0);
+      forkliftBody.aabbNeedsUpdate = true;
     }
     // A constrained articulated body shares the cargo world, so boxes can strike it.
     function beginRagdoll(actor) {
@@ -91,8 +112,10 @@
         var suffix = side > 0 ? 'L' : 'R';
         segment('upperArm'+suffix, side*.23, 1.20, 0, .105, .27, .105, 2);
         segment('forearm'+suffix, side*.23, .94, 0, .09, .25, .09, 1.4);
+        segment('hand'+suffix, side*.23, .765, 0, .08, .10, .065, .5);
         segment('thigh'+suffix, side*.085, .60, 0, .145, .38, .16, 7);
         segment('shin'+suffix, side*.085, .24, 0, .115, .34, .13, 4);
+        segment('foot'+suffix, side*.085, .04, .045, .13, .08, .235, 1);
       });
       function join(a, b, point, cone) {
         var pa = new C.Vec3(actor.pos.x + c*point[0] + s*point[2], point[1], actor.pos.y - s*point[0] + c*point[2]);
@@ -107,8 +130,10 @@
         var suffix = side > 0 ? 'L' : 'R';
         join('torso','upperArm'+suffix,[side*.20,1.34,0],1.0);
         join('upperArm'+suffix,'forearm'+suffix,[side*.23,1.065,0],.9);
+        join('forearm'+suffix,'hand'+suffix,[side*.23,.815,0],.45);
         join('pelvis','thigh'+suffix,[side*.085,.79,0],.8);
         join('thigh'+suffix,'shin'+suffix,[side*.085,.41,0],.8);
+        join('shin'+suffix,'foot'+suffix,[side*.085,.07,0],.35);
       });
       parts.torso.angularVelocity.set(0.8, 0, 0.25);
       ragdolls.set(actor, { parts: parts, joints: joints });
@@ -130,6 +155,25 @@
             q:{ x:b.quaternion.x, y:b.quaternion.y, z:b.quaternion.z, w:b.quaternion.w } };
         });
       });
+    }
+    // Separate fluid world mirrors cargo as kinematic obstacles without stepping
+    // the cargo simulation twice. Contacts still use the current box transforms.
+    function syncFluidObstacles(orders) {
+      var seen = new Set();
+      orders.forEach(function (o) {
+        if (!o.pose || ['ruined', 'missed', 'loaded', 'carried'].indexOf(o.status) !== -1) return;
+        seen.add(o);
+        var b = fluidObstacles.get(o), d = dimensions[o.size] || dimensions.medium;
+        if (!b) {
+          b = new C.Body({ mass: 0, type: C.Body.KINEMATIC, shape: new C.Box(new C.Vec3(d.halfW, d.h/2, d.halfD)) });
+          world.addBody(b); fluidObstacles.set(o, b);
+        }
+        b.position.set(o.pose.x, Number.isFinite(o.pose.centerY) ? o.pose.centerY : o.pose.z + d.h/2, o.pose.y);
+        if (o.pose.quaternion) b.quaternion.set(o.pose.quaternion.x, o.pose.quaternion.y, o.pose.quaternion.z, o.pose.quaternion.w);
+        else b.quaternion.setFromEuler(o.pose.tilt || 0, o.pose.yaw || 0, o.pose.roll || 0, 'XYZ');
+        b.aabbNeedsUpdate = true;
+      });
+      fluidObstacles.forEach(function (b, o) { if (!seen.has(o)) { world.removeBody(b); fluidObstacles.delete(o); } });
     }
     // SPH pressure/viscosity act between fluid particles; collision contacts
     // turn the first surface impact into a decal and remove the particle.
@@ -177,6 +221,16 @@
             sleepSpeedLimit: 0.16, sleepTimeLimit: 0.8 });
           body.position.set(o.pose.x, o.pose.z + d.h / 2, o.pose.y);
           body.quaternion.setFromEuler(o.pose.tilt || 0, o.pose.yaw || 0, o.pose.roll || 0, 'XYZ');
+          if (!dynamic && o.status !== 'stored') {
+            body.addEventListener('collide', function (event) {
+              var other = event.body;
+              var impact = Math.abs(event.contact.getImpactVelocityAlongNormal());
+              if (o.status === 'stored' || !other || impact < 1.0 || !other.velocity) return;
+              var prior = impacts.get(o);
+              if (!prior || impact > prior.impact) impacts.set(o, { impact: impact,
+                vx: other.velocity.x * .45, vy: other.velocity.z * .45, vz: Math.max(.05, other.velocity.y * .3) });
+            });
+          }
           if (dynamic) {
             body.velocity.set(o.vel.x, o.vel.vz, o.vel.y);
             body.angularVelocity.set(o.vel.spin || 0, (o.vel.spin || 0) * 0.45, 0);
@@ -187,6 +241,10 @@
           world.addBody(body);
           rec = { body: body, dynamic: dynamic, generation: o._physicsGeneration || 0, dims: d };
           bodies.set(o, rec);
+        } else if (!dynamic) {
+          rec.body.position.set(o.pose.x, o.pose.z + rec.dims.h / 2, o.pose.y);
+          rec.body.quaternion.setFromEuler(o.pose.tilt || 0, o.pose.yaw || 0, o.pose.roll || 0, 'XYZ');
+          rec.body.aabbNeedsUpdate = true;
         }
       });
       bodies.forEach(function (rec, o) { if (!active.has(o)) { remove(rec); bodies.delete(o); } });
@@ -196,6 +254,14 @@
       var n = Math.max(1, Math.ceil(dt / Math.min(1 / 120, 0.05 / Math.max(1, maxSpeed))));
       n = Math.min(240, n);
       for (var i = 0; i < n; i++) world.step(dt / n);
+      impacts.forEach(function (hit, o) {
+        if (!active.has(o) || o.status === 'stored' || o.status === 'carried') return;
+        o._physicalDynamic = true; o._physicsGeneration = (o._physicsGeneration || 0) + 1;
+        o.physics = true; o.grounded = false; o.drops = Math.max(1, o.drops || 0);
+        o.intake = null;
+        o.vel = { x: hit.vx, y: hit.vy, vz: hit.vz, spin: Math.min(4, hit.impact * .25) };
+      });
+      impacts.clear();
       syncRagdolls();
       bodies.forEach(function (rec, o) {
         if (!rec.dynamic) return;
@@ -215,7 +281,7 @@
       });
       return bodies.size;
     }
-    return { step: step, world: world, syncActors: syncActors, beginRagdoll: beginRagdoll, endRagdoll: endRagdoll, stepFluid: stepFluid };
+    return { step: step, world: world, syncActors: syncActors, syncForklift: syncForklift, syncFluidObstacles: syncFluidObstacles, beginRagdoll: beginRagdoll, endRagdoll: endRagdoll, stepFluid: stepFluid };
   }
   return { create: create, C: C };
 });

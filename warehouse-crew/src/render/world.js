@@ -168,6 +168,7 @@ WC.world = (function () {
     opts = opts || {};
     var m = meshes.mesh(engine, name, opts.palette || null, opts);
     m.position.set(x, y, z);
+    m.userData.scenePart = name;
     if (opts.rotationY) m.rotation.y = opts.rotationY;
     if (opts.rotationX) m.rotation.x = opts.rotationX;
     if (opts.rotationZ) m.rotation.z = opts.rotationZ;
@@ -176,11 +177,51 @@ WC.world = (function () {
     return m;
   }
 
+  // Текстуры создаёт RatCore; мост отдаёт безопасную копию пикселей.
+  // Геометрия рецептов не имеет UV, поэтому проецируем их на координаты.
+  var surfaceMaterials = {};
+  function surfaceMaterial(kind) {
+    if (surfaceMaterials[kind]) return surfaceMaterials[kind];
+    var material = meshes.makeMaterial({ roughness: .94, metalness: 0 });
+    var spec = kind === 'concrete' ? ['#c0bdb5', '#747974', 4101, .34] :
+      kind === 'asphalt' ? ['#aaa9a3', '#656c6b', 4102, .48] : ['#e8d8c1', '#a99476', 4103, 1.8];
+    var generated = engine.tools.build.texGenerate({ kind: 'noise', width: 128, height: 128,
+      seed: spec[2], baseColor: spec[0], accentColor: spec[1], withNormals: false, withDamaged: false });
+    if (!generated.ok) return material;
+    var exported = engine.tools.bridge.exportTexture({ texture: generated.data });
+    if (!exported.ok) return material;
+    var data = exported.data;
+    var texture = new THREE_NS.DataTexture(data.pixels, data.width, data.height, THREE_NS.RGBAFormat);
+    texture.wrapS = THREE_NS.RepeatWrapping; texture.wrapT = THREE_NS.RepeatWrapping;
+    texture.magFilter = THREE_NS.LinearFilter; texture.minFilter = THREE_NS.LinearFilter;
+    if ('colorSpace' in texture) texture.colorSpace = THREE_NS.SRGBColorSpace;
+    texture.needsUpdate = true;
+    material.userData.surfaceTexture = texture;
+    material.userData.textureId = data.textureId;
+    material.onBeforeCompile = function (shader) {
+      shader.uniforms.warehouseSurface = { value: texture };
+      shader.vertexShader = 'varying vec3 warehouseSurfacePos;\n' + shader.vertexShader;
+      var projection = kind === 'cardboard' ? 'transformed' : '(modelMatrix * vec4(transformed, 1.0)).xyz';
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
+        '#include <begin_vertex>\nwarehouseSurfacePos = ' + projection + ';');
+      shader.fragmentShader = 'varying vec3 warehouseSurfacePos;\nuniform sampler2D warehouseSurface;\n' + shader.fragmentShader;
+      var coords = kind === 'cardboard' ? 'warehouseSurfacePos.xy' : 'warehouseSurfacePos.xz';
+      shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
+        '#include <map_fragment>\nvec3 grain = texture2D(warehouseSurface, ' + coords + ' * ' + spec[3].toFixed(2) + ').rgb;\ndiffuseColor.rgb *= mix(vec3(1.0), grain * 1.65, 0.42);');
+    };
+    material.customProgramCacheKey = function () { return 'warehouse-surface-' + kind; };
+    surfaceMaterials[kind] = material;
+    return material;
+  }
+
   function buildWarehouse() {
     // Двор под фурами: асфальт вокруг цеха
-    addStatic('yard', 0, 0, 0, { castShadow: false, receiveShadow: false });
+    addStatic('yard', 0, -0.24, 0, { castShadow: false, receiveShadow: false, material: surfaceMaterial('asphalt') });
     // Пол и разметка
-    addStatic('floor', 0, 0, 0, { castShadow: false });
+    addStatic('floor', 0, -0.20, 0, { castShadow: false, material: surfaceMaterial('concrete') });
+    // Швы бетона лежат строго над полом, а двор — ниже него.
+    for (var lineZ = -6.5; lineZ <= 6.5; lineZ += 2.6) addStatic('floorSeamX', 0, 0.002, lineZ, { castShadow:false, receiveShadow:false });
+    for (var lineX = -10; lineX <= 10; lineX += 2.5) addStatic('floorSeamZ', lineX, 0.006, 0, { castShadow:false, receiveShadow:false });
     [-7.8, -2.6, 2.6, 7.8].forEach(function (z) {
       addStatic('floorStripe', 0, 0.006, z, { castShadow: false, receiveShadow: false });
     });
@@ -276,7 +317,7 @@ WC.world = (function () {
     addStatic('sidewalk', 0, 0.06, st.y0 + 0.45, { castShadow: false });
     addStatic('curb', 0, 0.1, st.y0 + 1.1, { castShadow: false, receiveShadow: false });
     for (var x = -9.6; x <= 9.7; x += 2.4) {
-      addStatic('roadDash', x, 0.06, st.y1 - 1.6, { castShadow: false, receiveShadow: false });
+      addStatic('roadDash', x, 0.105, st.y1 - 1.6, { castShadow: false, receiveShadow: false });
     }
     [-9.6, 9.6].forEach(function (lx) {
       addStatic('lampPost', lx, 0.1, st.y0 + 0.5, { castShadow: false });
@@ -347,9 +388,9 @@ WC.world = (function () {
     var heavy = layoutConf().heavy;
     if (!heavy) return;
     addStatic('heavyPad', heavy.x, 0.02, heavy.y, { castShadow: false });
-    var s1 = addStatic('heavyStripe', heavy.x, 0.03, heavy.y - heavy.d / 2 + 0.2, { castShadow: false, receiveShadow: false });
+    var s1 = addStatic('heavyStripe', heavy.x, 0.055, heavy.y - heavy.d / 2 + 0.2, { castShadow: false, receiveShadow: false });
     s1.scale.z = 1;
-    var s2 = addStatic('heavyStripe', heavy.x, 0.03, heavy.y + heavy.d / 2 - 0.2, { castShadow: false, receiveShadow: false });
+    var s2 = addStatic('heavyStripe', heavy.x, 0.055, heavy.y + heavy.d / 2 - 0.2, { castShadow: false, receiveShadow: false });
     s2.scale.z = 1;
     addStatic('heavyPallet', heavy.pallet.x, 0.14, heavy.pallet.y, { castShadow: true });
     addStatic('palletStack', heavy.x - 1.9, 0, heavy.y - 1.1, { castShadow: true });
@@ -359,49 +400,82 @@ WC.world = (function () {
   // ---------------------------------------------------------------- техника
   var forkliftView = null;
 
+  // A centred wheel pivot keeps the tyre and hub together while rotating.
+  function vehicleWheel(parent, tyreName, hubName, x, y, z, width) {
+    var pivot = new THREE_NS.Group();
+    pivot.position.set(x, y, z);
+    var tyre = meshes.mesh(engine, tyreName, null);
+    tyre.rotation.x = Math.PI / 2;
+    tyre.position.set(0, 0, -width / 2);
+    pivot.add(tyre);
+    var hub = meshes.mesh(engine, hubName, null);
+    hub.rotation.x = Math.PI / 2;
+    hub.position.set(0, 0, z >= 0 ? width / 2 + .003 : -width / 2 - .043);
+    pivot.add(hub);
+    parent.add(pivot);
+    return pivot;
+  }
+
   function makeForkliftView() {
     var group = new THREE_NS.Group();
     var wheels = [];
-    function part(name, x, y, z, rx) {
+    function part(name, x, y, z) {
       var m = meshes.mesh(engine, name, null, { castShadow: true, receiveShadow: true });
-      m.position.set(x, y, z);
-      if (rx) m.rotation.z = rx;
-      group.add(m);
-      return m;
+      m.position.set(x, y, z); m.userData.vehiclePart = name;
+      group.add(m); return m;
     }
-    part('forkliftBody', 0, 0, 0);
-    part('forkliftCounter', -0.62, 0, 0);
-    part('forkliftMast', 0.78, 0, 0);
-    part('forkliftFork', 1.35, 0.16, 0.28);
-    part('forkliftFork', 1.35, 0.16, -0.28);
-    part('forkliftSeat', -0.25, 0.6, 0);
-    part('forkliftCage', -0.68, 0, 0.42);
-    part('forkliftCage', -0.68, 0, -0.42);
-    var beacon = part('forkliftBeacon', -0.7, 1.95, 0);
-    beacon.castShadow = false;
-    [[-0.55, 0.45], [-0.55, -0.45], [0.55, 0.45], [0.55, -0.45]].forEach(function (w) {
-      var wheel = meshes.mesh(engine, 'forkliftWheel', null, { castShadow: true });
-      wheel.position.set(w[0], 0.28, w[1]);
-      wheel.rotation.x = Math.PI * 0.5;
-      group.add(wheel);
-      wheels.push(wheel);
+    part('forkliftBody', 0, .30, 0);
+    part('forkliftCounter', -.62, .30, 0);
+    part('forkliftMast', .78, .20, 0);
+    part('forkliftHydraulic', .70, .35, -.24);
+    part('forkliftHydraulic', .70, .35, .24);
+    var forks = new THREE_NS.Group();
+    forks.userData.vehiclePart = 'forks'; group.add(forks);
+    [-.28, .28].forEach(function (z) {
+      var fork = meshes.mesh(engine, 'forkliftFork', null);
+      fork.position.set(1.25, .10, z); forks.add(fork);
     });
-    group.userData.wheels = wheels;
-    scene.add(group);
-    return group;
+    part('forkliftSeat', -.25, .60, 0);
+    part('forkliftColumn', .29, .59, 0);
+    var steering = part('forkliftWheelControl', .29, 1.02, 0);
+    steering.rotation.z = -.35;
+    [-.42, .42].forEach(function (z) {
+      part('forkliftCage', -.65, .65, z);
+      part('forkliftCage', .48, .65, z);
+      part('forkliftLamp', .78, .60, z * .75);
+    });
+    part('forkliftRoof', -.08, 1.72, 0);
+    var beacon = part('forkliftBeacon', -.60, 1.84, 0);
+    beacon.material.emissive.set('#e69815');
+    beacon.material.emissiveIntensity = .2;
+    [[-.55, .50], [-.55, -.50], [.55, .50], [.55, -.50]].forEach(function (w) {
+      wheels.push(vehicleWheel(group, 'forkliftWheel', 'forkliftHub', w[0], .28, w[1], .2));
+    });
+    group.userData.wheels = wheels; group.userData.beacon = beacon; group.userData.forks = forks;
+    group.userData.vehicle = 'forklift';
+    scene.add(group); return group;
   }
 
-  function updateForklift(sim) {
-    if (!forkliftView) forkliftView = makeForkliftView();
+  function updateForklift(sim, dt, game) {
     var f = sim.state.forklift;
-    if (!f) { forkliftView.visible = false; return; }
+    if (!f) { if (forkliftView) forkliftView.visible = false; return; }
+    if (!forkliftView) {
+      forkliftView = makeForkliftView();
+      forkliftView.position.set(f.x, 0, f.y);
+    }
     forkliftView.visible = true;
-    forkliftView.position.x += (f.x - forkliftView.position.x) * 0.35;
-    forkliftView.position.z += (f.y - forkliftView.position.z) * 0.35;
+    forkliftView.position.x = f.x;
+    forkliftView.position.z = f.y;
     forkliftView.position.y = 0;
     forkliftView.rotation.y = -f.yaw;
     var wheels = forkliftView.userData.wheels || [];
-    for (var i = 0; i < wheels.length; i++) wheels[i].rotation.y = (f.wheels || 0) * 1.4;
+    for (var i = 0; i < wheels.length; i++) wheels[i].rotation.z = -(f.wheels || 0);
+    var beacon = forkliftView.userData.beacon;
+    beacon.material.emissiveIntensity = f.rider ? .3 + .8 * Math.max(0, Math.sin(clock * 7)) : .08;
+    var forks = forkliftView.userData.forks;
+    var driver = f.rider && game.api.crew.find(function (w) { return w.id === f.rider; });
+    var target = driver && driver.state.carryingId ? .22 : 0;
+    forks.position.y += (target - forks.position.y) * Math.min(1, dt * 4);
   }
 
   var WC_WAREHOUSE_INTAKE = [
@@ -440,6 +514,8 @@ WC.world = (function () {
     var vestMesh = part(torso, 'vest', 0, 0, 0);
     part(torso, 'strap', 0, 0, 0);
     part(torso, 'strap2', 0, 0, 0);
+    part(torso, 'vestReflective', 0, 0, 0);
+    part(torso, 'vestBackReflective', 0, 0, 0);
     part(torso, 'pocket', 0, 0, 0);
     part(torso, 'badge', 0, 0, 0);
     part(torso, 'collar', 0, 0, 0);
@@ -458,9 +534,10 @@ WC.world = (function () {
     part(head, 'ear', 0.11, 0, 0);
     part(head, 'nose', 0, 0, 0);
     part(head, 'mouth', 0, 0, 0);
+    var eyes = [];
     [-0.048, 0.048].forEach(function (dx) {
-      part(head, 'eye', dx, 0, 0);
-      part(head, 'pupil', dx, 0, 0);
+      eyes.push(part(head, 'eye', dx, 0, 0));
+      eyes.push(part(head, 'pupil', dx, 0, 0));
       part(head, 'brow', dx, 0, 0);
     });
     // Каска: приплюснутый купол, поля, козырёк и обод
@@ -480,11 +557,13 @@ WC.world = (function () {
       elbow.position.y = -0.27;
       shoulder.add(elbow);
       part(elbow, 'elbowPad', 0, 0, 0);
+      part(shoulder, 'sleeveCuff', 0, 0, 0);
       var foreMesh = part(elbow, 'forearm', 0, 0, 0);
       var wrist = new THREE_NS.Group();
       wrist.position.y = -0.25;
       elbow.add(wrist);
       part(wrist, 'hand', 0, 0, 0);
+      part(wrist, 'gloveSeam', 0, 0, 0);
       var thumb = part(wrist, 'thumb', 0, 0, 0);
       if (sign < 0) thumb.position.x *= -1;
       return { shoulder: shoulder, elbow: elbow, wrist: wrist, upper: upperMesh, fore: foreMesh };
@@ -499,6 +578,7 @@ WC.world = (function () {
       knee.position.y = -0.38;
       hip.add(knee);
       part(knee, 'kneePad', 0, 0, 0);
+      part(knee, 'kneeGuard', 0, 0, 0);
       var shinMesh = part(knee, 'shin', 0, 0, 0);
       var ankle = new THREE_NS.Group();
       ankle.position.y = -0.34;
@@ -506,6 +586,7 @@ WC.world = (function () {
       part(ankle, 'anklePad', 0, 0, 0);
       part(ankle, 'foot', 0, 0, 0);
       part(ankle, 'sole', 0, 0, 0);
+      part(ankle, 'bootLaces', 0, 0, 0);
       return { hip: hip, knee: knee, ankle: ankle, thigh: thighMesh, shin: shinMesh };
     }
 
@@ -522,7 +603,7 @@ WC.world = (function () {
 
     scene.add(root);
     var viewState = {
-      root: root, hips: hips, torso: torso, neck: neck, head: head,
+      root: root, hips: hips, torso: torso, neck: neck, head: head, eyes: eyes,
       armL: armL, armR: armR, legL: legL, legR: legR,
       torsoMesh: torsoMesh, vestMesh: vestMesh,
       carryAnchor: carryAnchor, palette: palette,
@@ -568,7 +649,7 @@ WC.world = (function () {
   function makeBoxView(order) {
     if (boxViews.has(order.id)) return boxViews.get(order.id);
     var group = new THREE_NS.Group();
-    var body = meshes.mesh(engine, boxName(order.size), null);
+    var body = meshes.mesh(engine, boxName(order.size), null, { material: surfaceMaterial('cardboard') });
     group.add(body);
     var m = boxMetrics(body);
     // Скотч по верху и ярлык на торце — коробка перестаёт быть голым кубом.
@@ -631,7 +712,7 @@ WC.world = (function () {
         if (carrierView && sim.state.forklift && sim.state.forklift.rider === order.carrier && forkliftView) {
           if (group.parent !== forkliftView) forkliftView.add(group);
           group.scale.setScalar(1);
-          group.position.set(1.25, 0.30, 0);
+          group.position.set(1.25, 0.30 + forkliftView.userData.forks.position.y, 0);
           group.rotation.set(0, 0, 0);
         } else if (carrierView) {
           if (group.parent !== carrierView.carryAnchor) carrierView.carryAnchor.add(group);
@@ -878,11 +959,14 @@ WC.world = (function () {
       var helmet = meshes.mesh(engine, 'hardhat', view.palette); helmet.position.set(0, 0.03, 0); helmet.scale.set(1.02, .62, 1.02); head.add(helmet);
       ['L','R'].forEach(function (side) {
         piece('upperArm' + side, 'upperArm');
-        var fore = piece('forearm' + side, 'forearm');
-        var hand = meshes.mesh(engine, 'hand', view.palette); hand.position.set(0, -.225, 0); fore.add(hand);
+        piece('forearm' + side, 'forearm');
+        var hand = piece('hand' + side, 'hand');
+        var thumb = meshes.mesh(engine, 'thumb', view.palette);
+        thumb.position.set(side === 'L' ? -.05 : .05, -.015, .03); hand.add(thumb);
         piece('thigh' + side, 'thigh');
-        var shin = piece('shin' + side, 'shin');
-        var foot = meshes.mesh(engine, 'foot', view.palette); foot.position.set(0, -.24, .045); shin.add(foot);
+        piece('shin' + side, 'shin');
+        var foot = piece('foot' + side, 'foot');
+        var sole = meshes.mesh(engine, 'sole', view.palette); sole.position.set(0, -.05, 0); foot.add(sole);
       });
       scene.add(root); view.ragdollRoot = root; view.ragdollPieces = pieces;
     }
@@ -940,6 +1024,11 @@ WC.world = (function () {
       var sitting = Boolean(s.onForklift) || s.state === 'play';
       var twist = anim.torsoTwist || 0;
       var headTurn = anim.headTurn || 0;
+      // Короткое моргание и индивидуальный ритм дыхания.
+      var blinkPhase = (clock + s.id.length * .57) % 4.6;
+      var blink = blinkPhase < .12 ? .12 : 1;
+      viewEntry.eyes.forEach(function (eye) { eye.scale.y = blink; });
+      var handling = s.timers && !s.onForklift ? Math.min(1, (s.timers.pick || s.timers.place || 0) * 3) : 0;
 
       // ---------------------------------------------------------------- ноги
       var stride = (0.34 + 0.25 * run) * walk;
@@ -1004,12 +1093,22 @@ WC.world = (function () {
         viewEntry.armR.elbow.rotation.x = -0.18 - Math.max(0, -swing) * 0.3 - 0.75 * run;
       }
 
+      // Наклон и работа руками во время подъёма/укладки, а не только ходьба.
+      if (handling > 0 && !sitting) {
+        viewEntry.armL.shoulder.rotation.x += (-1.0 - viewEntry.armL.shoulder.rotation.x) * handling;
+        viewEntry.armR.shoulder.rotation.x += (-1.0 - viewEntry.armR.shoulder.rotation.x) * handling;
+        viewEntry.armL.elbow.rotation.x += (-.65 - viewEntry.armL.elbow.rotation.x) * handling;
+        viewEntry.armR.elbow.rotation.x += (-.65 - viewEntry.armR.elbow.rotation.x) * handling;
+        viewEntry.legL.knee.rotation.x += .28 * handling;
+        viewEntry.legR.knee.rotation.x += .28 * handling;
+      }
+
       // --------------------------------------------------- корпус, шея, голова
-      var targetLean = down ? 0 : (carrying ? 0.13 : 0.02) + 0.17 * run + Math.min(0.12, (body.fatigue || 0) * 0.18);
+      var targetLean = down ? 0 : (carrying ? 0.13 : 0.02) + 0.24 * handling + 0.17 * run + Math.min(0.12, (body.fatigue || 0) * 0.18);
       var bob = Math.abs(Math.sin(phase)) * 0.03 * walk * (1 + run);
-      viewEntry.hips.position.y = 0.98 - (resting ? 0.16 : 0) - Math.min(0.1, (body.fatigue || 0) * 0.1) - (down ? 0.5 : 0) + bob;
+      viewEntry.hips.position.y = 0.98 - (resting ? 0.16 : 0) - Math.min(0.1, (body.fatigue || 0) * 0.1) - (down ? 0.5 : 0) - .10 * handling + bob;
       viewEntry.torso.rotation.x = viewEntry.torso.rotation.x + (targetLean - viewEntry.torso.rotation.x) * Math.min(1, dt * 6);
-      viewEntry.torso.rotation.y = -twist * 0.35;
+      viewEntry.torso.rotation.y = -twist * 0.35 + (walk < .1 ? Math.sin(clock * .7 + s.id.length) * .025 : 0);
       viewEntry.hips.rotation.y = twist * 0.55;
       viewEntry.neck.rotation.y = headTurn + Math.sin((anim.breath || 0) * 0.35) * 0.05;
       viewEntry.head.rotation.x = resting ? 0.22 : (down ? 0.5 : 0.02);
@@ -1113,24 +1212,35 @@ WC.world = (function () {
   var truckViews = new Map();
 
   function makeTruckView() {
-    var group = new THREE_NS.Group();
-    function part(name, x, y, z, rx) {
+    var group = new THREE_NS.Group(), wheels = [];
+    group.userData.vehicle = 'truck';
+    function part(name, x, y, z) {
       var m = meshes.mesh(engine, name, null, { castShadow: true, receiveShadow: true });
-      m.position.set(x, y, z);
-      if (rx) m.rotation.x = rx;
-      group.add(m);
-      return m;
+      m.position.set(x, y, z); m.userData.vehiclePart = name;
+      group.add(m); return m;
     }
-    part('truckChassis', 0, 0, 0);
-    part('truckTrailer', 0, 0, 0);
-    part('truckStripe', 0, 0, 0);
-    part('truckCab', 3.55, 0, 0);
-    part('truckGlass', 4.3, 0, 0);
-    part('truckDoor', -2.62, 0, 0);
-    [[-1.75, 1.0], [-1.75, -1.0], [2.95, 1.0], [2.95, -1.0]].forEach(function (w) {
-      part('truckWheel', w[0], 0.46, w[1], Math.PI / 2);
+    part('truckChassis', 0, .60, 0);
+    part('truckTrailer', 0, .82, 0);
+    part('truckStripe', 0, 1.18, 0);
+    part('truckCab', 3.45, .74, 0);
+    part('truckGlass', 4.41, 1.63, 0);
+    part('truckDoor', -2.67, .84, 0);
+    part('truckBumper', 4.48, .56, 0);
+    part('truckGrille', 4.44, .98, 0);
+    [-1, 1].forEach(function (side) {
+      part('truckLight', 4.47, .94, side * .79);
+      part('truckMirror', 3.80, 1.67, side * 1.23);
+      part('truckSideWindow', 3.35, 1.68, side * 1.162);
+      part('truckHandle', 3.05, 1.35, side * 1.17);
+      part('truckStep', 3.30, .61, side * 1.20);
+      part('truckTailLight', -2.76, .95, side * .86);
+      part('truckRail', 0, 1.55, side * 1.245);
+      [-1.75, -.90, 3.05].forEach(function (x) {
+        wheels.push(vehicleWheel(group, 'truckWheel', 'truckHub', x, .46, side * 1.02, .30));
+      });
     });
-    group.userData.cargo = part('cargoStack', 0.9, 0, 0);
+    group.userData.wheels = wheels;
+    group.userData.cargo = part('cargoStack', .9, .84, 0);
     return group;
   }
 
@@ -1153,7 +1263,10 @@ WC.world = (function () {
       var outT = truck.departedAt == null ? 0 : Math.min(1, Math.max(0, (now - truck.departedAt) / 2.4));
       var easeOut = outT * outT;
       var offset = entry.dir * (8 * (1 - easeIn) + 9 * easeOut);
-      entry.group.position.x = entry.baseX + offset;
+      var nextX = entry.baseX + offset;
+      var distance = nextX - entry.group.position.x;
+      entry.group.userData.wheels.forEach(function (wheel) { wheel.rotation.z -= distance / .46; });
+      entry.group.position.x = nextX;
       entry.group.position.y = Math.sin(inT * Math.PI * 0.5) * 0.02;
       entry.group.visible = outT < 1;
       entry.group.userData.cargo.visible = truck.done < truck.total;
@@ -1464,7 +1577,7 @@ WC.world = (function () {
     // Лампы живут: лёгкое мерцание тёплого света
     lamps.forEach(function (lamp, i) {
       var base = lamp.userData.base || (lamp.userData.base = lamp.intensity || 6.5);
-      lamp.intensity = base * (0.94 + 0.06 * Math.sin(clock * 1.7 + i * 2.1) + 0.03 * Math.sin(clock * 11 + i));
+      lamp.intensity = base * (0.995 + 0.005 * Math.sin(clock * 0.45 + i * 2.1));
     });
     // Подсветка выбранного рабочего
     if (halo) {
@@ -1512,7 +1625,7 @@ WC.world = (function () {
     updateToilet(game, dt);
     updateCrew(dt, game);
     updateTrucks(sim, dt);
-    updateForklift(sim);
+    updateForklift(sim, dt, game);
     updateBoxes(sim);
     updateBlood(sim);
     updateSlotMarkers(sim);

@@ -30,6 +30,7 @@
 `shooter-2`) использовать `RatCore` как единый мозг, генератор карт, конструктор моделек,
 систему чувств (`see`/`hear`) и баг-трекер, оставляя свой WebGL-рендер на Three.js:
 - `bridge.exportMesh(handle, 'threejs')` отдаёт готовый дескриптор `{ position, normal, uv, index, bounds }` в осях Three.js `(X, h, -Y)` → в игре достаточно сделать `geom.setAttribute(...)`.
+- `bridge.exportTexture({ texture })` проверяет запечатанный хэндл `build.texGenerate` и выдаёт независимую копию `{ textureId, width, height, pixels }` в RGBA для `DataTexture`; неподписанные текстуры отклоняются с `RC-102`.
 - `bridge.exportMap(bounds, 'heightmap-f32')` отдаёт `Float32Array` высот `H(X,Y)` + граф дорог/зданий.
 - Живая подписка на изменения мира (`syncTick`) синхронизирует позиции сущностей и износ граней.
 

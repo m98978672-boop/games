@@ -347,6 +347,7 @@
     // Жёсткие тела, контакты, трение и вращение обрабатываются Cannon.
     function stepPhysics(dt) {
       if (!Number.isFinite(dt) || dt <= 0) return 0;
+      physicsWorld.syncForklift(state.forklift, dt);
       return physicsWorld.step(state.orders, dt);
     }
 
@@ -370,6 +371,7 @@
       dt = Math.min(0.1, Math.max(0, dt));
       if (state.bloodDrops.length) {
         if (!bloodWorld) bloodWorld = physics.create(LAYOUT, BOX_DIMS, RACK_LEVELS);
+        bloodWorld.syncFluidObstacles(state.orders);
         bloodWorld.stepFluid(state.bloodDrops, dt, function (drop) {
           state.bloodPools.push({ id: ++effectSeq, x: drop.x, y: drop.y, z: Math.max(0, drop.z - 0.035), age: 0, size: effectsRng.range(0.4, 0.8) });
         });

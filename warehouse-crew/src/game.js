@@ -40,6 +40,7 @@ WC.game = (function () {
     deaths: [],
     day: 1,
     needsCleanup: false,
+    crewTarget: 3,
     envs: {},
   };
 
@@ -215,6 +216,7 @@ WC.game = (function () {
       truckEvery: cfg.truckEvery,
       firstTruckDelay: cfg.firstTruckDelay,
     });
+    api.crewTarget = cfg.crew.length;
     api.crew = cfg.crew.map(function (member, i) {
       return window.WarehouseWorker.createWorker({
         id: member.id,
@@ -523,6 +525,9 @@ WC.game = (function () {
       if (WC.world && WC.world.removeView) WC.world.removeView(w.state.id);
       return false;
     });
+    // После filter это новый массив: окружение каждого живого работника
+    // должно видеть актуальную бригаду, включая будущие наймы.
+    api.crew.forEach(function (w) { if (api.envs[w.id]) api.envs[w.id].workers = api.crew; });
     if (!workerById(api.activeWorkerId) && api.crew[0]) api.activeWorkerId = api.crew[0].state.id;
     if (api.pair && api.pair.phase !== 'idle') {
       var a = workerById(api.pair.a);
@@ -548,9 +553,9 @@ WC.game = (function () {
   ];
 
   function hireReplacements() {
-    var target = cfg.crew.length;
+    var target = api.crewTarget;
     var guard = 0;
-    while (api.crew.length < target && guard < 4) {
+    while (api.crew.length < target && guard < 8) {
       guard += 1;
       spawnReplacement();
     }
@@ -559,6 +564,10 @@ WC.game = (function () {
   function spawnReplacement() {
     var seq = api.sim.state.hires.length + api.deaths.length + api.crew.length;
     var person = HIRE_NAMES[seq % HIRE_NAMES.length];
+    for (var n = 0; n < HIRE_NAMES.length; n++) {
+      var candidate = HIRE_NAMES[(seq + n) % HIRE_NAMES.length];
+      if (!api.crew.some(function (w) { return w.state.name === candidate.name; })) { person = candidate; break; }
+    }
     var palette = HIRE_PALETTES[seq % HIRE_PALETTES.length];
     var rng = window.WarehouseSim.createRng((cfg.seed + api.sim.state.day * 977 + seq * 131) >>> 0);
     var traits = {
@@ -567,9 +576,20 @@ WC.game = (function () {
       paceTrait: rng.range(0.4, 0.85), neuroticism: rng.range(0.15, 0.6),
       recovery: rng.range(0.4, 0.8), coop: rng.range(0.4, 0.9),
     };
-    var spawn = api.sim.layout.street
-      ? { x: api.sim.layout.street.gate.x + rng.range(0.5, 0.8), y: 6.1 }
-      : api.sim.layout.spawns[0];
+    // Ищем свободную точку в зоне отдыха, чтобы новички не появлялись друг в друге.
+    var spawnCandidates = [{ x:-8.05, y:6.1 }, { x:-7.3, y:5.65 }, { x:-6.45, y:5.7 },
+      { x:-5.65, y:5.6 }, { x:-7.9, y:7.0 }, { x:-6.3, y:6.3 }, { x:-5.6, y:6.5 }];
+    var spawn = spawnCandidates[0];
+    var bestClearance = -1;
+    spawnCandidates.forEach(function (candidate) {
+      if (!window.WarehouseWorker.insideWalk(candidate.x, candidate.y, api.sim.layout) ||
+          window.WarehouseWorker.pathBlocked(candidate, candidate, 0.35)) return;
+      var clearance = Infinity;
+      api.crew.concat(api.staff).forEach(function (other) {
+        clearance = Math.min(clearance, Math.hypot(other.state.pos.x - candidate.x, other.state.pos.y - candidate.y));
+      });
+      if (clearance > bestClearance) { bestClearance = clearance; spawn = candidate; }
+    });
     var worker = window.WarehouseWorker.createWorker({
       id: 'hire-' + api.sim.state.day + '-' + (api.crew.length + 1) + '-' + seq,
       name: person.name,
@@ -590,6 +610,18 @@ WC.game = (function () {
     pushLog('Новый работяга: ' + person.name + ' (' + person.role + ') вышел на смену', 'good');
     emit('hire', { worker: worker });
     return worker;
+  }
+
+  function hireWorker() {
+    var cost = cfg.shop.worker.cost, max = cfg.shop.worker.max;
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена ещё не началась или уже закончилась' };
+    if (api.crewTarget >= max) return { ok: false, reason: 'Бригада уже укомплектована: максимум ' + max };
+    if (api.sim.state.stats.score < cost) return { ok: false, reason: 'Не хватает очков: нужно ' + cost };
+    api.sim.state.stats.score -= cost;
+    api.crewTarget += 1;
+    var worker = spawnReplacement();
+    pushLog('Нанят дополнительный рабочий за ' + cost + ' очков', 'good');
+    return { ok: true, worker: worker, cost: cost };
   }
 
   function qualityPercent(game) {
@@ -861,6 +893,7 @@ WC.game = (function () {
     command: command,
     teamCommand: teamCommand,
     buyStaff: buyStaff,
+    hireWorker: hireWorker,
     staffCost: staffCost,
     hasStaff: hasStaff,
     hireReplacements: hireReplacements,
