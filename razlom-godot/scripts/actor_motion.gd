@@ -126,7 +126,7 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 		if part.begins_with("Arm"):
 			# Mild inward rest cant keeps sleeves joined to the chest and hands
 			# close to the hips instead of hanging out from the shoulders.
-			roll += 0.08 if part == "ArmL" else -0.08
+			roll += 0.14 if part == "ArmL" else -0.14
 			joint.rotation.z = clampf(roll, -0.35, 0.35)
 		else:
 			joint.rotation.z = roll

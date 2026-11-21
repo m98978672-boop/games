@@ -201,7 +201,7 @@ static func add_actor_hands(root: Node3D, bare_hands: bool = false) -> void:
 		var hand_side := -1.0 if side == "ArmL" else 1.0
 		var hand := Node3D.new()
 		hand.name = "CharacterHand"
-		hand.position = Vector3(0, -0.32, -0.015)
+		hand.position = Vector3(0, -0.29, -0.015)
 		arm.add_child(hand)
 		var palm := box(hand, Vector3(0, -0.005, -0.012), Vector3(0.072, 0.078, 0.034), hand_mat)
 		palm.name = "Palm"

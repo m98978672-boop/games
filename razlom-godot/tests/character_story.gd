@@ -84,6 +84,8 @@ func run_tests() -> void:
 	check(has_natural_face(medic), "Vera has the same shaped head and compact inset eyes")
 	check(has_clean_forehead(medic), "Vera's temple hair leaves two brows separate and no third forehead bar")
 	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")
+	var vera_sleeve := medic.get_node("ArmLJoint/ArmL/Visual") as MeshInstance3D
+	check(vera_sleeve.mesh is BoxMesh and (vera_sleeve.mesh as BoxMesh).size.is_equal_approx(Vector3(0.14, 0.5, 0.18)), "NPC sleeves use a compact proportion that does not flare away from the torso")
 	var vera_hand: Node3D = medic.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
 	var vera_right_hand: Node3D = medic.get_node("ArmRJoint/ArmR/CharacterHand") as Node3D
 	check(vera_hand.has_node("Finger0J0") and vera_hand.has_node("Finger3J1") and vera_hand.has_node("Thumb"), "Vera's hands have knuckles, separated fingers and a thumb")
