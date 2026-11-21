@@ -123,7 +123,13 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 		elif part == "ArmR" and gesture_kind in ["warm", "listen"]:
 			gesture_roll = 0.22 * social_blend
 		var roll := float(reactions.get(part, 0)) * (0.25 if alternate else -0.25) + gesture_roll
-		joint.rotation.z = clampf(roll, -0.35, 0.35) if part.begins_with("Arm") else roll
+		if part.begins_with("Arm"):
+			# Mild inward rest cant keeps sleeves joined to the chest and hands
+			# close to the hips instead of hanging out from the shoulders.
+			roll += 0.08 if part == "ArmL" else -0.08
+			joint.rotation.z = clampf(roll, -0.35, 0.35)
+		else:
+			joint.rotation.z = roll
 		if knees.has(part):
 			knees[part].rotation.x = maxf(0, -sin(clock + (PI if alternate else 0.0))) * blend * 0.7 + float(reactions.get(part, 0)) * 0.6 + duck * 0.55
 		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))

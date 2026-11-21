@@ -112,6 +112,7 @@ func run_tests() -> void:
 	game.interactions.medic_motion.react("arms", Vector3(-0.3, 1.1, 0), 1.0)
 	for i in range(90):
 		game.interactions.medic_motion.advance(1.0 / 60.0, 0.0)
+	check(is_equal_approx(vera_left_joint.position.x, -0.33) and is_equal_approx(vera_right_joint.position.x, 0.33), "NPC sleeves overlap their shoulder sockets instead of floating beyond the torso")
 	check(vera_left_joint.rotation.x >= -1.39 and vera_left_joint.rotation.x <= 0.51 and vera_right_joint.rotation.x >= -1.39 and vera_right_joint.rotation.x <= 0.51, "Flinch and greeting keep every NPC shoulder inside its safe anatomical range")
 	check(absf(vera_left_joint.rotation.z) <= 0.351 and absf(vera_right_joint.rotation.z) <= 0.351, "NPC shoulders cannot twist sleeves into a broken side-on pose")
 	check(vera_hand.position.is_equal_approx(vera_left_hand_position), "NPC hands stay attached to the sleeve through the full gesture and flinch")

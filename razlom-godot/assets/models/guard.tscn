@@ -119,14 +119,14 @@ mesh = SubResource("mesh4")
 material_override = SubResource("mat4")
 
 [node name="ArmL" type="Node3D" parent="."]
-position = Vector3(-0.4, 1.05, -0.13)
+position = Vector3(-0.33, 1.05, -0.13)
 
 [node name="Visual" type="MeshInstance3D" parent="ArmL"]
 mesh = SubResource("mesh5")
 material_override = SubResource("mat5")
 
 [node name="ArmR" type="Node3D" parent="."]
-position = Vector3(0.4, 1.05, -0.13)
+position = Vector3(0.33, 1.05, -0.13)
 
 [node name="Visual" type="MeshInstance3D" parent="ArmR"]
 mesh = SubResource("mesh6")
