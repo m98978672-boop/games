@@ -58,7 +58,9 @@ export function projects(root, files) {
       css: fs.filter((f) => f.endsWith('.css')),
       json: fs.filter((f) => f.endsWith('.json')),
       md: fs.filter((f) => f.endsWith('.md')),
-      tests: fs.filter((f) => /\/tests\/[^/]+\.mjs$/.test(f) || /\/(test|tests)\.mjs$/.test(f)),
+      /* Тесты бывают и на .js (road-tycoon/tests/victory.test.js): раньше
+         шаблон их не видел, и защита финалов выпадала из проверки. */
+      tests: fs.filter((f) => /\/tests?\/[^/]+\.(mjs|js)$/.test(f) || /\/(test|tests)\.(mjs|js)$/.test(f)),
       hasPackage: fs.includes(name + '/package.json'),
       hasNodeModules: existsSync(join(root, name, 'node_modules')),
     });

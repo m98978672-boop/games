@@ -68,7 +68,25 @@ export function createProfile(name = 'Водитель', truckId = 'auriga-3') {
     achievements: [],
     clock: { day: 1, minutes: 8 * 60 },
     activeJob: null,
+    // Карьера конечна: после CAREER_GOAL доставок показывается итог.
+    // freeMode — режим вольной езды после финала, карьера при этом не идёт.
+    careerDone: false,
+    freeMode: false,
   };
+}
+
+/* Профиль из старого сохранения не знает про новые поля карьеры. Без
+   нормализации careerDone/freeMode остаются undefined, и финал карьеры
+   либо не наступит, либо наступит повторно. Поэтому доводим форму профиля
+   при загрузке, а не надеемся на аккуратность старых данных. */
+export function normalizeProfile(profile) {
+  if (!profile || typeof profile !== 'object') return profile;
+  if (typeof profile.careerDone !== 'boolean') profile.careerDone = false;
+  if (typeof profile.freeMode !== 'boolean') profile.freeMode = false;
+  if (!profile.stats || typeof profile.stats !== 'object') {
+    profile.stats = { distance: 0, deliveries: 0, earnings: 0, fines: 0, collisions: 0, late: 0, fuelSpent: 0, topSpeed: 0, breakdowns: 0, cancelled: 0, repairs: 0 };
+  }
+  return profile;
 }
 
 export function loadSaves() {
@@ -76,8 +94,9 @@ export function loadSaves() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { slots: [null, null, null], lastSlot: 0 };
     const data = JSON.parse(raw);
+    const slots = Array.isArray(data.slots) ? [data.slots[0] || null, data.slots[1] || null, data.slots[2] || null] : [null, null, null];
     return {
-      slots: Array.isArray(data.slots) ? [data.slots[0] || null, data.slots[1] || null, data.slots[2] || null] : [null, null, null],
+      slots: slots.map(normalizeProfile),
       lastSlot: data.lastSlot || 0,
     };
   } catch {

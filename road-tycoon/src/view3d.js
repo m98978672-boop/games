@@ -6,6 +6,9 @@
   const C = TR.CONFIG;
   const U = TR.Util;
   const Wd = TR.World;
+  // Сюда кладём прежний 2D-рендер (src/render.js), прежде чем заменить его на 3D.
+  // Если WebGL на устройстве нет, игра откатится к нему вместо пустого экрана.
+  TR.Render2D = TR.Render;
   const R = (TR.Render = {});
   const V = (TR.View3D = {});
 
@@ -334,10 +337,45 @@
 
   /* ------------------------------------------------------------- сцена */
 
+  // Проверяем поддержку до создания THREE.WebGLRenderer: сам three.js при
+  // отсутствии контекста бросает невнятную ошибку, и вся страница умирала.
+  function webglAvailable(cv) {
+    try {
+      const probe = cv || document.createElement('canvas');
+      const gl = probe.getContext('webgl2') || probe.getContext('webgl');
+      return !!gl;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Откат на 2D-рендер. Игра остаётся полностью играбельной: карта, экономика,
+  // кнопки и сохранения работают, пропадает только объём.
+  function useFallback2D(cv, w) {
+    TR.view3dActive = false;
+    const flat = TR.Render2D;
+    if (!flat || typeof flat.init !== 'function') return null;
+    // Возвращаем 2D-интерфейс на место, чтобы весь остальной код игры
+    // продолжал обращаться к TR.Render и получал рабочий рендер.
+    for (const key of Object.keys(TR.Render)) delete TR.Render[key];
+    Object.assign(TR.Render, flat);
+    const api = TR.Render.init(cv, w);
+    document.body.classList.add('view-2d');
+    window.dispatchEvent(new CustomEvent('tr:viewmode', { detail: { mode: '2d' } }));
+    return api;
+  }
+
   R.init = function (cv, w) {
+    if (!webglAvailable(cv)) return useFallback2D(cv, w);
     canvas = cv;
     world = w;
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    } catch (err) {
+      // Драйвер отказал уже на создании контекста — не роняем игру.
+      console.warn('ТРАССА: WebGL недоступен, включаю 2D-режим.', err);
+      return useFallback2D(cv, w);
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -372,6 +410,9 @@
     scene.add(waterGroup, cityGroup, roadGroup, propGroup, facilityGroup, vehicleGroup, markerGroup, floatGroup);
 
     R.resize();
+    TR.view3dActive = true;
+    document.body.classList.remove('view-2d');
+    window.dispatchEvent(new CustomEvent('tr:viewmode', { detail: { mode: '3d' } }));
     return renderer;
   };
 

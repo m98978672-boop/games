@@ -357,6 +357,14 @@ export class UI {
       case 'free-drive':
         g.freeDrive(arg);
         break;
+      case 'career-free':
+        this.closeModal();
+        g.startFreeMode();
+        break;
+      case 'career-restart':
+        this.closeModal();
+        g.returnToMenu();
+        break;
       case 'goto-jobs':
         this.closeModal();
         g.openGarageTab('jobs');
@@ -1636,7 +1644,13 @@ export class UI {
     });
   }
 
-  deliveryResult({ job, pay, notes, xp, stats, levelUp }) {
+  deliveryResult({ job, pay, notes, xp, stats, levelUp, career }) {
+    // Финал карьеры — отдельный экран, а не строчка в итогах рейса: игрок
+    // должен видеть, что путь закончен, и сам решить, что делать дальше.
+    if (career) {
+      this.careerResult(career);
+      return;
+    }
     this.openModal({
       eyebrow: 'ДОСТАВКА ВЫПОЛНЕНА',
       title: 'Груз доставлен',
@@ -1651,6 +1665,35 @@ export class UI {
         ${levelUp ? `<p style="color:var(--amber);font-weight:700;text-align:center;margin-top:14px">Новый уровень: ${levelUp}!</p>` : ''}`,
       actions: [
         { label: 'В гараж', primary: true, act: 'goto-jobs' },
+      ],
+    });
+  }
+
+  /* Итог карьеры: сорок доставок позади. Показываем то, что действительно
+     накопилось за игру, а не красивые слова: рейсы, деньги, километры,
+     уровень, опоздания и аварии. Дальше два честных пути — остаться в игре
+     в режиме вольной езды или начать новую карьеру. */
+  careerResult(career) {
+    const verdict = career.collisions > 12 || career.late > 10
+      ? 'Путь был жёстким: аварии и опоздания испортили репутацию, но груз довезён.'
+      : career.collisions === 0 && career.late === 0
+        ? 'Безупречная карьера: ни одной аварии, ни одного опоздания.'
+        : 'Крепкая карьера: были задержки и ремонты, но дело сделано.';
+    this.openModal({
+      eyebrow: 'КАРЬЕРА ПРОЙДЕНА',
+      title: 'Сорок рейсов позади',
+      body: `<div class="result-hero"><div class="money">${fmtMoney(career.earnings)}</div><span class="pill good">доставок: ${career.deliveries}</span></div>
+        <div class="result-rows">
+          <div><span>Пробег</span><span>${fmt(career.distance)} км</span></div>
+          <div><span>Уровень водителя</span><span>${career.level}</span></div>
+          <div><span>Опозданий</span><span>${career.late}</span></div>
+          <div><span>Аварий</span><span>${career.collisions}</span></div>
+        </div>
+        <p style="text-align:center;margin-top:14px;color:var(--amber);font-weight:700">${verdict}</p>
+        <p style="font-size:12px;text-align:center">Дальше — вольная езда без цели и новых рейсов, или новая карьера с чистого листа.</p>`,
+      actions: [
+        { label: 'Остаться в игре', primary: true, act: 'career-free' },
+        { label: 'Новая карьера', act: 'career-restart' },
       ],
     });
   }

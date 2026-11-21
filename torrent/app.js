@@ -119,6 +119,10 @@
     const files = games.reduce((n, g) => n + (g.fileCount || 0), 0);
     const seeders = state.netStats ? (state.netStats.totals ? state.netStats.totals.seeders : netSeeders()) : 0;
     setText('statGames', String(games.length));
+    const collectionCount = games.filter((g) => g.source === 'collection').length;
+    if (el('statCollection')) {
+      setText('statCollection', collectionCount ? `${collectionCount} из коллекции` : 'только витрина');
+    }
     setText('statSize', bytes(totalBytes));
     setText('statFiles', String(files));
     setText('statSeeders', String(seeders));
@@ -196,7 +200,9 @@
       return `<article class="torrent-card" data-game="${escapeHtml(g.gameId)}">
         ${cover ? `<img class="torrent-cover" src="${cover}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<div class="torrent-cover"></div>'}
         <div class="torrent-info">
-          <h3>${escapeHtml(g.title)} <small>${escapeHtml(g.version || '')}</small></h3>
+          <h3>${escapeHtml(g.title)} <small>${escapeHtml(g.version || '')}</small>
+            ${g.source === 'collection' ? `<span class="src-tag" title="${escapeHtml(`${g.license || 'открытая'} · ${g.author || 'открытая коллекция'}`)}">🧩 коллекция${g.license ? ' · ' + escapeHtml(g.license) : ''}</span>` : ''}
+          </h3>
           <div class="torrent-meta">
             <span><b>${bytes(g.totalSize)}</b></span>
             <span><b>${g.fileCount}</b> файлов</span>
@@ -463,6 +469,24 @@
 
       // 5. Собираем один HTML-файл игры.
       const pack = P2P.packAsStandalone ? P2P.packAsStandalone({ files: clean }) : null;
+
+      // 5b. Скачанная игра переходит в библиотеку Games.
+      // Правило владельца: коллекция живёт в торренте, а в библиотеке
+      // появляется ТОЛЬКО то, что игрок реально скачал. Импорт идёт тем же
+      // путём, что и кнопка «Добавить свою игру»: html-пакет + 10 проходов
+      // антивируса — поэтому в библиотеке не может оказаться непроверенное.
+      let libraryNote = '';
+      if (pack && pack.ok) {
+        const saved = saveToLibrary(game, pack.html);
+        libraryNote = saved.ok
+          ? ' · 🎮 добавлено в библиотеку Games'
+          : ` · в библиотеку не добавлено: ${saved.error}`;
+        pushLog(saved.ok ? 'kept' : 'removed',
+          saved.ok ? `Игра перешла в библиотеку Games: ${saved.game.title}` : `Импорт в библиотеку: ${saved.error}`,
+          game.gameId);
+      }
+
+      // 5c. Отдаём игру файлом — она открывается двойным щелчком.
       if (pack && pack.ok) {
         const blob = new Blob([pack.html], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -473,7 +497,7 @@
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 30000);
-        pushLog('kept', `Готово: ${link.download} (${bytes(pack.bytes)}), режим: ${mode}`, game.gameId);
+        pushLog('kept', `Готово: ${link.download} (${bytes(pack.bytes)}), режим: ${mode}${libraryNote}`, game.gameId);
       } else {
         // Не удалось собрать одиночный файл — отдаём .torrent, чтобы игра качалась клиентом.
         pushLog('sanitized', 'Одиночный файл не собрался: игра доступна через .torrent', game.gameId);
@@ -499,6 +523,57 @@
       run.done = true;
       renderList();
     }
+  }
+
+  // ------------------------------------------------- импорт в библиотеку
+  // Скачал игру — она появляется в витрине Games («Мои добавленные игры»).
+  // Коллекция сама по себе в библиотеку НЕ попадает: только скачанное.
+  //
+  // Хранилище витрины — localStorage (~5 МБ), а игра весит до 700 КБ, поэтому:
+  //   • при нехватке места убираем САМУЮ СТАРУЮ импортированную игру (не чужую:
+  //     трогаем только записи с пометкой fromTorrent);
+  //   • если места всё равно нет — честно говорим об этом в журнале.
+  function saveToLibrary(game, html) {
+    const hub = window.GamesUserHub;
+    if (!hub || typeof hub.upsert !== 'function') {
+      return { ok: false, error: 'витрина Games не подключена на этой странице' };
+    }
+    if (!html || html.length < 200) return { ok: false, error: 'пустой пакет игры' };
+    if (html.length > 740000) {
+      return { ok: false, error: 'игра больше лимита библиотеки (740 КБ) — открывайте файлом' };
+    }
+
+    const record = {
+      id: `usr-torrent-${game.gameId}`.slice(0, 52),
+      slug: game.gameId.slice(0, 48),
+      sourceType: 'html',
+      htmlCode: html,
+      title: game.title || game.gameId,
+      subtitle: game.subtitle || 'Скачано из торрента Games',
+      description: `Скачано из P2P-раздачи «Торрент» · ${game.fileCount || 0} файлов · ` +
+        `${bytes(game.totalSize || 0)} · каждый кусок сверен по SHA-256.` +
+        (game.license ? ` Лицензия: ${game.license}.` : ''),
+      author: game.author || 'Открытая коллекция Games',
+      version: (game.version || 'v1').toString(),
+      category: '2d',
+      icon: '🧲',
+      features: ['Скачано из торрента', 'Проверено по SHA-256', 'Работает офлайн'],
+    };
+
+    let result = hub.upsert(record);
+    if (result.ok) return result;
+
+    // Место кончилось? Освобождаем предыдущие импорты (сначала самый старый).
+    if (/места|quota|storage|переполн/i.test(String(result.error || ''))) {
+      const mine = hub.getAll().filter((g) => String(g.id).startsWith('usr-torrent-'));
+      for (const old of mine) {
+        hub.remove(old.id);
+        pushLog('sanitized', `Освободил место в библиотеке: убрал «${old.title}»`, old.id);
+        result = hub.upsert(record);
+        if (result.ok) break;
+      }
+    }
+    return result;
   }
 
   function updateProgress(run) {

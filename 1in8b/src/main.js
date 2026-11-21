@@ -96,6 +96,35 @@
       }, { danger: true, title: 'История жизней' });
     });
 
+    /* Мемориал: фильтры, сравнение, экспорт и импорт книги жизней. */
+    ['mem-country', 'mem-age', 'mem-sort'].forEach(function (id) {
+      var node = el(id);
+      if (node) node.addEventListener('change', UI.renderPastList);
+    });
+    if (el('mem-reset')) {
+      el('mem-reset').addEventListener('click', function () {
+        el('mem-country').value = '';
+        el('mem-age').value = '';
+        el('mem-sort').value = 'new';
+        UI.renderPastList();
+      });
+    }
+    if (el('mem-compare-close')) {
+      el('mem-compare-close').addEventListener('click', function () {
+        el('mem-compare').hidden = true;
+        UI.clearCompare();
+      });
+    }
+    if (el('btn-export-past')) el('btn-export-past').addEventListener('click', UI.exportPast);
+    if (el('btn-import-past') && el('past-import-file')) {
+      el('btn-import-past').addEventListener('click', function () { el('past-import-file').click(); });
+      el('past-import-file').addEventListener('change', function (e) {
+        var file = e.target.files && e.target.files[0];
+        UI.importPast(file);
+        e.target.value = '';
+      });
+    }
+
     var saved = SAVE.peekLife();
     if (saved && saved.alive) {
       var b = el('btn-continue');
@@ -184,12 +213,22 @@
 
   function frame(now) {
     if (!S.life || el('screen-life').hidden) return;
-    var dt = Math.min(250, now - S.last);
-    S.last = now;
+    // Отметка времени от requestAnimationFrame может прийти пустой или
+    // отрицательной (вкладка была свёрнута). Math.min(250, NaN) даёт NaN,
+    // он уходил в S.acc, и тогда цикл `S.acc >= ys` с NaN не выполнялся
+    // никогда: жизнь замирала на месте без единой ошибки в консоли.
+    var stamp = Number.isFinite(now) ? now : (window.performance && performance.now ? performance.now() : S.last);
+    var raw = stamp - S.last;
+    if (!Number.isFinite(raw) || raw < 0) raw = 0;
+    var dt = Math.min(250, raw);
+    S.last = stamp;
 
     var active = !S.paused && !S.blocked && S.life.alive;
     if (active) {
       var ys = yearSeconds() / (S.skipping ? 24 : S.speed);
+      // Страховка от уже испорченного счётчика: иначе жизнь стоит вечно.
+      if (!Number.isFinite(S.acc)) S.acc = 0;
+      if (!Number.isFinite(ys) || ys <= 0) ys = 1;
       S.acc += dt / 1000;
       while (S.acc >= ys && S.life.alive && !S.blocked) {
         S.acc -= ys;

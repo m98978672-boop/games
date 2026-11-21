@@ -7,6 +7,9 @@ tools/bughunt/report.md
 tools/bughunt/report.json
 _shots/
 
+# python-кэш от обучения
+tools/training/__pycache__/
+
 # Local Godot source build and Python development environment
 /.cache/
 /.venv/

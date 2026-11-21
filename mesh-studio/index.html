@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1016">
+  <meta name="description" content="MESH STUDIO — наш 3D-редактор моделей на движке RatCore: примитивы, экструзия, тела вращения, воксели, сборка рецептами, экспорт в OBJ и формат движка. Работает офлайн, без установки.">
+  <title>MESH STUDIO — редактор 3D-моделей на движке RatCore</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <link rel="stylesheet" href="../shared/theme.css">
+  <link rel="stylesheet" href="studio.css?v=1.0.0">
+</head>
+<body>
+<div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
+
+<div class="studio">
+  <header class="topbar">
+    <a class="back" href="../index.html" aria-label="На главную страницу игр">← <span>GAMES</span></a>
+    <div class="title">
+      <span class="eyebrow">3D-РЕДАКТОР · ДВИЖОК RATCORE</span>
+      <h1>MESH STUDIO</h1>
+    </div>
+    <div class="stats" aria-live="polite">
+      <span class="chip" id="stat-meshes">0 моделей</span>
+      <span class="chip" id="stat-tris">0 треугольников</span>
+      <span class="chip" id="stat-scene-tris">0 в сцене</span>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <!-- левая панель: создание примитивов и операций -->
+    <aside class="panel left" aria-label="Создание модели">
+      <section class="block">
+        <h2>Форма</h2>
+        <div class="grid-shapes" id="primitive-list" role="group" aria-label="Добавить примитив"></div>
+      </section>
+
+      <section class="block">
+        <h2>Тело вращения</h2>
+        <label class="field">
+          <span>Профиль (x, y через точку с запятой)</span>
+          <input id="lathe-profile" value="0,0; 0.6,0; 0.6,0.4; 0.35,1.2; 0.15,1.6; 0,1.6" spellcheck="false">
+        </label>
+        <label class="field">
+          <span>Сегментов</span>
+          <input id="lathe-segments" type="number" min="3" max="48" value="16">
+        </label>
+        <button class="btn primary" id="btn-lathe">Создать тело вращения</button>
+      </section>
+
+      <section class="block">
+        <h2>Экструзия</h2>
+        <label class="field">
+          <span>Контур (x, y через точку с запятой)</span>
+          <input id="extrude-shape" value="0,0; 1,0; 1,0.6; 0.5,1; 0,0.6" spellcheck="false">
+        </label>
+        <label class="field">
+          <span>Глубина</span>
+          <input id="extrude-depth" type="number" min="0.05" max="20" step="0.05" value="1">
+        </label>
+        <button class="btn primary" id="btn-extrude">Выдавить контур</button>
+      </section>
+
+      <section class="block">
+        <h2>Воксельный слой</h2>
+        <label class="field">
+          <span>Слоёная запись: (X;Y)H1() — один воксель, h3 — наклонный</span>
+          <input id="layer-expr" value="(0;0)h3(1,0;0,1)" spellcheck="false">
+        </label>
+        <label class="field">
+          <span>Размер вокселя</span>
+          <input id="layer-voxel" type="number" min="0.05" max="2" step="0.05" value="0.25">
+        </label>
+        <button class="btn primary" id="btn-layer">Создать из слоя</button>
+      </section>
+
+      <section class="block">
+        <h2>Цвет</h2>
+        <div class="swatches" id="color-row" role="group" aria-label="Цвет модели"></div>
+        <label class="field compact">
+          <span>Свой цвет</span>
+          <input id="color-custom" type="color" value="#8fb8d8">
+        </label>
+      </section>
+    </aside>
+
+    <!-- центр: сцена -->
+    <section class="viewport" aria-label="Сцена">
+      <canvas id="view" tabindex="0" aria-label="Область просмотра модели. Вращение мышью или стрелками, масштаб колесом."></canvas>
+      <div class="viewport-hint" id="viewport-hint">
+        Мышь — вращать · колесо — масштаб · стрелки — вращать · 0 — сброс
+      </div>
+      <div class="viewport-tools" role="group" aria-label="Вид">
+        <button class="vbtn" id="view-front" title="Спереди (1)">Спереди</button>
+        <button class="vbtn" id="view-side" title="Сбоку (3)">Сбоку</button>
+        <button class="vbtn" id="view-top" title="Сверху (7)">Сверху</button>
+        <button class="vbtn" id="view-reset" title="Сброс вида (0)">Сброс</button>
+      </div>
+      <div class="viewport-error" id="viewport-error" hidden>
+        <b>3D недоступен</b>
+        <span id="viewport-error-text">Не удалось создать контекст отрисовки. Модели можно создавать и сохранять — они не пропадут.</span>
+      </div>
+    </section>
+
+    <!-- правая панель: сцена и действия -->
+    <aside class="panel right" aria-label="Модели в сцене">
+      <section class="block grow">
+        <h2>В сцене <span class="muted" id="scene-count">0</span></h2>
+        <ul class="scene-list" id="scene-list" aria-label="Список моделей"></ul>
+      </section>
+
+      <section class="block">
+        <h2>Действия</h2>
+        <div class="actions">
+          <button class="btn" id="btn-undo" title="Отменить (Ctrl+Z)">Отменить</button>
+          <button class="btn" id="btn-redo" title="Повторить (Ctrl+Shift+Z)">Повторить</button>
+          <button class="btn" id="btn-duplicate" title="Дублировать выбранную (Ctrl+D)">Дублировать</button>
+          <button class="btn danger" id="btn-delete" title="Удалить выбранную (Delete)">Удалить</button>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Сохранить</h2>
+        <div class="actions">
+          <button class="btn" id="btn-export-obj">Скачать описание</button>
+          <button class="btn primary" id="btn-export-json">Скачать проект</button>
+        </div>
+        <p class="note" id="export-note">JSON — проект целиком: модели, цвета, позиции и операции. Его можно открыть заново и продолжить.</p>
+      </section>
+
+      <section class="block">
+        <h2>Движок</h2>
+        <p class="note" id="engine-note">Проверяю движок…</p>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="statusbar" role="status" aria-live="polite">
+    <span id="status-text">Готово</span>
+    <span class="spacer"></span>
+    <span id="hint-keys">Ctrl+Z отмена · Delete удалить · 1/3/7 виды</span>
+  </footer>
+</div>
+
+<script src="../shared/engine.js"></script>
+<script src="../shared/engine-bootstrap.js" defer></script>
+<script src="studio.bundle.js?v=1.0.0" defer></script>
+</body>
+</html>

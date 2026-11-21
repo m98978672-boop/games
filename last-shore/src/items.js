@@ -14,6 +14,7 @@
 const svg = (body) => `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
 
 const ICONS = {
+  raft: svg('<rect x="3" y="13" width="18" height="3" rx="1.4" fill="#8a6a42"/><rect x="4" y="16.5" width="16" height="2.6" rx="1.2" fill="#a3854f"/><rect x="6" y="9.5" width="2" height="4" rx=".8" fill="#b08a58"/><rect x="16" y="9.5" width="2" height="4" rx=".8" fill="#b08a58"/><path d="M11 4.5v5.5" stroke="#cfc3a3" stroke-width="1.6"/><path d="M11 4.5l4.5 2.2-4.5 2.2z" fill="#e8dcc0"/>'),
   coconut: svg('<circle cx="12" cy="13" r="7" fill="#6b4a2a"/><circle cx="9.5" cy="10.5" r="2" fill="#8a6440"/><path d="M8 6.5q4-2.5 8 0" stroke="#3f7a3a" stroke-width="1.6" fill="none"/>'),
   berries: svg('<circle cx="9" cy="14" r="3.2" fill="#b9334a"/><circle cx="15" cy="15" r="3" fill="#9d2740"/><circle cx="12" cy="9.5" r="2.8" fill="#c93c52"/><path d="M12 6.5V3" stroke="#3f7a3a" stroke-width="1.6"/>'),
   wood: svg('<rect x="4" y="9" width="16" height="6" rx="3" fill="#8a6a42" transform="rotate(-18 12 12)"/><circle cx="19" cy="8.5" r="1.6" fill="#b08a58"/>'),
@@ -87,6 +88,10 @@ export const ITEMS = {
   workbench: { id: 'workbench', name: 'Верстак', icon: ICONS.workbench, kind: 'placeable', hotbar: true, action: 'Поставить: F' },
   grindstone: { id: 'grindstone', name: 'Точильный станок', icon: ICONS.grindstone, kind: 'placeable', hotbar: true, action: 'Поставить: F' },
   campfireKit: { id: 'campfireKit', name: 'Костровое место', icon: ICONS.campfireKit, kind: 'placeable', hotbar: true },
+
+  /* Плот — не «предмет в сумке ради галочки», а выход с острова: пока он
+     не построен, игра бесконечна, а после — у неё есть финал. */
+  raft: { id: 'raft', name: 'Плот', icon: ICONS.raft, kind: 'placeable', hotbar: true, action: 'Построить на воде и уплыть' },
 };
 
 /**
@@ -99,7 +104,7 @@ export const HOTBAR_SIZE = 10;
 export const BAG_ORDER = [
   'wood', 'stone', 'sand', 'flint', 'ironOre', 'iron', 'crystal', 'obsidian', 'fiber', 'rope', 'hide', 'feather', 'arrows',
   'coconut', 'berries', 'rawMeat', 'cookedMeat', 'driedMeat', 'cookedWater', 'brew', 'bandage', 'eyeWash',
-  'knife', 'spear', 'axe', 'pickaxe', 'shovel', 'bow', 'torch', 'campfireKit', 'workbench', 'grindstone',
+  'knife', 'spear', 'axe', 'pickaxe', 'shovel', 'bow', 'torch', 'campfireKit', 'workbench', 'grindstone', 'raft',
 ];
 
 /**
@@ -130,4 +135,12 @@ export const RECIPES = [
   { id: 'cookedWater', name: 'Кипячёная вода', need: { coconut: 1, wood: 1 }, gives: { cookedWater: 1 }, needFire: true, note: 'Кокосовая вода с огня — +38 жажды' },
   { id: 'driedMeat', name: 'Вяленое мясо', need: { rawMeat: 2, fiber: 1 }, gives: { driedMeat: 1 }, needFire: true, note: 'Сытно и не портится в дороге' },
   { id: 'brew', name: 'Ягодный отвар', need: { berries: 3, cookedWater: 1 }, gives: { brew: 1 }, note: 'Питьё и лечение разом' },
+
+  /* Итог всей игры: чтобы уплыть, нужно по-настоящему обжиться на острове —
+     набрать дерева, скрутить верёвки, сковать железные крепления. */
+  {
+    id: 'raft', name: 'Плот', need: { wood: 12, rope: 4, iron: 2 }, gives: { raft: 1 },
+    goal: true,
+    note: 'Спасение: поставь плот у воды и уплыви с острова',
+  },
 ];

@@ -60,6 +60,14 @@ function configFrom(env = process.env) {
   const dropboxTokenSecret = typeof env.DROPBOX_TOKEN_SECRET === 'string' ? env.DROPBOX_TOKEN_SECRET : '';
   const dropboxReady = Boolean(loginReady && dropboxAppKey && dropboxAppSecret && dropboxTokenSecret.length >= 32
     && publicOrigin && (!production || secureOrigin));
+  /* Собственный GPU-хост: владелец указывает адрес своего агента в
+     CLOUD_HOST_URL. Без него облачный запуск остаётся выключенным —
+     фиктивных сессий не бывает. */
+  const cloudHostUrl = typeof env.CLOUD_HOST_URL === 'string' ? env.CLOUD_HOST_URL.trim() : '';
+  const cloudHostName = typeof env.CLOUD_HOST_NAME === 'string' && env.CLOUD_HOST_NAME.trim()
+    ? env.CLOUD_HOST_NAME.trim().slice(0, 60)
+    : '';
+  const cloudReady = Boolean(cloudHostUrl && /^https?:\/\//.test(cloudHostUrl));
   return {
     port: Number.isFinite(port) && port > 0 && port <= 65535 ? port : 4174,
     publicOrigin,
@@ -72,6 +80,9 @@ function configFrom(env = process.env) {
     dropboxAppSecret,
     dropboxTokenSecret,
     dropboxReady,
+    cloudHostUrl,
+    cloudHostName,
+    cloudReady,
   };
 }
 
@@ -598,9 +609,14 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
           thirdPartyCache: false,
         },
         cloud: {
-          ready: false,
-          provider: null,
-          reason: 'No self-hosted host agent or licensed GPU streaming provider is configured.',
+          ready: config.cloudReady,
+          provider: config.cloudReady ? 'self-hosted-gpu' : null,
+          hostName: config.cloudReady ? (config.cloudHostName || 'Свой GPU-хост') : null,
+          /* Адрес агента не отдаём клиенту: браузер не должен ходить к хосту
+             напрямую, иначе понадобится открывать его в интернет. */
+          reason: config.cloudReady
+            ? null
+            : 'No self-hosted host agent or licensed GPU streaming provider is configured.',
         },
         cloudStorage: {
           provider: 'dropbox',
@@ -608,6 +624,42 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
           content: 'Steam library metadata snapshot only; no game files or save files.',
           reason: config.dropboxReady ? null : 'Dropbox OAuth is not configured on the server.',
         },
+      });
+    }
+
+    /* Живая проверка GPU-хоста. Клиент не знает адрес агента: запрос идёт
+       через backend, поэтому хост не надо выставлять в интернет. */
+    if (pathname === '/api/cloud/probe' && request.method === 'GET') {
+      if (!config.cloudReady) {
+        return sendJson(response, 200, {
+          ready: false,
+          online: false,
+          reason: 'GPU-хост не настроен на сервере (CLOUD_HOST_URL).',
+        });
+      }
+      const session = sessionFor(request, config);
+      if (!session) return sendError(response, 401, 'unauthorized', 'Сначала войдите через Steam.');
+      let online = false;
+      let detail = '';
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 2500);
+        const probe = await fetchImpl(new URL('/health', config.cloudHostUrl), {
+          method: 'GET',
+          signal: controller.signal,
+          headers: { accept: 'application/json' },
+        });
+        clearTimeout(timer);
+        online = probe.ok;
+        if (!probe.ok) detail = `агент ответил ${probe.status}`;
+      } catch (err) {
+        detail = err && err.name === 'AbortError' ? 'агент не ответил за 2.5 с' : 'агент недоступен';
+      }
+      return sendJson(response, 200, {
+        ready: true,
+        online,
+        hostName: config.cloudHostName || 'Свой GPU-хост',
+        reason: online ? null : detail || 'агент недоступен',
       });
     }
 

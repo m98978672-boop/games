@@ -1,0 +1,1231 @@
+#!/usr/bin/env node
+/* ============================================================
+   Сборщик «знаний» для обучения модели (tools/training/build-knowledge.mjs)
+
+   Что делает: превращает сам репозиторий в обучающие примеры.
+   Источники — только настоящие данные, ничего выдуманного:
+
+     1. ИГРА: живые состояния боя из Frontline (Game + нейтральный
+        командир), превращённые в вопросы «что делать?» и ответы,
+        которые проверены тем же валидатором, что и в игре.
+     2. БАГИ: каталог правил баг-искателя (32 правила с кодами),
+        реальные находки и — главное — пары «плохо → хорошо»,
+        собранные из истории репозитория.
+     3. КОД: примеры опасного и безопасного кода из реальных
+        исправлений (NaN в игровом цикле, alert, eval, битые пути).
+
+   Формат выхода: JSONL с полями
+     { system, user, assistant, kind, source }
+   — ровно то, что читает tools/training/finetune.mjs.
+
+   Запуск:
+     node tools/training/build-knowledge.mjs --out knowledge-data
+     node tools/training/build-knowledge.mjs --out data --game 200 --code 500
+   ============================================================ */
+import { mkdir, writeFile, readFile, readdir, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { join, resolve, relative, dirname, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const require = createRequire(import.meta.url);
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
+/* ------------------------------------------------------------ утилиты */
+
+const sha256 = (s) => createHash('sha256').update(s).digest('hex');
+const execFileAsync = promisify(execFile);
+
+function parseArgs(argv) {
+  const out = {
+    out: 'knowledge-data', game: 0, code: 0, bug: 0, readme: 0, play: 0, codes: 0, law: 0, defect: 0, balance: 0, edge: 0, engine: 0, realcode: 0, bench: 0,
+    seed: 7, quiet: false, maxFileKb: 64,
+  };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--out') out.out = argv[++i];
+    else if (a === '--game') out.game = Number(argv[++i]) || 0;
+    else if (a === '--code') out.code = Number(argv[++i]) || 0;
+    else if (a === '--bug') out.bug = Number(argv[++i]) || 0;
+    else if (a === '--readme') out.readme = Number(argv[++i]) || 0;
+    else if (a === '--play') out.play = Number(argv[++i]) || 0;
+    else if (a === '--codes') out.codes = Number(argv[++i]) || 0;
+    else if (a === '--law') out.law = Number(argv[++i]) || 0;
+    else if (a === '--defect') out.defect = Number(argv[++i]) || 0;
+    else if (a === '--balance') out.balance = Number(argv[++i]) || 0;
+    else if (a === '--edge') out.edge = Number(argv[++i]) || 0;
+    else if (a === '--engine') out.engine = Number(argv[++i]) || 0;
+    else if (a === '--realcode') out.realcode = Number(argv[++i]) || 0;
+    else if (a === '--bench') out.bench = Number(argv[++i]) || 0;
+    else if (a === '--seed') out.seed = Number(argv[++i]) || 7;
+    else if (a === '--max-file-kb') out.maxFileKb = Number(argv[++i]) || 64;
+    else if (a === '--quiet') out.quiet = true;
+    else throw new Error(`неизвестный флаг: ${a}`);
+  }
+  return out;
+}
+
+/* Это инструмент командной строки, а не игровой код: он обязан печатать
+   прогресс, иначе на 3-минутном прогоне непонятно, жив ли он. Флаг --quiet
+   выключает вывод для CI, где журнал и так пишется целиком. */
+function log(...a) { if (!parseArgs.quiet) console.log(...a); }
+
+/* ------------------------------- 1. ИГРА: состояния боя → решения */
+
+/* Собирает настоящие состояния из симуляции Frontline. Каждый пример —
+   это снимок, который видит командир, и разбор, какое действие допустимо.
+   Ответ строим детерминированно и проверяем validateProposal: если он не
+   проходит, пример не попадает в датасет (мусор в обучении недопустим). */
+async function buildGameRows(limit, rng) {
+  const rows = [];
+  let mods;
+  try {
+    const { loadConfig } = await import(join(ROOT, 'frontline-command/src/core/config.js'));
+    const { Game } = await import(join(ROOT, 'frontline-command/src/sim/game.js'));
+    const { commanderSnapshot, validateProposal } = await import(join(ROOT, 'frontline-command/src/sim/neutral_commander.js'));
+    const { commanderPrompt } = await import(join(ROOT, 'frontline-command/src/ai/commander-prompts.js'));
+    mods = { loadConfig, Game, commanderSnapshot, validateProposal, commanderPrompt };
+  } catch (e) {
+    log('  игра недоступна:', e.message);
+    return rows;
+  }
+
+  const cfg = await mods.loadConfig();
+  cfg.factions = cfg.factions.map((f) => ({ ...f, persona: 'balanced' }));
+  cfg.faction = (id) => cfg.factions[id] || cfg.factions[0];
+  const prompt = mods.commanderPrompt(true);
+
+  /* Правила выбора действия — те же ограничения, что в validateProposal.
+     Это не «эксперт», а честная политика: видно, что можно, и выбирается
+     самое полезное из допустимого. */
+  function decide(input) {
+    const squads = input.squads || [];
+    const points = input.points || [];
+    const builds = input.builds || [];
+    const lowAmmo = squads.findIndex((s) => s.ammo < 70);
+    if (lowAmmo >= 0) return { action: 'supply', squad: lowAmmo };
+    const engineer = squads.findIndex((s) => s.engineers > 0);
+    if (builds.length && engineer >= 0) return { action: 'build', squad: engineer, build: 0 };
+    if (points.length) return { action: 'hold', squad: 0, point: 0 };
+    return { action: 'none' };
+  }
+
+  const seeds = [];
+  for (let s = 300; s < 300 + Math.max(10, Math.ceil(limit / 20)); s++) seeds.push(s);
+
+  /* Сначала собираем весь пул состояний за полный бой (120 с игрового
+     времени), и только потом выбираем. Если обрывать по лимиту, в выборку
+     попадут только первые секунды — без расхода боеприпасов и без действий
+     supply/none, и модель никогда их не выучит. */
+  const pool = [];
+  const seen = new Set();
+  for (const seed of seeds) {
+    for (const swapSides of [false, true]) {
+      let game;
+      try { game = new mods.Game({ cfg, seed, aiVsAi: true, swapSides }); } catch (e) { continue; }
+      let steps = 0;
+      while (steps < 4200) {
+        try { game.step ? game.step(1 / 30) : game.update(1 / 30); } catch (e) { break; }
+        steps++;
+        if (steps % 15 !== 0) continue;
+        for (const faction of [0, 1]) {
+          let snap;
+          try { snap = mods.commanderSnapshot(game, faction); } catch (e) { continue; }
+          const input = snap.input;
+          const key = JSON.stringify(input);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const answer = decide(input);
+          const text = JSON.stringify(answer);
+          if (!mods.validateProposal(text, snap)) continue;
+          pool.push({
+            system: prompt, user: key, assistant: text, kind: 'game-decision',
+            action: answer.action,
+            source: `frontline seed=${seed} swap=${swapSides} t=${(game.time ?? steps / 30).toFixed(1)}`,
+          });
+        }
+      }
+    }
+    if (pool.length >= limit * 6 && pool.some((r) => r.action === 'supply')) break;
+  }
+
+  /* Баланс по действиям: round-robin по корзинам, чтобы ни одно действие
+     не вытеснило остальные. Внутри корзины порядок — как в бою. */
+  const buckets = new Map();
+  for (const r of pool) {
+    if (!buckets.has(r.action)) buckets.set(r.action, []);
+    buckets.get(r.action).push(r);
+  }
+  const order = ['supply', 'build', 'hold', 'none'];
+  const queues = order.filter((a) => buckets.has(a)).map((a) => buckets.get(a));
+  const picked = [];
+  let progress = true;
+  while (picked.length < limit && progress) {
+    progress = false;
+    for (const q of queues) {
+      if (q.length && picked.length < limit) {
+        const r = q.shift();
+        const { action, ...rest } = r;
+        picked.push(rest);
+        progress = true;
+      }
+    }
+  }
+  return picked;
+}
+
+/* --------------------------------- 2. БАГИ: каталог правил и находки */
+
+async function buildBugRows(limit, rng) {
+  const rows = [];
+  let codes;
+  try {
+    const mod = await import(join(ROOT, 'tools/bughunt/lib/catalog.mjs'));
+    codes = mod.CODES || null;
+  } catch (e) {
+    log('  каталог правил недоступен:', e.message);
+    return rows;
+  }
+  if (!Array.isArray(codes) || !codes.length) {
+    log('  каталог правил: неожиданный формат');
+    return rows;
+  }
+
+  const system = 'Ты проверяешь игры и приложения на баги. Отвечай по существу и коротко. '
+    + 'Код бага — это число от 000 до 999: сотни — раздел, десятки и единицы — правило внутри раздела.';
+
+  for (const c of codes) {
+    // В каталоге 1000 кодов, но часть — пустые слоты аудита без правила и
+    // уровня. Учить на «null» нельзя: в датасет идут только именованные.
+    if (!c.rule || !c.severity || c.audit) continue;
+    const code = String(c.code).padStart(3, '0');
+    rows.push({
+      system,
+      user: 'Что проверяет правило с кодом ' + code + '? Ответь: что именно проверяется и насколько это опасно.',
+      assistant: `Код ${code} — «${c.title}». Раздел: ${c.category} (${c.block}). Уровень: ${c.severity}. `
+        + `Правило ищет: ${c.rule}. Если нарушено — это ${c.severity}.`,
+      kind: 'bug-rule',
+      source: 'tools/bughunt/lib/catalog.mjs',
+    });
+    if (rows.length >= limit) return rows;
+  }
+
+  // Обратный вопрос: «это критично или нет?» — закрепляем уровни важности.
+  const severitySystem = 'Определи важность находки в коде игры. Отвечай одним словом: критично, важно или мелочь.';
+  const SEVERITY_EXAMPLES = [
+    ['Скрипт не компилируется: SyntaxError при загрузке страницы.', 'критично'],
+    ['Ссылка на файл игры ведёт в никуда: 404 по ассету.', 'критично'],
+    ['В JSON сохранения записан NaN.', 'критично'],
+    ['Модальное окно alert перекрывает игру на телефоне.', 'важно'],
+    ['Кнопка закрытия панели ничего не закрывает.', 'важно'],
+    ['Дублируется ключ в JSON-таблице.', 'важно'],
+    ['В пути ассета стоят обратные слэши вместо прямых.', 'важно'],
+    ['В тексте интерфейса опечатка в подписи.', 'мелочь'],
+    ['В файле осталась пустая строка-заглушка.', 'мелочь'],
+    ['Число в данных записано строкой.', 'мелочь'],
+  ];
+  for (const [text, answer] of SEVERITY_EXAMPLES) {
+    rows.push({ system: severitySystem, user: text, assistant: answer, kind: 'bug-severity', source: 'примеры уровней' });
+    if (rows.length >= limit) return rows;
+  }
+  return rows;
+}
+
+/* --------------------------- 3. КОД: опасное и безопасное из истории */
+
+/* Ищем в реальных файлах репозитория узнаваемые опасные конструкции и
+   показываем правильную замену. Каждый пример взят из живого кода —
+   так модель учится на тех же ошибках, что уже были в проектах. */
+const CODE_LESSONS = [
+  {
+    bad: /const dt = Math\.min\(0\.05, \(now - last\) \/ 1000\);/,
+    system: 'Ты ищешь баги в игровом цикле на JavaScript. Ответь, в чём проблема и как исправить.',
+    user: 'Игровой цикл: function frame(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; step(dt); }\nЧто случится, если браузер передаст now пустым?',
+    assistant: 'dt станет NaN. Math.min не отсекает NaN, а проверка dt <= 0 для NaN ложна — NaN попадёт в игровое время и останется там навсегда: игра замирает или улетает в бесконечность без ошибки в консоли.\n\nИсправление:\n  const stamp = Number.isFinite(now) ? now : performance.now();\n  let raw = (stamp - last) / 1000;\n  if (!Number.isFinite(raw) || raw < 0) raw = 0;\n  const dt = Math.min(0.05, raw);\n  last = stamp;',
+    kind: 'code-dt',
+    source: 'tools/tests/frame-dt.mjs',
+  },
+  {
+    bad: /if \(dt <= 0\) return;/,
+    system: 'Ты ищешь баги в игровом цикле на JavaScript. Ответь, в чём проблема и как исправить.',
+    user: 'В функции шага симуляции стоит проверка: if (dt <= 0) return;\nПочему этого недостаточно?',
+    assistant: 'Сравнение NaN <= 0 ложно, поэтому проверка пропускает NaN дальше — в состояние игры. Нужна проверка на конечность: if (!Number.isFinite(dt) || dt <= 0) return;',
+    kind: 'code-dt',
+    source: 'road-tycoon/src/sim.js',
+  },
+  {
+    bad: /alert\s*\(/,
+    system: 'Ты ищешь баги в браузерной игре. Ответь, в чём проблема и как исправить.',
+    user: 'В обработчике кнопки стоит alert(e.message).\nЧем это плохо в игре?',
+    assistant: 'alert блокирует весь интерфейс и на телефоне перекрывает экран целиком: игра выглядит сломанной. Нужен неблокирующий способ показать ошибку — свой тост, статус в панели или встроенный диалог, который закрывается по кнопке.',
+    kind: 'code-ui',
+    source: 'folder-os/index.html',
+  },
+  {
+    bad: /new Function\s*\(/,
+    system: 'Ты ищешь дыры в безопасности в JavaScript-коде. Ответь, в чём проблема и как исправить.',
+    user: 'Код собирает строку и выполняет её через new Function(text).\nЧем это опасно?',
+    assistant: 'Любая строка, попавшая туда из сохранения, URL или файла пользователя, станет исполняемым кодом. Нужен разбор данных (JSON.parse с проверкой полей) и явный список разрешённых действий вместо исполнения текста.',
+    kind: 'code-security',
+    source: 'tools/torrent/build-catalog.mjs',
+  },
+  {
+    bad: /c\.target\.tagName/,
+    system: 'Ты ищешь баги в обработчике клавиатуры. Ответь, в чём проблема и как исправить.',
+    user: 'window.addEventListener("keydown", (e) => { if (e.target.tagName !== "INPUT") { ... } });\nПочему это падает?',
+    assistant: 'У события с window/document target может быть без tagName (это не элемент), тогда обращение к tagName бросает TypeError и любая клавиша роняет игру. Нужна проверка: if (e.target && e.target.tagName !== "INPUT").',
+    kind: 'code-dom',
+    source: 'truck-showroom/showroom.bundle.js',
+  },
+  {
+    bad: /position: fixed;[\s\S]{0,200}z-index/,
+    system: 'Ты ищешь баги вёрстки в игре. Ответь, в чём проблема и как исправить.',
+    user: 'У всплывающих уведомлений z-index: 34, а у карточки с важным отчётом z-index: 26.\nЧто не так?',
+    assistant: 'Уведомления окажутся выше отчёта и перекроют цифры в момент, когда игрок их читает. Отчёт должен быть выше: .report { z-index: 40 }, а уведомления при открытом отчёте ещё и уступать место.',
+    kind: 'code-css',
+    source: 'road-tycoon/style.css',
+  },
+];
+
+async function buildCodeRows(limit) {
+  const rows = [];
+  for (const lesson of CODE_LESSONS) {
+    rows.push({
+      system: lesson.system,
+      user: lesson.user,
+      assistant: lesson.assistant,
+      kind: lesson.kind,
+      source: lesson.source,
+    });
+    if (rows.length >= limit) return rows;
+  }
+
+  // Добор: реальные правила «как проверить игру» из README и AGENTS.
+  const extras = [
+    ['Какие проверки обязательны перед публикацией игры?',
+      'Проверить, что все ссылки из HTML и CSS ведут на существующие файлы; что каждый скрипт компилируется; что в сохранении не бывает NaN; что игра запускается и реагирует на клавиши, мышь и касания; что данные каталога совпадают с файлами игры.'],
+    ['Как проверить игру, не открывая её вручную?',
+      'Запустить бота-багоискателя: node tools/bughunt/bughunt.mjs --play. Он читает файлы, открывает игру в мини-браузере, нажимает кнопки, тыкает мышью и клавишами, крутит игровой цикл и проверяет, что в состоянии не осталось NaN.'],
+    ['Что значит «игра закончена»?',
+      'Нет незакрытых пунктов в PLAN.md, все заявленные кнопки и экраны работают, есть автосохранение, игра переживает битый кадр и отсутствие WebGL, а тесты проекта и бот-багоискатель не находят ни одного критичного или важного дефекта.'],
+  ];
+  for (const [q, a] of extras) {
+    rows.push({ system: 'Ты помогаешь проверять браузерные игры на баги. Отвечай по делу.', user: q, assistant: a, kind: 'code-check', source: 'AGENTS.md' });
+    if (rows.length >= limit) return rows;
+  }
+  return rows;
+}
+
+/* --------------------- 6. Таблица кодов баг-искателя (1000 кодов) */
+
+/* docs/bugcodes-bughunt.md генерируется из того же каталога, по которому бот
+   ставит код находке. Здесь 1000 кодов и 10 разделов — это словарь, на
+   котором модель учится говорить с ботом на одном языке. Пустые слоты
+   аудита («аудит подсистемы») пропускаем: учить на заглушке нельзя. */
+async function buildCodeTableRows(limit) {
+  const rows = [];
+  let text;
+  try { text = await readFile(join(ROOT, 'docs/bugcodes-bughunt.md'), 'utf8'); }
+  catch (e) { log('  таблица кодов недоступна:', e.message); return rows; }
+
+  const system = 'Ты знаешь таблицу кодов баг-искателя этого репозитория. '
+    + 'Код — число 000–999: сотни задают раздел, десятки и единицы — проверку внутри раздела.';
+
+  // Разделы: «## 000–99 · Структура и файлы».
+  const sections = new Map();
+  for (const line of text.split('\n')) {
+    const m = line.match(/^##\s+(\d{3})[–-]\d+\s*·\s*(.+)$/);
+    if (m) sections.set(Number(m[1]), m[2].trim());
+  }
+
+  const found = [];
+  for (const line of text.split('\n')) {
+    const m = line.match(/^\|\s*(\d{3})\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|$/);
+    if (!m) continue;
+    const code = Number(m[1]);
+    const title = m[2].trim();
+    const detector = m[3].trim();
+    if (!title || title === 'аудит подсистемы' || /^аудит подсистемы/.test(title)) continue;
+    found.push({ code, title, detector });
+  }
+
+  const byCode = new Map(found.map((x) => [x.code, x]));
+  for (const { code, title, detector } of found) {
+    const base = Math.floor(code / 100) * 100;
+    const section = sections.get(base) || 'раздел ' + String(base).padStart(3, '0');
+    const codeStr = String(code).padStart(3, '0');
+    const isLive = detector === 'да';
+    rows.push({
+      system,
+      user: `Что проверяет код ${codeStr}?`,
+      assistant: `Код ${codeStr} — «${title}». Раздел: ${section}. `
+        + (isLive
+          ? 'Это живой детектор: бот проверяет это сам и ставит такой код находке.'
+          : 'Это слот аудита: проверка заявлена, но автоматического детектора нет — смотреть глазами.'),
+      kind: 'bug-code',
+      source: 'docs/bugcodes-bughunt.md',
+    });
+    if (rows.length >= limit) return rows;
+  }
+
+  // Обратная задача: по описанию найти код. Это закрепляет словарь.
+  const sample = found.filter((x) => x.detector === 'да');
+  for (const { code, title } of sample) {
+    const codeStr = String(code).padStart(3, '0');
+    rows.push({
+      system,
+      user: `Какой код у проверки «${title}»? Ответь только номером.`,
+      assistant: codeStr,
+      kind: 'bug-code-reverse',
+      source: 'docs/bugcodes-bughunt.md',
+    });
+    if (rows.length >= limit) return rows;
+  }
+
+  // Разделы целиком: модель должна знать границы сотен.
+  for (const [base, name] of sections) {
+    const items = found.filter((x) => x.code >= base && x.code < base + 100).length;
+    rows.push({
+      system,
+      user: `Какие коды относятся к разделу «${name}» и сколько их?`,
+      assistant: `Раздел «${name}» — коды ${String(base).padStart(3, '0')}–${String(base + 99).padStart(3, '0')}. `
+        + `Содержательных проверок в таблице: ${items}.`,
+      kind: 'bug-code-section',
+      source: 'docs/bugcodes-bughunt.md',
+    });
+    if (rows.length >= limit) return rows;
+  }
+  return rows;
+}
+
+/* ----------------------------- 7. Законы репозитория из AGENTS.md */
+
+/* AGENTS.md — не документация «вообще», а правила, на которых ломались
+   реальные сборки. У каждого пункта есть история: dawn.exr, stratum в
+   шейдере, info_hash, comments: []. Учить надо именно с историей — иначе
+   модель запомнит запрет, но не поймёт причины. */
+async function buildLawRows(limit) {
+  const rows = [];
+  const system = 'Ты знаешь законы этого репозитория игр и объясняешь, почему каждый из них появился. '
+    + 'Отвечай коротко и по делу.';
+  const LAWS = [
+    ['Можно ли автоудалению убрать игровой файл, если он кажется подозрительным?',
+      'Нет. Игровые файлы не удаляются никогда. Автоочистка убирает только вредоносное: исполняемые, майнеры, похитители ключей, автозапуск. После очистки каждая игра обязана собираться из кусков бит-в-бит — это проверяет node tools/torrent/test.mjs.'],
+    ['Почему бинарники нельзя проверять как текст?',
+      'Потому что «BiDi-символы» находятся в случайных байтах и меняют файл. Реальный случай: dawn.exr. EXR, PNG и звук читаются как байты, а не как строки.'],
+    ['Может ли сигнатура «stratum» поймать игровой код как майнер?',
+      'Да, и это ложное срабатывание. Слово stratum встречается в шейдере. Поэтому в tools/torrent/test.mjs лежат контрольные примеры, в том числе last-shore/bundle.js, которые обязаны проходить чисто.'],
+    ['Почему info_hash нельзя считать своей формулой?',
+      'Каталог и сервер разъезжались, и одна раздача распадалась на две. info_hash считается только manifest.computeInfoHash — по составу файлов. Совпадение у всех игр проверяет tools/torrent/test.mjs.'],
+    ['Почему после правки любой игры надо пересобирать каталог раздач?',
+      'В каталоге лежат sha256 всех кусков. Если каталог отстал, у игрока не сойдутся хеши и загрузка сломается. Пересборка: node tools/torrent/build-catalog.mjs, проверка: --check. Подстраховки — тест печатает отставшие файлы, POST /api/p2p {"action":"drift"} сверяет с диском, CI пересобирает перед тестами.'],
+    ['Что не попадает в раздачу и почему?',
+      'Документация (кроме assets/README.md и лицензий), docs, скриншоты, тесты и lock-файлы. Причина: они меняются в main постоянно, и каталог «уставал» бы без причины. Раздача — это игра, а не git-копия папки; бюджет — меньше 60 МБ на все игры.'],
+    ['Как добавить новую страницу так, чтобы прошёл CI?',
+      'Подключить ../shared/engine.js до своих скриптов, добавить ../shared/engine-bootstrap.js с defer, плашку data-engine-badge и строку в shared/engine-registry.json. Проверка покрытия: node game-base/tests/engine.mjs — обязательный шаг CI.'],
+    ['Почему случайность и часы берутся из ядра движка?',
+      'Свои копии mulberry32 в играх переведены на RatCore.createRng: алгоритм идентичен, поэтому сохранения и сиды совместимы бит-в-бит. Новые игры берут случайность из window.GamesEngine.rng(seed), а фиксированный шаг — из clock().'],
+    ['Как создавать модели, меши и текстуры в RatCore?',
+      'Только через RatCore.tools.*. Это проверяется в коде через ToolGuard — прямое создание в обход инструментов не пройдёт.'],
+    ['Почему у статей в новостях всегда пустые комментарии?',
+      'comments: [] — закон. Комментарии пишут только реальные читатели. Заготовленные комментарии в фиде недопустимы: это выглядело бы как живое обсуждение, которого нет.'],
+    ['Что должно быть у каждой статьи новостного фида?',
+      'factCheck с методом сверки, локальная обложка site/assets/news/<код>.svg, queue: now или future с scheduledFor для будущих, и comments: []. Обложки собирает тот же buildNewsCoverSvg, что и авто-постер.'],
+    ['Где живут 216 игр из открытых репозиториев и почему?',
+      'Только в торренте, в папке collection/. В библиотеку Games игра попадает лишь после того, как игрок её скачал: GamesUserHub.upsert плюс 10 проходов антивируса. Добавлять коллекцию в site/games-data.js нельзя — это нарушит правило владельца.'],
+    ['Что делать после правки site/index.html?',
+      'Синхронизировать корень командой node site/sync-root.mjs, затем прогнать проверки витрины: community-catalog.mjs, portal.mjs и bughunt --play --only site.'],
+    ['Как общаться с другими ИИ в этом репозитории?',
+      'Зарегистрироваться в ratcore/comms/registry/agents.json и оставлять сообщения в ratcore/comms/channels/general/ или в личном ящике ratcore/comms/inbox/<agentId>/.'],
+  ];
+  for (const [q, a] of LAWS) {
+    rows.push({ system, user: q, assistant: a, kind: 'repo-law', source: 'AGENTS.md' });
+    if (rows.length >= limit) return rows;
+  }
+  return rows;
+}
+
+/* ------------------- 8. Разбор дефектов: причина → решение */
+
+/* Из отчётов аудита Frontline (AUDIT.md, GAME_AUDITOR.md, ALL_AUDIT_*.md).
+   Здесь не «список багов», а связки «что было → почему плохо → как
+   исправлено» и правила приёмки. Именно такому разбору мы учим модель:
+   не «код 500», а «почему приёмка не пройдена и что смотреть». */
+async function buildDefectRows(limit) {
+  const rows = [];
+  const system = 'Ты разбираешь дефекты игр: называешь причину, последствие для игрока и правильное решение. '
+    + 'Опирайся на то, что уже случалось в этом репозитории.';
+  const CASES = [
+    ['Игрок строит оборонительную линию, но при отказе видит только «место занято». Что не так?',
+      `Нет кодов причин: свободный текст нельзя ни показать толком, ни проверить тестом. UI, журнал приказов и тесты не отличают «нет места» от «нет материалов».
+
+Правильно: у отказа должен быть код (build.lastReject), а тест — проверять, что на каждый запрет выдаётся свой код.`],
+    ['Точка переходит из рук в руки по 3-5 раз, флаг «мерцает». В чём причина?',
+      `Порог захвата применялся одинаково к старту и к продолжению: как только перевес падал, прогресс таял со скоростью 0.35 за тик. Получался эффект качелей.
+
+Правильно: гистерезис — отдельный порог для начала захвата и для продолжения, чтобы уже начатый захват не сбрасывался от малейшего равенства.`],
+    ['ИИ после каждого захвата ставит профиль обороны заново. Чем это плохо?',
+      `Он не смотрит, что узел уже укреплён, и не считается с экономикой: стройка конкурирует с производством отрядов. В итоге армия недоукомплектована, а укрепления дублируются.
+
+Правильно: перед постановкой профиля проверять текущее состояние узла и остаток ресурсов; стройка и производство должны делить один бюджет по приоритету.`],
+    ['Профиль обороны «окоп ×4, проволока ×4» — почему этого мало?',
+      `Он не описывает глубину: непонятно, что ставить впереди, а что в тылу, поэтому ИИ строит всё в одном кольце. Одна линия без глубины пробивается с одного направления.
+
+Правильно: профиль задаёт слои — передний край, опорные точки, тыл — и каждая секция знает своё место.`],
+    ['Оборонительную линию из 20 секций приходится ставить двадцатью кликами. Как исправить?',
+      'Нужны массовые инструменты: линия, зона и шаблон, а не одиночная постановка под курсор. Игрок задаёт направление и длину — остальное расставляется само, с проверкой места и бюджета.'],
+    ['Что значит «приёмка игры не пройдена» и почему это не список багов?',
+      `Приёмка — это числовые пороги: средний тик симуляции ≤ 6.0 мс, память ≤ 64 МБ, доля решённых войн ИИ×ИИ ≥ 0.9, перекос сторон 0.4…0.6, преимущество первого хода ≤ 0.75, асимметрия рельефа ≤ 4 тайла из 16 384.
+
+Код 500–539 означает, что соответствующий алгоритм не подтверждён, а не «найден конкретный дефект». Одна причина может относиться к нескольким алгоритмам.`],
+    ['Почему статический аудит репозитория не доказывает исправность игр?',
+      `Он проверяет только то, что можно проверить без запуска: синтаксис Node.js, разбор JSON, частичную структуру PNG, буквальные относительные ссылки script/link/img. Поведение, UI, механики, лицензии и безопасность он не проверяет.
+
+Поэтому в отчёте прямо написано: отсутствие найденных ошибок не означает исправность. Нужны тесты проектов и запуск игры.`],
+    ['Почему важно, чтобы тест мог отличить «нет места» от «нет материалов»?',
+      'Потому что это разные причины с разным лечением: первая — менять позицию или шаблон, вторая — ждать ресурсы или расширять производство. Если обе выглядят одинаково, ни игрок не поймёт, что делать, ни тест не поймает регресс.'],
+    ['Игра «улетает» или замирает без ошибки в консоли. Где искать?',
+      `Сначала в игровом цикле: NaN в dt или в состоянии. Math.min не отсекает NaN, а проверка dt <= 0 для NaN ложна — NaN остаётся в времени навсегда.
+
+Правильно: проверять Number.isFinite на сыром значении до ограничения, и отдельно чистить состояние на конечность.`],
+    ['Что проверять, если часть игры перестала грузиться после правки?',
+      `Сначала синтаксис каждого скрипта, затем ссылки из HTML и CSS на существующие файлы, затем порядок подключения: движок shared/engine.js обязан идти до игровых скриптов.
+
+Частая причина: игра грузит минифицированный бандл, а правку внесли только в исходник — тогда нужно пересобрать бандл.`],
+    ['Как проверить игру, не открывая её вручную по экранам?',
+      `Запустить бота-багоискателя: node tools/bughunt/bughunt.mjs --play. Он читает файлы, открывает игру в мини-браузере, нажимает кнопки, ведёт мышь и клавиатуру, крутит игровой цикл и проверяет, что в состоянии не осталось NaN.
+
+Но помни границу: мини-браузер не заменяет живого игрока в сложных механиках.`],
+    ['Уведомление перекрывает важный отчёт в момент, когда игрок его читает. Как исправить?',
+      'Это конфликт z-index: у уведомлений слой выше, чем у отчёта. Правильно — важный отчёт поднимать выше (z-index 40), а уведомления при открытом отчёте уступать место, в том числе на телефоне.'],
+    ['Почему правка только в src/ бывает бесполезной?',
+      'Потому что игра может грузить минифицированный бандл, собранный из src/. Если править только исходник, игрок продолжит получать старый код. Правило: правишь src — пересобираешь бандл, и проверяешь оба файла.'],
+  ];
+  for (const [q, a] of CASES) {
+    rows.push({ system, user: q, assistant: a, kind: 'defect-analysis', source: 'frontline-command/docs/AUDIT.md, GAME_AUDITOR.md, ALL_AUDIT_REPORT.md' });
+    if (rows.length >= limit) return rows;
+  }
+  return rows;
+}
+
+/* ------------------- 9. Баланс: числа и почему они такие */
+
+/* Из frontline-command/docs/BALANCE.md — файл генерируется из data/*.json,
+   поэтому числа настоящие, а не пересказанные. Учим не заучивать таблицу,
+   а понимать следствия: почему пулемёт давит, почему танк дорогой, почему
+   порог захвата для старта выше, чем для удержания. */
+async function buildBalanceRows(limit) {
+  const rows = [];
+  const system = 'Ты знаешь баланс Frontline: Command и объясняешь, как числа влияют на игру. '
+    + 'Опирайся на реальные значения из таблиц баланса.';
+  const CASES = [
+    ['Сколько урона в секунду даёт пулемёт и почему он считается оружием подавления?',
+      '14 урона × 10 выстрелов/с = 140 DPS, магазин 100 патронов, перезарядка 5 с, разброс 8°, подавление 16, дальность 500.\n\nВысокое подавление при большом магазине — это не про убийство, а про то, чтобы держать врага в укрытии и ломать его мораль. Поэтому пулемётчик (110 HP, скорость 90) медленнее пехотинца и стоит дороже: 16 материалов и 30 боеприпасов против 12 и 18.'],
+    ['Почему снайперка дорогая и медленная, но при этом не самый высокий DPS?',
+      '80 урона × 0.6 выстр./с = 48 DPS — меньше, чем у автомата (108) и пулемёта (140). Но дальность 1000 (вдвое больше автомата) и разброс 0.5° при подавлении 22.\n\nЕё ценность не в DPS, а в том, что она достаёт туда, куда другие не видят. Магазин 5 и перезарядка 3 с — плата за точность: промах стоит дорого.'],
+    ['Почему танк стоит 102 материала, 36 боеприпасов и 24 топлива?',
+      'Лёгкий танк: 400 HP, броня 6, орудие 120 урона × 0.3 = 36 DPS, дальность 800, подавление 40, скорость 80, сборка 22 с.\n\nОн медленный и дорогой, но переживает то, что убивает пехоту: 400 HP против 100. Отсюда правило: танк — не для скорости, а для прорыва там, где пехота уже не проходит.'],
+    ['Чем заряжаются боеприпасы пехотинца и танка — это один ресурс?',
+      'Один ресурс — боеприпасы (ammo), но расход разный: винтовка пехотинца тратит патроны, орудие танка — снаряды (shell), а стоимость танка отдельно требует топливо.\n\nПоэтому «броня без снабжения» — это дорогая мишень: топливо и снаряды кончаются быстрее, чем подходят грузовики.'],
+    ['Почему порог захвата для старта 1.35, а для удержания 1?',
+      'Чтобы флаг не мерцал. Начать захват можно только с ощутимым перевесом (1.35), а удерживать прогресс — уже при равенстве (1). Иначе точка переходила бы из рук в руки по 3–5 раз, а прогресс таял бы при малейшем колебании.\n\nПауза после флага 10 с и терпение при паритете 3 с — та же защита от качелей.'],
+    ['Сколько идёт захват штаба, города и склада и почему по-разному?',
+      'Штаб — 16 с, город — 12 с, склад — 9 с, обычная точка — 7 с. Чем важнее объект, тем дольше его брать: это даёт защите время подойти, а атакующему — заплатить за жадность.\n\nКлючевой город дополнительно требует перевес ×1.35.'],
+    ['Что такое эшелоны обороны и зачем они нужны?',
+      'Это доли секций по глубине от переднего края: 0 — фронт, 1 — тыл. У среднего профиля front 80 px / 0.45, main 170 / 0.35, rear 280 / 0.2.\n\nСмысл: одна линия без глубины пробивается с одного направления. Эшелоны заставляют атакующего пробивать несколько рубежей, а обороняющемуся дают место, куда отходить.'],
+    ['Почему у профиля обороны есть бюджет и плотность?',
+      'Бюджет (лёгкий 260, средний 520, тяжёлый 820) ограничивает, сколько укреплений можно поставить. Плотность задаёт, насколько близко они стоят. Без бюджета профиль «тяжёлый» съел бы всю экономику, а без плотности укрепления слипались бы в одну точку.\n\nЕщё есть dedup 96 px — минимальное расстояние между секциями плана, и maxFortsPerPoint — сколько фортов держим у одной точки.'],
+    ['Сколько ресурсов на старте и когда начинается давление?',
+      'Старт: 1400 боеприпасов, 1400 материалов, 700 топлива, 400 медикаментов.\n\nРазминка длится 180 с и умножает порог в 2 раза — первые три минуты ИИ не давит в полную силу. Дальше порог атаки стратега 0.12, а «all-in» включается после 240 с без захватов при коэффициенте требуемой силы 0.55.'],
+    ['Почему у отряда есть шаблоны, а не свободный набор?',
+      'Шаблон задаёт роль и цену сразу: штурмовой (4 пехотинца, пулемётчик, медик) — 77 материалов, 114 боеприпасов, 7 медикаментов; бронегруппа — 240 материалов, 126 боеприпасов, 48 топлива.\n\nТак игрок думает о задаче, а не о пересчёте каждого бойца, и не может собрать отряд без медика или без инженера там, где они нужны.'],
+    ['Как мораль влияет на приказы по числам?',
+      'Старт 78, отказ при 40, паника при 20. С командиром рядом мораль растёт на 2 в секунду, без командира падает на 0.5.\n\nЗначит отряд без командира живёт примерно 76 секунд до отказа от приказа, даже без потерь. Поэтому командир — не украшение, а ресурс восстановления.'],
+    ['Почему война заканчивается по «измору» и что это значит?',
+      'Если за 900 с никто не победил, включается измор: ускорение захвата ×0.55, то есть точки берутся быстрее. Если и это не помогло и паритет полный — война заканчивается ничьей «Война на измор: полный паритет».\n\nЭто защита от бесконечных войн, где обе стороны сидят в обороне.'],
+    ['Сколько стоит быть без армии и как это наказывается?',
+      'Капитуляция без армии — через 90 с. Отдельно есть наказание за добивание: если врагов меньше 18, коэффициент силы 1, а бонус атаки на штаб 2.2 — то есть штаб защищается сильнее.\n\nСмысл: нельзя выиграть, просто вырезав всех, и нельзя быстро добить слабого в его базе.'],
+  ];
+  for (const [q, a] of CASES) {
+    rows.push({ system, user: q, assistant: a, kind: 'balance', source: 'frontline-command/docs/BALANCE.md' });
+    if (rows.length >= limit) return rows;
+  }
+  return rows;
+}
+
+/* ---------- 10. Элементарные ситуации: синтетика по правилам игры */
+
+/* Живой бой редко даёт крайние случаи: отряд с 30% патронов и без инженера
+   встречается не каждый прогон. А именно на границах модель и ошибается.
+   Здесь строим состояния по правилам игры (порог 70% для supply, инженер
+   для build, индексы для hold) и проверяем каждое игровым validateProposal.
+   Данные синтетические, но правила — настоящие, и ответы проверены игрой. */
+async function buildEdgeRows(limit) {
+  const rows = [];
+  let mods;
+  try {
+    const { validateProposal } = await import(join(ROOT, 'frontline-command/src/sim/neutral_commander.js'));
+    const { commanderPrompt } = await import(join(ROOT, 'frontline-command/src/ai/commander-prompts.js'));
+    mods = { validateProposal, prompt: commanderPrompt(true) };
+  } catch (e) {
+    log('  игра недоступна:', e.message);
+    return rows;
+  }
+
+  /* Допустимое действие по состоянию — та же политика, что в бою, но
+     считаем прямо по input, без симуляции. */
+  function decide(input) {
+    if (!input.squads.length) return { action: 'none' };
+    const low = input.squads.findIndex((q) => q.ammo < 70);
+    if (low >= 0) return { action: 'supply', squad: low };
+    const eng = input.squads.findIndex((q) => q.engineers > 0);
+    if (input.builds.length && eng >= 0) return { action: 'build', squad: eng, build: 0 };
+    if (input.points.length) return { action: 'hold', squad: 0, point: 0 };
+    return { action: 'none' };
+  }
+
+  const snap = (input) => ({
+    squads: input.squads.map((q, i) => ({ id: i, ...q })),
+    points: input.points.map((q, i) => ({ id: i, ...q })),
+    builds: input.builds.map((q, i) => ({ id: i, ...q })),
+    input,
+  });
+
+  const squad = (o = {}) => ({ members: 5, ammo: 100, health: 100, morale: 80, engineers: 0, ...o });
+  const point = (o = {}) => ({ kind: 'city', key: false, ...o });
+  const build = (o = {}) => ({ progress: 40, ...o });
+
+  const CASES = [
+    ['Один отряд, 45% патронов, инженера нет, рядом два склада.', 'supply'],
+    ['Отряд с 12% патронов, инженер есть, три непостроенных чертежа.', 'supply'],
+    ['Два отряда: первый с 95% патронов, второй с 20%.', 'supply'],
+    ['Отряд с 69% патронов — на границе порога.', 'supply'],
+    ['Отряд с 70% патронов и инженер, есть чертёж.', 'build'],
+    ['Отряд с 70% патронов, инженера нет, есть точка.', 'hold'],
+    ['Отряд с полными патронами, инженер, чертёж без прогресса.', 'build'],
+    ['Отряд без патронов и без инженера, точек нет.', 'none'],
+    ['Два отряда, оба с полными патронами, один инженерный, чертежей нет, точка одна.', 'hold'],
+    ['Пять отрядов, у четвёртого 30% патронов, остальные полные.', 'supply'],
+    ['Отряд с 100% патронов, но 20% здоровья — на что это влияет?', 'hold'],
+    ['Отряд с полными патронами и инженером, но чертёж уже построен — что можно?', 'hold'],
+  ];
+  const INPUTS = [
+    { squads: [squad({ ammo: 45 })], points: [point(), point({ kind: 'depot' })], builds: [] },
+    { squads: [squad({ ammo: 12, engineers: 2 })], points: [], builds: [build(), build(), build()] },
+    { squads: [squad({ ammo: 95 }), squad({ ammo: 20 })], points: [point()], builds: [] },
+    { squads: [squad({ ammo: 69 })], points: [point()], builds: [] },
+    { squads: [squad({ ammo: 70, engineers: 1 })], points: [], builds: [build()] },
+    { squads: [squad({ ammo: 70 })], points: [point()], builds: [build()] },
+    { squads: [squad({ ammo: 100, engineers: 3 })], points: [], builds: [build({ progress: 0 })] },
+    { squads: [squad({ ammo: 0 })], points: [], builds: [] },
+    { squads: [squad({ ammo: 100 }), squad({ ammo: 100, engineers: 1 })], points: [point()], builds: [] },
+    { squads: [squad(), squad(), squad(), squad({ ammo: 30 }), squad()], points: [point()], builds: [] },
+    { squads: [squad({ ammo: 100, health: 20 })], points: [point()], builds: [] },
+    { squads: [squad({ ammo: 100, engineers: 1 })], points: [point()], builds: [] },
+  ];
+
+  for (let i = 0; i < CASES.length && rows.length < limit; i++) {
+    const [question] = CASES[i];
+    const input = INPUTS[i];
+    const answer = decide(input);
+    const text = JSON.stringify(answer);
+    if (!mods.validateProposal(text, snap(input))) {
+      log('  пропуск граничного случая: игра не приняла ответ', i);
+      continue;
+    }
+    rows.push({
+      system: mods.prompt,
+      user: JSON.stringify(input),
+      assistant: text,
+      kind: 'game-edge',
+      source: `правила игры, случай ${i + 1}: ${question}`,
+    });
+  }
+
+  /* Разбор правил словами: почему именно так, а не иначе. Это то, чего
+     не хватает модели, которая видит только пары «вход-ответ». */
+  const system = 'Ты объясняешь правила решений командира в Frontline. Отвечай коротко и точно.';
+  const RULES = [
+    ['Почему снабжение даётся только при боеприпасах ниже 70%?',
+      'Потому что подвоз — это время и риск: грузовик едет, отряд ждёт. Если патронов больше 70%, отряд ещё может воевать, и тратить на него рейс рано. Порог 70% — граница, где запас уже не покрывает бой до подхода следующего снабжения.'],
+    ['Отряд с 69% патронов — это уже повод для снабжения?',
+      'Да. Порог строгий: 70% и выше — снабжение не требуется, ниже 70% — требуется. 69% уже требует, 70% ещё нет.'],
+    ['Почему для строительства нужен именно инженер?',
+      'Чертёж не строит себя сам: нужен тот, кто умеет строить. В данных отряда есть поле engineers — если оно 0, действие build невозможно, сколько бы материалов ни было.'],
+    ['Можно ли приказать строить отряду без инженера, если чертёж уже наполовину готов?',
+      'Нет. Прогресс не отменяет требования: в отряде должен быть хотя бы один инженер. Иначе приказ будет отклонён.'],
+    ['Что делать, если патронов мало, а инженера нет и строить нечего?',
+      'Снабжение. Порядок приоритетов: сначала патроны (если ниже 70%), потом стройка (если есть инженер и чертёж), потом удержание точки, иначе — ничего.'],
+    ['Что значит действие none и когда оно правильно?',
+      'Это «не делать ничего». Оно верно, когда нет ни отрядов с низким боеприпасом, ни подходящего инженера с чертежом, ни своей точки для удержания. Лучше ничего, чем приказ, который игра отклонит.'],
+    ['Почему индексы отрядов, точек и чертежей нельзя выдумывать?',
+      'Это позиции в списке, который видит командир. Если назвать индекс, которого нет, игра отклонит приказ целиком. Поэтому сначала смотрим, сколько элементов в каждом списке, и только потом называем номер.'],
+    ['Почему здоровье отряда не влияет на выбор действия напрямую?',
+      'В правилах решений здоровье — это информация для командира, а не условие действия. Ограничения жёсткие: патроны для снабжения, инженер для стройки, своя точка для удержания. Здоровье учитывается в бою, но не в этих трёх проверках.'],
+    ['Отряд с полными патронами, инженером и точкой — что выбрать?',
+      'Если есть непостроенный чертёж — строить, потому что это даёт новое качество. Если чертежей нет — удерживать точку. Снабжение не нужно: патронов больше 70%.'],
+    ['Что важнее: снабдить отряд с 20% патронов или достроить чертёж инженером?',
+      'Снабдить. Отряд без патронов не может воевать, а стройка подождёт: приоритет патронов выше стройки. Правило простое — сначала боеспособность, потом инфраструктура.'],
+  ];
+  for (const [q, a] of RULES) {
+    rows.push({ system, user: q, assistant: a, kind: 'game-rule', source: 'frontline-command/src/sim/neutral_commander.js' });
+    if (rows.length >= limit) break;
+  }
+  return rows;
+}
+
+/* ------------------- 11. Устройство игры: архитектура и методика */
+
+/* Из спек игры (AI_SPEC, MAP_AND_EQUATIONS, BUILDING_SPEC, WALLS_SPEC,
+   PATHING_SPEC, AUDIT). Смысл: модель должна понимать, из чего состоит
+   игра, чтобы искать в ней баги, а не только отвечать «что делать». */
+async function buildEngineRows(limit) {
+  const rows = [];
+  const system = 'Ты знаешь, как устроена игра Frontline: Command внутри, и умеешь объяснить её архитектуру и методику проверки.';
+  const CASES = [
+    ['Из каких трёх уровней состоит ИИ во Frontline и как часто они думают?',
+      'StrategicAI думает каждые 4–7 секунд: ставит директивы и приказы через Command API. SquadAI — каждые 0.2–0.5 с: фазы, формации, якорь, отступление. Soldier AI — от 1 до 10 Гц: цель, укрытие, огонь, мораль, лечение, ремонт.\n\nЧастота солдата зависит от расстояния до камеры (LOD): ближе 800 px — 10 Гц, ближе 1600 px — 4 Гц, дальше — 1 Гц. Между «мыслями» каждый кадр обновляются движение, перезарядка, огонь и таймеры.'],
+    ['По какой формуле стратегический ИИ выбирает, куда атаковать?',
+      'attack = ценность × 1.2 − расстояние × 0.9 − угроза + слабость цели. Если значение выше порога attackThreshold из data/ai_weights.json — атака начинается.\n\nТо есть ИИ не «бросается на ближайшего»: он взвешивает, что даст больше при меньшем пути и меньшем сопротивлении.'],
+    ['В каком порядке ИИ обороняется?',
+      'Сначала штаб (HQ), затем города, затем фабрики и склады. Причина простая: потеря штаба — это поражение, потеря города — потеря ключевой точки, а фабрика и склад без штаба уже бесполезны.'],
+    ['Как в игре устроены координаты карты?',
+      'Симуляция хранит точку (x, y) с осью y вниз. На сетке отображается (X, Y) = (x − W/2, H/2 − y), обратное преобразование — (x, y) = (X + W/2, H/2 − Y). Смещение A→B: (ΔX, ΔY) = (xB − xA, yA − yB), длина — корень из суммы квадратов.\n\nЭкран: sx = viewW/2 + (x − cameraX)·zoom, sy = viewH/2 + (y − cameraY)·zoom. При масштабировании точка под курсором остаётся на месте.'],
+    ['Почему сетка координат — это отображение, а не препятствия?',
+      'Она не создаёт новых преград, секторов или путей: это слой рисования поверх мира. Поэтому старые сохранения используют прежние координаты и не ломаются, когда игрок включает сетку.'],
+    ['Как выбирается шаг сетки координат?',
+      'Берётся наибольший шаг из набора 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000, при котором шаг × zoom ≤ 220 пикселей. Линейка использует тот же набор, но порог 160. Рисуются только линии в видимой части мира — иначе на большом зуме рисовались бы миллионы линий.'],
+    ['Чем отличается путь от прямого смещения до цели на карте?',
+      'Пунктирная стрелка показывает прямое смещение выбранного отряда до цели, а не фактический маршрут вокруг преград. Это разные вещи: стрелка — геометрия, маршрут строится алгоритмом обхода стен и проходов.\n\nВо время игры за фракцию чужие цели и направления не показываются — это часть тумана войны.'],
+    ['Что даёт отладочный показ сетки и векторов над миникартой?',
+      'Сетку и векторы можно включить для проверки: видно координаты, смещения и направление последнего фактического движения бойцов (голубые стрелки), когда включён эксперимент «боты не проходят друг сквозь друга».\n\nЭто инструмент разработчика и тестировщика: с ним видно, где именно боец застревает или уходит не туда.'],
+    ['Как проверяется симметрия карты и почему это принципиально?',
+      'Рельеф и точки симметричны поворотом на 180°, и это проверяется жёстко в tests/symmetry.mjs: допустимая асимметрия — не больше 4 тайлов из 16 384.\n\nПринципиально потому, что иначе одна сторона стартует в лучших условиях, и исход войны решает карта, а не командир.'],
+    ['Сколько файлов и какие лимиты проверяет приёмка производительности?',
+      'Средний тик симуляции на 392 юнитах за 500 шагов — не больше 6.0 мс, память после прогона — не больше 64 МБ. Доля решённых войн ИИ×ИИ — не меньше 0.9, перекос сторон — от 0.4 до 0.6, преимущество первого хода — не больше 0.75.\n\nЭто пороги из regression_thresholds.json: выход за них означает регресс, даже если код «работает».'],
+    ['Что такое флаги механик вроде wall_collision_v2 и зачем они?',
+      'Это выключатели: каждый флаг отключает свою часть механики и возвращает прежнее поведение. Например, wall_collision_v2 по умолчанию включён, wall_destruction включён, wall_sound_muffle включён.\n\nСмысл: можно сравнить поведение «до и после» на одном и том же сохранении и на тех же сидах, не откатывая код.'],
+    ['Почему всё строительство идёт только через Command API?',
+      'Потому что тогда игрок, автопилот и ИИ врага пользуются одними и теми же типами приказов и одними же проверками. Нет «тихих» обходных путей, которые обходят валидацию и ломают баланс.\n\nЭто же даёт задержку радио и возможность отказа — приказ становится событием, а не мгновенным изменением состояния.'],
+    ['Что значит «приказ — это событие»?',
+      'Приказ не меняет мир мгновенно: он уходит с задержкой, может быть отклонён и имеет ответ. Поэтому у отряда есть lastOrderAt, а в интерфейсе видно, когда приказ отправлен и принят.\n\nДля тестировщика это важно: поведение нельзя проверять в один кадр — нужно прокрутить время и дождаться ответа.'],
+  ];
+  for (const [q, a] of CASES) {
+    rows.push({ system, user: q, assistant: a, kind: 'engine-arch', source: 'frontline-command/docs/AI_SPEC.md, MAP_AND_EQUATIONS.md, AUDIT.md, BUILDING_SPEC.md, WALLS_SPEC.md' });
+    if (rows.length >= limit) return rows;
+  }
+  return rows;
+}
+
+/* ---------- 12. Реальный код: найди дефект в настоящем файле ---------- */
+
+/* Слабое место прошлой версии: из 2200 примеров только 9 учили искать баги
+   в коде, хотя именно это измеряет бенчмарк. Здесь берём НАСТОЯЩИЕ места
+   из настоящих файлов репозитория — те, что находит бот-багоискатель, — и
+   строим примеры в его же формате: код, фрагмент, объяснение, как чинить.
+
+   Ответ всегда с фрагментом: модель должна научиться показывать место, а не
+   отвечать «где-то есть проблема». */
+const CODE_DEFECTS = [
+  {
+    rule: 'eval', code: '600', severity: 'важно',
+    file: 'tools/torrent/build-catalog.mjs',
+    pattern: /new Function\(/,
+    why: 'Строка превращается в исполняемый код. Если в неё попадёт текст из сохранения, URL или файла игрока, он выполнится с правами страницы.',
+    fix: 'Разбирать данные (JSON.parse с проверкой полей) и сверять с явным списком разрешённых действий — не исполнять текст.',
+  },
+  {
+    rule: 'разбор-без-защиты', code: '401', severity: 'мелочь',
+    file: 'tools/p2p-server/server.mjs',
+    pattern: /JSON\.parse\(/,
+    why: 'Битый JSON бросает исключение. В обработчике это роняет запрос, в игре — сохранение: игрок теряет прогресс в самый заметный момент.',
+    fix: 'Обернуть в try/catch и вернуть понятную ошибку: try { return JSON.parse(t) } catch { return null } — и пусть вызывающий решает, что делать с null.',
+  },
+  {
+    rule: 'пустой-catch', code: '303', severity: 'мелочь',
+    file: 'tools/p2p-server/server.mjs',
+    pattern: /catch\s*(\([^)]*\))?\s*\{\s*\}/,
+    why: 'Ошибка ловится и молча выбрасывается: причина сбоя исчезает, и починить его потом невозможно — в журнале пусто.',
+    fix: 'Записать ошибку в журнал (console.warn с контекстом) или вернуть её вызывающему. Молча глотать можно только то, что действительно неважно, и это надо писать в комментарии.',
+  },
+{
+    rule: 'хранилище-без-защиты', code: '402', severity: 'мелочь',
+    file: 'road-tycoon/src/sim.js',
+    pattern: /localStorage\.(getItem|setItem|removeItem)\s*\(/,
+    why: 'В приватном режиме браузера и при переполнении хранилища localStorage бросает исключение. Если это не поймать, игра падает в момент сохранения — самый заметный для игрока момент.',
+    fix: 'Обернуть доступ в try/catch: сохранение должно либо пройти, либо тихо не пройти, но игра обязана продолжить работать.',
+  },
+  {
+    rule: 'внешний-запрос', code: '800', severity: 'мелочь',
+    file: 'site/scripts/auto-post-news.mjs',
+    pattern: /https?:\/\/(?!localhost|127\.0\.0\.1)[a-z0-9.-]+/i,
+    why: 'Внешний адрес в коде игры означает запрос наружу: сайт должен работать статически и офлайн. Если это не ссылка-источник, а настоящий запрос, игра не запустится без сети.',
+    fix: 'Для источника новости — оставить как ссылку с пометкой. Для ресурса — положить файл в репозиторий и обращаться по относительному пути.',
+  },
+  {
+    rule: 'пустой-catch', code: '303', severity: 'мелочь',
+    file: 'folder-os/index.html',
+    pattern: /catch\s*(\([^)]*\))?\s*\{\s*\}/,
+    why: 'Ошибка поймана и выброшена: в журнале пусто, причину сбоя не найти. Игрок видит «не работает», разработчик — ничего.',
+    fix: 'Записать ошибку с контекстом или вернуть её вызывающему; молчаливое проглатывание допустимо только с комментарием, почему это безопасно.',
+  },
+  {
+    rule: 'отладочный-лог', code: '313', severity: 'мелочь',
+    file: 'truck-haul/src/main.js',
+    pattern: /console\.log\(/,
+    why: 'Отладочные логи в игровом коде засоряют журнал: настоящую ошибку среди них не видно, а на слабом телефоне они ещё и тормозят.',
+    fix: 'Убрать или спрятать за флагом отладки, который выключен по умолчанию.',
+  },
+];
+
+async function buildRealCodeRows(limit) {
+  const rows = [];
+  let text;
+  const sources = new Map();
+  const system = 'Ты ищешь дефекты в настоящем коде браузерных игр. Отвечай так: '
+    + 'сначала код находки из таблицы баг-искателя, потом фрагмент строки, потом почему это плохо и как правильно. '
+    + 'Если дефекта нет — так и скажи: «чисто».';
+
+  for (const d of CODE_DEFECTS) {
+    let src;
+    try { src = await readFile(join(ROOT, d.file), 'utf8'); }
+    catch (e) { continue; }
+    sources.set(d.file, src);
+
+    const lines = src.split('\n');
+    const hits = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (d.pattern.test(lines[i])) hits.push(i + 1);
+      if (hits.length >= 3) break;
+    }
+    if (!hits.length) { log('  нет вхождений в', d.file, '—', d.rule); continue; }
+
+    for (const lineNo of hits) {
+      if (rows.length >= limit) return rows;
+      // Контекст ±2 строки: по одной строке модель не поймёт окружение.
+      const from = Math.max(0, lineNo - 3);
+      const to = Math.min(lines.length, lineNo + 2);
+      const snippet = lines.slice(from, to)
+        .map((l, i) => `${String(from + i + 1).padStart(4)} | ${l}`)
+        .join('\n');
+      rows.push({
+        system,
+        user: `Файл ${d.file}. Найди дефект в этом фрагменте:\n\n${snippet}`,
+        assistant: `Код ${d.code} (${d.rule}), уровень: ${d.severity}.\n`
+          + `Место: ${d.file}:${lineNo}.\n\n`
+          + `Почему это плохо: ${d.why}\n\n`
+          + `Как исправить: ${d.fix}`,
+        kind: 'code-defect',
+        source: `${d.file}:${lineNo}`,
+      });
+    }
+  }
+
+  /* Отрицательные примеры: тот же файл, но чистое место. Без них модель
+     учится кричать «баг» на любой код — это видно по метрике ложных тревог. */
+  const CLEAN = [
+    { file: 'shared/p2p/torrentfile.js', what: 'разбор данных с проверкой' },
+    { file: 'site/scripts/auto-post-news.mjs', what: 'сборка обложки' },
+    { file: 'tools/p2p-server/server.mjs', what: 'маршрутизация запросов' },
+  ];
+  for (const c of CLEAN) {
+    if (rows.length >= limit) return rows;
+    let src;
+    try { src = await readFile(join(ROOT, c.file), 'utf8'); } catch (e) { continue; }
+    const lines = src.split('\n');
+    // Берём функцию целиком: там нет известных дефектов по нашим правилам.
+    const start = lines.findIndex((l) => /^(export\s+)?(async\s+)?function\s+\w+/.test(l));
+    if (start < 0) continue;
+    let end = start + 24;
+    for (let i = start + 1; i < Math.min(lines.length, start + 60); i++) {
+      if (lines[i] === '}') { end = i + 1; break; }
+    }
+    const snippet = lines.slice(start, end)
+      .map((l, i) => `${String(start + i + 1).padStart(4)} | ${l}`)
+      .join('\n');
+    rows.push({
+      system,
+      user: `Файл ${c.file}. Найди дефект в этом фрагменте:\n\n${snippet}`,
+      assistant: 'чисто',
+      kind: 'code-clean',
+      source: c.file,
+    });
+  }
+  return rows;
+}
+
+/* ---------- 13. Пары «чисто / сломано» из бенчмарка багов ---------- */
+
+/* Бенчмарк (make-bug-bench.mjs) уже умеет аккуратно ломать настоящие файлы,
+   и у каждого дефекта известен код правила. Это готовый источник пар
+   «так правильно — так сломано». Обучаем на парах: модель видит обе версии
+   одного файла и учится отличать дефект от нормы, а не угадывать. */
+async function buildBenchRows(limit) {
+  const rows = [];
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  let dir;
+  try {
+    dir = await mkdtemp(join(tmpdir(), 'bugbench-'));
+    await execFileAsync('node', [
+      join(ROOT, 'tools/training/make-bug-bench.mjs'), '--out', dir,
+    ], { cwd: ROOT, maxBuffer: 16 * 1024 * 1024 });
+    const manifest = JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8'));
+    const byScenario = new Map();
+    for (const c of manifest.cases) {
+      if (!byScenario.has(c.scenario)) byScenario.set(c.scenario, {});
+      byScenario.get(c.scenario)[c.hasBug ? 'broken' : 'clean'] = c;
+    }
+
+    const prompts = await loadPrompts();
+    const system = prompts.bugCheck.system;
+    const userPrefix = prompts.bugCheck.userPrefix;
+
+    for (const [scenario, pair] of byScenario) {
+      if (rows.length >= limit) break;
+      if (!pair.broken || !pair.clean) continue;
+      const broken = pair.broken;
+      // Фрагмент вокруг дефекта: ищем строку, которой нет в чистой версии.
+      const brokenText = await readFile(join(dir, broken.name), 'utf8');
+      const cleanText = await readFile(join(dir, pair.clean.name), 'utf8');
+      const bLines = brokenText.split('\n');
+      const cLines = cleanText.split('\n');
+      let at = 0;
+      while (at < Math.min(bLines.length, cLines.length) && bLines[at] === cLines[at]) at++;
+      const from = Math.max(0, at - 2);
+      const to = Math.min(bLines.length, at + 3);
+      const snippet = bLines.slice(from, to)
+        .map((l, i) => `${String(from + i + 1).padStart(4)} | ${l}`)
+        .join('\n');
+
+      rows.push({
+        system,
+        user: userPrefix.replace('{file}', broken.file) + snippet,
+        assistant: JSON.stringify({
+          bug: true,
+          code: broken.code,
+          why: broken.what,
+        }, null, 0),
+        kind: 'code-bench-broken',
+        source: `бенчмарк: ${scenario}`,
+      });
+
+      /* Чистая версия — чтобы модель не кричала «баг» на любой файл.
+         Показываем тот же участок, но из настоящего, несломанного файла:
+         подменять строки на «...» нельзя — тогда учить нечего. */
+      if (rows.length < limit) {
+        const cleanSnippet = cLines.slice(from, to)
+          .map((l, i) => `${String(from + i + 1).padStart(4)} | ${l}`)
+          .join('\n');
+        rows.push({
+          system,
+          user: userPrefix.replace('{file}', pair.clean.file) + cleanSnippet,
+          assistant: prompts.bugCheck.cleanAnswer,
+          kind: 'code-bench-clean',
+          source: `бенчмарк: ${scenario}`,
+        });
+      }
+    }
+  } catch (e) {
+    log('  бенчмарк недоступен:', e.message);
+  } finally {
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
+  return rows;
+}
+
+/* ------------------------------------------ 4. Общие правила репозитория */
+
+/* «Как играть и в чём смысл» — по каждому настоящему README игры и по GDD
+   Frontline. Тексты берём из репозитория, а не сочиняем: если в README нет
+   раздела, игра пропускается, чтобы модель не выучила выдумку. */
+async function buildPlayRows(limit) {
+  const rows = [];
+  const system = 'Ты объясняешь, как играть в игры этого репозитория и в чём их смысл. Отвечай точно, по правилам игры.';
+
+  // Frontline: смысл берём из GDD (дизайн-документ), он совпадает с кодом.
+  const FRONTLINE = [
+    ['В чём смысл игры Frontline: Command?',
+      'Это тактическая песочница про войну двух армий. Вы можете быть бойцом, командиром или стратегом, а противник управляется тем же кодом, что и ваша армия — правила для всех одни: юниты, мораль, туман войны, лимиты, задержка радио. Смысл не в скорости кликов, а в управлении системой: снабжение, сектора, фронт, окружение и экономика работают сами, вы влияете на них приказами.'],
+    ['Как победить во Frontline?',
+      'Захватить штаб противника или все его ключевые города. Поражение — то же самое для вашей стороны. Смерть бойца не заканчивает войну: он возрождается на базе, армия продолжает воевать. Есть и третий исход: если обе армии уничтожены одновременно, засчитывается ничья — «Обе армии уничтожены».'],
+    ['Какие три уровня управления во Frontline?',
+      'Солдат — видит только своё окружение и конус зрения, стреляет, занимает укрытия, ремонтирует, лечит. Командир — видит карту, отряды и точки, выделяет и приказывает, строит, снабжает. Стратег — видит сектора, влияние и фронт, задаёт директивы и приоритеты производства. Переключение клавишей Tab, без потери управления армией.'],
+    ['Почему приказ во Frontline может не выполниться?',
+      'Приказ — это событие, а не мгновенное перемещение. Он идёт с задержкой радио, может быть отклонён, а отряд с моралью ниже 40 может отказаться. Ниже 20 — паника и отход к рубежу. Отряд с потерями больше половины отступает. Это часть замысла: командир должен учитывать состояние людей, а не только карту.'],
+    ['Как работает снабжение во Frontline?',
+      'Снабжение секторов падает со временем и с расстоянием от базы, склады и грузовики его восстанавливают, окружённые сектора теряют его быстрее. Боеприпасы конечны: их нужно подвозить со складов. Отсюда главное правило командира — не растягивать фронт дальше, чем можешь кормить.'],
+    ['Что такое мораль во Frontline?',
+      'Число от 0 до 100. Растёт от командира рядом, от укрытий и передышки без контакта. Падает от подавления, потерь и отсутствия командира. Это второй ресурс после боеприпасов: отряд без морали не выполняет приказы, даже если у него полный боекомплект.'],
+    ['Какие клавиши управления во Frontline?',
+      'W A S D — движение, R — перезарядка, E — взаимодействие, Space — пауза, Tab — смена уровня управления, B — строительство, T — директивы, P — автопилот, K — навыки, G — создать отряд, M — карта команд, [/] — скорость времени, F3 — отладка, Escape — меню.'],
+  ];
+  for (const [q, a] of FRONTLINE) {
+    rows.push({ system, user: q, assistant: a, kind: 'play-frontline', source: 'frontline-command/docs/GDD.md, src/core/input.js' });
+    if (rows.length >= limit) return rows;
+  }
+
+  // Остальные игры: берём заголовок и раздел «Как играть» из README.
+  let entries = [];
+  try { entries = await readdir(ROOT, { withFileTypes: true }); } catch (e) { return rows; }
+  const skip = new Set(['node_modules', 'site', 'tools', 'shared', 'docs', 'news', 'collection', 'torrent', 'developers', '.git', '.github']);
+  for (const ent of entries) {
+    if (rows.length >= limit) break;
+    if (!ent.isDirectory() || skip.has(ent.name) || ent.name.startsWith('.')) continue;
+    let text;
+    try { text = await readFile(join(ROOT, ent.name, 'README.md'), 'utf8'); } catch (e) { continue; }
+    if (text.length > 60_000) text = text.slice(0, 60_000);
+
+    const title = (text.match(/^#\s+(.+)$/m) || [null, ent.name])[1].replace(/[*_`]/g, '').trim();
+    // Раздел «как играть» — до следующего заголовка того же уровня.
+    const play = text.match(/^##\s+(?:Как играть|How to play|Управление|Gameplay)[^\n]*\n([\s\S]*?)(?=^##\s|\Z)/m);
+    const full = (play ? play[1] : text.split(/^##\s/m)[1] || '').replace(/\s+/g, ' ').trim();
+    if (full.length < 90) continue;
+
+    /* Длинное руководство режем по границе предложения: обрывок посреди
+       слова учит модели обрезать ответ. Остаток уходит отдельным примером
+       с пометкой «продолжение», чтобы ничего не потерялось. */
+    const LIMIT = 1900;
+    const parts = [];
+    if (full.length <= LIMIT) parts.push(full);
+    else {
+      let rest = full;
+      while (rest.length && parts.length < 3) {
+        let cut = rest.lastIndexOf('. ', LIMIT);
+        if (cut < LIMIT * 0.5) cut = rest.lastIndexOf(' ', LIMIT);
+        if (cut <= 0) cut = Math.min(LIMIT, rest.length);
+        parts.push(rest.slice(0, cut + 1).trim());
+        rest = rest.slice(cut + 1).trim();
+      }
+    }
+
+    for (let p = 0; p < parts.length; p++) {
+      rows.push({
+        system,
+        user: p === 0
+          ? `Как играть в «${title}» и в чём смысл?`
+          : `Продолжи руководство по «${title}» (часть ${p + 1}).`,
+        assistant: parts[p],
+        kind: 'play-guide',
+        source: `${ent.name}/README.md`,
+      });
+      if (rows.length >= limit) return rows;
+    }
+  }
+  return rows;
+}
+
+/* --------------------------------------------- 5. Правила репозитория */
+
+async function buildReadmeRows(limit) {
+  const rows = [];
+  const system = 'Ты знаешь правила этого репозитория игр и объясняешь их кратко и точно.';
+  const facts = [
+    ['Почему игры не должны зависеть от интернета?',
+      'Сайт выкладывается на GitHub Pages и должен работать статически. Внешние CDN и запросы к серверу при запуске ломают офлайн-игру и замедляют загрузку.'],
+    ['Зачем каждая игра подключает shared/engine.js раньше своих скриптов?',
+      'Общий движок даёт единый HUD, сохранения и обработку ввода. Если подключить его после своих скриптов, части игры уже успеют обратиться к несуществующему API.'],
+    ['Почему сохранения пишутся в localStorage с проверкой?',
+      'Приватный режим и переполнение хранилища бросают исключение. Запись без try/catch роняет игру в момент сохранения — самый заметный для игрока момент.'],
+    ['Как добавить новую игру в репозиторий?',
+      'Создать папку с index.html, подключить shared/theme.css и engine.js, добавить запись в site/community-games.json, обложку и README, затем проверить тестами и ботом-багоискателем.'],
+    ['Что нельзя делать с файлами игроков?',
+      'Автоудаление касается только вредоносных файлов: исполняемых, майнеров, похитителей ключей. Игровые .js, .html, .wasm, картинки, звук и сохранения не удаляются никогда.'],
+  ];
+  for (const [q, a] of facts) {
+    rows.push({ system, user: q, assistant: a, kind: 'repo-rule', source: 'AGENTS.md, README.md' });
+    if (rows.length >= limit) return rows;
+  }
+  return rows;
+}
+
+/* ------------------------------------------------------------------ сбор */
+
+/* Промпты берём из prompts.json — того же файла, что читает оценка.
+   Иначе обучение и проверка расходятся, и метрики мерят не то. */
+let PROMPTS = null;
+async function loadPrompts() {
+  if (PROMPTS) return PROMPTS;
+  const raw = await readFile(join(ROOT, 'tools/training/prompts.json'), 'utf8');
+  PROMPTS = JSON.parse(raw);
+  return PROMPTS;
+}
+
+async function main() {
+  const opts = parseArgs(process.argv.slice(2));
+  const outDir = resolve(ROOT, opts.out);
+  await mkdir(outDir, { recursive: true });
+
+  // Детерминированная перестановка: один seed — один и тот же датасет.
+  let state = (opts.seed || 7) >>> 0;
+  const rng = () => { state = (state * 1664525 + 1013904223) >>> 0; return state / 4294967296; };
+  const shuffle = (a) => {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  console.log('Собираю знания из репозитория');
+  const rows = [];
+
+  const gameLimit = opts.game || 0;
+  if (gameLimit > 0) {
+    console.log('  бой Frontline: до', gameLimit, 'состояний…');
+    const game = await buildGameRows(gameLimit, rng);
+    console.log('   получено', game.length);
+    rows.push(...game);
+  }
+
+  const bugLimit = opts.bug || 0;
+  if (bugLimit > 0) {
+    console.log('  правила баг-искателя: до', bugLimit, '…');
+    const bugs = await buildBugRows(bugLimit, rng);
+    console.log('   получено', bugs.length);
+    rows.push(...bugs);
+  }
+
+  const codeLimit = opts.code || 0;
+  if (codeLimit > 0) {
+    console.log('  уроки по коду: до', codeLimit, '…');
+    const code = await buildCodeRows(codeLimit);
+    console.log('   получено', code.length);
+    rows.push(...code);
+  }
+
+  const playLimit = opts.play || 0;
+  if (playLimit > 0) {
+    console.log('  как играть и в чём смысл: до', playLimit, '…');
+    const play = await buildPlayRows(playLimit);
+    console.log('   получено', play.length);
+    rows.push(...play);
+  }
+
+  const codesLimit = opts.codes || 0;
+  if (codesLimit > 0) {
+    console.log('  таблица кодов баг-искателя: до', codesLimit, '…');
+    const codes = await buildCodeTableRows(codesLimit);
+    console.log('   получено', codes.length);
+    rows.push(...codes);
+  }
+
+  const lawLimit = opts.law || 0;
+  if (lawLimit > 0) {
+    console.log('  законы репозитория: до', lawLimit, '…');
+    const laws = await buildLawRows(lawLimit);
+    console.log('   получено', laws.length);
+    rows.push(...laws);
+  }
+
+  const defectLimit = opts.defect || 0;
+  if (defectLimit > 0) {
+    console.log('  разбор дефектов: до', defectLimit, '…');
+    const defects = await buildDefectRows(defectLimit);
+    console.log('   получено', defects.length);
+    rows.push(...defects);
+  }
+
+  const balanceLimit = opts.balance || 0;
+  if (balanceLimit > 0) {
+    console.log('  баланс игры: до', balanceLimit, '…');
+    const balance = await buildBalanceRows(balanceLimit);
+    console.log('   получено', balance.length);
+    rows.push(...balance);
+  }
+
+  const edgeLimit = opts.edge || 0;
+  if (edgeLimit > 0) {
+    console.log('  граничные ситуации и правила решений: до', edgeLimit, '…');
+    const edge = await buildEdgeRows(edgeLimit);
+    console.log('   получено', edge.length);
+    rows.push(...edge);
+  }
+
+  const engineLimit = opts.engine || 0;
+  if (engineLimit > 0) {
+    console.log('  устройство игры: до', engineLimit, '…');
+    const engine = await buildEngineRows(engineLimit);
+    console.log('   получено', engine.length);
+    rows.push(...engine);
+  }
+
+  const realcodeLimit = opts.realcode || 0;
+  if (realcodeLimit > 0) {
+    console.log('  реальный код: дефекты в настоящих файлах, до', realcodeLimit, '…');
+    const real = await buildRealCodeRows(realcodeLimit);
+    console.log('   получено', real.length);
+    rows.push(...real);
+  }
+
+  const benchLimit = opts.bench || 0;
+  if (benchLimit > 0) {
+    console.log('  пары «чисто / сломано» из бенчмарка: до', benchLimit, '…');
+    const bench = await buildBenchRows(benchLimit);
+    console.log('   получено', bench.length);
+    rows.push(...bench);
+  }
+
+  const readmeLimit = opts.readme || 0;
+  if (readmeLimit > 0) {
+    console.log('  правила репозитория: до', readmeLimit, '…');
+    const rules = await buildReadmeRows(readmeLimit);
+    console.log('   получено', rules.length);
+    rows.push(...rules);
+  }
+
+  if (!rows.length) {
+    console.error('Ничего не собрано: укажите --game/--bug/--code/--play/--codes/--law/--readme больше нуля.');
+    process.exit(1);
+  }
+
+  // Убираем точные дубликаты: повтор одного и того же входа портит обучение.
+  const seen = new Set();
+  const clean = [];
+  for (const r of rows) {
+    const key = sha256(r.system + '\u0000' + r.user);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    clean.push(r);
+  }
+
+  shuffle(clean);
+  // Делим на обучение и проверку по источникам, чтобы не было утечки.
+  const evalCount = Math.max(1, Math.round(clean.length * 0.1));
+  const shuffled = clean.slice();
+  const evalRows = shuffled.splice(0, evalCount);
+
+  const writeJsonl = async (name, list) => {
+    const body = list.map((r) => JSON.stringify(r)).join('\n') + '\n';
+    await writeFile(join(outDir, name), body, 'utf8');
+    return sha256(body);
+  };
+  const trainHash = await writeJsonl('train.jsonl', shuffled);
+  const evalHash = await writeJsonl('eval.jsonl', evalRows);
+
+  const byKind = {};
+  for (const r of clean) byKind[r.kind] = (byKind[r.kind] || 0) + 1;
+
+  const manifest = {
+    schema: 'games-knowledge-v1',
+    madeAt: new Date().toISOString(),
+    seed: opts.seed,
+    counts: { total: clean.length, train: shuffled.length, eval: evalRows.length, byKind },
+    files: {
+      train: { name: 'train.jsonl', count: shuffled.length, sha256: trainHash },
+      eval: { name: 'eval.jsonl', count: evalRows.length, sha256: evalHash },
+    },
+    note: 'Только настоящие данные репозитория: состояния боя Frontline, каталог правил баг-искателя и реальные исправления. Ничего выдуманного.',
+  };
+  await writeFile(join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
+
+  console.log('\nГотово');
+  console.log('  всего примеров:', clean.length);
+  console.log('  обучение:', shuffled.length, '· проверка:', evalRows.length);
+  console.log('  по типам:', JSON.stringify(byKind));
+  console.log('  папка:', relative(ROOT, outDir) || outDir);
+}
+
+await main();

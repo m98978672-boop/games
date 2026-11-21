@@ -444,8 +444,19 @@ const server = http.createServer(async (req, res) => {
         return json(res, 200, { ok: true });
       }
       if (action === 'drift') {
+        /* У отчёта два разных «ок»: запрос выполнен (HTTP 200) и каталог
+           совпадает с диском. Раньше поле ok из отчёта перетирало флаг
+           успешного запроса, и клиент не мог отличить «всё хорошо» от
+           «каталог отстал, но сервер ответил». Теперь они раздельные. */
         const report = await catalogDrift(body.limit);
-        return json(res, 200, { ok: true, ...report, hint: report.ok ? 'каталог актуален' : 'пересоберите: node tools/torrent/build-catalog.mjs' });
+        return json(res, 200, {
+          ok: true,
+          catalogFresh: report.ok,
+          drift: report.drift,
+          checked: report.checked,
+          truncated: report.truncated,
+          hint: report.ok ? 'каталог актуален' : 'пересоберите: node tools/torrent/build-catalog.mjs',
+        });
       }
       if (action === 'catalog') {
         return json(res, 200, { ok: true, catalog: state.catalog });

@@ -5,16 +5,33 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 
 const run = promisify(execFile);
 
 /* эти тесты бот не запускает: им нужен настоящий браузер, видеокарта,
    картинки-эталоны или сеть */
-const HEAVY = /(browser|render|preview|shot|screenshot|perf|view|texview|dashview|cabview|softview|diag|benchmark|device|autopilot|seams)/i;
+const HEAVY = /(browser|render|preview|shot|screenshot|perf|view|texview|dashview|cabview|softview|diag|benchmark|device|autopilot|seams|covers|phone-features|shaderlog|site-check|robust)/i;
+
+/* Папка с package.json рядом с тестом: subir до первого найденного,
+   но не выше корня репозитория. */
+export function ownPackageDir(root, test) {
+  let dir = dirname(join(root, test));
+  for (let i = 0; i < 3; i++) {
+    if (existsSync(join(dir, 'package.json'))) return dir;
+    const up = dirname(dir);
+    if (!up.startsWith(root) || up === dir) break;
+    dir = up;
+  }
+  return null;
+}
 
 export function testsOf(project) {
   return project.tests
+    /* Собранные бандлы (*.bundle.js, .harness-bundle.js) — это выход
+       сборки, а не тест: они рассчитывают на браузер и падают
+       «window is not defined». Запускать их напрямую в Node бессмысленно. */
+    .filter((t) => !/\.bundle\.(m?js)$/i.test(t))
     .filter((t) => !/\/_[^/]+\.mjs$/.test(t))     /* _файлы — вспомогательные */
     .filter((t) => !HEAVY.test(t.slice(t.lastIndexOf('/') + 1)))
     .sort();
@@ -25,14 +42,40 @@ export async function runTests(root, project, opts = {}) {
   const ran = [];
   const skipped = [];
   const list = testsOf(project);
-  const needsDeps = project.hasPackage && !project.hasNodeModules;
+  /* Тест может лежать не в корне проекта, а в собственной папке со своим
+     package.json (tools/razlom-web/test.mjs требует playwright). Тогда
+     «нет node_modules» надо смотреть рядом с тестом, иначе бот падает
+     ERR_MODULE_NOT_FOUND и записывает это как дефект игры. */
+  /* Зависимости — вопрос отдельной папки, а не всего проекта: у проекта
+     tools одни тесты самодостаточны, а tools/razlom-web требует
+     playwright. Поэтому решаем для каждого теста отдельно, иначе один
+     тяжёлый сосед утаскивает в пропуск все остальные. */
+  const needsDepsFor = (test) => {
+    const ownPkg = ownPackageDir(root, test);
+    if (ownPkg) return !existsSync(join(ownPkg, 'node_modules'));
+    return project.hasPackage && !project.hasNodeModules;
+  };
 
   for (const test of list) {
-    if (needsDeps) { skipped.push({ test, why: 'не установлены зависимости (npm i)' }); continue; }
+    if (needsDepsFor(test)) { skipped.push({ test, why: 'не установлены зависимости (npm i)' }); continue; }
     const started = Date.now();
     try {
+      /* Рабочая папка — папка самого теста, а не корень репозитория.
+         Тесты игр читают файлы относительно себя (`assets/kenney/…`,
+         `src/main.js`, `tests/.harness-bundle.js`), поэтому запуск из
+         корня давал пачку ложных «тест не проходит: ENOENT» — так были
+         оболганы night-taxi, last-shore и euro-haul. Путь к файлу
+         остаётся абсолютным, меняется только cwd. */
+      /* Рабочая папка — папка проекта, а не корень репозитория. Тесты игр
+         читают файлы относительно себя (`assets/kenney/…`, `src/main.js`,
+         `tests/.harness-bundle.js`), поэтому запуск из корня давал пачку
+         ложных «тест не проходит: ENOENT» — так были оболганы night-taxi,
+         last-shore и euro-haul. Берём папку из пути самого теста
+         (`night-taxi/tests/ui.mjs` → `night-taxi`). */
+      const testDir = dirname(join(root, test));
+      const projectDir = basename(testDir) === 'tests' ? dirname(testDir) : testDir;
       const { stdout } = await run(process.execPath, [join(root, test)], {
-        cwd: root, timeout: opts.timeout || 240000, maxBuffer: 32 * 1024 * 1024,
+        cwd: projectDir, timeout: opts.timeout || 240000, maxBuffer: 32 * 1024 * 1024,
         env: { ...process.env, BUGHUNT: '1' },
       });
       ran.push({ test, ms: Date.now() - started, ok: true, tail: tail(stdout) });
@@ -47,6 +90,16 @@ export async function runTests(root, project, opts = {}) {
         ran.push({ test, ms: Date.now() - started, ok: false, tail: tail(out) });
         continue;
       }
+      /* Тест, которому не хватило браузера, — это не дефект игры. В
+         песочнице без libnspr4 Chromium падает с «Failed to launch the
+         browser process: Code 127», и бот честно писал «тест не проходит»
+         на пять браузерных тестов LAST SHORE. Различаем: не смогли
+         запустить браузер → пропуск; тест упал по существу → находка. */
+      if (/Failed to launch the browser process|error while loading shared libraries|Code: 127|browserType\.launch/i.test(out)) {
+        skipped.push({ test, why: 'нужен браузер, а он в этой среде не запускается' });
+        ran.push({ test, ms: Date.now() - started, ok: true, tail: 'пропуск: браузер недоступен' });
+        continue;
+      }
       const lines = out.split('\n').filter((l) => /✗|Error|error|провал|Провалено|AssertionError|not ok/.test(l));
       findings.push({
         rule: 'тест-падает', severity: 'критично', project: project.name, file: test, line: 1,
@@ -57,7 +110,9 @@ export async function runTests(root, project, opts = {}) {
       ran.push({ test, ms: Date.now() - started, ok: false, tail: tail(out) });
     }
   }
-  if (needsDeps && list.length) {
+  /* Отдельная строка про package.json — только если из-за зависимостей
+     не запустился ни один тест. Иначе шум: часть тестов отработала. */
+  if (list.length && !ran.length && skipped.length >= list.length) {
     skipped.push({ test: project.name + '/package.json', why: 'npm-зависимости не установлены' });
   }
   return { findings, ran, skipped };

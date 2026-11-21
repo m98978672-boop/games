@@ -87,6 +87,49 @@
   .start-item2:hover{background:#e8f0fe;}
   .start-item2 .ic{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:16px;border-radius:4px;background:#fff;border:1px solid #ccc;}
   .start-right{flex:1;overflow:auto;padding:8px;}
+
+  /* ---------- Калькулятор ---------- */
+  .calc-app{padding:10px;background:#f3f3f3;}
+  .calc-screen{background:#1b1b1b;color:#7dfc8a;font:600 24px/1.2 'Consolas',monospace;padding:10px 12px;border-radius:4px;text-align:right;overflow:hidden;text-overflow:ellipsis;}
+  .calc-mem{height:16px;font:11px 'Consolas',monospace;color:#666;text-align:right;padding:2px 4px;}
+  .calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px;}
+  .calc-key{padding:10px 0;font:600 14px 'Segoe UI',sans-serif;background:#fff;border:1px solid #c8c8c8;border-radius:4px;cursor:pointer;}
+  .calc-key:hover{background:#eaf2ff;}
+  .calc-key:active{background:#d7e6ff;}
+  .calc-eq{background:#0b61d8;color:#fff;border-color:#0a4fae;}
+  .calc-eq:hover{background:#0a54bd;}
+  .calc-history{margin-top:8px;max-height:96px;overflow:auto;font:11px 'Consolas',monospace;color:#555;}
+  .calc-hist-item{padding:2px 4px;border-bottom:1px dashed #ddd;}
+
+  /* ---------- Блокнот ---------- */
+  .notes-app{display:grid;grid-template-columns:170px 1fr;height:100%;background:#f7f7f7;}
+  .notes-side{border-right:1px solid #d8d8d8;display:flex;flex-direction:column;min-height:0;}
+  .notes-head{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:7px 8px;border-bottom:1px solid #d8d8d8;font:600 11px 'Segoe UI',sans-serif;}
+  .notes-list{overflow:auto;flex:1;min-height:0;}
+  .notes-item{padding:6px 8px;border-bottom:1px solid #e6e6e6;cursor:pointer;font:11px 'Segoe UI',sans-serif;}
+  .notes-item:hover{background:#eaf2ff;}
+  .notes-item.active{background:#d7e6ff;}
+  .notes-item b{display:block;font-size:11.5px;}
+  .notes-item span{display:block;color:#777;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .notes-empty{padding:10px;font:11px 'Segoe UI',sans-serif;color:#888;}
+  .notes-main{display:flex;flex-direction:column;min-height:0;}
+  .notes-title{border:0;border-bottom:1px solid #e0e0e0;padding:8px 10px;font:600 13px 'Segoe UI',sans-serif;background:#fff;}
+  .notes-body{flex:1;min-height:120px;border:0;resize:none;padding:10px;font:12px/1.6 'Segoe UI',sans-serif;background:#fff;}
+  .notes-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border-top:1px solid #e0e0e0;background:#f3f3f3;}
+  .notes-status{font:10.5px 'Segoe UI',sans-serif;color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  /* ---------- Права доступа ---------- */
+  .access-app{padding:10px;font:12px 'Segoe UI',sans-serif;background:#fafafa;overflow:auto;}
+  .access-hint{font-size:11px;color:#555;margin:0 0 8px;}
+  .access-path{display:flex;gap:6px;margin-bottom:8px;}
+  .access-path input{flex:1;padding:6px 8px;border:1px solid #c8c8c8;border-radius:4px;font:12px 'Consolas',monospace;}
+  .access-list{border:1px solid #dcdcdc;border-radius:4px;background:#fff;max-height:260px;overflow:auto;}
+  .access-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 8px;border-bottom:1px solid #eee;}
+  .access-row:last-child{border-bottom:0;}
+  .access-name{font:11.5px 'Consolas',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .access-user{display:flex;align-items:center;gap:4px;font-size:10.5px;color:#555;}
+  .access-user span{color:#333;font-weight:600;margin-right:2px;}
+  .access-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;}
   .start-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;}
   .start-grid-item{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 6px;border-radius:4px;cursor:pointer;font-size:11px;color:#000;text-shadow:0 1px 1px rgba(255,255,255,0.8);}
   .start-grid-item:hover{background:#e8f0fe;}
@@ -212,7 +255,7 @@ const defaultFS={
     '/dev/console':{type:'file',name:'console',path:'/dev/console',content:'system console',mtime:Date.now()},
     '/etc':{type:'dir',name:'etc',path:'/etc',children:['hostname','version','apps.conf'],mtime:Date.now()},
     '/etc/hostname':{type:'file',name:'hostname',path:'/etc/hostname',content:'folder-os',mtime:Date.now()},
-    '/etc/version':{type:'file',name:'version',path:'/etc/version',content:'Folder OS 3.1.0 (folder/kernel-based + games)',mtime:Date.now()},
+    '/etc/version':{type:'file',name:'version',path:'/etc/version',content:'Folder OS 3.2.0 (folder/kernel-based + games)',mtime:Date.now()},
     '/etc/apps.conf':{type:'file',name:'apps.conf',path:'/etc/apps.conf',content:'filemanager\nterminal\neditor\nsettings\nabout',mtime:Date.now()},
     '/home':{type:'dir',name:'home',path:'/home',children:['user'],mtime:Date.now()},
     '/home/user':{type:'dir',name:'user',path:'/home/user',children:['documents','downloads','readme.txt','Games'],mtime:Date.now()},
@@ -221,7 +264,7 @@ const defaultFS={
     '/home/user/Games':{type:'dir',name:'Games',path:'/home/user/Games',children:['lastshore','frontline'],mtime:Date.now()},
     '/home/user/Games/lastshore':{type:'file',name:'lastshore',path:'/home/user/Games/lastshore',content:'game: LAST SHORE\nurl: ../last-shore/index.html\ntype: internal\ndesc: 3D-выживание на необитаемом острове',mtime:Date.now()},
     '/home/user/Games/frontline':{type:'file',name:'frontline',path:'/home/user/Games/frontline',content:'game: Линия Фронта\nurl: ../frontline-steel-and-drones/play.html\ntype: internal\ndesc: Стратегия современной войны в реальном времени',mtime:Date.now()},
-    '/home/user/readme.txt':{type:'file',name:'readme.txt',path:'/home/user/readme.txt',content:'Добро пожаловать в Folder OS 3.1!\n\nАрхитектура:\n  /sys/kernel  - активное ядро (папка, читает файлы, принимает решения)\n  /sys/cpu/coreN  - ядер-папки процессора (inbox, out, status, load, current)\n  /ram  - оперативная память (временная, очищается при ребуте)\n  /proc/PID  - папка процесса с файлами состояния\n  /home/user/Games  - папка с играми\n\nПопробуйте:\n  cat /sys/kernel/scheduler/state\n  cat /sys/cpu/core0/status\n  ls /home/user/Games\n  play lastshore\n  play frontline\n  help\n',mtime:Date.now()},
+    '/home/user/readme.txt':{type:'file',name:'readme.txt',path:'/home/user/readme.txt',content:'Добро пожаловать в Folder OS 3.2!\n\nАрхитектура:\n  /sys/kernel  - активное ядро (папка, читает файлы, принимает решения)\n  /sys/cpu/coreN  - ядер-папки процессора (inbox, out, status, load, current)\n  /ram  - оперативная память (временная, очищается при ребуте)\n  /proc/PID  - папка процесса с файлами состояния\n  /home/user/Games  - папка с играми\n\nПопробуйте:\n  cat /sys/kernel/scheduler/state\n  cat /sys/cpu/core0/status\n  ls /home/user/Games\n  play lastshore\n  play frontline\n  help\n',mtime:Date.now()},
     '/proc':{type:'dir',name:'proc',path:'/proc',children:[],mtime:Date.now()},
     '/ram':{type:'dir',name:'ram',path:'/ram',children:[],mtime:Date.now()},
     '/sys':{type:'dir',name:'sys',path:'/sys',children:['kernel','cpu'],mtime:Date.now()},
@@ -264,7 +307,10 @@ const defaultFS={
     '/sys/cpu/core3/current':{type:'file',name:'current',path:'/sys/cpu/core3/current',content:'-',mtime:Date.now()},
     '/tmp':{type:'dir',name:'tmp',path:'/tmp',children:[],mtime:Date.now()},
     '/usr':{type:'dir',name:'usr',path:'/usr',children:['apps'],mtime:Date.now()},
-    '/usr/apps':{type:'dir',name:'apps',path:'/usr/apps',children:['filemanager.app','terminal.app','editor.app','settings.app','about.app'],mtime:Date.now()},
+    '/usr/apps':{type:'dir',name:'apps',path:'/usr/apps',children:['filemanager.app','terminal.app','editor.app','calc.app','notes.app','access.app','settings.app','about.app'],mtime:Date.now()},
+    '/usr/apps/calc.app':{type:'file',name:'calc.app',path:'/usr/apps/calc.app',content:'app: calc\nicon: 🧮\ndesc: Калькулятор - арифметика с историей вычислений',mtime:Date.now()},
+    '/usr/apps/notes.app':{type:'file',name:'notes.app',path:'/usr/apps/notes.app',content:'app: notes\nicon: 🗒️\ndesc: Блокнот - быстрые заметки в /home/user/notes',mtime:Date.now()},
+    '/usr/apps/access.app':{type:'file',name:'access.app',path:'/usr/apps/access.app',content:'app: access\nicon: 🔐\ndesc: Права доступа - чтение и запись по пользователям',mtime:Date.now()},
     '/usr/apps/filemanager.app':{type:'file',name:'filemanager.app',path:'/usr/apps/filemanager.app',content:'app: filemanager\nicon: 💾\ndesc: Файловый менеджер - навигация по папкам и файлам',mtime:Date.now()},
     '/usr/apps/terminal.app':{type:'file',name:'terminal.app',path:'/usr/apps/terminal.app',content:'app: terminal\nicon: 🖥️\ndesc: Терминал - команды для работы с папками и файлами',mtime:Date.now()},
     '/usr/apps/editor.app':{type:'file',name:'editor.app',path:'/usr/apps/editor.app',content:'app: editor\nicon: 📝\ndesc: Текстовый редактор - редактирование файлов',mtime:Date.now()},
@@ -512,7 +558,7 @@ function openGame(id){
 
 /* ===================== CORE ===================== */
 const vfs=new VFS();const kernel=new Kernel(vfs);const ram=new RAM(vfs);const cores=[new CPUCore(0,vfs),new CPUCore(1,vfs),new CPUCore(2,vfs),new CPUCore(3,vfs)];const wm=new WM();const taskbar=new Taskbar();
-const APPS=[{id:'filemanager',title:'Диск C',icon:'💾'},{id:'terminal',title:'Терминал',icon:'🖥️'},{id:'editor',title:'Редактор',icon:'📝'},{id:'settings',title:'Настройки',icon:'⚙️'},{id:'about',title:'О системе',icon:'ℹ️'}];
+const APPS=[{id:'filemanager',title:'Диск C',icon:'💾'},{id:'terminal',title:'Терминал',icon:'🖥️'},{id:'editor',title:'Редактор',icon:'📝'},{id:'calc',title:'Калькулятор',icon:'🧮'},{id:'notes',title:'Блокнот',icon:'🗒️'},{id:'access',title:'Права доступа',icon:'🔐'},{id:'settings',title:'Настройки',icon:'⚙️'},{id:'about',title:'О системе',icon:'ℹ️'}];
 function notify(msg){const n=document.getElementById('notify');n.textContent=msg;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),1800);}
 function clock(){const d=new Date();document.getElementById('clock').textContent=d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});}setInterval(clock,1000);clock();
 
@@ -531,14 +577,290 @@ document.addEventListener('keydown',(e)=>{if(e.key==='F3'){e.preventDefault();to
 function toggleMenu(force){const m=document.getElementById('start-menu');const show=force!==undefined?force:m.style.display!=='flex';m.style.display=show?'flex':'none';}document.getElementById('start-btn').onclick=(e)=>{e.stopPropagation();toggleMenu();};document.addEventListener('click',(e)=>{if(!document.getElementById('start-menu').contains(e.target)&&e.target!==document.getElementById('start-btn'))toggleMenu(false);});document.getElementById('desktop').addEventListener('click',()=>toggleMenu(false));
 
 /* ===================== APPS ===================== */
-function openFileManager(win){const c=win.content;let cur=vfs.cwd;c.innerHTML='<div class="app"><div class="fm-path" id="fm-path">/</div><div class="fm-toolbar"><button class="btn-sm primary" id="fm-mkdir">+ Папка</button><button class="btn-sm" id="fm-touch">+ Файл</button><button class="btn-sm" id="fm-refresh">⟳</button><button class="btn-sm" id="fm-up">↑ Вверх</button></div><div class="fm-list" id="fm-list"></div><div id="fm-msg" style="color:#666;font-size:12px;margin-top:6px;display:none;"></div></div>';const pe=c.querySelector('#fm-path');const le=c.querySelector('#fm-list');const me=c.querySelector('#fm-msg');function sm(t,e){me.textContent=t;me.style.color=e?'#c00':'#666';me.style.display='block';setTimeout(()=>me.style.display='none',2500);}function render(){pe.textContent=cur;const nodes=vfs.list(cur);le.innerHTML='';const up=parentPath(cur);if(up!=='/'&&up!==cur){const r=document.createElement('div');r.className='fm-row';r.innerHTML='<div class="ic">📁</div><div class="name">..</div><div class="meta">parent</div>';r.onclick=()=>{cur=up;render();};le.appendChild(r);}(nodes||[]).forEach(n=>{const r=document.createElement('div');r.className='fm-row';r.innerHTML='<div class="ic">'+(n.type==='dir'?'📁':'📄')+'</div><div class="name">'+escapeHtml(n.name)+'</div><div class="meta">'+(n.type==='dir'?'папка':'файл')+'</div>';r.ondblclick=()=>{if(n.type==='dir'){cur=vfs.join(cur,n.name);render();}else{openEditor(null,n.path);};};r.onclick=(e)=>{e.stopPropagation();le.querySelectorAll('.fm-row').forEach(x=>x.classList.remove('selected'));r.classList.add('selected');};le.appendChild(r);});}c.querySelector('#fm-mkdir').onclick=()=>{const n=prompt('Имя папка:');if(n){try{vfs.mkdir(vfs.join(cur,n));render();notify('Папка создана');}catch(e){alert(e.message);}}};c.querySelector('#fm-touch').onclick=()=>{const n=prompt('Имя файла:');if(n){try{vfs.write(vfs.join(cur,n),'');render();notify('Файл создан');}catch(e){alert(e.message);}}};c.querySelector('#fm-refresh').onclick=render;c.querySelector('#fm-up').onclick=()=>{const up=parentPath(cur);if(up!==cur){cur=up;render();}};render();return{destroy:()=>{}};}
+function openFileManager(win){const c=win.content;let cur=vfs.cwd;c.innerHTML='<div class="app"><div class="fm-path" id="fm-path">/</div><div class="fm-toolbar"><button class="btn-sm primary" id="fm-mkdir">+ Папка</button><button class="btn-sm" id="fm-touch">+ Файл</button><button class="btn-sm" id="fm-refresh">⟳</button><button class="btn-sm" id="fm-up">↑ Вверх</button></div><div class="fm-list" id="fm-list"></div><div id="fm-msg" style="color:#666;font-size:12px;margin-top:6px;display:none;"></div></div>';const pe=c.querySelector('#fm-path');const le=c.querySelector('#fm-list');const me=c.querySelector('#fm-msg');function sm(t,e){me.textContent=t;me.style.color=e?'#c00':'#666';me.style.display='block';setTimeout(()=>me.style.display='none',2500);}function render(){pe.textContent=cur;const nodes=vfs.list(cur);le.innerHTML='';const up=parentPath(cur);if(up!=='/'&&up!==cur){const r=document.createElement('div');r.className='fm-row';r.innerHTML='<div class="ic">📁</div><div class="name">..</div><div class="meta">parent</div>';r.onclick=()=>{cur=up;render();};le.appendChild(r);}(nodes||[]).forEach(n=>{const r=document.createElement('div');r.className='fm-row';r.innerHTML='<div class="ic">'+(n.type==='dir'?'📁':'📄')+'</div><div class="name">'+escapeHtml(n.name)+'</div><div class="meta">'+(n.type==='dir'?'папка':'файл')+'</div>';r.ondblclick=()=>{if(n.type==='dir'){cur=vfs.join(cur,n.name);render();}else{openEditor(null,n.path);};};r.onclick=(e)=>{e.stopPropagation();le.querySelectorAll('.fm-row').forEach(x=>x.classList.remove('selected'));r.classList.add('selected');};le.appendChild(r);});}c.querySelector('#fm-mkdir').onclick=()=>{const n=prompt('Имя папка:');if(n){try{vfs.mkdir(vfs.join(cur,n));render();notify('Папка создана');}catch(e){notify(e.message);}}};c.querySelector('#fm-touch').onclick=()=>{const n=prompt('Имя файла:');if(n){try{vfs.write(vfs.join(cur,n),'');render();notify('Файл создан');}catch(e){notify(e.message);}}};c.querySelector('#fm-refresh').onclick=render;c.querySelector('#fm-up').onclick=()=>{const up=parentPath(cur);if(up!==cur){cur=up;render();}};render();return{destroy:()=>{}};}
 const cmdHistory=[];let histIdx=0;
-function openTerminal(win){const c=win.content;c.innerHTML='<div class="app"><div class="cmd-out" id="term-out"></div><input class="term-input" id="term-in" placeholder="Введите команду (help для справки)"/></div>';const out=c.querySelector('#term-out');const inp=c.querySelector('#term-in');function line(html){const d=document.createElement('div');d.className='cmd-line';d.innerHTML=html;out.appendChild(d);out.scrollTop=out.scrollHeight;return d;}function pl(){return'<span class="prompt">'+escapeHtml(vfs.cwd)+'</span><span class="cmd">$</span> ';}line('<span class="ok">Folder OS Terminal v3.1</span><br>Всё здесь - папки и файлы. Игры: /home/user/Games и /games. Команды: play <id>, f3.<br>');line(pl()+'<span class="cmd" id="term-cur"></span>');const cl=document.getElementById('term-cur');let buf='';function rl(){cl.textContent=buf;out.scrollTop=out.scrollHeight;}inp.focus();inp.addEventListener('input',(e)=>{buf=e.target.value;rl();});inp.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();const cmd=buf.trim();buf='';inp.value='';rl();line('<span class="prompt">'+escapeHtml(vfs.cwd)+'</span><span class="cmd">$</span> <span class="cmd">'+escapeHtml(cmd)+'</span>');if(cmd)cmdHistory.push(cmd);histIdx=cmdHistory.length;runCmd(cmd);line(pl()+'<span class="cmd" id="term-cur"></span>');rl();}else if(e.key==='ArrowUp'){e.preventDefault();if(histIdx>0){histIdx--;buf=cmdHistory[histIdx]||'';inp.value=buf;rl();}}else if(e.key==='ArrowDown'){e.preventDefault();if(histIdx<cmdHistory.length-1){histIdx++;buf=cmdHistory[histIdx]||'';inp.value=buf;rl();}else{buf='';inp.value='';rl();}}});async function runCmd(cmd){if(!cmd)return;const res=await executeCommand(cmd);if(res.includes("__CLEAR__")){c.querySelector('#term-out').innerHTML='';res=res.filter(h=>h!=="__CLEAR__");}res.forEach(html=>line(html));return{destroy:()=>{}};}}
+function openTerminal(win){const c=win.content;c.innerHTML='<div class="app"><div class="cmd-out" id="term-out"></div><input class="term-input" id="term-in" placeholder="Введите команду (help для справки)"/></div>';const out=c.querySelector('#term-out');const inp=c.querySelector('#term-in');function line(html){const d=document.createElement('div');d.className='cmd-line';d.innerHTML=html;out.appendChild(d);out.scrollTop=out.scrollHeight;return d;}function pl(){return'<span class="prompt">'+escapeHtml(vfs.cwd)+'</span><span class="cmd">$</span> ';}
+    // Tab дополняет команду или путь: /ho<Tab> → /home/user/
+    function completeCmd(text){
+      const COMMANDS='ls cd pwd cat echo mkdir touch rm cp mv ps exec kill play clear uname sysinfo ram proc help'.split(' ');
+      const parts=String(text).split(' ');
+      if(parts.length===1){
+        const hits=COMMANDS.filter(c=>c.startsWith(parts[0]));
+        return hits.length===1?hits[0]+' ':text;
+      }
+      const last=parts.pop();
+      const slash=last.lastIndexOf('/');
+      const dirPart=slash>=0?last.slice(0,slash+1):'';
+      const prefix=slash>=0?last.slice(slash+1):last;
+      let base;
+      try{base=vfs.resolve(dirPart?dirPart:(vfs.cwd));}catch(e){return text;}
+      let nodes=[];
+      try{nodes=vfs.list(base)||[];}catch(e){return text;}
+      const hits=nodes.filter(n=>n.name.toLowerCase().startsWith(prefix.toLowerCase()));
+      if(!hits.length)return text;
+      if(hits.length===1){
+        const n=hits[0];
+        parts.push(dirPart+n.name+(n.type==='dir'?'/':''));
+        return parts.join(' ');
+      }
+      // Несколько вариантов: показываем общие символы, как в настоящей оболочке.
+      let common=hits[0].name;
+      hits.forEach(n=>{let i=0;while(i<common.length&&i<n.name.length&&common[i]===n.name[i])i++;common=common.slice(0,i);});
+      if(common.length>prefix.length){
+        parts.push(dirPart+common);
+        return parts.join(' ');
+      }
+      return text;
+    }
+    function completeHint(text){
+      const COMMANDS='ls cd pwd cat echo mkdir touch rm cp mv ps exec kill play clear uname sysinfo ram proc help'.split(' ');
+      const parts=String(text).split(' ');
+      if(parts.length!==1)return [];
+      return COMMANDS.filter(c=>c.startsWith(parts[0])&&parts[0]);
+    }line('<span class="ok">Folder OS Terminal v3.1</span><br>Всё здесь - папки и файлы. Игры: /home/user/Games и /games. Команды: play <id>, f3.<br>');line(pl()+'<span class="cmd" id="term-cur"></span>');const cl=document.getElementById('term-cur');let buf='';function rl(){cl.textContent=buf;out.scrollTop=out.scrollHeight;}inp.focus();inp.addEventListener('input',(e)=>{buf=e.target.value;rl();});inp.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();const cmd=buf.trim();buf='';inp.value='';rl();line('<span class="prompt">'+escapeHtml(vfs.cwd)+'</span><span class="cmd">$</span> <span class="cmd">'+escapeHtml(cmd)+'</span>');if(cmd)cmdHistory.push(cmd);histIdx=cmdHistory.length;runCmd(cmd);line(pl()+'<span class="cmd" id="term-cur"></span>');rl();}else if(e.key==='Tab'){e.preventDefault();const done=completeCmd(buf);if(done&&done!==buf){buf=done;inp.value=buf;rl();}}
+      else if(e.key==='ArrowUp'){e.preventDefault();if(histIdx>0){histIdx--;buf=cmdHistory[histIdx]||'';inp.value=buf;rl();}}else if(e.key==='ArrowDown'){e.preventDefault();if(histIdx<cmdHistory.length-1){histIdx++;buf=cmdHistory[histIdx]||'';inp.value=buf;rl();}else{buf='';inp.value='';rl();}}});async function runCmd(cmd){if(!cmd)return;const res=await executeCommand(cmd);if(res.includes("__CLEAR__")){c.querySelector('#term-out').innerHTML='';res=res.filter(h=>h!=="__CLEAR__");}res.forEach(html=>line(html));return{destroy:()=>{}};}}
 let editorWin=null;let editorPath='/home/user/readme.txt';
-function openEditor(winApp,path){if(!path)path=editorPath;editorPath=path;const title='Редактор: '+path;const ex=wm.wins.find(w=>w.app==='editor'&&w.title===title);if(ex){wm.focus(ex);return ex;}const win=wm.create(winApp||{app:'editor'},title,'📝','<div class="app"><div style="display:flex;gap:8px;margin-bottom:8px;"><div style="font-family:monospace;font-size:12px;color:#333;">'+escapeHtml(path)+'</div><button class="btn-sm primary" id="ed-save">💾 Сохранить</button><button class="btn-sm" id="ed-new">+ Новый</button></div><textarea class="editor-area" id="ed-area"></textarea><div id="ed-status" style="font-size:12px;color:#666;margin-top:4px;"></div></div>');const area=win.content.querySelector('#ed-area');const st=win.content.querySelector('#ed-status');try{area.value=vfs.read(path);}catch(e){area.value='';st.textContent='Новый файл';}let dirty=false;area.addEventListener('input',()=>{dirty=true;st.textContent='Есть несохранённые изменения';});win.content.querySelector('#ed-save').onclick=()=>{try{vfs.write(editorPath,area.value);dirty=false;st.textContent='Сохранено в '+escapeHtml(editorPath);notify('Файл сохранён');}catch(e){alert(e.message);}};win.content.querySelector('#ed-new').onclick=()=>{const n=prompt('Имя файла (например /home/user/notes.txt):');if(n){try{vfs.write(n,'');openEditor(null,n);}catch(e){alert(e.message);}}};win.onUnmount=()=>{editorWin=null;};editorWin=win;return win;}
-function openSettings(){const ex=wm.wins.find(w=>w.app==='settings');if(ex){wm.focus(ex);return ex;}const win=wm.create({app:'settings'},'Настройки','⚙️','<div class="app" style="padding:20px;"><div style="font-family:monospace;font-size:12px;color:#333;margin-bottom:16px;">Диск: folderos_v3 (localStorage)<br>ОЗУ: /ram (временное, очищается при ребуте)<br>Ядро: /sys/kernel<br>Процессор: /sys/cpu/core0..3<br>Игры: /home/user/Games, /games</div><button class="btn-sm" id="st-reset" style="color:#c00;">Сбросить ОС к заводским</button><div id="st-res-msg" class="ok-msg" style="color:#c00;margin-top:8px;"></div></div>');win.content.querySelector('#st-reset').onclick=()=>{if(confirm('Сбросить все файлы и настройки?')){vfs.reset();location.reload();}};return win;}
-function openAbout(){const ex=wm.wins.find(w=>w.app==='about');if(ex){wm.focus(ex);return ex;}return wm.create({app:'about'},'О системе','ℹ️','<div class="app" style="padding:24px;"><h2>📁 Folder OS 3.1</h2><p><b>Версия:</b> 3.1.0</p><p><b>Принцип:</b> вместо монолитного ядра - активная папка <span style="font-family:monospace">/sys/kernel</span>, которая читает файлы из /proc и /sys, принимает решения и отдаёт команды ядрам.</p><p><b>Ядро:</b> <span style="font-family:monospace">/sys/kernel/</span> - scheduler, vfs, modules.</p><p><b>Процессор:</b> <span style="font-family:monospace">/sys/cpu/core0..3</span> - ядер-папки с <span style="font-family:monospace">inbox</span>, <span style="font-family:monospace">out</span>, <span style="font-family:monospace">status/load/current</span>.</p><p><b>ОЗУ:</b> <span style="font-family:monospace">/ram</span> - временное хранилище, очищается при перезагрузке.</p><p><b>Процессы:</b> <span style="font-family:monospace">/proc/PID</span> - папка с файлами <span style="font-family:monospace">state</span>, <span style="font-family:monospace">cmd</span>, <span style="font-family:monospace">cpu</span>, <span style="font-family:monospace">pc</span>.</p><p><b>Игры:</b> <span style="font-family:monospace">/home/user/Games</span> и <span style="font-family:monospace">/games</span> - ярлыки браузерных игр.</p><p><b>Команды:</b> ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, ps, exec, kill, play, clear, uname, sysinfo, ram, proc.</p><p><b>F3:</b> инспектор устройства ОС.</p><p style="margin-top:14px;font-size:12px;color:#666;">Создано для эмуляции ОС исключительно из папок и файлов.</p></div>');}
-function openApp(id){const a=APPS.find(x=>x.id===id);if(!a){notify('Приложение не найдено: '+id);return;}if(id==='settings'){openSettings();return;}if(id==='about'){openAbout();return;}if(id==='filemanager'){wm.create({app:'filemanager'},a.title,a.icon,'',openFileManager);return;}if(id==='terminal'){wm.create({app:'terminal'},a.title,a.icon,'',openTerminal);return;}if(id==='editor'){openEditor({app:'editor'},'/home/user/readme.txt');return;}const proc=kernel.spawn(a.title,id);kernel.schedule();cores.forEach(core=>core.process());wm.create({app:id},a.title,a.icon,'<div class="app" style="padding:24px;color:#333;"><h2>'+escapeHtml(a.title)+'</h2><p>Ядро создало процесс <b>PID '+proc.pid+'</b> в папке <span style="font-family:monospace">/proc/'+proc.pid+'</span>.</p><p>Код скопирован в ОЗУ <span style="font-family:monospace">/ram/'+proc.pid+'/code</span> (временное).</p><p>Задача положена в inbox ядра и обработана - всё работает на папках и файлах.</p></div>');}
+function openEditor(winApp,path){if(!path)path=editorPath;editorPath=path;const title='Редактор: '+path;const ex=wm.wins.find(w=>w.app==='editor'&&w.title===title);if(ex){wm.focus(ex);return ex;}const win=wm.create(winApp||{app:'editor'},title,'📝','<div class="app"><div style="display:flex;gap:8px;margin-bottom:8px;"><div style="font-family:monospace;font-size:12px;color:#333;">'+escapeHtml(path)+'</div><button class="btn-sm primary" id="ed-save">💾 Сохранить</button><button class="btn-sm" id="ed-new">+ Новый</button></div><textarea class="editor-area" id="ed-area"></textarea><div id="ed-status" style="font-size:12px;color:#666;margin-top:4px;"></div></div>');const area=win.content.querySelector('#ed-area');const st=win.content.querySelector('#ed-status');try{area.value=vfs.read(path);}catch(e){area.value='';st.textContent='Новый файл';}let dirty=false;area.addEventListener('input',()=>{dirty=true;st.textContent='Есть несохранённые изменения';});win.content.querySelector('#ed-save').onclick=()=>{try{vfs.write(editorPath,area.value);dirty=false;st.textContent='Сохранено в '+escapeHtml(editorPath);notify('Файл сохранён');}catch(e){notify(e.message);}};win.content.querySelector('#ed-new').onclick=()=>{const n=prompt('Имя файла (например /home/user/notes.txt):');if(n){try{vfs.write(n,'');openEditor(null,n);}catch(e){notify(e.message);}}};win.onUnmount=()=>{editorWin=null;};editorWin=win;return win;}
+function openSettings(){const ex=wm.wins.find(w=>w.app==='settings');if(ex){wm.focus(ex);return ex;}const win=wm.create({app:'settings'},'Настройки','⚙️','<div class="app" style="padding:20px;"><div style="font-family:monospace;font-size:12px;color:#333;margin-bottom:16px;">Диск: folderos_v3 (localStorage)<br>ОЗУ: /ram (временное, очищается при ребуте)<br>Ядро: /sys/kernel<br>Процессор: /sys/cpu/core0..3<br>Игры: /home/user/Games, /games</div><button class="btn-sm" id="st-reset" style="color:#c00;">Сбросить ОС к заводским</button><div id="st-res-msg" class="ok-msg" style="color:#c00;margin-top:8px;"></div><div style="margin-top:18px;padding-top:14px;border-top:1px solid #ddd;"><b style="font-size:12px;">Диск в файл</b><p style="font-size:11px;color:#666;margin:4px 0 8px;">Снимок всей файловой системы: папки, файлы, настройки. Пригодится для переноса ОС на другой компьютер.</p><button class="btn-sm" id="st-export">Экспорт диска</button> <button class="btn-sm" id="st-import">Импорт диска</button><input type="file" id="st-import-file" accept="application/json,.json" hidden><div id="st-disk-msg" style="font-size:11px;color:#666;margin-top:6px;"></div></div></div>');win.content.querySelector('#st-reset').onclick=()=>{if(confirm('Сбросить все файлы и настройки?')){vfs.reset();location.reload();}};
+  const diskMsg=win.content.querySelector('#st-disk-msg');
+  win.content.querySelector('#st-export').onclick=()=>{
+    const payload={app:'folder-os',version:3,exportedAt:new Date().toISOString(),cwd:vfs.cwd,nodes:vfs.nodes};
+    const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');
+    a.href=url;a.download='folderos-disk-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
+    diskMsg.textContent='Диск сохранён в файл ('+Object.keys(vfs.nodes).length+' объектов).';
+  };
+  win.content.querySelector('#st-import').onclick=()=>win.content.querySelector('#st-import-file').click();
+  win.content.querySelector('#st-import-file').onchange=(e)=>{
+    const file=e.target.files&&e.target.files[0];if(!file)return;
+    const fr=new FileReader();
+    fr.onload=()=>{
+      let data;
+      try{data=JSON.parse(String(fr.result||''));}catch(err){diskMsg.textContent='Файл повреждён: это не JSON.';return;}
+      if(!data||typeof data!=='object'||!data.nodes||typeof data.nodes!=='object'){diskMsg.textContent='В файле нет описания диска.';return;}
+      const keys=Object.keys(data.nodes);
+      if(!keys.length){diskMsg.textContent='Диск в файле пуст — импорт отменён.';return;}
+      if(!confirm('Заменить текущий диск содержимым файла? Текущие файлы будут потеряны.'))return;
+      const clean={};
+      keys.forEach(k=>{const n=data.nodes[k];if(!n||typeof n!=='object')return;
+        clean[k]={type:n.type==='dir'?'dir':'file',name:String(n.name||''),path:k,
+          content:n.type==='dir'?undefined:String(n.content==null?'':n.content),
+          children:Array.isArray(n.children)?n.children.filter(c=>typeof c==='string'):[],
+          mtime:Number(n.mtime)||Date.now()};
+      });
+      vfs.nodes=clean;if(typeof data.cwd==='string'&&clean[data.cwd])vfs.cwd=data.cwd;
+      vfs.save();location.reload();
+    };
+    fr.onerror=()=>{diskMsg.textContent='Не удалось прочитать файл.';};
+    fr.readAsText(file);e.target.value='';
+  };
+  return win;}
+function openAbout(){const ex=wm.wins.find(w=>w.app==='about');if(ex){wm.focus(ex);return ex;}return wm.create({app:'about'},'О системе','ℹ️','<div class="app" style="padding:24px;"><h2>📁 Folder OS 3.2</h2><p><b>Версия:</b> 3.2.0</p><p><b>Принцип:</b> вместо монолитного ядра - активная папка <span style="font-family:monospace">/sys/kernel</span>, которая читает файлы из /proc и /sys, принимает решения и отдаёт команды ядрам.</p><p><b>Ядро:</b> <span style="font-family:monospace">/sys/kernel/</span> - scheduler, vfs, modules.</p><p><b>Процессор:</b> <span style="font-family:monospace">/sys/cpu/core0..3</span> - ядер-папки с <span style="font-family:monospace">inbox</span>, <span style="font-family:monospace">out</span>, <span style="font-family:monospace">status/load/current</span>.</p><p><b>ОЗУ:</b> <span style="font-family:monospace">/ram</span> - временное хранилище, очищается при перезагрузке.</p><p><b>Процессы:</b> <span style="font-family:monospace">/proc/PID</span> - папка с файлами <span style="font-family:monospace">state</span>, <span style="font-family:monospace">cmd</span>, <span style="font-family:monospace">cpu</span>, <span style="font-family:monospace">pc</span>.</p><p><b>Игры:</b> <span style="font-family:monospace">/home/user/Games</span> и <span style="font-family:monospace">/games</span> - ярлыки браузерных игр.</p><p><b>Команды:</b> ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, ps, exec, kill, play, clear, uname, sysinfo, ram, proc.</p><p><b>F3:</b> инспектор устройства ОС.</p><p style="margin-top:14px;font-size:12px;color:#666;">Создано для эмуляции ОС исключительно из папок и файлов.</p></div>');}
+/* ------------------------------------------------------------ Калькулятор */
+function openCalc(){
+  const ex=wm.wins.find(w=>w.app==='calc');if(ex){wm.focus(ex);return ex;}
+  const win=wm.create({app:'calc'},'Калькулятор','🧮','<div class="app calc-app">'+
+    '<div class="calc-screen" id="calc-screen">0</div>'+
+    '<div class="calc-mem" id="calc-mem"></div>'+
+    '<div class="calc-grid">'+
+    ['C','⌫','%','÷','7','8','9','×','4','5','6','−','1','2','3','+','±','0','.','='].map(k=>'<button class="calc-key" data-k="'+k+'">'+k+'</button>').join('')+
+    '</div><div class="calc-history" id="calc-history"></div></div>');
+  const screen=win.content.querySelector('#calc-screen');
+  const mem=win.content.querySelector('#calc-mem');
+  const histBox=win.content.querySelector('#calc-history');
+  let cur='0', prev=null, op=null, justEval=false;
+  const history=[];
+  function fmt(n){
+    if(!Number.isFinite(n))return 'Ошибка';
+    const r=Math.round(n*1e10)/1e10;
+    return String(r).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');
+  }
+  function paint(){screen.textContent=cur;mem.textContent=op?fmt(prev)+' '+op:'';}
+  function calc(a,b,o){
+    if(o==='+')return a+b;if(o==='−')return a-b;if(o==='×')return a*b;
+    if(o==='÷')return b===0?NaN:a/b;return b;
+  }
+  function press(k){
+    if(k==='C'){cur='0';prev=null;op=null;justEval=false;paint();return;}
+    if(k==='⌫'){cur=cur.length>1?cur.slice(0,-1):'0';paint();return;}
+    if(k==='±'){cur=cur.startsWith('-')?cur.slice(1):(cur==='0'?cur:'-'+cur);paint();return;}
+    if(k==='%'){cur=fmt(parseFloat(cur)/100);paint();return;}
+    if('0123456789'.includes(k)){
+      if(justEval){cur='0';justEval=false;}
+      cur=cur==='0'?k:cur+k;paint();return;
+    }
+    if(k==='.'){if(justEval){cur='0';justEval=false;}if(!cur.includes('.'))cur+='.';paint();return;}
+    if('+−×÷'.includes(k)){
+      if(op&&!justEval){const r=calc(prev,parseFloat(cur),op);if(!Number.isFinite(r)){cur='Ошибка';prev=null;op=null;paint();return;}prev=r;cur=fmt(r);}
+      else prev=parseFloat(cur);
+      op=k;justEval=false;paint();return;
+    }
+    if(k==='='){
+      if(!op)return;
+      const b=parseFloat(cur),r=calc(prev,b,op);
+      const line=fmt(prev)+' '+op+' '+fmt(b)+' = '+(Number.isFinite(r)?fmt(r):'деление на ноль');
+      history.unshift(line);if(history.length>8)history.pop();
+      histBox.innerHTML=history.map(h=>'<div class="calc-hist-item">'+escapeHtml(h)+'</div>').join('');
+      cur=Number.isFinite(r)?fmt(r):'Ошибка';prev=null;op=null;justEval=true;paint();return;
+    }
+  }
+  win.content.querySelectorAll('.calc-key').forEach(b=>{
+    b.onclick=()=>press(b.dataset.k);
+    b.classList.toggle('calc-eq',b.dataset.k==='=');
+  });
+  win.onKey=(e)=>{
+    const k=e.key;
+    const map={'*':'×','/':'÷','-':'−','Enter':'=','Escape':'C','Backspace':'⌫'};
+    if(k==='Tab'||e.target.tagName==='INPUT')return false;
+    if('0123456789.+'.includes(k)&&k.length===1){press(k);return true;}
+    if(map[k]){press(map[k]);return true;}
+    return false;
+  };
+  paint();
+  return win;
+}
+
+/* --------------------------------------------------------------- Блокнот */
+function openNotes(){
+  const ex=wm.wins.find(w=>w.app==='notes');if(ex){wm.focus(ex);return ex;}
+  const dir='/home/user/notes';
+  try{vfs.mkdir(dir,'');}catch(e){}
+  const win=wm.create({app:'notes'},'Блокнот','🗒️','<div class="app notes-app">'+
+    '<div class="notes-side"><div class="notes-head"><span>Заметки</span><button class="btn-sm primary" id="nt-new">+ Новая</button></div><div class="notes-list" id="nt-list"></div></div>'+
+    '<div class="notes-main"><input class="notes-title" id="nt-title" placeholder="Заголовок" aria-label="Заголовок заметки">'+
+    '<textarea class="notes-body" id="nt-body" placeholder="Текст заметки…" aria-label="Текст заметки"></textarea>'+
+    '<div class="notes-foot"><span id="nt-status" class="notes-status"></span><span><button class="btn-sm primary" id="nt-save">💾 Сохранить</button> <button class="btn-sm" id="nt-del">Удалить</button></span></div></div></div>');
+  const list=win.content.querySelector('#nt-list');
+  const title=win.content.querySelector('#nt-title');
+  const body=win.content.querySelector('#nt-body');
+  const status=win.content.querySelector('#nt-status');
+  let current=null;
+  function notes(){
+    try{return (vfs.list(dir)||[]).filter(n=>n.type==='file'&&/\.txt$/.test(n.name));}catch(e){return [];}
+  }
+  function slug(t){
+    const base=(t||'note').toLowerCase().replace(/[^a-zа-я0-9]+/gi,'-').replace(/^-|-$/g,'').slice(0,40)||'note';
+    let name=base+'.txt',i=2;
+    while(vfs.nodes[vfs.join(dir,name)]){name=base+'-'+(i++)+'.txt';}
+    return vfs.join(dir,name);
+  }
+  function renderList(){
+    const items=notes();
+    list.innerHTML='';
+    if(!items.length){list.innerHTML='<div class="notes-empty">Заметок пока нет</div>';return;}
+    items.forEach(n=>{
+      const row=document.createElement('div');
+      row.className='notes-item'+(current===n.path?' active':'');
+      let preview='';
+      try{preview=String(vfs.read(n.path)||'').split('\n')[0].slice(0,40);}catch(e){}
+      row.innerHTML='<b>'+escapeHtml(n.name)+'</b><span>'+escapeHtml(preview||'пусто')+'</span>';
+      row.onclick=()=>loadNote(n.path);
+      list.appendChild(row);
+    });
+  }
+  function loadNote(path){
+    current=path;
+    try{body.value=String(vfs.read(path)||'');}catch(e){body.value='';}
+    title.value=path.split('/').pop().replace(/\.txt$/,'');
+    status.textContent='Открыта '+path;
+    renderList();
+  }
+  function newNote(){
+    const path=slug('заметка');
+    try{vfs.write(path,'');}catch(e){notify(e.message);return;}
+    loadNote(path);
+    title.focus();
+    title.select();
+  }
+  win.content.querySelector('#nt-new').onclick=newNote;
+  win.content.querySelector('#nt-save').onclick=()=>{
+    if(!current){newNote();return;}
+    try{
+      vfs.write(current,body.value);
+      const wanted=title.value.trim();
+      if(wanted){
+        const target=vfs.join(dir,wanted.replace(/[\\/:*?"<>|]/g,'-').slice(0,60)+'.txt');
+        if(target!==current&&!vfs.nodes[target]){vfs.write(target,body.value);vfs.remove(current);current=target;}
+      }
+      status.textContent='Сохранено в '+current;
+      notify('Заметка сохранена');
+      renderList();
+    }catch(e){status.textContent='Ошибка: '+e.message;}
+  };
+  win.content.querySelector('#nt-del').onclick=()=>{
+    if(!current)return;
+    if(!confirm('Удалить заметку '+current+'?'))return;
+    try{vfs.remove(current);}catch(e){notify(e.message);return;}
+    current=null;title.value='';body.value='';status.textContent='Заметка удалена';
+    renderList();
+  };
+  renderList();
+  return win;
+}
+
+/* ---------------------------------------------------------- Права доступа */
+function openAccess(){
+  const ex=wm.wins.find(w=>w.app==='access');if(ex){wm.focus(ex);return ex;}
+  const ACL='/etc/access.json';
+  const USERS=[{id:'user',title:'Пользователь'},{id:'guest',title:'Гость'},{id:'root',title:'Администратор'}];
+  function readAcl(){
+    try{const raw=vfs.read(ACL);return raw?JSON.parse(raw):{};}catch(e){return {};}
+  }
+  function writeAcl(a){try{vfs.write(ACL,JSON.stringify(a,null,1));}catch(e){}}
+  const win=wm.create({app:'access'},'Права доступа','🔐','<div class="app access-app">'+
+    '<p class="access-hint">Кто что может: <b>чтение</b> и <b>запись</b> для каждого пути. Администратор может всё.</p>'+
+    '<div class="access-path"><input id="ac-path" value="/home/user" aria-label="Путь"><button class="btn-sm" id="ac-load">Показать</button></div>'+
+    '<div class="access-list" id="ac-list"></div>'+
+    '<div class="access-foot"><span id="ac-status" class="notes-status"></span><button class="btn-sm primary" id="ac-save">Применить</button></div></div>');
+  const pathInput=win.content.querySelector('#ac-path');
+  const listBox=win.content.querySelector('#ac-list');
+  const status=win.content.querySelector('#ac-status');
+  let draft={};
+  function load(){
+    const p=pathInput.value.trim()||'/';
+    const acl=readAcl();draft={};
+    let items=[];
+    try{items=vfs.list(p)||[];}catch(e){listBox.innerHTML='<div class="notes-empty">Путь не найден: '+escapeHtml(p)+'</div>';return;}
+    listBox.innerHTML='';
+    items.forEach(n=>{
+      const rules=acl[n.path]||{};
+      const row=document.createElement('div');row.className='access-row';
+      row.innerHTML='<span class="access-name">'+(n.type==='dir'?'📁':'📄')+' '+escapeHtml(n.name)+'</span>'+
+        USERS.filter(u=>u.id!=='root').map(u=>'<label class="access-user"><span>'+u.title+'</span>'+
+          '<label title="чтение"><input type="checkbox" data-user="'+u.id+'" data-mode="r"'+(rules[u.id]&&rules[u.id].r?' checked':'')+'> чт</label>'+
+          '<label title="запись"><input type="checkbox" data-user="'+u.id+'" data-mode="w"'+(rules[u.id]&&rules[u.id].w?' checked':'')+'> зп</label>'+
+          '</label>').join('');
+      row.querySelectorAll('input').forEach(cb=>{
+        cb.onchange=()=>{
+          const u=cb.dataset.user,m=cb.dataset.mode;
+          draft[n.path]=draft[n.path]||JSON.parse(JSON.stringify(rules[u]?{...rules}:{...rules}));
+          draft[n.path][u]=draft[n.path][u]||{r:false,w:false};
+          draft[n.path][u][m]=cb.checked;
+        };
+      });
+      listBox.appendChild(row);
+    });
+    if(!items.length)listBox.innerHTML='<div class="notes-empty">Пустая папка</div>';
+    status.textContent='Показано: '+p+' · правил: '+Object.keys(acl).length;
+  }
+  win.content.querySelector('#ac-load').onclick=load;
+  win.content.querySelector('#ac-save').onclick=()=>{
+    const acl=readAcl();
+    Object.keys(draft).forEach(path=>{
+      acl[path]=Object.assign(acl[path]||{},draft[path]);
+    });
+    writeAcl(acl);
+    status.textContent='Правила сохранены в '+ACL;
+    notify('Права доступа обновлены');
+    draft={};
+    load();
+  };
+  load();
+  return win;
+}
+
+function openApp(id){const a=APPS.find(x=>x.id===id);if(!a){notify('Приложение не найдено: '+id);return;}if(id==='settings'){openSettings();return;}if(id==='about'){openAbout();return;}if(id==='filemanager'){wm.create({app:'filemanager'},a.title,a.icon,'',openFileManager);return;}if(id==='terminal'){wm.create({app:'terminal'},a.title,a.icon,'',openTerminal);return;}if(id==='editor'){openEditor({app:'editor'},'/home/user/readme.txt');return;}if(id==='calc'){openCalc();return;}if(id==='notes'){openNotes();return;}if(id==='access'){openAccess();return;}const proc=kernel.spawn(a.title,id);kernel.schedule();cores.forEach(core=>core.process());wm.create({app:id},a.title,a.icon,'<div class="app" style="padding:24px;color:#333;"><h2>'+escapeHtml(a.title)+'</h2><p>Ядро создало процесс <b>PID '+proc.pid+'</b> в папке <span style="font-family:monospace">/proc/'+proc.pid+'</span>.</p><p>Код скопирован в ОЗУ <span style="font-family:monospace">/ram/'+proc.pid+'/code</span> (временное).</p><p>Задача положена в inbox ядра и обработана - всё работает на папках и файлах.</p></div>');}
 setInterval(()=>{kernel.schedule();cores.forEach(core=>core.process());},700);
 setTimeout(()=>{openApp('filemanager');setTimeout(()=>openApp('terminal'),150);},200);
 </script>

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-21T08:43:04.750Z",
+  "updatedAt": "2026-11-21T09:18:44.963Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
@@ -23,10 +23,10 @@
     "lastSourcesReachable": 0,
     "categoriesCount": 6,
     "backlog": {
-      "total": 104,
-      "now": 44,
-      "future": 60,
-      "builtAt": "2026-11-18T14:07:33.421Z",
+      "total": 147,
+      "now": 84,
+      "future": 63,
+      "builtAt": "2026-11-21T09:18:44.963Z",
       "note": "Статьи очереди «на будущее» лежат с датой вперёд и раскрываются по расписанию автопоста."
     }
   },
@@ -4786,6 +4786,1673 @@
       "pinned": true,
       "autoPosted": false,
       "queue": "now"
+    },
+    {
+      "id": "backlog-games-07776c2798",
+      "code": "G-313",
+      "category": "games",
+      "title": "Godot 4 продолжает набирать обороты в браузерных сборках",
+      "summary": "Экспорт в WebAssembly у Godot 4 стал стабильнее: игры на движке всё чаще выходят прямо в браузере без плагинов.",
+      "body": [
+        "Движок Godot 4 собирает проект в WebAssembly-бандл, который запускается в любом современном браузере. Для небольших игр это значит: один HTML-файл, никакой установки."
+      ],
+      "tags": [
+        "Godot",
+        "WebAssembly",
+        "Движки"
+      ],
+      "sourceName": "Godot Engine — официальный сайт и документация",
+      "sourceUrl": "https://godotengine.org/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (Godot Engine — официальный сайт и документация)",
+          "url": "https://godotengine.org/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «Godot Engine — официальный сайт и документация»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-313.svg",
+      "imageCaption": "Обложка рубрики: Godot 4 продолжает набирать обороты в браузерных сборках",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-games-5d3b114aae",
+      "code": "G-802",
+      "category": "games",
+      "title": "Three.js остаётся самым популярным способом сделать 3D в браузере",
+      "summary": "Библиотека WebGL/WebGPU отдаёт сцену в canvas: модели, свет, тени и физику можно собрать без установки клиента.",
+      "body": [
+        "Three.js работает поверх WebGL2 и WebGPU. Игры складываются из geometry, material и renderer: браузер рисует кадры на GPU, а ассеты грузятся как обычные файлы."
+      ],
+      "tags": [
+        "Three.js",
+        "WebGL",
+        "3D"
+      ],
+      "sourceName": "Three.js — официальная документация",
+      "sourceUrl": "https://threejs.org/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (Three.js — официальная документация)",
+          "url": "https://threejs.org/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «Three.js — официальная документация»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-802.svg",
+      "imageCaption": "Обложка рубрики: Three.js остаётся самым популярным способом сделать 3D в браузере",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-games-e1fd86ed2e",
+      "code": "G-728",
+      "category": "games",
+      "title": "WebGPU открывает браузерным играм доступ к современной графике",
+      "summary": "Новый API даёт прямой доступ к GPU с меньшими накладными расходами, чем WebGL2, и уже поддерживается в основных браузерах.",
+      "body": [
+        "WebGPU описан в спецификации W3C GPU for the Web. Для игр это означает compute-шейдеры и более предсказуемую производительность на мобильных устройствах."
+      ],
+      "tags": [
+        "WebGPU",
+        "Графика",
+        "Стандарты"
+      ],
+      "sourceName": "W3C — GPU for the Web (WebGPU)",
+      "sourceUrl": "https://www.w3.org/GPU/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (W3C — GPU for the Web (WebGPU))",
+          "url": "https://www.w3.org/GPU/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «W3C — GPU for the Web (WebGPU)»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-728.svg",
+      "imageCaption": "Обложка рубрики: WebGPU открывает браузерным играм доступ к современной графике",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-games-64f5dde7b5",
+      "code": "G-557",
+      "category": "games",
+      "title": "Геймпады в браузере: Gamepad API работает без установки драйверов",
+      "summary": "Стандарт описывает, как страница читает кнопки и стики подключённого контроллера — это уже используют облачные каталоги игр.",
+      "body": [
+        "Gamepad API даёт список подключённых устройств и их состояние в каждый кадр. Раскладка кнопок стандартизирована W3C, поэтому одна игра работает с разными геймпадами."
+      ],
+      "tags": [
+        "Геймпады",
+        "API",
+        "W3C"
+      ],
+      "sourceName": "W3C — Gamepad API",
+      "sourceUrl": "https://www.w3.org/TR/gamepad/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (W3C — Gamepad API)",
+          "url": "https://www.w3.org/TR/gamepad/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «W3C — Gamepad API»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-557.svg",
+      "imageCaption": "Обложка рубрики: Геймпады в браузере: Gamepad API работает без установки драйверов",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-games-2d718baf18",
+      "code": "G-197",
+      "category": "games",
+      "title": "Пиксельные игры снова в тренде — из-за скорости загрузки",
+      "summary": "Пиксель-арт на canvas 2D весит килобайты, а не гигабайты: такие игры открываются мгновенно даже на слабом интернете.",
+      "body": [
+        "Техника Nearest Neighbor при масштабировании сохраняет резкие пиксели. В сочетании с процедурной генерацией это даёт маленький размер сборки и характерный стиль."
+      ],
+      "tags": [
+        "Пиксель-арт",
+        "Canvas",
+        "Оптимизация"
+      ],
+      "sourceName": "MDN — Canvas API",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/API/Canvas_API",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — Canvas API)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/API/Canvas_API"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — Canvas API»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-197.svg",
+      "imageCaption": "Обложка рубрики: Пиксельные игры снова в тренде — из-за скорости загрузки",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-games-996163480c",
+      "code": "G-465",
+      "category": "games",
+      "title": "Процедурная генерация экономит художникам недели работы",
+      "summary": "Города, текстуры и уровни собираются кодом по правилам: одна функция генерирует бесконечное число вариантов.",
+      "body": [
+        "Шум Перлина и клеточные автоматы дают связные карты. Разработчик задаёт правила, а не рисует каждый тайл, поэтому правка баланса занимает минуты."
+      ],
+      "tags": [
+        "Процедурная генерация",
+        "Шум",
+        "Уровни"
+      ],
+      "sourceName": "The Book of Shaders — процедурные техники",
+      "sourceUrl": "https://thebookofshaders.com/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Book of Shaders — процедурные техники)",
+          "url": "https://thebookofshaders.com/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «The Book of Shaders — процедурные техники»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-465.svg",
+      "imageCaption": "Обложка рубрики: Процедурная генерация экономит художникам недели работы",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-games-aee2292f5f",
+      "code": "G-695",
+      "category": "games",
+      "title": "Сохранения в браузере: IndexedDB надёжнее localStorage",
+      "summary": "Для больших сохранений с картинками и журналами нужна база: localStorage ограничен примерно 5 МБ на сайт.",
+      "body": [
+        "IndexedDB хранит структурированные объекты и бинарные данные, работает асинхронно и переживает перезапуск браузера. Экспорт сохранения в файл делает его переносимым."
+      ],
+      "tags": [
+        "Сохранения",
+        "IndexedDB",
+        "Данные"
+      ],
+      "sourceName": "MDN — IndexedDB API",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/API/IndexedDB_API",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — IndexedDB API)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/API/IndexedDB_API"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — IndexedDB API»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-695.svg",
+      "imageCaption": "Обложка рубрики: Сохранения в браузере: IndexedDB надёжнее localStorage",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-games-098cc8163a",
+      "code": "G-890",
+      "category": "games",
+      "title": "PWA-режим позволяет «установить» браузерную игру на телефон",
+      "summary": "Манифест и service worker дают иконку на домашнем экране и запуск без адресной строки.",
+      "body": [
+        "PWA не требует магазинов приложений: достаточно manifest.webmanifest и кеширующего service worker. Обновления приходят при следующем открытии."
+      ],
+      "tags": [
+        "PWA",
+        "Мобильные",
+        "Установка"
+      ],
+      "sourceName": "MDN — Progressive web apps",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/Progressive_web_apps",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — Progressive web apps)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/Progressive_web_apps"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — Progressive web apps»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-890.svg",
+      "imageCaption": "Обложка рубрики: PWA-режим позволяет «установить» браузерную игру на телефон",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-tech-12d9dce1c7",
+      "code": "T-987",
+      "category": "tech",
+      "title": "WebAssembly 2.0 приближает десктопную производительность к браузеру",
+      "summary": "Wasm уже исполняет код на десятки процентов быстрее JavaScript в тяжёлых задачах: физике, сжатии, обработке звука.",
+      "body": [
+        "WebAssembly — бинарный формат, который браузер компилирует в машинный код. Компиляторы C, C++, Rust и Zig умеют собирать в wasm напрямую."
+      ],
+      "tags": [
+        "WebAssembly",
+        "Производительность"
+      ],
+      "sourceName": "WebAssembly — официальный сайт",
+      "sourceUrl": "https://webassembly.org/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (WebAssembly — официальный сайт)",
+          "url": "https://webassembly.org/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «WebAssembly — официальный сайт»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/t-987.svg",
+      "imageCaption": "Обложка рубрики: WebAssembly 2.0 приближает десктопную производительность к браузеру",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-tech-c2b039b407",
+      "code": "T-795",
+      "category": "tech",
+      "title": "Нейросети на устройстве: ONNX Runtime и WebGPU в браузере",
+      "summary": "Модели можно запускать локально, без отправки данных на сервер — это быстрее и приватнее.",
+      "body": [
+        "ONNX Runtime Web исполняет модели через WebGPU или Wasm. Небольшая модель распознавания изображений укладывается в десятки мегабайт и работает офлайн."
+      ],
+      "tags": [
+        "ИИ",
+        "ONNX",
+        "Приватность"
+      ],
+      "sourceName": "ONNX Runtime — веб-исполнение",
+      "sourceUrl": "https://onnxruntime.ai/docs/tutorials/web/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (ONNX Runtime — веб-исполнение)",
+          "url": "https://onnxruntime.ai/docs/tutorials/web/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «ONNX Runtime — веб-исполнение»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/t-795.svg",
+      "imageCaption": "Обложка рубрики: Нейросети на устройстве: ONNX Runtime и WebGPU в браузере",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-tech-94a958ded6",
+      "code": "T-978",
+      "category": "tech",
+      "title": "HTTP/3 и QUIC сокращают задержку в мобильных сетях",
+      "summary": "QUIC работает поверх UDP и поднимает соединение быстрее, чем TCP+TLS: это заметно на плохой связи.",
+      "body": [
+        "HTTP/3 стандартизован IETF в RFC 9114. Он уменьшает число round-trip при установке соединения и не блокирует поток при потере пакета."
+      ],
+      "tags": [
+        "HTTP/3",
+        "QUIC",
+        "Сети"
+      ],
+      "sourceName": "IETF — RFC 9114 (HTTP/3)",
+      "sourceUrl": "https://www.rfc-editor.org/rfc/rfc9114.html",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (IETF — RFC 9114 (HTTP/3))",
+          "url": "https://www.rfc-editor.org/rfc/rfc9114.html"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «IETF — RFC 9114 (HTTP/3)»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/t-978.svg",
+      "imageCaption": "Обложка рубрики: HTTP/3 и QUIC сокращают задержку в мобильных сетях",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-tech-9bc92c1fd4",
+      "code": "T-973",
+      "category": "tech",
+      "title": "WebRTC соединяет два браузера напрямую, без сервера для данных",
+      "summary": "Технология P2P лежит в основе видеозвонков, файлообмена и торрент-клиентов в браузере.",
+      "body": [
+        "WebRTC использует ICE, STUN и DTLS-SRTP. Серверу нужен только сигналинг — как только канал открыт, данные идут напрямую между пирами."
+      ],
+      "tags": [
+        "WebRTC",
+        "P2P",
+        "Сигналинг"
+      ],
+      "sourceName": "W3C — WebRTC",
+      "sourceUrl": "https://www.w3.org/TR/webrtc/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (W3C — WebRTC)",
+          "url": "https://www.w3.org/TR/webrtc/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «W3C — WebRTC»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/t-973.svg",
+      "imageCaption": "Обложка рубрики: WebRTC соединяет два браузера напрямую, без сервера для данных",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-tech-33396b40be",
+      "code": "T-184",
+      "category": "tech",
+      "title": "Service Worker делает сайт доступным без интернета",
+      "summary": "Скрипт-посредник кеширует файлы и отвечает из кеша, когда сети нет.",
+      "body": [
+        "Service worker перехватывает fetch-запросы страницы. Стратегия cache-first даёт мгновенную загрузку, network-first — свежесть данных."
+      ],
+      "tags": [
+        "Service Worker",
+        "Офлайн",
+        "Кеш"
+      ],
+      "sourceName": "MDN — Service Worker API",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/API/Service_Worker_API",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — Service Worker API)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/API/Service_Worker_API"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — Service Worker API»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/t-184.svg",
+      "imageCaption": "Обложка рубрики: Service Worker делает сайт доступным без интернета",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-tech-1b8cabc875",
+      "code": "T-341",
+      "category": "tech",
+      "title": "Сжатие Brotli уменьшает вес игры на 20–30 % без потерь",
+      "summary": "Алгоритм из Google уже встроен во все основные браузеры и включён на большинстве CDN.",
+      "body": [
+        "Brotli использует статический словарь, что особенно выгодно для текстовых ресурсов: JS, CSS, JSON и SVG сжимаются сильно."
+      ],
+      "tags": [
+        "Brotli",
+        "Сжатие",
+        "Оптимизация"
+      ],
+      "sourceName": "IETF — RFC 7932 (Brotli)",
+      "sourceUrl": "https://www.rfc-editor.org/rfc/rfc7932.html",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (IETF — RFC 7932 (Brotli))",
+          "url": "https://www.rfc-editor.org/rfc/rfc7932.html"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «IETF — RFC 7932 (Brotli)»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/t-341.svg",
+      "imageCaption": "Обложка рубрики: Сжатие Brotli уменьшает вес игры на 20–30 % без потерь",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-tech-87f06ffcd4",
+      "code": "T-266",
+      "category": "tech",
+      "title": "CRDT позволяют нескольким игрокам редактировать мир одновременно",
+      "summary": "Структуры без конфликтов сходятся к одному состоянию без центрального сервера.",
+      "body": [
+        "CRDT (conflict-free replicated data type) гарантируют одинаковый результат при любом порядке применения операций. Это основа совместного редактирования и мультиплеера в реальном времени."
+      ],
+      "tags": [
+        "CRDT",
+        "Мультиплеер",
+        "Синхронизация"
+      ],
+      "sourceName": "CRDT — обзор исследовательской группы",
+      "sourceUrl": "https://crdt.tech/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (CRDT — обзор исследовательской группы)",
+          "url": "https://crdt.tech/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «CRDT — обзор исследовательской группы»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/t-266.svg",
+      "imageCaption": "Обложка рубрики: CRDT позволяют нескольким игрокам редактировать мир одновременно",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-tech-e01ba4df02",
+      "code": "T-765",
+      "category": "tech",
+      "title": "Главы стандартов CSS: container queries вместо медиазапросов",
+      "summary": "Интерфейс подстраивается под ширину своего контейнера, а не всего окна — удобно для встраиваемых вкладок.",
+      "body": [
+        "Container queries позволяют писать @container (min-width: 600px). Игра внутри iframe перестаёт зависеть от размера родительской страницы."
+      ],
+      "tags": [
+        "CSS",
+        "Адаптивность"
+      ],
+      "sourceName": "MDN — CSS container queries",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/CSS/CSS_containment/Container_queries",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — CSS container queries)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/CSS/CSS_containment/Container_queries"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — CSS container queries»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/t-765.svg",
+      "imageCaption": "Обложка рубрики: Главы стандартов CSS: container queries вместо медиазапросов",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-science-e1f6e27abc",
+      "code": "S-916",
+      "category": "science",
+      "title": "Джеймс Уэбб продолжает находить атмосферы у далёких экзопланет",
+      "summary": "Телескоп измеряет спектр света, прошедшего через атмосферу планеты, и определяет её состав.",
+      "body": [
+        "Метод транзитной спектроскопии: когда планета проходит перед звездой, часть света фильтруется атмосферой. Разные молекулы оставляют разные линии поглощения."
+      ],
+      "tags": [
+        "Джеймс Уэбб",
+        "Экзопланеты",
+        "Спектроскопия"
+      ],
+      "sourceName": "NASA — James Webb Space Telescope",
+      "sourceUrl": "https://science.nasa.gov/mission/webb/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA — James Webb Space Telescope)",
+          "url": "https://science.nasa.gov/mission/webb/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «NASA — James Webb Space Telescope»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/s-916.svg",
+      "imageCaption": "Обложка рубрики: Джеймс Уэбб продолжает находить атмосферы у далёких экзопланет",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-science-b72b5c241f",
+      "code": "S-106",
+      "category": "science",
+      "title": "Марсоходы изучили слои пород, которым миллиарды лет",
+      "summary": "Слои осадочных пород на Марсе хранят сведения о воде и климате древней планеты.",
+      "body": [
+        "Осадочные слои образуются в воде. Их химический состав и структура показывают, какими были реки и озёра, когда на планете шла жидкая вода."
+      ],
+      "tags": [
+        "Марс",
+        "Роверы",
+        "Геология"
+      ],
+      "sourceName": "NASA — Mars Exploration Program",
+      "sourceUrl": "https://science.nasa.gov/mars/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA — Mars Exploration Program)",
+          "url": "https://science.nasa.gov/mars/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «NASA — Mars Exploration Program»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/s-106.svg",
+      "imageCaption": "Обложка рубрики: Марсоходы изучили слои пород, которым миллиарды лет",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-science-36f1dc7963",
+      "code": "S-723",
+      "category": "science",
+      "title": "Гравитационные волны открыли новую астрономию",
+      "summary": "Слияния чёрных дыр и нейтронных звёзд искажают пространство-время — это измеряют лазерные интерферометры.",
+      "body": [
+        "LIGO и Virgo измеряют разницу длин плеч полкилометра с точностью меньше протона. Сигнал приходит как «чирп» — рост частоты при сближении масс."
+      ],
+      "tags": [
+        "Гравитационные волны",
+        "LIGO"
+      ],
+      "sourceName": "LIGO — официальный сайт обсерватории",
+      "sourceUrl": "https://www.ligo.org/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (LIGO — официальный сайт обсерватории)",
+          "url": "https://www.ligo.org/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «LIGO — официальный сайт обсерватории»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/s-723.svg",
+      "imageCaption": "Обложка рубрики: Гравитационные волны открыли новую астрономию",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-science-58bfd2cb4d",
+      "code": "S-551",
+      "category": "science",
+      "title": "Квантовые вычисления: коррекция ошибок важнее числа кубитов",
+      "summary": "Надёжный логический кубит собирается из многих физических — и это главная инженерная задача десятилетия.",
+      "body": [
+        "Квантовое состояние хрупко: шум разрушает суперпозицию. Коды коррекции ошибок распределяют информацию по нескольким кубитам, чтобы ошибка одного не портила данные."
+      ],
+      "tags": [
+        "Квантовые вычисления",
+        "Кубиты"
+      ],
+      "sourceName": "IBM Quantum — объяснение коррекции ошибок",
+      "sourceUrl": "https://www.ibm.com/quantum",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (IBM Quantum — объяснение коррекции ошибок)",
+          "url": "https://www.ibm.com/quantum"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «IBM Quantum — объяснение коррекции ошибок»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/s-551.svg",
+      "imageCaption": "Обложка рубрики: Квантовые вычисления: коррекция ошибок важнее числа кубитов",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-science-8723fce70e",
+      "code": "S-440",
+      "category": "science",
+      "title": "Нейтрино долетают до детекторов сквозь всю Землю",
+      "summary": "Эти частицы почти не взаимодействуют с веществом, поэтому детекторы ставят глубоко под землёй — отсекать шум.",
+      "body": [
+        "Нейтрино рождаются в ядерных реакциях Солнца и в атмосфере. Гигантские детекторы (IceCube, Super-Kamiokande) регистрируют редкие вспышки черенковского света."
+      ],
+      "tags": [
+        "Нейтрино",
+        "Детекторы",
+        "Физика"
+      ],
+      "sourceName": "IceCube Neutrino Observatory",
+      "sourceUrl": "https://icecube.wisc.edu/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (IceCube Neutrino Observatory)",
+          "url": "https://icecube.wisc.edu/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «IceCube Neutrino Observatory»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/s-440.svg",
+      "imageCaption": "Обложка рубрики: Нейтрино долетают до детекторов сквозь всю Землю",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-science-d3c650549c",
+      "code": "S-479",
+      "category": "science",
+      "title": "Солнечные вспышки влияют на спутники и радиосвязь",
+      "summary": "Потоки заряженных частиц искажают магнитное поле Земли и могут отключать электронику на орбите.",
+      "body": [
+        "Активность Солнца идёт циклами около 11 лет. Геомагнитные бури вызывают полярные сияния и помехи в радиосвязи, поэтому их прогнозируют заранее."
+      ],
+      "tags": [
+        "Солнце",
+        "Космическая погода"
+      ],
+      "sourceName": "NOAA — Space Weather Prediction Center",
+      "sourceUrl": "https://www.swpc.noaa.gov/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NOAA — Space Weather Prediction Center)",
+          "url": "https://www.swpc.noaa.gov/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «NOAA — Space Weather Prediction Center»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/s-479.svg",
+      "imageCaption": "Обложка рубрики: Солнечные вспышки влияют на спутники и радиосвязь",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-science-5ff2535d90",
+      "code": "S-422",
+      "category": "science",
+      "title": "Экзопланеты ищут тремя независимыми методами",
+      "summary": "Транзиты, доплеровское смещение и микролинзирование дают разные, но дополняющие данные.",
+      "body": [
+        "Транзитный метод ловит падение яркости звезды, спектрограф — покачивание звезды, микролинзирование — кратковременное усиление света. Комбинация методов даёт массу и радиус планеты."
+      ],
+      "tags": [
+        "Экзопланеты",
+        "Методы наблюдений"
+      ],
+      "sourceName": "NASA Exoplanet Exploration",
+      "sourceUrl": "https://exoplanets.nasa.gov/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA Exoplanet Exploration)",
+          "url": "https://exoplanets.nasa.gov/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «NASA Exoplanet Exploration»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/s-422.svg",
+      "imageCaption": "Обложка рубрики: Экзопланеты ищут тремя независимыми методами",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-science-d90bc461ec",
+      "code": "S-603",
+      "category": "science",
+      "title": "Адронный коллайдер проверяет Стандартную модель на прочность",
+      "summary": "Столкновения частиц при высоких энергиях позволяют искать отклонения от предсказаний теории.",
+      "body": [
+        "Большой адронный коллайдер разгоняет протоны почти до скорости света. Детекторы восстанавливают траектории продуктов столкновения, а статистика событий проверяет предсказания."
+      ],
+      "tags": [
+        "CERN",
+        "БАК",
+        "Физика частиц"
+      ],
+      "sourceName": "CERN — официальный сайт",
+      "sourceUrl": "https://home.cern/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (CERN — официальный сайт)",
+          "url": "https://home.cern/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «CERN — официальный сайт»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/s-603.svg",
+      "imageCaption": "Обложка рубрики: Адронный коллайдер проверяет Стандартную модель на прочность",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-world-2bdb528c96",
+      "code": "W-107",
+      "category": "world",
+      "title": "Открытые данные меняют журналистику и науку",
+      "summary": "Публичные API и датасеты позволяют независимо проверять факты и строить собственные исследования.",
+      "body": [
+        "Порталы открытых данных публикуют статистику, геоданные и бюджеты в машиночитаемом виде. Журналисты и исследователи используют их для проверки и визуализации."
+      ],
+      "tags": [
+        "Открытые данные",
+        "Медиа"
+      ],
+      "sourceName": "World Bank — Open Data",
+      "sourceUrl": "https://data.worldbank.org/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (World Bank — Open Data)",
+          "url": "https://data.worldbank.org/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «World Bank — Open Data»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/w-107.svg",
+      "imageCaption": "Обложка рубрики: Открытые данные меняют журналистику и науку",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-world-0252487f8c",
+      "code": "W-677",
+      "category": "world",
+      "title": "Библиотеки и архивы оцифровали миллионы книг",
+      "summary": "Сканированные фонды доступны бесплатно: от старинных манускриптов до свежих научных публикаций.",
+      "body": [
+        "Проекты вроде Internet Archive хранят копии страниц и книг. Данные открыты для чтения, а при использовании указывают источник — это делает цитирование прозрачным."
+      ],
+      "tags": [
+        "Архивы",
+        "Библиотеки",
+        "Доступ"
+      ],
+      "sourceName": "Internet Archive — официальный сайт",
+      "sourceUrl": "https://archive.org/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Internet Archive — официальный сайт)",
+          "url": "https://archive.org/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «Internet Archive — официальный сайт»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/w-677.svg",
+      "imageCaption": "Обложка рубрики: Библиотеки и архивы оцифровали миллионы книг",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-world-93e64795f3",
+      "code": "W-250",
+      "category": "world",
+      "title": "Городской транспорт переходит на данные в реальном времени",
+      "summary": "Открытые GTFS-фиды позволяют строить приложения с живым расписанием автобусов и поездов.",
+      "body": [
+        "GTFS — простой открытый формат: текстовые файлы с маршрутами, остановками и временем. Один и тот же фид читают карты, табло и мобильные приложения."
+      ],
+      "tags": [
+        "Транспорт",
+        "GTFS",
+        "Города"
+      ],
+      "sourceName": "Google Developers — GTFS",
+      "sourceUrl": "https://developers.google.com/transit/gtfs",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Google Developers — GTFS)",
+          "url": "https://developers.google.com/transit/gtfs"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «Google Developers — GTFS»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/w-250.svg",
+      "imageCaption": "Обложка рубрики: Городской транспорт переходит на данные в реальном времени",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-world-4c8f723d98",
+      "code": "W-718",
+      "category": "world",
+      "title": "Музеи выкладывают коллекции в высоком разрешении",
+      "summary": "Изображения картин и артефактов можно скачать свободно и использовать в учёбе.",
+      "body": [
+        "Музейные API (например, The Met Collection API) отдают метаданные и ссылки на изображения. Лицензии у разных музеев отличаются, поэтому условия проверяют на сайте."
+      ],
+      "tags": [
+        "Музеи",
+        "Искусство",
+        "Лицензии"
+      ],
+      "sourceName": "The Met — Collection API",
+      "sourceUrl": "https://metmuseum.github.io/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Met — Collection API)",
+          "url": "https://metmuseum.github.io/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «The Met — Collection API»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/w-718.svg",
+      "imageCaption": "Обложка рубрики: Музеи выкладывают коллекции в высоком разрешении",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-world-c780652e91",
+      "code": "W-430",
+      "category": "world",
+      "title": "Спутниковые снимки стали доступны обычным людям",
+      "summary": "Сервисы наблюдения Земли показывают изменения лесов, городов и льдов на открытых данных.",
+      "body": [
+        "Снимки Copernicus и Landsat публикуются в открытом доступе. Их сравнивают по времени: по разнице снимков видны вырубки, рост городов и таяние льдов."
+      ],
+      "tags": [
+        "Спутники",
+        "Наблюдение Земли"
+      ],
+      "sourceName": "Copernicus — открытые данные наблюдения Земли",
+      "sourceUrl": "https://www.copernicus.eu/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Copernicus — открытые данные наблюдения Земли)",
+          "url": "https://www.copernicus.eu/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «Copernicus — открытые данные наблюдения Земли»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/w-430.svg",
+      "imageCaption": "Обложка рубрики: Спутниковые снимки стали доступны обычным людям",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-world-ba0e358021",
+      "code": "W-926",
+      "category": "world",
+      "title": "Генеративный ИИ меняет работу переводчиков и редакций",
+      "summary": "Инструменты ускоряют черновики, но фактчек и ответственность остаются на людях.",
+      "body": [
+        "Модели хорошо справляются с черновым переводом и переписыванием, но могут уверенно ошибаться в фактах. Поэтому в редакциях вводят обязательную человеческую проверку перед публикацией."
+      ],
+      "tags": [
+        "ИИ",
+        "Медиа",
+        "Этика"
+      ],
+      "sourceName": "W3C — AI & the Web",
+      "sourceUrl": "https://www.w3.org/2023/04/ai-web.html",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (W3C — AI & the Web)",
+          "url": "https://www.w3.org/2023/04/ai-web.html"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «W3C — AI & the Web»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/w-926.svg",
+      "imageCaption": "Обложка рубрики: Генеративный ИИ меняет работу переводчиков и редакций",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-world-d37a0bb9b2",
+      "code": "W-774",
+      "category": "world",
+      "title": "Онлайн-образование опирается на открытые стандарты",
+      "summary": "SCORM и xAPI описывают, как курсы обмениваются результатами обучения между платформами.",
+      "body": [
+        "Стандарт xAPI (Experience API) записывает учебные события в формате «субъект — действие — объект». Это позволяет переносить прогресс между разными системами."
+      ],
+      "tags": [
+        "Образование",
+        "Стандарты"
+      ],
+      "sourceName": "ADL — xAPI (Experience API)",
+      "sourceUrl": "https://adlnet.gov/projects/xapi/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (ADL — xAPI (Experience API))",
+          "url": "https://adlnet.gov/projects/xapi/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «ADL — xAPI (Experience API)»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/w-774.svg",
+      "imageCaption": "Обложка рубрики: Онлайн-образование опирается на открытые стандарты",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-world-c84071002d",
+      "code": "W-407",
+      "category": "world",
+      "title": "Локальные сообщества восстанавливают старые карты и маршруты",
+      "summary": "OpenStreetMap наполняется участниками: данные свободны и доступны для любых проектов.",
+      "body": [
+        "OpenStreetMap — открытая карта мира под лицензией ODbL. Данные можно скачать целиком и использовать в играх, навигации и исследованиях при указании источника."
+      ],
+      "tags": [
+        "Карты",
+        "OpenStreetMap",
+        "Сообщества"
+      ],
+      "sourceName": "OpenStreetMap — официальный сайт",
+      "sourceUrl": "https://www.openstreetmap.org/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (OpenStreetMap — официальный сайт)",
+          "url": "https://www.openstreetmap.org/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «OpenStreetMap — официальный сайт»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/w-407.svg",
+      "imageCaption": "Обложка рубрики: Локальные сообщества восстанавливают старые карты и маршруты",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-security-e40e331c3d",
+      "code": "C-205",
+      "category": "security",
+      "title": "Пароли без паролей: WebAuthn и ключи доступа",
+      "summary": "Вход по криптографическому ключу в браузере защищает от фишинга лучше, чем пароль.",
+      "body": [
+        "WebAuthn использует пару ключей: приватный остаётся на устройстве, публичный хранит сайт. Поддельный домен не сможет подтвердить вход, потому что ключ привязан к origin."
+      ],
+      "tags": [
+        "WebAuthn",
+        "Пароли",
+        "Фишинг"
+      ],
+      "sourceName": "W3C — Web Authentication (WebAuthn)",
+      "sourceUrl": "https://www.w3.org/TR/webauthn-3/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (W3C — Web Authentication (WebAuthn))",
+          "url": "https://www.w3.org/TR/webauthn-3/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «W3C — Web Authentication (WebAuthn)»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/c-205.svg",
+      "imageCaption": "Обложка рубрики: Пароли без паролей: WebAuthn и ключи доступа",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-security-df4e8f59ef",
+      "code": "C-473",
+      "category": "security",
+      "title": "Content Security Policy ограничивает вредоносные скрипты",
+      "summary": "Заголовок CSP говорит браузеру, какие источники скриптов и стилей разрешены.",
+      "body": [
+        "Политика вида script-src 'self' запрещает исполнять чужой код. Это главный барьер против XSS: даже если скрипт попал в страницу, браузер его не выполнит."
+      ],
+      "tags": [
+        "CSP",
+        "XSS",
+        "Защита"
+      ],
+      "sourceName": "MDN — Content Security Policy",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/HTTP/CSP",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — Content Security Policy)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/HTTP/CSP"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — Content Security Policy»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/c-473.svg",
+      "imageCaption": "Обложка рубрики: Content Security Policy ограничивает вредоносные скрипты",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-security-35a7ccb1f7",
+      "code": "C-847",
+      "category": "security",
+      "title": "Subresource Integrity проверяет, что файл не подменили",
+      "summary": "Атрибут integrity сверяет sha-384 хеш загружаемого скрипта или стиля.",
+      "body": [
+        "При подключении внешнего файла браузер считает его хеш и сравнивает с указанным. Если CDN отдал изменённый файл, загрузка отменяется — это защита от компрометации CDN."
+      ],
+      "tags": [
+        "SRI",
+        "CDN",
+        "Целостность"
+      ],
+      "sourceName": "MDN — Subresource Integrity",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/Security/Subresource_Integrity",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — Subresource Integrity)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/Security/Subresource_Integrity"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — Subresource Integrity»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/c-847.svg",
+      "imageCaption": "Обложка рубрики: Subresource Integrity проверяет, что файл не подменили",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-security-2b1944d03b",
+      "code": "C-439",
+      "category": "security",
+      "title": "Песочница iframe изолирует чужой код от сайта",
+      "summary": "Атрибут sandbox запрещает чужой странице доступ к cookies, DOM и навигации родителя.",
+      "body": [
+        "sandbox=\"allow-scripts\" даёт исполнять скрипты, но не читать данные сайта. Это стандартный способ безопасно показывать игры и виджеты от третьих лиц."
+      ],
+      "tags": [
+        "Sandbox",
+        "Изоляция",
+        "iframe"
+      ],
+      "sourceName": "MDN — iframe sandbox",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/HTML/Element/iframe",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — iframe sandbox)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/HTML/Element/iframe"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — iframe sandbox»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/c-439.svg",
+      "imageCaption": "Обложка рубрики: Песочница iframe изолирует чужой код от сайта",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-facts-b1692ae7fe",
+      "code": "F-912",
+      "category": "facts",
+      "title": "Сколько весит браузерная игра — от килобайт до гигабайт",
+      "summary": "Пиксельная аркада на canvas может занимать меньше 100 КБ, а 3D-шутер с моделями — сотни мегабайт.",
+      "body": [
+        "Размер сборки определяют ассеты: текстуры, модели и звук. Процедурная генерация и сжатие Brotli позволяют уменьшить вес в разы без потери качества."
+      ],
+      "tags": [
+        "Размер",
+        "Оптимизация",
+        "Факты"
+      ],
+      "sourceName": "Can I Use — поддержка сжатия и API",
+      "sourceUrl": "https://caniuse.com/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Can I Use — поддержка сжатия и API)",
+          "url": "https://caniuse.com/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «Can I Use — поддержка сжатия и API»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-912.svg",
+      "imageCaption": "Обложка рубрики: Сколько весит браузерная игра — от килобайт до гигабайт",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-facts-c273ce8980",
+      "code": "F-934",
+      "category": "facts",
+      "title": "Кадры в секунду: почему 60 fps ощущаются плавнее 30",
+      "summary": "Чем меньше интервал между кадрами, тем меньше задержка ввода — это замечает даже глаз.",
+      "body": [
+        "При 60 fps кадр живёт 16,7 мс, при 30 fps — 33,3 мс. Для быстрых игр это разница в отзывчивости управления, а не только в плавности картинки."
+      ],
+      "tags": [
+        "FPS",
+        "Отклик",
+        "Факты"
+      ],
+      "sourceName": "MDN — requestAnimationFrame",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/API/window/requestAnimationFrame",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (MDN — requestAnimationFrame)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/API/window/requestAnimationFrame"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «MDN — requestAnimationFrame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-934.svg",
+      "imageCaption": "Обложка рубрики: Кадры в секунду: почему 60 fps ощущаются плавнее 30",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-facts-3e9bcdb68f",
+      "code": "F-972",
+      "category": "facts",
+      "title": "Один пиксель может стоить мегабайт: как работает сжатие текстур",
+      "summary": "Сжатые форматы вроде KTX2 и Basis уменьшают текстуры в памяти GPU в 4–8 раз.",
+      "body": [
+        "Текстура остаётся сжатой прямо в видеопамяти, поэтому экономится и трафик, и память. Это критично для мобильных устройств с ограниченным объёмом VRAM."
+      ],
+      "tags": [
+        "Текстуры",
+        "GPU",
+        "Сжатие"
+      ],
+      "sourceName": "Khronos Group — KTX 2.0",
+      "sourceUrl": "https://www.khronos.org/ktx/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Khronos Group — KTX 2.0)",
+          "url": "https://www.khronos.org/ktx/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «Khronos Group — KTX 2.0»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-972.svg",
+      "imageCaption": "Обложка рубрики: Один пиксель может стоить мегабайт: как работает сжатие текстур",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "backlog-facts-de02d8131d",
+      "code": "F-383",
+      "category": "facts",
+      "title": "Как браузер запускает игру: от HTML до первого кадра",
+      "summary": "Разбор, компиляция, загрузка ассетов и инициализация контекста — всё укладывается в доли секунды.",
+      "body": [
+        "Браузер парсит HTML, исполняет скрипты, создаёт WebGL-контекст и загружает ресурсы. Кеш и предзагрузка (preload) сокращают время до первого кадра."
+      ],
+      "tags": [
+        "Производительность",
+        "Загрузка"
+      ],
+      "sourceName": "web.dev — оптимизация загрузки",
+      "sourceUrl": "https://web.dev/fast/",
+      "publishedAt": "2026-11-18T10:00:00.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (web.dev — оптимизация загрузки)",
+          "url": "https://web.dev/fast/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "now",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Сверка темы и первоисточника «web.dev — оптимизация загрузки»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-383.svg",
+      "imageCaption": "Обложка рубрики: Как браузер запускает игру: от HTML до первого кадра",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "plan-games-ba52195a27",
+      "code": "G-550",
+      "category": "games",
+      "title": "Оптимизация под слабые устройства",
+      "summary": "Ограничение FPS и разрешения делает игру доступной на старых телефонах.",
+      "body": [
+        "Динамическое разрешение и уровни детализации (LOD) снижают нагрузку. Это расширяет аудиторию без потери картинки на мощных устройствах."
+      ],
+      "tags": [
+        "Оптимизация",
+        "Мобильные"
+      ],
+      "sourceName": "web.dev — производительность",
+      "sourceUrl": "https://web.dev/fast/",
+      "publishedAt": "2027-09-12T09:00:00.000Z",
+      "scheduledFor": "2027-09-12",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Календарь события (web.dev — производительность)",
+          "url": "https://web.dev/fast/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Дата и источник события сверены с официальным календарём «web.dev — производительность»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-550.svg",
+      "imageCaption": "Обложка рубрики: Оптимизация под слабые устройства",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "plan-games-71ddb64858",
+      "code": "G-900",
+      "category": "games",
+      "title": "Кроссплатформенные игры: один код на вебе и в нативе",
+      "summary": "Общие модули позволяют собрать одну игру для браузера и нативной платформы.",
+      "body": [
+        "Web-сборка и нативная используют один геймплейный код, различаясь рендером и оболочкой. Это упрощает поддержку."
+      ],
+      "tags": [
+        "Кроссплатформа",
+        "Сборки"
+      ],
+      "sourceName": "MDN — Progressive web apps",
+      "sourceUrl": "https://developer.mozilla.org/ru/docs/Web/Progressive_web_apps",
+      "publishedAt": "2027-05-03T09:00:00.000Z",
+      "scheduledFor": "2027-05-03",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Календарь события (MDN — Progressive web apps)",
+          "url": "https://developer.mozilla.org/ru/docs/Web/Progressive_web_apps"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Дата и источник события сверены с официальным календарём «MDN — Progressive web apps»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/g-900.svg",
+      "imageCaption": "Обложка рубрики: Кроссплатформенные игры: один код на вебе и в нативе",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "plan-facts-093f4a597e",
+      "code": "F-983",
+      "category": "facts",
+      "title": "Сколько занимает один кадр текстуры",
+      "summary": "Разрешение напрямую определяет объём видеопамяти.",
+      "body": [
+        "Текстура 2048×2048 в 32 битах занимает около 16 МБ без сжатия. Сжатые форматы уменьшают это в несколько раз."
+      ],
+      "tags": [
+        "Текстуры",
+        "Память"
+      ],
+      "sourceName": "Khronos — KTX 2.0",
+      "sourceUrl": "https://www.khronos.org/ktx/",
+      "publishedAt": "2027-08-30T09:00:00.000Z",
+      "scheduledFor": "2027-08-30",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Календарь события (Khronos — KTX 2.0)",
+          "url": "https://www.khronos.org/ktx/"
+        }
+      ],
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "queue": "future",
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-18",
+        "method": "Дата и источник события сверены с официальным календарём «Khronos — KTX 2.0»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "image": "site/assets/news/f-983.svg",
+      "imageCaption": "Обложка рубрики: Сколько занимает один кадр текстуры",
+      "imageCredit": "Games News · локальная обложка"
     }
   ],
   "notes": "Комментарии к новостям пишут только реальные читатели — они хранятся в браузере (localStorage) и проверяются GamesAntivirus. Заранее заготовленных и симулированных комментариев (в том числе «от редакции») в ленте нет."

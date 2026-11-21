@@ -7,7 +7,8 @@
     "builder": "ratcore/tools/build-browser-bundle.mjs",
     "bridge": "shared/engine.js",
     "bootstrap": "shared/engine-bootstrap.js",
-    "modules": 48
+    "modules": 48,
+    "sections": 23
   },
   "rules": [
     "Каждый раздел Games подключает движок через ../shared/engine.js (или shared/engine.js в корне).",
@@ -169,6 +170,14 @@
       "badge": "topbar"
     },
     {
+      "id": "mesh-studio",
+      "path": "mesh-studio/index.html",
+      "kind": "tool",
+      "engine": "../shared/engine.js",
+      "badge": "topbar",
+      "note": "Редактор 3D-моделей на движке RatCore: примитивы, вращение, экструзия, воксели, сохранение проекта"
+    },
+    {
       "id": "torrent",
       "path": "torrent/index.html",
       "kind": "department",
@@ -185,20 +194,20 @@
       "note": "Страница исходного Godot-прототипа; не браузерная игра"
     },
     {
+      "id": "boris",
+      "path": "boris/index.html",
+      "kind": "department",
+      "engine": "../shared/engine.js",
+      "badge": "auto",
+      "note": "Видеосериал про кота Бориса: страница эпизода и голосования зрителей"
+    },
+    {
       "id": "warehouse-crew",
       "path": "warehouse-crew/index.html",
       "kind": "game",
       "engine": "../shared/engine.js",
       "badge": "topbar",
       "note": "Склад с живыми рабочими: три обученных мозга (958 параметров), органы и гормоны, пульт управления бригадой, 3D-разрез тела"
-    },
-    {
-      "id": "boris",
-      "path": "boris/index.html",
-      "kind": "portal",
-      "engine": "../shared/engine.js",
-      "badge": "auto",
-      "note": "Страница эпизода «Борис»: видео, голосование и файлы серии; игры на странице нет"
     }
   ],
   "excluded": [

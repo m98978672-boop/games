@@ -5,6 +5,7 @@ import { JSDOM } from 'jsdom';
 import fs from 'node:fs';
 import path from 'node:path';
 import * as THREE from '../node_modules/three/build/three.module.js';
+import { waitReady } from './wait-ready.mjs';
 
 const dir = path.resolve(import.meta.dirname, '..');
 const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
@@ -22,7 +23,7 @@ const code = fs.readFileSync(path.join(dir, 'tests/.harness-bundle.js'), 'utf8')
 new Function(code)();
 window.document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
 window.document.getElementById('btn-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-await new Promise((r) => setTimeout(r, 300));
+await waitReady(window);
 
 const game = window.__game;
 if (!game) throw new Error('game not created');
