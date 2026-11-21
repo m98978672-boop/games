@@ -84,8 +84,12 @@ try {
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
  // Walk to a safe standing distance and line Vera up under the camera ray using
  // ordinary movement; no teleport, scripted pose, or debug scene is involved.
- await page.keyboard.down('d'); await page.waitForTimeout(850); await page.keyboard.up('d');
- await page.keyboard.down('w'); await page.waitForTimeout(140); await page.keyboard.up('w');
+ await page.keyboard.down('d');
+ await waitStatus(() => window.__razlomStatus.position[0] < -25.25, 20000, 'не удалось подойти к Вере по оси X');
+ await page.keyboard.up('d');
+ await page.keyboard.down('w');
+ await waitStatus(() => window.__razlomStatus.position[2] > 23.1, 15000, 'не удалось подойти к Вере по оси Z');
+ await page.keyboard.up('w');
  await page.waitForTimeout(350);
  await check('NPC pose review camera reaches Vera by real in-world movement', async () => {
   const state = await page.evaluate(() => window.__razlomStatus);
