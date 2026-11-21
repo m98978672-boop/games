@@ -205,7 +205,14 @@ async function oauthCallback(request: Request): Promise<Response> {
 
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(request.headers.get("origin")) });
-  const route = new URL(request.url).pathname.replace(/^\/functions\/v1\/youtube-bot/, "") || "/";
+  const pathname = new URL(request.url).pathname;
+  // Supabase's gateway/runtime may expose the path with the function prefix,
+  // only the function slug, or already stripped to the route. Accept all three.
+  const routePath = pathname
+    .replace(/^\/functions\/v1\/youtube-bot(?=\/|$)/, "")
+    .replace(/^\/youtube-bot(?=\/|$)/, "")
+    .replace(/\/+$/, "");
+  const route = routePath || "/";
   try {
     // Opening the function base URL by itself should guide users back to the
     // actual dashboard instead of exposing the low-level "Not found" response.
