@@ -24,6 +24,7 @@ window.WC = window.WC || {};
     lastUiAt: 0,
     newsIndex: 0,
     orderRows: new Map(),
+    safetyRows: new Map(),
     orderFilter: 'all',
     orderVisibleLimit: 14,
     nums: {},
@@ -48,6 +49,9 @@ window.WC = window.WC || {};
     dom.time = q('hud-time');
     dom.crewTabs = q('crew-tabs');
     dom.selectedCard = q('selected-card');
+    dom.safetyList = q('safety-list');
+    dom.safetyEmpty = q('safety-empty');
+    dom.safetyCount = q('safety-count');
     dom.orderList = q('order-list');
     dom.queueCount = q('queue-count');
     dom.queueSummary = q('queue-summary');
@@ -350,6 +354,59 @@ window.WC = window.WC || {};
     }
     U.$$('.qb').forEach(function (button) {
       button.classList.toggle('on', st.mode === 'auto' && button.getAttribute('data-quick') === 'auto');
+    });
+  }
+
+  function renderSafety() {
+    var alerts = WC.safety.assess(game.api.crew, global.WarehouseModel.BODY_PARTS);
+    var live = Object.create(null);
+    dom.safetyCount.textContent = String(alerts.length);
+    dom.safetyEmpty.hidden = alerts.length !== 0;
+    alerts.forEach(function (alert, index) {
+      live[alert.id] = true;
+      var row = uiState.safetyRows.get(alert.id);
+      if (!row) {
+        var id = alert.id;
+        var name = U.el('b', { class: 'safety-name' });
+        var badge = U.el('span', { class: 'safety-badge' });
+        var details = U.el('div', { class: 'safety-details' });
+        var choose = U.el('button', { type: 'button', text: 'Выбрать', onclick: function () {
+          var worker = game.workerById(id);
+          if (!worker || worker.state.dead) return;
+          select(id); renderSelected();
+        } });
+        var inspect = U.el('button', { type: 'button', text: 'Осмотреть', onclick: function () {
+          var worker = game.workerById(id);
+          if (worker && !worker.state.dead) openInspector(id);
+        } });
+        var node = U.el('div', { class: 'safety-row' }, [
+          U.el('div', { class: 'safety-head' }, [name, badge]), details,
+          U.el('div', { class: 'safety-actions' }, [choose, inspect]),
+        ]);
+        row = { node: node, name: name, badge: badge, details: details, choose: choose, inspect: inspect };
+        uiState.safetyRows.set(id, row);
+        dom.safetyList.appendChild(node);
+      }
+      if (dom.safetyList.children[index] !== row.node) {
+        var focused = row.node.contains(document.activeElement) ? document.activeElement : null;
+        dom.safetyList.insertBefore(row.node, dom.safetyList.children[index] || null);
+        if (focused) focused.focus({ preventScroll: true });
+      }
+      row.name.textContent = alert.name;
+      row.badge.textContent = alert.rank === 3 ? 'критично' : alert.rank === 2 ? 'важно' : 'внимание';
+      row.node.classList.toggle('critical', alert.rank === 3);
+      row.details.textContent = alert.reasons.join(' · ');
+      row.choose.setAttribute('aria-label', 'Выбрать: ' + alert.name);
+      row.inspect.setAttribute('aria-label', 'Осмотреть: ' + alert.name);
+    });
+    uiState.safetyRows.forEach(function (row, id) {
+      if (live[id]) return;
+      if (row.node.contains(document.activeElement)) {
+        var heading = q('safety-heading');
+        if (heading) heading.focus({ preventScroll: true });
+      }
+      if (row.node.parentNode) row.node.parentNode.removeChild(row.node);
+      uiState.safetyRows.delete(id);
     });
   }
 
@@ -726,6 +783,8 @@ window.WC = window.WC || {};
         U.el('p', { html: 'Пульт — <b>нижняя шторка</b>: потяни за «язычок» вверх или тапни по нему. Снизу всегда висят <b>быстрые приказы</b> (Взять · Нести · Перерыв · Авто) — один тап, без меню. Тап по <b>метке над рабочим</b> выбирает его. Кнопка <b>⤢</b> разворачивает игру на весь экран.' }),
         U.el('h3', { text: 'Клавиши' }),
         U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
+        U.el('h3', { text: 'Состояние бригады' }),
+        U.el('p', { text: 'Сводка в пульте показывает рабочих с обмороком, травмами, низкой энергией или здоровьем, высокой усталостью и болью либо низким запасом воды. Выбери рабочего или открой его инспектор. Это предупреждения по игровым показателям, а не автоматические приказы.' }),
         U.el('h3', { text: 'Обзор очереди' }),
         U.el('p', { text: 'Фильтры показывают все заказы, свободные, занятые, приоритетные или те, у которых осталось не больше 30 секунд (включая просроченные). Сводка показывает число свободных ячеек без зарезервированных мест. Если заказов много, нажми «Показать ещё».' }),
         U.el('h3', { text: 'Приоритет заказа' }),
@@ -1366,6 +1425,7 @@ window.WC = window.WC || {};
     wireKeys();
     renderSelected();
     renderSide();
+    renderSafety();
     renderOrders();
     renderShop();
     renderNews(true);
@@ -1435,6 +1495,7 @@ window.WC = window.WC || {};
     uiState.lastUiAt = now;
     renderHud();
     renderSelected();
+    renderSafety();
     renderTrucks();
     renderOrders();
     renderShop();

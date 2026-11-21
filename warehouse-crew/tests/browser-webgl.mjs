@@ -71,6 +71,33 @@ try {
   assert(actual.header.bottom < (portrait ? 125 : 120), 'заголовок не должен занимать слишком много экрана');
   const dayLight = await page.evaluate(() => WC.world.scene.children.find(o => o.isHemisphereLight).intensity);
   await page.evaluate(() => WC.ui.sheet.set('full', true));
+  const concern = await page.evaluate(() => {
+    const a = WC.game.api.crew[1], b = WC.game.api.crew[2];
+    a.body.energy = .18;
+    b.body.injuries.push({type:'muscle',part:'back',severity:.3,at:0,cause:'тест'});
+    WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1 / 30);
+    return {a:a.id, aName:a.name, b:b.id, bName:b.name};
+  });
+  const energyRow = page.locator('#safety-list .safety-row').filter({hasText:concern.aName});
+  const injuryRow = page.locator('#safety-list .safety-row').filter({hasText:concern.bName});
+  const chooseWorker = energyRow.getByRole('button', {name:'Выбрать: ' + concern.aName});
+  await chooseWorker.scrollIntoViewIfNeeded();
+  await page.waitForFunction(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }, await chooseWorker.elementHandle());
+  const safetySize = await chooseWorker.boundingBox();
+  assert(safetySize.height >= 38 && safetySize.x >= 0 && safetySize.x + safetySize.width <= (portrait ? 390 : 844), JSON.stringify(safetySize));
+  assert.match(await energyRow.innerText(), /энергия 18%/);
+  assert.match(await injuryRow.innerText(), /травма/);
+  await page.screenshot({path:'/tmp/wc-safety-' + (portrait ? 'portrait' : 'landscape') + '.png'});
+  await chooseWorker.tap(); assert.equal(await page.evaluate(() => WC.game.api.activeWorkerId), concern.a);
+  const inspectWorker = injuryRow.getByRole('button', {name:'Осмотреть: ' + concern.bName});
+  await inspectWorker.scrollIntoViewIfNeeded(); await inspectWorker.tap();
+  assert.equal(await page.evaluate(() => WC.ui.state.inspectorWorkerId), concern.b);
+  assert.match(await page.locator('#insp-who').innerText(), new RegExp(concern.bName));
+  await page.evaluate(() => {
+    WC.ui.closeModal(); WC.game.api.crew[1].body.energy = .8; WC.game.api.crew[2].body.injuries = [];
+    WC.ui.select(WC.game.api.crew[0].id); WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1 / 30);
+  });
+  assert.equal(await page.locator('#safety-list .safety-row').count(),0);
   const priorityRow = page.locator('#order-list .order').filter({hasText: actual.lateCode});
   const priorityButton = priorityRow.locator('.o-priority');
   await priorityButton.scrollIntoViewIfNeeded();
@@ -117,7 +144,7 @@ try {
     const g = WC.game;
     g.sim.state.stats.score = 1000;
     const hired = g.hireWorker(); const medic = g.buyStaff('medic');
-    g.api.crew[0].body.energy = .41;
+    g.api.crew[0].body.energy = .41; g.api.crew[3].body.energy = .19;
     g.setSpeed(4); g.setPaused(true);
     return {ok: hired.ok && medic.ok && WC.save.save(g), time: g.sim.state.time,
       id: g.api.crew[3].id, orders: g.sim.state.orders.length};
@@ -136,8 +163,10 @@ try {
   assert.deepEqual(resumed, {status:'restored', crew:4, staff:1, id:saved.id, time:saved.time, orders:saved.orders,
     energy:.41, paused:true, speed:4, speedOn:'4', mode:'night', lightingOn:'night', lightLevel:lighting.night});
   assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
+  assert.match(await page.locator('#safety-list .safety-row').innerText(), /энергия 19%/);
   assert.equal(await page.locator('#order-list .order').filter({hasText:actual.lateCode}).locator('.o-priority').getAttribute('aria-pressed'), 'true');
   assert.equal(errors.length, 0, errors.join('\n'));
+  console.log('✓ Сводка бригады, выбор, инспектор и восстановление на телефоне');
   console.log('✓ Фильтры, сводка и приоритет заказа: мобильный тап и восстановление после перезагрузки');
   console.log('✓ Субтитры, быстрый приказ и настройка озвучки на телефоне');
   console.log('✓ Ночной свет, карта и сохранение режима при перезагрузке в браузере');

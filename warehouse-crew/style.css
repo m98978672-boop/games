@@ -585,6 +585,21 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
 .rule b { font-family: var(--mono); color: var(--ink-dim); }
 .rule-note { margin-top: calc(5px * var(--ui)); font-family: var(--mono); font-size: calc(9px * var(--ui)); color: var(--accent-2); }
 
+/* Предупреждения наблюдают за бригадой, не посылая приказы автоматически. */
+.safety-empty { color: var(--ink-faint); font-size: calc(10px * var(--ui)); line-height: 1.4; }
+.safety-empty[hidden] { display: none; }
+.safety-list { display: grid; gap: 6px; }
+.safety-row { border: 1px solid var(--line-strong); border-left: 3px solid var(--accent); border-radius: 8px; padding: 8px; background: rgba(232, 180, 90, .07); }
+.safety-row.critical { border-left-color: var(--red); background: rgba(226, 96, 79, .1); }
+.safety-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.safety-name { color: var(--ink); font-size: calc(11px * var(--ui)); }
+.safety-badge { color: var(--accent-2); font-size: calc(9px * var(--ui)); }
+.safety-row.critical .safety-badge { color: #ff8f6b; }
+.safety-details { color: var(--ink-dim); font-size: calc(10px * var(--ui)); line-height: 1.4; margin: 4px 0 7px; }
+.safety-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.safety-actions button { border: 1px solid var(--line-strong); border-radius: 7px; background: var(--panel-2); color: var(--ink); padding: 5px 9px; min-height: 32px; font-size: calc(10px * var(--ui)); cursor: pointer; }
+.safety-actions button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
 /* очередь заказов */
 .queue-count {
   font-family: var(--mono);
@@ -952,7 +967,7 @@ body.ready .panel.side { animation: panelIn 0.55s 0.08s var(--ease-out) both; }
   .cmd { min-height: calc(44px * var(--ui)); }
   .cmd b { font-size: calc(11px * var(--ui)); }
   .order-list { max-height: calc(240px * var(--ui)); }
-  .order .o-line .o-take, .order .o-line .o-priority, .queue-filters button, .queue-more { min-height: 40px; }
+  .order .o-line .o-take, .order .o-line .o-priority, .queue-filters button, .queue-more, .safety-actions button { min-height: 40px; }
 
   .inspector {
     width: 100vw; max-height: 100%;
@@ -1006,7 +1021,7 @@ body.ready .panel.side { animation: panelIn 0.55s 0.08s var(--ease-out) both; }
   body[data-sheet="hidden"] .panel.tools { transform: translateX(100%) !important; }
   .sheet-handle { display: none; }
   .ctl-scroll { opacity: 1 !important; pointer-events: auto !important; }
-  .order .o-line .o-take, .order .o-line .o-priority, .queue-filters button, .queue-more { min-height: 40px; }
+  .order .o-line .o-take, .order .o-line .o-priority, .queue-filters button, .queue-more, .safety-actions button { min-height: 40px; }
   .quickbar { right: auto; left: calc(8px * var(--ui)); width: min(58vw, 430px); bottom: calc(8px + var(--safe-b)); }
   .toasts { bottom: calc(12px + var(--safe-b)); left: calc(12px * var(--ui)); right: auto; transform: none; align-items: flex-start; }
   .topbar { padding-top: calc(4px + var(--safe-t)); }
