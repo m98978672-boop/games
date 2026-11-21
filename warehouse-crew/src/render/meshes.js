@@ -35,6 +35,8 @@ WC.meshes = (function () {
     foot: { parts: [{ shape: 'box', sx: 0.13, sy: 0.07, sz: 0.235, offset: [0, -0.07, 0.045], color: 'boots' }] },
     badge: { parts: [{ shape: 'box', sx: 0.075, sy: 0.045, sz: 0.018, offset: [0.095, 0.20, 0.116], color: '#f2ecdf' }] },
     strap: { parts: [{ shape: 'box', sx: 0.33, sy: 0.035, sz: 0.012, offset: [0, 0.145, 0.122], color: '#f4e6b8' }] },
+    vestBackReflective: { parts: [{ shape: 'box', sx: 0.37, sy: 0.025, sz: 0.012, offset: [0, 0.21, -0.126], color: '#f4e6b8' }] },
+    vestReflective: { parts: [{ shape: 'box', sx: 0.37, sy: 0.025, sz: 0.012, offset: [0, 0.27, 0.122], color: '#f4e6b8' }] },
     strap2: { parts: [{ shape: 'box', sx: 0.33, sy: 0.03, sz: 0.012, offset: [0, 0.20, 0.122], color: '#f4e6b8' }] },
     collar: { parts: [{ shape: 'cylinder', radius: 0.082, height: 0.05, segments: 10, offset: [0, 0.35, 0], color: 'shirtDark' }] },
     buckle: { parts: [{ shape: 'box', sx: 0.055, sy: 0.04, sz: 0.014, offset: [0, -0.045, 0.126], color: '#c9cfd4' }] },
@@ -47,7 +49,11 @@ WC.meshes = (function () {
     hipPad: { parts: [{ shape: 'sphere', radius: 0.077, segments: 8, offset: [0, -0.077, 0], color: 'pants' }] },
     kneePad: { parts: [{ shape: 'sphere', radius: 0.058, segments: 8, offset: [0, -0.058, 0], color: 'pantsDark' }] },
     anklePad: { parts: [{ shape: 'sphere', radius: 0.048, segments: 8, offset: [0, -0.048, 0], color: 'boots' }] },
+    gloveSeam: { parts: [{ shape: 'box', sx: 0.065, sy: 0.012, sz: 0.012, offset: [0, -0.055, 0.036], color: '#d5c8ae' }] },
+    sleeveCuff: { parts: [{ shape: 'cylinder', radius: 0.053, height: 0.035, segments: 10, offset: [0, -0.27, 0], color: 'shirtDark' }] },
+    kneeGuard: { parts: [{ shape: 'box', sx: 0.11, sy: 0.11, sz: 0.025, offset: [0, -0.085, 0.065], color: 'pantsDark' }] },
     thumb: { parts: [{ shape: 'box', sx: 0.03, sy: 0.055, sz: 0.032, offset: [-0.05, -0.085, 0.03], color: 'gloves' }] },
+    bootLaces: { parts: [{ shape: 'box', sx: 0.08, sy: 0.02, sz: 0.04, offset: [0, -0.02, 0.16], color: '#c3b999' }] },
     sole: { parts: [{ shape: 'box', sx: 0.14, sy: 0.032, sz: 0.25, offset: [0, -0.102, 0.05], color: 'bootsDark' }] },
     // Каска: купол, поля и лямка под подбородком
     // Купол каски лежит на макушке (голова 0..0.205), поля — по лбу.
@@ -58,6 +64,8 @@ WC.meshes = (function () {
 
     // --- склад ---
     floor: { parts: [{ shape: 'box', sx: 26, sy: 0.2, sz: 17, offset: [0, -0.2, 0], color: '#3c494b' }] },
+    floorSeamX: { parts: [{ shape: 'box', sx: 26, sy: 0.003, sz: 0.025, offset: [0, 0, 0], color: '#364346' }] },
+    floorSeamZ: { parts: [{ shape: 'box', sx: 0.025, sy: 0.003, sz: 17, offset: [0, 0, 0], color: '#364346' }] },
     floorStripe: { parts: [{ shape: 'box', sx: 26, sy: 0.02, sz: 0.18, offset: [0, 0, 0], color: '#6a5a38' }] },
     wall: { parts: [{ shape: 'box', sx: 26, sy: 3.4, sz: 0.2, offset: [0, 0, 0], color: '#34414a' }] },
     wallSide: { parts: [{ shape: 'box', sx: 0.2, sy: 3.4, sz: 17, offset: [0, 0, 0], color: '#303d45' }] },
@@ -121,6 +129,22 @@ WC.meshes = (function () {
     truckDoor: { parts: [{ shape: 'box', sx: 0.14, sy: 2.3, sz: 2.3, offset: [0, 1.9, 0], color: '#b9c0c4' }] },
     truckWheel: { parts: [{ shape: 'cylinder', radius: 0.46, height: 0.3, segments: 12, offset: [0, 0, 0], color: '#191d1f' }] },
     truckChassis: { parts: [{ shape: 'box', sx: 6.4, sy: 0.24, sz: 2.1, offset: [0, 0.78, 0], color: '#2b3236' }] },
+    truckHub: { parts: [{ shape: 'cylinder', radius: 0.22, height: 0.04, segments: 16, offset: [0, 0, 0], color: '#9babb1' }] },
+    truckBumper: { parts: [{ shape: 'box', sx: 0.24, sy: 0.28, sz: 2.2, offset: [0, 0, 0], color: '#28343a' }] },
+    truckGrille: { parts: [{ shape: 'box', sx: 0.035, sy: 0.32, sz: 1.18, offset: [0, 0, 0], color: '#202b30' }] },
+    truckLight: { parts: [{ shape: 'box', sx: 0.045, sy: 0.16, sz: 0.31, offset: [0, 0, 0], color: '#f6e2a4' }] },
+    truckMirror: { parts: [{ shape: 'box', sx: 0.18, sy: 0.25, sz: 0.10, offset: [0, 0, 0], color: '#223238' }] },
+    truckSideWindow: { parts: [{ shape: 'box', sx: 0.85, sy: 0.55, sz: 0.025, offset: [0, 0, 0], color: '#526f7a' }] },
+    truckHandle: { parts: [{ shape: 'box', sx: 0.25, sy: 0.045, sz: 0.025, offset: [0, 0, 0], color: '#bbc5c7' }] },
+    truckTailLight: { parts: [{ shape: 'box', sx: 0.04, sy: 0.16, sz: 0.24, offset: [0, 0, 0], color: '#b32f29' }] },
+    truckStep: { parts: [{ shape: 'box', sx: 0.70, sy: 0.07, sz: 0.18, offset: [0, 0, 0], color: '#69777c' }] },
+    truckRail: { parts: [{ shape: 'box', sx: 4.9, sy: 0.08, sz: 0.06, offset: [0, 0, 0], color: '#e4aa4e' }] },
+    forkliftWheelControl: { parts: [{ shape: 'cylinder', radius: 0.18, height: 0.035, segments: 16, offset: [0, 0, 0], color: '#252a2b' }] },
+    forkliftColumn: { parts: [{ shape: 'box', sx: 0.08, sy: 0.42, sz: 0.08, offset: [0, 0, 0], color: '#30383a' }] },
+    forkliftRoof: { parts: [{ shape: 'box', sx: 1.25, sy: 0.09, sz: 1.05, offset: [0, 0, 0], color: '#3d4246' }] },
+    forkliftHub: { parts: [{ shape: 'cylinder', radius: 0.13, height: 0.04, segments: 12, offset: [0, 0, 0], color: '#a7b2b4' }] },
+    forkliftLamp: { parts: [{ shape: 'box', sx: 0.08, sy: 0.12, sz: 0.18, offset: [0, 0, 0], color: '#fff0c0' }] },
+    forkliftHydraulic: { parts: [{ shape: 'box', sx: 0.10, sy: 1.4, sz: 0.10, offset: [0, 0, 0], color: '#96a8ad' }] },
     cargoStack: { parts: [{ shape: 'box', sx: 1.0, sy: 0.9, sz: 1.6, offset: [0, 1.1, 0], color: '#9d7240' }] },
 
     // --- улица за южной стеной ---

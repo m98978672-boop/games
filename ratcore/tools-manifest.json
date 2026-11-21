@@ -1310,6 +1310,14 @@
         "геометрия"
       ],
       "summary": "Read-only экспорт одного запечатанного меша в Three.js/Godot 4 (позиции, нормали, цвета, индексы) через BridgeGuard"
+    },
+    {
+      "id": "bridge.exportTexture",
+      "branch": "bridge",
+      "tier": "pack",
+      "pack": "pack:ai-team",
+      "tags": ["bridge", "texture", "export", "threejs", "мост", "текстура"],
+      "summary": "Копия RGBA запечатанной текстуры для внешнего рендера; сырой хэндл отклоняется ToolGuard"
     }
   ]
 }

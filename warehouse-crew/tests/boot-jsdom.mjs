@@ -90,7 +90,11 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
     writable: true,
     value: (query) => ({ matches: touch && /coarse/.test(query), media: query, addEventListener() {}, removeEventListener() {} }),
   });
-  window.THREE = Object.assign({}, THREE, { WebGLRenderer: StubRenderer });
+  // jsdom has no image decoder or WebGL: verify the material's shader hook
+  // with a local stand-in texture, while keeping the real Three material/mesh.
+  window.eval(fs.readFileSync(path.join(repoRoot, 'shooter/three.min.js'), 'utf8'));
+  const browserThree = window.THREE;
+  window.THREE = Object.assign({}, browserThree, { WebGLRenderer: StubRenderer });
   window.TextEncoder = TextEncoder;
   window.TextDecoder = TextDecoder;
   const errors = [];
@@ -190,6 +194,13 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
         window.WC.world.render(1 / 30, window.WC.game);
         result.truckRendered = true;
         result.truckMeshes = window.WC.world.scene.children.length;
+        const vehicle = window.WC.world.scene.children.find(o => o.userData.vehicle === 'truck');
+        const wheels = vehicle && vehicle.userData.wheels;
+        const wheelRotation = wheels && wheels[0].rotation.z;
+        game.update(0.1); window.WC.world.render(.1, game);
+        const lift = window.WC.world.scene.children.find(o => o.userData.vehicle === 'forklift');
+        result.transportDetails = !!vehicle && wheels.length === 6 && Math.abs(wheels[0].rotation.z - wheelRotation) > .01 &&
+          !!lift && lift.userData.wheels.length === 4 && !!lift.userData.forks && !!lift.userData.beacon;
       } catch (err) {
         result.truckRendered = false;
         result.truckError = String(err && err.message);
@@ -201,6 +212,24 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       result.shopShortcut = body.getAttribute('data-sheet') === 'full' && doc.activeElement === doc.getElementById('shop-heading');
     }
     window.WC.world.render(1 / 30, game);
+    window.WC.world.scene.updateMatrixWorld(true);
+    const findPart = name => window.WC.world.scene.children.find(o => o.userData && o.userData.scenePart === name);
+    const floor = findPart('floor'), yard = findPart('yard'), stripe = findPart('floorStripe');
+    const floorTop = new THREE.Box3().setFromObject(floor).max.y;
+    const yardTop = new THREE.Box3().setFromObject(yard).max.y;
+    const stripeTop = new THREE.Box3().setFromObject(stripe).max.y;
+    const heavyPadTop = new THREE.Box3().setFromObject(findPart('heavyPad')).max.y;
+    const heavyStripeTop = new THREE.Box3().setFromObject(findPart('heavyStripe')).max.y;
+    const roadTop = new THREE.Box3().setFromObject(findPart('streetSlab')).max.y;
+    const dashTop = new THREE.Box3().setFromObject(findPart('roadDash')).max.y;
+    const shader = { uniforms: {}, vertexShader: browserThree.ShaderLib.standard.vertexShader, fragmentShader: browserThree.ShaderLib.standard.fragmentShader };
+    floor.material.onBeforeCompile(shader);
+    result.textureMaterial = floor.material.userData.textureId?.startsWith('tex_') &&
+      floor.material.userData.surfaceTexture?.image?.data?.length === 128 * 128 * 4 &&
+      shader.uniforms.warehouseSurface.value === floor.material.userData.surfaceTexture && shader.vertexShader.includes('warehouseSurfacePos =') && shader.fragmentShader.includes('texture2D(warehouseSurface') &&
+      yard.material.userData.textureId?.startsWith('tex_');
+    result.floorSurfaces = { floorTop, yardTop, stripeTop, heavyPadTop, heavyStripeTop, roadTop, dashTop };
+    result.floorSeparation = Math.abs(floorTop) < 1e-5 && yardTop < floorTop - 0.02 && stripeTop > floorTop + 0.01 && heavyStripeTop > heavyPadTop + .01 && dashTop > roadTop + .01;
     result.noCabinLetters = !doc.querySelector('[id^="cabin-sign-"]');
     // Плашка имени в quickbar должна переключать рабочего одним тапом
     const cycle = doc.getElementById('qb-cycle');
@@ -300,7 +329,7 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       for (let k = 0; k < 30; k++) game.update(1 / 30);
       window.WC.world.render(1 / 30, game);
       const normalRig = window.WC.world.scene.children.find(o => o.userData && o.userData.rig === victim.id);
-      result.ragdollWorks = !!victim.state.ragdoll && Object.keys(victim.state.ragdoll).length === 11 && normalRig && !normalRig.visible && victim.state.ragdoll.head.y < 1.5;
+      result.ragdollWorks = !!victim.state.ragdoll && Object.keys(victim.state.ragdoll).length === 15 && normalRig && !normalRig.visible && victim.state.ragdoll.head.y < 1.5;
       victim.body.vitality = 0;
       victim.body.deceased = true;
       game.update(1 / 30);
@@ -313,6 +342,30 @@ async function boot({ allowFetch, allowInline, label, width, height, touch }) {
       game.restart();
       window.WC.world.render(1 / 30, game);
       result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
+      const hireButton = doc.querySelector('[data-buy="worker"]');
+      game.sim.state.stats.score = 400;
+      window.WC.ui.state.lastUiAt = -Infinity;
+      window.WC.ui.frame(1 / 30);
+      for (let i = 0; i < 5; i++) hireButton.click();
+      window.WC.ui.renderSide();
+      result.extraCrew = game.api.crew.length === 8 && game.api.crewTarget === 8 && game.sim.state.stats.score === 0 && hireButton.disabled;
+      result.extraTabs = doc.querySelectorAll('#crew-tabs [data-worker]').length === 8;
+      const hire = game.api.crew[7];
+      result.extraControllable = game.command(hire.id, 'auto').ok && game.api.envs[hire.id].brain === game.api.baseBrain;
+      game.sim.state.stats.score = 80;
+      result.maxCrew = !game.hireWorker().ok && game.sim.state.stats.score === 80;
+      game.api.crew.forEach(w => game.command(w.id, 'wait'));
+      const hireOrder = game.sim.spawnOrder();
+      hireOrder.mass = 8;
+      result.hireCommand = game.command(hire.id, 'pick', { orderId: hireOrder.id }).ok;
+      for (let k = 0; k < 1200 && hire.state.stats.picked < 1; k++) game.update(1 / 30);
+      result.hireActuallyWorks = hire.state.stats.picked > 0;
+      const oldId = hire.id;
+      hire.body.vitality = 0; hire.body.deceased = true;
+      game.update(1 / 30);
+      game.sim.state.time = game.sim.state.day * game.sim.state.dayLength + 0.01;
+      game.update(1 / 30);
+      result.extraReplaced = game.api.crew.length === 8 && !game.api.crew.some(w => w.id === oldId) && game.api.crew.every(w => game.api.envs[w.id].workers === game.api.crew);
     } catch (err) { result.featureError = String(err && err.stack || err); }
   }
   window.close();
@@ -339,6 +392,8 @@ for (const mode of modes) {
   check(r.meshes > 100, 'меши собраны движком', { meshes: r.meshes });
   check(r.bodyReady, 'body.ready выставлен');
   check(Boolean(r.quickbar), 'есть панель быстрых приказов');
+  check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
+  check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
   check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');
   check(r.haloRecipe, 'рецепт подсветки halo в движке');
   check(r.cycleWorks !== false, 'тап по имени в quickbar переключает рабочего');
@@ -350,6 +405,7 @@ for (const mode of modes) {
   check(Array.isArray(r.cameraCycle) && r.cameraCycle[0] === 'follow' && r.cameraCycle[1] === 'top', 'C переключает 3-е лицо → сверху за ним → весь цех', { cycle: r.cameraCycle });
   check(r.followMode === 'follow' && r.followClass, 'камера «сверху за рабочим» включается', { mode: r.followMode });
   check(r.truckSpawned && r.truckOrders > 0, 'фура приезжает на док с грузом', { orders: r.truckOrders });
+  check(r.transportDetails, 'фуры и погрузчик имеют детали и вращающиеся колёса');
   check(r.truckRendered === true, 'фура рисуется мешами движка без ошибок', { err: r.truckError });
   if (mode.touch) {
     check(r.device === 'phone', 'layout.js распознал телефон', { device: r.device });
@@ -365,6 +421,7 @@ for (const mode of modes) {
   check(r.boxSunk === 0 && r.boxHovering === 0, 'коробки стоят на опоре (не тонут и не летают)',
     { sunk: r.boxSunk, hovering: r.boxHovering });
   check(r.boxStray === 0, 'коробку не уносит за рабочим после переноски', { stray: r.boxStray });
+  check(r.extraCrew && r.extraTabs && r.extraControllable && r.maxCrew && r.extraReplaced && r.hireCommand && r.hireActuallyWorks, 'найм до восьми, управление и замена дополнительных рабочих', { extraCrew: r.extraCrew, tabs: r.extraTabs, controllable: r.extraControllable, max: r.maxCrew, replaced: r.extraReplaced, command: r.hireCommand, works: r.hireActuallyWorks, error: r.featureError });
   check(r.ragdollWorks, 'обморок отображается физическим ragdoll', { ragdoll: r.ragdollWorks, error: r.featureError });
   check(r.staffNavigation && r.bloodRendered && r.caughtWorks, 'персонал обходит препятствия, частицы крови рисуются', { navigation: r.staffNavigation, blood: r.bloodRendered, error: r.featureError });
   check(!r.featureError && r.mapWorks && r.staffBought && r.medicWorks && r.staffRenders && r.deathWorks && r.hireWorks && r.restartWorks, '2D, магазин, медик, смерть и пополнение работают в игре', { error: r.featureError, map: r.mapWorks, staff: r.staffBought, medic: r.medicWorks, death: r.deathWorks, hire: r.hireWorks, restart: r.restartWorks });

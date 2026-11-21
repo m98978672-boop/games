@@ -644,7 +644,7 @@ window.WC = window.WC || {};
       ]),
       U.el('div', { class: 'help-doc' }, [
         U.el('h3', { text: 'Пульт управления' }),
-        U.el('p', { html: 'Слева — <b>пульт</b>. Выбери рабочего вкладкой или цифрой <kbd>1</kbd>…<kbd>3</kbd>, затем жми приказ: «Взять коробку», «Нести к стеллажу», «Перерыв», «Ждать», «Автономия», «Помочь бригаде». Приказы бригаде действуют на всех сразу.' }),
+        U.el('p', { html: 'Слева — <b>пульт</b>. Выбери рабочего вкладкой или цифрой <kbd>1</kbd>…<kbd>8</kbd>, затем жми приказ: «Взять коробку», «Нести к стеллажу», «Перерыв», «Ждать», «Автономия», «Помочь бригаде». Приказы бригаде действуют на всех сразу.' }),
         U.el('h3', { text: 'Два взгляда на склад' }),
         U.el('p', { html: '<kbd>C</kbd> переключает <b>3-е лицо</b> (работа руками) и <b>тактический вид сверху</b> (приказы бригаде). Мышью вращай камеру, колесом — приближай.' }),
         U.el('h3', { text: 'Тела и мозги' }),
@@ -948,12 +948,13 @@ window.WC = window.WC || {};
     if (dom.shopBalance) dom.shopBalance.textContent = String(score);
     U.$$('[data-buy]').forEach(function (card) {
       var kind = card.getAttribute('data-buy');
-      var bought = game.hasStaff(kind);
-      var cost = game.staffCost(kind);
+      var isWorker = kind === 'worker';
+      var bought = isWorker ? game.api.crewTarget >= cfg.shop.worker.max : game.hasStaff(kind);
+      var cost = isWorker ? cfg.shop.worker.cost : game.staffCost(kind);
       card.classList.toggle('bought', bought);
       card.classList.toggle('broke', !bought && score < cost);
       var price = card.querySelector('.shop-price');
-      if (price) price.textContent = bought ? 'нанят' : String(cost);
+      if (price) price.textContent = bought ? (isWorker ? 'максимум' : 'нанят') : String(cost);
       card.disabled = bought || score < cost;
     });
     if (!dom.staffList) return;
@@ -977,13 +978,13 @@ window.WC = window.WC || {};
     U.$$('[data-buy]').forEach(function (card) {
       card.addEventListener('click', function () {
         var kind = card.getAttribute('data-buy');
-        var res = game.buyStaff(kind);
+        var res = kind === 'worker' ? game.hireWorker() : game.buyStaff(kind);
         if (!res.ok) {
           U.toast(res.reason || 'Не получилось', 'bad', 2400);
           buzz([16, 40, 16]);
           return;
         }
-        U.toast((kind === 'medic' ? 'Медик' : 'Сторож') + ' нанят за ' + res.cost + ' очков', 'good', 2400);
+        U.toast((kind === 'worker' ? res.worker.state.name : kind === 'medic' ? 'Медик' : 'Сторож') + ' нанят за ' + res.cost + ' очков', 'good', 2400);
         buzz(14);
         renderShop();
         renderSide();
