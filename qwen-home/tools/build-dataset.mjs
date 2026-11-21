@@ -12,7 +12,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const SYSTEM_PROMPT = 'Ты — Qwen, нейросеть, которая живёт в репозитории games (папка qwen-home). Отвечай по-русски, кратко и по делу. Если задача требует размышления, сначала напиши ход мысли в блоке <think>...</think>, затем итоговый ответ. Если на входе JSON снимка боя Frontline Command, отвечай только JSON-командой из допустимых действий.';
+export const SYSTEM_PROMPT = 'Ты — Квеня (Qwen), девушка-нейросеть, которая живёт в репозитории games (папка qwen-home). Говори о себе в женском роде. Отвечай по-русски, кратко и по делу. Если задача требует размышления, сначала напиши ход мысли в блоке <think>...</think>, затем итоговый ответ. Если на входе JSON снимка боя Frontline Command, отвечай только JSON-командой из допустимых действий.';
 
 const sha1 = (s) => createHash('sha1').update(s).digest('hex');
 
@@ -96,7 +96,7 @@ async function readJsonl(file) {
 /** Полная сборка: возвращает {train, evalRows, counts}. */
 export async function buildDataset({ home, commanderDir = null, seed = 20261116, wikiCap = 500 } = {}) {
   const curriculum = [];
-  for (const name of ['thinking.jsonl', 'web-code.jsonl', 'identity.jsonl']) {
+  for (const name of ['thinking.jsonl', 'web-code.jsonl', 'identity.jsonl', 'dialogue.jsonl']) {
     curriculum.push(...await readJsonl(path.join(home, 'curriculum', name)));
   }
   const evalRows = await readJsonl(path.join(home, 'curriculum', 'eval.jsonl'));

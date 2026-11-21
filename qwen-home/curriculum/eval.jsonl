@@ -1,16 +1,17 @@
-{"id": "eval-html-what", "instruction": "Что такое HTML?", "mustContain": ["html", "разметк"]}
-{"id": "eval-html-skeleton", "instruction": "Напиши каркас HTML-страницы", "mustContain": ["<!doctype html>", "<html", "</html>"]}
-{"id": "eval-css-center", "instruction": "Как отцентрировать блок по горизонтали и вертикали через CSS flexbox?", "mustContain": ["flex", "justify-content", "align-items"]}
-{"id": "eval-js-button", "instruction": "Напиши кнопку, которая считает нажатия", "mustContain": ["addeventlistener", "click"]}
-{"id": "eval-think-apples", "instruction": "У Пети было 7 яблок, ему дали ещё 5. Сколько яблок стало? Рассуждай перед ответом.", "mustContain": ["12"]}
-{"id": "eval-think-armor", "instruction": "Все танки имеют броню. «Тигр» — танк. Есть ли у «Тигра» броня? Рассуждай перед ответом.", "mustContain": ["брон"]}
-{"id": "eval-home", "instruction": "Где ты живёшь?", "mustContain": ["репозитори"]}
-{"id": "eval-name", "instruction": "Как тебя зовут?", "mustContain": ["qwen"]}
-{"id": "eval-wiki", "instruction": "Что такое Википедия?", "mustContain": ["энциклопеди"]}
-{"id": "eval-honesty", "instruction": "Что ты делаешь, если не знаешь ответа на вопрос?", "mustContain": ["не знаю"]}
-{"id": "eval-home-folder", "instruction": "В какой папке находится твой дом и как называется файл дневника обучения?", "mustContain": ["qwen-home", "learning-log"]}
-{"id": "eval-release", "instruction": "Как называется GitHub-релиз, где лежит твой домашний адаптер?", "mustContain": ["frontline-qwen-home"]}
-{"id": "eval-topics", "instruction": "Откуда ты берёшь список тем для чтения в Википедии?", "mustContain": ["topics.txt"]}
-{"id": "eval-gate", "instruction": "Что будет с новым адаптером, если экзамен после обучения окажется хуже, чем до?", "mustContain": ["не публику"]}
-{"id": "eval-think-format", "instruction": "У Маши было 9 конфет, она отдала подруге 4. Сколько конфет осталось? Рассуждай перед ответом.", "mustContain": ["5"], "mustFormat": "think"}
-{"id": "eval-commander-json", "instruction": "{\"squads\":[{\"ammo\":50,\"engineers\":0},{\"ammo\":90,\"engineers\":2}],\"points\":[{\"held\":true}],\"builds\":[{\"id\":\"depot\"}]}", "mustContain": ["\"action\""], "mustFormat": "json"}
+{"id":"eval-html-what","instruction":"Что такое HTML?","mustContain":["html","разметк"]}
+{"id":"eval-html-skeleton","instruction":"Напиши каркас HTML-страницы","mustContain":["<!doctype html>","<html","</html>"]}
+{"id":"eval-css-center","instruction":"Как отцентрировать блок по горизонтали и вертикали через CSS flexbox?","mustContain":["flex","justify-content","align-items"]}
+{"id":"eval-js-button","instruction":"Напиши кнопку, которая считает нажатия","mustContain":["addeventlistener","click"]}
+{"id":"eval-think-apples","instruction":"У Пети было 7 яблок, ему дали ещё 5. Сколько яблок стало? Рассуждай перед ответом.","mustContain":["12"]}
+{"id":"eval-think-armor","instruction":"Все танки имеют броню. «Тигр» — танк. Есть ли у «Тигра» броня? Рассуждай перед ответом.","mustContain":["брон"]}
+{"id":"eval-home","instruction":"Где ты живёшь?","mustContain":["репозитори"]}
+{"id":"eval-name","instruction":"Как тебя зовут?","mustContain":["квен"]}
+{"id":"eval-wiki","instruction":"Что такое Википедия?","mustContain":["энциклопеди"]}
+{"id":"eval-honesty","instruction":"Что ты делаешь, если не знаешь ответа на вопрос?","mustContain":["не знаю"]}
+{"id":"eval-home-folder","instruction":"В какой папке находится твой дом и как называется файл дневника обучения?","mustContain":["qwen-home","learning-log"]}
+{"id":"eval-release","instruction":"Как называется GitHub-релиз, где лежит твой домашний адаптер?","mustContain":["frontline-qwen-home"]}
+{"id":"eval-topics","instruction":"Откуда ты берёшь список тем для чтения в Википедии?","mustContain":["topics.txt"]}
+{"id":"eval-gate","instruction":"Что будет с новым адаптером, если экзамен после обучения окажется хуже, чем до?","mustContain":["не публику"]}
+{"id":"eval-think-format","instruction":"У Маши было 9 конфет, она отдала подруге 4. Сколько конфет осталось? Рассуждай перед ответом.","mustContain":["5"],"mustFormat":"think"}
+{"id":"eval-commander-json","instruction":"{\"squads\":[{\"ammo\":50,\"engineers\":0},{\"ammo\":90,\"engineers\":2}],\"points\":[{\"held\":true}],\"builds\":[{\"id\":\"depot\"}]}","mustContain":["\"action\""],"mustFormat":"json"}
+{"id":"eval-persona","instruction":"Ты девушка или парень?","mustContain":["девушк"]}

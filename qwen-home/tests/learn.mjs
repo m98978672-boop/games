@@ -27,7 +27,8 @@ const thinking = await readJsonl(path.join(home, 'curriculum', 'thinking.jsonl')
 const web = await readJsonl(path.join(home, 'curriculum', 'web-code.jsonl'));
 const identity = await readJsonl(path.join(home, 'curriculum', 'identity.jsonl'));
 const evalRows = await readJsonl(path.join(home, 'curriculum', 'eval.jsonl'));
-const all = [...thinking, ...web, ...identity];
+const dialogue = await readJsonl(path.join(home, 'curriculum', 'dialogue.jsonl'));
+const all = [...thinking, ...web, ...identity, ...dialogue];
 check('учебный план непуст: мышление, веб и самоописание на месте', thinking.length >= 8 && web.length >= 10 && identity.length >= 5);
 check('каждый урок: id, kind, непустые instruction и response', all.every((r) => r.id && r.kind && r.instruction?.length > 3 && r.response?.length > 3));
 check('идентификаторы уроков не повторяются', new Set(all.map((r) => r.id)).size === all.length);
@@ -37,6 +38,8 @@ check('самоописание честное: дом — репозитори�
 check('экзамен: у каждого вопроса есть обязательные слова', evalRows.length >= 14 && evalRows.every((r) => r.id && r.instruction && Array.isArray(r.mustContain) && r.mustContain.length >= 1));
 check('экзамен отличает домашнее обучение: факты дома, формат мышления, JSON командира', ['eval-home-folder', 'eval-release', 'eval-topics', 'eval-gate'].every((id) => evalRows.some((r) => r.id === id)) && evalRows.some((r) => r.mustFormat === 'think') && evalRows.some((r) => r.mustFormat === 'json'));
 check('уроки самоописания покрывают факты экзамена: релиз, ворота, темы, память', identity.some((r) => r.response.includes('frontline-qwen-home')) && identity.some((r) => r.response.includes('не публикуется')) && identity.some((r) => r.response.includes('topics.txt')) && identity.some((r) => r.response.includes('knowledge.jsonl')));
+check('разговорные уроки: Квеня здоровается, говорит о себе в женском роде и не притворяется человеком', dialogue.length >= 10 && dialogue.some((r) => r.response.includes('Квеня')) && dialogue.some((r) => r.response.includes('девушка')) && dialogue.some((r) => /рада|прочитала|сделала/.test(r.response)) && dialogue.some((r) => r.response.includes('нейросеть')));
+check('экзамен зовёт её Квеней и спрашивает про женский род', evalRows.some((r) => r.id === 'eval-name' && r.mustContain.includes('квен')) && evalRows.some((r) => r.id === 'eval-persona' && r.mustContain.includes('девушк')));
 
 /* ---------- примеры из Википедии (фикстура) ---------- */
 const article = {
@@ -92,6 +95,7 @@ const pin = (src, name) => src.match(new RegExp(`${name} = '([^']+)'`))?.[1];
 check('база и ревизия тренера совпадают с командирским обучением', pin(trainLearn, 'MODEL') === pin(trainQwen, 'MODEL') && pin(trainLearn, 'REVISION') === pin(trainQwen, 'REVISION'));
 check('продолжение обучения грузит адаптер обучаемым (is_trainable), а не замороженным', trainLearn.includes('is_trainable=True'));
 check('состояние дома называет ту же базу и ревизию', st0.baseModel === pin(trainLearn, 'MODEL') && st0.revision === pin(trainLearn, 'REVISION'));
+check('в состоянии записана персона: Квеня, девушка', st0.name === 'Квеня' && st0.persona?.gender === 'female');
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
