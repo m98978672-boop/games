@@ -185,17 +185,35 @@ WC.world = (function () {
     var material = meshes.makeMaterial({ roughness: .94, metalness: 0 });
     var spec = kind === 'concrete' ? ['#c0bdb5', '#747974', 4101, .34] :
       kind === 'asphalt' ? ['#aaa9a3', '#656c6b', 4102, .48] : ['#e8d8c1', '#a99476', 4103, 1.8];
-    var generated = engine.tools.build.texGenerate({ kind: 'noise', width: 128, height: 128,
-      seed: spec[2], baseColor: spec[0], accentColor: spec[1], withNormals: false, withDamaged: false });
-    if (!generated.ok) return material;
-    var exported = engine.tools.bridge.exportTexture({ texture: generated.data });
-    if (!exported.ok) return material;
-    var data = exported.data;
-    var texture = new THREE_NS.DataTexture(data.pixels, data.width, data.height, THREE_NS.RGBAFormat);
-    texture.wrapS = THREE_NS.RepeatWrapping; texture.wrapT = THREE_NS.RepeatWrapping;
-    texture.magFilter = THREE_NS.LinearFilter; texture.minFilter = THREE_NS.LinearFilter;
-    if ('colorSpace' in texture) texture.colorSpace = THREE_NS.SRGBColorSpace;
-    texture.needsUpdate = true;
+    // Графика не должна мешать запуску: старый кешированный RatCore ещё
+    // может не иметь exportTexture. В этом случае оставляем цветной материал.
+    var build = engine.tools && engine.tools.build;
+    var bridge = engine.tools && engine.tools.bridge;
+    if (!build || typeof build.texGenerate !== 'function' ||
+        !bridge || typeof bridge.exportTexture !== 'function' ||
+        typeof THREE_NS.DataTexture !== 'function') {
+      surfaceMaterials[kind] = material;
+      return material;
+    }
+    var data, texture;
+    try {
+      var generated = build.texGenerate({ kind: 'noise', width: 128, height: 128,
+        seed: spec[2], baseColor: spec[0], accentColor: spec[1], withNormals: false, withDamaged: false });
+      var exported = generated && generated.ok && bridge.exportTexture({ texture: generated.data });
+      if (!exported || !exported.ok || !exported.data || !exported.data.pixels) {
+        surfaceMaterials[kind] = material;
+        return material;
+      }
+      data = exported.data;
+      texture = new THREE_NS.DataTexture(data.pixels, data.width, data.height, THREE_NS.RGBAFormat);
+      texture.wrapS = THREE_NS.RepeatWrapping; texture.wrapT = THREE_NS.RepeatWrapping;
+      texture.magFilter = THREE_NS.LinearFilter; texture.minFilter = THREE_NS.LinearFilter;
+      if ('colorSpace' in texture) texture.colorSpace = THREE_NS.SRGBColorSpace;
+      texture.needsUpdate = true;
+    } catch (err) {
+      surfaceMaterials[kind] = material;
+      return material;
+    }
     material.userData.surfaceTexture = texture;
     material.userData.textureId = data.textureId;
     material.onBeforeCompile = function (shader) {

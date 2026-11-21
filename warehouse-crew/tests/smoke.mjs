@@ -31,10 +31,14 @@ ok(!/https?:\/\/(?!localhost)[^"' ]+\.(js|css)/i.test(html), 'нет внешн�
 for (const m of html.matchAll(/(?:src|href)="([^"#]+?)"/g)) {
   const p = m[1];
   if (p.startsWith('data:') || p.startsWith('http')) continue;
-  ok(existsSync(join(root, p)), 'index.html -> ' + p + ' существует');
+  ok(existsSync(join(root, p.split(/[?#]/)[0])), 'index.html -> ' + p + ' существует');
 }
 ok(html.includes('../shared/engine.js'), 'подключён общий движок ../shared/engine.js');
 ok(html.includes('../ratcore/ratcore.bundle.js'), 'подключён RatCore');
+const scripts = [...html.matchAll(/<script\s+src="([^"]+)"/g)].map(m => m[1]);
+const versioned = scripts.filter(src => src.startsWith('src/') || src.startsWith('../ratcore/ratcore.bundle.js'));
+const versions = versioned.map(src => new URL(src, 'https://example.test/warehouse-crew/').searchParams.get('v'));
+ok(versions.length > 1 && versions.every(v => v && v === versions[0]), 'движок и игровые скрипты имеют общую версию для обхода старого кэша');
 ok(html.includes('../shooter/three.min.js'), 'подключён локальный Three.js');
 ok(html.indexOf('shared/engine.js') < html.indexOf('src/main.js'), 'движок подключён до игровых скриптов');
 
