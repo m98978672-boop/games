@@ -51,7 +51,6 @@ func _init(host: Node3D) -> void:
 	var glove_highlight := RazlomArt.material(Color("56645a"), "cloth")
 	var seam := RazlomArt.material(Color("8b927e"))
 	RazlomArt.orb(hand, Vector3(0, 0, -0.035), Vector3(0.084, 0.06, 0.095), glove, "Palm")
-	RazlomArt.orb(hand, Vector3(0, 0.054, -0.06), Vector3(0.04, 0.004, 0.03), glove_highlight, "BackhandPad")
 	for i in range(4):
 		var finger := Node3D.new()
 		finger.name = "Finger%d" % i
@@ -72,11 +71,6 @@ func _init(host: Node3D) -> void:
 		var seam_mark := RazlomArt.box(finger, Vector3(0, 0.007, -0.078), Vector3(0.012, 0.003, 0.008), seam)
 		seam_mark.name = "Stitch"
 		hand_knuckles.append(finger)
-	for i in range(4):
-		# Flat reinforced ridges follow the glove surface instead of reading as
-		# separate floating beads at the first-person camera distance.
-		var ridge := RazlomArt.box(hand, Vector3(-0.039 + i * 0.026, 0.043, -0.078), Vector3(0.012, 0.004, 0.014), glove_highlight)
-		ridge.name = "KnuckleRidge%d" % i
 	var thumb := MeshInstance3D.new()
 	var thumb_mesh := CapsuleMesh.new()
 	thumb_mesh.radius = 0.011
