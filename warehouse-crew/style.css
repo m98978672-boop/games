@@ -600,6 +600,16 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
 .safety-actions button { border: 1px solid var(--line-strong); border-radius: 7px; background: var(--panel-2); color: var(--ink); padding: 5px 9px; min-height: 32px; font-size: calc(10px * var(--ui)); cursor: pointer; }
 .safety-actions button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 
+/* Журнал доступен и в мобильном пульте; тип события указан не только цветом. */
+.journal-list { display: grid; gap: 4px; max-height: calc(240px * var(--ui)); overflow-y: auto; overscroll-behavior: contain; }
+.journal-list:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.journal-entry { display: flex; align-items: baseline; gap: 8px; padding: 6px 7px; border-radius: 7px; background: rgba(255,255,255,.035); color: var(--ink); font-size: calc(10px * var(--ui)); line-height: 1.45; overflow-wrap: anywhere; }
+.journal-entry time { flex: none; color: var(--ink-faint); font-family: var(--mono); }
+.journal-tone { color: var(--ink-dim); }
+.journal-entry.bad .journal-tone { color: var(--red); }
+.journal-entry.warn .journal-tone { color: var(--accent-2); }
+.journal-entry.good .journal-tone { color: var(--green); }
+
 /* очередь заказов */
 .queue-count {
   font-family: var(--mono);

@@ -381,6 +381,31 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       game.restart();
       window.WC.world.render(1 / 30, game);
       result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
+      // Один и тот же журнал доступен в пульте и на телефоне; фильтрация
+      // не меняет сохранение, новые события не сбивают выбранный фильтр.
+      game.setPaused(true);
+      const synthetic = Array.from({length: 25}, (_, i) => ({t:i, text:i===24 ? '<b>Последнее</b>' : 'Событие ' + i, tone:i%3===0 ? 'bad' : i%3===1 ? 'warn' : 'good'}));
+      game.api.log.splice(0, game.api.log.length, ...synthetic);
+      const journalBefore = JSON.stringify(game.captureCheckpoint());
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      const jf = name => doc.querySelector('[data-journal-filter="' + name + '"]');
+      const journalRows = () => [...doc.querySelectorAll('#journal-list .journal-entry')];
+      result.journalDisplay = journalRows().length === 12 && journalRows()[0].textContent.includes('<b>Последнее</b>') && journalRows()[0].querySelectorAll('b').length === 1 &&
+        doc.getElementById('journal-count').textContent === '25' && doc.getElementById('journal-showing').textContent.includes('12 из 25');
+      const moreJournal = doc.getElementById('journal-more');
+      moreJournal.click(); result.journalDisplay = result.journalDisplay && journalRows().length === 24;
+      moreJournal.focus(); moreJournal.click();
+      result.journalDisplay = result.journalDisplay && journalRows().length === 25 && moreJournal.hidden && doc.activeElement === jf('all');
+      jf('warning').click();
+      result.journalFilters = jf('warning').getAttribute('aria-pressed') === 'true' && journalRows().length === 12 && journalRows().every(r => r.classList.contains('bad') || r.classList.contains('warn'));
+      game.api.log.push({t:26, text:'Новая проблема', tone:'bad'});
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      result.journalFilters = result.journalFilters && journalRows()[0].textContent.includes('Новая проблема') && jf('warning').getAttribute('aria-pressed') === 'true';
+      game.api.log.pop(); jf('good').click();
+      result.journalFilters = result.journalFilters && journalRows().length === 8 && journalRows().every(r => r.classList.contains('good')) && JSON.stringify(game.captureCheckpoint()) === journalBefore;
+      game.api.log.splice(0, game.api.log.length, {t:0, text:'Только успех', tone:'good'});
+      jf('warning').click(); result.journalFilters = result.journalFilters && !doc.getElementById('journal-empty').hidden && journalRows().length === 0;
+      game.restart(); result.journalRestart = jf('all').getAttribute('aria-pressed') === 'true' && doc.getElementById('journal-count').textContent === '1';
       // Сводка не изменяет симуляцию, остаётся стабильной и ведёт к нужному рабочему.
       const crew = game.api.crew;
       crew[0].body.energy = .18;
@@ -531,6 +556,7 @@ for (const mode of modes) {
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
   check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
   check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});
+  check(r.journalDisplay && r.journalFilters && r.journalRestart, 'журнал в пульте: фильтры, история, фокус, новая смена', {display:r.journalDisplay, filters:r.journalFilters, restart:r.journalRestart, error:r.featureError});
   check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });

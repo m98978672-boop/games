@@ -185,6 +185,27 @@ try {
   assert.equal(await page.evaluate(() => WC.game.state.paused), true);
   assert.equal(await page.evaluate(() => WC.game.api.crew[0].body.energy), .34);
   console.log('✓ События фона и восстановление смены в Chromium');
+  await page.evaluate(() => {
+    WC.ui.sheet.set('full', true);
+    WC.game.api.log.splice(0, WC.game.api.log.length, ...Array.from({length:26}, (_, i) => ({t:i, text:'Запись ' + i, tone:i%2 ? 'bad' : 'good'})));
+    WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1/30);
+  });
+  const journalWarning = page.locator('[data-journal-filter="warning"]');
+  await journalWarning.scrollIntoViewIfNeeded();
+  await page.waitForFunction(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }, await journalWarning.elementHandle());
+  const journalButtonSize = await journalWarning.boundingBox();
+  assert(journalButtonSize.height >= 38 && journalButtonSize.x + journalButtonSize.width <= (portrait ? 390 : 844));
+  await journalWarning.tap();
+  assert.equal(await journalWarning.getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('#journal-list .journal-entry').count(), 12);
+  assert.match(await page.locator('#journal-list .journal-entry').first().innerText(),/Проблема.*Запись 25/);
+  const journalMore = page.locator('#journal-more');
+  await journalMore.scrollIntoViewIfNeeded(); await journalMore.tap();
+  assert.equal(await page.locator('#journal-list .journal-entry').count(), 13);
+  assert(await journalMore.isHidden());
+  await page.screenshot({path:'/tmp/wc-journal-' + (portrait ? 'portrait' : 'landscape') + '.png'});
+  console.log('✓ Мобильный журнал, фильтр предупреждений и просмотр истории');
+
   assert.equal(errors.length, 0, errors.join('\n'));
   console.log('✓ Сводка бригады, выбор, инспектор и восстановление на телефоне');
   console.log('✓ Фильтры, сводка и приоритет заказа: мобильный тап и восстановление после перезагрузки');
