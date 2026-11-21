@@ -48,7 +48,7 @@ if (!JSDOM || !THREE) {
 
 const SCRIPTS = [
   'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
-  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/safety.js', 'src/voice.js',
+  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/contracts.js', 'src/safety.js', 'src/voice.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
 ];
@@ -509,6 +509,14 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       result.movingCargoStatus = result.movingCargoStatus && rows[0].querySelector('.o-who').textContent.includes('в работе') && !rows[0].querySelector('.o-abc').textContent.includes('движется');
       const filter = name => doc.querySelector('[data-order-filter="' + name + '"]');
       const visibleCodes = () => [...doc.querySelectorAll('#order-list .o-code')].map(e => e.textContent);
+      qLate.direction = 'return'; qLate.deadline = -100;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      const returnRow = [...doc.querySelectorAll('#order-list .order')].find(row => row.querySelector('.o-code').textContent === qLate.code);
+      result.returnQueue = returnRow.querySelector('.o-info').textContent.includes('возврат на полку') &&
+        returnRow.querySelector('.o-timer').textContent === 'без срока' && !returnRow.querySelector('.o-timer').classList.contains('late') &&
+        doc.getElementById('queue-summary').textContent.includes('≤ 30 с: 1');
+      filter('soon').click(); result.returnQueue = result.returnQueue && visibleCodes().join() === qSoon.code;
+      delete qLate.direction; qLate.deadline = 100; filter('all').click();
       const savedBeforeFilter = JSON.stringify(game.captureCheckpoint());
       filter('pending').click();
       result.queueFilters = visibleCodes().join() === qLate.code && filter('pending').getAttribute('aria-pressed') === 'true';
@@ -586,6 +594,19 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       result.safetyHired = result.safetyHired && !window.WC.ui.state.safetyRows.has(oldId);
     } catch (err) { result.featureError = String(err && err.stack || err); }
   }
+  try {
+    const doc = window.document; game.restart();
+    window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+    const button = doc.querySelector('#contracts-list [data-contract="intake"]');
+    button.click();
+    const active = game.api.contracts.items[0].status === 'active' && doc.querySelector('#contracts-count').textContent === '1 / 2';
+    const saved = JSON.parse(window.localStorage.getItem(window.WC.save.CHECKPOINT_KEY)).checkpoint.contracts.items[0].status === 'active';
+    doc.querySelector('#contracts-list [data-contract="intake"]').click();
+    const cancelled = game.api.contracts.items[0].status === 'cancelled' && doc.querySelector('#contracts-list').textContent.includes('Отменён');
+    doc.getElementById('btn-report').click();
+    const report = doc.querySelector('.shift-report').textContent.includes('Контракты смены');
+    result.contractUi = active && saved && cancelled && report;
+  } catch (err) { result.contractError = String(err && err.stack || err); }
   window.close();
   return result;
 }
@@ -616,11 +637,13 @@ for (const mode of modes) {
   else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
   check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
+  check(r.contractUi, 'контракты в пульте: взять, сохранить, отменить и увидеть в отчёте', {error:r.contractError});
   check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});
   check(r.reportDisplay && r.reportRefresh && r.reportInspect && r.reportExport && r.reportEnd && r.reportEmpty && r.reportFocus, 'отчёт смены: снимок, обновление, инспектор, экспорт и итоги', {display:r.reportDisplay, refresh:r.reportRefresh, inspect:r.reportInspect, export:r.reportExport, end:r.reportEnd, empty:r.reportEmpty, focus:r.reportFocus, error:r.featureError});
   check(r.journalDisplay && r.journalFilters && r.journalRestart, 'журнал в пульте: фильтры, история, фокус, новая смена', {display:r.journalDisplay, filters:r.journalFilters, restart:r.journalRestart, error:r.featureError});
   check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
   check(r.movingCargoStatus, 'очередь показывает движение груза и ожидание остановки', {error:r.featureError});
+  check(r.returnQueue, 'возврат на полку виден без ложной просрочки и не попадает в срочные', {error:r.featureError});
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);

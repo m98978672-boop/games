@@ -86,6 +86,8 @@ window.WC = window.WC || {};
     dom.shopBalance = q('shop-balance');
     dom.shopList = q('shop-list');
     dom.staffList = q('staff-list');
+    dom.contractsList = q('contracts-list');
+    dom.contractsCount = q('contracts-count');
   }
 
   // --------------------------------------------------- мелочи «на ощупь»
@@ -466,12 +468,12 @@ window.WC = window.WC || {};
     }
     // Ближайший дедлайн сверху — срочные заказы не теряются в очереди.
     var active = game.sim.activeOrders().slice().sort(function (a, b) {
-      return a.deadline - b.deadline || a.createdAt - b.createdAt;
+      return (a.direction === 'return') - (b.direction === 'return') || a.deadline - b.deadline || a.createdAt - b.createdAt;
     });
     var now = game.sim.state.time;
     var slots = game.sim.state.slots;
     var free = slots.filter(function (slot) { return !slot.occupied; }).length;
-    var soon = active.filter(function (order) { return order.deadline - now <= 30; }).length;
+    var soon = active.filter(function (order) { return order.direction !== 'return' && order.deadline - now <= 30; }).length;
     dom.queueSummary.textContent = 'Свободных ячеек: ' + free + '/' + slots.length + ' · срок ≤ 30 с: ' + soon;
     dom.queueSummary.title = 'Свободные ячейки не включают места, зарезервированные для заказов';
     dom.queueSummary.classList.toggle('warning', free === 0 || soon > 0);
@@ -479,7 +481,7 @@ window.WC = window.WC || {};
       if (uiState.orderFilter === 'pending') return order.status === 'pending';
       if (uiState.orderFilter === 'working') return order.status === 'claimed' || order.status === 'carried';
       if (uiState.orderFilter === 'priority') return order.dispatchPriority === true;
-      if (uiState.orderFilter === 'soon') return order.deadline - now <= 30;
+      if (uiState.orderFilter === 'soon') return order.direction !== 'return' && order.deadline - now <= 30;
       return true;
     });
     var visible = filtered.slice(0, uiState.orderVisibleLimit);
@@ -550,11 +552,11 @@ window.WC = window.WC || {};
       var who = order.status === 'carried' ? 'несёт: ' + nameOf(order.carrier)
         : order.status === 'claimed' ? (order.physics ? 'ждёт остановки: ' : 'в работе: ') + nameOf(order.carrier) : 'свободен';
       row.querySelector('.o-who').textContent = who;
-      row.querySelector('.o-info').textContent = order.goods + ' · ' + order.mass + ' кг' + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
+      row.querySelector('.o-info').textContent = order.goods + ' · ' + order.mass + ' кг' + (order.direction === 'return' ? ' · возврат на полку' : '') + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
       // Точки коробки: A — откуда, C — где лежит, B — куда едет
       var abc = row.querySelector('.o-abc');
       if (abc) {
-        var from = order.source === 'truck' ? 'фура' : order.source === 'heavy' ? 'тяжёлый отдел' : 'приёмка';
+        var from = order.source === 'truck' ? 'фура' : order.source === 'rack' ? 'стеллаж' : order.source === 'heavy' ? 'тяжёлый отдел' : 'приёмка';
         var poseText = order.status === 'carried' ? 'в руках'
           : order.physics ? 'движется'
             : (order.pose && order.pose.lying) ? 'на боку'
@@ -567,9 +569,9 @@ window.WC = window.WC || {};
       }
       var left = order.deadline - now;
       var timer = row.querySelector('.o-timer');
-      timer.textContent = left > 0 ? 'до ' + U.timeLeft(left) : 'просрочен ' + U.timeLeft(-left);
-      timer.classList.toggle('late', left <= 0);
-      timer.classList.toggle('soon', left > 0 && left < 18);
+      timer.textContent = order.direction === 'return' ? 'без срока' : left > 0 ? 'до ' + U.timeLeft(left) : 'просрочен ' + U.timeLeft(-left);
+      timer.classList.toggle('late', order.direction !== 'return' && left <= 0);
+      timer.classList.toggle('soon', order.direction !== 'return' && left > 0 && left < 18);
     });
     uiState.orderRows.forEach(function (row, id) {
       if (!live[id]) {
@@ -1126,6 +1128,7 @@ window.WC = window.WC || {};
         U.el('p', { class: 'report-note', text: ended ? 'Итоги завершённой смены.' : 'Снимок на момент открытия. Смена не ставится на паузу; нажмите «Обновить» для новых данных.' }),
         U.el('div', { class: 'vitals-grid' }, [
           vital('Очки', U.money(summary.score), 'баланс после покупок'),
+          vital('Контракты', String(summary.contracts.filter(function (c) { return c.status === 'completed'; }).length), 'выполнено за смену'),
           vital('На стеллаж', String(summary.delivered), 'доставлено'),
           vital('Качество', summary.quality + ' %', 'повреждения и срок'),
           vital('Падения', String(summary.dropped), 'все грузы'),
@@ -1140,6 +1143,8 @@ window.WC = window.WC || {};
         ]),
         U.el('p', { class: 'report-note', text: 'Качество учитывает повреждения и срок у учитываемых уложенных и испорченных заказов. Если таких нет, показывается 100%. Отчёт JSON — не сохранение для продолжения игры.' }),
         WC.save.isProtected() ? U.el('p', { class: 'report-note report-warning', text: 'Сохранение защищено от перезаписи: текущая смена не записывается в браузер.' }) : null,
+        U.el('h3', { class: 'report-heading', text: 'Контракты смены' }),
+        U.el('div', { class: 'report-people' }, summary.contracts.map(function (c) { return U.el('p', { class: 'report-note', text: c.title + ': ' + ({available:'не взят', active:'в работе', completed:'выполнен', failed:'не выполнен', cancelled:'отменён'})[c.status] + ' · ' + c.progress + '/' + c.goal + (c.reward ? ' · +' + c.reward + ' очков' : '') + (c.reason ? ' · ' + c.reason : '') }); })),
         U.el('h3', { class: 'report-heading', text: 'Бригада сейчас (' + summary.crew.length + ')' }),
         U.el('div', { class: 'report-people' }, crewRows.length ? crewRows : [U.el('p', { class: 'report-note', text: 'Рабочих в бригаде нет.' })]),
         U.el('h3', { class: 'report-heading', text: 'Персонал (' + summary.staff.length + ')' }),
@@ -1162,6 +1167,35 @@ window.WC = window.WC || {};
 
   // ------------------------------------------------------------------ init
   // ---------------------------------------------------------- магазин смены
+  function renderContracts() {
+    if (!dom.contractsList || !game.api.contracts || !game.sim) return;
+    var now = game.sim.state.time, items = game.api.contracts.items;
+    dom.contractsCount.textContent = items.filter(function (i) { return i.status === 'active'; }).length + ' / ' + WC.contracts.maxActive;
+    // Не пересоздаём кнопки на каждом кадре: сохраняем фокус и положение прокрутки.
+    var key = JSON.stringify(items) + ':' + Math.floor(now) + ':' + game.state.shiftEnded;
+    if (uiState.contractKey === key) return;
+    uiState.contractKey = key;
+    var focused = document.activeElement && document.activeElement.getAttribute('data-contract');
+    dom.contractsList.innerHTML = '';
+    items.forEach(function (i) {
+      var d = WC.contracts.definitions.find(function (x) { return x.id === i.id; });
+      var labels = { available: 'Доступен', active: 'В работе', completed: 'Выполнен', failed: 'Не выполнен', cancelled: 'Отменён' };
+      var detail = i.status === 'active' ? 'осталось ' + Math.max(0, Math.ceil(i.deadline - now)) + ' с' : (i.status === 'available' ? 'до ' + d.duration + ' с' : i.reason);
+      var children = [U.el('div', { class: 'contract-head' }, [U.el('b', { text: d.title }), U.el('span', { text: '+' + d.reward + ' очков' })]),
+        U.el('p', { text: d.description }),
+        U.el('div', { class: 'contract-progress', text: labels[i.status] + ' · ' + i.progress + ' / ' + d.goal + (detail ? ' · ' + detail : '') })];
+      if (!game.state.shiftEnded && (i.status === 'available' || i.status === 'active')) {
+        children.push(U.el('button', { type: 'button', class: 'queue-more', 'data-contract': i.id, text: i.status === 'active' ? 'Отменить' : 'Взять контракт', onclick: function () {
+          var res = i.status === 'active' ? game.cancelContract(i.id) : game.acceptContract(i.id);
+          if (!res.ok) U.toast(res.reason, 'bad', 2400);
+          renderContracts();
+        } }));
+      }
+      dom.contractsList.appendChild(U.el('article', { class: 'contract-card contract-' + i.status }, children));
+    });
+    if (focused) { var button = dom.contractsList.querySelector('[data-contract="' + focused + '"]'); if (button) button.focus({ preventScroll: true }); }
+  }
+
   function renderShop() {
     if (!game.sim || !game.sim.state) return;
     var score = Math.round(game.sim.state.stats.score);
@@ -1596,6 +1630,7 @@ window.WC = window.WC || {};
     renderTrucks();
     renderOrders();
     renderShop();
+    renderContracts();
     renderNews(false);
     if (uiState.inspectorOpen) renderInspector();
     if (uiState.sideAt == null || now - uiState.sideAt > 900) {

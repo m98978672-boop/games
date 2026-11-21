@@ -619,7 +619,7 @@
       for (var i = 0; i < list.length; i++) {
         if (list[i].status === 'stored' || list[i].status === 'loaded' || list[i].status === 'ruined' || list[i].status === 'missed') done += 1;
       }
-      return { done: done, total: list.length };
+      return { done: done + (truck.completedDetached || 0), total: list.length + (truck.completedDetached || 0) + (truck.unfulfilled || 0) };
     }
 
     function spawnTruck(kind) {
@@ -700,6 +700,10 @@
           var sl = null;
           for (var q = 0; q < state.slots.length; q++) if (state.slots[q].id === so.slotId) sl = state.slots[q];
           if (!sl) continue;
+          // Приходная фура может ещё работать, когда часть её уже
+          // размещённого груза направляют в следующую отгрузку.
+          var priorTruck = so.truckId && truckById(so.truckId);
+          if (priorTruck && priorTruck.status === 'working') priorTruck.completedDetached = (priorTruck.completedDetached || 0) + 1;
           so.status = 'pending';
           so.carrier = null;
           so.direction = 'out';
@@ -766,10 +770,15 @@
 
     function departTruck(truck, reason) {
       if (!truck || truck.status !== 'working') return;
+      var prog = truckProgress(truck);
+      truck.done = prog.done;
+      truck.total = prog.total;
       truck.status = 'done';
       truck.departedAt = state.time;
       state.stats.truckShifts += 1;
       note('Фура ' + truck.plate + ' уехала: ' + (reason || 'окно закрылось'), 'warn');
+      // Непогруженные места не исчезают и не оказываются на полке сами.
+      ordersOfTruck(truck).slice().forEach(function (o) { if (o.direction === 'out') returnToStorage(o); });
     }
 
     // Вернуть коробку на полку (например, фура уехала без неё)
@@ -790,6 +799,34 @@
       syncDest(order);
       note('Коробка ' + order.code + ' вернулась на место', 'warn');
       return order;
+    }
+
+    // Превращаем незавершённую отгрузку в задачу возврата. Если коробка
+    // ещё физически лежит в своей ячейке, ничего переносить не нужно.
+    function returnToStorage(order) {
+      if (!order || (order.direction !== 'out' && order.direction !== 'in') ||
+          (order.status !== 'pending' && order.status !== 'claimed' && order.status !== 'carried')) return false;
+      var slot = null;
+      for (var i = 0; i < state.slots.length; i++) {
+        if (state.slots[i].id === order.slotId) { slot = state.slots[i]; break; }
+      }
+      var pose = order.pose;
+      var priorTruck = order.truckId && truckById(order.truckId);
+      // Если срок истёк до отъезда, место остаётся невыполненным в табеле фуры.
+      if (priorTruck && priorTruck.status === 'working') priorTruck.unfulfilled = (priorTruck.unfulfilled || 0) + 1;
+      var atSlot = slot && pose && order.status !== 'carried' && !order.physics &&
+        Math.hypot(pose.x - slot.x, pose.y - slot.y) < 0.08 && Math.abs(pose.z - (slot.h + 0.025)) < 0.08;
+      if (atSlot) {
+        restock(order);
+      } else {
+        order.direction = 'return';
+        order.truckId = null;
+        order.urgent = false;
+        delete order.dispatchPriority;
+        order.dest = destPoint(order);
+        note('Коробку ' + order.code + ' нужно вернуть в ' + order.slotId, 'warn');
+      }
+      return true;
     }
 
     function step(dt) {
@@ -819,6 +856,12 @@
           departTruck(truck, 'окно погрузки закрылось');
         }
       }
+      // Старое сохранение могло содержать отгрузку уже уехавшей фуре.
+      state.orders.forEach(function (o) {
+        if (o.direction !== 'out') return;
+        var truck = o.truckId && truckById(o.truckId);
+        if (!truck || truck.status !== 'working') returnToStorage(o);
+      });
       // --- Тяжёлый груз из соседнего отдела ---
       state.heavyTimer -= dt;
       if (state.heavyTimer <= 0) {
@@ -840,11 +883,16 @@
       for (var i = 0; i < state.orders.length; i++) {
         var o = state.orders[i];
         if (o.status === 'missed' || o.status === 'stored' || o.status === 'ruined' || o.status === 'loaded') continue;
-        if (state.time > o.deadline + 35) {
-          o.status = 'missed';
-          delete o.dispatchPriority;
-          o.carrier = null;
-          if (o.direction !== 'out') releaseSlot(o);
+        if (o.direction !== 'return' && state.time > o.deadline + 35) {
+          if (o.direction === 'out' || o.direction === 'in') {
+            // Штраф за срок, но физический груз остаётся на складе.
+            returnToStorage(o);
+          } else {
+            o.status = 'missed';
+            delete o.dispatchPriority;
+            o.carrier = null;
+            releaseSlot(o);
+          }
           state.stats.missed += 1;
           state.stats.perfectStreak = 0;
           state.stats.score -= 6;
@@ -872,7 +920,7 @@
         var o = list[i];
         if (filter && !filter(o)) continue;
         var d = Math.hypot(o.x - from.x, o.y - from.y);
-        var urgency = Math.max(0, 1 - Math.max(0, o.deadline - state.time) / 100);
+        var urgency = o.direction === 'return' ? 0 : Math.max(0, 1 - Math.max(0, o.deadline - state.time) / 100);
         var s = urgency * 6 + o.priority * 2 - d * 0.12;
         if (o.dispatchPriority === true) s += 3.5;
         if (s > bestScore) { bestScore = s; best = o; }
@@ -971,6 +1019,7 @@
       spawnTruck: spawnTruck,
       loadTruck: loadTruck,
       restock: restock,
+      returnToStorage: returnToStorage,
       departTruck: departTruck,
       activeTruck: activeTruck,
       truckById: truckById,

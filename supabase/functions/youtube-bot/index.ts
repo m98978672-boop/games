@@ -68,6 +68,7 @@ async function dbRequest(table: string, query: string, init: RequestInit = {}): 
   const response = await fetch(`${env("SUPABASE_URL")}/rest/v1/${table}${query}`, {
     ...init,
     headers: dbHeaders(init.headers),
+    signal: init.signal ?? AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new Error(`Private token storage failed (${response.status}).`);
   return response;
@@ -191,8 +192,15 @@ async function verifyGitHubActionsOidc(request: Request): Promise<Record<string,
   if (header.alg !== "RS256" || typeof header.kid !== "string") throw new Error("Unexpected GitHub identity signature.");
   const now = Math.floor(Date.now() / 1000);
   if (!githubJwksCache || githubJwksCache.expiresAt <= now) {
-    const response = await fetch("https://token.actions.githubusercontent.com/.well-known/jwks");
-    if (!response.ok) throw new Error("GitHub identity keys are unavailable.");
+    let response: Response;
+    try {
+      response = await fetch("https://token.actions.githubusercontent.com/.well-known/jwks", {
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch {
+      throw new Error("Timed out reaching GitHub's OIDC signing-key endpoint.");
+    }
+    if (!response.ok) throw new Error(`GitHub identity keys are unavailable (${response.status}).`);
     const payload = await response.json();
     githubJwksCache = { keys: payload.keys ?? [], expiresAt: now + 300 };
   }
@@ -258,7 +266,11 @@ async function accessTokenFromStoredRefreshToken(): Promise<string> {
 
 async function publishAutopilotReview(request: Request): Promise<Response> {
   try { await verifyGitHubActionsOidc(request); }
-  catch { return Response.json({ error: "GitHub Actions identity was not accepted." }, { status: 401 }); }
+  catch (error) {
+    const reason = error instanceof Error ? error.message.slice(0, 160) : "identity verification failed";
+    console.error("Autopilot OIDC verification failed", reason);
+    return Response.json({ error: `GitHub Actions identity was not accepted: ${reason}` }, { status: 401 });
+  }
   let form: FormData;
   try { form = await request.formData(); }
   catch { return Response.json({ error: "Expected multipart review upload." }, { status: 400 }); }

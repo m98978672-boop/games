@@ -3,9 +3,10 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from game_reviews import build_review_messages, load_game_catalog, validate_review, youtube_description
+from game_reviews import build_review_messages, generate_game_review, load_game_catalog, validate_review, youtube_description
 from schedule_policy import next_publish_slot
 
 
@@ -70,6 +71,45 @@ class GameCatalogTests(unittest.TestCase):
         bad = dict(good, possible_minus="Управление ужасное и точно сломано.")
         with self.assertRaises(ValueError):
             validate_review(bad, games)
+
+    def test_generation_retries_with_exact_feature_ids(self):
+        games = load_game_catalog()
+        game = games[0]
+        base = {
+            "schema_version": 1,
+            "game_id": game["id"],
+            "selected_feature_ids": ["not-a-real-feature", "also-invalid"],
+            "possible_minus": "Может потребовать привыкания к управлению.",
+            "minus_feature_id": f"{game['id']}-f1",
+            "idea_score": 7,
+            "hook": "Короткий разбор игрового проекта Games!",
+        }
+        corrected = dict(
+            base,
+            selected_feature_ids=[f"{game['id']}-f1", f"{game['id']}-f2"],
+        )
+        with patch("game_reviews.generate_with_qwen", side_effect=[json.dumps(base), json.dumps(corrected)]) as generate:
+            review = generate_game_review(games)
+        self.assertEqual(generate.call_count, 2)
+        self.assertEqual(review["pros"], game["features"][:2])
+
+    def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
+        games = load_game_catalog()
+        game = games[0]
+        invalid = {
+            "schema_version": 1,
+            "game_id": game["id"],
+            "selected_feature_ids": ["made-up", f"{game['id']}-f2"],
+            "possible_minus": "Может потребовать привыкания к управлению.",
+            "minus_feature_id": f"{game['id']}-f1",
+            "idea_score": 8,
+            "hook": "Короткий разбор игрового проекта Games!",
+        }
+        with patch("game_reviews.generate_with_qwen", side_effect=[json.dumps(invalid), json.dumps(invalid)]) as generate:
+            review = generate_game_review(games)
+        self.assertEqual(generate.call_count, 2)
+        self.assertEqual(review["pros"], game["features"][:2])
+        self.assertEqual(review["minus_evidence"], game["features"][0])
 
 
 class ScheduleTests(unittest.TestCase):

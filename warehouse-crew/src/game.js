@@ -185,6 +185,7 @@ WC.game = (function () {
           pushLog(w.name + ' закрыл ' + order.code + ' (+' + result.points + ')', result.late ? 'warn' : 'good');
           WC.audio.delivered();
           reactToEvent(worker, 'delivered');
+          contractChanges(WC.contracts.record(api.contracts, api.sim.state.stats, api.sim.state.time, 'delivered', order));
           emit('delivered', { worker: worker, order: order, result: result });
         },
         onInjury: function (w, injury) {
@@ -203,12 +204,14 @@ WC.game = (function () {
           pushLog(w.name + ' загрузил ' + order.code + ' в фуру (+' + result.points + ')', 'good');
           if (WC.audio && WC.audio.delivered) WC.audio.delivered();
           reactToEvent(worker, 'loaded');
+          contractChanges(WC.contracts.record(api.contracts, api.sim.state.stats, api.sim.state.time, 'loaded', order));
           emit('loaded', { worker: worker, order: order, result: result });
         },
         onDropped: function (w, order, outcome) {
           pushLog(w.name + ' уронил ' + order.code + ' — ' + Math.round(order.damage * 100) + '% повреждений', 'bad');
           WC.audio.drop();
           reactToEvent(worker, 'dropped');
+          contractChanges(WC.contracts.advance(api.contracts, api.sim.state.stats, api.sim.state.time));
           emit('dropped', { worker: worker, order: order, outcome: outcome });
         },
       onCaught: function (w) {
@@ -223,7 +226,29 @@ WC.game = (function () {
     };
   }
 
+  function contractChanges(changes) {
+    changes.forEach(function (change) {
+      var d = WC.contracts.definitions.find(function (x) { return x.id === change.id; });
+      if (change.reward) api.sim.state.stats.score += change.reward;
+      pushLog('Контракт «' + d.title + '»: ' + (change.status === 'completed' ? 'выполнен (+' + change.reward + ')' : change.reason), change.status === 'completed' ? 'good' : 'warn');
+      emit('contract', change);
+    });
+  }
+  function acceptContract(id) {
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена не активна' };
+    var result = WC.contracts.accept(api.contracts, id, api.sim.state.time, cfg.shiftRealSeconds, api.sim.state.stats);
+    if (result.ok) { pushLog('Взят контракт «' + WC.contracts.definitions.find(function (d) { return d.id === id; }).title + '»', 'info'); WC.save.autosave(api); }
+    return result;
+  }
+  function cancelContract(id) {
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена не активна' };
+    var result = WC.contracts.cancel(api.contracts, id, api.sim.state.time);
+    if (result.ok) { contractChanges([result.change]); WC.save.autosave(api); }
+    return result;
+  }
+
   function createSim() {
+    api.contracts = WC.contracts.create();
     api.dialogueState = WC.dialogue.create(0);
     socialRng = window.WarehouseSim.createRng(cfg.seed + 7719);
     api.sim = window.WarehouseSim.createWarehouse({
@@ -808,6 +833,7 @@ WC.game = (function () {
 
   function endShift() {
     if (S.shiftEnded) return;
+    contractChanges(WC.contracts.finish(api.contracts, api.sim.state.time));
     S.shiftEnded = true;
     S.paused = true;
     setPaused(true);
@@ -820,6 +846,7 @@ WC.game = (function () {
     var stats = api.sim.state.stats;
     return {
       score: Math.round(stats.score),
+      contracts: api.contracts.items.map(function (i) { var d = WC.contracts.definitions.find(function (x) { return x.id === i.id; }); return { id: i.id, title: d.title, status: i.status, progress: i.progress, goal: d.goal, reward: i.status === 'completed' ? d.reward : 0, reason: i.reason }; }),
       lighting: api.shiftMode,
       delivered: stats.delivered,
       ruined: stats.ruined,
@@ -890,6 +917,7 @@ WC.game = (function () {
         worker.update(step, api.envs[worker.id]);
         detectBodyEvents(worker);
       });
+      contractChanges(WC.contracts.advance(api.contracts, api.sim.state.stats, api.sim.state.time));
       if (api.needsCleanup) cleanupDead();
       emitLine(WC.dialogue.step(api.dialogueState, api.crew, api.sim.state.time, api.shiftMode, window.WarehouseWorker.pathBlocked));
       if (api.sim.state.day !== api.day) {
@@ -908,7 +936,7 @@ WC.game = (function () {
   // Только данные: функции, ссылки окружения и тела Cannon живут в фабриках.
   function captureCheckpoint() {
     return JSON.parse(JSON.stringify({
-      version: 2, shiftMode: api.shiftMode, dialogueState: api.dialogueState, runtime: S, warehouse: api.sim.captureCheckpoint(),
+      version: 2, contracts: api.contracts, shiftMode: api.shiftMode, dialogueState: api.dialogueState, runtime: S, warehouse: api.sim.captureCheckpoint(),
       crew: api.crew.map(function (worker) {
         return { state: worker.state, brain: api.envs[worker.id].brain,
           rng: api.envs[worker.id].rng.getState() };
@@ -944,6 +972,7 @@ WC.game = (function () {
         !Number.isInteger(saved.crewTarget) || saved.crewTarget < 0 || saved.crewTarget > 8 ||
         !saved.warehouse || !saved.warehouse.state) throw new Error('Повреждён снимок смены');
     // Снимки v2, созданные до появления ночного режима, считаются дневными.
+    var restoredContracts = saved.contracts == null ? WC.contracts.create() : WC.contracts.validate(saved.contracts);
     var restoredMode = saved.shiftMode == null ? 'day' : saved.shiftMode;
     if (restoredMode !== 'day' && restoredMode !== 'night') throw new Error('Неизвестный режим освещения');
     function safeTree(value, depth) {
@@ -1013,6 +1042,7 @@ WC.game = (function () {
     });
     api.sim.restoreCheckpoint(saved.warehouse, workers.map(function (worker) { return worker.state; }));
     api.shiftMode = restoredMode;
+    api.contracts = restoredContracts;
     api.dialogueState = saved.dialogueState == null ? WC.dialogue.create(saved.warehouse.state.time) : WC.dialogue.validate(saved.dialogueState);
     api.crew = workers; api.staff = staff; api.envs = {};
     workers.forEach(function (worker, i) {
@@ -1108,6 +1138,8 @@ WC.game = (function () {
     command: command,
     teamCommand: teamCommand,
     setOrderPriority: setOrderPriority,
+    acceptContract: acceptContract,
+    cancelContract: cancelContract,
     buyStaff: buyStaff,
     hireWorker: hireWorker,
     staffCost: staffCost,
