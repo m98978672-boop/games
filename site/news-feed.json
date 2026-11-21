@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-21T08:18:34.700Z",
+  "updatedAt": "2026-11-21T09:18:44.963Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
-    "lastRunAt": "2026-11-21T04:38:04.913Z",
+    "lastRunAt": "2026-11-21T08:43:04.750Z",
     "sourcesCount": 11,
     "verifiedArticlesCount": 19,
     "commentSyncTools": [
@@ -19,14 +19,14 @@
     ],
     "mode": "verified-editorial+auto-rss",
     "workflow": ".github/workflows/auto-news.yml",
-    "totalRuns": 10,
-    "lastSourcesReachable": 10,
+    "totalRuns": 13,
+    "lastSourcesReachable": 0,
     "categoriesCount": 6,
     "backlog": {
-      "total": 122,
-      "now": 59,
+      "total": 147,
+      "now": 84,
       "future": 63,
-      "builtAt": "2026-11-21T08:18:34.700Z",
+      "builtAt": "2026-11-21T09:18:44.963Z",
       "note": "Статьи очереди «на будущее» лежат с датой вперёд и раскрываются по расписанию автопоста."
     }
   },
@@ -2442,7 +2442,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-985.svg",
       "imageCaption": "Обложка рубрики: Европейских лидеров на встрече «коалиции желающих» описали словами «ка",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-ea1b29f9ae",
@@ -2478,7 +2479,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-805.svg",
       "imageCaption": "Обложка рубрики: Россиянам дали советы по уплате налогов до 1 декабря",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-265cca31cb",
@@ -2514,7 +2516,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-934.svg",
       "imageCaption": "Обложка рубрики: Выпуск интегрированной среды разработки Apache NetBeans 32",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-305c294800",
@@ -2550,7 +2553,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-705.svg",
       "imageCaption": "Обложка рубрики: Стало известно об изменении предпочтений россиян при покупке вина",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-558a667a86",
@@ -2586,7 +2590,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-754.svg",
       "imageCaption": "Обложка рубрики: «Держим под прицелом». В подготовке ударов ВСУ по Крымскому мосту запо",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-bbc-world-811c650e91",
@@ -2622,7 +2627,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-883.svg",
       "imageCaption": "Обложка рубрики: Russian missile hits Poland as Ukraine's allies hold military exercise",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-c52d91fb48",
@@ -2662,7 +2668,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-844.svg",
       "imageCaption": "Обложка рубрики: Логотип NVIDIA: пригреть змею на груди",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-bd7f78c6e3",
@@ -2703,7 +2710,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-866.svg",
       "imageCaption": "Обложка рубрики: [Перевод] Карты Уордли. Глава 3 «Изучаем карту»",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-bee1a9fa82",
@@ -2739,7 +2747,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-843.svg",
       "imageCaption": "Обложка рубрики: В Киеве произошли взрывы",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-2977dd1e0e",
@@ -2775,7 +2784,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-761.svg",
       "imageCaption": "Обложка рубрики: Заключенный кричал от боли в течение часа во время неудачной казни в С",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-c8fe73a95b",
@@ -2811,7 +2821,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-988.svg",
       "imageCaption": "Обложка рубрики: На Украине пришли к печальному выводу после одного события",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-70629df700",
@@ -2850,7 +2861,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-901.svg",
       "imageCaption": "Обложка рубрики: Как я свой терминал делал с блэкджеком и двумя Fable",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-a3e9d5f350",
@@ -2888,11 +2900,12 @@
       "autoPosted": true,
       "image": "site/assets/news/t-942.svg",
       "imageCaption": "Обложка рубрики: Sound: может ли результат вайб-кодинга стать ЯП?",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-bbc-world-d491d0fb8e",
-      "code": "W-700",
+      "code": "W-989",
       "category": "world",
       "title": "Tech stock sell-off drags markets down as Anthropic shares slide",
       "summary": "Pressures weighed on US markets, with the S&P 500 and the Dow Jones Industrial Average pushed into correction territory.",
@@ -2922,13 +2935,14 @@
       "comments": [],
       "pinned": false,
       "autoPosted": true,
-      "image": "site/assets/news/w-700.svg",
+      "image": "site/assets/news/w-989.svg",
       "imageCaption": "Обложка рубрики: Tech stock sell-off drags markets down as Anthropic shares slide",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-bbc-world-0e80582248",
-      "code": "W-701",
+      "code": "W-708",
       "category": "world",
       "title": "French police officers sentenced for beating of music producer Michel Zecler",
       "summary": "The court has upheld the 2020 beating of the black music producer as an aggravated circumstance of racism.",
@@ -2958,9 +2972,10 @@
       "comments": [],
       "pinned": false,
       "autoPosted": true,
-      "image": "site/assets/news/w-701.svg",
+      "image": "site/assets/news/w-708.svg",
       "imageCaption": "Обложка рубрики: French police officers sentenced for beating of music producer Michel ",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-nasa-af547c3b86",
@@ -3000,7 +3015,8 @@
       "autoPosted": true,
       "image": "site/assets/news/s-927.svg",
       "imageCaption": "Обложка рубрики: Curiosity Spots Drifting Twilight Clouds",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-lenta-top-02667a1f33",
@@ -3036,7 +3052,8 @@
       "autoPosted": true,
       "image": "site/assets/news/w-747.svg",
       "imageCaption": "Обложка рубрики: «Не скорость ракет». Путин дал интервью Кустурице, в котором назвал ва",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-habr-news-ceb7db20b5",
@@ -3078,7 +3095,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-738.svg",
       "imageCaption": "Обложка рубрики: Доказательство гипотезы Римана с помощью ИИ",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-3dnews-9c2063f72b",
@@ -3114,7 +3132,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-862.svg",
       "imageCaption": "Обложка рубрики: Micron собралась поставить память прямо на процессоры — многослойная D",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-stopgame-4fdf730a8b",
@@ -3150,7 +3169,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-756.svg",
       "imageCaption": "Обложка рубрики: 1666: Amsterdam получит первое обновление контента в декабре",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-stopgame-7b3cec7c68",
@@ -3186,7 +3206,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-888.svg",
       "imageCaption": "Обложка рубрики: Рекорд: Grand Theft Auto VI уже принесла создателям почти 4 млрд долла",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-nasa-a9186cefeb",
@@ -3227,7 +3248,8 @@
       "autoPosted": true,
       "image": "site/assets/news/s-810.svg",
       "imageCaption": "Обложка рубрики: New NASA Seed Funding Primes Small Businesses for Innovation",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-ixbt-games-6553f7d1cd",
@@ -3266,7 +3288,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-859.svg",
       "imageCaption": "Обложка рубрики: Denuvo не смогла победить обход через гипервизор, Call of Duty: Modern",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-3dnews-a472cfcb30",
@@ -3302,7 +3325,8 @@
       "autoPosted": true,
       "image": "site/assets/news/t-932.svg",
       "imageCaption": "Обложка рубрики: Китай докатился до пещерных технологий в энергетике — запущен первый в",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-ixbt-games-c8e513039c",
@@ -3341,7 +3365,8 @@
       "autoPosted": true,
       "image": "site/assets/news/g-852.svg",
       "imageCaption": "Обложка рубрики: GTA VI заработала $3,79 млрд за первые сутки, установив рекорд для все",
-      "imageCredit": "Games News · локальная обложка"
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
     },
     {
       "id": "auto-securitylab-134508d5d8",

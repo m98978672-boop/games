@@ -34,6 +34,26 @@ WC.meshes = (function () {
     foot: { parts: [{ shape: 'box', sx: 0.13, sy: 0.07, sz: 0.235, offset: [0, -0.07, 0.045], color: 'boots' }] },
     badge: { parts: [{ shape: 'box', sx: 0.075, sy: 0.045, sz: 0.018, offset: [0.095, 0.20, 0.116], color: '#f2ecdf' }] },
     strap: { parts: [{ shape: 'box', sx: 0.33, sy: 0.035, sz: 0.012, offset: [0, 0.145, 0.122], color: '#f4e6b8' }] },
+    strap2: { parts: [{ shape: 'box', sx: 0.33, sy: 0.03, sz: 0.012, offset: [0, 0.20, 0.122], color: '#f4e6b8' }] },
+    collar: { parts: [{ shape: 'cylinder', radius: 0.082, height: 0.05, segments: 10, offset: [0, 0.35, 0], color: 'shirtDark' }] },
+    buckle: { parts: [{ shape: 'box', sx: 0.055, sy: 0.04, sz: 0.014, offset: [0, -0.045, 0.126], color: '#c9cfd4' }] },
+    pocket: { parts: [{ shape: 'box', sx: 0.09, sy: 0.07, sz: 0.012, offset: [-0.105, 0.16, 0.121], color: 'vestDark' }] },
+    // Суставы-шарики прячут щели между сегментами.
+    // ПРИМЕЧАНИЕ: примитивы движка растут от y=0 вверх, поэтому offset.y
+    // сдвигает деталь вниз на её радиус — тогда центр ложится на сустав.
+    shoulderPad: { parts: [{ shape: 'sphere', radius: 0.072, segments: 10, offset: [0, -0.072, 0], color: 'shirt' }] },
+    elbowPad: { parts: [{ shape: 'sphere', radius: 0.05, segments: 8, offset: [0, -0.05, 0], color: 'skin' }] },
+    hipPad: { parts: [{ shape: 'sphere', radius: 0.077, segments: 8, offset: [0, -0.077, 0], color: 'pants' }] },
+    kneePad: { parts: [{ shape: 'sphere', radius: 0.058, segments: 8, offset: [0, -0.058, 0], color: 'pantsDark' }] },
+    anklePad: { parts: [{ shape: 'sphere', radius: 0.048, segments: 8, offset: [0, -0.048, 0], color: 'boots' }] },
+    thumb: { parts: [{ shape: 'box', sx: 0.03, sy: 0.055, sz: 0.032, offset: [-0.05, -0.085, 0.03], color: 'gloves' }] },
+    sole: { parts: [{ shape: 'box', sx: 0.14, sy: 0.032, sz: 0.25, offset: [0, -0.102, 0.05], color: 'bootsDark' }] },
+    // Каска: купол, поля и лямка под подбородком
+    // Купол каски лежит на макушке (голова 0..0.205), поля — по лбу.
+    hardhat: { parts: [{ shape: 'sphere', radius: 0.118, segments: 14, offset: [0, 0.148, 0], color: 'hat' }] },
+    hatBrim: { parts: [{ shape: 'cylinder', radius: 0.142, height: 0.016, segments: 16, offset: [0, 0.172, 0.004], color: 'hat' }] },
+    hatPeak: { parts: [{ shape: 'box', sx: 0.17, sy: 0.02, sz: 0.09, offset: [0, 0.168, 0.112], color: 'hat' }] },
+    hatBand: { parts: [{ shape: 'cylinder', radius: 0.108, height: 0.026, segments: 16, offset: [0, 0.166, 0], color: 'hatBand' }] },
 
     // --- склад ---
     floor: { parts: [{ shape: 'box', sx: 26, sy: 0.2, sz: 17, offset: [0, -0.2, 0], color: '#262b2c' }] },
@@ -98,15 +118,21 @@ WC.meshes = (function () {
     cargoStack: { parts: [{ shape: 'box', sx: 1.0, sy: 0.9, sz: 1.6, offset: [0, 1.1, 0], color: '#9d7240' }] },
   };
 
+  var FALLBACK = { hat: '#e8b45a', hatBand: '#f6f2e9', bootSole: '#15181a' };
+
   function resolveColor(name, palette) {
-    if (!palette) return name;
+    if (!palette) return FALLBACK[name] || name;
     if (palette[name]) return palette[name];
     if (name === 'pantsDark') return WC.util.shade(palette.pants, 0.78);
-    return name;
+    if (name === 'bootsDark') return WC.util.shade(palette.boots, 0.72);
+    if (name === 'shirtDark') return WC.util.shade(palette.shirt, 0.82);
+    if (name === 'vestDark') return WC.util.shade(palette.vest, 0.8);
+    if (name === 'hatBand') return WC.util.shade(palette.hat || FALLBACK.hat, 0.82);
+    return FALLBACK[name] || name;
   }
 
   function recipeKey(name, palette) {
-    return name + '|' + (palette ? palette.shirt + palette.skin : 'neutral');
+    return name + '|' + (palette ? palette.shirt + palette.skin + (palette.hat || '') : 'neutral');
   }
 
   function toOps(name, palette) {
@@ -203,7 +229,7 @@ WC.meshes = (function () {
     ['boxSmall', 'boxMedium', 'boxBig', 'tape', 'label'].forEach(function (name) { buildOne(engine, name, null); });
     Object.keys(palettes || {}).forEach(function (id) {
       var palette = palettes[id];
-      ['pelvis', 'torso', 'vest', 'belt', 'strap', 'neck', 'head', 'hair', 'hairBack', 'eye', 'pupil', 'brow', 'nose', 'mouth', 'upperArm', 'forearm', 'hand', 'thigh', 'shin', 'foot', 'badge'].forEach(function (name) {
+      ['pelvis', 'torso', 'vest', 'belt', 'strap', 'strap2', 'collar', 'buckle', 'pocket', 'neck', 'head', 'hair', 'hairBack', 'eye', 'pupil', 'brow', 'nose', 'mouth', 'upperArm', 'forearm', 'hand', 'thumb', 'thigh', 'shin', 'foot', 'sole', 'badge', 'shoulderPad', 'elbowPad', 'hipPad', 'kneePad', 'anklePad', 'hardhat', 'hatBrim', 'hatPeak', 'hatBand'].forEach(function (name) {
         buildOne(engine, name, palette);
       });
     });

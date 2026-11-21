@@ -246,57 +246,74 @@ WC.world = (function () {
     root.position.set(spawn.x, 0, spawn.y);
     root.userData.rig = member.id;
 
+    // Деталь крепится к суставу: отдельный меш на каждую часть, чтобы у каждой
+    // был свой цвет (движок склеивает рецепты в один цвет, поэтому не экономим).
+    function part(parent, name, x, y, z) {
+      var m = meshes.mesh(engine, name, palette);
+      if (x || y || z) m.position.set(x || 0, y || 0, z || 0);
+      parent.add(m);
+      return m;
+    }
+
     var hips = new THREE_NS.Group();
     hips.position.y = 0.98;
     root.add(hips);
-    hips.add(meshes.mesh(engine, 'pelvis', palette));
-    hips.add(meshes.mesh(engine, 'belt', palette));
+    part(hips, 'pelvis', 0, 0, 0);
+    part(hips, 'belt', 0, 0, 0);
+    part(hips, 'buckle', 0, 0, 0);
+    part(hips, 'hipPad', 0.085, -0.19, 0);
+    part(hips, 'hipPad', -0.085, -0.19, 0);
 
     var torso = new THREE_NS.Group();
     hips.add(torso);
-    torso.add(meshes.mesh(engine, 'torso', palette));
-    torso.add(meshes.mesh(engine, 'vest', palette));
-    torso.add(meshes.mesh(engine, 'strap', palette));
-    torso.add(meshes.mesh(engine, 'badge', palette));
+    part(torso, 'torso', 0, 0, 0);
+    part(torso, 'vest', 0, 0, 0);
+    part(torso, 'strap', 0, 0, 0);
+    part(torso, 'strap2', 0, 0, 0);
+    part(torso, 'pocket', 0, 0, 0);
+    part(torso, 'badge', 0, 0, 0);
+    part(torso, 'collar', 0, 0, 0);
 
     var neck = new THREE_NS.Group();
     neck.position.y = 0.40;
     torso.add(neck);
-    neck.add(meshes.mesh(engine, 'neck', palette));
+    part(neck, 'neck', 0, 0, 0);
 
     var head = new THREE_NS.Group();
     head.position.y = 0.085;
     neck.add(head);
-    head.add(meshes.mesh(engine, 'head', palette));
-    head.add(meshes.mesh(engine, 'hair', palette));
-    head.add(meshes.mesh(engine, 'hairBack', palette));
-    head.add(meshes.mesh(engine, 'nose', palette));
-    head.add(meshes.mesh(engine, 'mouth', palette));
+    part(head, 'head', 0, 0, 0);
+    part(head, 'hairBack', 0, 0, 0);
+    part(head, 'nose', 0, 0, 0);
+    part(head, 'mouth', 0, 0, 0);
     [-0.048, 0.048].forEach(function (dx) {
-      var eye = meshes.mesh(engine, 'eye', palette);
-      eye.position.x = dx;
-      head.add(eye);
-      var pupil = meshes.mesh(engine, 'pupil', palette);
-      pupil.position.x = dx;
-      head.add(pupil);
-      var brow = meshes.mesh(engine, 'brow', palette);
-      brow.position.x = dx;
-      head.add(brow);
+      part(head, 'eye', dx, 0, 0);
+      part(head, 'pupil', dx, 0, 0);
+      part(head, 'brow', dx, 0, 0);
     });
+    // Каска: приплюснутый купол, поля, козырёк и обод
+    var dome = part(head, 'hardhat', 0, 0, 0);
+    dome.scale.set(1.02, 0.62, 1.02);
+    part(head, 'hatBrim', 0, 0, 0);
+    part(head, 'hatPeak', 0, 0, 0);
+    part(head, 'hatBand', 0, 0, 0);
 
     function makeArm(sign) {
       var shoulder = new THREE_NS.Group();
       shoulder.position.set(0.205 * sign, 0.355, 0);
       torso.add(shoulder);
-      shoulder.add(meshes.mesh(engine, 'upperArm', palette));
+      part(shoulder, 'shoulderPad', 0, 0, 0);
+      part(shoulder, 'upperArm', 0, 0, 0);
       var elbow = new THREE_NS.Group();
       elbow.position.y = -0.27;
       shoulder.add(elbow);
-      elbow.add(meshes.mesh(engine, 'forearm', palette));
+      part(elbow, 'elbowPad', 0, 0, 0);
+      part(elbow, 'forearm', 0, 0, 0);
       var wrist = new THREE_NS.Group();
       wrist.position.y = -0.25;
       elbow.add(wrist);
-      wrist.add(meshes.mesh(engine, 'hand', palette));
+      part(wrist, 'hand', 0, 0, 0);
+      part(wrist, 'thumb', 0, 0, 0);
       return { shoulder: shoulder, elbow: elbow, wrist: wrist };
     }
 
@@ -304,15 +321,18 @@ WC.world = (function () {
       var hip = new THREE_NS.Group();
       hip.position.set(0.085 * sign, -0.19, 0);
       hips.add(hip);
-      hip.add(meshes.mesh(engine, 'thigh', palette));
+      part(hip, 'thigh', 0, 0, 0);
       var knee = new THREE_NS.Group();
       knee.position.y = -0.38;
       hip.add(knee);
-      knee.add(meshes.mesh(engine, 'shin', palette));
+      part(knee, 'kneePad', 0, 0, 0);
+      part(knee, 'shin', 0, 0, 0);
       var ankle = new THREE_NS.Group();
       ankle.position.y = -0.34;
       knee.add(ankle);
-      ankle.add(meshes.mesh(engine, 'foot', palette));
+      part(ankle, 'anklePad', 0, 0, 0);
+      part(ankle, 'foot', 0, 0, 0);
+      part(ankle, 'sole', 0, 0, 0);
       return { hip: hip, knee: knee, ankle: ankle };
     }
 
@@ -321,9 +341,10 @@ WC.world = (function () {
     var legL = makeLeg(1);
     var legR = makeLeg(-1);
 
+    // Точка, к которой крепится несомая коробка: смещение подбирается по её
+    // размеру в updateBoxes, чтобы коробка лежала на животе, а не висела в воздухе.
     var carryAnchor = new THREE_NS.Group();
-    carryAnchor.position.set(0, 0.02, 0.34);
-    carryAnchor.scale.setScalar(0.82);
+    carryAnchor.position.set(0, -0.06, 0.24);
     torso.add(carryAnchor);
 
     scene.add(root);
@@ -349,14 +370,48 @@ WC.world = (function () {
     return size === 'big' ? 'boxBig' : size === 'medium' ? 'boxMedium' : 'boxSmall';
   }
 
+  // Размеры коробки берём из геометрии движка, а не из констант:
+  // иначе коробка тонет в полу и в полке. Примитивы движка растут от y=0
+  // вверх, поэтому низ коробки — это её локальный нуль, а не центр.
+  function boxMetrics(body) {
+    var bb = body.geometry.boundingBox;
+    if (!bb) { body.geometry.computeBoundingBox(); bb = body.geometry.boundingBox; }
+    return {
+      height: Math.max(0.1, bb.max.y - bb.min.y),
+      halfD: Math.max(0.05, (bb.max.z - bb.min.z) / 2),
+      halfW: Math.max(0.05, (bb.max.x - bb.min.x) / 2),
+    };
+  }
+
+  // На какой высоте стоит пол: паллета приёмки (0.12) и площадка дока (0.09)
+  // сами по себе приподняты — коробка должна лежать на них, а не тонуть.
+  function floorSupport(order) {
+    if (order.truckId) return 0.09;
+    if (order.intake != null && !order.drops) return 0.12;
+    return 0;
+  }
+
   function makeBoxView(order) {
     if (boxViews.has(order.id)) return boxViews.get(order.id);
     var group = new THREE_NS.Group();
     var body = meshes.mesh(engine, boxName(order.size), null);
     group.add(body);
+    var m = boxMetrics(body);
+    // Скотч по верху и ярлык на торце — коробка перестаёт быть голым кубом.
+    var tape = meshes.mesh(engine, 'tape', null);
+    tape.position.set(0, m.height + 0.004, 0);
+    tape.scale.set(0.6, 1, (m.halfD * 2) / 0.44);
+    tape.castShadow = false;
+    group.add(tape);
+    var label = meshes.mesh(engine, 'label', null);
+    label.position.set(-m.halfW * 0.32, m.height * 0.55, m.halfD + 0.007);
+    label.rotation.x = Math.PI * 0.5;
+    label.scale.setScalar(m.halfW / 0.26);
+    label.castShadow = false;
+    group.add(label);
     group.userData.orderId = order.id;
     scene.add(group);
-    var entry = { group: group, body: body, state: null };
+    var entry = { group: group, body: body, height: m.height, halfD: m.halfD, halfW: m.halfW, state: null };
     boxViews.set(order.id, entry);
     return entry;
   }
@@ -375,29 +430,48 @@ WC.world = (function () {
       seen[order.id] = true;
       var viewEntry = makeBoxView(order);
       var group = viewEntry.group;
+      // Полка: слаты толщиной 0.05 стоят центром на высоте slot.h, значит
+      // верхняя плоскость — slot.h + 0.025.
+      var slotTop = 0;
       if (order.status === 'stored') {
         var slot = null;
         for (var i = 0; i < sim.state.slots.length; i++) {
           if (sim.state.slots[i].id === order.slotId) slot = sim.state.slots[i];
         }
-        if (slot) {
-          group.position.set(slot.x, slot.h + 0.02, slot.y);
-          group.rotation.set(0, 0, 0);
-        }
+        if (slot) slotTop = slot.h + 0.025;
+      }
+      if (order.status === 'stored' && slotTop) {
+        // Коробка, которую уже несли, осталась ребёнком carryAnchor: без
+        // возврата в сцену она «летит» следом за рабочим по всему складу.
+        if (group.parent !== scene) scene.add(group);
+        group.scale.setScalar(1);
+        // Низ коробки — её локальный нуль, поэтому ставим прямо на полку.
+        group.position.set(slot.x, slotTop, slot.y);
+        group.rotation.set(0, 0, 0);
         group.visible = true;
       } else if (order.status === 'ruined' || order.status === 'missed') {
         group.visible = false;
       } else if (order.status === 'carried' && order.carrier) {
         var carrierView = crewViews.get(order.carrier);
-        if (carrierView && group.parent !== carrierView.carryAnchor) {
-          carrierView.carryAnchor.add(group);
-          group.position.set(0, 0, 0);
-          group.rotation.set(0, 0, 0);
+        if (carrierView) {
+          if (group.parent !== carrierView.carryAnchor) carrierView.carryAnchor.add(group);
+          // Коробка ложится на живот: низ на уровне пояса, спинка упирается
+          // в корпус. Наклон повторяет наклон рабочего, поэтому «не парит».
+          var hug = order.size === 'big' ? 0.74 : order.size === 'medium' ? 0.82 : 0.9;
+          group.scale.setScalar(hug);
+          group.position.set(0, -0.22, 0.02);
+          group.rotation.set(-0.05, 0, 0);
+          // Руки подстраиваются под коробку: кисти ловят её бока по высоте,
+          // а не висят в воздухе перед грудью.
+          carrierView.carryHug = hug;
+          carrierView.carryBox = { height: viewEntry.height, halfD: viewEntry.halfD, halfW: viewEntry.halfW };
+          carrierView.carryLow = -0.22;
         }
         group.visible = true;
       } else {
         if (group.parent !== scene) scene.add(group);
-        group.position.set(order.x, 0.13, order.y);
+        group.scale.setScalar(1);
+        group.position.set(order.x, floorSupport(order), order.y);
         group.rotation.set(0, order.priority > 0.72 ? 0.35 : -0.2, 0);
         group.visible = true;
       }
@@ -491,6 +565,22 @@ WC.world = (function () {
     return Math.min(1, total);
   }
 
+  // Двухзвенная обратная кинематика руки: по цели (dy, dz) от плеча выдаёт
+  // углы плеча и локтя. Нужна, чтобы кисти лежали на коробке любого размера.
+  var ARM_UPPER = 0.27, ARM_FORE = 0.25;
+  function solveArm(dy, dz) {
+    var d = Math.hypot(dy, dz);
+    if (d < 1e-4) return { shoulder: 0, elbow: -0.4 };
+    var maxD = ARM_UPPER + ARM_FORE;
+    var dd = Math.min(maxD * 0.995, d);
+    var base = Math.atan2(dz, -dy);
+    var cosA = (ARM_UPPER * ARM_UPPER + dd * dd - ARM_FORE * ARM_FORE) / (2 * ARM_UPPER * dd);
+    var A = Math.acos(Math.max(-1, Math.min(1, cosA)));
+    var cosE = (ARM_UPPER * ARM_UPPER + ARM_FORE * ARM_FORE - dd * dd) / (2 * ARM_UPPER * ARM_FORE);
+    var E = Math.acos(Math.max(-1, Math.min(1, cosE)));
+    return { shoulder: -(base - A), elbow: -(Math.PI - E) };
+  }
+
   function updateCrew(dt, game) {
     game.api.crew.forEach(function (worker) {
       var viewEntry = crewViews.get(worker.id);
@@ -522,12 +612,20 @@ WC.world = (function () {
       // Руки: при переноске — вперёд, иначе машут
       var swing = Math.sin(phase) * 0.7 * walk;
       if (carrying) {
-        viewEntry.armL.shoulder.rotation.x = -1.15;
-        viewEntry.armR.shoulder.rotation.x = -1.15;
-        viewEntry.armL.shoulder.rotation.z = -0.16;
-        viewEntry.armR.shoulder.rotation.z = 0.16;
-        viewEntry.armL.elbow.rotation.x = -0.75;
-        viewEntry.armR.elbow.rotation.x = -0.75;
+        var hugBox = viewEntry.carryHug == null ? 0.82 : viewEntry.carryHug;
+        var boxDims = viewEntry.carryBox || { height: 0.4, halfD: 0.21 };
+        var lowY = viewEntry.carryLow == null ? -0.22 : viewEntry.carryLow;
+        // Кисти — на боках коробки ниже её середины: ладони обхватывают борта
+        // снаружи, а не уходят внутрь коробки.
+        var ik = solveArm(lowY + boxDims.height * hugBox * 0.34 - 0.355, 0.20 + boxDims.halfD * hugBox * 0.35);
+        viewEntry.armL.shoulder.rotation.x = ik.shoulder;
+        viewEntry.armR.shoulder.rotation.x = ik.shoulder;
+        viewEntry.armL.shoulder.rotation.z = -0.13;
+        viewEntry.armR.shoulder.rotation.z = 0.13;
+        viewEntry.armL.elbow.rotation.x = ik.elbow;
+        viewEntry.armR.elbow.rotation.x = ik.elbow;
+        viewEntry.armL.wrist.rotation.x = -0.45;
+        viewEntry.armR.wrist.rotation.x = -0.45;
       } else if (resting) {
         viewEntry.armL.shoulder.rotation.x = -0.22 + Math.sin(s.anim.breath) * 0.04;
         viewEntry.armR.shoulder.rotation.x = -0.22 + Math.sin(s.anim.breath) * 0.04;
@@ -536,6 +634,8 @@ WC.world = (function () {
         viewEntry.armL.elbow.rotation.x = -0.35;
         viewEntry.armR.elbow.rotation.x = -0.35;
       } else {
+        viewEntry.armL.wrist.rotation.x = 0;
+        viewEntry.armR.wrist.rotation.x = 0;
         viewEntry.armL.shoulder.rotation.x = -swing;
         viewEntry.armR.shoulder.rotation.x = swing;
         viewEntry.armL.shoulder.rotation.z = -0.07;

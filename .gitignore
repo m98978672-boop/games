@@ -24,3 +24,4 @@ tools/training/__pycache__/
 
 # python-кэш
 __pycache__/
+node_modules/

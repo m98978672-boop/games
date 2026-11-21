@@ -9,8 +9,10 @@
   <circle cx="1120" cy="120" r="230" fill="#ffffff" opacity="0.07"/>
   <circle cx="180" cy="640" r="190" fill="#ffffff" opacity="0.05"/>
   <text x="72" y="120" font-family="Inter, Segoe UI, sans-serif" font-size="128">🛡️</text>
-  <rect x="72" y="180" width="196" height="52" rx="26" fill="#ffffff" opacity="0.16"/>
+  <rect x="72" y="180" width="171" height="52" rx="26" fill="#ffffff" opacity="0.16"/>
   <text x="98" y="216" font-family="Inter, Segoe UI, sans-serif" font-size="26" font-weight="700" fill="#ffffff">C-983</text>
-  <text x="72" y="330" font-family="Inter, Segoe UI, sans-serif" font-size="44" font-weight="700" fill="#ffffff">17 миллионов строк против 167 лет</text>\n  <text x="72" y="384" font-family="Inter, Segoe UI, sans-serif" font-size="44" font-weight="700" fill="#ffffff">бессилия. ИИ заявил о решении</text>\n  <text x="72" y="438" font-family="Inter, Segoe UI, sans-serif" font-size="44" font-weight="700" fill="#ffffff">гипотезы Р</text>
+  <text x="72" y="330" font-family="Inter, Segoe UI, sans-serif" font-size="44" font-weight="700" fill="#ffffff">17 миллионов строк против 167 лет</text>
+  <text x="72" y="384" font-family="Inter, Segoe UI, sans-serif" font-size="44" font-weight="700" fill="#ffffff">бессилия. ИИ заявил о решении гипотезы</text>
+  <text x="72" y="438" font-family="Inter, Segoe UI, sans-serif" font-size="44" font-weight="700" fill="#ffffff">Римана…</text>
   <text x="72" y="620" font-family="Inter, Segoe UI, sans-serif" font-size="28" font-weight="600" fill="#ffffff" opacity="0.78">SecurityLab · Games News</text>
 </svg>

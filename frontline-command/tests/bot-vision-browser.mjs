@@ -39,6 +39,20 @@ try{
   await page.goto(base,{waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
   const on=await runScene();assert.equal(on.flag,true);assert.equal(on.arrived,true);assert.equal(on.pathFailed,false);
   assert.equal(on.collided,false);assert.ok(on.maxStep<=on.limit+1e-9);
+  const distantWall=await page.evaluate(async()=>{
+    const {Game}=await import('/src/sim/game.js'),{moveUnit}=await import('/src/sim/units.js');
+    const results=[];
+    for(const faction of [0,1]) {
+      const cfg=window.__frontline.cfg,g=new Game({cfg,seed:5,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.occupancyGrid.clear();g.squads.clear();g._wallFollowMetrics={steps:0};
+      const s=faction?-1:1,x=1000-s*9.1,y=800;Object.assign(g.world,{W:2048,H:2048,isWalkable:()=>true,isBaseWalkable:()=>true,speedAt:()=>1});
+      Object.assign(g.walls,{enabled:()=>true,buildingAtPoint:x=>s*(x-1000)>300?{}:null,doorWaypoint:()=>null,doorsForUnit:()=>{},blocksMove:(x,y,r)=>s*(x-1000)+r>=0,
+        blocksMoveSweep:(x1,y1,x2,y2,r)=>Math.max(s*(x1-1000),s*(x2-1000))+r>=0});
+      const u=g.spawnUnit(faction,'infantry',x,y);u.goal={x:x+s*800,y};moveUnit(g,u,s,0,.05);
+      results.push({steps:g._wallFollowMetrics.steps,dx:u.x-x,dy:u.y-y});
+    }
+    return results;
+  });
+  assert.ok(distantWall.every(x=>x.steps===1&&Math.abs(x.dx)<1e-6&&Math.abs(x.dy)>.5),JSON.stringify(distantWall));
   const wallOrders=await page.evaluate(async()=>{
     const {Game}=await import('/src/sim/game.js'),{Squad}=await import('/src/sim/squads.js');
     const results=[];

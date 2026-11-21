@@ -10,6 +10,16 @@ W, H, FPS = B.W, B.H, B.FPS
 FF = B.FF
 TMP = B.TMP
 F = 1500.0
+MODE = "wide"
+
+def set_mode(m):
+    global MODE, W, H, F
+    MODE = m
+    if m == "shorts":
+        W, H, F = 1080, 1920, 1350.0
+    else:
+        W, H, F = 1920, 1080, 1500.0
+    SKY.clear()
 
 CLAY = (212, 206, 198); ORANGE = (232, 138, 58); PINK = (238, 150, 170)
 GREEN = (70, 200, 70); BLACK = (15, 15, 15); PURP = (150, 40, 190)
@@ -314,7 +324,10 @@ def render_frame(k, t, ovl_imgs):
         faces += box((-3.2, 1.5, 5), (2.4, 3.0, 3), (52, 55, 66)) + box((3.6, 1.2, 4), (2.2, 2.4, 3), (46, 49, 60))
         faces += box((2.6, 1.5, 2.2), (0.08, 3.0, 0.08), (60, 62, 70)) + box((2.6, 3.05, 2.2), (0.5, 0.14, 0.3), (250, 235, 180))
         cf, cl = cat_faces(P); faces += cf; lines += cl
-        cam = make_cam((-1.05, 0.55, -2.1), (0.25, 1.05, 6.0))
+        if MODE == "shorts":
+            cam = make_cam((0.0, 0.62, -1.9), (0.4, 1.05, 6.0))
+        else:
+            cam = make_cam((-1.05, 0.55, -2.1), (0.25, 1.05, 6.0))
     elif k == 5:
         sky = sky_img("studio", (118, 118, 121), (162, 162, 164))
         seq = [(1.5, -0.55), (5.5, 0.0), (9.5, 0.55)]
@@ -325,7 +338,8 @@ def render_frame(k, t, ovl_imgs):
                  head_pitch=0.30, tail_t=t*0.9, blink=blink(t))
         shadow = (0, 0)
         objs = [(-1.3, 1.5, "bowl"), (0.0, 5.5, "house"), (1.3, 9.5, "cat")]
-        for ox, t0, kind in objs:
+        for ox0, t0, kind in objs:
+            ox = ox0 * (0.72 if MODE == "shorts" else 1.0)
             s = 0.85*eob(clamp01((t-t0)/0.6)) if t > t0 else 0.0
             if s <= 0.01: continue
             oz = -0.8
@@ -379,9 +393,9 @@ def render_frame(k, t, ovl_imgs):
             dr = ImageDraw.Draw(img)
     return img
 
-def render_scene(k, ovl, out_path, only_t=None):
+def render_scene(k, ovl, out_path, only_t=None, D=None):
     S = B.scenes[k]
-    Dl = S["D"]
+    Dl = D if D is not None else S["D"]
     ovl_imgs = [(Image.open(p).convert("RGBA"), a, b) for p, a, b in ovl]
     if only_t is not None:
         img = render_frame(k, only_t, ovl_imgs)

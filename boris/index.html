@@ -17,6 +17,8 @@
   h1{font-size:26px;margin:0}
   .tag{color:var(--mut);font-size:14px}
   .player{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#000;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .player.v{max-width:430px;margin:0 auto}
+  .player.v video{aspect-ratio:9/16}
   video{display:block;width:100%;aspect-ratio:16/9;background:#000}
   .bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:18px 0 8px}
   .btn{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#161310;font-weight:700;text-decoration:none;padding:14px 22px;border-radius:14px;font-size:17px;box-shadow:0 8px 24px rgba(255,122,26,.35)}
@@ -61,7 +63,15 @@
 
   <div class="cols">
     <div class="card">
-      <h2>О серии</h2>
+      <h2>Shorts-версия (9:16, до 60 секунд)</h2>
+      <div class="player v">
+        <video controls preload="metadata" poster="thumb_ep01.png" src="boris_ep01_shorts.mp4"></video>
+      </div>
+      <div class="bar">
+        <a class="btn" href="boris_ep01_shorts.mp4" download="boris_ep01_shorts.mp4">⬇ Скачать Shorts (MP4, 9:16)</a>
+        <span class="meta">1080×1920 · 25 fps · чёткий голос</span>
+      </div>
+      <h2 style="margin-top:18px">О серии</h2>
       <p>Борис начинает жизнь на улице: триста двадцать полигонов, непрокрашенный хвост и большая мечта о сосиске. Впереди — мусорные баки, коробка-недвижимость и тёплое окно с человеком.</p>
       <p>В финале Борис встаёт в Т-позу и ждёт вашего вердикта: что он получит в следующем эпизоде?</p>
       <h2 style="margin-top:18px">Голосование зрителей</h2>
