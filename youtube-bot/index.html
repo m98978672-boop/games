@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0d12">
+  <title>YouTube Bot — планирование публикаций</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root{color-scheme:dark;--bg:#0b0d12;--panel:#141821;--line:#282f3b;--muted:#9ba7b8;--text:#f3f5fa;--accent:#ff3854;--green:#50d6a0;--yellow:#ffd166}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 10% -10%,#2b1420 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}main{width:min(1000px,calc(100% - 32px));margin:0 auto;padding:30px 0 70px}.top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:24px}.brand{display:flex;align-items:center;gap:12px}.mark{width:46px;height:34px;background:var(--accent);border-radius:11px;display:grid;place-items:center;font-size:18px}.brand h1{font-size:21px;margin:0}.brand p{margin:2px 0;color:var(--muted);font-size:13px}.button,button{display:inline-flex;justify-content:center;align-items:center;border:0;border-radius:10px;padding:11px 16px;background:var(--accent);color:#fff;text-decoration:none;font:inherit;font-weight:700;cursor:pointer}.button.secondary{background:#252c37}.button:disabled,button:disabled{opacity:.55;cursor:wait}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.card{background:linear-gradient(155deg,#171c26,#11151c);border:1px solid var(--line);border-radius:17px;padding:21px;box-shadow:0 18px 45px #0002}.wide{grid-column:1/-1}.card h2{font-size:17px;margin:0 0 15px}.muted{color:var(--muted)}.notice{padding:12px 14px;background:#211c14;border:1px solid #463923;color:#f5d58a;border-radius:10px;margin:14px 0}.notice.success{background:#10231d;border-color:#225c46;color:#9af0c7}.notice.error{background:#28151a;border-color:#67313a;color:#ff9fac}.channel{display:flex;align-items:center;gap:13px}.avatar{width:45px;height:45px;flex:none;border-radius:50%;background:#2b3340;display:grid;place-items:center}.stats{display:flex;gap:16px;color:var(--muted);font-size:13px;margin-top:3px}.stats b{color:var(--text)}form{display:grid;gap:13px}label{display:grid;gap:6px;color:#cbd3df;font-size:13px}input,textarea,select{width:100%;background:#0d1118;border:1px solid #303847;border-radius:9px;padding:11px 12px;color:var(--text);font:inherit}input[type=file]{padding:9px}textarea{min-height:95px;resize:vertical}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.help{font-size:12px;color:var(--muted)}.progress{width:100%;height:8px;background:#252c37;border-radius:99px;overflow:hidden}.progress i{display:block;width:0;height:100%;background:var(--green);transition:width .2s}.privacy{display:flex;gap:10px;align-items:flex-start}.privacy input{width:auto;margin:3px 0}.footer{margin-top:19px;color:var(--muted);font-size:12px}.hidden{display:none!important}code{overflow-wrap:anywhere;color:#b8c8ff}@media(max-width:720px){.top{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.two{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div class="brand"><div class="mark">▶</div><div><h1>YouTube Bot</h1><p>Планирование загрузки видео в ваш канал</p></div></div>
+    <a class="button secondary" href="https://studio.youtube.com/" target="_blank" rel="noreferrer">Открыть YouTube Studio ↗</a>
+  </header>
+  <div id="notice" class="notice hidden" role="status"></div>
+  <div class="grid">
+    <section class="card">
+      <h2>1. Подключите канал</h2>
+      <div id="channel" class="muted">Нажмите кнопку, чтобы выбрать Google-аккаунт.</div>
+      <button id="connect" type="button" style="margin-top:15px">Подключить Google / YouTube</button>
+      <p class="help">Авторизация откроется через Google. Пароль от аккаунта не передаётся сайту. Токен хранится только в памяти этой вкладки.</p>
+    </section>
+    <section class="card">
+      <h2>Как это работает</h2>
+      <p class="muted">Вы задаёте название, описание и время публикации. Видео загружается на YouTube как приватное; YouTube должен опубликовать его в указанное время.</p>
+      <p class="help">Загрузка идёт прямо из браузера в YouTube по HTTPS. Не закрывайте вкладку до завершения передачи файла.</p>
+    </section>
+    <section class="card wide">
+      <h2>2. Подготовьте публикацию</h2>
+      <form id="videoForm">
+        <label>Видеофайл <input id="video" name="video" type="file" accept="video/*" required></label>
+        <label>Название <input id="title" name="title" maxlength="100" required placeholder="Название ролика"></label>
+        <label>Описание <textarea id="description" name="description" maxlength="5000" placeholder="Описание, ссылки, главы…"></textarea></label>
+        <div class="two">
+          <label>Теги через запятую <input id="tags" name="tags" placeholder="игры, Frontline"></label>
+          <label>Категория
+            <select id="category">
+              <option value="22">Люди и блоги</option><option value="20">Игры</option><option value="24">Развлечения</option><option value="27">Образование</option><option value="28">Наука и технологии</option><option value="10">Музыка</option><option value="19">Путешествия и события</option>
+            </select>
+          </label>
+        </div>
+        <div class="two">
+          <label>Дата и время публикации <input id="publishAt" type="datetime-local" required><span class="help">Укажите время в часовом поясе устройства. Выберите время минимум через 30 минут.</span></label>
+          <label>Видео предназначено для детей?
+            <select id="madeForKids" required><option value="" selected disabled>Выберите точно</option><option value="false">Нет, не предназначено специально для детей</option><option value="true">Да, предназначено для детей</option></select>
+          </label>
+        </div>
+        <label class="privacy"><input id="rights" type="checkbox" required><span>У меня есть права на видео, музыку, изображения и другие материалы в ролике.</span></label>
+        <button id="uploadButton" type="submit">Загрузить и запланировать</button>
+        <div id="progressWrap" class="hidden"><div class="progress"><i id="progressBar"></i></div><div id="progressText" class="help">Подготовка загрузки…</div></div>
+      </form>
+    </section>
+    <section class="card wide">
+      <h2>Важно</h2>
+      <p class="muted">Это статическое приложение в GitHub Pages: оно не хранит файлы и не запускается само по расписанию. Держите эту вкладку открытой, пока видео загружается. После успешной загрузки и постановки в расписание публикацию выполняет YouTube.</p>
+      <p class="help">Сначала проверьте подключение канала и сделайте тестовую публикацию на ролике, который готовы опубликовать. Если Google сообщает об ошибке или YouTube API отклоняет загрузку, проверьте канал в YouTube Studio прежде чем повторять, чтобы не создать дубликат.</p>
+    </section>
+  </div>
+  <p class="footer">Сайт использует только ваш OAuth-доступ и YouTube Data API. Он не запрашивает и не сохраняет пароль Google или OAuth client secret.</p>
+</main>
+<script>
+'use strict';
+const CLIENT_ID = '420623721440-fjr6am5l8to15rs5ce2beof66t8kutb2.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly';
+let tokenClient = null;
+let accessToken = null;
+let expiresAt = 0;
+let busy = false;
+const $ = (id) => document.getElementById(id);
+const notice = $('notice');
+function message(text, kind='') { notice.textContent = text; notice.className = 'notice ' + kind; notice.classList.remove('hidden'); }
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function readyToken() { return accessToken && Date.now() < expiresAt - 30000; }
+function requireToken(prompt='') {
+  if (!window.google?.accounts?.oauth2) { message('Загрузка Google Identity Services ещё не завершена. Подождите и попробуйте снова.', 'error'); return; }
+  if (!tokenClient) {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPES,
+      callback: async (result) => {
+        if (result.error) { message('Google не выдал разрешение: ' + result.error, 'error'); return; }
+        accessToken = result.access_token;
+        expiresAt = Date.now() + Number(result.expires_in || 3600) * 1000;
+        await loadChannel();
+      },
+      error_callback: (error) => message('Не удалось открыть окно авторизации Google: ' + (error?.message || 'попробуйте снова'), 'error')
+    });
+  }
+  tokenClient.requestAccessToken(prompt ? {prompt} : {});
+}
+async function api(url, options={}) {
+  if (!readyToken()) throw new Error('Сеанс Google истёк. Нажмите «Подключить Google / YouTube» и повторите действие.');
+  const headers = new Headers(options.headers || {});
+  headers.set('Authorization', 'Bearer ' + accessToken);
+  return fetch(url, {...options, headers});
+}
+async function loadChannel() {
+  try {
+    const response = await api('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true&maxResults=1');
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error?.message || 'YouTube не вернул канал.');
+    const channel = body.items?.[0];
+    if (!channel) { $('channel').textContent = 'У выбранного Google-аккаунта не найден YouTube-канал.'; return; }
+    $('channel').innerHTML = '<div class="channel"><div class="avatar">▶</div><div><strong>' + escapeHtml(channel.snippet?.title) + '</strong><div class="stats"><span><b>' + escapeHtml(channel.statistics?.videoCount ?? '—') + '</b> видео</span><span><b>' + escapeHtml(channel.statistics?.subscriberCount ?? 'скрыто') + '</b> подписчиков</span></div></div></div>';
+    message('Подключён канал «' + channel.snippet.title + '». Перед загрузкой проверьте, что это нужный канал.', 'success');
+  } catch (error) { message(error.message || 'Не удалось прочитать канал.', 'error'); }
+}
+function setProgress(percent, text) { $('progressWrap').classList.remove('hidden'); $('progressBar').style.width = Math.max(0, Math.min(100, percent)) + '%'; $('progressText').textContent = text; }
+function uploadResumable(file, metadata) {
+  return new Promise((resolve, reject) => {
+    const mime = file.type || 'video/mp4';
+    const init = new XMLHttpRequest();
+    const url = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status';
+    init.open('POST', url);
+    init.setRequestHeader('Authorization', 'Bearer ' + accessToken);
+    init.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+    init.setRequestHeader('X-Upload-Content-Length', String(file.size));
+    init.setRequestHeader('X-Upload-Content-Type', mime);
+    init.onload = () => {
+      if (init.status < 200 || init.status >= 300) { reject(new Error('YouTube не принял запрос на загрузку (' + init.status + '): ' + (init.responseText || '').slice(0, 500))); return; }
+      const uploadUrl = init.getResponseHeader('Location');
+      if (!uploadUrl) { reject(new Error('Не получен адрес resumable-загрузки от YouTube. Проверьте Authorized JavaScript origins в OAuth-клиенте и повторите вход.')); return; }
+      const put = new XMLHttpRequest();
+      put.open('PUT', uploadUrl);
+      put.setRequestHeader('Content-Type', mime);
+      put.upload.onprogress = (event) => { if (event.lengthComputable) setProgress(8 + event.loaded / event.total * 90, 'Загружаю видео: ' + Math.round(event.loaded / event.total * 100) + '%'); };
+      put.onerror = () => reject(new Error('Сетевая/CORS-ошибка во время передачи видео. Проверьте подключение и настройки Google OAuth.'));
+      put.onload = () => {
+        let result = {};
+        try { result = JSON.parse(put.responseText || '{}'); } catch {}
+        if (put.status < 200 || put.status >= 300) { reject(new Error('Загрузка отклонена (' + put.status + '): ' + (result.error?.message || put.responseText || 'неизвестная ошибка').slice(0, 500))); return; }
+        resolve(result);
+      };
+      setProgress(8, 'Соединение установлено. Передаю видео в YouTube…');
+      put.send(file);
+    };
+    init.onerror = () => reject(new Error('Не удалось связаться с YouTube API. Проверьте доступ к сети.'));
+    init.send(JSON.stringify(metadata));
+  });
+}
+$('connect').addEventListener('click', () => requireToken('consent'));
+$('videoForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (busy) return;
+  if (!readyToken()) { message('Сначала подключите Google / YouTube.', 'error'); return; }
+  const file = $('video').files[0];
+  if (!file) { message('Выберите видеофайл.', 'error'); return; }
+  if (file.size > 256 * 1024 * 1024 * 1024) { message('Файл превышает лимит YouTube API.', 'error'); return; }
+  const dateValue = $('publishAt').value;
+  const publishDate = new Date(dateValue);
+  if (!dateValue || Number.isNaN(publishDate.getTime()) || publishDate.getTime() < Date.now() + 30 * 60 * 1000) { message('Выберите время минимум через 30 минут от текущего.', 'error'); return; }
+  const title = $('title').value.trim();
+  if (!title || title.length > 100) { message('Укажите название не длиннее 100 символов.', 'error'); return; }
+  const tags = [...new Set($('tags').value.split(',').map(tag => tag.trim()).filter(Boolean))].slice(0, 30);
+  const metadata = {
+    snippet: {title, description: $('description').value, tags, categoryId: $('category').value},
+    status: {privacyStatus: 'private', publishAt: publishDate.toISOString(), selfDeclaredMadeForKids: $('madeForKids').value === 'true'}
+  };
+  busy = true; $('uploadButton').disabled = true; $('connect').disabled = true;
+  try {
+    const result = await uploadResumable(file, metadata);
+    setProgress(100, 'Готово. Видео загружено и запланировано.');
+    const link = 'https://youtu.be/' + result.id;
+    message('Видео загружено: ' + link + '. Проверьте дату и время в YouTube Studio.', 'success');
+    const info = document.createElement('p'); info.innerHTML = '<a target="_blank" rel="noreferrer" href="' + escapeHtml(link) + '">Открыть видео ↗</a>'; $('progressWrap').appendChild(info);
+  } catch (error) { message(error.message || 'Ошибка при загрузке.', 'error'); }
+  finally { busy = false; $('uploadButton').disabled = false; $('connect').disabled = false; }
+});
+</script>
+</body>
+</html>
