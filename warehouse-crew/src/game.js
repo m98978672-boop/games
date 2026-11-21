@@ -824,6 +824,7 @@ WC.game = (function () {
       delivered: stats.delivered,
       ruined: stats.ruined,
       missed: stats.missed,
+      dropped: stats.dropped,
       quality: qualityPercent(api),
       bestStreak: stats.bestStreak,
       loaded: stats.loaded,

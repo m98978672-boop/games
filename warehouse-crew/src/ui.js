@@ -789,11 +789,15 @@ window.WC = window.WC || {};
   }
 
   // ------------------------------------------------------------------ модалки
+  var reportReturnFocus = null;
   function closeModal() {
+    var wasReport = Boolean(dom.modalRoot.querySelector('.shift-report'));
     dom.modalRoot.classList.remove('open');
     dom.modalRoot.innerHTML = '';
     uiState.inspectorOpen = false;
     uiState.helpOpen = false;
+    if (wasReport && reportReturnFocus && reportReturnFocus.isConnected) reportReturnFocus.focus({ preventScroll: true });
+    if (wasReport) reportReturnFocus = null;
   }
 
   function openModal(node) {
@@ -840,6 +844,8 @@ window.WC = window.WC || {};
         U.el('p', { text: 'Рабочие отвечают на приказы и иногда разговаривают рядом друг с другом. Текст виден над сценой и в журнале. В пульте можно включить озвучку: используется только установленный на устройстве локальный русский голос. Если его нет, остаются текстовые реплики. Общая кнопка звука отключает и озвучку.' }),
         U.el('h3', { text: 'День и ночь' }),
         U.el('p', { text: 'В пульте можно переключить освещение на день или ночь в любой момент. Ночью фонари освещают улицу, а лампы — стеллажи. В темноте зрение рабочих постепенно снижается, особенно при усталости, и восстанавливается на свету.' }),
+        U.el('h3', { text: 'Отчёт смены' }),
+        U.el('p', { text: 'В пульте можно открыть отчёт о грузах, очках и бригаде в любой момент. Он показывает снимок на момент открытия и не останавливает игру. Кнопка «Обновить» получает новые данные, JSON-отчёт не заменяет сохранение.' }),
         U.el('h3', { text: 'Сохранение смены' }),
         U.el('p', { text: 'Смена сохраняется в браузере каждые 25 секунд, при сворачивании и уходе со страницы, если браузер позволяет запись. При следующем запуске она продолжится с прежней бригадой, грузами и состоянием здоровья. Кнопка сохранения и клавиша S записывают смену сразу.' }),
         U.el('h3', { text: 'Движок' }),
@@ -1080,56 +1086,77 @@ window.WC = window.WC || {};
     return box;
   }
 
-  /* Оценка смены: цифры без вердикта — не финал, а бухгалтерия.
-     Смена считается крепкой, когда качество высокое и ничего не
-     разбито; тяжёлой — когда брак и просрочка съели результат. */
-  function shiftVerdict(summary) {
-    if (summary.delivered === 0) return 'Смена пустая: ни одного заказа не дошло до стеллажа.';
-    if (summary.quality >= 90 && summary.ruined === 0 && summary.missed === 0) {
-      return 'Образцовая смена: всё в срок и без брака. Так держать.';
-    }
-    if (summary.quality >= 70 && summary.ruined <= 1) {
-      return 'Смена закрыта достойно: склад работал, бригада справилась.';
-    }
-    return 'Тяжёлая смена: брак и просрочка съели результат. Следующая будет лучше.';
-  }
+  // Отчёт — снимок при открытии. Игра продолжает работать, если не на паузе.
+  function openShiftEnd(summary) { openShiftReport(summary, true); }
 
-  function openShiftEnd(summary) {
-    var modal = U.el('div', { class: 'inspector' }, [
+  function openShiftReport(summary, ended) {
+    if (!dom.modalRoot.querySelector('.shift-report')) {
+      reportReturnFocus = dom.modalRoot.contains(document.activeElement) ? q('btn-report') : document.activeElement;
+    }
+    var crewRows = summary.crew.map(function (member) {
+      return U.el('div', { class: 'report-person' }, [
+        U.el('div', { class: 'report-person-head' }, [
+          U.el('b', { text: member.name }), U.el('span', { text: member.role }),
+        ]),
+        U.el('div', { text: 'На стеллаж: ' + member.delivered + ' · в фуру: ' + member.loaded + ' · уронил: ' + member.dropped }),
+        U.el('div', { text: 'Энергия: ' + member.energy + '% · усталость: ' + member.fatigue + '% · путь: ' + member.metres + ' м' }),
+        U.el('div', { text: 'Травмы: ' + (member.injuries.length ? member.injuries.join(', ') : 'нет') }),
+        U.el('button', { class: 'btn report-inspect', type: 'button', text: 'Осмотреть', 'aria-label': 'Осмотреть: ' + member.name, onclick: function () {
+          if (!game.workerById(member.id) || game.workerById(member.id).state.dead) { U.toast('Рабочий больше не в бригаде', 'warn'); return; }
+          closeModal(); openInspector(member.id);
+        } }),
+      ]);
+    });
+    var staffRows = summary.staff.map(function (member) {
+      return U.el('div', { class: 'report-person', text: member.name + ' · ' + (member.kind === 'medic' ? 'вылечено травм: ' + member.healed : 'остановлено нарушений: ' + member.caught) });
+    });
+    var actions = [];
+    if (ended) actions.push(U.el('button', { class: 'btn', type: 'button', text: 'Новая смена', onclick: function () { closeModal(); game.restart(); } }));
+    else actions.push(U.el('button', { class: 'btn', type: 'button', text: 'Обновить', onclick: function () { openShiftReport(game.summary(), game.state.shiftEnded); } }));
+    actions.push(U.el('button', { class: 'btn', type: 'button', text: 'Скачать отчёт', onclick: function () { WC.save.download(game); } }));
+    actions.push(U.el('button', { class: 'btn', type: 'button', text: 'Закрыть', onclick: closeModal }));
+    var modal = U.el('div', { class: 'inspector shift-report', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'report-title' }, [
       U.el('div', { class: 'insp-head' }, [
-        U.el('h2', { text: 'Смена закрыта' }),
-        U.el('span', { class: 'who', text: 'склад «Северный узел»' }),
+        U.el('h2', { id: 'report-title', text: ended ? 'Смена закрыта' : 'Отчёт смены' }),
         U.el('span', { class: 'spacer' }),
         U.el('button', { class: 'icon-btn', type: 'button', html: '<svg class="ico"><use href="#i-close"/></svg>', onclick: closeModal, 'aria-label': 'Закрыть' }),
       ]),
-      U.el('div', { class: 'insp-side', style: 'max-height:60vh' }, [
+      U.el('div', { class: 'report-content', tabindex: '0', 'aria-label': 'Показатели смены' }, [
+        U.el('p', { class: 'report-note', text: ended ? 'Итоги завершённой смены.' : 'Снимок на момент открытия. Смена не ставится на паузу; нажмите «Обновить» для новых данных.' }),
         U.el('div', { class: 'vitals-grid' }, [
-          vital('Очки', U.money(summary.score), 'за смену'),
-          vital('Заказы', String(summary.delivered), 'доставлено'),
-          vital('Качество', summary.quality + ' %', 'без брака'),
-          vital('Освещение', summary.lighting === 'night' ? 'Ночь' : 'День', 'режим в конце смены'),
+          vital('Очки', U.money(summary.score), 'баланс после покупок'),
+          vital('На стеллаж', String(summary.delivered), 'доставлено'),
+          vital('Качество', summary.quality + ' %', 'повреждения и срок'),
+          vital('Падения', String(summary.dropped), 'все грузы'),
+          vital('Испорчено', String(summary.ruined), 'списано'),
+          vital('Пропущено', String(summary.missed), 'заказы с истёкшим сроком'),
+          vital('Из фур', String(summary.unloaded), 'выгружено коробок'),
+          vital('В фуры', String(summary.loaded), 'загружено коробок'),
+          vital('Фуры уехали', String(summary.truckShifts), 'включая незавершённые рейсы'),
+          vital('Погибли', String(summary.deaths), 'за смену'),
           vital('Лучшая серия', String(summary.bestStreak), 'без ошибок'),
-          vital('Разбито', String(summary.ruined), 'списание'),
-          vital('Просрочено', String(summary.missed), 'штрафы'),
+          vital('Освещение', summary.lighting === 'night' ? 'Ночь' : 'День', ended ? 'в конце смены' : 'при открытии'),
         ]),
-        U.el('h4', { text: 'Бригада' }),
-        U.el('div', { class: 'organs' }, summary.crew.map(function (member) {
-          return U.el('div', { class: 'organ ok' }, [
-            U.el('span', { text: member.name.split(' ')[0] }),
-            U.el('div', { class: 'track' }, [U.el('i', { style: 'width:' + member.energy + '%' })]),
-            U.el('span', { class: 'val', text: member.delivered + ' шт' }),
-          ]);
-        })),
-        U.el('div', { class: 'brain-note', text: shiftVerdict(summary) }),
-        U.el('div', { class: 'brain-note', text: WC.save.isProtected() ? 'Сохранение защищено от перезаписи. Можно скачать отчёт смены в JSON.' : 'Проверь индикатор сохранения; отчёт смены можно скачать в JSON.' }),
+        U.el('p', { class: 'report-note', text: 'Качество учитывает повреждения и срок у учитываемых уложенных и испорченных заказов. Если таких нет, показывается 100%. Отчёт JSON — не сохранение для продолжения игры.' }),
+        WC.save.isProtected() ? U.el('p', { class: 'report-note report-warning', text: 'Сохранение защищено от перезаписи: текущая смена не записывается в браузер.' }) : null,
+        U.el('h3', { class: 'report-heading', text: 'Бригада сейчас (' + summary.crew.length + ')' }),
+        U.el('div', { class: 'report-people' }, crewRows.length ? crewRows : [U.el('p', { class: 'report-note', text: 'Рабочих в бригаде нет.' })]),
+        U.el('h3', { class: 'report-heading', text: 'Персонал (' + summary.staff.length + ')' }),
+        U.el('div', { class: 'report-people' }, staffRows.length ? staffRows : [U.el('p', { class: 'report-note', text: 'Персонал не нанят.' })]),
+        U.el('p', { class: 'report-note', text: 'В списке показаны работники, оставшиеся в бригаде на момент отчёта.' }),
       ]),
-      U.el('div', { class: 'help-actions' }, [
-        U.el('button', { class: 'btn', type: 'button', text: 'Новая смена', onclick: function () { closeModal(); game.restart(); } }),
-        U.el('button', { class: 'btn', type: 'button', text: 'Скачать отчёт', onclick: function () { WC.save.download(game); } }),
-        U.el('button', { class: 'btn', type: 'button', text: 'Инспектор', onclick: function () { closeModal(); openInspector(); } }),
-      ]),
+      U.el('div', { class: 'help-actions report-actions' }, actions),
     ]);
     openModal(modal);
+    modal.addEventListener('keydown', function (event) {
+      if (event.key !== 'Tab') return;
+      var focusable = Array.prototype.slice.call(modal.querySelectorAll('button:not([disabled]), [tabindex="0"]'));
+      if (!focusable.length) return;
+      var first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+    modal.querySelector('.insp-head button').focus({ preventScroll: true });
   }
 
   // ------------------------------------------------------------------ init
@@ -1218,6 +1245,7 @@ window.WC = window.WC || {};
       uiState.journalVisibleLimit += 12;
       renderJournal();
     });
+    q('btn-report').addEventListener('click', function () { openShiftReport(game.summary(), game.state.shiftEnded); });
     var shopButton = q('btn-shop');
     if (shopButton) shopButton.addEventListener('click', function () {
       sheet.set('full', true);
@@ -1416,6 +1444,7 @@ window.WC = window.WC || {};
     window.addEventListener('keydown', function (event) {
       if (event.target && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
       var key = event.key.toLowerCase();
+      if (event.code === 'Space' && event.target && event.target.closest && event.target.closest('button')) return;
       if (event.code === 'Space') {
         event.preventDefault();
         game.setPaused(!game.state.paused);

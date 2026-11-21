@@ -119,6 +119,8 @@ WC.save = (function () {
 
   function download(game) {
     var payload = collect(game);
+    // Отчёт не является сохранением: это читаемая сводка на момент скачивания.
+    payload.summary = WC.game.summary();
     payload.crewBrains = game.crew.map(function (w) {
       return { id: w.id, model: w.brainMeta || null };
     });

@@ -381,6 +381,54 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       game.restart();
       window.WC.world.render(1 / 30, game);
       result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
+      // Отчёт — снимок без вмешательства в смену, включая наём и пустые данные.
+      game.sim.state.stats.score = 1000;
+      game.hireWorker(); game.buyStaff('medic');
+      game.sim.state.stats.delivered = 4; game.sim.state.stats.loaded = 2; game.sim.state.stats.dropped = 3;
+      game.api.crew[0].body.energy = .41;
+      game.setPaused(false);
+      const reportBefore = JSON.stringify(game.captureCheckpoint());
+      doc.getElementById('btn-report').click();
+      let report = doc.querySelector('.shift-report');
+      result.reportDisplay = report && report.querySelector('#report-title').textContent === 'Отчёт смены' &&
+        report.textContent.includes('На стеллаж') && report.textContent.includes('Падения3') &&
+        report.textContent.includes('Баланс') === false && report.querySelectorAll('.report-person').length === 5 &&
+        report.textContent.includes('Полина Верес') && !game.state.paused && JSON.stringify(game.captureCheckpoint()) === reportBefore;
+      game.sim.state.stats.score = 501;
+      const reportRefresh = [...report.querySelectorAll('.report-actions button')].find(b => b.textContent === 'Обновить');
+      result.reportRefresh = report.textContent.includes('800') && !!reportRefresh;
+      reportRefresh.click(); report = doc.querySelector('.shift-report');
+      result.reportRefresh = result.reportRefresh && report.textContent.includes('501') && !game.state.paused;
+      const inspectButton = report.querySelector('.report-inspect'); inspectButton.click();
+      result.reportInspect = window.WC.ui.state.inspectorOpen && window.WC.ui.state.inspectorWorkerId === game.api.crew[0].id;
+      window.WC.ui.closeModal();
+      const oldClick = window.HTMLAnchorElement.prototype.click;
+      window.HTMLAnchorElement.prototype.click = function () {};
+      window.URL.revokeObjectURL = () => {};
+      const exported = window.WC.save.download(game);
+      window.HTMLAnchorElement.prototype.click = oldClick;
+      result.reportExport = exported.summary.score === 501 && exported.summary.dropped === 3 && exported.summary.crew.length === 4 && !('checkpoint' in exported);
+      game.endShift(); report = doc.querySelector('.shift-report');
+      result.reportEnd = game.state.paused && report && report.querySelector('#report-title').textContent === 'Смена закрыта' &&
+        [...report.querySelectorAll('.report-actions button')].some(b => b.textContent === 'Новая смена');
+      window.WC.ui.closeModal(); doc.getElementById('btn-report').click();
+      result.reportEnd = result.reportEnd && doc.getElementById('report-title').textContent === 'Смена закрыта';
+      window.WC.ui.closeModal(); game.restart();
+      const reportLauncher = doc.getElementById('btn-report'); reportLauncher.focus(); reportLauncher.click(); report = doc.querySelector('.shift-report');
+      result.reportEmpty = report.textContent.includes('Персонал не нанят') && report.textContent.includes('100 %');
+      const firstReportButton = report.querySelector('.insp-head button');
+      result.reportFocus = doc.activeElement === firstReportButton;
+      const tab = new window.KeyboardEvent('keydown', {key:'Tab', shiftKey:true, bubbles:true, cancelable:true});
+      firstReportButton.dispatchEvent(tab);
+      result.reportFocus = result.reportFocus && tab.defaultPrevented && doc.activeElement === report.querySelector('.report-actions button:last-child');
+      const pausedBeforeSpace = game.state.paused;
+      const space = new window.KeyboardEvent('keydown', {key:' ', code:'Space', bubbles:true, cancelable:true});
+      doc.activeElement.dispatchEvent(space);
+      result.reportFocus = result.reportFocus && !space.defaultPrevented && game.state.paused === pausedBeforeSpace;
+      window.WC.ui.closeModal(); result.reportFocus = result.reportFocus && doc.activeElement === reportLauncher;
+      window.WC.save.protect(); reportLauncher.click();
+      result.reportEmpty = result.reportEmpty && doc.querySelector('.report-warning').textContent.includes('не записывается');
+      window.WC.ui.closeModal(); game.restart();
       // Один и тот же журнал доступен в пульте и на телефоне; фильтрация
       // не меняет сохранение, новые события не сбивают выбранный фильтр.
       game.setPaused(true);
@@ -556,6 +604,7 @@ for (const mode of modes) {
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
   check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
   check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});
+  check(r.reportDisplay && r.reportRefresh && r.reportInspect && r.reportExport && r.reportEnd && r.reportEmpty && r.reportFocus, 'отчёт смены: снимок, обновление, инспектор, экспорт и итоги', {display:r.reportDisplay, refresh:r.reportRefresh, inspect:r.reportInspect, export:r.reportExport, end:r.reportEnd, empty:r.reportEmpty, focus:r.reportFocus, error:r.featureError});
   check(r.journalDisplay && r.journalFilters && r.journalRestart, 'журнал в пульте: фильтры, история, фокус, новая смена', {display:r.journalDisplay, filters:r.journalFilters, restart:r.journalRestart, error:r.featureError});
   check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});

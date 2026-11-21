@@ -7,7 +7,7 @@
     "storefront": 18,
     "collection": 216,
     "files": 2156,
-    "totalBytes": 53151464,
+    "totalBytes": 53157149,
     "chunks": 401,
     "blockedFiles": 5
   },
@@ -5029,8 +5029,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "61cbeaac805aca46b9c5dea0be322ce2af243355fbc7f8e760e7a40124cdab86",
-      "totalSize": 1899698,
+      "infoHash": "0dae8368cac4ce1a8b6c7c9aa8d4b229401135e87a675e003de8ecee7a70b3a6",
+      "totalSize": 1905383,
       "chunkSize": 262144,
       "chunkCount": 8,
       "fileCount": 36,
@@ -5082,8 +5082,8 @@
         },
         {
           "path": "index.html",
-          "size": 20249,
-          "sha256": "aab2e9daff9f5fb6f0ac6e3d0d2ceaaad3487d969e0612ec804232acdcf0b8c2"
+          "size": 20446,
+          "sha256": "faa02f1f57a7bbfa0e51d09a2fa7f6ebc24570d6b112a2aef85b853a1e2087ab"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5107,8 +5107,8 @@
         },
         {
           "path": "src/game.js",
-          "size": 49852,
-          "sha256": "c56554b526d8417607bf414d6181f16fadf735b0575259e1293f6f2941214baf"
+          "size": 49882,
+          "sha256": "df40d0453c4a7c337c94d3397ae49567a3cfd1b5900242ce99c71afb5558a005"
         },
         {
           "path": "src/layout.js",
@@ -5147,8 +5147,8 @@
         },
         {
           "path": "src/save.js",
-          "size": 4926,
-          "sha256": "ed914090a710427cc5cd52c84853b69a9b6cdf065b692b014d5b046ab5271cb0"
+          "size": 5108,
+          "sha256": "f1083502bc73c856f023178d055e0052f928e9cd84eb1d5317638d548ae7f00f"
         },
         {
           "path": "src/sim/model.js",
@@ -5172,8 +5172,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 83411,
-          "sha256": "1ec7b8f16ce1342d835746a025f8da8e65bff21e74088d32b323746ab16ad27b"
+          "size": 87405,
+          "sha256": "882319315ea8549871d0fe365b8e6bf6296000082d04381c4b9ff5dda7e80ca0"
         },
         {
           "path": "src/util.js",
@@ -5187,8 +5187,8 @@
         },
         {
           "path": "style.css",
-          "size": 53801,
-          "sha256": "aaf3a23855ea8b22c1880164a5004e3e26b2a0e4e7003f9dc724794048723580"
+          "size": 55083,
+          "sha256": "deabb189de172f3085582c508d2447f0cdd649431c47144d7745e331c1ae8904"
         },
         {
           "path": "tools/crew-shot.mjs",
