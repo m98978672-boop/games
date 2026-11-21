@@ -288,6 +288,7 @@ def main():
     torch.manual_seed(42 + len(turns))
     raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7)
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
+    drafts = [raw_reply]
     reply = clean_reply(raw_reply)
     def reply_problem(text):
         """Что не так с черновиком: обрыв или цифры не из фактов."""
@@ -309,8 +310,14 @@ def main():
         print(f'Черновик плох ({problem}), попытка {attempt + 1}: {reply!r}', flush=True)
         torch.manual_seed(100 + attempt)
         retry = messages[:-1] + [{'role': 'user', 'content': owner_text + context_note + '\n(Прошлый черновик не годится. Пиши фразу целиком до точки: после «написано, что» сразу ответ из фактов, а год бери из фактов — тот же год, что там написан, цифры не меняй.)'}]
-        reply = clean_reply(generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.1))
+        raw_retry = generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.1)
+        drafts.append(raw_retry)
+        reply = clean_reply(raw_retry)
         problem = reply_problem(reply)
+    if query:
+        # Черновики — в журнал: дом честно показывает, как она отвечала.
+        with SEARCH_LOG.open('a', encoding='utf-8') as log_file:
+            log_file.write(f'Черновики ответа: {drafts!r}\n')
     if results:
         parts = [p for p in re.split(r'(?<=[.!?])\s+', reply) if p.strip()]
         reply = ' '.join(parts[:2]).strip()
