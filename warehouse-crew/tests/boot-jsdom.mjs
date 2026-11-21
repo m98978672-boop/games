@@ -224,6 +224,11 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
     }
     window.WC.world.render(1 / 30, game);
     window.WC.world.scene.updateMatrixWorld(true);
+    const rig = window.WC.world.scene.children.find(o => o.userData?.rig === game.api.crew[0].id);
+    const armMeshes = [];
+    rig.traverse(o => { if (['upperArm', 'forearm', 'shoulderPad', 'elbowPad', 'hand'].includes(o.userData?.recipe)) armMeshes.push(o); });
+    result.opaqueArms = armMeshes.length >= 10 && armMeshes.every(o => !o.material.transparent && o.material.opacity === 1 && o.material.depthWrite &&
+      (o.userData.recipe === 'hand' || o.material.side === browserThree.DoubleSide));
     const findPart = name => window.WC.world.scene.children.find(o => o.userData && o.userData.scenePart === name);
     const floor = findPart('floor'), yard = findPart('yard'), stripe = findPart('floorStripe');
     const floorTop = new THREE.Box3().setFromObject(floor).max.y;
@@ -354,6 +359,25 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       game.restart();
       window.WC.world.render(1 / 30, game);
       result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
+      // Очередь сортируется по сроку, занятые заказы нельзя назначить;
+      // после перезапуска клики работают с новыми объектами симуляции.
+      game.api.crew.forEach(w => game.command(w.id, 'wait'));
+      game.selectWorker(game.api.crew[0].id);
+      const qLate = game.sim.spawnOrder(), qSoon = game.sim.spawnOrder();
+      qLate.mass = qSoon.mass = 8; qLate.deadline = 100; qSoon.deadline = 20;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      const rows = [...doc.querySelectorAll('#order-list .order')];
+      result.queueSorted = rows.length >= 2 && rows[0].querySelector('.o-code').textContent === qSoon.code;
+      rows[0].querySelector('.o-take').click();
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      result.queueAssigned = qSoon.status === 'claimed' && qSoon.carrier === game.api.crew[0].id && rows[0].querySelector('.o-take').disabled && rows[1].querySelector('.o-take').disabled;
+      game.restart(); game.api.crew.forEach(w => game.command(w.id, 'wait'));
+      const newOrder = game.sim.spawnOrder(); newOrder.mass = 8;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      const newButton = doc.querySelector('#order-list .o-take');
+      newButton.click();
+      result.queueRestart = newOrder.status === 'claimed' && newOrder.carrier === game.api.crew[0].id;
+      game.restart();
       const hireButton = doc.querySelector('[data-buy="worker"]');
       game.sim.state.stats.score = 400;
       window.WC.ui.state.lastUiAt = -Infinity;
@@ -408,6 +432,8 @@ for (const mode of modes) {
   check(Boolean(r.quickbar), 'есть панель быстрых приказов');
   if (mode.textureBridge) check(r.textureFallback, 'игра работает без текстуры при несовместимом движке');
   else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
+  check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
+  check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
   check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');
   check(r.haloRecipe, 'рецепт подсветки halo в движке');
