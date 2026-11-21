@@ -993,6 +993,17 @@ window.WC = window.WC || {};
 
   function wireControls() {
     wireShop();
+    var shopButton = q('btn-shop');
+    if (shopButton) shopButton.addEventListener('click', function () {
+      sheet.set('full', true);
+      var scroller = dom.panel && dom.panel.querySelector('.ctl-scroll');
+      var heading = q('shop-heading');
+      if (scroller && heading) {
+        scroller.scrollTop += heading.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 12;
+        heading.setAttribute('tabindex', '-1');
+        heading.focus({ preventScroll: true });
+      }
+    });
     U.$$('[data-command]').forEach(function (button) {
       button.addEventListener('click', function () {
         var cmd = button.getAttribute('data-command');
@@ -1225,7 +1236,7 @@ window.WC = window.WC || {};
         U.toast('Новый работяга: ' + payload.worker.state.name, 'good', 3000);
         renderSide();
       } else if (type === 'privacy') {
-        if (payload.on) U.toast('Ж и М уединились — там приватно', 'info', 2600);
+        if (payload.on) U.toast('Рабочие уединились — там приватно', 'info', 2600);
       } else if (type === 'staff') {
         renderShop();
       } else if (type === 'caught') {

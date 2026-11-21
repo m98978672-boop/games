@@ -1,4 +1,4 @@
-// Проверки нового слоя склада: точки A/B/C коробок, физика, улица, кабинки Ж/М,
+// Проверки нового слоя склада: точки A/B/C коробок, физика, улица, туалет,
 // уединение пары, техника для тяжёлого груза и смерть с пополнением.
 // Гоняют ту же логику, что и игра: src/sim/*.js — без DOM и Three.js.
 //
@@ -95,6 +95,33 @@ console.log('Точки A / B / C коробки');
     'после укладки C = B');
 }
 
+// --- Быстрый груз не должен пересекать боковину стеллажа.
+console.log('Столкновения и частицы');
+{
+  const { warehouse } = makeWorld();
+  const box = warehouse.spawnOrder();
+  warehouse.claim(box.id, 'x'); warehouse.markCarried(box, 'x');
+  const rack = Wh.LAYOUT.racks[0];
+  warehouse.drop(box, 0.1, rack.x - 2.0, 0, { z: 0.6, vx: 25, vy: 0, vz: 0, spin: 0 });
+  warehouse.stepPhysics(0.1);
+  check(box.pose.x <= rack.x - 0.62, 'быстрая коробка отскакивает от боковины стеллажа', { pose: box.pose, velocity: box.vel });
+  check(box.vel.x < 0, 'удар меняет направление скорости');
+  warehouse.emitBlood(2, 2, 0.7);
+  check(warehouse.state.bloodDrops.length > 0, 'травма создаёт частицы');
+  let minimumHeight = Infinity;
+  for (let i = 0; i < 100; i++) {
+    warehouse.stepBlood(0.03);
+    for (const drop of warehouse.state.bloodDrops) minimumHeight = Math.min(minimumHeight, drop.z);
+  }
+  check(minimumHeight >= 0 && warehouse.state.bloodDrops.length === 0, 'капли падают и не проходят через пол');
+  check(warehouse.state.bloodPools.length > 0 && warehouse.state.bloodPools.length <= 80, 'пятна остаются на полу и ограничены по числу');
+  for (let i = 0; i < 910; i++) warehouse.stepBlood(0.1);
+  check(warehouse.state.bloodPools.length === 0, 'пятна со временем исчезают');
+  warehouse.state.bloodDrops.push({ id: 9999, x: rack.x, y: 0, z: 2.4, vx: 0, vy: 0, vz: -1, life: 2 });
+  for (let i = 0; i < 60; i++) warehouse.stepBlood(0.02);
+  check(warehouse.state.bloodPools.some(p => p.z > 1.8), 'капли оседают на полке, а не пролетают сквозь неё');
+}
+
 // ---------------------------------------------------------------- 2. физика коробок
 console.log('Физика коробок: не летают и не тонут');
 {
@@ -125,20 +152,37 @@ console.log('Физика коробок: не летают и не тонут')
   warehouse.markCarried(shelfBox, 'x');
   warehouse.drop(shelfBox, 0.1, Wh.LAYOUT.racks[0].x, 0, { z: 2.5, vz: 0, spin: 2 });
   for (let i = 0; i < 500; i++) warehouse.stepPhysics(0.01);
-  check(shelfBox.bounces > 0 && shelfBox.pose.lying, 'коробка отскакивает и ложится на бок', { bounces: shelfBox.bounces, pose: shelfBox.pose });
+  check(shelfBox.bounces > 0 && Boolean(shelfBox.pose.quaternion), 'коробка сталкивается с полкой и получает трёхмерное вращение', { bounces: shelfBox.bounces, pose: shelfBox.pose });
   check(shelfBox.pose.z >= 1.875 - 0.001, 'упавшая на стеллаж коробка не проходит сквозь полку', { z: shelfBox.pose.z });
 }
 
-// --------------------------------------------------------------- 3. улица и кабинки
-console.log('Улица за воротами и кабинки Ж / М');
+// Обморок создаёт шарнирную модель в физическом мире, а не поворачивает риг по таймеру.
+console.log('Физическое падение тела');
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const w = workers[0];
+  w.body.collapsed = true;
+  w.body.energy = 0;
+  w.update(1 / 30, envs[w.id]);
+  const initialHeight = w.state.ragdoll.head.y;
+  const names = Object.keys(w.state.ragdoll);
+  for (let i = 0; i < 120; i++) warehouse.stepPhysics(1 / 120);
+  const head = w.state.ragdoll.head;
+  check(names.length === 11 && names.includes('shinL'), 'тело состоит из связанных физических сегментов', { names });
+  check(head.y < initialHeight - 0.2 && head.y > -0.05, 'тело упало под гравитацией и остановилось над полом', { initialHeight, head });
+  warehouse.endRagdoll(w.state);
+  check(!w.state.ragdoll, 'физические сегменты удаляются после восстановления');
+}
+
+// --------------------------------------------------------------- 3. улица и туалет
+console.log('Улица за воротами и отдельный туалет');
 {
   const { warehouse, workers, envs } = makeWorld();
   const st = Wh.LAYOUT.street;
   check(Boolean(st) && st.y1 > st.y0, 'у склада есть улица', { street: st });
   check(WorkerMod.insideWalk(0, st.y0 + 1, Wh.LAYOUT), 'на улице ходить можно');
   check(!WorkerMod.insideWalk(0, st.y0 + 1 - 8, Wh.LAYOUT) === false, 'в цеху тоже можно');
-  check(Wh.LAYOUT.wc && Wh.LAYOUT.wc.length === 2, 'две кабинки: Ж и М');
-  check(Wh.LAYOUT.wc[0].id === 'Ж' && Wh.LAYOUT.wc[1].id === 'М', 'кабинки подписаны');
+  check(Boolean(Wh.LAYOUT.toilet) && !Wh.LAYOUT.wc, 'одна отдельная комната вместо старых кабинок');
 
   const worker = workers[0];
   const spot = st.spots[0];
@@ -147,37 +191,49 @@ console.log('Улица за воротами и кабинки Ж / М');
   let reached = null;
   let crossedGate = false;
   let maxStep = 0;
+  let crossedObstacle = false;
   for (let i = 0; i < 900 && !reached; i += 1) {
     const previous = { ...worker.state.pos };
     worker.update(0.05, envs[worker.id]);
     maxStep = Math.max(maxStep, Math.hypot(worker.state.pos.x - previous.x, worker.state.pos.y - previous.y));
+    if (WorkerMod.pathBlocked(previous, worker.state.pos, 0.25)) crossedObstacle = true;
     if (previous.y < 8 && worker.state.pos.y >= 8) crossedGate = Math.abs(worker.state.pos.x - st.gate.x) < st.gate.half;
     if (worker.state.state === 'street') reached = { x: worker.state.pos.x, y: worker.state.pos.y };
   }
   check(Boolean(reached), 'рабочий дошёл до улицы через ворота', { pos: reached });
   check(crossedGate && maxStep < 0.3, 'пересёк стену через ворота без телепортации', { crossedGate, maxStep });
+  check(!crossedObstacle, 'рабочий не пересекает стеллажи и мебель на маршруте');
   check(reached && reached.y >= st.y0 && reached.y <= st.y1 && reached.x >= st.x0 && reached.x <= st.x1,
     'стоит на улице, а не в стене', { reached, street: st });
 
-  // Кабинка по полу: Марта — в Ж, Гриша — в М
   const marta = workers[0];
   marta.body.bladder = 0.95;
   marta.command('auto', warehouse);
-  let cabin = null;
-  for (let i = 0; i < 900 && !cabin; i += 1) {
+  let entered = false, left = false, wallCrossed = false, maxToiletStep = 0, doorCrossed = false;
+  for (let i = 0; i < 1400 && !left; i += 1) {
+    const prev = { ...marta.state.pos };
     marta.update(0.05, envs[marta.id]);
-    if (marta.state.state === 'wc') cabin = { id: marta.state.inCabin, x: marta.state.pos.x, y: marta.state.pos.y };
+    const pos = marta.state.pos;
+    maxToiletStep = Math.max(maxToiletStep, Math.hypot(pos.x - prev.x, pos.y - prev.y));
+    if (WorkerMod.pathBlocked(prev, pos, 0.20)) wallCrossed = true;
+    if (prev.y < Wh.LAYOUT.toilet.y - Wh.LAYOUT.toilet.d / 2 && pos.y >= Wh.LAYOUT.toilet.y - Wh.LAYOUT.toilet.d / 2) doorCrossed = Math.abs(pos.x - Wh.LAYOUT.toilet.x) < Wh.LAYOUT.toilet.doorWidth / 2;
+    if (marta.state.state === 'toilet') {
+      entered = true;
+      check(!workers[1].command('toilet', warehouse).ok, 'второй работник не входит в занятый туалет');
+      // One assertion is enough; keep simulating until exit.
+      break;
+    }
   }
-  check(Boolean(cabin) && cabin.id === 'Ж', 'Марта ушла в кабинку Ж', cabin || {});
-  const zh = Wh.LAYOUT.wc[0];
-  check(cabin && Math.abs(cabin.x - zh.x) < 1.2 && Math.abs(cabin.y - zh.y) < 1.2, 'кабинка совпала с планировкой', { cabin, zh });
-  let left = false;
+  check(entered && doorCrossed && !wallCrossed && maxToiletStep < 0.3, 'вошёл через дверь без пересечения стен и телепортации', { entered, doorCrossed, wallCrossed, maxToiletStep });
   for (let i = 0; i < 900 && !left; i += 1) {
+    const prev = { ...marta.state.pos };
     marta.update(0.05, envs[marta.id]);
-    if (!marta.state.inCabin && marta.state.state !== 'wc') left = true;
+    if (WorkerMod.pathBlocked(prev, marta.state.pos, 0.20)) wallCrossed = true;
+    if (entered && warehouse.state.toiletOccupant == null) left = true;
   }
-  check(left, 'вышел из кабинки и вернулся к работе');
+  check(left && !wallCrossed, 'вышел через дверь и освободил туалет');
   check(marta.body.bladder < 0.5, 'нужда снята', { bladder: Number(marta.body.bladder.toFixed(2)) });
+  check(workers[1].command('toilet', warehouse).ok, 'туалет доступен следующему работнику');
 }
 
 // --------------------------------------------------------- 4. уединение пары Ж и М

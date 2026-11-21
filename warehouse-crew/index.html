@@ -63,6 +63,7 @@
     <div class="engine-hud-slot" data-engine-badge aria-label="Движок игры"></div>
     <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза"><svg class="ico"><use href="#i-pause"/></svg></button>
     <button id="btn-camera" class="icon-btn" title="Сменить вид (C)" aria-label="Сменить вид"><svg class="ico"><use href="#i-camera"/></svg></button>
+    <button id="btn-shop" class="shop-shortcut" type="button" title="Открыть магазин">✚ <span>Магазин</span></button>
     <button id="btn-map" class="icon-btn" title="2D-вид сверху (T)" aria-label="2D-вид сверху"><span class="map-ico">2D</span></button>
     <button id="btn-inspector" class="icon-btn" title="Инспектор тела (I)" aria-label="Инспектор тела"><svg class="ico"><use href="#i-heart"/></svg></button>
     <button id="btn-sound" class="icon-btn" title="Звук (M)" aria-label="Звук"><svg class="ico"><use href="#i-sound"/></svg></button>
@@ -120,7 +121,7 @@
         <button class="cmd" data-command="wait"><b>Ждать указаний</b><i>освободить заказ</i></button>
         <button class="cmd" data-command="auto"><b>Автономия</b><i>решает нейросеть</i></button>
         <button class="cmd" data-command="help"><b>Помочь бригаде</b><i>срочные заказы</i></button>
-        <button class="cmd" data-command="wc"><b>В кабинку</b><i>снять нужду</i></button>
+        <button class="cmd" data-command="toilet"><b>В туалет</b><i>снять нужду</i></button>
         <button class="cmd" data-command="street"><b>На улицу</b><i>передохнуть</i></button>
         <button class="cmd" data-command="play"><b>Покататься</b><i>погрузчик</i></button>
         <button class="cmd" data-command="meet"><b>Уединиться</b><i>тихое место</i></button>
@@ -140,7 +141,7 @@
     </div>
 
     <div class="ctl-group">
-      <div class="ctl-label">Магазин смены <span id="shop-balance" class="queue-count">0</span></div>
+      <div id="shop-heading" class="ctl-label">Магазин смены <span id="shop-balance" class="queue-count">0</span></div>
       <div id="shop-list" class="shop-list">
         <button class="shop-card" type="button" data-buy="medic">
           <span class="shop-mark">✚</span>
@@ -206,6 +207,8 @@
 <script src="data/brain-data.js"></script>
 <script src="src/sim/model.js"></script>
 <script src="src/ai/brain-net.js"></script>
+<script src="vendor/cannon-es.min.js"></script>
+<script src="src/sim/physics.js"></script>
 <script src="src/sim/warehouse.js"></script>
 <script src="src/sim/worker.js"></script>
 <script src="src/config.js"></script>

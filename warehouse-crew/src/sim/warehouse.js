@@ -1,10 +1,11 @@
 // Склад «Северный узел»: заказы, приёмка, стеллажи, сроки, качество.
 // Чистая логика без DOM и Three.js — её гоняют и игра, и обучение нейросети.
 (function (root, factory) {
-  var api = factory();
+  var physics = typeof module === 'object' && module.exports ? require('./physics.js') : root.WarehousePhysics;
+  var api = factory(physics);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.WarehouseSim = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (physics) {
   'use strict';
 
   var CUSTOMERS = [
@@ -52,7 +53,7 @@
     ],
     rackRows: [-4.9, -1.65, 1.65, 4.9],
     despatch: { x: 10.6, y: 0 },
-    restArea: { x: -7.4, y: 7.1 },
+    restArea: { x: -7.4, y: 6.3 },
     spawns: [
       { x: -5.6, y: 0 },
       { x: -5.2, y: 2.4 },
@@ -70,11 +71,8 @@
         { x: 5.2, y: 10.9, label: 'у киоска' },
       ],
     },
-    // Кабинки «Ж» и «М» вдоль южной стены: заходят внутрь, снаружи не видно.
-    wc: [
-      { id: 'Ж', x: -3.7, y: 7.35, w: 1.5, d: 1.5 },
-      { id: 'М', x: 0.7, y: 7.35, w: 1.5, d: 1.5 },
-    ],
+    // Одна отдельная комната туалета с проходом в передней стене.
+    toilet: { x: -3.7, y: 7.0, w: 2.8, d: 2.0, doorWidth: 1.6 },
     // Отдел тяжёлого груза в северо-восточном углу: там же стоит техника.
     heavy: {
       x: 9.1, y: -6.1, w: 4.6, d: 3.0,
@@ -150,11 +148,14 @@
   function createWarehouse(options) {
     options = options || {};
     var rng = createRng(options.seed || 20261120);
+    var effectsRng = createRng((options.seed || 20261120) ^ 0x34fa29);
+    var effectSeq = 0;
     var state = {
       seed: options.seed || 20261120,
       time: 0,
       shiftLength: options.shiftLength || 480,
       orders: [],
+      bloodDrops: [], bloodPools: [],
       orderSeq: 1,
       slots: RACK_SLOTS.map(function (s) { return Object.assign({}, s); }),
       spawnEvery: options.spawnEvery || 15,
@@ -201,7 +202,11 @@
         wheels: 0,
       },
       staff: { medic: null, watchman: null },
+      toiletOccupant: null,
     };
+
+    var physicsWorld = physics.create(LAYOUT, BOX_DIMS, RACK_LEVELS);
+    var bloodWorld = null;
 
     function note(text, tone) {
       state.log.push({ t: state.time, text: text, tone: tone || 'info' });
@@ -311,6 +316,7 @@
       };
       order.vel = { x: 0, y: 0, vz: 0, spin: 0 };
       order.physics = false;
+      order._physicalDynamic = false;
       order.grounded = true;
       order.x = order.dest.x;
       order.y = order.dest.y;
@@ -330,96 +336,51 @@
         spin: opts.spin != null ? opts.spin : rng.range(-3.4, 3.4),
       };
       order.physics = true;
+      order._physicalDynamic = true;
+      order._physicsGeneration = (order._physicsGeneration || 0) + 1;
+      delete order.pose.quaternion;
       order.grounded = false;
       order.pose.h = d.h;
       return order;
     }
 
-    function boxOverlap(a, b) {
-      var da = dims(a);
-      var db = dims(b);
-      return Math.abs(a.pose.x - b.pose.x) < da.halfW + db.halfW - 0.04 &&
-        Math.abs(a.pose.y - b.pose.y) < da.halfD + db.halfD - 0.04 &&
-        Math.abs(a.pose.z - b.pose.z) < da.h * 0.9;
+    // Жёсткие тела, контакты, трение и вращение обрабатываются Cannon.
+    function stepPhysics(dt) {
+      if (!Number.isFinite(dt) || dt <= 0) return 0;
+      return physicsWorld.step(state.orders, dt);
     }
 
-    // Физика коробок: гравитация, пол/полка, трение, «на бок» после жёсткого
-    // приземления. Ни одна коробка не висит в воздухе и не проваливается.
-    function stepPhysics(dt) {
-      var loose = [];
-      for (var i = 0; i < state.orders.length; i++) {
-        var o = state.orders[i];
-        if (o.status === 'stored' || o.status === 'ruined' || o.status === 'missed' || o.status === 'loaded') continue;
-        if (o.status === 'carried') continue;
-        if (!o.pose) decorate(o);
-        if (!o.physics) { if (o.pose) loose.push(o); continue; }
-        loose.push(o);
-        var p = o.pose;
-        var v = o.vel;
-        var d = dims(o);
-        var floorZ = supportHeight(o);
-        v.vz -= 9.81 * dt;
-        p.x += v.x * dt;
-        p.y += v.y * dt;
-        p.z += v.vz * dt;
-        p.yaw += v.spin * dt * 0.45;
-        p.tilt += v.spin * dt;
-        p.x = Math.max(-12.2, Math.min(12.2, p.x));
-        p.y = Math.max(-8.2, Math.min(13.8, p.y));
-        if (p.z <= floorZ) {
-          p.z = floorZ;
-          if (v.vz < -1.1) {
-            // удар: гасим скорость, коробка может лечь on its side
-            v.vz = -v.vz * 0.24;
-            v.x *= 0.62;
-            v.y *= 0.62;
-            v.spin *= 0.55;
-            o.bounces = (o.bounces || 0) + 1;
-          } else {
-            v.vz = 0;
-            o.grounded = true;
-          }
-        }
-        if (o.grounded) {
-          var damp = Math.pow(0.015, dt);
-          v.x *= damp;
-          v.y *= damp;
-          p.x += v.x * dt;
-          p.y += v.y * dt;
-          var targetTilt = Math.abs(p.tilt) > 0.55 ? Math.sign(p.tilt) * Math.PI * 0.5 : 0;
-          p.tilt += (targetTilt - p.tilt) * Math.min(1, dt * 9);
-          p.lying = Math.abs(targetTilt) > 0.1;
-          v.spin *= Math.pow(0.02, dt);
-          if (Math.hypot(v.x, v.y) < 0.05 && Math.abs(v.spin) < 0.1) {
-            o.physics = false;
-            v.x = 0; v.y = 0; v.spin = 0;
-            p.tilt = targetTilt;
-            p.z = floorZ;
-          }
-        }
-        o.x = p.x;
-        o.y = p.y;
+    // Частицы жидкости: отдельный ГПСЧ не меняет экономику/мозг.
+    // Частицы ограничены по числу и времени жизни; кровь не проходит сквозь пол.
+    function emitBlood(x, y, severity) {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      var count = Math.min(12, Math.max(2, Math.round(severity * 12)));
+      var angle = effectsRng.range(0, Math.PI * 2);
+      var height = effectsRng.range(0.8, 1.2);
+      for (var i = 0; i < count; i++) {
+        var direction = angle + effectsRng.range(-0.35, 0.35);
+        var speed = effectsRng.range(0.4, 0.8) * Math.max(0.3, severity);
+        state.bloodDrops.push({ id: ++effectSeq, x: x + effectsRng.range(-.05,.05), y: y + effectsRng.range(-.05,.05), z: height + effectsRng.range(-.05,.05),
+          vx: Math.cos(direction) * speed, vy: Math.sin(direction) * speed, vz: effectsRng.range(0.2, 0.6), life: 3 });
       }
-      // Расталкивание лёгших коробок: одна не влезает в другую
-      for (var a = 0; a < loose.length; a++) {
-        for (var b = a + 1; b < loose.length; b++) {
-          if (!boxOverlap(loose[a], loose[b])) continue;
-          var oa = loose[a];
-          var ob = loose[b];
-          var dx = oa.pose.x - ob.pose.x;
-          var dy = oa.pose.y - ob.pose.y;
-          var len = Math.hypot(dx, dy);
-          if (len < 0.001) { dx = 1; dy = 0; len = 1; }
-          var push = 0.05;
-          oa.pose.x += (dx / len) * push;
-          oa.pose.y += (dy / len) * push;
-          ob.pose.x -= (dx / len) * push;
-          ob.pose.y -= (dy / len) * push;
-          oa.physics = true;
-          ob.physics = true;
-        }
+      if (state.bloodDrops.length > 100) state.bloodDrops.splice(0, state.bloodDrops.length - 100);
+    }
+
+    function stepBlood(dt) {
+      dt = Math.min(0.1, Math.max(0, dt));
+      if (state.bloodDrops.length) {
+        if (!bloodWorld) bloodWorld = physics.create(LAYOUT, BOX_DIMS, RACK_LEVELS);
+        bloodWorld.stepFluid(state.bloodDrops, dt, function (drop) {
+          state.bloodPools.push({ id: ++effectSeq, x: drop.x, y: drop.y, z: Math.max(0, drop.z - 0.035), age: 0, size: effectsRng.range(0.4, 0.8) });
+        });
+      } else if (bloodWorld) {
+        bloodWorld.stepFluid(state.bloodDrops, 0, function () {});
       }
-      return loose.length;
+      if (state.bloodPools.length > 80) state.bloodPools.splice(0, state.bloodPools.length - 80);
+      for (var j = state.bloodPools.length - 1; j >= 0; j--) {
+        state.bloodPools[j].age += dt;
+        if (state.bloodPools[j].age > 90) state.bloodPools.splice(j, 1);
+      }
     }
 
     // ------------------------------------------------- тяжёлый груз и техника
@@ -835,6 +796,7 @@
 
       // --- Физика коробок ---
       stepPhysics(dt);
+      stepBlood(dt);
 
       for (var i = 0; i < state.orders.length; i++) {
         var o = state.orders[i];
@@ -958,6 +920,11 @@
       syncDest: syncDest,
       kick: kick,
       stepPhysics: stepPhysics,
+      syncActors: physicsWorld.syncActors,
+      beginRagdoll: physicsWorld.beginRagdoll,
+      endRagdoll: physicsWorld.endRagdoll,
+      emitBlood: emitBlood,
+      stepBlood: stepBlood,
       spawnHeavyBatch: spawnHeavyBatch,
       heavyOf: heavyOf,
     };
