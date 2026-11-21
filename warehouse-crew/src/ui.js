@@ -27,6 +27,10 @@ window.WC = window.WC || {};
     safetyRows: new Map(),
     orderFilter: 'all',
     orderVisibleLimit: 14,
+    journalFilter: 'all',
+    journalVisibleLimit: 12,
+    journalLast: null,
+    journalKey: '',
     nums: {},
     sheet: 'half',
   };
@@ -58,6 +62,11 @@ window.WC = window.WC || {};
     dom.queueShowing = q('queue-showing');
     dom.queueEmpty = q('queue-empty');
     dom.queueMore = q('queue-more');
+    dom.journalList = q('journal-list');
+    dom.journalCount = q('journal-count');
+    dom.journalShowing = q('journal-showing');
+    dom.journalEmpty = q('journal-empty');
+    dom.journalMore = q('journal-more');
     dom.side = q('side');
     dom.pauseFlag = q('pause-flag');
     dom.modalRoot = q('modal-root');
@@ -574,6 +583,42 @@ window.WC = window.WC || {};
     });
   }
 
+  // Журнал — представление уже существующих записей, без новых событий и
+  // влияния на симуляцию. Показаны максимум 80 последних записей смены.
+  function renderJournal() {
+    var log = game.api.log;
+    var latest = log[log.length - 1];
+    var key = log.length + ':' + uiState.journalFilter + ':' + uiState.journalVisibleLimit;
+    if (uiState.journalLast === latest && uiState.journalKey === key) return;
+    uiState.journalLast = latest;
+    uiState.journalKey = key;
+    var filtered = log.slice().reverse().filter(function (entry) {
+      if (uiState.journalFilter === 'warning') return entry.tone === 'warn' || entry.tone === 'bad';
+      if (uiState.journalFilter === 'good') return entry.tone === 'good';
+      return true;
+    });
+    var visible = filtered.slice(0, uiState.journalVisibleLimit);
+    dom.journalCount.textContent = String(log.length);
+    dom.journalShowing.textContent = 'Показано ' + visible.length + ' из ' + filtered.length + ' · всего в журнале ' + log.length + '/80';
+    dom.journalEmpty.hidden = filtered.length > 0;
+    dom.journalEmpty.textContent = log.length ? 'Нет записей для этого фильтра' : 'Пока нет событий';
+    if (document.activeElement === dom.journalMore && visible.length >= filtered.length) {
+      var filter = document.querySelector('[data-journal-filter="' + uiState.journalFilter + '"]');
+      if (filter) filter.focus({ preventScroll: true });
+    }
+    dom.journalMore.hidden = visible.length >= filtered.length;
+    dom.journalMore.textContent = 'Показать ещё (' + (filtered.length - visible.length) + ')';
+    dom.journalList.innerHTML = '';
+    visible.forEach(function (entry) {
+      var tone = entry.tone === 'bad' ? 'bad' : entry.tone === 'warn' ? 'warn' : entry.tone === 'good' ? 'good' : 'info';
+      var label = tone === 'bad' ? 'Проблема' : tone === 'warn' ? 'Внимание' : tone === 'good' ? 'Успех' : 'Событие';
+      dom.journalList.appendChild(U.el('div', { class: 'journal-entry ' + tone }, [
+        U.el('time', { text: U.clockLabel(entry.t, cfg.shiftRealSeconds, cfg.shiftHours) }),
+        U.el('span', {}, [ U.el('b', { class: 'journal-tone', text: label + ' · ' }), U.el('span', { text: entry.text }) ]),
+      ]));
+    });
+  }
+
   function nameOf(id) {
     var worker = game.workerById(id);
     return worker ? worker.state.name.split(' ')[0] : '—';
@@ -785,6 +830,8 @@ window.WC = window.WC || {};
         U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
         U.el('h3', { text: 'Состояние бригады' }),
         U.el('p', { text: 'Сводка в пульте показывает рабочих с обмороком, травмами, низкой энергией или здоровьем, высокой усталостью и болью либо низким запасом воды. Выбери рабочего или открой его инспектор. Это предупреждения по игровым показателям, а не автоматические приказы.' }),
+        U.el('h3', { text: 'Журнал смены' }),
+        U.el('p', { text: 'В пульте видны последние 80 событий и реплик. Фильтры показывают все записи, предупреждения или успехи; «Показать ещё» открывает более ранние записи. Журнал не влияет на симуляцию.' }),
         U.el('h3', { text: 'Обзор очереди' }),
         U.el('p', { text: 'Фильтры показывают все заказы, свободные, занятые, приоритетные или те, у которых осталось не больше 30 секунд (включая просроченные). Сводка показывает число свободных ячеек без зарезервированных мест. Если заказов много, нажми «Показать ещё».' }),
         U.el('h3', { text: 'Приоритет заказа' }),
@@ -1157,6 +1204,20 @@ window.WC = window.WC || {};
         if (filterButton) filterButton.focus({ preventScroll: true });
       }
     });
+    U.$$('[data-journal-filter]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        uiState.journalFilter = button.getAttribute('data-journal-filter');
+        uiState.journalVisibleLimit = 12;
+        U.$$('[data-journal-filter]').forEach(function (item) {
+          item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
+        });
+        renderJournal();
+      });
+    });
+    dom.journalMore.addEventListener('click', function () {
+      uiState.journalVisibleLimit += 12;
+      renderJournal();
+    });
     var shopButton = q('btn-shop');
     if (shopButton) shopButton.addEventListener('click', function () {
       sheet.set('full', true);
@@ -1426,6 +1487,7 @@ window.WC = window.WC || {};
     renderSelected();
     renderSide();
     renderSafety();
+    renderJournal();
     renderOrders();
     renderShop();
     renderNews(true);
@@ -1436,6 +1498,10 @@ window.WC = window.WC || {};
       if (type === 'dialogue') {
         showDialogue(payload);
       } else if (type === 'restart') {
+        uiState.journalFilter = 'all';
+        uiState.journalVisibleLimit = 12;
+        U.$$('[data-journal-filter]').forEach(function (item) { item.setAttribute('aria-pressed', item.getAttribute('data-journal-filter') === 'all' ? 'true' : 'false'); });
+        renderJournal();
         var subtitle = q('dialogue-subtitle');
         if (subtitle) subtitle.hidden = true;
         clearTimeout(subtitleTimer);
@@ -1496,6 +1562,7 @@ window.WC = window.WC || {};
     renderHud();
     renderSelected();
     renderSafety();
+    renderJournal();
     renderTrucks();
     renderOrders();
     renderShop();

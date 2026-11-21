@@ -21,6 +21,10 @@ async function boot() {
 let c = await boot(); let game = c.WC.game;
 assert.equal(game.api.resumeStatus,'new');
 assert.equal(game.api.shiftMode,'day');
+// Журнал ограничен последними 80 событиями даже при большом потоке приказов.
+for (let i=0; i<100; i++) game.command(game.api.crew[0].id, 'wait');
+assert.equal(game.api.log.length,80);
+
 const lines=[]; game.api.onEvent=(type, payload) => { if (type === 'dialogue') lines.push(payload); };
 const first = game.api.crew[0];
 assert(game.command(first.id,'wait').ok); assert.match(lines.at(-1).text,/жду/);
@@ -69,6 +73,8 @@ const raw = data.get(c.WC.save.CHECKPOINT_KEY);
 assert(raw && data.has(c.WC.save.CHECKPOINT_KEY));
 c = await boot(); game = c.WC.game;
 assert.equal(game.api.resumeStatus,'restored');
+assert.deepEqual(JSON.parse(JSON.stringify(game.api.log.slice(0,-1))), JSON.parse(JSON.stringify(snap.log.slice(-79))));
+assert.match(game.api.log.at(-1).text, /Смена восстановлена/);
 assert.equal(game.api.shiftMode,'night');
 assert.deepEqual(JSON.parse(JSON.stringify(game.api.dialogueState)), JSON.parse(JSON.stringify(snap.dialogueState)));
 assert(game.api.crew.every(w => game.api.envs[w.id].shiftMode === 'night'));
