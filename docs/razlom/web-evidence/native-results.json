@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 44.212,
+  "elapsedSeconds": 45.992,
   "checks": [
     {
       "name": "import",
@@ -69,8 +69,8 @@
     },
     {
       "name": "destruction",
-      "exitCode": 1,
-      "passed": false,
+      "exitCode": 0,
+      "passed": true,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -79,12 +79,9 @@
         "--script",
         "res://tests/destruction.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nDestruction checks: 38; failures: 2\nFAIL: Unsupported section collapses from the base\nFAIL: Unsupported section collapses from the base\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nDestruction checks: 36; failures: 0\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": [
-        "FAIL: Unsupported section collapses from the base",
-        "FAIL: Unsupported section collapses from the base"
-      ]
+      "unexpectedDiagnostics": []
     },
     {
       "name": "building-geometry",
@@ -295,7 +292,7 @@
       "unexpectedDiagnostics": []
     }
   ],
-  "passed": false,
+  "passed": true,
   "limitations": [
     "Headless dummy renderer; no image/audio validation",
     "Automated mission uses teleportation and frozen enemy ticks for isolation",
