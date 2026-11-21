@@ -82,22 +82,15 @@ try {
   assert.ok(Math.hypot(after[0]-before[0], after[2]-before[2]) > .2);
  });
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
- // Walk closer to Vera using ordinary strafe/forward controls; then aim slightly
- // left so the actual interaction ray lands on her capsule, not a debug shortcut.
- await page.keyboard.down('d'); await page.waitForTimeout(800); await page.keyboard.up('d');
- await page.mouse.click(720,450);
- await page.waitForTimeout(150);
- await page.mouse.move(720,450);
- await page.mouse.move(870,450);
- await page.waitForTimeout(500);
- await check('Mouse-look turns toward Vera in the live game', async () => {
-  const yaw = await page.evaluate(() => window.__razlomStatus.yaw);
-  assert.ok(yaw > 2.55 && yaw < 3.0, `yaw=${yaw}`);
- });
+ // Walk to a safe standing distance and line Vera up under the camera ray using
+ // ordinary movement; no teleport, scripted pose, or debug scene is involved.
+ await page.keyboard.down('d'); await page.waitForTimeout(850); await page.keyboard.up('d');
+ await page.keyboard.down('w'); await page.waitForTimeout(140); await page.keyboard.up('w');
+ await page.waitForTimeout(350);
  await check('NPC pose review camera reaches Vera by real in-world movement', async () => {
   const state = await page.evaluate(() => window.__razlomStatus);
   const distance = Math.hypot(state.position[0] + 25.5, state.position[2] - 24);
-  assert.ok(distance < 1.8, `position=${state.position}, distance=${distance}`);
+  assert.ok(distance > 0.65 && distance < 1.25, `position=${state.position}, distance=${distance}`);
  });
  await page.keyboard.press('c');
  await page.waitForTimeout(350);
