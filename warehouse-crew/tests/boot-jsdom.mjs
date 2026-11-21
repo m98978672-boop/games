@@ -501,6 +501,12 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       rows[0].querySelector('.o-take').click();
       window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
       result.queueAssigned = qSoon.status === 'claimed' && qSoon.carrier === game.api.crew[0].id && rows[0].querySelector('.o-take').disabled && rows[1].querySelector('.o-take').disabled;
+      qSoon.physics = true;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      result.movingCargoStatus = rows[0].querySelector('.o-who').textContent.includes('ждёт остановки') && rows[0].querySelector('.o-abc').textContent.includes('движется');
+      qSoon.physics = false;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      result.movingCargoStatus = result.movingCargoStatus && rows[0].querySelector('.o-who').textContent.includes('в работе') && !rows[0].querySelector('.o-abc').textContent.includes('движется');
       const filter = name => doc.querySelector('[data-order-filter="' + name + '"]');
       const visibleCodes = () => [...doc.querySelectorAll('#order-list .o-code')].map(e => e.textContent);
       const savedBeforeFilter = JSON.stringify(game.captureCheckpoint());
@@ -614,6 +620,7 @@ for (const mode of modes) {
   check(r.reportDisplay && r.reportRefresh && r.reportInspect && r.reportExport && r.reportEnd && r.reportEmpty && r.reportFocus, 'отчёт смены: снимок, обновление, инспектор, экспорт и итоги', {display:r.reportDisplay, refresh:r.reportRefresh, inspect:r.reportInspect, export:r.reportExport, end:r.reportEnd, empty:r.reportEmpty, focus:r.reportFocus, error:r.featureError});
   check(r.journalDisplay && r.journalFilters && r.journalRestart, 'журнал в пульте: фильтры, история, фокус, новая смена', {display:r.journalDisplay, filters:r.journalFilters, restart:r.journalRestart, error:r.featureError});
   check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
+  check(r.movingCargoStatus, 'очередь показывает движение груза и ожидание остановки', {error:r.featureError});
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);

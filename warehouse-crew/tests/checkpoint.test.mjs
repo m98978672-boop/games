@@ -59,6 +59,8 @@ assert(!game.setOrderPriority(carrying.id,true).ok); assert(!game.setOrderPriori
 assert(!game.setOrderPriority(order.id,'yes').ok);
 assert(game.setOrderPriority(order.id,false).ok); assert.equal(order.dispatchPriority,false);
 assert(game.setOrderPriority(order.id,true).ok);
+assert(game.sim.claim(order.id, driver.id)); driver.state.orderId = order.id; driver.state.state = 'toPick'; driver.state.mode = 'manual';
+assert(order.physics, 'груз ещё движется перед сохранением');
 // A live articulated ragdoll should survive reload, not just its display pose.
 worker.state.state = 'down'; worker.body.collapsed = true; worker.state.timers.down = 10;
 game.sim.beginRagdoll(worker.state); game.sim.stepPhysics(.1);
@@ -94,7 +96,11 @@ assert.equal(game.sim.state.toiletOccupant, game.api.crew[2].id);
 assert.deepEqual(JSON.parse(JSON.stringify(game.captureCheckpoint().warehouse.physics)),JSON.parse(JSON.stringify(snap.warehouse.physics)));
 assert.deepEqual(JSON.parse(JSON.stringify(game.api.envs[game.api.crew[0].id].brain)),JSON.parse(JSON.stringify(snap.crew[0].brain)));
 assert.equal(game.api.envs[game.api.crew[0].id].rng.getState(),snap.crew[0].rng);
-game.setPaused(false); for(let i=0;i<30;i++) game.update(.1);
+game.setPaused(false); game.update(.1);
+const restoredCargo = game.sim.state.orders.find(o => o.id === order.id);
+assert(restoredCargo.physics && restoredCargo.status === 'claimed' && !game.api.crew[3].state.carryingId,
+  'после восстановления работник не подхватывает движущийся груз');
+for(let i=0;i<29;i++) game.update(.1);
 assert(game.sim.state.time > snap.warehouse.state.time);
 assert(game.api.crew[0].state.ragdoll.pelvis);
 // После завершения смены перезагрузка сохраняет финальное состояние, а рестарт создаёт новую.
