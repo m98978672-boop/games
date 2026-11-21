@@ -93,7 +93,8 @@ try {
  await page.waitForTimeout(500);
  await check('Captured mouse turns the live camera toward the shelter windows', async () => {
   const yaw = await page.evaluate(() => window.__razlomStatus.yaw);
-  assert.ok(yaw > 4.2 && yaw < 5.3, `yaw=${yaw}`);
+  const wrappedYaw = ((yaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  assert.ok(wrappedYaw > 4.2 && wrappedYaw < 5.3, `yaw=${yaw}, wrapped=${wrappedYaw}`);
  });
  await page.keyboard.down('w'); await page.waitForTimeout(350); await page.keyboard.up('w');
  await page.waitForTimeout(300);
