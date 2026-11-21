@@ -41,7 +41,9 @@ SEARCH_LOG = HOME / 'memory' / 'search-log.md'
 WIKI_API = 'https://ru.wikipedia.org/w/api.php'
 
 SEARCH_WORDS = re.compile(r'(поищи|найди|узнай|погугли|загугли|поиск)', re.I)
-STRIP_WORDS = re.compile(r'(квеня|поищи|найди|узнай|посмотри|пожалуйста|в википедии|в интернете|поиске|мне)', re.I)
+STRIP_WORDS = re.compile(r'(квеня|поищи|найди|узнай|посмотри|пожалуйста|в википедии|в интернете|поиске|мне|ответь|своими словами|ещё раз|еще раз|одной фразой|скажи)', re.I)
+BAD_HISTORY = re.compile(r'(Нашлось:|Статья «|https?://|\nuser\n|\nassistant\n)')
+QUERY_STOP = {'каком', 'году', 'была', 'было', 'были', 'когда', 'какая', 'какой', 'какое', 'какие', 'сколько', 'ответь', 'своими', 'словами', 'одной', 'фразой', 'скажи', 'такой', 'такая'}
 
 
 def parse_turns(text):
@@ -68,18 +70,18 @@ def parse_turns(text):
 def clean_reply(text):
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.S).strip()
     text = re.sub(r'^(Квеня|Qwen)\s*:\s*', '', text).strip()
-    for marker in ('\nВладелец:', '\nКвеня:', '\nВладелец', '\nUser:'):
+    for marker in ('\nВладелец:', '\nКвеня:', '\nВладелец', '\nUser:', '\nuser\n', '\nassistant\n', '\nuser ', '\nassistant '):
         if marker in text:
             text = text.split(marker)[0].strip()
     return text
 
 
-def generate(model, tokenizer, messages, max_new, sample):
+def generate(model, tokenizer, messages, max_new, sample, temperature=0.7):
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
     inputs = tokenizer(prompt, return_tensors='pt')
     kwargs = dict(max_new_tokens=max_new, pad_token_id=tokenizer.eos_token_id)
     if sample:
-        kwargs.update(do_sample=True, temperature=0.7, top_p=0.9)
+        kwargs.update(do_sample=True, temperature=temperature, top_p=0.9)
     else:
         kwargs.update(do_sample=False)
     with torch.no_grad():
@@ -111,28 +113,65 @@ def decide_search(model, tokenizer, owner_text):
     return None
 
 
+def wiki_get(params):
+    request = urllib.request.Request(f'{WIKI_API}?{urllib.parse.urlencode(params)}', headers={'User-Agent': 'KvenyaHome/1.0 (qwen-home talk search)'})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
+def digest(extract, query):
+    """Short extract: the sentences of the article that match the query.
+
+    A 0.8B model cannot digest a whole article; it gets the 2-3 most
+    relevant sentences instead of raw text to copy.
+    Returns (text, score).
+    """
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', extract) if len(s.strip()) > 25]
+    if not sentences:
+        return '', 0
+    keywords = [w.lower()[:5] for w in re.findall(r'[\u0400-\u04FFA-Za-z]{4,}', query) if w.lower() not in QUERY_STOP]
+    scored = []
+    for i, sentence in enumerate(sentences):
+        low = sentence.lower()
+        score = sum(1 for k in keywords if k in low)
+        scored.append((score, i, sentence))
+    best = sorted(scored, key=lambda t: (-t[0], t[1]))[:3]
+    if not best or best[0][0] == 0:
+        return ' '.join(s for _, _, s in sorted(scored[:2], key=lambda t: t[1]))[:600], 0
+    chosen = sorted(best, key=lambda t: t[1])
+    return ' '.join(s for _, _, s in chosen)[:700], best[0][0]
+
+
 def search_wikipedia(query, limit=3):
-    """Her hands: query Russian Wikipedia, return title/url/extract list."""
-    params = urllib.parse.urlencode({
-        'action': 'query', 'format': 'json', 'formatversion': '2',
-        'generator': 'search', 'gsrnamespace': '0', 'gsrsearch': query,
-        'gsrlimit': str(limit + 2), 'prop': 'extracts|info', 'inprop': 'url',
-        'explaintext': '1', 'exlimit': 'max',
-    })
-    request = urllib.request.Request(f'{WIKI_API}?{params}', headers={'User-Agent': 'KvenyaHome/1.0 (qwen-home talk search)'})
+    """Her hands: two-step Wikipedia search.
+
+    Step 1 ranks article titles; step 2 fetches their texts. Each result
+    carries a short digest of the sentences matching the query.
+    """
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
-            data = json.load(response)
+        found = wiki_get({'action': 'query', 'format': 'json', 'formatversion': '2',
+                          'list': 'search', 'srsearch': query, 'srnamespace': '0',
+                          'srlimit': str(limit + 2)})
+        hits = found.get('query', {}).get('search', [])
+        titles = [h['title'] for h in hits if h.get('title')]
+        if not titles:
+            return []
+        texts = wiki_get({'action': 'query', 'format': 'json', 'formatversion': '2',
+                          'prop': 'extracts|info', 'inprop': 'url', 'explaintext': '1',
+                          'exlimit': 'max', 'titles': '|'.join(titles)})
+        pages = {p['title']: p for p in texts.get('query', {}).get('pages', [])}
     except Exception as error:
         print(f'Поиск не удался: {error}', flush=True)
         return []
-    pages = data.get('query', {}).get('pages', [])
+    snippets = {h['title']: re.sub(r'<[^>]+>', '', h.get('snippet', '')) for h in hits}
     results = []
-    for page in sorted(pages, key=lambda p: p.get('index', 99)):
+    for title in titles[:limit]:
+        page = pages.get(title, {})
         extract = re.sub(r'\s+', ' ', page.get('extract', '')).strip()
-        if page.get('title') and extract:
-            results.append({'title': page['title'], 'url': page.get('fullurl', ''), 'extract': extract[:1200]})
-    return results[:limit]
+        text, score = digest(extract or snippets.get(title, ''), query)
+        if text:
+            results.append({'title': title, 'url': page.get('fullurl', ''), 'digest': text, 'score': score})
+    return results
 
 
 def log_search(query, results):
@@ -180,17 +219,20 @@ def main():
         log_search(query, results)
         print(f'Поиск «{query}»: найдено статей: {len(results)}', flush=True)
         if results:
-            found = '\n'.join(f'— Статья «{r["title"]}»: {r["extract"]}' for r in results)
-            context_note = f'\n\n(Дом поискал за тебя в русской Википедии по запросу «{query}». Нашлось:\n{found}\nОтвечай владельцу СВОИМИ СЛОВАМИ по этим текстам: начни с «Поискала в Википедии!», назови статью и дай ответ из неё. Не копируй тексты дословно и не пиши ссылки. Если ответа в текстах нет — честно скажи об этом.)'
+            best = max(results, key=lambda r: r['score'])
+            print(f'Отвечает по статье: {best["title"]!r} (совпадений: {best["score"]})', flush=True)
+            context_note = f'\n\n(Факты из русской Википедии, статья «{best["title"]}»: {best["digest"]}\nОтветь владельцу одной-двумя фразами СВОИМИ СЛОВАМИ: начни с «Поискала в Википедии!» и сразу дай ответ из этих фактов. Ничего больше не пиши и не повторяй факты дословно.)'
         else:
             context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
     history = turns[-(9):-1] if len(turns) > 1 else []
     messages = [{'role': 'system', 'content': persona}]
     for role, body in history:
+        if role == 'assistant' and BAD_HISTORY.search(body):
+            continue  # не подмешиваем ей в память собственные мусорные реплики
         messages.append({'role': role, 'content': body})
     messages.append({'role': 'user', 'content': owner_text + context_note})
     torch.manual_seed(42 + len(turns))
-    reply = clean_reply(generate(model, tokenizer, messages, max_new=args.max_new, sample=True))
+    reply = clean_reply(generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7))
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
     DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
