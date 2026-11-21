@@ -28,7 +28,7 @@ jobs:
       HF_HUB_DISABLE_XET: '1'
       TOKENIZERS_PARALLELISM: 'false'
       GH_TOKEN: ${{ github.token }}
-      STEPS: ${{ inputs.steps || '120' }}
+      STEPS: ${{ inputs.steps || '360' }}
       RANDOM_ARTICLES: ${{ inputs.random_articles || '12' }}
     steps:
       - uses: actions/checkout@v4
