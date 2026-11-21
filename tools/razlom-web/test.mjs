@@ -19,6 +19,19 @@ page.on('pageerror', e => errors.push(String(e)));
 page.on('console', msg => { if (msg.type() === 'error' && /SCRIPT ERROR|Parse Error|Failed to load|Aborted|RuntimeError/.test(msg.text())) errors.push(msg.text()); });
 const checks = [];
 async function check(name, fn) { await fn(); checks.push(name); console.log('PASS: '+name); }
+/* Взрыв живёт 2,6 с, а статус обновляется раз в 0,25 с: на медленном
+   программном WebGL ожидание по кадру анимации может просто не успеть
+   увидеть ни взрыв, ни его очистку. Опрашиваем статус по таймеру, а при
+   тайм-ауте показываем сам статус — иначе упавший прогон не говорит,
+   был ли взрыв вообще. */
+async function waitStatus(predicate, timeout, label) {
+  try {
+    await page.waitForFunction(predicate, null, { timeout, polling: 250 });
+  } catch (err) {
+    const state = await page.evaluate(() => window.__razlomStatus || null).catch(() => null);
+    throw new Error(`${label}: статус игры ${JSON.stringify(state)}`, { cause: err });
+  }
+}
 const base = process.env.RAZLOM_URL || 'http://127.0.0.1:8765/razlom/web/game.html';
 try {
  await page.goto(base);
@@ -41,11 +54,11 @@ try {
  // Detonate from the shelter before moving into enemy sightlines; paused/death states
  // intentionally freeze the in-world fuse, so the browser check stays deterministic.
  await page.keyboard.press('g');
- await page.waitForFunction(() => window.__razlomStatus.activeCharges > 0, null, {timeout:15000});
- await page.waitForFunction(() => window.__razlomStatus.blastCount > 0, null, {timeout:20000});
+ await waitStatus(() => window.__razlomStatus.activeCharges > 0, 15000, 'заряд не активировался');
+ await waitStatus(() => window.__razlomStatus.blastCount > 0, 30000, 'взрыв не появился');
  await check('Actual charge renders a timed blast in WebGL', async () => assert.ok(await page.evaluate(() => window.__razlomStatus.blastCount) > 0));
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/blast-smoke.png'});
- await page.waitForFunction(() => window.__razlomStatus.blastCount === 0 && window.__razlomStatus.activeCharges === 0, null, {timeout:20000});
+ await waitStatus(() => window.__razlomStatus.blastCount === 0 && window.__razlomStatus.activeCharges === 0, 30000, 'взрыв не очистился');
  await check('Web blast cleans up before saving the game', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.health > 0), true));
  const before = await page.evaluate(() => window.__razlomStatus.position);
  await page.keyboard.down('w'); await page.waitForTimeout(700); await page.keyboard.up('w');
