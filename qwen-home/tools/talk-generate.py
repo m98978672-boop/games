@@ -275,15 +275,17 @@ def main():
             context_note = f'\n\n(Ответь владельцу ровно одной фразой: начни её словами «Поискала в Википедии! В статье {best["title"]} написано, что» и сразу после «что» допиши ответ СВОИМИ СЛОВАМИ.\nВот факты из русской Википедии для твоего ответа: {best["digest"]})'
         else:
             context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
-    history = turns[-(9):-1] if len(turns) > 1 else []
     from_search = bool(results)
     messages = [{'role': 'system', 'content': persona}]
-    for role, body in history:
-        if role == 'assistant' and BAD_HISTORY.search(body):
-            continue  # не подмешиваем ей в память собственные мусорные реплики
-        if role == 'assistant' and from_search and 'поискала в википедии' in body.lower():
-            continue  # отвечая по свежему поиску, она не должна повторять прошлые ответы: факты важнее привычки
-        messages.append({'role': role, 'content': body})
+    if not from_search:
+        history = turns[-(9):-1] if len(turns) > 1 else []
+        for role, body in history:
+            if role == 'assistant' and BAD_HISTORY.search(body):
+                continue  # не подмешиваем ей в память собственные мусорные реплики
+            messages.append({'role': role, 'content': body})
+    # Отвечая по свежему поиску, историю не тащим вовсе: пачка одинаковых
+    # вопросов без ответов ломает маленькой модели картину разговора,
+    # а факты для ответа уже лежат последним блоком.
     messages.append({'role': 'user', 'content': owner_text + context_note})
     torch.manual_seed(42 + len(turns))
     raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7)
