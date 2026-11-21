@@ -366,6 +366,19 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       window.WC.ui.renderSide();
       result.hireWorks = game.api.crew.length === 3 && game.sim.state.hires.length === 1;
       game.restart();
+      // Последний фоновой снимок включает паузу и свежие данные. На pagehide
+      // сохранение выполняется и без visibilitychange (например, bfcache).
+      game.api.crew[0].body.energy = .42;
+      Object.defineProperty(doc, 'hidden', { configurable: true, value: true });
+      doc.dispatchEvent(new window.Event('visibilitychange'));
+      let background = JSON.parse(window.localStorage.getItem(window.WC.save.CHECKPOINT_KEY));
+      result.backgroundSave = game.state.paused && background.checkpoint.runtime.paused && background.checkpoint.crew[0].state.body.energy === .42;
+      game.api.crew[0].body.energy = .39;
+      window.dispatchEvent(new window.Event('pagehide'));
+      background = JSON.parse(window.localStorage.getItem(window.WC.save.CHECKPOINT_KEY));
+      result.backgroundSave = result.backgroundSave && background.checkpoint.crew[0].state.body.energy === .39;
+      Object.defineProperty(doc, 'hidden', { configurable: true, value: false });
+      game.restart();
       window.WC.world.render(1 / 30, game);
       result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
       // Сводка не изменяет симуляцию, остаётся стабильной и ведёт к нужному рабочему.
@@ -517,6 +530,7 @@ for (const mode of modes) {
   else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
   check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
+  check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});
   check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });

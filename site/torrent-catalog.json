@@ -7,7 +7,7 @@
     "storefront": 18,
     "collection": 216,
     "files": 2156,
-    "totalBytes": 53144314,
+    "totalBytes": 53145490,
     "chunks": 401,
     "blockedFiles": 5
   },
@@ -5029,8 +5029,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "6b6e2d2df0c9ffaa2afb9b4c07c3483603239bbb2018522ca9ba95f1573c56f0",
-      "totalSize": 1892548,
+      "infoHash": "2b16603a76e920751a9ec0682dce3a475d12367b6eef76aa97a03988c48ff324",
+      "totalSize": 1893724,
       "chunkSize": 262144,
       "chunkCount": 8,
       "fileCount": 36,
@@ -5082,8 +5082,8 @@
         },
         {
           "path": "index.html",
-          "size": 19204,
-          "sha256": "18ea5a775361cf19f96ff6050c38219c24142f7b0a0dd37e3dafc7a01dbe3630"
+          "size": 19226,
+          "sha256": "bd7b8c214bc3bd523c68268d7b762d2077d9346b902e2074d2bc918f79952477"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5117,8 +5117,8 @@
         },
         {
           "path": "src/main.js",
-          "size": 5817,
-          "sha256": "62e2a5417d766247dd209e69b51d1698f829d6ec677fac9bbe1b8bdbf509e2b2"
+          "size": 6463,
+          "sha256": "8ce121293ee50cd636a10eb5ec82353870360222f0ac4857109c02d571a75dfe"
         },
         {
           "path": "src/render.js",
@@ -5147,8 +5147,8 @@
         },
         {
           "path": "src/save.js",
-          "size": 4473,
-          "sha256": "e6d20b790252280a1e345adf2791caf8f858e3f167c956e39ff81bfbc5e81e1c"
+          "size": 4926,
+          "sha256": "ed914090a710427cc5cd52c84853b69a9b6cdf065b692b014d5b046ab5271cb0"
         },
         {
           "path": "src/sim/model.js",
@@ -5172,8 +5172,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 79309,
-          "sha256": "03e17694e79aec2062f3e41cad86729fc7010a318fccf56f4be13b1e88e4bf68"
+          "size": 79364,
+          "sha256": "35f0bfbee0f6e0c1b8f0e7ed277292edbaaad2d7f490c4689cc4033a2076be32"
         },
         {
           "path": "src/util.js",

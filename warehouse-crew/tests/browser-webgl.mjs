@@ -18,8 +18,9 @@ const browser = await chromium.launch({ executablePath, headless: true,
   args: ['--no-sandbox', '--no-zygote', '--single-process', '--disable-dev-shm-usage', '--in-process-gpu',
     '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 try {
-  const page = await browser.newPage({ viewport: portrait ? { width: 390, height: 844 } : { width: 844, height: 390 },
+  const context = await browser.newContext({ viewport: portrait ? { width: 390, height: 844 } : { width: 844, height: 390 },
     isMobile: true, hasTouch: true });
+  const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error' && !m.text().includes('favicon.ico')) errors.push(m.text()); });
@@ -165,6 +166,25 @@ try {
   assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
   assert.match(await page.locator('#safety-list .safety-row').innerText(), /энергия 19%/);
   assert.equal(await page.locator('#order-list .order').filter({hasText:actual.lateCode}).locator('.o-priority').getAttribute('aria-pressed'), 'true');
+  // Headless Chromium не меняет document.hidden при переключении вкладок;
+  // явно доставляем это событие, затем проверяем сохранение после перезагрузки.
+  const background = await page.evaluate(() => {
+    WC.game.setPaused(false); WC.game.api.crew[0].body.energy = .34;
+    Object.defineProperty(document, 'hidden', {configurable:true, value:true});
+    document.dispatchEvent(new Event('visibilitychange'));
+    delete document.hidden;
+    const saved = JSON.parse(localStorage.getItem(WC.save.CHECKPOINT_KEY));
+    window.dispatchEvent(new Event('pagehide'));
+    return saved;
+  });
+  assert.equal(background.checkpoint.runtime.paused,true);
+  assert.equal(background.checkpoint.crew[0].state.body.energy,.34);
+  await page.reload({waitUntil:'load'});
+  await page.waitForFunction(() => window.WC?.game?.api?.ready && document.body.classList.contains('ready'), null, {timeout:20000});
+  assert.equal(await page.evaluate(() => WC.game.api.resumeStatus), 'restored');
+  assert.equal(await page.evaluate(() => WC.game.state.paused), true);
+  assert.equal(await page.evaluate(() => WC.game.api.crew[0].body.energy), .34);
+  console.log('✓ События фона и восстановление смены в Chromium');
   assert.equal(errors.length, 0, errors.join('\n'));
   console.log('✓ Сводка бригады, выбор, инспектор и восстановление на телефоне');
   console.log('✓ Фильтры, сводка и приоритет заказа: мобильный тап и восстановление после перезагрузки');

@@ -7,36 +7,39 @@ WC.save = (function () {
   var KEY = 'warehouse-crew-save-v1';
   var CHECKPOINT_KEY = 'warehouse-crew-save-v2';
   var protectedSave = false;
+  var protectionReason = null;
 
+  // Чтение и запись — разные права: даже при переполненной квоте снимок
+  // можно прочитать. Пробная запись здесь могла скрыть существующее сохранение.
   function storage() {
-    try {
-      if (typeof localStorage === 'undefined') return null;
-      var probe = '__wc_probe__';
-      localStorage.setItem(probe, '1');
-      localStorage.removeItem(probe);
-      return localStorage;
-    } catch (err) {
-      return null;
-    }
+    try { return typeof localStorage === 'undefined' ? null : localStorage; }
+    catch (err) { return null; }
+  }
+
+  function protect(reason) {
+    protectedSave = true;
+    protectionReason = reason || 'damaged';
   }
 
   function load() {
     var store = storage();
-    if (!store) return null;
+    if (!store) { protect('unavailable'); return null; }
     var legacy = null;
     try {
       var old = store.getItem(KEY);
       if (old) { legacy = JSON.parse(old); if (!legacy || legacy.version !== 1) legacy = null; }
     } catch (err) { legacy = null; }
+    var raw;
+    try { raw = store.getItem(CHECKPOINT_KEY); }
+    catch (err) { protect('unavailable'); return legacy; }
+    if (raw === null) return legacy;
     try {
-      var raw = store.getItem(CHECKPOINT_KEY);
-      if (!raw) return legacy;
       if (raw.length > 8 * 1024 * 1024) throw new Error('Слишком большой снимок');
       var data = JSON.parse(raw);
       if (!data || data.version !== 2 || !data.checkpoint || data.checkpoint.version !== 2) throw new Error('Неверная версия');
       return data;
     } catch (err) {
-      protectedSave = true;
+      protect('damaged');
       return legacy;
     }
   }
@@ -82,39 +85,37 @@ WC.save = (function () {
     };
   }
 
-  function flash() {
+  function indicate(text, success) {
+    clearTimeout(indicate.timer);
     var bar = document.getElementById('save-indicator');
     if (!bar) return;
-    bar.classList.add('flash');
-    bar.textContent = '● сохранено';
-    clearTimeout(flash.timer);
-    flash.timer = setTimeout(function () {
+    bar.classList.toggle('flash', Boolean(success));
+    bar.textContent = text;
+    if (success) indicate.timer = setTimeout(function () {
       bar.classList.remove('flash');
       bar.textContent = '● автосохранение';
     }, 1400);
   }
 
-  function save(game) {
-    if (protectedSave) return false;
-    try {
-      var data = collect(game);
-      data.version = 2;
-      data.checkpoint = WC.game.captureCheckpoint();
-      return write(data);
-    } catch (err) {
-      console.warn('[warehouse-crew] сохранение не удалось:', err);
-      return false;
-    }
-  }
+  function flash() { indicate('● сохранено', true); }
 
-  function autosave(game) {
-    var ok = save(game);
-    if (!ok) {
-      var bar = document.getElementById('save-indicator');
-      if (bar) bar.textContent = protectedSave ? '● сохранение защищено' : '● ошибка сохранения';
+  function save(game) {
+    var ok = false;
+    if (!protectedSave) {
+      try {
+        var data = collect(game);
+        data.version = 2;
+        data.checkpoint = WC.game.captureCheckpoint();
+        ok = write(data);
+      } catch (err) {
+        console.warn('[warehouse-crew] сохранение не удалось:', err);
+      }
     }
+    if (!ok) indicate(protectedSave ? '● сохранение защищено' : '● ошибка сохранения', false);
     return ok;
   }
+
+  function autosave(game) { return save(game); }
 
   function download(game) {
     var payload = collect(game);
@@ -134,6 +135,7 @@ WC.save = (function () {
   }
 
   return { load: load, save: save, autosave: autosave, download: download, KEY: KEY,
-    CHECKPOINT_KEY: CHECKPOINT_KEY, protect: function () { protectedSave = true; },
-    unprotect: function () { protectedSave = false; }, isProtected: function () { return protectedSave; } };
+    CHECKPOINT_KEY: CHECKPOINT_KEY, protect: protect,
+    unprotect: function () { protectedSave = false; protectionReason = null; },
+    isProtected: function () { return protectedSave; }, protectionReason: function () { return protectionReason; } };
 })();
