@@ -52,6 +52,12 @@ jobs:
           npx playwright install --with-deps chromium 2>&1 | tee -a /tmp/razlom-web-check.log
           python -m http.server 8765 --directory ../.. > /tmp/razlom-http.log 2>&1 &
           npm test 2>&1 | tee -a /tmp/razlom-web-check.log
+      - name: Publish Web failure log as annotation
+        if: failure()
+        run: |
+          # Для PR лог нельзя закоммитить в ветку, а внешний доступ к логам
+          # прогона бывает закрыт: хвост уезжает в аннотацию проверки.
+          python3 -c 'import os; p="/tmp/razlom-web-check.log"; s="".join(open(p,errors="replace").readlines()[-60:]) if os.path.exists(p) else "лог не создан"; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
       - name: Retain test evidence
         if: always()
         uses: actions/upload-artifact@v4
