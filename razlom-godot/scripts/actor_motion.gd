@@ -129,7 +129,7 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 			gesture_roll = 0.22 * social_blend
 		elif part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
 			# Raise the greeting hand clear of the coat so the wave reads head-on.
-			gesture_roll = 1.9 * social_blend
+			gesture_roll = 1.05 * social_blend
 		elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
 			# Turn the offered hand outward while the forearm reaches forward.
 			gesture_roll = -0.5 * social_blend
@@ -140,7 +140,7 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 			# close to the hips instead of hanging out from the shoulders.
 			roll += 0.14 if part == "ArmL" else -0.14
 			if part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
-				roll_limit = 1.95
+				roll_limit = 1.15
 			elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
 				roll_limit = 0.7
 			joint.rotation.z = clampf(roll, -roll_limit, roll_limit)
