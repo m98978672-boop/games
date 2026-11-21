@@ -45,7 +45,8 @@ func run_tests() -> void:
 	check(motion.model.rotation.z > 0.001, "Hit reaction tilts the guard visually")
 	for i in range(120):
 		motion.advance(1.0 / 60, 0, false)
-	check(absf(motion.model.rotation.z) < 0.001, "Hit reaction settles without lasting tilt")
+	var idle_tilt := sin(motion.clock * 0.7) * 0.025
+	check(absf(motion.model.rotation.z - idle_tilt) < 0.006, "Hit reaction settles back to its breathing idle pose")
 	check(absf(motion.model.get_node("Head").rotation.y) > 0.001, "Idle guard looks around")
 	check(absf(dog_motion.model.get_node("Head").rotation.y) > 0.001, "Waiting dog scans with its head")
 	check(game.interactions.medic_motion != null, "Vera has an idle animation driver")
