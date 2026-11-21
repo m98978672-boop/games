@@ -1,0 +1,58 @@
+name: Frontline Qwen talk (разговор с Квеней)
+on:
+  push:
+    # Квеня отвечает на ветках arena/**, когда владелец дописывает
+    # сообщение в файл диалога. Её собственный коммит с ответом помечен
+    # [skip ci] и новый прогон не запускает.
+    branches: ['arena/**']
+    paths: ['qwen-home/talk/dialogue.md']
+permissions:
+  contents: write
+concurrency:
+  group: qwen-talk-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  talk:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU inference dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Download her home adapter
+        run: |
+          set +e
+          mkdir -p "$RUNNER_TEMP/home-adapter"
+          gh release download frontline-qwen-home --pattern 'adapter.tar.gz' --dir "$RUNNER_TEMP/home-adapter"
+          if [ -f "$RUNNER_TEMP/home-adapter/adapter.tar.gz" ]; then
+            tar -xzf "$RUNNER_TEMP/home-adapter/adapter.tar.gz" -C "$RUNNER_TEMP/home-adapter"
+            echo "ADAPTER=$RUNNER_TEMP/home-adapter/adapter" >> "$GITHUB_ENV"
+          fi
+          exit 0
+      - name: Kvenya answers
+        run: |
+          if [ -n "${ADAPTER:-}" ]; then
+            python -u qwen-home/tools/talk-generate.py --adapter "$ADAPTER"
+          else
+            python -u qwen-home/tools/talk-generate.py
+          fi
+      - name: Commit her words back to the branch
+        run: |
+          git config user.name 'Квеня (Qwen home bot)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qwen-home/talk/dialogue.md qwen-home/talk/last-reply.txt
+          if [ -f qwen-home/memory/search-log.md ]; then git add qwen-home/memory/search-log.md; fi
+          git diff --cached --quiet && exit 0
+          git commit -m 'Квеня ответила в диалоге [skip ci]'
+          git push origin "HEAD:$GITHUB_REF_NAME"
