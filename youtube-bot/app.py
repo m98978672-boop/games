@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
+import hmac
 import json
 import mimetypes
 import os
@@ -14,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from dotenv import load_dotenv
 from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2.credentials import Credentials
@@ -31,6 +34,10 @@ TOKEN_FILE = DATA_DIR / "token.json"
 CLIENT_SECRETS = Path(os.getenv("GOOGLE_CLIENT_SECRETS_FILE", str(BASE_DIR / "client_secret.json"))).resolve()
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://localhost:8765").rstrip("/")
 REDIRECT_URI = f"{PUBLIC_BASE_URL}/oauth2callback"
+APP_ACCESS_PASSWORD = os.getenv("APP_ACCESS_PASSWORD")
+SESSION_SIGNING_KEY = os.getenv("APP_SESSION_SECRET", "") or secrets.token_urlsafe(32)
+if PUBLIC_BASE_URL.startswith("https://") and not APP_ACCESS_PASSWORD:
+    raise RuntimeError("APP_ACCESS_PASSWORD is required when exposing the app over HTTPS.")
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
@@ -42,6 +49,27 @@ queue_lock = threading.Lock()
 uploading_ids: set[str] = set()
 oauth_states: dict[str, float] = {}
 channel_cache: dict[str, Any] = {"at": 0.0, "value": None}
+
+
+def make_session_cookie() -> str:
+    payload = f"{int(time.time())}:{secrets.token_urlsafe(18)}".encode()
+    signature = hmac.new(SESSION_SIGNING_KEY.encode(), payload, hashlib.sha256).digest()
+    encode = lambda value: base64.urlsafe_b64encode(value).decode().rstrip("=")
+    return f"{encode(payload)}.{encode(signature)}"
+
+
+def valid_session_cookie(value: str | None) -> bool:
+    if not value:
+        return False
+    try:
+        payload_part, signature_part = value.split(".", 1)
+        decode = lambda part: base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))
+        payload, signature = decode(payload_part), decode(signature_part)
+        timestamp = int(payload.split(b":", 1)[0])
+    except (ValueError, TypeError):
+        return False
+    expected = hmac.new(SESSION_SIGNING_KEY.encode(), payload, hashlib.sha256).digest()
+    return hmac.compare_digest(signature, expected) and 0 <= time.time() - timestamp < 12 * 60 * 60
 
 
 def load_queue() -> list[dict[str, Any]]:
@@ -227,6 +255,43 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="YouTube Channel Bot", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def protect_public_preview(request: Request, call_next):
+    if APP_ACCESS_PASSWORD:
+        if request.url.path not in {"/login", "/oauth2callback", "/health"} and not valid_session_cookie(request.cookies.get("ytbot_session")):
+            if request.url.path.startswith("/api/"):
+                return JSONResponse({"detail": "Сначала войдите в панель."}, status_code=401)
+            return RedirectResponse("/login", status_code=303)
+        if request.method in {"POST", "DELETE"} and request.url.path != "/login":
+            origin = request.headers.get("origin", "").rstrip("/")
+            if origin != PUBLIC_BASE_URL:
+                return JSONResponse({"detail": "Запрос отклонён: неверный источник."}, status_code=403)
+    return await call_next(request)
+
+
+LOGIN_HTML = '''<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Вход — YouTube Bot</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0d12;color:#f3f5fa;font:16px system-ui}main{width:min(380px,calc(100vw - 36px));padding:26px;background:#141821;border:1px solid #303847;border-radius:16px}h1{font-size:21px;margin:0 0 8px}p{color:#aab4c2;font-size:14px}input,button{width:100%;box-sizing:border-box;padding:12px;border-radius:9px;font:inherit}input{background:#0d1118;border:1px solid #3a4352;color:white;margin:10px 0}button{border:0;background:#ff3854;color:white;font-weight:700;cursor:pointer}.err{color:#ff8292}</style><main><h1>Вход в YouTube Bot</h1><p>Введите временный пароль доступа к этой панели.</p>{error}<form method="post" action="/login"><input type="password" name="password" autocomplete="current-password" placeholder="Пароль доступа" required autofocus><button type="submit">Войти</button></form></main></html>'''
+
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page():
+    return LOGIN_HTML.replace("{error}", "")
+
+
+@app.post("/login")
+def login(request: Request, password: str = Form(...)):
+    origin = request.headers.get("origin", "").rstrip("/")
+    if APP_ACCESS_PASSWORD and origin != PUBLIC_BASE_URL:
+        return HTMLResponse(LOGIN_HTML.replace("{error}", '<p class="err">Запрос отклонён. Обновите страницу и попробуйте снова.</p>'), status_code=403)
+    if not APP_ACCESS_PASSWORD or not hmac.compare_digest(password, APP_ACCESS_PASSWORD):
+        return HTMLResponse(LOGIN_HTML.replace("{error}", '<p class="err">Пароль не подошёл. Попробуйте ещё раз.</p>'), status_code=401)
+    response = RedirectResponse("/", status_code=303)
+    response.set_cookie(
+        "ytbot_session", make_session_cookie(), max_age=12 * 60 * 60,
+        httponly=True, secure=PUBLIC_BASE_URL.startswith("https://"), samesite="lax", path="/",
+    )
+    return response
 
 
 @app.get("/", response_class=HTMLResponse)
