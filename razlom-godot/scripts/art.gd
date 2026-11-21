@@ -105,28 +105,23 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 	root.set_meta("detailed", true)
 	var head := root.get_node_or_null("Head") as Node3D
 	if head != null:
-		var eye_mat := material(Color("253632"))
+		# Faces use one small, flat eye mark per side. Separate spherical irises and
+		# cheek orbs exaggerated the face into the two detached oval blobs visible
+		# in close view, so keep all features attached to the head surface.
 		for side in [-1, 1]:
-			var eye := box(head, Vector3(side * 0.085, 0.015, -0.178), Vector3(0.065, 0.035, 0.018), material(Color("e5ded0")))
+			var eye := box(head, Vector3(side * 0.07, 0.035, -0.165), Vector3(0.038, 0.012, 0.008), material(Color("302a25")))
 			eye.name = "EyeL" if side < 0 else "EyeR"
-			var iris_color := Color("718c78") if medic else Color("556d5b")
-			# These are deliberately tiny, flat details fitted inside the eye socket.
-			# The old values were treated as world scale, making two giant egg-shaped eyes.
-			orb(eye, Vector3(0, 0, -0.014), Vector3(0.022, 0.026, 0.006), material(iris_color), "Iris")
-			orb(eye, Vector3(0, 0, -0.018), Vector3(0.010, 0.016, 0.004), eye_mat, "Pupil")
-			orb(eye, Vector3(-0.006, 0.007, -0.021), Vector3(0.004, 0.005, 0.002), material(Color("fff4df")), "Catchlight")
-			box(head, Vector3(side * 0.085, 0.065, -0.18), Vector3(0.07, 0.012 if medic else 0.018, 0.018), material(Color("574533")))
+			box(head, Vector3(side * 0.07, 0.06, -0.163), Vector3(0.045, 0.009 if medic else 0.012, 0.008), material(Color("594337")))
 			if medic:
-				orb(head, Vector3(side * 0.18, -0.005, -0.13), Vector3(0.075, 0.055, 0.035), material(Color("c58d83")), "SoftCheek")
-				orb(head, Vector3(side * 0.18, -0.075, -0.11), Vector3(0.035, 0.05, 0.04), material(Color("d5b36d")), "Earring")
-			box(head, Vector3(side * 0.18, -0.005, 0), Vector3(0.035, 0.075, 0.07), material(Color("b99978")))
-		box(head, Vector3(0, -0.025, -0.19), Vector3(0.045, 0.065, 0.045), material(Color("b99978")))
+				# A subtle flat blush mark, never a protruding sphere.
+				box(head, Vector3(side * 0.105, -0.025, -0.159), Vector3(0.026, 0.01, 0.004), material(Color("b97970")))
+			box(head, Vector3(side * 0.17, 0, -0.005), Vector3(0.025, 0.065, 0.035), material(Color("b99978")))
+		# Small bridge and mouth give every humanoid the same readable face layout.
+		box(head, Vector3(0, -0.008, -0.17), Vector3(0.022, 0.038, 0.018), material(Color("a9876d")))
+		box(head, Vector3(0, -0.075, -0.166), Vector3(0.052, 0.009, 0.008), material(Color("a65e5d") if medic else Color("795447")))
 		if medic:
-			box(head, Vector3(0, -0.09, -0.184), Vector3(0.085, 0.014, 0.012), material(Color("a65e5d")))
 			for side in [-1, 1]:
-				box(head, Vector3(side * 0.048, -0.082, -0.187), Vector3(0.018, 0.008, 0.012), material(Color("c88178")))
-		else:
-			box(head, Vector3(0, -0.09, -0.18), Vector3(0.095, 0.018, 0.018), material(Color("795447")))
+				box(head, Vector3(side * 0.03, -0.069, -0.17), Vector3(0.012, 0.006, 0.004), material(Color("d29a89")))
 		var cap := root.get_node_or_null("Cap") as Node3D
 		if cap != null: cap.reparent(head, true)
 		var scalp := box(head, Vector3(0, 0.14, 0.015), Vector3(0.35, 0.065, 0.34), material(Color("544435")))
