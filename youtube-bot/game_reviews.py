@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
@@ -47,7 +48,7 @@ def load_game_catalog(path: Path = CATALOG_PATH) -> list[dict[str, Any]]:
         if not game_id or game_id in seen or not title or not isinstance(features, list) or not features:
             continue
         clean_features = [str(feature).strip() for feature in features if str(feature).strip()]
-        if not clean_features:
+        if len(clean_features) < 2:
             continue
         seen.add(game_id)
         result.append({
@@ -164,11 +165,115 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     }
 
 
+def _catalog_only_fallback(
+    raw: str,
+    games: list[Mapping[str, Any]],
+    recent_game_ids: Iterable[str],
+) -> dict[str, Any]:
+    """Keep a bad model feature-ID choice from stopping a safe, source-grounded episode."""
+    try:
+        data = _extract_json(raw)
+    except (TypeError, ValueError):
+        data = {}
+    catalog = {str(game["id"]): game for game in games}
+    recent = set(recent_game_ids)
+    fallback_game = next((game for game in games if str(game["id"]) not in recent), games[0])
+    game = catalog.get(str(data.get("game_id", "")), fallback_game)
+    if str(game["id"]) in recent and any(str(item["id"]) not in recent for item in games):
+        game = fallback_game
+    game_id = str(game["id"])
+    features = [str(feature) for feature in game.get("features", [])[:12]]
+    feature_ids = [f"{game_id}-f{i + 1}" for i in range(len(features))]
+    if len(feature_ids) < 2:
+        raise ValueError(f"Catalog game {game_id!r} has fewer than two usable features")
+
+    proposed = data.get("selected_feature_ids")
+    valid_proposed = (
+        [str(item) for item in proposed]
+        if isinstance(proposed, list)
+        and len(proposed) == 2
+        and proposed[0] != proposed[1]
+        and all(str(item) in feature_ids for item in proposed)
+        else feature_ids[:2]
+    )
+    minus_id = str(data.get("minus_feature_id", ""))
+    if minus_id not in feature_ids:
+        minus_id = valid_proposed[0]
+
+    try:
+        score = int(data.get("idea_score", 7))
+    except (TypeError, ValueError):
+        score = 7
+    score = min(10, max(1, score))
+
+    hook = str(data.get("hook", "")).strip()
+    if not 8 <= len(hook) <= 100:
+        hook = f"Что предлагает игра {game.get('title', 'Games')}?"[:100]
+        if len(hook) < 8:
+            hook = "Коротко об игре Games!"
+
+    possible_minus = str(data.get("possible_minus", "")).strip()
+    if (
+        not 10 <= len(possible_minus) <= 100
+        or re.search(r"https?://|www\\.|@[\\w.-]+", possible_minus, re.I)
+        or not re.search(r"может|возможно|похоже|вероятно", possible_minus, re.I)
+    ):
+        evidence = features[int(minus_id.rsplit("-f", 1)[1]) - 1][:45]
+        possible_minus = f"Возможно, акцент на «{evidence}» подойдёт не всем."
+
+    repaired = {
+        "schema_version": 1,
+        "game_id": game_id,
+        "selected_feature_ids": valid_proposed,
+        "possible_minus": possible_minus,
+        "minus_feature_id": minus_id,
+        "idea_score": score,
+        "hook": hook,
+    }
+    return validate_review(repaired, games, recent_game_ids=recent)
+
+
 def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids: Iterable[str] = (), seed: str = "") -> dict[str, Any]:
     game_list = list(games)
     recent = list(recent_game_ids)
-    raw = generate_with_qwen(build_review_messages(game_list, recent_game_ids=recent, seed=seed), max_new_tokens=900)
-    return validate_review(raw, game_list, recent_game_ids=recent)
+    messages = build_review_messages(game_list, recent_game_ids=recent, seed=seed)
+    last_raw = ""
+    last_error: ValueError | None = None
+
+    # Give Qwen one constrained correction pass before falling back to exact
+    # catalogue feature IDs. The final fallback never invents source facts.
+    for attempt in range(2):
+        attempt_messages = messages
+        if attempt and last_error:
+            allowed = {
+                str(game["id"]): [f"{game['id']}-f{i + 1}" for i, _ in enumerate(game["features"][:12])]
+                for game in game_list
+            }
+            attempt_messages = [
+                *messages,
+                {"role": "assistant", "content": "Я подготовил редакционный план и проверяю его формат."},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Предыдущий план не прошёл проверку: {last_error}. Исправь его и верни только JSON. "
+                        "Для selected_feature_ids укажи ровно два различных идентификатора из списка ниже; "
+                        "minus_feature_id тоже должен точно совпадать с идентификатором из списка. "
+                        "Не пиши названия функций вместо ID. Список допустимых ID: "
+                        + json.dumps(allowed, ensure_ascii=False)
+                    ),
+                },
+            ]
+        last_raw = generate_with_qwen(attempt_messages, max_new_tokens=900 if attempt == 0 else 500)
+        try:
+            return validate_review(last_raw, game_list, recent_game_ids=recent)
+        except ValueError as exc:
+            last_error = exc
+
+    print(
+        f"Qwen plan failed validation twice ({last_error}); using a catalogue-only safe fallback.",
+        file=sys.stderr,
+    )
+    return _catalog_only_fallback(last_raw, game_list, recent)
 
 
 def youtube_description(review: Mapping[str, Any]) -> str:
