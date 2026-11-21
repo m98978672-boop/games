@@ -42,7 +42,7 @@ WIKI_API = 'https://ru.wikipedia.org/w/api.php'
 
 SEARCH_WORDS = re.compile(r'(поищи|найди|узнай|погугли|загугли|поиск)', re.I)
 STRIP_WORDS = re.compile(r'(квеня|поищи|найди|узнай|посмотри|пожалуйста|в википедии|в интернете|поиске|мне|ответь|своими словами|ещё раз|еще раз|одной фразой|скажи)', re.I)
-BAD_HISTORY = re.compile(r'(Нашлось:|Статья «|https?://|\nuser\n|\nassistant\n)')
+BAD_HISTORY = re.compile(r'(Нашлось:|Статья «|https?://|\nuser\n|\nassistant\n|Поискала в Википедии\.$)')
 QUERY_STOP = {'каком', 'году', 'была', 'было', 'были', 'когда', 'какая', 'какой', 'какое', 'какие', 'сколько', 'ответь', 'своими', 'словами', 'одной', 'фразой', 'скажи', 'такой', 'такая'}
 
 
@@ -130,10 +130,13 @@ def digest(extract, query):
     if not sentences:
         return '', 0
     keywords = [w.lower()[:5] for w in re.findall(r'[\u0400-\u04FFA-Za-z]{4,}', query) if w.lower() not in QUERY_STOP]
+    year_bonus = bool(re.search(r'(году|когда|основан|основан|дата|лет)', query.lower()))
     scored = []
     for i, sentence in enumerate(sentences):
         low = sentence.lower()
         score = sum(1 for k in keywords if k in low)
+        if year_bonus and re.search(r'\b\d{3,4}\b', sentence):
+            score += 2  # вопрос про год — предложение с годом важнее прочих
         scored.append((score, i, sentence))
     best = sorted(scored, key=lambda t: (-t[0], t[1]))[:3]
     if not best or best[0][0] == 0:
@@ -142,15 +145,25 @@ def digest(extract, query):
     return ' '.join(s for _, _, s in chosen)[:700], best[0][0]
 
 
+def keyword_query(query):
+    """Wikipedia search wants keywords, not a whole question sentence."""
+    words = re.findall(r'[\u0400-\u04FFA-Za-z0-9][\u0400-\u04FFA-Za-z0-9\-]*', query)
+    stop = QUERY_STOP | {'когда', 'какой', 'какая', 'какое', 'какие', 'каком', 'где', 'кто', 'что', 'сколько', 'почему', 'зачем', 'как', 'это', 'есть', 'так'}
+    keys = [w for w in words if len(w) >= 4 and w.lower() not in stop]
+    return ' '.join(keys) or query
+
+
 def search_wikipedia(query, limit=3):
     """Her hands: two-step Wikipedia search.
 
     Step 1 ranks article titles; step 2 fetches their texts. Each result
     carries a short digest of the sentences matching the query.
     """
+    terms = keyword_query(query)
+    print(f'Запрос в Википедию: {terms!r}', flush=True)
     try:
         found = wiki_get({'action': 'query', 'format': 'json', 'formatversion': '2',
-                          'list': 'search', 'srsearch': query, 'srnamespace': '0',
+                          'list': 'search', 'srsearch': terms, 'srnamespace': '0',
                           'srlimit': str(limit + 2)})
         hits = found.get('query', {}).get('search', [])
         titles = [h['title'] for h in hits if h.get('title')]
@@ -221,7 +234,7 @@ def main():
         if results:
             best = max(results, key=lambda r: r['score'])
             print(f'Отвечает по статье: {best["title"]!r} (совпадений: {best["score"]})', flush=True)
-            context_note = f'\n\n(Факты из русской Википедии, статья «{best["title"]}»: {best["digest"]}\nОтветь владельцу одной-двумя фразами СВОИМИ СЛОВАМИ: начни с «Поискала в Википедии!» и сразу дай ответ из этих фактов. Ничего больше не пиши и не повторяй факты дословно.)'
+            context_note = f'\n\n(Факты из русской Википедии: {best["digest"]}\nОтветь владельцу ровно одной фразой по образцу: «Поискала в Википедии! В статье «{best["title"]}» написано: <ответ из фактов своими словами>». Ничего больше не пиши.)'
         else:
             context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
     history = turns[-(9):-1] if len(turns) > 1 else []
