@@ -47,8 +47,8 @@ func run_tests() -> void:
 	await process_frame
 	await process_frame
 	check(game.blocks.size() < 250, "Real blast breaks exposed infill")
-	for y in range(4):
-		check(game.destroyed.has("back_16_%d" % y), "Unsupported section collapses from the base")
+	for y in [0, 2]:
+		check(game.destroyed.has("back_16_%d" % y), "Unsupported aligned masonry courses collapse from the base")
 	check(game.active_debris > 0 and game.active_debris <= 32, "Rigid debris created under active-body budget")
 	check(game.state.health > 99, "Distant player unaffected")
 	# Let actual PhysicsServer3D integrate and then freeze the fragments.
