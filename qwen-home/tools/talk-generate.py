@@ -141,11 +141,11 @@ def digest(extract, query):
         if year_bonus and re.search(r'\b\d{3,4}\b', sentence):
             score += 2  # вопрос про год — предложение с годом важнее прочих
         scored.append((score, i, sentence))
-    best = sorted(scored, key=lambda t: (-t[0], t[1]))[:3]
+    best = sorted(scored, key=lambda t: (-t[0], t[1]))[:2]
     if not best or best[0][0] == 0:
-        return ' '.join(s for _, _, s in sorted(scored[:2], key=lambda t: t[1]))[:600], 0
+        return ' '.join(s for _, _, s in sorted(scored[:2], key=lambda t: t[1]))[:500], 0
     chosen = sorted(best, key=lambda t: t[1])
-    return ' '.join(s for _, _, s in chosen)[:700], best[0][0]
+    return ' '.join(s for _, _, s in chosen)[:500], best[0][0]
 
 
 def keyword_query(query):
@@ -243,7 +243,7 @@ def main():
             exact = [r for r in results if r.get('exact')]
             best = exact[0] if exact else max(results, key=lambda r: r['score'])
             print(f'Отвечает по статье: {best["title"]!r} (совпадений: {best["score"]})', flush=True)
-            context_note = f'\n\n(Факты из русской Википедии: {best["digest"]}\nОтветь владельцу ровно одной фразой: начни её словами «Поискала в Википедии! В статье {best["title"]} написано, что» — а дальше сразу допиши конец фразы из фактов СВОИМИ СЛОВАМИ. Ничего больше не пиши.)'
+            context_note = f'\n\n(Ответь владельцу ровно одной фразой: начни её словами «Поискала в Википедии! В статье {best["title"]} написано, что» и сразу после «что» допиши ответ СВОИМИ СЛОВАМИ.\nВот факты из русской Википедии для твоего ответа: {best["digest"]})'
         else:
             context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
     history = turns[-(9):-1] if len(turns) > 1 else []
@@ -254,9 +254,18 @@ def main():
         messages.append({'role': role, 'content': body})
     messages.append({'role': 'user', 'content': owner_text + context_note})
     torch.manual_seed(42 + len(turns))
-    raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7, min_new=44 if results else 0)
+    raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7)
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
     reply = clean_reply(raw_reply)
+    attempt = 0
+    while results and attempt < 2 and (len(reply) < 60 or reply.endswith(('что', ':', ','))):
+        # Маленькая модель иногда обрывает фразу на «написано, что» —
+        # просим её ещё раз, строже и холоднее; факты всё ещё перед ней.
+        attempt += 1
+        print(f'Черновик оборвался, попытка {attempt + 1}: {reply!r}', flush=True)
+        torch.manual_seed(100 + attempt)
+        retry = messages[:-1] + [{'role': 'user', 'content': owner_text + context_note + '\n(Прошлый черновик оборвался. Пиши фразу целиком до точки: после «написано, что» сразу ответ из фактов.)'}]
+        reply = clean_reply(generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.2))
     if results:
         parts = [p for p in re.split(r'(?<=[.!?])\s+', reply) if p.strip()]
         reply = ' '.join(parts[:2]).strip()
