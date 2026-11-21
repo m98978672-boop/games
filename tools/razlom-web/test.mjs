@@ -82,35 +82,25 @@ try {
   assert.ok(Math.hypot(after[0]-before[0], after[2]-before[2]) > .2);
  });
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
- // Pointer lock requires a real canvas click in Chromium even after keyboard start.
- // The unarmed click has no combat effect; it only activates mouse-look.
+ // Walk closer to Vera using ordinary strafe/forward controls; then aim slightly
+ // left so the actual interaction ray lands on her capsule, not a debug shortcut.
+ await page.keyboard.down('d'); await page.waitForTimeout(800); await page.keyboard.up('d');
  await page.mouse.click(720,450);
  await page.waitForTimeout(150);
- // Inspect the rebuilt shelter glazing from the actual first-person camera.
- // The player starts facing +Z; this measured mouse turn faces the east wall.
  await page.mouse.move(720,450);
- await page.mouse.move(0,450);
+ await page.mouse.move(870,450);
  await page.waitForTimeout(500);
- await check('Captured mouse turns the live camera toward the shelter windows', async () => {
+ await check('Mouse-look turns toward Vera in the live game', async () => {
   const yaw = await page.evaluate(() => window.__razlomStatus.yaw);
-  const wrappedYaw = ((yaw % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  assert.ok(wrappedYaw > 4.2 && wrappedYaw < 5.3, `yaw=${yaw}, wrapped=${wrappedYaw}`);
+  assert.ok(yaw > 2.55 && yaw < 3.0, `yaw=${yaw}`);
  });
- await page.keyboard.down('w'); await page.waitForTimeout(350); await page.keyboard.up('w');
- await page.waitForTimeout(300);
- await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/shelter-window.png'});
- // Move through the playable shelter and face Vera for a real NPC pose capture.
- await page.mouse.move(720,450);
- await page.mouse.move(1439,450);
- await page.waitForTimeout(500);
- await page.keyboard.down('d'); await page.waitForTimeout(900); await page.keyboard.up('d');
- await page.mouse.move(720,450);
- await page.mouse.move(1018,450);
- await page.waitForTimeout(500);
- await check('NPC pose review camera reaches Vera from gameplay controls', async () => {
-  const yaw = await page.evaluate(() => window.__razlomStatus.yaw);
-  assert.ok(yaw > 2.25 && yaw < 2.8, `yaw=${yaw}`);
+ await check('NPC pose review camera reaches Vera by real in-world movement', async () => {
+  const state = await page.evaluate(() => window.__razlomStatus);
+  const distance = Math.hypot(state.position[0] + 25.5, state.position[2] - 24);
+  assert.ok(distance < 1.8, `position=${state.position}, distance=${distance}`);
  });
+ await page.keyboard.press('c');
+ await page.waitForTimeout(350);
  await page.keyboard.press('e');
  await page.waitForFunction(() => window.__razlomStatus?.dialog?.visible, null, {timeout:10000});
  await check('Vera opens her actual in-world conversation within interaction range', async () => {
