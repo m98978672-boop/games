@@ -1,0 +1,132 @@
+name: Frontline Qwen self-learning (дом и Википедия)
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: 'Шагов дообучения в этом прогоне'
+        default: '120'
+      random_articles:
+        description: 'Сколько случайных статей Википедии прочитать сверх тем'
+        default: '12'
+  schedule:
+    # Раз в неделю: прочитать свежее и доучиться, если экзамен не стал хуже.
+    - cron: '17 3 * * 1'
+permissions:
+  contents: write
+jobs:
+  learn:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    env:
+      OMP_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      GH_TOKEN: ${{ github.token }}
+      STEPS: ${{ inputs.steps || '120' }}
+      RANDOM_ARTICLES: ${{ inputs.random_articles || '12' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU training dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Download previous home adapter and commander replay data
+        run: |
+          set +e
+          mkdir -p "$RUNNER_TEMP/prev" "$RUNNER_TEMP/long-data"
+          gh release download frontline-qwen-home --pattern 'adapter.tar.gz' --dir "$RUNNER_TEMP/prev"
+          if [ -f "$RUNNER_TEMP/prev/adapter.tar.gz" ]; then
+            tar -xzf "$RUNNER_TEMP/prev/adapter.tar.gz" -C "$RUNNER_TEMP/prev"
+            echo "PREV_ADAPTER=$RUNNER_TEMP/prev/adapter" >> "$GITHUB_ENV"
+          fi
+          gh release download frontline-learning-15h-44671482687 --pattern 'long-dataset.tar.gz' --dir "$RUNNER_TEMP/long-data"
+          if [ -f "$RUNNER_TEMP/long-data/long-dataset.tar.gz" ]; then
+            tar -xzf "$RUNNER_TEMP/long-data/long-dataset.tar.gz" -C "$RUNNER_TEMP/long-data"
+          fi
+          exit 0
+      - name: Read Wikipedia (topics + fresh random articles)
+        run: node qwen-home/tools/collect-wikipedia.mjs --topics qwen-home/topics.txt --random "$RANDOM_ARTICLES" --out qwen-home/memory/knowledge.jsonl
+      - name: Build the lesson dataset
+        run: |
+          if [ -f "$RUNNER_TEMP/long-data/commander/train.jsonl" ]; then
+            node qwen-home/tools/build-dataset.mjs --out "$RUNNER_TEMP/learn-data" --commander "$RUNNER_TEMP/long-data/commander"
+          else
+            node qwen-home/tools/build-dataset.mjs --out "$RUNNER_TEMP/learn-data"
+          fi
+      - name: Exam BEFORE learning (previous adapter vs base)
+        run: |
+          if [ -n "${PREV_ADAPTER:-}" ]; then
+            python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/learn-data" --adapter "$PREV_ADAPTER" --output "$RUNNER_TEMP/eval-before.json"
+          else
+            python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/learn-data" --output "$RUNNER_TEMP/eval-before.json"
+          fi
+          node qwen-home/tools/score-learn.mjs "$RUNNER_TEMP/eval-before.json"
+      - name: Learn (continued LoRA from the previous home adapter)
+        timeout-minutes: 120
+        run: |
+          set +e
+          set -o pipefail
+          EXTRA=""
+          if [ -n "${PREV_ADAPTER:-}" ]; then EXTRA="--initial-adapter $PREV_ADAPTER"; fi
+          python -u qwen-home/tools/train-learn.py --data "$RUNNER_TEMP/learn-data" --output "$RUNNER_TEMP/learn-output" --steps "$STEPS" $EXTRA 2>&1 | tee "$RUNNER_TEMP/training.log"
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            python -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"training.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit "$status"
+      - name: Exam AFTER learning and the publish gate
+        id: gate
+        run: |
+          python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/learn-data" --adapter "$RUNNER_TEMP/learn-output/adapter" --output "$RUNNER_TEMP/eval-after.json"
+          node qwen-home/tools/score-learn.mjs "$RUNNER_TEMP/eval-after.json"
+          node -e '
+            const fs = require("fs");
+            const before = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/eval-before.json", "utf8")).scores;
+            const after = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/eval-after.json", "utf8")).scores;
+            const beforeScore = (before.adapter || before.base).passed;
+            const afterScore = after.adapter.passed;
+            const publish = afterScore >= beforeScore;
+            console.log(`exam before=${beforeScore} after=${afterScore} publish=${publish}`);
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `publish=${publish}\nbefore=${beforeScore}\nafter=${afterScore}\n`);
+            console.log("::notice::QWEN_LEARN " + JSON.stringify({ before: beforeScore, after: afterScore, publish }));
+          '
+      - name: Publish the adapter only if the exam did not get worse
+        if: steps.gate.outputs.publish == 'true'
+        run: |
+          set -eu
+          tar -C "$RUNNER_TEMP/learn-output" -czf "$RUNNER_TEMP/adapter.tar.gz" adapter report.json progress.json
+          if gh release view frontline-qwen-home >/dev/null 2>&1; then
+            gh release upload frontline-qwen-home "$RUNNER_TEMP/adapter.tar.gz" --clobber
+          else
+            gh release create frontline-qwen-home --title 'Frontline Qwen — домашний адаптер' --notes 'LoRA-адаптер домашней линии обучения Qwen (мышление, Википедия, базовый веб-код). Исследовательский артефакт: не WebLLM-модель, не командирский адаптер игры и не доказательство навыков. История прогонов — qwen-home/memory/learning-log.md.' "$RUNNER_TEMP/adapter.tar.gz"
+          fi
+      - name: Write the diary and commit memory home
+        run: |
+          set -eu
+          node qwen-home/tools/update-memory.mjs --report "$RUNNER_TEMP/learn-output/report.json" --scores "$RUNNER_TEMP/eval-after.json" --published "${{ steps.gate.outputs.publish }}" --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --date "$(date -u +%F)"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qwen-home/memory qwen-home/state.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Qwen: самообучение — экзамен ${{ steps.gate.outputs.before }} → ${{ steps.gate.outputs.after }}, публикация: ${{ steps.gate.outputs.publish }}"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+      - name: Retain learning artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-learn-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/learn-data/
+            ${{ runner.temp }}/learn-output/
+            ${{ runner.temp }}/eval-before.json
+            ${{ runner.temp }}/eval-after.json
+            ${{ runner.temp }}/training.log
+          if-no-files-found: warn
+          retention-days: 30

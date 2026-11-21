@@ -102,6 +102,10 @@ jobs:
           exit "$status"
       - name: Test frontline city brains (мэры country-atlas поверх штаба)
         run: node frontline-command/tests/mayors.mjs
+      - name: Test Frontline Steel & Drones (кампания, бой, синхронизация play.html)
+        run: node frontline-steel-and-drones/tests/logic.mjs
+      - name: Test Qwen home (дом нейросети: учебный план, сборщики, дневник)
+        run: node qwen-home/tests/learn.mjs
       - name: Test Frontline battlefield visuals (Chromium)
         run: npm run test:battlefield:browser --prefix frontline-command
       - name: Test shooter-2 structure and offline rules
@@ -161,6 +165,7 @@ jobs:
           # на импорте, а выглядел как провал игры.
           npm ci --no-audit --no-fund
           node tests/smoke.mjs
+          node tests/autopilot.mjs
       - name: Test last-shore escape (плот, спасение, экран финала)
         run: |
           cd last-shore

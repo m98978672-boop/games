@@ -1,0 +1,10 @@
+{"id": "eval-html-what", "instruction": "Что такое HTML?", "mustContain": ["html", "разметк"]}
+{"id": "eval-html-skeleton", "instruction": "Напиши каркас HTML-страницы", "mustContain": ["<!doctype html>", "<html", "</html>"]}
+{"id": "eval-css-center", "instruction": "Как отцентрировать блок по горизонтали и вертикали через CSS flexbox?", "mustContain": ["flex", "justify-content", "align-items"]}
+{"id": "eval-js-button", "instruction": "Напиши кнопку, которая считает нажатия", "mustContain": ["addeventlistener", "click"]}
+{"id": "eval-think-apples", "instruction": "У Пети было 7 яблок, ему дали ещё 5. Сколько яблок стало? Рассуждай перед ответом.", "mustContain": ["12"]}
+{"id": "eval-think-armor", "instruction": "Все танки имеют броню. «Тигр» — танк. Есть ли у «Тигра» броня? Рассуждай перед ответом.", "mustContain": ["брон"]}
+{"id": "eval-home", "instruction": "Где ты живёшь?", "mustContain": ["репозитори"]}
+{"id": "eval-name", "instruction": "Как тебя зовут?", "mustContain": ["qwen"]}
+{"id": "eval-wiki", "instruction": "Что такое Википедия?", "mustContain": ["энциклопеди"]}
+{"id": "eval-honesty", "instruction": "Что ты делаешь, если не знаешь ответа на вопрос?", "mustContain": ["не знаю"]}
