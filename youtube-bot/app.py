@@ -41,13 +41,14 @@ if PUBLIC_BASE_URL.startswith("https://") and not APP_ACCESS_PASSWORD:
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
 ]
 MAX_VIDEO_BYTES = 10 * 1024 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".mpeg", ".mpg", ".avi", ".wmv", ".flv", ".webm", ".3gpp"}
 
 queue_lock = threading.Lock()
 uploading_ids: set[str] = set()
-oauth_states: dict[str, float] = {}
+oauth_states: dict[str, tuple[Flow, float]] = {}
 channel_cache: dict[str, Any] = {"at": 0.0, "value": None}
 
 
@@ -260,7 +261,7 @@ app = FastAPI(title="YouTube Channel Bot", lifespan=lifespan)
 @app.middleware("http")
 async def protect_public_preview(request: Request, call_next):
     if APP_ACCESS_PASSWORD:
-        if request.url.path not in {"/login", "/oauth2callback", "/health"} and not valid_session_cookie(request.cookies.get("ytbot_session")):
+        if request.url.path not in {"/login", "/auth/start", "/oauth2callback", "/health"} and not valid_session_cookie(request.cookies.get("ytbot_session")):
             if request.url.path.startswith("/api/"):
                 return JSONResponse({"detail": "Сначала войдите в панель."}, status_code=401)
             return RedirectResponse("/login", status_code=303)
@@ -329,8 +330,10 @@ def auth_start():
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Не удалось подготовить Google OAuth: {exc}") from exc
     now = time.time()
-    oauth_states[state] = now + 600
-    for old_state, expiry in list(oauth_states.items()):
+    # Keep the Flow itself: Google auth-code flow may use PKCE, whose verifier
+    # must survive the redirect and be reused during token exchange.
+    oauth_states[state] = (flow, now + 600)
+    for old_state, (_, expiry) in list(oauth_states.items()):
         if expiry < now:
             oauth_states.pop(old_state, None)
     return RedirectResponse(url)
@@ -340,16 +343,22 @@ def auth_start():
 def oauth_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
     if error:
         return RedirectResponse("/?oauth_error=" + error)
-    expiry = oauth_states.pop(state or "", None)
-    if not code or not state or expiry is None or expiry < time.time():
+    saved_flow = oauth_states.pop(state or "", None)
+    if not code or not state or saved_flow is None or saved_flow[1] < time.time():
         raise HTTPException(status_code=400, detail="OAuth-состояние не найдено или истекло. Начните подключение заново.")
-    flow = Flow.from_client_secrets_file(str(CLIENT_SECRETS), scopes=SCOPES, state=state, redirect_uri=REDIRECT_URI)
+    flow = saved_flow[0]
     try:
         flow.fetch_token(code=code)
         store_credentials(flow.credentials)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Не удалось завершить подключение Google: {str(exc)[:400]}") from exc
-    return RedirectResponse("/?connected=1")
+    return HTMLResponse(
+        "<!doctype html><html lang='ru'><meta charset='utf-8'><title>YouTube подключён</title>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+        "<body style='font:18px system-ui;max-width:640px;margin:12vh auto;padding:24px;color:#172033'>"
+        "<h1>YouTube подключён</h1><p>Разрешение сохранено в защищённом хранилище этого бота. "
+        "Можно закрыть эту вкладку.</p></body></html>"
+    )
 
 
 @app.post("/api/jobs")

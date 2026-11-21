@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 import { mergeKnowledge } from '../tools/collect-wikipedia.mjs';
 import { buildDataset, convertCommander, examplesFromKnowledge, SYSTEM_PROMPT } from '../tools/build-dataset.mjs';
-import { scoreOutputs } from '../tools/score-learn.mjs';
+import { formatOk, scoreOutputs } from '../tools/score-learn.mjs';
 import { logEntry, nextState } from '../tools/update-memory.mjs';
 
 const home = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -26,13 +26,22 @@ const readJsonl = async (p) => (await readFile(p, 'utf8')).split('\n').filter(Bo
 const thinking = await readJsonl(path.join(home, 'curriculum', 'thinking.jsonl'));
 const web = await readJsonl(path.join(home, 'curriculum', 'web-code.jsonl'));
 const identity = await readJsonl(path.join(home, 'curriculum', 'identity.jsonl'));
+const youtubeScripts = await readJsonl(path.join(home, 'curriculum', 'youtube-scripts.jsonl'));
 const evalRows = await readJsonl(path.join(home, 'curriculum', 'eval.jsonl'));
-const all = [...thinking, ...web, ...identity];
-check('учебный план непуст: мышление, веб и самоописание на месте', thinking.length >= 8 && web.length >= 10 && identity.length >= 5);
+const all = [...thinking, ...web, ...identity, ...youtubeScripts];
+check('учебный план непуст: мышление, веб, самоописание и мульт-сценарии на месте', thinking.length >= 8 && web.length >= 10 && identity.length >= 5 && youtubeScripts.length >= 8);
 check('каждый урок: id, kind, непустые instruction и response', all.every((r) => r.id && r.kind && r.instruction?.length > 3 && r.response?.length > 3));
 check('идентификаторы уроков не повторяются', new Set(all.map((r) => r.id)).size === all.length);
 check('уроки мышления учат формату <think>…</think>', thinking.every((r) => r.response.includes('<think>') && r.response.includes('</think>')));
 check('уроки веб-кода содержат законченные блоки кода', web.every((r) => (r.response.match(/```/g) || []).length >= 2));
+check('уроки видео учат валидному JSON со сценами и короткими репликами', youtubeScripts.every((r) => {
+  try {
+    const script = JSON.parse(r.response);
+    return r.kind === 'youtube-script' && script.schema_version === 1 && Array.isArray(script.scenes)
+      && script.scenes.length >= 3 && script.scenes.every((s) => s.speaker && s.dialogue && s.visual && s.emotion);
+  } catch { return false; }
+}));
+check('уроки сценариев используют только вымышленные темы и не вставляют ссылки', youtubeScripts.every((r) => !/https?:\/\//i.test(r.response) && r.response.includes('topic_id')));
 check('самоописание честное: дом — репозиторий, модель маленькая', identity.some((r) => r.response.includes('репозитори')) && identity.some((r) => /маленьк|0\.8B/.test(r.response)));
 check('экзамен: у каждого вопроса есть обязательные слова', evalRows.length >= 14 && evalRows.every((r) => r.id && r.instruction && Array.isArray(r.mustContain) && r.mustContain.length >= 1));
 check('экзамен отличает домашнее обучение: факты дома, формат мышления, JSON командира', ['eval-home-folder', 'eval-release', 'eval-topics', 'eval-gate'].every((id) => evalRows.some((r) => r.id === id)) && evalRows.some((r) => r.mustFormat === 'think') && evalRows.some((r) => r.mustFormat === 'json'));
@@ -61,7 +70,7 @@ check('повторное чтение обновляет запись, а не 
 const tmp = await mkdtemp(path.join(tmpdir(), 'qwen-home-'));
 await writeFile(path.join(tmp, 'train.jsonl'), JSON.stringify({ seed: 1, input: { squads: [] }, response: '{"action":"hold"}' }) + '\n');
 const { train, evalRows: dsEval, counts } = await buildDataset({ home, commanderDir: tmp });
-check('датасет собран: учебный план + Википедия + повтор командира', counts.thinking >= 8 && counts.web >= 10 && counts.commander === 1, JSON.stringify(counts));
+check('датасет собран: веб, сценарии, Википедия + повтор командира', counts.thinking >= 8 && counts.web >= 10 && counts['youtube-script'] >= 8 && counts.commander === 1, JSON.stringify(counts));
 check('экзамен не попадает в обучение', dsEval.length === evalRows.length && !train.some((r) => evalRows.some((e) => e.instruction === r.instruction)));
 check('в датасете нет дублей по вопросу', new Set(train.map((r) => r.instruction)).size === train.length);
 check('командирский повтор: JSON-вопрос и JSON-ответ сохранены', convertCommander([{ input: { a: 1 }, response: '{"action":"none"}' }])[0].response === '{"action":"none"}');
@@ -75,6 +84,13 @@ const scores = scoreOutputs([
   { id: 'd', mustContain: ['"action"'], mustFormat: 'json', base: 'Думаю, надо снабдить отряд', adapter: '{"action":"supply","squad":0}' },
 ]);
 check('баллы считаются честно, формат — часть балла: база 1/4, адаптер 3/4', scores.base.passed === 1 && scores.adapter.passed === 3 && scores.base.total === 4 && scores.adapter.total === 4);
+const validVideoScript = JSON.stringify({ schema_version: 1, topic_id: 'animal-comedy', title: 'Кот и кнопка', hook: 'Кот увидел большую кнопку.', scenes: [
+  { speaker: 'Кот', dialogue: 'Нажать сейчас?', visual: 'Кот смотрит на кнопку', emotion: 'curious' },
+  { speaker: 'Мышь', dialogue: 'А что она делает?', visual: 'Мышь выглядывает', emotion: 'calm' },
+  { speaker: 'Кот', dialogue: 'Теперь она делает вид, что кнопка.', visual: 'Кнопка улыбается', emotion: 'surprised' },
+] });
+check('экзаменатор принимает валидный JSON-сценарий и отклоняет неправильную схему', formatOk(validVideoScript, 'youtube-script') && !formatOk('{"scenes":[]}', 'youtube-script'));
+
 
 /* ---------- дневник и состояние ---------- */
 const st0 = JSON.parse(await readFile(path.join(home, 'state.json'), 'utf8'));
