@@ -61,6 +61,7 @@ var look_scale := 1.0
 var sensitivity_step := 1
 var low_quality := false
 var ambience: WorldEnvironment
+var world_state_applied := ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -79,6 +80,7 @@ func _ready() -> void:
 	world.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(world)
 	build_level()
+	refresh_world_state()
 	refresh_navigation()
 	player = PlayerScript.new()
 	player.game = self
@@ -177,6 +179,7 @@ func build_level() -> void:
 	Art.box(world, Vector3(-25, 0.5, 19), Vector3(2.1, 0.8, 1), wood, true)
 	Art.box(world, Vector3(-25, 0.98, 19), Vector3(2, 0.15, 0.9), Art.material(Color("aaa07c")))
 	Art.box(world, Vector3(-20, 0.65, 19), Vector3(2, 1.3, 0.8), metal, true)
+	decorate_shelter()
 	interactions.spawn_shelter(world)
 	dog = DogScript.new()
 	dog.game = self
@@ -200,6 +203,7 @@ func build_level() -> void:
 			make_block(Vector3(25, 0.65 + y, z), "right_%d_%d" % [z, y])
 	Art.sign_text(world, "ВОДОСНАБЖЕНИЕ", Vector3(16, 4.65, -7.65), 55)
 	Art.sign_text(world, "СКЛАД 03 / РЕЗЕРВ", Vector3(16, 4.05, -7.65), 29, Color("bdc8a9"))
+	decorate_warehouse()
 	for pos in [Vector3(11, 0.6, -20), Vector3(22, 0.6, -12), Vector3(20, 0.6, -21), Vector3(10, 0.6, -12)]:
 		Art.box(world, pos, Vector3(2.4, 1.2, 1.5), wood, true)
 	lamp(Vector3(16, 4.5, -13), Color("91d8c7"), 9)
@@ -231,6 +235,127 @@ func build_level() -> void:
 		world.add_child(guard)
 		enemies.append(guard)
 
+func decorate_shelter() -> void:
+	var timber := Art.material(Color("6c6250"), "wood")
+	var warm_metal := Art.material(Color("8e8067"), "metal")
+	# Layered doorway, rain lip and window framing break up the plain box silhouette.
+	Art.box(world, Vector3(-23, 3.82, 26.42), Vector3(4.8, 0.18, 0.35), warm_metal)
+	for x in [-27.5, -18.5]:
+		Art.box(world, Vector3(x, 1.8, 17.31), Vector3(0.09, 3.15, 0.09), timber)
+		Art.box(world, Vector3(x, 3.35, 17.31), Vector3(0.42, 0.09, 0.12), warm_metal)
+	for z in [19.2, 20.8, 22.4, 24.0]:
+		Art.box(world, Vector3(-18.18, 2.0, z), Vector3(0.045, 0.035, 0.55), warm_metal)
+	Art.box(world, Vector3(-18.18, 2.0, 21.6), Vector3(0.045, 1.65, 0.04), warm_metal)
+	# A hand-painted direction board, hanging herbs and shared outdoor sitting space.
+	Art.box(world, Vector3(-27.55, 2.55, 24.5), Vector3(0.12, 0.62, 1.5), timber)
+	Art.sign_text(world, "ВОДА  /  ТЕПЛО  /  ДОМ", Vector3(-27.45, 2.64, 24.5), 17, Color("e3d8b9"))
+	for x in [-27.8, -26.8, -25.8]:
+		Art.box(world, Vector3(x, 2.85, 17.28), Vector3(0.32, 0.2, 0.12), Art.material(Color("62755e"), "cloth"))
+		Art.box(world, Vector3(x, 2.66, 17.28), Vector3(0.018, 0.24, 0.02), Art.material(Color("748b69")))
+	var bench := Art.box(world, Vector3(-21.5, 0.42, 27.4), Vector3(2.0, 0.16, 0.5), timber, true)
+	bench.name = "ShelterBench"
+	for x in [-22.2, -20.8]:
+		Art.box(world, Vector3(x, 0.2, 27.4), Vector3(0.12, 0.44, 0.4), timber, true)
+	Art.box(world, Vector3(-23, 3.65, 26.55), Vector3(6.0, 0.07, 0.06), warm_metal)
+	for x in [-25.1, -23.7, -22.3, -20.9]:
+		var bulb := Art.orb(world, Vector3(x, 3.48, 26.55), Vector3.ONE * 0.09, Art.material(Color("f2cb85"), "", 0.8), "ShelterBulb")
+		bulb.position.y += sin((x + 26) * 1.5) * 0.06
+
+func decorate_warehouse() -> void:
+	var oxidized := Art.material(Color("887a62"), "rust")
+	var pale := Art.material(Color("b9ad91"), "concrete")
+	# Recessed sign frame, loading-bay lintel, and repaired sheet-metal patches.
+	Art.box(world, Vector3(16, 4.75, -7.53), Vector3(12.2, 0.12, 0.18), oxidized)
+	for x in [10.0, 22.0]:
+		Art.box(world, Vector3(x, 4.28, -7.53), Vector3(0.12, 0.88, 0.18), oxidized)
+		Art.box(world, Vector3(x, 1.9, -7.48), Vector3(0.16, 3.7, 0.12), oxidized)
+	for x in [8.0, 24.0]:
+		for y in [0.7, 4.2]:
+			Art.orb(world, Vector3(x, y, -7.42), Vector3.ONE * 0.06, pale, "Rivet")
+	for y in [1.05, 2.25, 3.45]:
+		Art.box(world, Vector3(16, y, -7.49), Vector3(0.28, 0.05, 0.06), oxidized)
+	# Downpipe and battered rain hood along the west corner.
+	Art.box(world, Vector3(6.72, 2.5, -8.8), Vector3(0.12, 5.0, 0.12), oxidized)
+	Art.box(world, Vector3(16, 5.02, -7.3), Vector3(16, 0.08, 0.55), oxidized)
+	for x in [7.3, 24.7]:
+		Art.box(world, Vector3(x, 2.4, -8.02), Vector3(0.08, 4.5, 0.12), pale)
+
+func refresh_world_state() -> void:
+	if not is_instance_valid(world):
+		return
+	var key := "%s|%s|%s|%s" % [state.complete, state.quests, state.vera_bond, state.relay_shared]
+	if key == world_state_applied:
+		return
+	world_state_applied = key
+	var upgrades := world.get_node_or_null("ShelterImprovements") as Node3D
+	if state.complete and upgrades == null:
+		upgrades = Node3D.new()
+		upgrades.name = "ShelterImprovements"
+		world.add_child(upgrades)
+		upgrades.position = Vector3(-30.5, 0, 23)
+		var metal := Art.material(Color("7c8174"), "metal")
+		var wood := Art.material(Color("655b48"), "wood")
+		var water := Art.material(Color("76a99c"), "", 0.22)
+		var tank := MeshInstance3D.new()
+		var tank_mesh := CylinderMesh.new()
+		tank_mesh.top_radius = 0.72
+		tank_mesh.bottom_radius = 0.72
+		tank_mesh.height = 1.8
+		tank.name = "WaterTank"
+		tank.mesh = tank_mesh
+		tank.material_override = metal
+		tank.position = Vector3(0, 1.0, 0)
+		upgrades.add_child(tank)
+		Art.box(upgrades, Vector3(0, 1.33, -0.725), Vector3(1.1, 0.28, 0.035), water)
+		for y in [0.25, 1.75]:
+			Art.box(upgrades, Vector3(0, y, 0), Vector3(1.5, 0.08, 1.5), wood)
+		Art.box(upgrades, Vector3(0.55, 2.05, 0), Vector3(0.12, 0.35, 0.12), metal)
+		Art.sign_text(upgrades, "ЗАПАС ВОДЫ / ОЧАГ", Vector3(0, 2.35, -0.8), 20)
+		# Raised kitchen garden adds a visible, small recovery of the shelter courtyard.
+		Art.box(upgrades, Vector3(2.4, 0.35, 1.4), Vector3(2.2, 0.35, 1.4), wood)
+		Art.box(upgrades, Vector3(2.4, 0.54, 1.4), Vector3(2.0, 0.06, 1.2), Art.material(Color("544b38"), "ground"))
+		for i in range(7):
+			var plant_pos := Vector3(1.65 + (i % 3) * 0.68, 0.76, 0.95 + float(i / 3) * 0.55)
+			Art.box(upgrades, plant_pos, Vector3(0.08, 0.42, 0.08), Art.material(Color("56745a")))
+			for leaf in [-1, 1]:
+				var leaf_node := Art.orb(upgrades, plant_pos + Vector3(leaf * 0.11, 0.12, 0), Vector3(0.2, 0.08, 0.11), Art.material(Color("74906b")), "GardenLeaf")
+				leaf_node.rotation.z = leaf * 0.3
+		lamp(Vector3(-30.5, 2.5, 23), Color("f2c784"), 6)
+		Art.sign_text(world, "ПОСЛЕ НАСОСА: ВОДА ВЕРНУЛАСЬ", Vector3(-24.4, 3.1, 25.4), 25, Color("a9d0b6"))
+	if state.quests.get("power", 0) == 3 and world.get_node_or_null("SubstationRestored") == null:
+		var substation := Node3D.new()
+		substation.name = "SubstationRestored"
+		world.add_child(substation)
+		substation.position = Vector3(-43, 0, -43)
+		Art.box(substation, Vector3(2.9, 0.78, 0), Vector3(1.35, 1.5, 1.1), Art.material(Color("827d68"), "metal"), true)
+		Art.box(substation, Vector3(2.9, 1.58, -0.56), Vector3(0.72, 0.36, 0.035), Art.material(Color("496d5f"), "", 0.5))
+		Art.box(substation, Vector3(2.9, 0.55, -0.61), Vector3(0.08, 0.52, 0.08), Art.material(Color("c69c5d"), "metal"))
+		Art.sign_text(substation, "РЕЗЕРВНАЯ ЛИНИЯ • ВКЛЮЧЕНА", Vector3(2.9, 2.15, -0.65), 16, Color("a8d3b4"))
+		var indicator := OmniLight3D.new()
+		indicator.name = "LiveIndicator"
+		indicator.position = Vector3(2.9, 1.65, -0.7)
+		indicator.light_color = Color("83cba0")
+		indicator.light_energy = 0.8
+		indicator.omni_range = 3.5
+		substation.add_child(indicator)
+	if state.quests.get("gate", 0) in [3, 4] and world.get_node_or_null("WorldDecisionNotice") == null:
+		var notice := Node3D.new()
+		notice.name = "WorldDecisionNotice"
+		world.add_child(notice)
+		notice.position = Vector3(-21.0, 0, 26.0)
+		Art.box(notice, Vector3(-0.05, 1.35, 0), Vector3(1.5, 1.0, 0.14), Art.material(Color("625b48"), "wood"))
+		Art.sign_text(notice, "ПРИКАЗ ОБНАРОДОВАН" if state.quests.gate == 3 else "ИМЕНА СОХРАНЕНЫ В ТАЙНЕ", Vector3(-0.05, 1.4, -0.09), 14, Color("e4cf9d"))
+	if state.vera_bond >= 1 and upgrades != null and upgrades.get_node_or_null("EveningTable") == null:
+		var table := Art.box(upgrades, Vector3(2.3, 0.86, 3.35), Vector3(1.3, 0.1, 0.8), Art.material(Color("735d45"), "wood"))
+		table.name = "EveningTable"
+		for x in [-0.48, 0.48]:
+			Art.box(upgrades, Vector3(2.3 + x, 0.42, 3.35), Vector3(0.08, 0.85, 0.72), Art.material(Color("665340"), "wood"))
+		for x in [1.9, 2.65]:
+			var cup := Art.box(upgrades, Vector3(x, 0.98, 3.35), Vector3(0.16, 0.16, 0.16), Art.material(Color("d4c8a7"), "tile"))
+			cup.name = "TeaCup"
+		lamp(Vector3(-28.0, 2.25, 26.4), Color("f3cb88"), 5)
+		Art.sign_text(upgrades, "НАШ ТИХИЙ УГОЛ", Vector3(2.3, 1.3, 3.35), 17, Color("e3d5b3"))
+
 func lamp(pos: Vector3, color: Color, radius: float) -> void:
 	Art.box(world, pos, Vector3(0.7, 0.12, 0.35), Art.material(color, "", 1))
 	var light := OmniLight3D.new()
@@ -245,14 +370,20 @@ func make_block(pos: Vector3, id: String) -> void:
 	var block = BlockScript.new()
 	block.game = self
 	block.block_id = id
-	block.tint = Color.WHITE
+	# Stable per-block variation: saved/damaged bricks keep the same finish after reload.
+	var variant_rng := RandomNumberGenerator.new()
+	variant_rng.seed = abs(id.hash()) + 1
+	var palettes := [Color("d0c2a6"), Color("b9a991"), Color("c6b79b"), Color("d5c9b1"), Color("a99a80")]
+	block.tint = palettes[variant_rng.randi_range(0, palettes.size() - 1)]
 	world.add_child(block)
 	block.position = pos
 	var visual := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
-	mesh.size = Vector3(0.98, 0.98, 0.98)
+	mesh.size = Vector3(variant_rng.randf_range(0.94, 0.99), 0.97, variant_rng.randf_range(0.94, 0.99))
 	visual.mesh = mesh
-	visual.material_override = Art.material(Color.WHITE, "brick")
+	visual.position.y = variant_rng.randf_range(-0.01, 0.01)
+	visual.rotation.y = deg_to_rad(float(variant_rng.randi_range(-2, 2)))
+	visual.material_override = Art.material(block.tint, "brick")
 	block.add_child(visual)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -793,6 +924,7 @@ func _input(event: InputEvent) -> void:
 			DisplayServer.window_set_title("РАЗЛОМ / FPS %d / debris %d / blocks %d" % [Engine.get_frames_per_second(), active_debris, blocks.size()])
 
 func _process(delta: float) -> void:
+	refresh_world_state()
 	# Read-only browser diagnostics: no RPC or mutable RatCore geometry is shared.
 	if OS.has_feature("web"):
 		web_report_time -= delta
