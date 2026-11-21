@@ -308,7 +308,8 @@ func decorate_shelter() -> void:
 		Art.box(world, Vector3(x, 0.2, 27.4), Vector3(0.12, 0.44, 0.4), timber, true)
 	Art.box(world, Vector3(-23, 3.65, 26.55), Vector3(6.0, 0.07, 0.06), warm_metal)
 	for x in [-25.1, -23.7, -22.3, -20.9]:
-		var bulb := Art.orb(world, Vector3(x, 3.48, 26.55), Vector3.ONE * 0.09, Art.material(Color("f2cb85"), "", 0.8), "ShelterBulb")
+		var bulb := Art.box(world, Vector3(x, 3.48, 26.55), Vector3(0.1, 0.08, 0.1), Art.material(Color("f2cb85"), "", 0.8))
+		bulb.name = "ShelterBulb"
 		bulb.position.y += sin((x + 26) * 1.5) * 0.06
 
 func decorate_warehouse() -> void:
@@ -321,7 +322,7 @@ func decorate_warehouse() -> void:
 		Art.box(world, Vector3(x, 1.9, -7.48), Vector3(0.16, 3.7, 0.12), oxidized)
 	for x in [8.0, 24.0]:
 		for y in [0.7, 4.2]:
-			Art.orb(world, Vector3(x, y, -7.42), Vector3.ONE * 0.06, pale, "Rivet")
+			Art.box(world, Vector3(x, y, -7.42), Vector3(0.06, 0.06, 0.06), pale)
 	for y in [1.05, 2.25, 3.45]:
 		Art.box(world, Vector3(16, y, -7.49), Vector3(0.28, 0.05, 0.06), oxidized)
 	# Downpipe and battered rain hood along the west corner.
@@ -347,10 +348,8 @@ func refresh_world_state() -> void:
 		var wood := Art.material(Color("655b48"), "wood")
 		var water := Art.material(Color("76a99c"), "", 0.22)
 		var tank := MeshInstance3D.new()
-		var tank_mesh := CylinderMesh.new()
-		tank_mesh.top_radius = 0.72
-		tank_mesh.bottom_radius = 0.72
-		tank_mesh.height = 1.8
+		var tank_mesh := BoxMesh.new()
+		tank_mesh.size = Vector3(1.44, 1.8, 1.44)
 		tank.name = "WaterTank"
 		tank.mesh = tank_mesh
 		tank.material_override = metal
@@ -368,7 +367,8 @@ func refresh_world_state() -> void:
 			var plant_pos := Vector3(1.65 + (i % 3) * 0.68, 0.76, 0.95 + float(i / 3) * 0.55)
 			Art.box(upgrades, plant_pos, Vector3(0.08, 0.42, 0.08), Art.material(Color("56745a")))
 			for leaf in [-1, 1]:
-				var leaf_node := Art.orb(upgrades, plant_pos + Vector3(leaf * 0.11, 0.12, 0), Vector3(0.2, 0.08, 0.11), Art.material(Color("74906b")), "GardenLeaf")
+				var leaf_node := Art.box(upgrades, plant_pos + Vector3(leaf * 0.11, 0.12, 0), Vector3(0.2, 0.08, 0.11), Art.material(Color("74906b")))
+				leaf_node.name = "GardenLeaf"
 				leaf_node.rotation.z = leaf * 0.3
 		lamp(Vector3(-30.5, 2.5, 23), Color("f2c784"), 6)
 		Art.sign_text(world, "ПОСЛЕ НАСОСА: ВОДА ВЕРНУЛАСЬ", Vector3(-24.4, 3.1, 25.4), 25, Color("a9d0b6"))
