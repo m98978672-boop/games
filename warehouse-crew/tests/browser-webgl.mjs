@@ -2,6 +2,7 @@
 // then set WC_BROWSER_EXECUTABLE and WC_BROWSER_URL; playwright-core is required.
 // Example: WC_BROWSER_EXECUTABLE=/path/to/chromium WC_BROWSER_URL=http://127.0.0.1:8765 node warehouse-crew/tests/browser-webgl.mjs
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 
 const executablePath = process.env.WC_BROWSER_EXECUTABLE;
@@ -61,7 +62,7 @@ try {
     rows[0].querySelector('.o-take').click();
     WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1 / 30);
     return { version: gl.getParameter(gl.VERSION), glError: gl.getError(), arms, stats, actions, header,
-      sorted, assigned: soon.status === 'claimed', disabled: rows[1].querySelector('.o-take').disabled, lateId: late.id, lateCode: late.code };
+      sorted, assigned: soon.status === 'claimed', disabled: rows[1].querySelector('.o-take').disabled, lateId: late.id, lateCode: late.code, soonId: soon.id, soonCode: soon.code };
   });
   assert.match(actual.version, /WebGL/);
   assert.equal(actual.glError, 0);
@@ -72,6 +73,24 @@ try {
   assert(actual.header.bottom < (portrait ? 125 : 120), 'заголовок не должен занимать слишком много экрана');
   const dayLight = await page.evaluate(() => WC.world.scene.children.find(o => o.isHemisphereLight).intensity);
   await page.evaluate(() => WC.ui.sheet.set('full', true));
+  // The paused shift keeps this UI check independent of animation timing.
+  await page.evaluate(id => {
+    WC.game.sim.state.orders.find(o => o.id === id).physics = true;
+    WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1 / 30);
+  }, actual.soonId);
+  const movingRow = page.locator('#order-list .order').filter({hasText: actual.soonCode});
+  await movingRow.scrollIntoViewIfNeeded();
+  await page.waitForFunction(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }, await movingRow.elementHandle());
+  assert.match(await movingRow.locator('.o-who').innerText(), /ждёт остановки/);
+  assert.match(await movingRow.locator('.o-abc').innerText(), /движется/);
+  const movingBounds = await movingRow.boundingBox();
+  assert(movingBounds.x >= 0 && movingBounds.x + movingBounds.width <= (portrait ? 390 : 844));
+  await page.evaluate(id => {
+    WC.game.sim.state.orders.find(o => o.id === id).physics = false;
+    WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1 / 30);
+  }, actual.soonId);
+  assert.match(await movingRow.locator('.o-who').innerText(), /в работе/);
+  console.log('✓ Движущийся груз и ожидание остановки в мобильной очереди');
   const concern = await page.evaluate(() => {
     const a = WC.game.api.crew[1], b = WC.game.api.crew[2];
     a.body.energy = .18;
@@ -166,6 +185,32 @@ try {
   assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
   assert.match(await page.locator('#safety-list .safety-row').innerText(), /энергия 19%/);
   assert.equal(await page.locator('#order-list .order').filter({hasText:actual.lateCode}).locator('.o-priority').getAttribute('aria-pressed'), 'true');
+  await page.evaluate(() => WC.ui.sheet.set('full', true));
+  const reportButton = page.locator('#btn-report');
+  await reportButton.scrollIntoViewIfNeeded();
+  await page.waitForFunction(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }, await reportButton.elementHandle());
+  await reportButton.tap();
+  const report = page.locator('.shift-report');
+  assert.equal(await report.locator('#report-title').textContent(),'Отчёт смены');
+  assert.match(await report.textContent(), /Падения/);
+  assert.match(await report.innerText(), /Полина Верес/);
+  const reportActions = report.locator('.report-actions button');
+  assert.equal(await reportActions.count(), 3);
+  for (const button of await reportActions.all()) {
+    const rect = await button.boundingBox();
+    assert(rect.height >= 38 && rect.x >= 0 && rect.y >= 0 && rect.x + rect.width <= (portrait ? 390 : 844) && rect.y + rect.height <= (portrait ? 844 : 390), JSON.stringify(rect));
+  }
+  await page.waitForTimeout(500);
+  await page.screenshot({path:'/tmp/wc-report-' + (portrait ? 'portrait' : 'landscape') + '.png', animations:'disabled'});
+  const [download] = await Promise.all([page.waitForEvent('download'), report.getByRole('button', {name:'Скачать отчёт'}).tap()]);
+  const reportFile = JSON.parse(await fs.readFile(await download.path(), 'utf8'));
+  assert.equal(reportFile.summary.crew.length,4); assert.equal(reportFile.summary.staff.length,1);
+  assert.equal(reportFile.summary.score,800); assert(!reportFile.checkpoint);
+  const inspectFromReport = report.getByRole('button', {name:'Осмотреть: ' + await page.evaluate(() => WC.game.api.crew[3].name)});
+  await inspectFromReport.scrollIntoViewIfNeeded(); await inspectFromReport.tap();
+  assert.equal(await page.evaluate(() => WC.ui.state.inspectorWorkerId),saved.id);
+  await page.evaluate(() => WC.ui.closeModal());
+  console.log('✓ Мобильный отчёт: показатели, скачивание и инспектор');
   // Headless Chromium не меняет document.hidden при переключении вкладок;
   // явно доставляем это событие, затем проверяем сохранение после перезагрузки.
   const background = await page.evaluate(() => {
@@ -185,6 +230,36 @@ try {
   assert.equal(await page.evaluate(() => WC.game.state.paused), true);
   assert.equal(await page.evaluate(() => WC.game.api.crew[0].body.energy), .34);
   console.log('✓ События фона и восстановление смены в Chromium');
+  await page.evaluate(() => {
+    WC.ui.sheet.set('full', true);
+    WC.game.api.log.splice(0, WC.game.api.log.length, ...Array.from({length:26}, (_, i) => ({t:i, text:'Запись ' + i, tone:i%2 ? 'bad' : 'good'})));
+    WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1/30);
+  });
+  const journalWarning = page.locator('[data-journal-filter="warning"]');
+  await journalWarning.scrollIntoViewIfNeeded();
+  await page.waitForFunction(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }, await journalWarning.elementHandle());
+  const journalButtonSize = await journalWarning.boundingBox();
+  assert(journalButtonSize.height >= 38 && journalButtonSize.x + journalButtonSize.width <= (portrait ? 390 : 844));
+  await journalWarning.tap();
+  assert.equal(await journalWarning.getAttribute('aria-pressed'),'true');
+  assert.equal(await page.locator('#journal-list .journal-entry').count(), 12);
+  assert.match(await page.locator('#journal-list .journal-entry').first().innerText(),/Проблема.*Запись 25/);
+  const journalMore = page.locator('#journal-more');
+  await journalMore.scrollIntoViewIfNeeded(); await journalMore.tap();
+  assert.equal(await page.locator('#journal-list .journal-entry').count(), 13);
+  assert(await journalMore.isHidden());
+  await page.screenshot({path:'/tmp/wc-journal-' + (portrait ? 'portrait' : 'landscape') + '.png'});
+  console.log('✓ Мобильный журнал, фильтр предупреждений и просмотр истории');
+  await page.evaluate(() => WC.game.endShift());
+  assert.equal(await page.locator('#report-title').textContent(), 'Смена закрыта');
+  assert(await page.locator('.shift-report').getByRole('button', {name:'Новая смена'}).isVisible());
+  await page.reload({waitUntil:'load'});
+  await page.waitForFunction(() => window.WC?.game?.api?.ready && document.body.classList.contains('ready'), null, {timeout:20000});
+  assert.equal(await page.locator('#report-title').textContent(), 'Смена закрыта');
+  assert.equal(await page.evaluate(() => WC.game.state.shiftEnded),true);
+  console.log('✓ Итоги завершённой смены восстанавливаются после перезагрузки');
+
+
   assert.equal(errors.length, 0, errors.join('\n'));
   console.log('✓ Сводка бригады, выбор, инспектор и восстановление на телефоне');
   console.log('✓ Фильтры, сводка и приоритет заказа: мобильный тап и восстановление после перезагрузки');

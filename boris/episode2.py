@@ -39,26 +39,26 @@ P.ANIM = {12: 12.5, 13: 14.0, 14: 14.5, 15: 15.0, 16: 12.0}
 P.DEFS = [
     dict(k=12, lines=[("n", "e_n1"), ("c", "e_c1")], ov=[("title", 0.25, 4.4, "out")],
          sfx=[("street", 0.0, .18, "loop"), ("music", 0.0, .26, "loop"), ("birds", 0.4, .25, None),
-              ("meow_q", 2.2, .70, None), ("coo", 3.0, .40, None), ("meow_happy", 6.5, .80, None),
-              ("purr", 7.6, .40, None), ("mew", 9.2, .50, None)]),
+              ("meow_happy", 2.2, .55, None), ("coo", 3.0, .40, None),
+              ("purr", 7.6, .40, None), ("mew", 9.2, .38, None)]),
     dict(k=13, lines=[("n", "e_n2"), ("c", "e_c2")], ov=[], pad_s=2.0,
          sfx=[("street", 0.0, .20, "loop"), ("music", 0.0, .26, "loop"), ("rustle", 2.6, .30, None),
-              ("rustle", 3.7, .35, None), ("mew", 4.7, .70, None), ("steps", 5.5, .40, None),
-              ("honk", 8.2, .80, None), ("honk", 8.9, .60, None), ("mew", 9.7, .80, None),
-              ("meow", 11.2, .50, None), ("frr", 12.4, .30, None)]),
+              ("rustle", 3.7, .35, None), ("mew", 4.7, .50, None), ("steps", 5.5, .40, None),
+              ("honk", 8.2, .80, None), ("honk", 8.9, .60, None), ("mew", 9.7, .55, None),
+              ("frr", 12.4, .30, None)]),
     dict(k=14, lines=[("n", "e_n3"), ("c", "e_c3")], ov=[("stamp", 10.8, 14.2, "anim")],
          sfx=[("street", 0.0, .12, "loop"), ("music", 0.0, .28, "loop"), ("steps", 0.4, .45, None),
-              ("steps", 2.0, .40, None), ("rustle", 4.2, .25, None), ("meow_q", 5.0, .70, None),
+              ("steps", 2.0, .40, None), ("rustle", 4.2, .25, None), ("meow_q", 5.0, .50, None),
               ("creak", 6.8, .40, None), ("steps", 8.8, .45, None), ("knock", 10.4, .55, None),
-              ("purr", 11.2, .50, None), ("meow_happy", 12.4, .70, None)]),
+              ("purr", 11.2, .50, None), ("meow_happy", 12.6, .55, None)]),
     dict(k=15, lines=[("n", "e_n4"), ("c", "e_c4")], ov=[], pad_s=4.0,
          sfx=[("wind", 0.0, .35, 15.0), ("hum", 0.0, .40, "loop"), ("music", 0.0, .24, "loop"),
-              ("purr", 0.6, .50, None), ("rustle", 2.2, .20, None), ("purr", 3.2, .55, None),
-              ("frr", 7.0, .40, None), ("purr_soft", 8.6, .50, None), ("meow_happy", 11.6, .60, None)]),
+              ("purr", 0.6, .50, None), ("rustle", 2.2, .20, None), ("purr", 3.2, .55, None), ("meow_happy", 6.5, .50, None),
+              ("frr", 7.0, .40, None), ("purr_soft", 8.6, .50, None)]),
     dict(k=16, lines=[("n", "e_n5"), ("c", "e_c5")], ov=[("end", -3.0, 99, "out")],
          sfx=[("wind", 0.0, .40, 12.0), ("night", 0.0, .25, "loop"), ("music", 0.0, .30, "loop"),
-              ("purr", 0.5, .50, None), ("meow_happy", 2.5, .60, None), ("mew", 5.0, .45, None),
-              ("purr", 6.2, .50, None), ("sting_up", 8.6, .45, None), ("meow_long", 9.6, .50, None)]),
+              ("purr", 0.5, .50, None), ("meow_happy", 1.8, .45, None),
+              ("purr", 6.2, .50, None), ("sting_up", 8.6, .45, None), ("meow_long", 9.6, .45, None)]),
 ]
 
 P.PREV_T = {12: 6.8, 13: 8.5, 14: 11.6, 15: 4.5, 16: 5.0}
@@ -75,6 +75,10 @@ def _mo2(scenes, W, H, TMP):
                 ["1 ДРУГ-КОТ", "2 ПОДОКОННИК С ВИДОМ", "3 ГОЛУБЬ-СОСЕД"])
     out[0].append((os.path.join(TMP, "result.png"), 0.5, round(min(7.2, scenes[0]["D"]), 2)))
     out[4].append((os.path.join(TMP, "vote.png"), round(scenes[4]["D"] * 0.40, 2), scenes[4]["D"]))
+    P.plate_png(os.path.join(TMP, "tail.png"), W, H,
+                "ХВОСТ РАЗУКРАШЕН? ЭТО ШТРИХ-КОД",
+                ["пикнешь — выдаст сосиску", "не смывать до следующего эпизода"])
+    out[4].append((os.path.join(TMP, "tail.png"), 1.2, 5.2))
     return out
 
 

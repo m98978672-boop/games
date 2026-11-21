@@ -234,6 +234,10 @@
     {
       "path": "ratcore/demos/citadel-watch/index.html",
       "reason": "Демо движка, грузит ES-модули напрямую"
+    },
+    {
+      "path": "youtube-bot/index.html",
+      "reason": "Внешний Supabase-backed YouTube OAuth dashboard, не игровой раздел"
     }
   ],
   "engineCore": [

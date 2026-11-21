@@ -53,7 +53,7 @@ func run_tests() -> void:
 	check(game.interactions.column.get_child(1).text.contains("Электромехаником"), "Vera has personal history beyond the pump request")
 	game.interactions.medic_motion.greet("treat")
 	game.interactions.medic_motion.advance(0.2, 0)
-	check(game.interactions.medic_motion.joints.ArmL.rotation.x < -0.3, "Treatment has a distinct two-handed gesture")
+	check(game.interactions.medic_motion.joints.ArmL.rotation.x > 0.3, "Treatment reaches Vera's hand forward toward the person she is helping")
 	game.player.position = Vector3(45, 0.5, 45)
 	game.interactions.attention_timer = 0
 	game.interactions.advance_people(0.1)

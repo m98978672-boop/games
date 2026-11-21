@@ -326,6 +326,186 @@ console.log('Автономия: усталость, срочность и об�
   check(Boolean(w.carryingId) && min > 1.05, 'рабочий обходит стоящий погрузчик', {min,x:w.pos.x,y:w.pos.y});
 }
 
+
+console.log('Обморок и владение заказами');
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const [a, b] = workers;
+  const order = warehouse.spawnOrder(); order.mass = 8;
+  a.command('pick', warehouse, { orderId: order.id });
+  a.body.collapsed = true; a.body.energy = 0;
+  a.update(0.1, envs[a.id]);
+  check(a.state.state === 'down' && !a.orderId && order.status === 'pending' && !order.carrier,
+    'обморок по пути освобождает резерв');
+  check(b.command('pick', warehouse, { orderId: order.id }).ok, 'коллега может занять освобождённый заказ');
+  for (const cmd of ['pick', 'wait', 'rest', 'tech', 'meet', 'toilet']) {
+    check(!a.command(cmd, warehouse, { orderId: order.id }).ok && a.state.state === 'down',
+      'команда ' + cmd + ' не поднимает упавшего');
+  }
+  check(a.command('auto', warehouse).ok && a.state.state === 'down', 'автономию можно включить на потом');
+  a.body.collapsed = false; a.body.energy = 0.6; a.state.timers.down = 0.2;
+  a.update(0.1, envs[a.id]);
+  check(a.state.state === 'down' && order.carrier === b.id, 'пауза восстановления не перехватывает чужой заказ');
+  a.update(0.1, envs[a.id]); a.update(0.1, envs[a.id]);
+  check(a.state.state !== 'down' && order.carrier === b.id, 'после восстановления чужой заказ остаётся у владельца');
+}
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const a = workers[0], order = warehouse.spawnOrder(); order.mass = 8;
+  warehouse.claim(order.id, a.id); warehouse.markCarried(order, a.id);
+  a.state.orderId = order.id; a.state.carryingId = order.id; a.state.state = 'toDrop';
+  a.state.onForklift = true; warehouse.state.forklift.rider = a.id;
+  let drops = 0; envs[a.id].onDropped = () => drops++;
+  a.body.collapsed = true; a.body.energy = 0;
+  a.update(0.1, envs[a.id]);
+  check(order.status === 'pending' && order.physics && !order.carrier && !a.orderId && !a.carryingId,
+    'груз падает в физический мир и заказ освобождён');
+  check(!a.state.onForklift && !warehouse.state.forklift.rider && drops === 1 && a.state.stats.dropped === 1,
+    'водитель освобождает погрузчик; падение учитывается один раз');
+  a.update(0.1, envs[a.id]);
+  check(drops === 1 && order.drops === 1, 'пока без сознания, груз не падает повторно');
+  for (let i = 0; i < 300; i++) warehouse.stepPhysics(0.02);
+  check(!order.physics && order.pose.z >= warehouse.supportHeight(order) - 0.01, 'упавший груз действительно приземляется');
+}
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const [a, b] = workers, order = warehouse.spawnOrder(); order.mass = 8;
+  warehouse.claim(order.id, b.id);
+  a.state.mode = 'manual'; a.state.orderId = order.id; a.state.state = 'toPick';
+  a.update(0.1, envs[a.id]);
+  check(order.status === 'claimed' && order.carrier === b.id && !a.orderId, 'устаревший маршрут не перехватывает чужой заказ');
+  a.state.orderId = order.id; a.state.techOrderId = order.id; a.state.state = 'toTech';
+  warehouse.state.forklift.rider = b.id;
+  a.update(0.1, envs[a.id]);
+  check(order.status === 'claimed' && order.carrier === b.id && !a.orderId, 'путь к технике не освобождает чужой заказ');
+  a.state.orderId = order.id; a.state.carryingId = order.id; a.state.state = 'toDrop';
+  a.update(0.1, envs[a.id]);
+  check(order.status === 'claimed' && order.carrier === b.id && !a.carryingId, 'устаревший груз не перемещает чужой заказ');
+}
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const a = workers[0], order = warehouse.spawnOrder();
+  order.mass = 33; order.heavy = false; a.body.fatigue = 0.95; a.state.safety.fear = 1;
+  const res = a.command('pick', warehouse, { orderId: order.id });
+  check(res.ok && res.tech && a.state.state === 'toTech' && order.carrier === a.id,
+    'груз выше личного предела, но ниже общего порога, направляется на погрузчик');
+  a.body.collapsed = true; a.body.energy = 0; a.update(0.1, envs[a.id]);
+  check(!a.state.techOrderId && order.status === 'pending', 'при обмороке по пути к технике заказ освобождается');
+}
+
+
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const a = workers[0], order = warehouse.spawnOrder(); order.mass = 8;
+  warehouse.claim(order.id, a.id); warehouse.markCarried(order, a.id);
+  a.state.orderId = order.id; a.state.carryingId = order.id; a.state.state = 'toDrop'; a.state.mode = 'manual';
+  for (let i = 0; i < 1200 && !a.state.timers.place; i++) a.update(0.05, envs[a.id]);
+  check(a.state.timers.place > 0 && a.carryingId === order.id, 'работник подошёл к ячейке с грузом');
+  a.state.timers.place = 100; a.state.lastDropAt = -100;
+  envs[a.id].rng = { next: () => 0, range: (x, y) => (x + y) / 2, gauss: () => 0 };
+  a.update(0.01, envs[a.id]);
+  check(order.status === 'stored' && order.drops === 0 && !a.carryingId,
+    'после успешной укладки груз не падает в том же тике', {status: order.status, drops: order.drops});
+}
+
+
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const a = workers[0], room = warehouse.layout.toilet;
+  a.state.pos.x = room.x; a.state.pos.y = room.y; a.state.inToilet = true;
+  a.state.state = 'toilet'; warehouse.state.toiletOccupant = a.id;
+  a.body.collapsed = true; a.body.energy = 0; a.update(0.1, envs[a.id]);
+  check(warehouse.state.toiletOccupant === a.id && a.state.state === 'down', 'занятый туалет сохраняет упавшего человека внутри');
+  a.body.collapsed = false; a.body.energy = 0.6; a.state.timers.down = 0;
+  a.update(0.1, envs[a.id]);
+  check(a.state.state === 'fromToilet' && warehouse.state.toiletOccupant === a.id, 'после восстановления работник выходит из туалета');
+  for (let i = 0; i < 500 && warehouse.state.toiletOccupant; i++) a.update(0.1, envs[a.id]);
+  check(!warehouse.state.toiletOccupant && !a.state.inToilet, 'туалет освобождается после выхода');
+}
+
+
+console.log('Приёмка и безопасный подбор после падения');
+{
+  const { warehouse, workers } = makeWorld();
+  const a = warehouse.spawnOrder(), b = warehouse.spawnOrder(), c = warehouse.spawnOrder();
+  const initialIntake = a.intake;
+  warehouse.claim(a.id, workers[0].id);
+  check(!warehouse.spawnOrder(), 'зарезервированная коробка продолжает занимать место на приёмке');
+  warehouse.markCarried(a, workers[0].id);
+  const next = warehouse.spawnOrder();
+  check(next && next.intake === initialIntake && next.intake !== b.intake && next.intake !== c.intake,
+    'место освобождается после подъёма, а не после назначения');
+}
+{
+  const { warehouse, workers } = makeWorld();
+  const order = warehouse.spawnOrder();
+  warehouse.claim(order.id, workers[0].id); warehouse.markCarried(order, workers[0].id);
+  warehouse.store(order, workers[0].id);
+  warehouse.spawnTruck('load');
+  order.intake = 0; // в старых снимках сохранялся номер бывшей площадки
+  const next = warehouse.spawnOrder();
+  check(order.status === 'pending' && order.source === 'rack' && next && next.intake === 0,
+    'заказ на отгрузку со стеллажа не занимает старую площадку приёмки');
+}
+{
+  const { warehouse } = makeWorld();
+  const a = warehouse.spawnOrder(), b = warehouse.spawnOrder(), c = warehouse.spawnOrder();
+  warehouse.drop(a, .1, a.x, a.y, {z:.7});
+  check(!warehouse.spawnOrder(), 'упавшая на площадку коробка не даёт создать груз поверх неё');
+  a.x = -6; a.y = -7; a.pose.x = a.x; a.pose.y = a.y;
+  a.intake = 0; // совместимость со старым снимком после падения
+  const next = warehouse.spawnOrder();
+  check(next && next.intake === 0 && b.intake === 1 && c.intake === 2,
+    'после перемещения упавшей коробки её старая площадка освобождается');
+}
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const w = workers[0], order = warehouse.spawnOrder(); order.mass = 8;
+  warehouse.claim(order.id, w.id); warehouse.markCarried(order, w.id);
+  warehouse.drop(order, .1, -7, -7, { z: 1.5, vx: 3, spin: 2 });
+  w.state.pos.x = -5.9; w.state.pos.y = -7;
+  w.command('pick', warehouse, {orderId: order.id});
+  check(!warehouse.markCarried(order, w.id) && order.status === 'claimed', 'склад не выдаёт движущийся груз напрямую');
+  check(!warehouse.markCarried(order, workers[1].id) && order.carrier === w.id, 'склад не выдаёт груз чужому работнику');
+  w.state.timers.pick = 10;
+  for (let i = 0; i < 10; i++) { warehouse.stepPhysics(.025); w.update(.025, envs[w.id]); }
+  check(order.physics && order.status === 'claimed' && !w.carryingId && w.state.timers.pick === 0,
+    'движущийся груз не подхватывается в воздухе и подъём сбрасывается');
+  let elapsed = 0;
+  while (order.physics && elapsed < 20) { warehouse.stepPhysics(.025); w.update(.025, envs[w.id]); elapsed += .025; }
+  check(!order.physics && !w.carryingId, 'ожидание заканчивается только после физической остановки', {elapsed});
+  for (let i = 0; i < 1500 && !w.carryingId; i++) { warehouse.stepPhysics(.025); w.update(.025, envs[w.id]); }
+  check(w.carryingId === order.id && order.status === 'carried', 'после остановки работник подходит к новому положению и поднимает груз', {state:w.state.state, x:w.pos.x, y:w.pos.y, orderX:order.x, orderY:order.y});
+}
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const w = workers[0], order = warehouse.spawnOrder(); order.mass = 8;
+  w.command('pick', warehouse, {orderId: order.id});
+  for (let i = 0; i < 500 && !w.state.timers.pick; i++) w.update(.02, envs[w.id]);
+  check(w.state.timers.pick > 0 && !w.carryingId, 'подъём начинается только после подхода');
+  order.physics = true; w.update(.02, envs[w.id]);
+  check(w.state.timers.pick === 0 && !w.carryingId, 'новый толчок прерывает начавшийся подъём');
+  order.physics = false; order.x += 3;
+  w.update(.02, envs[w.id]);
+  check(w.state.timers.pick === 0 && !w.carryingId, 'к сместившейся коробке нужно подойти заново');
+  order.status = 'pending'; order.carrier = null;
+  check(w.command('store', warehouse).ok, 'можно продолжить свой освобождённый после падения заказ');
+  w.update(.02, envs[w.id]);
+  check(order.status === 'claimed' && order.carrier === w.id, 'продолжение заново резервирует свободный груз');
+}
+{
+  const { warehouse, workers } = makeWorld();
+  const [a, b] = workers, order = warehouse.spawnOrder(); order.mass = 8;
+  warehouse.claim(order.id, b.id);
+  a.state.orderId = order.id; a.state.carryingId = order.id; a.state.state = 'toDrop';
+  a.command('wait', warehouse);
+  check(order.status === 'claimed' && order.carrier === b.id && order.drops === 0,
+    'приказ ждать не роняет заказ, принадлежащий коллеге');
+  a.state.orderId = 'missing'; a.state.carryingId = 'missing';
+  let res; try { res = a.command('store', warehouse); } catch (e) { res = {error: e.message}; }
+  check(res && !res.ok && !res.error, 'приказ не ломает игру при отсутствующем заказе', res);
+}
+
 console.log('');
 if (failures) {
   console.log(`✗ Провалов: ${failures} из ${checks}`);

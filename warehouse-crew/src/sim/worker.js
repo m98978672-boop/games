@@ -570,7 +570,7 @@
 
     function releaseOrder(warehouse) {
       var order = activeOrder(warehouse);
-      if (order && order.status === 'claimed') {
+      if (order && order.status === 'claimed' && order.carrier === w.id) {
         order.status = 'pending';
         order.carrier = null;
       }
@@ -583,7 +583,7 @@
       if (order) {
         order.refusedBy = order.refusedBy || {};
         order.refusedBy[w.id] = warehouse.state.time;
-        if (order.status === 'claimed' || order.status === 'carried') {
+        if ((order.status === 'claimed' || order.status === 'carried') && order.carrier === w.id) {
           order.status = 'pending';
           order.carrier = null;
         }
@@ -803,6 +803,30 @@
       return true;
     }
 
+    // Обморок не резервирует заказ или погрузчик за неподвижным человеком.
+    // Носимый груз падает в Cannon ровно один раз. Проверка владельца также
+    // защищает от старого снимка с устаревшей ссылкой на чужой заказ.
+    function releaseIncapacitated(warehouse, env) {
+      var carried = null;
+      if (w.carryingId) {
+        for (var i = 0; i < warehouse.state.orders.length; i++) {
+          if (warehouse.state.orders[i].id === w.carryingId) { carried = warehouse.state.orders[i]; break; }
+        }
+      }
+      if (carried && carried.status === 'carried' && carried.carrier === w.id) {
+        var outcome = warehouse.drop(carried, 0.35, w.pos.x, w.pos.y);
+        w.stats.dropped += 1;
+        if (env && env.onDropped) env.onDropped(w, carried, outcome);
+      }
+      w.carryingId = null;
+      releaseOrder(warehouse);
+      w.techOrderId = null;
+      dismountTech();
+      w.resting = false;
+      w.privacy = false;
+      w.speedNow = 0;
+    }
+
     function die(warehouse, cause) {
       if (w.dead) return;
       if (warehouse && warehouse.endRagdoll) warehouse.endRagdoll(w);
@@ -812,7 +836,7 @@
       body.vitality = 0;
       if (warehouse && w.carryingId) {
         for (var i = 0; i < warehouse.state.orders.length; i++) {
-          if (warehouse.state.orders[i].id !== w.carryingId) continue;
+          if (warehouse.state.orders[i].id !== w.carryingId || warehouse.state.orders[i].status !== 'carried' || warehouse.state.orders[i].carrier !== w.id) continue;
           warehouse.drop(warehouse.state.orders[i], 0.5, w.pos.x, w.pos.y, { vz: 0.3, spin: 2 });
         }
       }
@@ -839,7 +863,7 @@
 
     // Текущие нужды: туалет, улица, техника. Работа важнее, но не навсегда.
     function updateNeeds(dt, warehouse, env, order, rng) {
-      if (w.dead) return;
+      if (w.dead || w.state === 'down' || body.collapsed) return;
       w.playCooldown = Math.max(0, (w.playCooldown || 0) - dt);
       w.streetClock = (w.streetClock || 0) + dt;
       var busy = w.carryingId || order;
@@ -872,6 +896,7 @@
       opts2 = opts2 || {};
       if (warehouse) lastWarehouse = warehouse;
       if (w.dead) return { ok: false, reason: 'Рабочий погиб' };
+      if ((body.collapsed || w.state === 'down') && cmd !== 'auto') return { ok: false, reason: 'Рабочий восстанавливается после обморока' };
       if ((w.state === 'toToilet' || w.state === 'toilet' || w.state === 'fromToilet') && cmd !== 'auto') return { ok: false, reason: 'Рабочий занят посещением туалета' };
       switch (cmd) {
         case 'auto':
@@ -908,7 +933,7 @@
           var liftCheck = checkLift(order);
           if (!liftCheck.ok) {
             // Тяжёлый груз: не отказ, а «иду за техникой»
-            if (!w.onForklift && warehouse.heavyOf && warehouse.heavyOf(order) && order.mass <= 80 && forkliftFree()) {
+            if (!w.onForklift && order.mass <= 80 && forkliftFree()) {
               var heavyClaim = warehouse.claim(order.id, w.id);
               if (heavyClaim) {
                 w.orderId = order.id;
@@ -930,16 +955,20 @@
           return { ok: true, state: w.state, orderId: order.id };
         }
         case 'store': {
-          w.mode = opts2.keepAuto ? w.mode : 'manual';
           if (!w.orderId) return { ok: false, reason: 'Нет заказа в работе' };
+          var ord = activeOrder(warehouse);
+          if (!ord || (w.carryingId && (ord.id !== w.carryingId || ord.status !== 'carried' || ord.carrier !== w.id)) ||
+              (!w.carryingId && ord.status !== 'pending' && (ord.status !== 'claimed' || ord.carrier !== w.id))) {
+            return { ok: false, reason: 'Заказ больше недоступен' };
+          }
+          w.mode = opts2.keepAuto ? w.mode : 'manual';
           if (w.carryingId) {
-            var ord = activeOrder(warehouse);
             setState('toDrop');
             setGoal(targetPoint(warehouse, ord), 'drop:' + ord.id);
             return { ok: true, state: w.state };
           }
           setState('toPick');
-          setGoal(targetPoint(warehouse, activeOrder(warehouse)), 'pick:' + w.orderId);
+          setGoal(targetPoint(warehouse, ord), 'pick:' + w.orderId);
           emit('Сначала поднять коробку', 'warn');
           return { ok: true, state: w.state };
         }
@@ -951,7 +980,7 @@
             for (var k = 0; k < warehouse.state.orders.length; k++) {
               if (warehouse.state.orders[k].id === w.carryingId) carried = warehouse.state.orders[k];
             }
-            if (carried) warehouse.drop(carried, 0.08, w.pos.x, w.pos.y);
+            if (carried && carried.status === 'carried' && carried.carrier === w.id) warehouse.drop(carried, 0.08, w.pos.x, w.pos.y);
             w.carryingId = null;
           }
           w.resting = false;
@@ -1027,6 +1056,8 @@
       w.rngRef = function () { return rng; };
       lastEnv = env;
       lastWarehouse = warehouse;
+      // Старые снимки могли сохранить заказ или водителя за упавшим рабочим.
+      if (w.state === 'down') releaseIncapacitated(warehouse, env);
       w.elapsed += dt;
 
       // 1. Мозг тикает 2 раза в секунду и не мгновенно (инерция решения)
@@ -1043,6 +1074,14 @@
         w.orderId = null;
         w.carryingId = null;
         setGoal(null);
+      }
+      if (w.carryingId && (!order || order.id !== w.carryingId || order.status !== 'carried' || order.carrier !== w.id)) {
+        w.carryingId = null;
+        w.orderId = null;
+        w.techOrderId = null;
+        setGoal(null);
+        if (w.state === 'toDrop') setState('idle');
+        order = null;
       }
       var carrying = Boolean(w.carryingId);
       if (carrying && order && order.pose) {
@@ -1092,10 +1131,7 @@
         setState('down');
         if (warehouse.beginRagdoll) warehouse.beginRagdoll(w);
         w.timers.down = 9;
-        if (w.carryingId && order) {
-          warehouse.drop(order, 0.35, w.pos.x, w.pos.y);
-          w.carryingId = null;
-        }
+        releaseIncapacitated(warehouse, env);
         emit('Упал без сил', 'bad');
         if (rng.next() < 0.3) {
           var hit = model.addInjury(body, {
@@ -1122,7 +1158,7 @@
 
       // 4. Автономия: решения о задачах
       if (w.mode === 'auto' && !body.collapsed) {
-        var NEED_STATES = { toRest: 1, rest: 1, toToilet: 1, toilet: 1, fromToilet: 1, toStreet: 1, street: 1, toTech: 1, play: 1, toMeet: 1, meet: 1 };
+        var NEED_STATES = { down: 1, toRest: 1, rest: 1, toToilet: 1, toilet: 1, fromToilet: 1, toStreet: 1, street: 1, toTech: 1, play: 1, toMeet: 1, meet: 1 };
         if (!w.orderId && !NEED_STATES[w.state]) {
           var wantsRest = body.energy < 0.24 || body.fatigue > 0.83 ||
             (model.injuryLevel(body) > 0.55 && body.energy < 0.48) ||
@@ -1255,9 +1291,17 @@
           break;
         }
         case 'toTech': {
+          var techOrder = w.techOrderId ? activeOrder(warehouse) : null;
+          if (w.techOrderId && (!techOrder || techOrder.id !== w.techOrderId || techOrder.status !== 'claimed' || techOrder.carrier !== w.id)) {
+            w.orderId = null;
+            w.techOrderId = null;
+            setState('idle');
+            setGoal(null);
+            break;
+          }
           if (!forkliftFree()) {
             var stuck = w.techOrderId ? activeOrder(warehouse) : null;
-            if (stuck && stuck.status === 'claimed') {
+            if (stuck && stuck.status === 'claimed' && stuck.carrier === w.id) {
               stuck.status = 'pending';
               stuck.carrier = null;
             }
@@ -1362,14 +1406,28 @@
         }
         case 'toPick': {
           order = activeOrder(warehouse);
-          if (!order) { setState('idle'); w.orderId = null; break; }
-          if (order.status !== 'claimed' && order.status !== 'pending') { w.orderId = null; setState('idle'); break; }
-          if (order.status === 'pending') warehouse.claim(order.id, w.id);
+          if (!order || (order.status === 'pending' && !warehouse.claim(order.id, w.id)) ||
+              order.status !== 'claimed' || order.carrier !== w.id) {
+            w.orderId = null;
+            w.techOrderId = null;
+            setState('idle');
+            setGoal(null);
+            break;
+          }
+          // Не ловим падающий или скользящий груз. Резерв остаётся за
+          // работником; после остановки цель строится по новой позиции.
+          if (order.physics) {
+            w.timers.pick = 0;
+            w.timers.reach = 0;
+            w.speedNow = 0;
+            setGoal(null);
+            break;
+          }
           // Тяжёлое не берём: правило техники безопасности, а не «сила есть — тяни»
           var lift = checkLift(order);
           if (!lift.ok) {
             // Тяжёлый груз не бросаем: идём за техникой, если она свободна
-            if (!w.onForklift && warehouse.heavyOf && warehouse.heavyOf(order) && order.mass <= 80 && forkliftFree()) {
+            if (!w.onForklift && order.mass <= 80 && forkliftFree()) {
               goToTech(warehouse, order);
               break;
             }
@@ -1394,8 +1452,8 @@
             var need = model.pickTime(body, w.decision) * (1 + Math.max(0, order.mass - 22) / 60);
             if (w.timers.pick >= need) {
               w.timers.pick = 0;
+              if (!warehouse.markCarried(order, w.id)) break;
               w.carryingId = order.id;
-              warehouse.markCarried(order, w.id);
               w.stats.picked += 1;
               if (order.mass > model.safeLift(body)) {
                 emit('Поднял ' + Math.round(order.mass) + ' кг — выше безопасного предела', 'warn');
@@ -1405,6 +1463,7 @@
               emit('Коробка ' + order.code + ' в руках', 'info');
             }
           } else if (d < 0.45 && gap > ARM_REACH) {
+            w.timers.pick = 0;
             // Стоим рядом, но не дотягиваемся — отказываемся, а не тянемся «резиновой рукой»
             w.timers.reach = (w.timers.reach || 0) + dt;
             if (w.timers.reach > 2.5) {
@@ -1414,6 +1473,7 @@
               if (env.onRefused) env.onRefused(w, order, why);
             }
           } else {
+            w.timers.pick = 0;
             w.timers.reach = 0;
           }
           break;
@@ -1476,7 +1536,8 @@
           }
           // Риск уронить коробку
           var risk = model.dropRisk(body, w.decision, w.onForklift ? 0 : order.mass) * dt;
-          if (rng.next() < risk && warehouse.state.time - w.lastDropAt > 1.2) {
+          if (w.carryingId === order.id && order.status === 'carried' && order.carrier === w.id &&
+              rng.next() < risk && warehouse.state.time - w.lastDropAt > 1.2) {
             w.lastDropAt = warehouse.state.time;
             var dmg = 0.28 + 0.5 * rng.next() + 0.12 * Math.min(1, order.mass / 30);
             var outcome = warehouse.drop(order, dmg, w.pos.x, w.pos.y, { vx: Math.cos(w.heading) * w.speedNow * 0.4, vy: Math.sin(w.heading) * w.speedNow * 0.4, vz: 0.3, z: 0.7 });

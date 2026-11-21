@@ -349,6 +349,13 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       result.bloodRendered = game.sim.state.bloodDrops.length > 0;
 
       const victim = game.api.crew[0];
+      const partner = game.api.crew[1];
+      Object.assign(game.api.pair, { phase: 'meet', privacy: true, a: victim.id, b: partner.id, until: 15 });
+      victim.state.state = 'down'; victim.state.privacy = true; victim.body.collapsed = true;
+      partner.state.state = 'meet'; partner.state.privacy = true;
+      game.update(1 / 30);
+      result.pairCollapse = game.api.pair.phase === 'idle' && !game.api.pair.privacy && !partner.state.privacy;
+      victim.state.state = 'idle'; victim.body.collapsed = false;
       victim.state.pos.x = -5.6; victim.state.pos.y = 0;
       victim.state.inToilet = false; victim.state.privacy = false;
       victim.body.energy = 0; victim.body.collapsed = true;
@@ -381,6 +388,79 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       game.restart();
       window.WC.world.render(1 / 30, game);
       result.restartWorks = game.api.crew.length === 3 && game.api.staff.length === 0;
+      // Отчёт — снимок без вмешательства в смену, включая наём и пустые данные.
+      game.sim.state.stats.score = 1000;
+      game.hireWorker(); game.buyStaff('medic');
+      game.sim.state.stats.delivered = 4; game.sim.state.stats.loaded = 2; game.sim.state.stats.dropped = 3;
+      game.api.crew[0].body.energy = .41;
+      game.setPaused(false);
+      const reportBefore = JSON.stringify(game.captureCheckpoint());
+      doc.getElementById('btn-report').click();
+      let report = doc.querySelector('.shift-report');
+      result.reportDisplay = report && report.querySelector('#report-title').textContent === 'Отчёт смены' &&
+        report.textContent.includes('На стеллаж') && report.textContent.includes('Падения3') &&
+        report.textContent.includes('Баланс') === false && report.querySelectorAll('.report-person').length === 5 &&
+        report.textContent.includes('Полина Верес') && !game.state.paused && JSON.stringify(game.captureCheckpoint()) === reportBefore;
+      game.sim.state.stats.score = 501;
+      const reportRefresh = [...report.querySelectorAll('.report-actions button')].find(b => b.textContent === 'Обновить');
+      result.reportRefresh = report.textContent.includes('800') && !!reportRefresh;
+      reportRefresh.click(); report = doc.querySelector('.shift-report');
+      result.reportRefresh = result.reportRefresh && report.textContent.includes('501') && !game.state.paused;
+      const inspectButton = report.querySelector('.report-inspect'); inspectButton.click();
+      result.reportInspect = window.WC.ui.state.inspectorOpen && window.WC.ui.state.inspectorWorkerId === game.api.crew[0].id;
+      window.WC.ui.closeModal();
+      const oldClick = window.HTMLAnchorElement.prototype.click;
+      window.HTMLAnchorElement.prototype.click = function () {};
+      window.URL.revokeObjectURL = () => {};
+      const exported = window.WC.save.download(game);
+      window.HTMLAnchorElement.prototype.click = oldClick;
+      result.reportExport = exported.summary.score === 501 && exported.summary.dropped === 3 && exported.summary.crew.length === 4 && !('checkpoint' in exported);
+      game.endShift(); report = doc.querySelector('.shift-report');
+      result.reportEnd = game.state.paused && report && report.querySelector('#report-title').textContent === 'Смена закрыта' &&
+        [...report.querySelectorAll('.report-actions button')].some(b => b.textContent === 'Новая смена');
+      window.WC.ui.closeModal(); doc.getElementById('btn-report').click();
+      result.reportEnd = result.reportEnd && doc.getElementById('report-title').textContent === 'Смена закрыта';
+      window.WC.ui.closeModal(); game.restart();
+      const reportLauncher = doc.getElementById('btn-report'); reportLauncher.focus(); reportLauncher.click(); report = doc.querySelector('.shift-report');
+      result.reportEmpty = report.textContent.includes('Персонал не нанят') && report.textContent.includes('100 %');
+      const firstReportButton = report.querySelector('.insp-head button');
+      result.reportFocus = doc.activeElement === firstReportButton;
+      const tab = new window.KeyboardEvent('keydown', {key:'Tab', shiftKey:true, bubbles:true, cancelable:true});
+      firstReportButton.dispatchEvent(tab);
+      result.reportFocus = result.reportFocus && tab.defaultPrevented && doc.activeElement === report.querySelector('.report-actions button:last-child');
+      const pausedBeforeSpace = game.state.paused;
+      const space = new window.KeyboardEvent('keydown', {key:' ', code:'Space', bubbles:true, cancelable:true});
+      doc.activeElement.dispatchEvent(space);
+      result.reportFocus = result.reportFocus && !space.defaultPrevented && game.state.paused === pausedBeforeSpace;
+      window.WC.ui.closeModal(); result.reportFocus = result.reportFocus && doc.activeElement === reportLauncher;
+      window.WC.save.protect(); reportLauncher.click();
+      result.reportEmpty = result.reportEmpty && doc.querySelector('.report-warning').textContent.includes('не записывается');
+      window.WC.ui.closeModal(); game.restart();
+      // Один и тот же журнал доступен в пульте и на телефоне; фильтрация
+      // не меняет сохранение, новые события не сбивают выбранный фильтр.
+      game.setPaused(true);
+      const synthetic = Array.from({length: 25}, (_, i) => ({t:i, text:i===24 ? '<b>Последнее</b>' : 'Событие ' + i, tone:i%3===0 ? 'bad' : i%3===1 ? 'warn' : 'good'}));
+      game.api.log.splice(0, game.api.log.length, ...synthetic);
+      const journalBefore = JSON.stringify(game.captureCheckpoint());
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      const jf = name => doc.querySelector('[data-journal-filter="' + name + '"]');
+      const journalRows = () => [...doc.querySelectorAll('#journal-list .journal-entry')];
+      result.journalDisplay = journalRows().length === 12 && journalRows()[0].textContent.includes('<b>Последнее</b>') && journalRows()[0].querySelectorAll('b').length === 1 &&
+        doc.getElementById('journal-count').textContent === '25' && doc.getElementById('journal-showing').textContent.includes('12 из 25');
+      const moreJournal = doc.getElementById('journal-more');
+      moreJournal.click(); result.journalDisplay = result.journalDisplay && journalRows().length === 24;
+      moreJournal.focus(); moreJournal.click();
+      result.journalDisplay = result.journalDisplay && journalRows().length === 25 && moreJournal.hidden && doc.activeElement === jf('all');
+      jf('warning').click();
+      result.journalFilters = jf('warning').getAttribute('aria-pressed') === 'true' && journalRows().length === 12 && journalRows().every(r => r.classList.contains('bad') || r.classList.contains('warn'));
+      game.api.log.push({t:26, text:'Новая проблема', tone:'bad'});
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+      result.journalFilters = result.journalFilters && journalRows()[0].textContent.includes('Новая проблема') && jf('warning').getAttribute('aria-pressed') === 'true';
+      game.api.log.pop(); jf('good').click();
+      result.journalFilters = result.journalFilters && journalRows().length === 8 && journalRows().every(r => r.classList.contains('good')) && JSON.stringify(game.captureCheckpoint()) === journalBefore;
+      game.api.log.splice(0, game.api.log.length, {t:0, text:'Только успех', tone:'good'});
+      jf('warning').click(); result.journalFilters = result.journalFilters && !doc.getElementById('journal-empty').hidden && journalRows().length === 0;
+      game.restart(); result.journalRestart = jf('all').getAttribute('aria-pressed') === 'true' && doc.getElementById('journal-count').textContent === '1';
       // Сводка не изменяет симуляцию, остаётся стабильной и ведёт к нужному рабочему.
       const crew = game.api.crew;
       crew[0].body.energy = .18;
@@ -421,6 +501,12 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       rows[0].querySelector('.o-take').click();
       window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
       result.queueAssigned = qSoon.status === 'claimed' && qSoon.carrier === game.api.crew[0].id && rows[0].querySelector('.o-take').disabled && rows[1].querySelector('.o-take').disabled;
+      qSoon.physics = true;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      result.movingCargoStatus = rows[0].querySelector('.o-who').textContent.includes('ждёт остановки') && rows[0].querySelector('.o-abc').textContent.includes('движется');
+      qSoon.physics = false;
+      window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
+      result.movingCargoStatus = result.movingCargoStatus && rows[0].querySelector('.o-who').textContent.includes('в работе') && !rows[0].querySelector('.o-abc').textContent.includes('движется');
       const filter = name => doc.querySelector('[data-order-filter="' + name + '"]');
       const visibleCodes = () => [...doc.querySelectorAll('#order-list .o-code')].map(e => e.textContent);
       const savedBeforeFilter = JSON.stringify(game.captureCheckpoint());
@@ -531,7 +617,10 @@ for (const mode of modes) {
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
   check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
   check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});
+  check(r.reportDisplay && r.reportRefresh && r.reportInspect && r.reportExport && r.reportEnd && r.reportEmpty && r.reportFocus, 'отчёт смены: снимок, обновление, инспектор, экспорт и итоги', {display:r.reportDisplay, refresh:r.reportRefresh, inspect:r.reportInspect, export:r.reportExport, end:r.reportEnd, empty:r.reportEmpty, focus:r.reportFocus, error:r.featureError});
+  check(r.journalDisplay && r.journalFilters && r.journalRestart, 'журнал в пульте: фильтры, история, фокус, новая смена', {display:r.journalDisplay, filters:r.journalFilters, restart:r.journalRestart, error:r.featureError});
   check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
+  check(r.movingCargoStatus, 'очередь показывает движение груза и ожидание остановки', {error:r.featureError});
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
@@ -565,6 +654,7 @@ for (const mode of modes) {
   check(r.boxStray === 0, 'коробку не уносит за рабочим после переноски', { stray: r.boxStray });
   check(r.extraCrew && r.extraTabs && r.extraControllable && r.maxCrew && r.extraReplaced && r.hireCommand && r.hireActuallyWorks, 'найм до восьми, управление и замена дополнительных рабочих', { extraCrew: r.extraCrew, tabs: r.extraTabs, controllable: r.extraControllable, max: r.maxCrew, replaced: r.extraReplaced, command: r.hireCommand, works: r.hireActuallyWorks, error: r.featureError });
   check(r.ragdollWorks, 'обморок отображается физическим ragdoll', { ragdoll: r.ragdollWorks, error: r.featureError });
+  check(r.pairCollapse, 'при обмороке совместное уединение завершается', { error: r.featureError });
   check(r.staffNavigation && r.bloodRendered && r.caughtWorks, 'персонал обходит препятствия, частицы крови рисуются', { navigation: r.staffNavigation, blood: r.bloodRendered, error: r.featureError });
   check(!r.featureError && r.mapWorks && r.staffBought && r.medicWorks && r.staffRenders && r.deathWorks && r.hireWorks && r.restartWorks, '2D, магазин, медик, смерть и пополнение работают в игре', { error: r.featureError, map: r.mapWorks, staff: r.staffBought, medic: r.medicWorks, death: r.deathWorks, hire: r.hireWorks, restart: r.restartWorks });
     // У запасного (синтетического) мозга качество случайное — требуем доставку

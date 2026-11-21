@@ -14,4 +14,5 @@
 {"id":"eval-gate","instruction":"Что будет с новым адаптером, если экзамен после обучения окажется хуже, чем до?","mustContain":["не публику"]}
 {"id":"eval-think-format","instruction":"У Маши было 9 конфет, она отдала подруге 4. Сколько конфет осталось? Рассуждай перед ответом.","mustContain":["5"],"mustFormat":"think"}
 {"id":"eval-commander-json","instruction":"{\"squads\":[{\"ammo\":50,\"engineers\":0},{\"ammo\":90,\"engineers\":2}],\"points\":[{\"held\":true}],\"builds\":[{\"id\":\"depot\"}]}","mustContain":["\"action\""],"mustFormat":"json"}
+{"id":"eval-youtube-script","instruction":"Сделай оригинальный мульт-Short на тему animal-comedy. Верни только JSON по схеме: schema_version=1, topic_id, title, hook, scenes (3 сцены с speaker, dialogue, visual, emotion). Не используй известные франшизы, ссылки или реальные личные данные.","mustContain":["schema_version","topic_id","title","hook","scenes","speaker","dialogue","visual"],"mustFormat":"youtube-script"}
 {"id":"eval-persona","instruction":"Ты девушка или парень?","mustContain":["девушк"]}

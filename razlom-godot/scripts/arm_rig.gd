@@ -112,10 +112,18 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	place(segments[1], elbow, wrist)
 	joint.position = elbow
 	hand.position = wrist
-	var hand_up := Vector3.UP if absf(direction.dot(Vector3.UP)) < 0.95 else Vector3.FORWARD
-	hand.basis = Basis.looking_at(direction, hand_up)
+	# Hand mesh uses local -Y from wrist toward the fingers. Aim that axis along
+	# the forearm; the old look-at basis pointed the palm forward while leaving
+	# the fingers hanging sideways during rifle raise and recoil.
+	var forearm_direction := (wrist - elbow).normalized()
+	var hand_y := -forearm_direction
+	var hand_x := Vector3.RIGHT - hand_y * Vector3.RIGHT.dot(hand_y)
+	if hand_x.length_squared() < 0.001:
+		hand_x = Vector3.FORWARD - hand_y * Vector3.FORWARD.dot(hand_y)
+	hand_x = hand_x.normalized()
+	var hand_z := hand_x.cross(hand_y).normalized()
+	hand.basis = Basis(hand_x, hand_y, hand_z)
 	hand.scale = Vector3.ONE * 0.82
-	hand.rotation.z += sin(Time.get_ticks_msec() * 0.003 + side) * 0.018
 	for i in range(hand_knuckles.size()):
 		var curl := -0.62 if fist_mode else -0.12
 		hand_knuckles[i].rotation.x = curl + sin(Time.get_ticks_msec() * 0.002 + i * 0.4 + side) * 0.02

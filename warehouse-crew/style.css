@@ -600,6 +600,16 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
 .safety-actions button { border: 1px solid var(--line-strong); border-radius: 7px; background: var(--panel-2); color: var(--ink); padding: 5px 9px; min-height: 32px; font-size: calc(10px * var(--ui)); cursor: pointer; }
 .safety-actions button:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 
+/* Журнал доступен и в мобильном пульте; тип события указан не только цветом. */
+.journal-list { display: grid; gap: 4px; max-height: calc(240px * var(--ui)); overflow-y: auto; overscroll-behavior: contain; }
+.journal-list:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.journal-entry { display: flex; align-items: baseline; gap: 8px; padding: 6px 7px; border-radius: 7px; background: rgba(255,255,255,.035); color: var(--ink); font-size: calc(10px * var(--ui)); line-height: 1.45; overflow-wrap: anywhere; }
+.journal-entry time { flex: none; color: var(--ink-faint); font-family: var(--mono); }
+.journal-tone { color: var(--ink-dim); }
+.journal-entry.bad .journal-tone { color: var(--red); }
+.journal-entry.warn .journal-tone { color: var(--accent-2); }
+.journal-entry.good .journal-tone { color: var(--green); }
+
 /* очередь заказов */
 .queue-count {
   font-family: var(--mono);
@@ -750,6 +760,22 @@ body[data-sheet="hidden"] .sheet-handle { animation: handleNudge 3.6s var(--ease
   from { opacity: 0; transform: translateY(16px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* Снимок смены: прокручивается отдельно от заголовка и кнопок. */
+.shift-report { width: min(720px, calc(100vw - 32px)); }
+.report-content { min-height: 0; flex: 1 1 auto; overflow-y: auto; padding: calc(14px * var(--ui)) calc(16px * var(--ui)); }
+.report-content:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -3px; }
+.report-note { color: var(--ink-dim); font-size: calc(10px * var(--ui)); line-height: 1.5; margin: 0 0 10px; }
+.report-warning { color: var(--accent-2); }
+.report-content .vitals-grid { margin-bottom: 12px; }
+.report-heading { color: var(--accent-2); font-size: calc(11px * var(--ui)); margin: 14px 0 8px; }
+.report-people { display: grid; gap: 6px; }
+.report-person { padding: 8px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink-dim); font-size: calc(10px * var(--ui)); line-height: 1.6; overflow-wrap: anywhere; }
+.report-person-head { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.report-person-head b { color: var(--ink); }
+.report-inspect { margin-top: 6px; }
+.report-actions { flex-shrink: 0; padding-top: 10px; border-top: 1px solid var(--line); }
+@media (max-width: 900px), (pointer: coarse) { .report-actions .btn, .report-inspect { min-height: 40px; } }
+
 .insp-head {
   display: flex; align-items: center; gap: 10px;
   padding: calc(12px * var(--ui)) calc(16px * var(--ui));

@@ -351,14 +351,14 @@ def real_meows():
     """Раскладывает настоящие мяу по именам библиотеки (+ питч-варианты)."""
     if not os.path.exists(REAL_SRC):
         return False
-    _ff("-i", REAL_SRC, "-ac", "1", "-ar", str(SR), os.path.join(OUT, "meow.wav"))
-    _ff("-i", REAL_SRC, "-af", "asetrate=44100*1.10,aresample=44100,atempo=1/1.10,highpass=f=60",
+    _ff("-i", REAL_SRC, "-af", "volume=0.62", "-ac", "1", "-ar", str(SR), os.path.join(OUT, "meow.wav"))
+    _ff("-i", REAL_SRC, "-af", "asetrate=44100*1.10,aresample=44100,atempo=1/1.10,highpass=f=60,volume=0.62",
         "-ac", "1", os.path.join(OUT, "meow_q.wav"))
-    _ff("-i", REAL_SRC, "-af", "asetrate=44100*1.28,aresample=44100,atempo=1/1.28,highpass=f=60",
+    _ff("-i", REAL_SRC, "-af", "asetrate=44100*1.28,aresample=44100,atempo=1/1.28,highpass=f=60,volume=0.62",
         "-ac", "1", os.path.join(OUT, "mew.wav"))
-    _ff("-i", REAL_SRC, "-af", "asetrate=44100*1.05,aresample=44100,atempo=1/1.05,highpass=f=60",
+    _ff("-i", REAL_SRC, "-af", "asetrate=44100*1.05,aresample=44100,atempo=1/1.05,highpass=f=60,volume=0.62",
         "-ac", "1", os.path.join(OUT, "meow_happy.wav"))
-    _ff("-i", REAL_SRC2, "-ac", "1", "-ar", str(SR), os.path.join(OUT, "meow_long.wav"))
+    _ff("-i", REAL_SRC2, "-af", "volume=0.62", "-ac", "1", "-ar", str(SR), os.path.join(OUT, "meow_long.wav"))
     for n in ("meow", "meow_q", "mew", "meow_happy", "meow_long"):
         print("sfx %-14s (real recording)" % n)
     return True

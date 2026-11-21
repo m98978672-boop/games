@@ -20,6 +20,21 @@ export function formatOk(output, format) {
       return LEGAL_ACTIONS.has(parsed.action);
     } catch { return false; }
   }
+  if (format === 'youtube-script') {
+    try {
+      const clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+      const start = clean.indexOf('{');
+      const end = clean.lastIndexOf('}');
+      if (start < 0 || end <= start) return false;
+      const parsed = JSON.parse(clean.slice(start, end + 1));
+      return parsed.schema_version === 1 && typeof parsed.topic_id === 'string'
+        && typeof parsed.title === 'string' && typeof parsed.hook === 'string'
+        && Array.isArray(parsed.scenes) && parsed.scenes.length >= 3 && parsed.scenes.length <= 6
+        && parsed.scenes.every((scene) => typeof scene.speaker === 'string'
+          && typeof scene.dialogue === 'string' && typeof scene.visual === 'string'
+          && ['happy', 'curious', 'surprised', 'calm'].includes(scene.emotion));
+    } catch { return false; }
+  }
   return true;
 }
 

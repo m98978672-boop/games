@@ -63,6 +63,9 @@ var sensitivity_step := 1
 var low_quality := false
 var ambience: WorldEnvironment
 var world_state_applied := ""
+var web_art_review := ""
+var web_art_review_ready := false
+var web_art_review_fired := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -95,6 +98,86 @@ func _ready() -> void:
 		toggle_quality()
 	var briefing := "ТЁПЛАЯ СТЕНА / ГЛАВА 01\n\nВозьми винтовку на полке у задней стены. Найди насос на складе и вернись к Вере. Павел подскажет мирный проход.\n\nЛевый круг — идти; справа — смотреть. Кнопка ВЗЯТЬ — действие." if mobile_mode else "ТЁПЛАЯ СТЕНА / ГЛАВА 01\n\nВера: «На станции остался насосный блок. Сыну Рады осталось воды на одну ночь. И кому-то было приказано не пускать нас на склад».\n\n1. Возьми винтовку на полке у задней стены убежища.\n2. Выйди из убежища и следуй направлению слева сверху.\n3. Найди насос на складе и верни его сюда.\n\nПоговори со связным Павлом о проходе без боя. Охрану можно обойти.\nУправление: WASD — идти, мышь — смотреть, E — взять, ПКМ — прицел вкл/выкл, Esc — пауза."
 	show_menu("РАЗЛОМ", briefing)
+	if OS.has_feature("web"):
+		var bridge = Engine.get_singleton("JavaScriptBridge")
+		var review_mode := str(bridge.eval("new URLSearchParams(window.location.search).get('artReview') || ''"))
+		if not review_mode.is_empty():
+			call_deferred("start_web_art_review", review_mode)
+
+func start_web_art_review(mode: String) -> void:
+	var allowed := ["vera-idle", "vera-greet", "vera-treat", "pavel-walk", "guard-aim", "guard-fire", "shelter-window", "service-window"]
+	web_report_time = 0.0
+	if not allowed.has(mode):
+		return
+	web_art_review = mode
+	started = true
+	ended = false
+	get_tree().paused = false
+	modal.hide()
+	interactions.panel.hide()
+	hud.hide()
+	player.set_physics_process(false)
+	player.gun.hide()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	for enemy in enemies:
+		enemy.set_physics_process(false)
+		enemy.visual.hide()
+	dog.visual.hide()
+	var vera := world.get_node("Vera") as Node3D
+	var pavel := world.get_node("Pavel") as Node3D
+	for label in vera.find_children("*", "Label3D", true, false):
+		label.hide()
+	for label in pavel.find_children("*", "Label3D", true, false):
+		label.hide()
+	if mode.begins_with("vera-"):
+		pavel.hide()
+		player.position = Vector3(-25.5, 0.3, 20.5)
+		player.rotation = Vector3.ZERO
+		player.camera.global_position = Vector3(-25.5, 1.9, 20.5)
+		player.camera.look_at(vera.global_position + Vector3(0, 1.16, 0), Vector3.UP)
+		player.camera.fov = 54.0
+		if mode == "vera-greet":
+			interactions.medic_motion.greet()
+		elif mode == "vera-treat":
+			interactions.medic_motion.greet("treat")
+	elif mode == "pavel-walk":
+		vera.hide()
+		player.position = Vector3(-14.0, 0.3, 12.0)
+		player.rotation = Vector3.ZERO
+		player.camera.global_position = Vector3(-14.0, 1.9, 12.0)
+		player.camera.look_at(pavel.global_position + Vector3(0, 1.05, 0), Vector3.UP)
+		player.camera.fov = 54.0
+	elif mode == "shelter-window":
+		vera.hide()
+		pavel.hide()
+		player.position = Vector3(-20.5, 0.3, 22.7)
+		player.camera.global_position = Vector3(-20.5, 2.0, 22.7)
+		player.camera.look_at(Vector3(-17.7, 2.0, 22.7), Vector3.UP)
+		player.camera.fov = 58.0
+	elif mode == "service-window":
+		vera.hide()
+		pavel.hide()
+		player.position = Vector3(65.0, 0.3, 17.5)
+		player.camera.global_position = Vector3(65.0, 2.0, 17.5)
+		player.camera.look_at(Vector3(61.7, 2.0, 17.5), Vector3.UP)
+		player.camera.fov = 58.0
+	elif mode in ["guard-aim", "guard-fire"]:
+		vera.hide()
+		pavel.hide()
+		var guard = enemies[0]
+		guard.visual.show()
+		guard.alert = true
+		guard.visible_contact = true
+		guard.weapon_raise = 1.0
+		guard.visual.rotation.y = PI
+		guard.think_label.hide()
+		player.position = guard.global_position + Vector3(0, 0.0, 3.6)
+		player.rotation = Vector3.ZERO
+		player.camera.global_position = player.global_position + Vector3(0, 1.6, 0)
+		player.camera.look_at(guard.visual.global_position + Vector3(0, 1.16, 0), Vector3.UP)
+		player.camera.fov = 54.0
+		guard.update_arm_pose(0.0, 1.0, 0.0)
+	web_art_review_ready = true
 
 func fit_mobile() -> void:
 	var pixels := get_window().size
@@ -174,7 +257,17 @@ func build_level() -> void:
 	# Shelter, open on the south side.
 	Art.box(world, Vector3(-23, 0.08, 22), Vector3(10, 0.25, 9), concrete, true)
 	Art.box(world, Vector3(-28, 1.8, 22), Vector3(0.3, 3.6, 9), wood, true)
-	Art.box(world, Vector3(-18, 1.8, 22), Vector3(0.3, 3.6, 9), wood, true)
+	# The east wall is built around three real window openings, not a pane layered
+	# on top of a solid wall. Bottom/top rails and solid piers retain the structure.
+	var window_sill_wall := Art.box(world, Vector3(-18, 0.65, 22), Vector3(0.3, 1.3, 9), wood, true)
+	window_sill_wall.name = "ShelterWindowSillWall"
+	var window_header_wall := Art.box(world, Vector3(-18, 3.15, 22), Vector3(0.3, 0.9, 9), wood, true)
+	window_header_wall.name = "ShelterWindowHeaderWall"
+	var pier_index := 0
+	for pier in [Vector2(18.4625, 1.925), Vector2(21.35, 1.55), Vector2(23.85, 1.15), Vector2(26.0375, 0.925)]:
+		var wall_pier := Art.box(world, Vector3(-18, 2.0, pier.x), Vector3(0.3, 1.4, pier.y), wood, true)
+		wall_pier.name = "ShelterWindowPier%d" % pier_index
+		pier_index += 1
 	Art.box(world, Vector3(-23, 1.8, 17.5), Vector3(10, 3.6, 0.3), wood, true)
 	Art.box(world, Vector3(-24, 0.72, 17.84), Vector3(1.55, 0.12, 0.48), wood)
 	Art.box(world, Vector3(-24.55, 0.85, 17.72), Vector3(0.12, 0.22, 0.16), metal)
@@ -279,11 +372,13 @@ func build_level() -> void:
 func decorate_shelter() -> void:
 	var timber := Art.material(Color("6c6250"), "wood")
 	var warm_metal := Art.material(Color("8e8067"), "metal")
-	var dark_glass := Art.material(Color("30433f"), "metal")
-	# Recessed panes, layered timber frames, doorway lintel and roof fascia break
-	# up the flat shelter walls and give openings real depth cues.
+	var dark_glass := Art.glass_material()
+	# Recessed, genuinely transparent panes sit inside the three wall cut-outs.
+	# Timber frames and metal muntins stay on the room side of the glazing.
 	for center_z in [20.0, 22.7, 25.0]:
-		Art.box(world, Vector3(-18.17, 2.0, center_z), Vector3(0.025, 1.05, 1.15), dark_glass)
+		var pane := Art.box(world, Vector3(-18.0, 2.0, center_z), Vector3(0.025, 1.12, 1.08), dark_glass)
+		pane.name = "ShelterWindowPane_%d" % int(center_z)
+		(pane.get_child(0) as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		for side in [-1, 1]:
 			Art.box(world, Vector3(-18.19, 2.0, center_z + side * 0.61), Vector3(0.08, 1.22, 0.08), timber)
 		Art.box(world, Vector3(-18.19, 1.4, center_z), Vector3(0.08, 0.08, 1.3), timber)
@@ -1019,10 +1114,11 @@ func _process(delta: float) -> void:
 	if OS.has_feature("web"):
 		web_report_time -= delta
 		if web_report_time <= 0 and is_instance_valid(player):
-			web_report_time = 0.25
+			web_report_time = 0.02 if not web_art_review.is_empty() else 0.25
 			var bridge = Engine.get_singleton("JavaScriptBridge")
 			bridge.eval("window.__razlomStatus = " + JSON.stringify({
 				"ready": true, "started": started, "paused": get_tree().paused,
+				"reviewReady": web_art_review_ready, "reviewMode": web_art_review, "reviewFired": web_art_review_fired,
 				"dialog": interactions.diagnostics(),
 				"quests": state.quests, "trackedQuest": state.tracked_quest,
 				"blastCount": get_tree().get_nodes_in_group("blast_fx").size(), "activeCharges": active_charges,
@@ -1072,10 +1168,22 @@ func _process(delta: float) -> void:
 		mission_label.text = "02 / ГОЛОС В ЭФИРЕ\n" + ("Вера • убежище" if state.relay_log else "Ретранслятор 12") + " · %d м\n" % int(distance) + direction_text
 	if not tracking.is_empty():
 		mission_label.text = str(tracking.title) + "\nЦель · %d м\n" % int(distance) + direction_text
+	# Dialogue pauses combat and movement, not the two people standing in the
+	# shelter: gestures and idle breathing must keep playing while the player talks.
+	if web_art_review == "pavel-walk":
+		interactions.courier_motion.advance(delta, 2.4)
+	elif web_art_review in ["guard-aim", "guard-fire"]:
+		var review_guard = enemies[0]
+		if web_art_review == "guard-fire" and not web_art_review_fired:
+			review_guard.motion.fire()
+			web_art_review_fired = true
+		review_guard.motion.advance(delta, 0.0, 1.0)
+		review_guard.update_arm_pose(delta, 1.0, 0.0)
+	elif not web_art_review.ends_with("window"):
+		interactions.advance_people(delta)
 	if get_tree().paused or ended:
 		return
 	quests.advance(delta)
-	interactions.advance_people(delta)
 	elapsed += delta
 	day_minutes += delta * 0.2
 	var hour := fmod(day_minutes / 60.0, 24.0)

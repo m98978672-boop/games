@@ -12,11 +12,20 @@
     "Save survives a complete page reload through IndexedDB",
     "Saved game loads from the browser start menu",
     "Games launcher opens the real game inside its iframe",
+    "Actual WebGL art review renders vera-idle",
+    "Actual WebGL art review renders vera-greet",
+    "Actual WebGL art review renders vera-treat",
+    "Actual WebGL art review renders pavel-walk",
+    "Actual WebGL art review renders guard-aim",
+    "Actual WebGL art review renders guard-fire",
+    "Actual WebGL art review renders shelter-window",
+    "Actual WebGL art review renders service-window",
     "No script or WASM runtime errors"
   ],
   "errors": [],
   "limits": [
     "Software WebGL on Chromium; not a human campaign playthrough",
+    "NPC pose evidence uses review cameras in the actual level; it is not a replacement for human animation review",
     "Sound is not auditioned",
     "Only desktop keyboard controls tested"
   ]
