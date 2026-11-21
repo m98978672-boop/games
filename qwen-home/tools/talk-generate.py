@@ -160,7 +160,7 @@ def digest(extract, query):
             if tier_pool:
                 pool, tiered = tier_pool, True
                 break
-    best = sorted(pool, key=lambda t: (-t[0], t[1]))[:2]
+    best = sorted(pool, key=lambda t: (-t[0], t[1]))[:1 if tiered else 2]
     if not best or (best[0][0] == 0 and not tiered):
         return ' '.join(s for _, _, s, *_ in sorted(scored[:2], key=lambda t: t[1]))[:500], 0
     chosen = sorted(best, key=lambda t: t[1])
@@ -272,9 +272,16 @@ def main():
         print(f'Поиск «{query}»: найдено статей: {len(results)}', flush=True)
         if results:
             print(f'Отвечает по статье: {best["title"]!r} (совпадений: {best["score"]})', flush=True)
-            context_note = f'\n\n(Ответь владельцу ровно одной фразой: начни её словами «Поискала в Википедии! В статье {best["title"]} написано, что» и сразу после «что» допиши ответ СВОИМИ СЛОВАМИ.\nВот факты из русской Википедии для твоего ответа: {best["digest"]})'
         else:
             context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
+    # Подача «сначала текст, потом вопрос» — так модели привыкли отвечать
+    # по документу; вопрос с фактами в скобках в конце она не тянет.
+    if results:
+        final_user = (f'Владелец спрашивает: {owner_text}\n\n'
+                      f'Текст из русской Википедии, статья «{best["title"]}»: {best["digest"]}\n\n'
+                      f'Ответь владельцу ровно одной фразой по этому тексту: начни её словами «Поискала в Википедии! В статье {best["title"]} написано, что» и сразу после «что» допиши ответ из текста СВОИМИ СЛОВАМИ. Ничего больше не пиши.')
+    else:
+        final_user = owner_text + context_note
     from_search = bool(results)
     messages = [{'role': 'system', 'content': persona}]
     if not from_search:
@@ -286,7 +293,7 @@ def main():
     # Отвечая по свежему поиску, историю не тащим вовсе: пачка одинаковых
     # вопросов без ответов ломает маленькой модели картину разговора,
     # а факты для ответа уже лежат последним блоком.
-    messages.append({'role': 'user', 'content': owner_text + context_note})
+    messages.append({'role': 'user', 'content': final_user})
     torch.manual_seed(42 + len(turns))
     raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7)
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
@@ -311,7 +318,7 @@ def main():
         attempt += 1
         print(f'Черновик плох ({problem}), попытка {attempt + 1}: {reply!r}', flush=True)
         torch.manual_seed(100 + attempt)
-        retry = messages[:-1] + [{'role': 'user', 'content': owner_text + context_note + '\n(Прошлый черновик не годится. Пиши фразу целиком до точки: после «написано, что» сразу ответ из фактов, а год бери из фактов — тот же год, что там написан, цифры не меняй.)'}]
+        retry = messages[:-1] + [{'role': 'user', 'content': final_user + '\n(Прошлый черновик не годится. Пиши фразу целиком до точки: после «написано, что» сразу ответ из текста выше, а год бери из текста — тот же год, что там написан, цифры не меняй.)'}]
         raw_retry = generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.1)
         drafts.append(raw_retry)
         reply = clean_reply(raw_retry)
