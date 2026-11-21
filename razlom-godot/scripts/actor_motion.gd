@@ -152,7 +152,7 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 		if elbows.has(part):
 			var bend := 0.06 + absf(swing) * 0.12 + flinch * 0.12
 			if part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
-				bend = lerpf(bend, 0.72, social_blend)
+				bend = lerpf(bend, 0.42, social_blend)
 			elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
 				bend = lerpf(bend, 0.5, social_blend)
 			elif part.begins_with("Arm") and gesture_kind in ["warm", "listen"]:
