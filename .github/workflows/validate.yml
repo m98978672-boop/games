@@ -104,7 +104,7 @@ jobs:
         run: node frontline-command/tests/mayors.mjs
       - name: Test Frontline Steel & Drones (кампания, бой, синхронизация play.html)
         run: node frontline-steel-and-drones/tests/logic.mjs
-      - name: Test Qwen home (дом нейросети: учебный план, сборщики, дневник)
+      - name: Test Qwen home (дом нейросети — учебный план, сборщики, дневник)
         run: node qwen-home/tests/learn.mjs
       - name: Test Frontline battlefield visuals (Chromium)
         run: npm run test:battlefield:browser --prefix frontline-command
