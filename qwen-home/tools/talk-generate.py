@@ -179,10 +179,16 @@ def search_wikipedia(query, limit=5):
         titles = [h['title'] for h in hits if h.get('title')]
         if not titles:
             return []
-        texts = wiki_get({'action': 'query', 'format': 'json', 'formatversion': '2',
-                          'prop': 'extracts|info', 'inprop': 'url', 'explaintext': '1',
-                          'exlimit': 'max', 'titles': '|'.join(titles)})
-        pages = {p['title']: p for p in texts.get('query', {}).get('pages', [])}
+        # Тексты тянем по одной статье: запрос пачкой возвращает огрызки,
+        # а поодиночке тот же API честно отдаёт полный текст (так читает
+        # и сборщик статей на уроках).
+        pages = {}
+        for title in titles[:3]:
+            one = wiki_get({'action': 'query', 'format': 'json', 'formatversion': '2',
+                            'prop': 'extracts|info', 'inprop': 'url', 'explaintext': '1',
+                            'titles': title})
+            for p in one.get('query', {}).get('pages', []):
+                pages[p['title']] = p
     except Exception as error:
         print(f'Поиск не удался: {error}', flush=True)
         return []
@@ -193,7 +199,7 @@ def search_wikipedia(query, limit=5):
         extract = re.sub(r'\s+', ' ', page.get('extract', '')).strip()
         text, score = digest(extract or snippets.get(title, ''), query)
         if text:
-            results.append({'title': title, 'url': page.get('fullurl', ''), 'digest': text, 'score': score})
+            results.append({'title': title, 'url': page.get('fullurl', ''), 'digest': text, 'score': score, 'elen': len(extract)})
     # Статья, чей заголовок точно называет спрошенное, важнее совпадений слов:
     # иначе «Франкфурт-на-Майне» проигрывает футбольному клубу из того же города.
     proper = [w.lower() for w in re.findall(r'[\u0400-\u04FFA-Za-z][\u0400-\u04FFA-Za-z0-9\-]*', query) if w[:1].isupper() and len(w) >= 3]
@@ -208,7 +214,7 @@ def log_search(query, results, best=None):
     if results:
         lines += [f'- [{r["title"]}]({r["url"]})' for r in results]
         if best:
-            lines += ['', f'Отвечала по статье «{best["title"]}», выжимка: {best["digest"]}']
+            lines += ['', f'Отвечала по статье «{best["title"]}» (текст статьи: {best.get("elen", 0)} симв.), выжимка: {best["digest"]}']
     else:
         lines.append('- Ничего не нашлось.')
     lines.append('')
