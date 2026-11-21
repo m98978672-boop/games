@@ -14,6 +14,8 @@ func run_tests() -> void:
 	root.add_child(game)
 	await process_frame
 	game.resume()
+	game.state.rifle_owned = true
+	game.player.sync_weapon_state()
 	game.set_process(false)
 	game.player.set_physics_process(false)
 	game.dog.set_physics_process(false)

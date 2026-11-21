@@ -26,6 +26,7 @@ var mission_label: Label
 var clock_label: Label
 var hint_label: Label
 var message_label: Label
+var aim_reticle: Control
 var menu_style := RazlomMenuStyle.new()
 var modal: PanelContainer
 var modal_title: Label
@@ -92,7 +93,8 @@ func _ready() -> void:
 	setup_hud()
 	if mobile_mode:
 		toggle_quality()
-	show_menu("РАЗЛОМ", "ТЁПЛАЯ СТЕНА  /  ГЛАВА 01\n\nВера: «На станции остался насосный блок.\nСыну Рады осталось воды на одну ночь.\nИ кому-то было приказано не пускать нас на склад».\n\n1. Выйди из убежища.\n2. Следуй направлению и расстоянию слева сверху.\n3. Найди насос на складе и верни его сюда.\n\nУ дороги есть связной Павел: поговори с ним о проходе без боя. Охрану также можно обойти.\nУправление: " + ("левый круг — идти, справа проведи пальцем — осмотреться. Кнопка ВЗЯТЬ — действие." if mobile_mode else "WASD — идти, мышь — смотреть, E — взять предмет. Esc — пауза.") + "")
+	var briefing := "ТЁПЛАЯ СТЕНА / ГЛАВА 01\n\nВозьми винтовку на полке у задней стены. Найди насос на складе и вернись к Вере. Павел подскажет мирный проход.\n\nЛевый круг — идти; справа — смотреть. Кнопка ВЗЯТЬ — действие." if mobile_mode else "ТЁПЛАЯ СТЕНА / ГЛАВА 01\n\nВера: «На станции остался насосный блок. Сыну Рады осталось воды на одну ночь. И кому-то было приказано не пускать нас на склад».\n\n1. Возьми винтовку на полке у задней стены убежища.\n2. Выйди из убежища и следуй направлению слева сверху.\n3. Найди насос на складе и верни его сюда.\n\nПоговори со связным Павлом о проходе без боя. Охрану можно обойти.\nУправление: WASD — идти, мышь — смотреть, E — взять, ПКМ — прицел вкл/выкл, Esc — пауза."
+	show_menu("РАЗЛОМ", briefing)
 
 func fit_mobile() -> void:
 	var pixels := get_window().size
@@ -174,6 +176,9 @@ func build_level() -> void:
 	Art.box(world, Vector3(-28, 1.8, 22), Vector3(0.3, 3.6, 9), wood, true)
 	Art.box(world, Vector3(-18, 1.8, 22), Vector3(0.3, 3.6, 9), wood, true)
 	Art.box(world, Vector3(-23, 1.8, 17.5), Vector3(10, 3.6, 0.3), wood, true)
+	Art.box(world, Vector3(-24, 0.72, 17.84), Vector3(1.55, 0.12, 0.48), wood)
+	Art.box(world, Vector3(-24.55, 0.85, 17.72), Vector3(0.12, 0.22, 0.16), metal)
+	Art.box(world, Vector3(-23.45, 0.85, 17.72), Vector3(0.12, 0.22, 0.16), metal)
 	Art.box(world, Vector3(-23, 3.7, 22), Vector3(10.8, 0.3, 9.8), metal, true)
 	Art.sign_text(world, "ОЧАГ / 07", Vector3(-23, 3.1, 26.9), 62)
 	Art.box(world, Vector3(-25, 0.5, 19), Vector3(2.1, 0.8, 1), wood, true)
@@ -220,6 +225,7 @@ func build_level() -> void:
 	spawn_loot("record", Vector3(11, 1.4, -12), "НАКЛАДНАЯ / прочитать", "warehouse_manifest")
 	spawn_loot("food", Vector3(-25, 1.2, 19), "Консервы • +1", "shelter_food")
 	spawn_loot("water", Vector3(-20, 1.5, 19), "Вода • +1", "shelter_water")
+	spawn_loot("rifle", Vector3(-24, 0.98, 18.02), "Винтовка у стены • взять", "starter_rifle")
 	spawn_loot("medkit", Vector3(11, 1.4, -20), "Аптечка • +1", "warehouse_med")
 	spawn_loot("scrap", Vector3(-10, 1.1, -12), "Детали • +3", "scrap_01")
 	spawn_loot("scrap", Vector3(-14, 1.1, 7), "Детали • +3", "scrap_02")
@@ -448,14 +454,24 @@ func spawn_loot(kind: String, pos: Vector3, title: String, id: String = "") -> v
 	world.add_child(item)
 	item.position = pos
 	var color := Color("81c2a8") if kind == "pump" else Color("c7ab6d")
-	if kind in ["armor", "helmet"]:
+	if kind == "rifle":
+		var weapon: Node3D = load("res://assets/models/carbine.tscn").instantiate()
+		item.add_child(weapon)
+		weapon.position = Vector3(0, 0, 0)
+		weapon.rotation.z = PI * 0.5
+		weapon.scale = Vector3.ONE * 0.9
+		weapon.get_node("LeftHand").hide()
+		weapon.get_node("RightHand").hide()
+		var label := Art.sign_text(item, "ВИНТОВКА / E", Vector3(0, 0.52, 0), 22, Color("e5d9b5"))
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	elif kind in ["armor", "helmet"]:
 		Art.protection_pickup(item, kind == "helmet")
 	else:
 		Art.box(item, Vector3.ZERO, Vector3(0.55, 0.4, 0.4), Art.material(color, "metal"))
 		Art.box(item, Vector3(0, 0.24, 0), Vector3(0.28, 0.08, 0.15), Art.material(Color("c7c7a7")))
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(0.6, 0.5, 0.5)
+	shape.size = Vector3(0.8, 0.4, 1.1) if kind == "rifle" else Vector3(0.6, 0.5, 0.5)
 	collision.shape = shape
 	item.add_child(collision)
 	if kind == "pump":
@@ -515,6 +531,15 @@ func share_contact(sender, point: Vector3) -> void:
 		if is_instance_valid(guard) and guard != sender and not guard.dead and guard.global_position.distance_to(sender.global_position) <= 18:
 			guard.receive_report(point)
 
+func sample_enemy_aim_point() -> Vector3:
+	# Guards aim around the torso, then naturally vary across the silhouette.
+	# This keeps ordinary bursts from magically converging on the head hitbox.
+	var height := world_rng.randf_range(0.40, 1.22)
+	if player.crouched:
+		height *= 0.72
+	var lateral := world_rng.randf_range(-0.26, 0.26)
+	return player.global_position + Vector3.UP * height + player.global_basis.x * lateral
+
 func enemy_fire(guard) -> void:
 	if state.passage or guard.dead or guard.arm_wounds.y >= 60 or not guard.sees_player():
 		return
@@ -525,12 +550,12 @@ func enemy_fire(guard) -> void:
 	# A practiced guard settles better, but never becomes a distant hitscan sniper.
 	# Triangular jitter approximates a human shot distribution without a hard accuracy lock.
 	var origin: Vector3 = guard.global_position + Vector3.UP * 1.5
-	var height: float = 1.16 * (0.72 if player.crouched else 1.0)
-	var target: Vector3 = player.global_position + Vector3.UP * height
+	var target := sample_enemy_aim_point()
 	var aim_direction := (target - origin).normalized()
 	var distance := origin.distance_to(target)
 	var quality := clampf(guard.aim_time / 2.5, 0.0, 1.0)
-	var deviation := (0.28 + distance * 0.024) * lerpf(1.0, 0.62, quality)
+	var deviation := (0.42 + distance * 0.018) * lerpf(1.0, 0.86, quality)
+	var height: float = 0.82 * (0.72 if player.crouched else 1.0)
 	var right := aim_direction.cross(Vector3.UP).normalized()
 	if right.length_squared() < 0.01:
 		right = Vector3.RIGHT
@@ -616,6 +641,10 @@ func interact() -> void:
 		var item: Node3D = hit.collider
 		var kind: String = item.get_meta("loot")
 		match kind:
+			"rifle":
+				state.rifle_owned = true
+				state.ammo = maxi(state.ammo, 18)
+				player.sync_weapon_state()
 			"pump":
 				state.pump = true
 			"record":
@@ -745,10 +774,29 @@ func setup_hud() -> void:
 	root.add_child(mission_panel)
 	mission_label = ui_label("", 17)
 	mission_panel.add_child(mission_label)
-	var crosshair := ui_label("+", 22, Color("e5d9b5"))
-	crosshair.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	crosshair.position = Vector2(-6, -15)
-	root.add_child(crosshair)
+	aim_reticle = Control.new()
+	aim_reticle.name = "AimReticle"
+	aim_reticle.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	aim_reticle.offset_left = -18
+	aim_reticle.offset_right = 18
+	aim_reticle.offset_top = -18
+	aim_reticle.offset_bottom = 18
+	aim_reticle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(aim_reticle)
+	for segment in [Vector4(17, 2, 2, 9), Vector4(17, 25, 2, 9), Vector4(2, 17, 9, 2), Vector4(25, 17, 9, 2), Vector4(16, 16, 4, 4)]:
+		var outline := ColorRect.new()
+		outline.position = Vector2(segment.x - 1, segment.y - 1)
+		outline.size = Vector2(segment.z + 2, segment.w + 2)
+		outline.color = Color(0.01, 0.035, 0.03, 0.9)
+		outline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		aim_reticle.add_child(outline)
+		var line := ColorRect.new()
+		line.position = Vector2(segment.x, segment.y)
+		line.size = Vector2(segment.z, segment.w)
+		line.color = Color("c8dda9")
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		aim_reticle.add_child(line)
+	aim_reticle.hide()
 	stats_label = ui_label("", 18)
 	stats_label.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	stats_label.position = Vector2(36, -108)
@@ -771,7 +819,7 @@ func setup_hud() -> void:
 	hint_style.content_margin_top = 6
 	hint_style.content_margin_bottom = 6
 	hint_label.add_theme_stylebox_override("normal", hint_style)
-	var controls := ui_label("WASD  ДВИЖЕНИЕ    /    ЛКМ  ОГОНЬ    /    E  ВЗЯТЬ    /    R  МАГАЗИН    /    G  ЗАРЯД    /    ESC  МЕНЮ", 12, Color("a5b6a5"))
+	var controls := ui_label("WASD ДВИЖЕНИЕ  ·  ЛКМ ОГОНЬ  ·  ПКМ ПРИЦЕЛ ВКЛ/ВЫКЛ  ·  E ВЗЯТЬ  ·  R ПЕРЕЗАРЯДКА  ·  ESC МЕНЮ", 12, Color("a5b6a5"))
 	controls.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
 	controls.position = Vector2(36, -32)
 	root.add_child(controls)
@@ -815,7 +863,7 @@ func setup_hud() -> void:
 		sensitivity_button.text = "Обзор · чувствительность: " + ["низкая", "обычная", "высокая"][sensitivity_step])
 	column.add_child(sensitivity_button)
 	menu_style.button(sensitivity_button, false)
-	var tips := ui_label("H — лечение   •   1 — еда   •   2 — вода   •   F5 / F9 — сохранить / загрузить\nПКМ — прицел   •   Shift — бег   •   Space — прыжок   •   C — присесть   •   F — фонарь   •   F2 — FPS", 13, Color("a8bca6"))
+	var tips := ui_label("H — лечение   •   1 — еда   •   2 — вода   •   F5 / F9 — сохранить / загрузить\nПКМ — прицел вкл/выкл   •   Shift — бег   •   Space — прыжок   •   C — присесть   •   F — фонарь   •   F2 — FPS", 13, Color("a8bca6"))
 	column.add_child(tips)
 	menu_style.label(modal_title, 46)
 	menu_style.label(modal_body, 17, Color("5a6c60"))
@@ -938,7 +986,7 @@ func _process(delta: float) -> void:
 				"blastCount": get_tree().get_nodes_in_group("blast_fx").size(), "activeCharges": active_charges,
 				"touch": touch_ui.diagnostics() if is_instance_valid(touch_ui) else {},
 				"startButton": [start_button.global_position.x, start_button.global_position.y, start_button.size.x, start_button.size.y],
-				"mobile": mobile_mode, "ammo": state.ammo, "yaw": player.rotation.y,
+				"mobile": mobile_mode, "ammo": state.ammo, "rifleOwned": state.rifle_owned, "aiming": player.aiming, "yaw": player.rotation.y,
 				"weapon": {"motion": player.motion_state, "phase": player.weapon_motion.phase, "reload": player.reload_time, "magazineY": player.weapon_motion.magazine.position.y, "handY": player.weapon_motion.support_hand.position.y},
 				"view": [get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y],
 				"health": state.health, "pump": state.pump, "complete": state.complete,
@@ -956,9 +1004,12 @@ func _process(delta: float) -> void:
 			finish_death_menu()
 	if not is_instance_valid(stats_label):
 		return
-	stats_label.text = "ЗДОРОВЬЕ %03d     ВОДА %03d     ЕДА %03d     СИЛЫ %03d\nМАГАЗИН %02d / %02d     ЗАРЯДЫ %d     АПТЕЧКИ %d     ДЕТАЛИ %d" % [state.health, state.water, state.hunger, state.stamina, state.ammo, state.reserve, state.charges, state.medkits, state.scrap]
+	var weapon_status := "МАГАЗИН %02d / %02d" % [state.ammo, state.reserve] if state.rifle_owned else "ВИНТОВКА: НЕТ • E У СТЕНЫ"
+	stats_label.text = "ЗДОРОВЬЕ %03d     ВОДА %03d     ЕДА %03d     СИЛЫ %03d\n%s     ЗАРЯДЫ %d     АПТЕЧКИ %d     ДЕТАЛИ %d" % [state.health, state.water, state.hunger, state.stamina, weapon_status, state.charges, state.medkits, state.scrap]
 	if mobile_mode:
-		stats_label.text = "ЗДОРОВЬЕ %d  ВОДА %d  ЕДА %d\nПАТРОНЫ %d/%d  АПТЕЧКИ %d" % [state.health, state.water, state.hunger, state.ammo, state.reserve, state.medkits]
+		stats_label.text = "ЗДОРОВЬЕ %d  ВОДА %d  ЕДА %d\n%s  АПТЕЧКИ %d" % [state.health, state.water, state.hunger, ("ПАТРОНЫ %d/%d" % [state.ammo, state.reserve] if state.rifle_owned else "ВИНТОВКА: НЕТ"), state.medkits]
+	if is_instance_valid(aim_reticle):
+		aim_reticle.visible = started and not ended and not get_tree().paused and state.rifle_owned and player.aiming
 	stats_label.text += "\nБРОНЯ %d  ШЛЕМ %d  БОЛЬ %d" % [state.armor, state.helmet, state.pain]
 	clock_label.text = "РЕГИОН РУБЕЖ   /   %02d:%02d   /   ТЕПЛО %03d   УСТАЛОСТЬ %03d" % [int(day_minutes / 60) % 24, int(day_minutes) % 60, state.warmth, state.fatigue]
 	if mobile_mode:
@@ -1125,6 +1176,7 @@ func load_game() -> bool:
 	add_child(world)
 	build_level()
 	state = restored
+	player.sync_weapon_state()
 	day_minutes = float(data.get("day_minutes", 462.0))
 	destroyed = data.destroyed.duplicate()
 	collected = data.collected.duplicate()
@@ -1230,7 +1282,7 @@ func validate_world_save(data: Dictionary) -> bool:
 			if not (value is float or value is int) or not is_finite(float(value)) or absf(float(value)) > 128:
 				return false
 	for record in data.loot:
-		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap", "record", "armor", "helmet"] or not record.get("title") is String:
+		if not record.get("kind") in ["pump", "food", "water", "medkit", "ammo", "scrap", "record", "armor", "helmet", "rifle"] or not record.get("title") is String:
 			return false
 	for record in data.guards:
 		var wounds: Variant = record.get("arm_wounds", [0, 0])
