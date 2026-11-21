@@ -62,7 +62,7 @@ func run_tests() -> void:
 		check(guard.left_arm.wrist.distance_to(left_grip) < 0.002 and guard.right_arm.wrist.distance_to(right_grip) < 0.002, "Both guard wrists track the same-frame rifle grips throughout its raise arc")
 		var left_forearm_axis: Vector3 = (guard.left_arm.wrist - guard.left_arm.elbow).normalized()
 		var right_forearm_axis: Vector3 = (guard.right_arm.wrist - guard.right_arm.elbow).normalized()
-		check(guard.left_arm.hand.basis.y.dot(left_forearm_axis) < -0.98 and guard.right_arm.hand.basis.y.dot(right_forearm_axis) < -0.98, "Guard fingers point forward from each wrist along the forearm instead of flopping sideways")
+		check(guard.left_arm.hand.basis.y.normalized().dot(left_forearm_axis) < -0.98 and guard.right_arm.hand.basis.y.normalized().dot(right_forearm_axis) < -0.98, "Guard fingers point forward from each wrist along the forearm instead of flopping sideways")
 		check(absf(guard.left_arm.elbow.distance_to(Vector3(-0.3, 1.3, 0)) - 0.52) < 0.002 and absf(guard.left_arm.elbow.distance_to(guard.left_arm.wrist) - 0.52) < 0.002 and absf(guard.right_arm.elbow.distance_to(Vector3(0.3, 1.3, 0)) - 0.52) < 0.002 and absf(guard.right_arm.elbow.distance_to(guard.right_arm.wrist) - 0.52) < 0.002, "Guard upper arms and forearms keep fixed length instead of stretching")
 	guard.arm_wounds = Vector2(100, 100)
 	guard.update_arm_pose(1.0 / 60.0, 0.4, 0.0)
