@@ -1161,3 +1161,15 @@ body.view-map #scene { filter: saturate(0.92) contrast(1.04); }
   .top-actions .icon-btn { width: 28px; height: 32px; }
   .shop-shortcut { padding: 0 5px; font-size: 10px; }
 }
+
+/* Контракты — компактные карточки в пульте, доступны и в мобильной шторке. */
+.contract-help { color: var(--muted, #aab4bf); font-size: 12px; line-height: 1.4; margin: 4px 0 10px; }
+.contracts-list { display: grid; gap: 8px; }
+.contract-card { padding: 10px; border: 1px solid rgba(184,204,218,.24); border-radius: 9px; background: rgba(255,255,255,.04); }
+.contract-head { display: flex; gap: 8px; justify-content: space-between; color: #e5efe9; }
+.contract-head span { color: #85d7a7; white-space: nowrap; font-size: 12px; }
+.contract-card p { margin: 6px 0; line-height: 1.35; font-size: 12px; }
+.contract-progress { font-size: 12px; color: #bfcbd0; margin-bottom: 6px; }
+.contract-active { border-color: #6ab995; }
+.contract-failed, .contract-cancelled { opacity: .75; }
+.contract-card button { min-height: 40px; }

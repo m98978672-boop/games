@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const files = ['vendor/cannon-es.min.js','src/sim/physics.js','src/sim/model.js','src/ai/brain-net.js','src/sim/warehouse.js','src/sim/worker.js','src/config.js','data/brain-data.js','src/save.js','src/dialogue.js','src/game.js'];
+const files = ['vendor/cannon-es.min.js','src/sim/physics.js','src/sim/model.js','src/ai/brain-net.js','src/sim/warehouse.js','src/sim/worker.js','src/config.js','data/brain-data.js','src/save.js','src/dialogue.js', 'src/contracts.js','src/game.js'];
 const data = new Map();
 const storage = {getItem: k => data.has(k) ? data.get(k) : null, setItem: (k,v) => data.set(k,String(v)), removeItem:k=>data.delete(k)};
 async function boot() {
@@ -69,12 +69,14 @@ game.api.dialogueState.pending = {speaker:game.api.crew[1].id,listener:game.api.
 const pausedDialogue = JSON.stringify(game.api.dialogueState);
 lines.length=0; for(let i=0;i<40;i++) game.update(.1);
 assert.equal(JSON.stringify(game.api.dialogueState),pausedDialogue); assert.equal(lines.length,0);
+assert(game.acceptContract('intake').ok);
 const snap = game.captureCheckpoint();
 assert(c.WC.save.save(game));
 const raw = data.get(c.WC.save.CHECKPOINT_KEY);
 assert(raw && data.has(c.WC.save.CHECKPOINT_KEY));
 c = await boot(); game = c.WC.game;
 assert.equal(game.api.resumeStatus,'restored');
+assert.equal(game.api.contracts.items[0].status, 'active');
 assert.deepEqual(JSON.parse(JSON.stringify(game.api.log.slice(0,-1))), JSON.parse(JSON.stringify(snap.log.slice(-79))));
 assert.match(game.api.log.at(-1).text, /Смена восстановлена/);
 assert.equal(game.api.shiftMode,'night');
@@ -159,10 +161,13 @@ c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed');
 assert.equal(c.WC.save.protectionReason(),'damaged');
 assert.equal(c.WC.save.save(c.WC.game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),'');
 // v2 старого формата без поля режима должен оставаться доступным.
-const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode; delete oldV2.checkpoint.dialogueState;
+const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode; delete oldV2.checkpoint.dialogueState; delete oldV2.checkpoint.contracts;
 oldV2.checkpoint.warehouse.state.orders.forEach(o => delete o.dispatchPriority);
 data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldV2));
-c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.shiftMode,'day');
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.shiftMode,'day'); assert.equal(c.WC.game.api.contracts.items[0].status,'available');
+const invalidContract = JSON.parse(raw); invalidContract.checkpoint.contracts.items[0].progress = 999;
+data.set(c.WC.save.CHECKPOINT_KEY, JSON.stringify(invalidContract));
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed'); assert.equal(c.WC.save.save(c.WC.game),false);
 // Неизвестный режим блокирует перезапись.
 oldV2.checkpoint.shiftMode = 'broken';
 data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldV2));
@@ -186,4 +191,19 @@ assert.equal(c.WC.save.save(c.WC.game),false); assert.equal(data.get(c.WC.save.C
 data.clear(); data.set('warehouse-crew-save-v1',JSON.stringify({version:1,bestScore:321,bestDelivered:9,shifts:4}));
 c = await boot(); assert.equal(c.WC.game.api.best.score,321); assert.equal(c.WC.game.api.shiftsPlayed,4);
 assert(c.WC.save.save(c.WC.game)); assert.equal(JSON.parse(data.get('warehouse-crew-save-v1')).bestScore,321);
+data.clear(); c = await boot(); game = c.WC.game;
+assert(game.acceptContract('intake').ok);
+const actor = game.api.crew[0];
+for (let i=0;i<3;i++) {
+  const order = game.sim.spawnOrder(); assert(order);
+  const before = game.sim.state.stats.score;
+  const result = game.sim.store(order, actor.id);
+  game.api.envs[actor.id].onDelivered(actor.state, order, result);
+  assert.equal(game.sim.state.stats.score - before, result.points + (i === 2 ? 35 : 0));
+}
+assert.equal(game.summary().contracts[0].status, 'completed');
+assert(c.WC.save.save(game)); c = await boot(); game = c.WC.game;
+assert.equal(game.api.contracts.items[0].status, 'completed');
+assert(!game.acceptContract('intake').ok); assert.equal(game.summary().contracts[0].reward, 35);
+game.restart(); assert.equal(game.api.contracts.items[0].status, 'available');
 console.log('✓ Перезагрузка смены: бригада, мозги, физика, склад, персонал, v1 и защита повреждённого файла');
