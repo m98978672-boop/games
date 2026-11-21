@@ -142,10 +142,11 @@ jobs:
         run: node truck-haul/tests/logic.mjs
       - name: Test shooter touch controls (стик, свайп, огонь, перезарядка)
         run: node shooter/tests/touch.mjs
-      - name: Test cascade-hydro finale (вехи, экран финала)
+      - name: Test cascade-hydro (симуляция рек и ГЭС, вехи, экран финала)
         run: |
           cd cascade-hydro
           npm ci
+          node tests/sim-test.mjs
           node tests/finale.mjs
       - name: Test last-shore rocks and animals (переступание, звери не застревают)
         run: |
