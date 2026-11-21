@@ -10,6 +10,9 @@ var hand: Node3D
 var hand_knuckles: Array[Node3D] = []
 var fist_mode := false
 var handedness := -1.0
+var last_pole := Vector3.ZERO
+const BONE_LENGTH := 0.52
+const MAX_REACH := 1.01
 
 func _init(host: Node3D, hand_side: float = -1.0) -> void:
 	parent = host
@@ -87,18 +90,24 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	var axis := target - shoulder
 	if axis.length_squared() < 0.000001:
 		axis = Vector3(0, -0.01, -0.01)
-	var distance := clampf(axis.length(), 0.06, 1.01)
+	var distance := clampf(axis.length(), 0.06, MAX_REACH)
 	var direction := axis.normalized()
 	wrist = shoulder + direction * distance
-	var pole := Vector3(side, -0.75, 0.28)
+	var pole := Vector3(-1.0 if side < 0.0 else 1.0, -0.75, 0.28)
 	pole -= direction * pole.dot(direction)
+	if pole.length_squared() < 0.001 and last_pole.length_squared() > 0.001:
+		pole = last_pole - direction * last_pole.dot(direction)
 	if pole.length_squared() < 0.001:
 		pole = direction.cross(Vector3.FORWARD)
 	if pole.length_squared() < 0.001:
 		pole = direction.cross(Vector3.UP)
 	pole = pole.normalized()
-	# Finite reach and nonzero elbow bend prevent hyperextension.
-	elbow = (shoulder + wrist) * 0.5 + pole * sqrt(maxf(0.0025, 0.52 * 0.52 - distance * distance * 0.25))
+	# Preserve the bend side while the target crosses the pole singularity.
+	if last_pole.length_squared() > 0.001 and pole.dot(last_pole) < 0.0:
+		pole = -pole
+	last_pole = pole
+	# Equal finite upper/lower lengths prevent hyperextension and elbow flips.
+	elbow = (shoulder + wrist) * 0.5 + pole * sqrt(maxf(0.0025, BONE_LENGTH * BONE_LENGTH - distance * distance * 0.25))
 	place(segments[0], shoulder, elbow)
 	place(segments[1], elbow, wrist)
 	joint.position = elbow

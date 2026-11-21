@@ -58,7 +58,7 @@ roughness_texture_channel = 0
 texture_filter = 4
 
 [sub_resource type="BoxMesh" id="mesh5"]
-size = Vector3(0.18, 0.55, 0.22)
+size = Vector3(0.14, 0.5, 0.18)
 
 [sub_resource type="StandardMaterial3D" id="mat6"]
 albedo_color = Color(1.0, 1.0, 1.0, 1)
@@ -72,7 +72,7 @@ roughness_texture_channel = 0
 texture_filter = 4
 
 [sub_resource type="BoxMesh" id="mesh6"]
-size = Vector3(0.18, 0.55, 0.22)
+size = Vector3(0.14, 0.5, 0.18)
 
 [sub_resource type="StandardMaterial3D" id="mat7"]
 albedo_color = Color(0.14901960784313725, 0.20392156862745098, 0.19215686274509805, 1)
@@ -119,14 +119,14 @@ mesh = SubResource("mesh4")
 material_override = SubResource("mat4")
 
 [node name="ArmL" type="Node3D" parent="."]
-position = Vector3(-0.4, 1.05, -0.13)
+position = Vector3(-0.3, 1.05, -0.13)
 
 [node name="Visual" type="MeshInstance3D" parent="ArmL"]
 mesh = SubResource("mesh5")
 material_override = SubResource("mat5")
 
 [node name="ArmR" type="Node3D" parent="."]
-position = Vector3(0.4, 1.05, -0.13)
+position = Vector3(0.3, 1.05, -0.13)
 
 [node name="Visual" type="MeshInstance3D" parent="ArmR"]
 mesh = SubResource("mesh6")

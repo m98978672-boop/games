@@ -84,11 +84,21 @@ func run_tests() -> void:
 	check(has_natural_face(medic), "Vera has the same shaped head and compact inset eyes")
 	check(has_clean_forehead(medic), "Vera's temple hair leaves two brows separate and no third forehead bar")
 	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")
+	var vera_sleeve := medic.get_node("ArmLJoint/ArmL/Visual") as MeshInstance3D
+	check(vera_sleeve.mesh is BoxMesh and (vera_sleeve.mesh as BoxMesh).size.is_equal_approx(Vector3(0.14, 0.5, 0.18)), "NPC sleeves use a compact proportion that does not flare away from the torso")
 	var vera_hand: Node3D = medic.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
+	var vera_right_hand: Node3D = medic.get_node("ArmRJoint/ArmR/CharacterHand") as Node3D
 	check(vera_hand.has_node("Finger0J0") and vera_hand.has_node("Finger3J1") and vera_hand.has_node("Thumb"), "Vera's hands have knuckles, separated fingers and a thumb")
+	check(vera_hand.get_node("Thumb").position.x < 0 and vera_right_hand.get_node("Thumb").position.x > 0, "Both civilian hands mirror their thumbs toward the correct sides")
 	var pavel: Node3D = game.world.get_node("Pavel").find_child("guard", true, false) as Node3D
 	check(pavel != null and has_natural_face(pavel), "Pavel uses the same shaped head and compact eyes")
-	check(game.world.has_node("Pavel/Guard/ArmLJoint/ArmL/CharacterHand/Palm") or game.world.get_node("Pavel").find_child("CharacterHand", true, false) != null, "Pavel also has visible articulated hands")
+	var pavel_left: Node3D = pavel.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
+	var pavel_right: Node3D = pavel.get_node("ArmRJoint/ArmR/CharacterHand") as Node3D
+	check(pavel_left != null and pavel_right != null and pavel_left.get_node("Palm") != null and pavel_right.get_node("Palm") != null, "Every civilian humanoid receives attached modeled hands")
+	check(pavel_left.get_node("Thumb").position.x < 0 and pavel_right.get_node("Thumb").position.x > 0, "Pavel's mirrored hands do not share the same thumb orientation")
+	var pavel_left_shoulder: Node3D = pavel.get_node("ArmLJoint") as Node3D
+	var pavel_right_shoulder: Node3D = pavel.get_node("ArmRJoint") as Node3D
+	check(absf(pavel_left_shoulder.position.x) <= 0.34 and absf(pavel_right_shoulder.position.x) <= 0.34 and pavel_left_shoulder.position.x < 0.0 and pavel_right_shoulder.position.x > 0.0, "Guard shoulders sit close enough to the torso to avoid a floating sleeve seam")
 	check(game.world.has_node("Pavel"), "Courier exists in playable world")
 	var count: int = guard.visual.get_child_count()
 	RazlomArt.dress_actor(guard.visual)
@@ -101,6 +111,16 @@ func run_tests() -> void:
 	game.interactions.medic_motion.greet()
 	game.interactions.medic_motion.advance(0.2, 0)
 	check(game.interactions.medic_motion.joints.ArmR.rotation.x < -0.4, "Conversation gesture raises hand")
+	var vera_left_joint: Node3D = game.interactions.medic_motion.joints.ArmL
+	var vera_right_joint: Node3D = game.interactions.medic_motion.joints.ArmR
+	var vera_left_hand_position := vera_hand.position
+	game.interactions.medic_motion.react("arms", Vector3(-0.3, 1.1, 0), 1.0)
+	for i in range(90):
+		game.interactions.medic_motion.advance(1.0 / 60.0, 0.0)
+	check(vera_left_joint.position.x < 0.0 and vera_right_joint.position.x > 0.0 and absf(absf(vera_left_joint.position.x) - absf(vera_right_joint.position.x)) < 0.001 and absf(vera_left_joint.position.x) <= 0.34, "NPC sleeves overlap their shoulder sockets instead of floating beyond the torso")
+	check(vera_left_joint.rotation.x >= -1.39 and vera_left_joint.rotation.x <= 0.51 and vera_right_joint.rotation.x >= -1.39 and vera_right_joint.rotation.x <= 0.51, "Flinch and greeting keep every NPC shoulder inside its safe anatomical range")
+	check(absf(vera_left_joint.rotation.z) <= 0.351 and absf(vera_right_joint.rotation.z) <= 0.351, "NPC shoulders cannot twist sleeves into a broken side-on pose")
+	check(vera_hand.position.is_equal_approx(vera_left_hand_position), "NPC hands stay attached to the sleeve through the full gesture and flinch")
 	var s = game.state
 	var legacy: Dictionary = s.snapshot()
 	legacy.erase("passage")
