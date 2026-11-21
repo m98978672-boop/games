@@ -11,6 +11,11 @@ on:
   schedule:
     # Раз в неделю: прочитать свежее и доучиться, если экзамен не стал хуже.
     - cron: '17 3 * * 1'
+  push:
+    # Ручной старт без кнопки Run workflow: изменение этого файла в main
+    # запускает один прогон обучения (как start-recovery.flag у командира).
+    branches: [main]
+    paths: ['qwen-home/start-learning.flag']
 permissions:
   contents: write
 jobs:
