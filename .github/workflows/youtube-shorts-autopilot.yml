@@ -26,10 +26,9 @@ jobs:
     env:
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || vars.YOUTUBE_MADE_FOR_KIDS }}
       DATA_DIR: youtube-bot/data
-      HF_HOME: ${{ runner.temp }}/huggingface
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
@@ -41,12 +40,12 @@ jobs:
             exit 1
           fi
       - name: Restore the local Qwen model cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/huggingface
           key: qwen-shorts-0-8b-2fc06364715b967f1860aea9cf38778875588b17-v1
       - name: Restore recent game selection memory
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: youtube-bot/data/recent-games.json
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
@@ -58,6 +57,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r youtube-bot/requirements-autopilot.txt
       - name: Generate a source-grounded game review with Qwen
+        env:
+          HF_HOME: ${{ runner.temp }}/huggingface
         run: python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4"
       - name: Upload and schedule with YouTube
         run: |
@@ -65,7 +66,7 @@ jobs:
           python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
       - name: Retain only non-sensitive model selection memory
         if: always() && hashFiles('youtube-bot/data/recent-games.json') != ''
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: youtube-bot/data/recent-games.json
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
