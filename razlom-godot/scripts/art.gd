@@ -105,7 +105,8 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 	root.set_meta("detailed", true)
 	var head := root.get_node_or_null("Head") as Node3D
 	if head != null:
-		var skin := material(Color("d3ad8e") if medic else Color("c9a786"))
+		var skin_color := Color("d3ad8e") if medic else Color("c9a786")
+		var skin := material(skin_color)
 		var head_visual := head.get_node_or_null("Visual") as MeshInstance3D
 		if head_visual != null:
 			var head_mesh := SphereMesh.new()
@@ -135,7 +136,7 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 				box(head, Vector3(side * 0.103, -0.026, -0.275), Vector3(0.025, 0.008, 0.003), material(Color("bf887a")))
 		# A softly shaded bridge and a small rounded tip sit on the face plane.
 		box(head, Vector3(0, -0.006, -0.302), Vector3(0.018, 0.042, 0.014), skin)
-		orb(head, Vector3(0, -0.03, -0.313), Vector3(0.012, 0.01, 0.009), skin.lightened(0.035), "NoseTip")
+		orb(head, Vector3(0, -0.03, -0.313), Vector3(0.012, 0.01, 0.009), material(skin_color.lightened(0.035)), "NoseTip")
 		box(head, Vector3(0, -0.078, -0.296), Vector3(0.046, 0.006, 0.005), material(Color("9a6259") if medic else Color("765449")))
 		box(head, Vector3(0, -0.083, -0.295), Vector3(0.025, 0.003, 0.004), material(Color("d0a092")))
 		var cap := root.get_node_or_null("Cap") as Node3D

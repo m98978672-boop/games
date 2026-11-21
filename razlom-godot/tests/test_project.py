@@ -61,14 +61,27 @@ class ProjectChecks(unittest.TestCase):
     def test_block_ids_unique(self):
         ids = []
         for y in range(4):
-            for x in range(8, 25):
-                ids.append(f'back_{x}_{y}')
-                if x < 14 or x > 18:
-                    ids.append(f'front_{x}_{y}')
-            for z in range(-23, -8):
-                ids.extend((f'left_{z}_{y}', f'right_{z}_{y}'))
-        self.assertEqual(len(ids), 236)
-        self.assertEqual(len(set(ids)), 236)
+            if y % 2 == 0:
+                for x in range(8, 25):
+                    ids.append(f'back_{x}_{y}')
+                    if x < 14 or x > 18:
+                        ids.append(f'front_{x}_{y}')
+                for z in range(-23, -8):
+                    ids.extend((f'left_{z}_{y}', f'right_{z}_{y}'))
+            else:
+                for wall in ('back', 'front'):
+                    ids.extend((f'{wall}_left_half_{y}', f'{wall}_right_half_{y}'))
+                    for x in range(8, 24):
+                        staggered_x = x + 0.5
+                        if wall == 'back' or staggered_x < 14 or staggered_x > 18:
+                            ids.append(f'{wall}_stagger_{x}_{y}')
+                for side in ('left', 'right'):
+                    ids.extend((f'{side}_near_half_{y}', f'{side}_far_half_{y}'))
+                    for z in range(-23, -9):
+                        ids.append(f'{side}_stagger_{z}_{y}')
+        ids.extend(f'gable_wedge_{x}_{z}' for x in (8, 24) for z in (-24, -8))
+        self.assertEqual(len(ids), 250)
+        self.assertEqual(len(set(ids)), 250)
 
     def test_critical_safety_contracts_present(self):
         game = (ROOT / 'scripts/game.gd').read_text()
