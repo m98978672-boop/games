@@ -19,27 +19,27 @@ func has_natural_face(model: Node3D) -> bool:
 	if head == null:
 		return false
 	var face := head.get_node_or_null("Visual") as MeshInstance3D
-	if face == null or not face.mesh is SphereMesh:
+	if face == null or not face.mesh is BoxMesh:
+		return false
+	var head_size: Vector3 = (face.mesh as BoxMesh).size
+	if head_size != Vector3(0.30, 0.34, 0.30):
 		return false
 	if not head.has_node("NoseTip") or not head.has_node("EyeL") or not head.has_node("EyeR"):
 		return false
-	if head.get_node("EyeL").position.z > -0.315 or head.get_node("EyeR").position.z > -0.315:
+	if head.get_node("EyeL").position.z > -0.15 or head.get_node("EyeR").position.z > -0.15:
 		return false
 	for eye_name in ["EyeL", "EyeR"]:
 		var eye := head.get_node_or_null(eye_name) as Node3D
-		if eye == null or not eye.has_node("Iris") or not eye.has_node("Pupil"):
+		if eye == null or not eye.has_node("Iris") or not eye.has_node("Pupil") or not eye.has_node("Sclera/Visual"):
 			return false
-		var eye_white: Node3D = eye.get_child(0) as Node3D
-		if eye_white == null or eye_white.get_child_count() == 0:
+		var sclera := eye.get_node("Sclera/Visual") as MeshInstance3D
+		if sclera == null or not sclera.mesh is BoxMesh:
 			return false
-		var visual := eye_white.get_child(0) as MeshInstance3D
-		if visual == null or not visual.mesh is BoxMesh:
-			return false
-		var size: Vector3 = (visual.mesh as BoxMesh).size
-		if size.x > 0.04 or size.y > 0.02 or size.z > 0.01:
+		var sclera_size: Vector3 = (sclera.mesh as BoxMesh).size
+		if sclera_size.x > 0.04 or sclera_size.y > 0.02 or sclera_size.z > 0.01:
 			return false
 		var iris := eye.get_node("Iris") as MeshInstance3D
-		if iris.scale.x > 0.01 or iris.scale.y > 0.012 or iris.scale.z > 0.005:
+		if iris == null or not iris.mesh is BoxMesh:
 			return false
 	return true
 func run_tests() -> void:
@@ -48,7 +48,7 @@ func run_tests() -> void:
 	await process_frame
 	var guard = game.enemies[0]
 	check(has_natural_face(guard.visual), "Guards have shaped heads and compact inset eyes")
-	check(guard.left_arm.hand.has_node("Palm") and guard.left_arm.hand.get_node("Finger0").get_child(0).mesh is CapsuleMesh, "Guard glove uses rounded palms and segmented fingers")
+	check(guard.left_arm.hand.has_node("Palm") and guard.left_arm.hand.get_node("Finger0").get_child(0).mesh is BoxMesh, "Guard glove uses block-built palms and segmented fingers")
 	var medic = game.interactions.medic_motion.model
 	check(has_natural_face(medic), "Vera has the same shaped head and compact inset eyes")
 	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")

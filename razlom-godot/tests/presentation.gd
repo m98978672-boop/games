@@ -59,7 +59,7 @@ func run_tests() -> void:
 	var player_glove: Node3D = game.player.left_arm.hand
 	var player_finger: Node3D = player_glove.get_node("Finger0") as Node3D
 	var player_finger_segment := player_finger.get_child(0) as MeshInstance3D
-	check(player_glove.has_node("Palm") and player_finger_segment.mesh is CapsuleMesh and not player_glove.has_node("KnuckleRidge0"), "First-person glove keeps attached segmented fingers without floating ornaments")
+	check(player_glove.has_node("Palm") and player_finger_segment.mesh is BoxMesh and not player_glove.has_node("KnuckleRidge0"), "First-person glove keeps attached block-built fingers without floating ornaments")
 	var surface := RazlomArt.material(Color.WHITE, "brick")
 	check(surface.normal_enabled and surface.normal_texture != null, "Brick relief uses an imported normal map")
 	check(surface.roughness_texture != null, "Surface roughness map is bound")
