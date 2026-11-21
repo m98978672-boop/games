@@ -88,6 +88,19 @@ console.log('crew roots:', crewRoots.length, 'order', order.code, order.size, 'c
 if (!crewRoots.length) process.exit(1);
 const root = crewRoots.find((r) => r.userData.rig === worker.state.id) || crewRoots[0];
 
+// LINEUP=1 — все трое в ряд, как на групповом снимке для README
+const lineup = process.env.LINEUP === '1';
+if (lineup) {
+  crewRoots.forEach((r, i) => {
+    r.position.set((i - 1) * 0.95, 0, 0);
+    r.rotation.set(0, 0, 0);
+  });
+  scene.updateMatrixWorld(true);
+  scene.children.forEach((child) => {
+    if (!child.userData || !child.userData.rig) child.visible = false;
+  });
+}
+
 // FOCUS=box — рисуем только коробку (без рабочего), чтобы проверить посадку
 let onlyBox = null;
 if (process.env.FOCUS === 'box') {
@@ -109,11 +122,17 @@ const offset = view === 'front' ? fwd.clone().multiplyScalar(dist)
   : fwd.clone().multiplyScalar(dist * 0.72).add(rightV.clone().multiplyScalar(dist * 0.62)).add(new THREE.Vector3(0, 1.1, 0));
 let camPos = [camTarget[0] + offset.x, camTarget[1] + offset.y, camTarget[2] + offset.z];
 let lookTarget = camTarget;
+if (lineup) {
+  const base = new THREE.Vector3();
+  crewRoots[Math.floor(crewRoots.length / 2)].getWorldPosition(base);
+  camPos = [base.x, 1.5, base.z + 3.9];
+  lookTarget = [base.x, 0.9, base.z];
+}
 if (sceneCam && sceneLook) { camPos = sceneCam; lookTarget = sceneLook; }
 const height = 2.2;
 const aspect = W / H;
 const viewH = height, viewW = height * aspect;
-const cam = new THREE.PerspectiveCamera(38, aspect, 0.1, 50);
+const cam = new THREE.PerspectiveCamera(lineup ? 33 : 38, aspect, 0.1, 50);
 cam.position.set(...camPos);
 cam.fov = 40;
 cam.lookAt(new THREE.Vector3(...lookTarget));
@@ -128,7 +147,7 @@ const zbuf = new Float32Array(W * H).fill(Infinity);
 // рабочий уже выбран выше
 const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
 root.updateMatrixWorld(true);
-const drawRoot = (sceneCam && sceneLook) ? scene : root;
+const drawRoot = lineup ? scene : ((sceneCam && sceneLook) ? scene : root);
 drawRoot.traverse((obj) => {
   if (!obj.isMesh || !obj.geometry || !obj.visible) return;
   const geo = obj.geometry;
