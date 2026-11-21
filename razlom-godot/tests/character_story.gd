@@ -61,6 +61,17 @@ func has_separated_fringe(model: Node3D) -> bool:
 	var head := model.get_node_or_null("Head") as Node3D
 	if head == null:
 		return false
+	var brow_l := head.get_node_or_null("BrowL") as Node3D
+	var brow_r := head.get_node_or_null("BrowR") as Node3D
+	if brow_l == null or brow_r == null or brow_l.get_child_count() == 0 or brow_r.get_child_count() == 0:
+		return false
+	var brow_l_mesh := brow_l.get_child(0) as MeshInstance3D
+	var brow_r_mesh := brow_r.get_child(0) as MeshInstance3D
+	if brow_l_mesh == null or brow_r_mesh == null or not brow_l_mesh.mesh is BoxMesh or not brow_r_mesh.mesh is BoxMesh:
+		return false
+	var brow_l_size: Vector3 = (brow_l_mesh.mesh as BoxMesh).size
+	var brow_r_size: Vector3 = (brow_r_mesh.mesh as BoxMesh).size
+	var highest_brow := maxf(brow_l.position.y + brow_l_size.y * 0.5, brow_r.position.y + brow_r_size.y * 0.5)
 	var previous: Node3D
 	var previous_width := 0.0
 	for i in range(3):
@@ -71,7 +82,7 @@ func has_separated_fringe(model: Node3D) -> bool:
 		if visual == null or not visual.mesh is BoxMesh:
 			return false
 		var size: Vector3 = (visual.mesh as BoxMesh).size
-		if fringe.position.y - size.y * 0.5 <= 0.09:
+		if fringe.position.y - size.y * 0.5 - highest_brow < 0.025:
 			return false
 		if previous != null and fringe.position.x - previous.position.x - (previous_width + size.x) * 0.5 < 0.02:
 			return false
