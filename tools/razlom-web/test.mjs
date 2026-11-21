@@ -24,6 +24,15 @@ async function check(name, fn) { await fn(); checks.push(name); console.log('PAS
    увидеть ни взрыв, ни его очистку. Опрашиваем статус по таймеру, а при
    тайм-ауте показываем сам статус — иначе упавший прогон не говорит,
    был ли взрыв вообще. */
+async function clickDialogChoice(prefix) {
+  const rect = await page.evaluate((needle) => {
+    const buttons = window.__razlomStatus?.dialog?.buttons || [];
+    const button = buttons.find((item) => item.text.startsWith(needle));
+    return button?.rect || null;
+  }, prefix);
+  assert.ok(rect, `dialog choice not found: ${prefix}`);
+  await page.mouse.click(rect[0] + rect[2] / 2, rect[1] + rect[3] / 2);
+}
 async function waitStatus(predicate, timeout, label) {
   try {
     await page.waitForFunction(predicate, null, { timeout, polling: 250 });
@@ -73,6 +82,39 @@ try {
   assert.ok(Math.hypot(after[0]-before[0], after[2]-before[2]) > .2);
  });
  await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/play.png'});
+ // Inspect the rebuilt shelter glazing from the actual first-person camera.
+ // The player starts facing +Z; this measured mouse turn faces the east wall.
+ await page.mouse.move(720,450);
+ await page.mouse.move(0,450);
+ await page.waitForTimeout(500);
+ await check('Captured mouse turns the live camera toward the shelter windows', async () => {
+  const yaw = await page.evaluate(() => window.__razlomStatus.yaw);
+  assert.ok(yaw > 4.2 && yaw < 5.3, `yaw=${yaw}`);
+ });
+ await page.keyboard.down('w'); await page.waitForTimeout(350); await page.keyboard.up('w');
+ await page.waitForTimeout(300);
+ await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/shelter-window.png'});
+ // Move through the playable shelter and face Vera for a real NPC pose capture.
+ await page.mouse.move(720,450);
+ await page.mouse.move(1439,450);
+ await page.waitForTimeout(500);
+ await page.keyboard.down('d'); await page.waitForTimeout(900); await page.keyboard.up('d');
+ await page.mouse.move(720,450);
+ await page.mouse.move(1018,450);
+ await page.waitForTimeout(500);
+ await check('NPC pose review camera reaches Vera from gameplay controls', async () => {
+  const yaw = await page.evaluate(() => window.__razlomStatus.yaw);
+  assert.ok(yaw > 2.25 && yaw < 2.8, `yaw=${yaw}`);
+ });
+ await page.keyboard.press('e');
+ await page.waitForFunction(() => window.__razlomStatus?.dialog?.visible, null, {timeout:10000});
+ await check('Vera opens her actual in-world conversation within interaction range', async () => {
+  assert.equal(await page.evaluate(() => window.__razlomStatus.dialog.title), 'ВЕРА ЛЕСНАЯ');
+ });
+ await clickDialogChoice('Я вернусь');
+ await page.waitForFunction(() => !window.__razlomStatus?.dialog?.visible);
+ await page.waitForTimeout(350);
+ await page.screenshot({timeout:90000,path:'../../docs/razlom/web-evidence/npc-greeting.png'});
  await page.keyboard.press('Escape');
  await page.waitForFunction(() => window.__razlomStatus?.paused);
  await check('Escape returns to pause menu', async () => assert.equal(await page.evaluate(() => window.__razlomStatus.paused), true));

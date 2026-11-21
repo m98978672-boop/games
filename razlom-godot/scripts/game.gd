@@ -174,7 +174,17 @@ func build_level() -> void:
 	# Shelter, open on the south side.
 	Art.box(world, Vector3(-23, 0.08, 22), Vector3(10, 0.25, 9), concrete, true)
 	Art.box(world, Vector3(-28, 1.8, 22), Vector3(0.3, 3.6, 9), wood, true)
-	Art.box(world, Vector3(-18, 1.8, 22), Vector3(0.3, 3.6, 9), wood, true)
+	# The east wall is built around three real window openings, not a pane layered
+	# on top of a solid wall. Bottom/top rails and solid piers retain the structure.
+	var window_sill_wall := Art.box(world, Vector3(-18, 0.65, 22), Vector3(0.3, 1.3, 9), wood, true)
+	window_sill_wall.name = "ShelterWindowSillWall"
+	var window_header_wall := Art.box(world, Vector3(-18, 3.15, 22), Vector3(0.3, 0.9, 9), wood, true)
+	window_header_wall.name = "ShelterWindowHeaderWall"
+	var pier_index := 0
+	for pier in [Vector2(18.4625, 1.925), Vector2(21.35, 1.55), Vector2(23.85, 1.15), Vector2(26.0375, 0.925)]:
+		var wall_pier := Art.box(world, Vector3(-18, 2.0, pier.x), Vector3(0.3, 1.4, pier.y), wood, true)
+		wall_pier.name = "ShelterWindowPier%d" % pier_index
+		pier_index += 1
 	Art.box(world, Vector3(-23, 1.8, 17.5), Vector3(10, 3.6, 0.3), wood, true)
 	Art.box(world, Vector3(-24, 0.72, 17.84), Vector3(1.55, 0.12, 0.48), wood)
 	Art.box(world, Vector3(-24.55, 0.85, 17.72), Vector3(0.12, 0.22, 0.16), metal)
@@ -279,11 +289,13 @@ func build_level() -> void:
 func decorate_shelter() -> void:
 	var timber := Art.material(Color("6c6250"), "wood")
 	var warm_metal := Art.material(Color("8e8067"), "metal")
-	var dark_glass := Art.material(Color("30433f"), "metal")
-	# Recessed panes, layered timber frames, doorway lintel and roof fascia break
-	# up the flat shelter walls and give openings real depth cues.
+	var dark_glass := Art.glass_material()
+	# Recessed, genuinely transparent panes sit inside the three wall cut-outs.
+	# Timber frames and metal muntins stay on the room side of the glazing.
 	for center_z in [20.0, 22.7, 25.0]:
-		Art.box(world, Vector3(-18.17, 2.0, center_z), Vector3(0.025, 1.05, 1.15), dark_glass)
+		var pane := Art.box(world, Vector3(-18.0, 2.0, center_z), Vector3(0.025, 1.12, 1.08), dark_glass)
+		pane.name = "ShelterWindowPane_%d" % int(center_z)
+		(pane.get_child(0) as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		for side in [-1, 1]:
 			Art.box(world, Vector3(-18.19, 2.0, center_z + side * 0.61), Vector3(0.08, 1.22, 0.08), timber)
 		Art.box(world, Vector3(-18.19, 1.4, center_z), Vector3(0.08, 0.08, 1.3), timber)
@@ -1072,10 +1084,12 @@ func _process(delta: float) -> void:
 		mission_label.text = "02 / ГОЛОС В ЭФИРЕ\n" + ("Вера • убежище" if state.relay_log else "Ретранслятор 12") + " · %d м\n" % int(distance) + direction_text
 	if not tracking.is_empty():
 		mission_label.text = str(tracking.title) + "\nЦель · %d м\n" % int(distance) + direction_text
+	# Dialogue pauses combat and movement, not the two people standing in the
+	# shelter: gestures and idle breathing must keep playing while the player talks.
+	interactions.advance_people(delta)
 	if get_tree().paused or ended:
 		return
 	quests.advance(delta)
-	interactions.advance_people(delta)
 	elapsed += delta
 	day_minutes += delta * 0.2
 	var hour := fmod(day_minutes / 60.0, 24.0)

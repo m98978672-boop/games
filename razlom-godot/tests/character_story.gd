@@ -83,17 +83,18 @@ func run_tests() -> void:
 	var medic = game.interactions.medic_motion.model
 	check(has_natural_face(medic), "Vera has the same shaped head and compact inset eyes")
 	check(has_clean_forehead(medic), "Vera's temple hair leaves two brows separate and no third forehead bar")
-	check(medic.has_node("ArmLJoint/ArmL/CharacterHand/Palm"), "Vera has modeled hands that follow her animated sleeves")
+	check(medic.has_node("ArmLJoint/ArmL/Elbow/CharacterHand/Palm"), "Vera's hand is attached through a separate animated elbow and forearm")
 	var vera_sleeve := medic.get_node("ArmLJoint/ArmL/Visual") as MeshInstance3D
-	check(vera_sleeve.mesh is BoxMesh and (vera_sleeve.mesh as BoxMesh).size.is_equal_approx(Vector3(0.14, 0.5, 0.18)), "NPC sleeves use a compact proportion that does not flare away from the torso")
-	var vera_hand: Node3D = medic.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
-	var vera_right_hand: Node3D = medic.get_node("ArmRJoint/ArmR/CharacterHand") as Node3D
-	check(vera_hand.has_node("Finger0J0") and vera_hand.has_node("Finger3J1") and vera_hand.has_node("Thumb"), "Vera's hands have knuckles, separated fingers and a thumb")
+	check(vera_sleeve.mesh is BoxMesh and (vera_sleeve.mesh as BoxMesh).size.is_equal_approx(Vector3(0.14, 0.28, 0.18)), "NPC upper sleeves end at a compact elbow instead of remaining rigid shoulder-to-wrist bars")
+	check(medic.has_node("ArmLJoint/ArmL/Elbow/Forearm") and medic.has_node("ArmRJoint/ArmR/Elbow/Forearm"), "Both humanoid arms include forearms beneath their elbow pivots")
+	var vera_hand: Node3D = medic.get_node("ArmLJoint/ArmL/Elbow/CharacterHand") as Node3D
+	var vera_right_hand: Node3D = medic.get_node("ArmRJoint/ArmR/Elbow/CharacterHand") as Node3D
+	check(vera_hand.has_node("Finger0") and vera_hand.has_node("Finger3") and vera_hand.has_node("Thumb"), "Vera's hands have short connected fingers and correctly mirrored thumbs")
 	check(vera_hand.get_node("Thumb").position.x < 0 and vera_right_hand.get_node("Thumb").position.x > 0, "Both civilian hands mirror their thumbs toward the correct sides")
 	var pavel: Node3D = game.world.get_node("Pavel").find_child("guard", true, false) as Node3D
 	check(pavel != null and has_natural_face(pavel), "Pavel uses the same shaped head and compact eyes")
-	var pavel_left: Node3D = pavel.get_node("ArmLJoint/ArmL/CharacterHand") as Node3D
-	var pavel_right: Node3D = pavel.get_node("ArmRJoint/ArmR/CharacterHand") as Node3D
+	var pavel_left: Node3D = pavel.get_node("ArmLJoint/ArmL/Elbow/CharacterHand") as Node3D
+	var pavel_right: Node3D = pavel.get_node("ArmRJoint/ArmR/Elbow/CharacterHand") as Node3D
 	check(pavel_left != null and pavel_right != null and pavel_left.get_node("Palm") != null and pavel_right.get_node("Palm") != null, "Every civilian humanoid receives attached modeled hands")
 	check(pavel_left.get_node("Thumb").position.x < 0 and pavel_right.get_node("Thumb").position.x > 0, "Pavel's mirrored hands do not share the same thumb orientation")
 	var pavel_left_shoulder: Node3D = pavel.get_node("ArmLJoint") as Node3D
@@ -111,9 +112,15 @@ func run_tests() -> void:
 	game.interactions.medic_motion.greet()
 	game.interactions.medic_motion.advance(0.2, 0)
 	check(game.interactions.medic_motion.joints.ArmR.rotation.x < -0.4, "Conversation gesture raises hand")
+	check(game.interactions.medic_motion.elbows.ArmR.rotation.x > 0.1, "Greeting bends Vera's elbow so the forearm and hand do not move as one rigid bar")
 	var vera_left_joint: Node3D = game.interactions.medic_motion.joints.ArmL
 	var vera_right_joint: Node3D = game.interactions.medic_motion.joints.ArmR
 	var vera_left_hand_position := vera_hand.position
+	var vera_hand_before_treatment := vera_hand.global_position
+	game.interactions.medic_motion.greet("treat")
+	for i in range(18):
+		game.interactions.medic_motion.advance(1.0 / 60.0, 0.0)
+	check(game.interactions.medic_motion.elbows.ArmL.rotation.x > 0.1 and vera_hand.global_position.distance_to(vera_hand_before_treatment) > 0.03, "Treatment gesture bends and moves the forearm with its attached hand")
 	game.interactions.medic_motion.react("arms", Vector3(-0.3, 1.1, 0), 1.0)
 	for i in range(90):
 		game.interactions.medic_motion.advance(1.0 / 60.0, 0.0)

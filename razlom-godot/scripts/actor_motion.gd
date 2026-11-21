@@ -6,6 +6,7 @@ var clock := 0.0
 var blend := 0.0
 var recoil := 0.0
 var joints: Dictionary = {}
+var elbows: Dictionary = {}
 var flinch := 0.0
 var reactions: Dictionary = {}
 var knees: Dictionary = {}
@@ -37,6 +38,10 @@ func _init(root: Node3D, quadruped: bool = false) -> void:
 		pivot.position = limb.position + Vector3.UP * (0.19 if quadruped else (0.35 if part.begins_with("Leg") else 0.23))
 		limb.reparent(pivot, true)
 		joints[part] = pivot
+		if not quadruped and part.begins_with("Arm"):
+			var elbow := limb.get_node_or_null("Elbow") as Node3D
+			if elbow != null:
+				elbows[part] = elbow
 		if not quadruped and part.begins_with("Leg"):
 			limb.get_node("Visual").hide()
 			var cloth := RazlomArt.material(Color("45554e"), "cloth")
@@ -133,6 +138,16 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 		if knees.has(part):
 			knees[part].rotation.x = maxf(0, -sin(clock + (PI if alternate else 0.0))) * blend * 0.7 + float(reactions.get(part, 0)) * 0.6 + duck * 0.55
 		joint.rotation.x = lerp_angle(joint.rotation.x, swing, 1.0 - exp(-delta * 12.0))
+		if elbows.has(part):
+			var bend := 0.06 + absf(swing) * 0.12 + flinch * 0.12
+			if part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
+				bend = lerpf(bend, 0.72, social_blend)
+			elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
+				bend = lerpf(bend, 0.5, social_blend)
+			elif part.begins_with("Arm") and gesture_kind in ["warm", "listen"]:
+				bend = lerpf(bend, 0.28, social_blend)
+			var elbow: Node3D = elbows[part]
+			elbow.rotation.x = lerp_angle(elbow.rotation.x, clampf(bend, 0.0, 0.78), 1.0 - exp(-delta * 10.0))
 	var breathing := sin(clock * 1.25) * (1.0 - blend) * 0.012
 	var step_bob := (1.0 - cos(clock * 2.0)) * blend * 0.012
 	model.position.y = lerpf(model.position.y, rest_height + step_bob + breathing - duck * 0.20, 1.0 - exp(-delta * 10.0))

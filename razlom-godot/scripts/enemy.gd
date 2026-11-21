@@ -83,11 +83,9 @@ func _ready() -> void:
 		for hand_visual in weapon_hand.find_children("*", "MeshInstance3D", true, false):
 			(hand_visual as MeshInstance3D).hide()
 	for arm_path in ["ArmRJoint/ArmR", "ArmLJoint/ArmL"]:
-		var old_arm := visual.get_node(arm_path) as Node3D
-		(old_arm.get_node("Visual") as MeshInstance3D).hide()
-		var old_hand := old_arm.get_node_or_null("CharacterHand") as Node3D
-		if old_hand != null:
-			old_hand.hide()
+		# Guards use the two-bone grip rig below; hide every authored arm layer so
+		# the old sleeves/forearms/hands cannot overlap that articulated silhouette.
+		(visual.get_node(arm_path) as Node3D).hide()
 	left_arm = RazlomArmRig.new(visual, -1.0)
 	right_arm = RazlomArmRig.new(visual, 1.0)
 	weapon_motion = RazlomWeaponMotion.new(weapon)
