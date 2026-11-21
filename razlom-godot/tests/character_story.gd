@@ -30,9 +30,12 @@ func has_natural_face(model: Node3D) -> bool:
 		return false
 	for eye_name in ["EyeL", "EyeR"]:
 		var eye := head.get_node_or_null(eye_name) as Node3D
-		if eye == null or not eye.has_node("Iris") or not eye.has_node("Pupil") or not eye.has_node("Sclera/Visual"):
+		if eye == null or not eye.has_node("Iris") or not eye.has_node("Pupil") or not eye.has_node("Sclera"):
 			return false
-		var sclera := eye.get_node("Sclera/Visual") as MeshInstance3D
+		var sclera_root := eye.get_node("Sclera") as Node3D
+		if sclera_root.get_child_count() == 0:
+			return false
+		var sclera := sclera_root.get_child(0) as MeshInstance3D
 		if sclera == null or not sclera.mesh is BoxMesh:
 			return false
 		var sclera_size: Vector3 = (sclera.mesh as BoxMesh).size
