@@ -58,7 +58,7 @@ try {
     rows[0].querySelector('.o-take').click();
     WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1 / 30);
     return { version: gl.getParameter(gl.VERSION), glError: gl.getError(), arms, stats, actions, header,
-      sorted, assigned: soon.status === 'claimed', disabled: rows[1].querySelector('.o-take').disabled };
+      sorted, assigned: soon.status === 'claimed', disabled: rows[1].querySelector('.o-take').disabled, lateId: late.id, lateCode: late.code };
   });
   assert.match(actual.version, /WebGL/);
   assert.equal(actual.glError, 0);
@@ -69,6 +69,16 @@ try {
   assert(actual.header.bottom < (portrait ? 125 : 120), 'заголовок не должен занимать слишком много экрана');
   const dayLight = await page.evaluate(() => WC.world.scene.children.find(o => o.isHemisphereLight).intensity);
   await page.evaluate(() => WC.ui.sheet.set('full', true));
+  const priorityRow = page.locator('#order-list .order').filter({hasText: actual.lateCode});
+  const priorityButton = priorityRow.locator('.o-priority');
+  await priorityButton.scrollIntoViewIfNeeded();
+  assert.equal(await priorityButton.getAttribute('aria-pressed'), 'false');
+  const prioritySize = await priorityButton.boundingBox();
+  assert(prioritySize.height >= 38 && prioritySize.x >= 0 && prioritySize.x + prioritySize.width <= (portrait ? 390 : 844), JSON.stringify(prioritySize));
+  await priorityButton.tap();
+  assert.equal(await priorityButton.getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
+  await page.screenshot({path: '/tmp/wc-priority-' + (portrait ? 'portrait' : 'landscape') + '.png'});
   await page.locator('#btn-voice').scrollIntoViewIfNeeded();
   assert.equal(await page.locator('#btn-voice').getAttribute('aria-pressed'), 'false');
   await page.locator('[data-lighting="night"]').scrollIntoViewIfNeeded();
@@ -107,7 +117,10 @@ try {
     lightLevel: WC.world.scene.children.find(o => o.isHemisphereLight)?.intensity }));
   assert.deepEqual(resumed, {status:'restored', crew:4, staff:1, id:saved.id, time:saved.time, orders:saved.orders,
     energy:.41, paused:true, speed:4, speedOn:'4', mode:'night', lightingOn:'night', lightLevel:lighting.night});
+  assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
+  assert.equal(await page.locator('#order-list .order').filter({hasText:actual.lateCode}).locator('.o-priority').getAttribute('aria-pressed'), 'true');
   assert.equal(errors.length, 0, errors.join('\n'));
+  console.log('✓ Приоритет заказа: мобильный тап и восстановление после перезагрузки');
   console.log('✓ Субтитры, быстрый приказ и настройка озвучки на телефоне');
   console.log('✓ Ночной свет, карта и сохранение режима при перезагрузке в браузере');
   console.log('✓ WebGL, непрозрачные руки, очередь и мобильная шапка (' + (portrait ? 'портрет' : 'ландшафт') + ')');

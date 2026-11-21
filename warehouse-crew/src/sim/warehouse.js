@@ -542,6 +542,7 @@
       order.bounces = 0;
       if (order.damage >= 0.85) {
         order.status = 'ruined';
+        delete order.dispatchPriority;
         releaseSlot(order);
         state.stats.ruined += 1;
         state.stats.perfectStreak = 0;
@@ -555,6 +556,7 @@
 
     function store(order, workerId) {
       order.status = 'stored';
+      delete order.dispatchPriority;
       order.storedAt = state.time;
       order.carrier = null;
       var late = state.time > order.deadline;
@@ -720,6 +722,7 @@
     function loadTruck(order, workerId) {
       var truck = order.truckId ? truckById(order.truckId) : null;
       order.status = 'loaded';
+      delete order.dispatchPriority;
       order.carrier = null;
       order.loadedAt = state.time;
       syncDest(order);
@@ -757,6 +760,7 @@
     // Вернуть коробку на полку (например, фура уехала без неё)
     function restock(order) {
       order.status = 'stored';
+      delete order.dispatchPriority;
       order.carrier = null;
       order.truckId = null;
       order.direction = null;
@@ -823,6 +827,7 @@
         if (o.status === 'missed' || o.status === 'stored' || o.status === 'ruined' || o.status === 'loaded') continue;
         if (state.time > o.deadline + 35) {
           o.status = 'missed';
+          delete o.dispatchPriority;
           o.carrier = null;
           if (o.direction !== 'out') releaseSlot(o);
           state.stats.missed += 1;
@@ -854,6 +859,7 @@
         var d = Math.hypot(o.x - from.x, o.y - from.y);
         var urgency = Math.max(0, 1 - Math.max(0, o.deadline - state.time) / 100);
         var s = urgency * 6 + o.priority * 2 - d * 0.12;
+        if (o.dispatchPriority === true) s += 3.5;
         if (s > bestScore) { bestScore = s; best = o; }
       }
       return best;

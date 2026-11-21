@@ -696,6 +696,21 @@ WC.game = (function () {
     return res;
   }
 
+  // Метка диспетчера помогает выбрать свободный заказ, но не изменяет его
+  // исходную ценность и не переназначает груз, уже взятый коллегой.
+  function setOrderPriority(orderId, enabled) {
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена не активна' };
+    if (typeof enabled !== 'boolean') return { ok: false, reason: 'Некорректная метка' };
+    var order = api.sim.state.orders.find(function (item) { return item.id === orderId; });
+    if (!order || order.status !== 'pending') return { ok: false, reason: 'Заказ уже занят или недоступен' };
+    if (Boolean(order.dispatchPriority) !== enabled) {
+      order.dispatchPriority = enabled;
+      pushLog(order.code + (enabled ? ': приоритет диспетчера' : ': приоритет снят'), 'info');
+      emit('order-priority', { order: order, enabled: enabled });
+    }
+    return { ok: true, enabled: enabled };
+  }
+
   function labelForCommand(cmd) {
     return {
       pick: 'взять коробку',
@@ -987,6 +1002,7 @@ WC.game = (function () {
       if (!order || typeof order.id !== 'string' || !order.id || orderIds[order.id] ||
           typeof order.status !== 'string' || !Number.isFinite(order.x) || !Number.isFinite(order.y) ||
           !Number.isFinite(order.mass) || !Number.isFinite(order.deadline) || !Number.isFinite(order.priority) ||
+          (order.dispatchPriority != null && typeof order.dispatchPriority !== 'boolean') ||
           !Number.isFinite(order.damage) || !order.pose || !Number.isFinite(order.pose.x) || !Number.isFinite(order.pose.y) || !Number.isFinite(order.pose.z)) throw new Error('Повреждён заказ');
       orderIds[order.id] = true;
     });
@@ -1090,6 +1106,7 @@ WC.game = (function () {
     workerById: workerById,
     command: command,
     teamCommand: teamCommand,
+    setOrderPriority: setOrderPriority,
     buyStaff: buyStaff,
     hireWorker: hireWorker,
     staffCost: staffCost,

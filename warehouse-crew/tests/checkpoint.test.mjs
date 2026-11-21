@@ -47,7 +47,14 @@ driver.state.onForklift = true; game.sim.state.forklift.rider = driver.id; game.
 game.sim.state.toiletOccupant = game.api.crew[2].id;
 game.api.crew[2].state.inToilet = true; game.api.crew[2].state.state = 'toilet';
 const order = game.sim.spawnOrder();
-if (order) { game.sim.drop(order,.2, -6, 2); game.sim.stepPhysics(.1); }
+assert(order); game.sim.drop(order,.2, -6, 2); game.sim.stepPhysics(.1);
+const originalPriority=order.priority, originalDeadline=order.deadline, originalScore=game.sim.state.stats.score;
+assert(game.setOrderPriority(order.id,true).ok); assert.equal(order.dispatchPriority,true);
+assert.equal(order.priority,originalPriority); assert.equal(order.deadline,originalDeadline); assert.equal(game.sim.state.stats.score,originalScore);
+assert(!game.setOrderPriority(carrying.id,true).ok); assert(!game.setOrderPriority('no-such-order',true).ok);
+assert(!game.setOrderPriority(order.id,'yes').ok);
+assert(game.setOrderPriority(order.id,false).ok); assert.equal(order.dispatchPriority,false);
+assert(game.setOrderPriority(order.id,true).ok);
 // A live articulated ragdoll should survive reload, not just its display pose.
 worker.state.state = 'down'; worker.body.collapsed = true; worker.state.timers.down = 10;
 game.sim.beginRagdoll(worker.state); game.sim.stepPhysics(.1);
@@ -73,6 +80,7 @@ assert.equal(game.sim.state.orders.length,snap.warehouse.state.orders.length);
 assert.equal(game.api.crew[0].body.energy,.43);
 assert.equal(game.api.crew[0].body.injuries[0].severity,.24);
 assert.equal(game.api.crew[0].state.body,game.api.crew[0].body);
+assert.equal(game.sim.state.orders.find(o => o.id === order.id).dispatchPriority,true);
 assert.equal(game.api.crew[1].state.carryingId,carrying.id);
 assert.equal(game.sim.state.orders.find(o=>o.id === carrying.id).carrier, game.api.crew[1].id);
 assert.equal(game.sim.state.forklift.rider, game.api.crew[3].id);
@@ -85,7 +93,7 @@ assert(game.sim.state.time > snap.warehouse.state.time);
 assert(game.api.crew[0].state.ragdoll.pelvis);
 // После завершения смены перезагрузка сохраняет финальное состояние, а рестарт создаёт новую.
 let cancelled=0; c.WC.voice={cancel(){cancelled++;}};
-game.endShift(); assert.equal(cancelled,1);
+game.endShift(); assert.equal(cancelled,1); assert(!game.setOrderPriority(order.id,false).ok);
 c = await boot(); game = c.WC.game;
 assert.equal(game.api.resumeStatus,'restored'); assert.equal(game.state.shiftEnded,true);
 game.restart(); assert.equal(game.state.shiftEnded,false); assert.equal(game.sim.state.time,0);
@@ -97,6 +105,7 @@ assert.equal(c.WC.save.save(game),false); assert.equal(data.get(c.WC.save.CHECKP
 storage.setItem = setItem;
 // v2 старого формата без поля режима должен оставаться доступным.
 const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode; delete oldV2.checkpoint.dialogueState;
+oldV2.checkpoint.warehouse.state.orders.forEach(o => delete o.dispatchPriority);
 data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldV2));
 c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.shiftMode,'day');
 // Неизвестный режим блокирует перезапись.
@@ -105,6 +114,9 @@ data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldV2));
 const badMode = data.get(c.WC.save.CHECKPOINT_KEY);
 c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed');
 assert.equal(c.WC.save.save(c.WC.game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),badMode);
+const invalidPriority = JSON.parse(raw); invalidPriority.checkpoint.warehouse.state.orders[0].dispatchPriority = 'true';
+data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(invalidPriority));
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed'); assert.equal(c.WC.save.save(c.WC.game),false);
 // A truncated or semantically damaged snapshot remains untouched, even on autosave.
 data.set(c.WC.save.CHECKPOINT_KEY,'{broken');
 c = await boot(); game = c.WC.game;

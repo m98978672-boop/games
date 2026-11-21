@@ -1600,6 +1600,8 @@
         var urgencyScore = (1 - Math.min(1, timeLeft / 100)) * (0.6 + 1.8 * urgency);
         var massScore = -Math.max(0, o.mass - model.carryCapacity(body)) * 0.12;
         var s = urgencyScore * 6 + o.priority * (1 + 2 * urgency) - dist * 0.14 - o.damage * 2 + massScore;
+        // Диспетчерская метка — предпочтение, не приказ в обход ограничений.
+        if (o.dispatchPriority === true) s += 3.5;
         // Отдаём близкий обычный заказ свободному, здоровому коллеге; срочные
         // грузы всё равно перевешивают этот штраф и не остаются без исполнителя.
         var closer = allWorkers.some(function (peer) {

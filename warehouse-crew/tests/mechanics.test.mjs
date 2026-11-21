@@ -226,6 +226,46 @@ console.log('Безопасное назначение заказов');
   check(!carryingAttempt.ok && owner.state.carryingId === first.id && first.status === 'carried', 'нельзя подменить заказ с коробкой в руках');
 }
 
+console.log('Приоритет диспетчера');
+{
+  const { warehouse, workers, envs } = makeWorld();
+  const w = workers[0], a = warehouse.spawnOrder(), b = warehouse.spawnOrder();
+  a.mass = b.mass = 8; a.priority = b.priority = .5; a.deadline = b.deadline = 100;
+  a.x = w.pos.x + 4; b.x = w.pos.x + 1; a.y = b.y = w.pos.y;
+  check(w.chooseOrder(warehouse,[w]).id === b.id, 'без метки учитывается близость');
+  a.dispatchPriority = true;
+  check(w.chooseOrder(warehouse,[w]).id === a.id && warehouse.nearestPending(w.pos).id === a.id,
+    'метка учитывается при автономии и общем выборе заказа');
+  b.deadline = warehouse.state.time; a.deadline = warehouse.state.time + 200;
+  check(w.chooseOrder(warehouse,[w]).id === b.id, 'очень срочный заказ может обогнать отмеченный');
+  a.deadline = b.deadline = 100;
+  a.mass = 90;
+  check(w.chooseOrder(warehouse,[w]).id === b.id, 'метка не отменяет ограничения веса');
+  a.mass = 8; w.body.energy = .2;
+  w.update(.1, envs[w.id]);
+  check(w.state.state === 'toRest' && !w.orderId, 'усталый рабочий отдыхает даже при приоритете');
+  const expected = 12 + Math.round(a.priority * 14);
+  const result = warehouse.store(a, w.id);
+  check(result.points === expected && a.dispatchPriority === undefined, 'метка не меняет оплату и снимается после доставки');
+  const truck = warehouse.spawnTruck('load');
+  check(Boolean(truck) && a.status === 'pending' && !a.dispatchPriority, 'старая метка не переходит на погрузку той же коробки');
+  a.dispatchPriority = true; warehouse.loadTruck(a,w.id);
+  check(!a.dispatchPriority, 'метка снимается после погрузки');
+}
+{
+  const { warehouse } = makeWorld();
+  const a = warehouse.spawnOrder(); a.dispatchPriority = true;
+  warehouse.drop(a, .1, a.x, a.y);
+  check(a.status === 'pending' && a.dispatchPriority, 'метка остаётся после падения пригодной коробки');
+  warehouse.drop(a, .9, a.x, a.y);
+  check(a.status === 'ruined' && !a.dispatchPriority, 'метка снимается после порчи');
+  const returned = warehouse.spawnOrder(); returned.dispatchPriority = true; warehouse.restock(returned);
+  check(returned.status === 'stored' && !returned.dispatchPriority, 'метка снимается после возврата на полку');
+  const b = warehouse.spawnOrder(); b.dispatchPriority = true; b.deadline = -36;
+  warehouse.step(.1);
+  check(b.status === 'missed' && !b.dispatchPriority, 'метка снимается после пропуска');
+}
+
 console.log('Автономия: усталость, срочность и обход');
 {
   const { warehouse, workers, envs } = makeWorld();
