@@ -19,7 +19,7 @@ REVISION = '2fc06364715b967f1860aea9cf38778875588b17'
 
 def generate(model, tokenizer, system_prompt, instruction, max_new):
     messages = [{'role': 'system', 'content': system_prompt}, {'role': 'user', 'content': instruction}]
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=True)
     inputs = tokenizer(text, return_tensors='pt')
     with torch.no_grad():
         out = model.generate(**inputs, max_new_tokens=max_new, do_sample=False, pad_token_id=tokenizer.eos_token_id)
@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--data', required=True, type=Path, help='dataset folder with manifest.json and eval.jsonl')
     parser.add_argument('--adapter', type=Path, help='adapter to compare against the base model')
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--max-new', type=int, default=224)
+    parser.add_argument('--max-new', type=int, default=320)
     args = parser.parse_args()
     manifest = json.loads((args.data / 'manifest.json').read_text())
     rows = [json.loads(line) for line in (args.data / 'eval.jsonl').read_text().splitlines() if line]

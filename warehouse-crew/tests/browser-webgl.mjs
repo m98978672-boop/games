@@ -26,6 +26,14 @@ try {
   await page.goto(new URL('/warehouse-crew/', base).href, { waitUntil: 'load' });
   await page.waitForFunction(() => window.WC?.game?.api?.ready && document.body.classList.contains('ready'), null, { timeout: 60000 });
   await page.waitForTimeout(1000);
+  await page.locator('[data-quick="rest"]').tap();
+  const subtitle = page.locator('#dialogue-subtitle');
+  assert(await subtitle.isVisible());
+  assert.match(await subtitle.innerText(), /передохну/);
+  assert.equal(await subtitle.evaluate(e => getComputedStyle(e).pointerEvents), 'none');
+  const subtitleBounds = await subtitle.boundingBox();
+  assert(subtitleBounds.x >= 0 && subtitleBounds.x + subtitleBounds.width <= (portrait ? 390 : 844));
+  await page.screenshot({path: '/tmp/wc-dialogue-' + (portrait ? 'portrait' : 'landscape') + '.png'});
   const actual = await page.evaluate(() => {
     const g = WC.game, gl = WC.world.renderer.getContext();
     WC.world.render(1 / 30, g);
@@ -50,7 +58,7 @@ try {
     rows[0].querySelector('.o-take').click();
     WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1 / 30);
     return { version: gl.getParameter(gl.VERSION), glError: gl.getError(), arms, stats, actions, header,
-      sorted, assigned: soon.status === 'claimed', disabled: rows[1].querySelector('.o-take').disabled };
+      sorted, assigned: soon.status === 'claimed', disabled: rows[1].querySelector('.o-take').disabled, lateId: late.id, lateCode: late.code };
   });
   assert.match(actual.version, /WebGL/);
   assert.equal(actual.glError, 0);
@@ -59,6 +67,34 @@ try {
   assert(actual.sorted && actual.assigned && actual.disabled);
   assert(actual.stats.every((r, i) => r.left >= 0 && r.right <= (portrait ? 390 : 844) && r.top >= actual.actions.bottom - 1 && (i === 0 || r.left >= actual.stats[i - 1].right)));
   assert(actual.header.bottom < (portrait ? 125 : 120), 'заголовок не должен занимать слишком много экрана');
+  const dayLight = await page.evaluate(() => WC.world.scene.children.find(o => o.isHemisphereLight).intensity);
+  await page.evaluate(() => WC.ui.sheet.set('full', true));
+  const priorityRow = page.locator('#order-list .order').filter({hasText: actual.lateCode});
+  const priorityButton = priorityRow.locator('.o-priority');
+  await priorityButton.scrollIntoViewIfNeeded();
+  assert.equal(await priorityButton.getAttribute('aria-pressed'), 'false');
+  const prioritySize = await priorityButton.boundingBox();
+  assert(prioritySize.height >= 38 && prioritySize.x >= 0 && prioritySize.x + prioritySize.width <= (portrait ? 390 : 844), JSON.stringify(prioritySize));
+  await priorityButton.tap();
+  assert.equal(await priorityButton.getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
+  await page.screenshot({path: '/tmp/wc-priority-' + (portrait ? 'portrait' : 'landscape') + '.png'});
+  await page.locator('#btn-voice').scrollIntoViewIfNeeded();
+  assert.equal(await page.locator('#btn-voice').getAttribute('aria-pressed'), 'false');
+  await page.locator('[data-lighting="night"]').scrollIntoViewIfNeeded();
+  await page.locator('[data-lighting="night"]').click();
+  const lighting = await page.evaluate((day) => {
+    const findHemi = () => WC.world.scene.children.find(o => o.isHemisphereLight);
+    WC.world.render(1 / 30, WC.game);
+    const night = findHemi().intensity;
+    const selected = document.querySelector('[data-lighting="night"]').getAttribute('aria-pressed');
+    WC.world.setMode('map2d'); const noFog = WC.world.scene.fog === null;
+    WC.world.setMode('third'); const fog = WC.world.scene.fog.color.getHex();
+    return {day, night, selected, noFog, fog, mode:WC.game.api.shiftMode};
+  }, dayLight);
+  assert(lighting.day > lighting.night && lighting.night > 0);
+  assert.deepEqual({selected:lighting.selected, noFog:lighting.noFog, fog:lighting.fog, mode:lighting.mode},
+    {selected:'true', noFog:true, fog:0x080e1c, mode:'night'});
   const saved = await page.evaluate(() => {
     const g = WC.game;
     g.sim.state.stats.score = 1000;
@@ -76,11 +112,17 @@ try {
     crew: WC.game.api.crew.length, staff: WC.game.api.staff.length, id: WC.game.api.crew[3]?.id,
     time: WC.game.sim.state.time, orders: WC.game.sim.state.orders.length,
     energy: WC.game.api.crew[0].body.energy, paused: WC.game.state.paused, speed: WC.game.state.speed,
-    speedOn: document.querySelector('#speed-seg button.on')?.getAttribute('data-speed') }));
+    speedOn: document.querySelector('#speed-seg button.on')?.getAttribute('data-speed'),
+    mode: WC.game.api.shiftMode, lightingOn: document.querySelector('#lighting-seg button.on')?.getAttribute('data-lighting'),
+    lightLevel: WC.world.scene.children.find(o => o.isHemisphereLight)?.intensity }));
   assert.deepEqual(resumed, {status:'restored', crew:4, staff:1, id:saved.id, time:saved.time, orders:saved.orders,
-    energy:.41, paused:true, speed:4, speedOn:'4'});
+    energy:.41, paused:true, speed:4, speedOn:'4', mode:'night', lightingOn:'night', lightLevel:lighting.night});
+  assert.equal(await page.evaluate(id => WC.game.sim.state.orders.find(o => o.id === id).dispatchPriority, actual.lateId), true);
+  assert.equal(await page.locator('#order-list .order').filter({hasText:actual.lateCode}).locator('.o-priority').getAttribute('aria-pressed'), 'true');
   assert.equal(errors.length, 0, errors.join('\n'));
-  console.log('✓ Сохранение и перезагрузка в настоящем браузере');
+  console.log('✓ Приоритет заказа: мобильный тап и восстановление после перезагрузки');
+  console.log('✓ Субтитры, быстрый приказ и настройка озвучки на телефоне');
+  console.log('✓ Ночной свет, карта и сохранение режима при перезагрузке в браузере');
   console.log('✓ WebGL, непрозрачные руки, очередь и мобильная шапка (' + (portrait ? 'портрет' : 'ландшафт') + ')');
 } finally {
   await browser.close();

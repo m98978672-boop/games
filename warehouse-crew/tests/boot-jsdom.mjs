@@ -48,7 +48,7 @@ if (!JSDOM || !THREE) {
 
 const SCRIPTS = [
   'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
-  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js',
+  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/voice.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
 ];
@@ -181,6 +181,15 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
     result.selectedChildren = selectedCard ? selectedCard.children.length : 0;
     // Три камеры: 3-е лицо → сверху за рабочим → весь цех
     result.cameraButtons = doc.querySelectorAll('#camera-seg button').length;
+    const nightButton = doc.querySelector('[data-lighting="night"]');
+    const dayButton = doc.querySelector('[data-lighting="day"]');
+    if (nightButton && dayButton) {
+      nightButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      result.lightingWorks = game.api.shiftMode === 'night' && nightButton.getAttribute('aria-pressed') === 'true' &&
+        game.api.crew.every(w => game.api.envs[w.id].shiftMode === 'night');
+      dayButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      result.lightingWorks = result.lightingWorks && game.api.shiftMode === 'day' && dayButton.getAttribute('aria-pressed') === 'true';
+    }
     result.truckPanel = Boolean(doc.getElementById('truck-list'));
     result.truckButton = Boolean(doc.getElementById('btn-truck'));
     if (window.WC.world && window.WC.world.cycleMode) {
@@ -368,6 +377,11 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
       const rows = [...doc.querySelectorAll('#order-list .order')];
       result.queueSorted = rows.length >= 2 && rows[0].querySelector('.o-code').textContent === qSoon.code;
+      const priorityButton = rows[0].querySelector('.o-priority');
+      priorityButton.click();
+      result.priorityWorks = qSoon.dispatchPriority === true && priorityButton.getAttribute('aria-pressed') === 'true';
+      priorityButton.click();
+      result.priorityWorks = result.priorityWorks && qSoon.dispatchPriority === false && priorityButton.getAttribute('aria-pressed') === 'false';
       rows[0].querySelector('.o-take').click();
       window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
       result.queueAssigned = qSoon.status === 'claimed' && qSoon.carrier === game.api.crew[0].id && rows[0].querySelector('.o-take').disabled && rows[1].querySelector('.o-take').disabled;
@@ -433,6 +447,7 @@ for (const mode of modes) {
   if (mode.textureBridge) check(r.textureFallback, 'игра работает без текстуры при несовместимом движке');
   else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
+  check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
   check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');
@@ -442,6 +457,7 @@ for (const mode of modes) {
   check(r.cardStable, 'карточки не пересобираются при обновлении HUD');
   check(r.selectedChildren === 9, 'карточка рабочего собрана один раз (3 строки + 4 полоски + характеры + травмы)', { children: r.selectedChildren });
   check(r.cameraButtons === 4, 'в пульте четыре режима камеры', { n: r.cameraButtons });
+  check(r.lightingWorks, 'дневной и ночной свет переключаются на пульте');
   check(r.truckPanel && r.truckButton, 'есть блок фур и кнопка вызова');
   check(Array.isArray(r.cameraCycle) && r.cameraCycle[0] === 'follow' && r.cameraCycle[1] === 'top', 'C переключает 3-е лицо → сверху за ним → весь цех', { cycle: r.cameraCycle });
   check(r.followMode === 'follow' && r.followClass, 'камера «сверху за рабочим» включается', { mode: r.followMode });

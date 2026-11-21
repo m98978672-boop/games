@@ -1076,6 +1076,7 @@
         resting: w.resting || w.state === 'down',
         carrying: bodyCarrying,
         noise: 0.2 + Math.min(0.5, allWorkers.length * 0.04),
+        light: warehouse.illuminationAt ? warehouse.illuminationAt(env.shiftMode, w.pos.x, w.pos.y) : 1,
         urgency: order ? order.priority : 0.2,
         teamSupport: w.decision.coop,
         reward: 0,
@@ -1599,6 +1600,8 @@
         var urgencyScore = (1 - Math.min(1, timeLeft / 100)) * (0.6 + 1.8 * urgency);
         var massScore = -Math.max(0, o.mass - model.carryCapacity(body)) * 0.12;
         var s = urgencyScore * 6 + o.priority * (1 + 2 * urgency) - dist * 0.14 - o.damage * 2 + massScore;
+        // Диспетчерская метка — предпочтение, не приказ в обход ограничений.
+        if (o.dispatchPriority === true) s += 3.5;
         // Отдаём близкий обычный заказ свободному, здоровому коллеге; срочные
         // грузы всё равно перевешивают этот штраф и не остаются без исполнителя.
         var closer = allWorkers.some(function (peer) {

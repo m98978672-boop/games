@@ -45,16 +45,33 @@ def read_data(folder):
     return manifest, rows
 
 
+def render(tokenizer, messages, generation=False):
+    # Thinking stays enabled: the lessons teach the model to emit <think>
+    # itself. With enable_thinking=False the Qwen template forces an empty
+    # think block into the generation prompt and normalizes think blocks in
+    # assistant content, which breaks the naive string-prefix split below.
+    return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=generation, enable_thinking=True)
+
+
 def encode(tokenizer, system_prompt, row):
     messages = [{'role': 'system', 'content': system_prompt}, {'role': 'user', 'content': row['instruction']}]
-    prefix_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
-    full_text = tokenizer.apply_chat_template(messages + [{'role': 'assistant', 'content': row['response']}], tokenize=False, add_generation_prompt=False, enable_thinking=False)
-    if not full_text.startswith(prefix_text) or len(full_text) <= len(prefix_text):
-        raise ValueError('chat template does not match generation prefix')
+    prefix_text = render(tokenizer, messages, generation=True)
+    full_text = render(tokenizer, messages + [{'role': 'assistant', 'content': row['response']}])
+    if full_text.startswith(prefix_text) and len(full_text) > len(prefix_text):
+        head, tail = prefix_text, full_text[len(prefix_text):]
+    else:
+        # Find where the template puts assistant content (it may normalize
+        # <think> blocks), via a sentinel message, and split there instead.
+        sentinel = 'ZZZSENTINELZZZ'
+        marked = render(tokenizer, messages + [{'role': 'assistant', 'content': sentinel}])
+        cut = marked.find(sentinel)
+        if cut < 0 or not full_text.startswith(marked[:cut]):
+            raise ValueError('chat template does not match generation prefix')
+        head, tail = marked[:cut], full_text[len(marked[:cut]):]
     # Tokenize prefix and suffix separately, exactly like train-qwen.py:
     # generation starts from the separately tokenized prefix.
-    prefix = tokenizer.encode(prefix_text, add_special_tokens=False)
-    target = tokenizer.encode(full_text[len(prefix_text):], add_special_tokens=False)
+    prefix = tokenizer.encode(head, add_special_tokens=False)
+    target = tokenizer.encode(tail, add_special_tokens=False)
     if len(prefix) + max(64, len(target)) > MAX_TOKENS:
         return None  # too long for the budget: skipped, counted by caller
     return prefix, target
@@ -113,7 +130,10 @@ def main():
     print(f'Dataset: {len(train)} train, {len(validation)} validation, skipped-too-long {skipped}; kinds {manifest["counts"]}', flush=True)
     model = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
     if args.initial_adapter:
-        model = PeftModel.from_pretrained(model, args.initial_adapter)
+        # is_trainable=True is required: by default PEFT loads an adapter
+        # frozen for inference and continued training gets 0 trainable
+        # parameters (second lesson run died exactly on this).
+        model = PeftModel.from_pretrained(model, args.initial_adapter, is_trainable=True)
         print(f'Continuing from adapter: {args.initial_adapter}', flush=True)
     else:
         model = get_peft_model(model, LoraConfig(r=8, lora_alpha=16, lora_dropout=0.0, target_modules=['q_proj', 'v_proj'], bias='none'))

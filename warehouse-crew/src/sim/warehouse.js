@@ -96,7 +96,23 @@
     big: { halfW: 0.31, halfD: 0.25, h: 0.52 },
   };
 
-  // Доки для фур: слева разгрузка (у приёмки), справа загрузка (у отгрузки).
+  // Нормированная освещённость для физиологии (не фотометрия рендера).
+  // Ночью лампы над рядами и уличные фонари дают локальные светлые зоны.
+  var INTERIOR_LIGHTS = [[-1.6, 0], [2.2, 0], [6.0, 0]];
+  var STREET_LIGHTS = [[-9.6, LAYOUT.street.y0 + 0.5], [9.6, LAYOUT.street.y0 + 0.5]];
+  function illuminationAt(mode, x, y) {
+    if (mode !== 'night') return 1;
+    var outdoor = y >= LAYOUT.street.y0;
+    var points = outdoor ? STREET_LIGHTS : INTERIOR_LIGHTS;
+    var base = outdoor ? 0.38 : 0.61;
+    var strength = outdoor ? 0.33 : 0.24;
+    var radius = outdoor ? 5 : 6.5;
+    var nearest = Infinity;
+    points.forEach(function (p) { nearest = Math.min(nearest, Math.hypot(x - p[0], y - p[1])); });
+    return base + strength * Math.max(0, 1 - nearest / radius);
+  }
+
+  // Доки для фур: слева разгрузка, справа загрузка.
   // handle — куда реально подают коробку (порог фуры), stand — где стоит рабочий.
   var DOCKS = {
     unload: {
@@ -526,6 +542,7 @@
       order.bounces = 0;
       if (order.damage >= 0.85) {
         order.status = 'ruined';
+        delete order.dispatchPriority;
         releaseSlot(order);
         state.stats.ruined += 1;
         state.stats.perfectStreak = 0;
@@ -539,6 +556,7 @@
 
     function store(order, workerId) {
       order.status = 'stored';
+      delete order.dispatchPriority;
       order.storedAt = state.time;
       order.carrier = null;
       var late = state.time > order.deadline;
@@ -704,6 +722,7 @@
     function loadTruck(order, workerId) {
       var truck = order.truckId ? truckById(order.truckId) : null;
       order.status = 'loaded';
+      delete order.dispatchPriority;
       order.carrier = null;
       order.loadedAt = state.time;
       syncDest(order);
@@ -741,6 +760,7 @@
     // Вернуть коробку на полку (например, фура уехала без неё)
     function restock(order) {
       order.status = 'stored';
+      delete order.dispatchPriority;
       order.carrier = null;
       order.truckId = null;
       order.direction = null;
@@ -807,6 +827,7 @@
         if (o.status === 'missed' || o.status === 'stored' || o.status === 'ruined' || o.status === 'loaded') continue;
         if (state.time > o.deadline + 35) {
           o.status = 'missed';
+          delete o.dispatchPriority;
           o.carrier = null;
           if (o.direction !== 'out') releaseSlot(o);
           state.stats.missed += 1;
@@ -838,6 +859,7 @@
         var d = Math.hypot(o.x - from.x, o.y - from.y);
         var urgency = Math.max(0, 1 - Math.max(0, o.deadline - state.time) / 100);
         var s = urgency * 6 + o.priority * 2 - d * 0.12;
+        if (o.dispatchPriority === true) s += 3.5;
         if (s > bestScore) { bestScore = s; best = o; }
       }
       return best;
@@ -914,6 +936,7 @@
     return {
       state: state,
       layout: LAYOUT,
+      illuminationAt: illuminationAt,
       captureCheckpoint: captureCheckpoint,
       restoreCheckpoint: restoreCheckpoint,
       rng: rng,
@@ -956,6 +979,7 @@
 
   return {
     createRng: createRng,
+    illuminationAt: illuminationAt,
     createWarehouse: createWarehouse,
     LAYOUT: LAYOUT,
     DOCKS: DOCKS,
