@@ -7,8 +7,8 @@
     "storefront": 18,
     "collection": 216,
     "files": 2150,
-    "totalBytes": 52823567,
-    "chunks": 399,
+    "totalBytes": 52920378,
+    "chunks": 400,
     "blockedFiles": 5
   },
   "games": [
@@ -5029,10 +5029,10 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "84019129734b0cbb3475c86c9901d45431df5cda4ea96701328e97c0cc5d544f",
-      "totalSize": 1571801,
+      "infoHash": "7681bd2c0f2fbdacf7e9095c6b1ac98099c82647fd613ce7a2ac86ec91351693",
+      "totalSize": 1668612,
       "chunkSize": 262144,
-      "chunkCount": 6,
+      "chunkCount": 7,
       "fileCount": 30,
       "files": [
         {
@@ -5082,8 +5082,8 @@
         },
         {
           "path": "index.html",
-          "size": 14485,
-          "sha256": "c6121a74a24b9c3e9dfd8bf62181b301bd21905981dc2d758cc774ac31c0f78a"
+          "size": 16132,
+          "sha256": "3d286eacbff58828c763402f337942e7dd557bbf2a694e4ec1ece1afdb352145"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5097,13 +5097,13 @@
         },
         {
           "path": "src/config.js",
-          "size": 3742,
-          "sha256": "f5a97fd3bcf5c99102aaf79c8dfb91a85abfcfa474b483f8bf38a47aae69fe9a"
+          "size": 4609,
+          "sha256": "7066e066652ce5cf2535683d4799cab294025841782b73baf3481276e0fa7b59"
         },
         {
           "path": "src/game.js",
-          "size": 16585,
-          "sha256": "b759df7117369296c40ffca384bcd4caef4144dfa0b692952780372f4a6bef4d"
+          "size": 33394,
+          "sha256": "9265d697ed3def778617a8f619cc6f0f8b226f13e416c991b9957557c2a53053"
         },
         {
           "path": "src/layout.js",
@@ -5127,13 +5127,13 @@
         },
         {
           "path": "src/render/meshes.js",
-          "size": 18185,
-          "sha256": "005ca4e077ceb0ac22c6e0eaadeee6d757b44e459934efd09fdcd5e32d4ff34e"
+          "size": 22467,
+          "sha256": "f36719fd54f776d913ef845a4ef8d5d8cb307b0e58aaa9e0ef9d0c17425ab4b1"
         },
         {
           "path": "src/render/world.js",
-          "size": 42742,
-          "sha256": "e7d07783a462648d0edf1daa95b9b6a30c1ec1d0fa34a4bf2c95652cee3b1e0f"
+          "size": 64444,
+          "sha256": "0195b91d702841ccfbdf488c12b468d09470499974cfb0daf8255086c7ba1b18"
         },
         {
           "path": "src/save.js",
@@ -5142,23 +5142,23 @@
         },
         {
           "path": "src/sim/model.js",
-          "size": 27619,
-          "sha256": "2424ba28352f269b3cd62c77889abeb4b3c180a6c7472592bf717c98206a013c"
+          "size": 30829,
+          "sha256": "e710b9fb5d3232466e27884abc86779b5618b5cde8dd0cf6c225472cb80c499d"
         },
         {
           "path": "src/sim/warehouse.js",
-          "size": 22527,
-          "sha256": "0f67fde9e7b9ddad90553b0447e6ec0277d4d7c5dffe4a9eb79734c9faf0f978"
+          "size": 37654,
+          "sha256": "4cafc44a4424f354460d6cd3d89acfe602884f8158c652c2cb38d8dfdc809610"
         },
         {
           "path": "src/sim/worker.js",
-          "size": 45934,
-          "sha256": "cd4aa7c27e5c53ba8ea59c298e491d08aa8d830ef94e6fb832c6b51bc6e4cb81"
+          "size": 68901,
+          "sha256": "70b9a840120f4730406fe5852b9d9dcd56a77c56b274d3ef20d4a9e659b0835b"
         },
         {
           "path": "src/ui.js",
-          "size": 57183,
-          "sha256": "52403e1d3cc0d533f3ef4f8bafa1e4a6e1f1ab8bdca94ba9b5ce89c3aff6b57c"
+          "size": 63139,
+          "sha256": "d07b9df35f2cc26a03e9b1bc6db454be8e6fb92c44c31af444f0d58e3f6f5b3f"
         },
         {
           "path": "src/util.js",
@@ -5167,13 +5167,13 @@
         },
         {
           "path": "style.css",
-          "size": 44223,
-          "sha256": "bf757c655dd193ae2b6cfec056b0f41a29782d3f441817bb0507a9f266487498"
+          "size": 48436,
+          "sha256": "5e78386832248058161f4412e9a7bee6fb72fa553ed7affba2f3265b2bdc408b"
         },
         {
           "path": "tools/crew-shot.mjs",
-          "size": 12595,
-          "sha256": "e008a2f212abe6b5881d9dacde22d8fa21c73817d8ae91d00a6e07c6afa2302d"
+          "size": 12626,
+          "sha256": "ed7629b96c835f85089f56c4c7f84bc38e2c854ce90b7d69c83b03c452da0871"
         },
         {
           "path": "tools/embed-brains.mjs",
