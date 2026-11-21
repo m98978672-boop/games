@@ -32,6 +32,15 @@ func run_tests() -> void:
 	freeze_actors()
 	game.player.position = Vector3(-40, 0.3, 30)
 	await physics_frame
+	var brick_finishes: Dictionary = {}
+	var brick_shapes: Dictionary = {}
+	for block in game.blocks.values():
+		var mesh_instance: MeshInstance3D = block.get_child(0)
+		var material := mesh_instance.material_override as StandardMaterial3D
+		var mesh := mesh_instance.mesh as BoxMesh
+		brick_finishes[str(material.albedo_color)] = true
+		brick_shapes[str(mesh.size)] = true
+	check(brick_finishes.size() >= 4 and brick_shapes.size() >= 4, "Warehouse infill has many stable tint and shape variants")
 	game.explode(Vector3(16, 0.8, -26))
 	await process_frame
 	await process_frame

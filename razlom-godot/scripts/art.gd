@@ -3,6 +3,7 @@ extends RefCounted
 ## Original modular art. Shared meshes/materials; no per-frame asset construction.
 static var materials: Dictionary = {}
 static var meshes: Dictionary = {}
+static var sphere_mesh: SphereMesh
 
 static func material(color: Color, texture: String = "", glow: float = 0.0) -> StandardMaterial3D:
 	var key := str(color) + texture + str(glow)
@@ -50,6 +51,20 @@ static func box(parent: Node3D, pos: Vector3, size: Vector3, mat: Material, soli
 		root.add_child(collision)
 	return root
 
+static func orb(parent: Node3D, pos: Vector3, scale: Vector3, mat: Material, name: String = "Detail") -> MeshInstance3D:
+	if sphere_mesh == null:
+		sphere_mesh = SphereMesh.new()
+		sphere_mesh.radial_segments = 16
+		sphere_mesh.rings = 8
+	var visual := MeshInstance3D.new()
+	visual.name = name
+	visual.mesh = sphere_mesh
+	visual.material_override = mat
+	visual.position = pos
+	visual.scale = scale
+	parent.add_child(visual)
+	return visual
+
 static func sign_text(parent: Node3D, text: String, pos: Vector3, font_size: int = 48, color: Color = Color("e6d8ad")) -> Label3D:
 	var label := Label3D.new()
 	parent.add_child(label)
@@ -94,11 +109,22 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 		for side in [-1, 1]:
 			var eye := box(head, Vector3(side * 0.085, 0.015, -0.178), Vector3(0.065, 0.035, 0.018), material(Color("e5ded0")))
 			eye.name = "EyeL" if side < 0 else "EyeR"
-			box(eye, Vector3(0, 0, -0.012), Vector3(0.026, 0.027, 0.012), eye_mat)
+			var iris_color := Color("718c78") if medic else Color("556d5b")
+			orb(eye, Vector3(0, 0, -0.012), Vector3(0.34, 0.43, 0.42), material(iris_color), "Iris")
+			orb(eye, Vector3(0, 0, -0.016), Vector3(0.17, 0.24, 0.2), eye_mat, "Pupil")
+			orb(eye, Vector3(-0.012, 0.009, -0.019), Vector3(0.07, 0.08, 0.08), material(Color("fff4df")), "Catchlight")
 			box(head, Vector3(side * 0.085, 0.065, -0.18), Vector3(0.07, 0.012 if medic else 0.018, 0.018), material(Color("574533")))
+			if medic:
+				orb(head, Vector3(side * 0.18, -0.005, -0.13), Vector3(0.075, 0.055, 0.035), material(Color("c58d83")), "SoftCheek")
+				orb(head, Vector3(side * 0.18, -0.075, -0.11), Vector3(0.035, 0.05, 0.04), material(Color("d5b36d")), "Earring")
 			box(head, Vector3(side * 0.18, -0.005, 0), Vector3(0.035, 0.075, 0.07), material(Color("b99978")))
 		box(head, Vector3(0, -0.025, -0.19), Vector3(0.045, 0.065, 0.045), material(Color("b99978")))
-		box(head, Vector3(0, -0.09, -0.18), Vector3(0.095, 0.018, 0.018), material(Color("795447")))
+		if medic:
+			box(head, Vector3(0, -0.09, -0.184), Vector3(0.085, 0.014, 0.012), material(Color("a65e5d")))
+			for side in [-1, 1]:
+				box(head, Vector3(side * 0.048, -0.082, -0.187), Vector3(0.018, 0.008, 0.012), material(Color("c88178")))
+		else:
+			box(head, Vector3(0, -0.09, -0.18), Vector3(0.095, 0.018, 0.018), material(Color("795447")))
 		var cap := root.get_node_or_null("Cap") as Node3D
 		if cap != null: cap.reparent(head, true)
 		var scalp := box(head, Vector3(0, 0.14, 0.015), Vector3(0.35, 0.065, 0.34), material(Color("544435")))
@@ -110,7 +136,10 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 				old_hair.reparent(head, true)
 				old_hair.position = Vector3(0, 0.15, 0.04)
 			for side in [-1, 1]:
-				box(head, Vector3(side * 0.153, 0.055, 0.055), Vector3(0.045, 0.21, 0.24), material(Color("594337")))
+				box(head, Vector3(side * 0.13, 0.055, 0.055), Vector3(0.06, 0.22, 0.24), material(Color("594337")))
+			for i in range(3):
+				var fringe := box(head, Vector3(-0.09 + i * 0.09, 0.12 - absf(i - 1) * 0.018, -0.16), Vector3(0.085, 0.12, 0.09), material(Color("694c3d")))
+				fringe.rotation.z = (i - 1) * 0.12
 			for i in range(5):
 				var braid := box(head, Vector3(0.105 + sin(i * 2.0) * 0.014, -0.04 - i * 0.055, 0.19), Vector3(0.075, 0.075, 0.075), material(Color("594337")))
 				braid.name = "Braid%d" % i
@@ -123,8 +152,25 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 	box(root, Vector3(0, 0.86, 0), Vector3(0.58, 0.055, 0.33), material(Color("454337"))).reparent(torso, true)
 	box(root, Vector3(0, 1.13, 0.22), Vector3(0.38, 0.45, 0.18), fabric).reparent(torso, true)
 	if medic:
-		box(root, Vector3(-0.15, 1.13, -0.21), Vector3(0.09, 0.035, 0.01), material(Color("e8e2c8"))).reparent(torso, true)
-		box(root, Vector3(-0.15, 1.13, -0.22), Vector3(0.03, 0.1, 0.01), material(Color("e8e2c8"))).reparent(torso, true)
+		var linen := material(Color("e8e2c8"))
+		box(root, Vector3(-0.15, 1.13, -0.21), Vector3(0.09, 0.035, 0.01), linen).reparent(torso, true)
+		box(root, Vector3(-0.15, 1.13, -0.22), Vector3(0.03, 0.1, 0.01), linen).reparent(torso, true)
+		# Field-medic jacket tailoring, scarf, visible stitching, buttons and insignia.
+		var teal := material(Color("627c73"), "cloth")
+		var rust_red := material(Color("ad6558"))
+		box(root, Vector3(0, 1.34, -0.01), Vector3(0.24, 0.09, 0.28), teal).reparent(torso, true)
+		for y in [1.04, 1.15, 1.26]:
+			orb(root, Vector3(0.015, y, -0.161), Vector3(0.018, 0.018, 0.012), material(Color("b69c6e")), "CoatButton").reparent(torso, true)
+		box(root, Vector3(0.225, 1.31, -0.01), Vector3(0.012, 0.14, 0.13), linen).reparent(torso, true)
+		box(root, Vector3(0.225, 1.31, -0.01), Vector3(0.014, 0.08, 0.03), rust_red).reparent(torso, true)
+		box(root, Vector3(0.225, 1.31, -0.01), Vector3(0.014, 0.026, 0.08), rust_red).reparent(torso, true)
+		box(root, Vector3(-0.2, 1.08, -0.18), Vector3(0.12, 0.07, 0.025), material(Color("e0d1ad"))).reparent(torso, true)
+		box(root, Vector3(-0.2, 1.08, -0.198), Vector3(0.02, 0.05, 0.009), rust_red).reparent(torso, true)
+		box(root, Vector3(-0.2, 1.08, -0.2), Vector3(0.05, 0.016, 0.009), rust_red).reparent(torso, true)
+		# A small pendant and stitched cuffs distinguish her silhouette in motion.
+		orb(root, Vector3(0, 1.27, -0.2), Vector3(0.025, 0.038, 0.012), material(Color("d0ad69")), "Pendant").reparent(torso, true)
+		for side in [-1, 1]:
+			box(root, Vector3(side * 0.32, 0.91, -0.08), Vector3(0.06, 0.09, 0.24), teal).reparent(torso, true)
 
 static func protection_pickup(parent: Node3D, helmet: bool) -> void:
 	var canvas := material(Color("606c5c"), "cloth")

@@ -30,6 +30,8 @@ var passage := false
 var passage_broken := false
 var relay_log := false
 var relay_shared := false
+## 0 = not asked, 1 = mutual interest, 2 = relationship, 3 = chose friendship.
+var vera_bond := 0
 var quests: Dictionary = {}
 var tracked_quest := ""
 var kills := 0
@@ -105,7 +107,7 @@ func reload_gun() -> int:
 	return amount
 
 func snapshot() -> Dictionary:
-	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken, "relay_log": relay_log, "relay_shared": relay_shared}
+	var result := {"version": SAVE_VERSION, "pump": pump, "complete": complete, "manifest": manifest, "truth_shared": truth_shared, "passage": passage, "passage_broken": passage_broken, "relay_log": relay_log, "relay_shared": relay_shared, "vera_bond": vera_bond}
 	result["tracked_quest"] = tracked_quest
 	result["quests"] = quests.duplicate(true)
 	for key in NUMERIC_KEYS:
@@ -119,6 +121,13 @@ func restore(source: Dictionary) -> bool:
 		data["warmth"] = 78.0
 		data["fatigue"] = 12.0
 	if data.get("version", 0) != SAVE_VERSION:
+		return false
+	if not data.has("vera_bond"):
+		data["vera_bond"] = 0
+	var bond_value: Variant = data.get("vera_bond", 0)
+	if not (bond_value is int or bond_value is float) or not is_finite(float(bond_value)):
+		return false
+	if float(bond_value) != floor(float(bond_value)) or bond_value < 0 or bond_value > 3:
 		return false
 	for key in ["armor", "helmet", "pain", "leg_wound", "left_arm_wound", "right_arm_wound"]:
 		if not data.has(key):
@@ -161,6 +170,7 @@ func restore(source: Dictionary) -> bool:
 	# Commit only after all checks: failed restore must not mutate live state.
 	for key in NUMERIC_KEYS + ["pump", "complete", "manifest", "truth_shared", "passage", "passage_broken", "relay_log", "relay_shared"]:
 		set(key, data[key])
+	vera_bond = int(bond_value)
 	quests = quest_data.duplicate(true)
 	tracked_quest = data.get("tracked_quest", "")
 	return true
