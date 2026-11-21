@@ -4,6 +4,8 @@
     "Real WASM game reaches start menu",
     "Right menu stays inside viewport after text shaping",
     "Start button resumes world through keyboard focus",
+    "Actual charge renders a timed blast in WebGL",
+    "Web blast cleans up before saving the game",
     "Player moves under browser keyboard input",
     "Escape returns to pause menu",
     "Shelter save writes inside browser user storage",
