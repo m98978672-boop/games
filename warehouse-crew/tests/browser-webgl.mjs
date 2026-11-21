@@ -91,6 +91,26 @@ try {
   }, actual.soonId);
   assert.match(await movingRow.locator('.o-who').innerText(), /в работе/);
   console.log('✓ Движущийся груз и ожидание остановки в мобильной очереди');
+  await page.evaluate(id => {
+    const order = WC.game.sim.state.orders.find(o => o.id === id);
+    order.direction = 'return'; order.deadline = -100;
+    WC.ui.state.lastUiAt = -Infinity; WC.ui.frame(1 / 30);
+  }, actual.lateId);
+  const returningRow = page.locator('#order-list .order').filter({hasText:actual.lateCode});
+  await returningRow.scrollIntoViewIfNeeded();
+  await page.waitForFunction(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }, await returningRow.elementHandle());
+  assert.match(await returningRow.locator('.o-info').innerText(), /возврат на полку/);
+  assert.equal(await returningRow.locator('.o-timer').innerText(), 'без срока');
+  assert.match(await page.locator('#queue-summary').innerText(), /срок ≤ 30 с: 1/);
+  const urgentFilter = page.locator('[data-order-filter="soon"]');
+  await urgentFilter.scrollIntoViewIfNeeded(); await urgentFilter.tap();
+  assert.equal(await page.locator('#order-list .o-code').innerText(), actual.soonCode);
+  await page.evaluate(id => {
+    const order = WC.game.sim.state.orders.find(o => o.id === id);
+    delete order.direction; order.deadline = 100;
+    document.querySelector('[data-order-filter="all"]').click();
+  }, actual.lateId);
+  console.log('✓ Возврат без срока в мобильной очереди и фильтре');
   const concern = await page.evaluate(() => {
     const a = WC.game.api.crew[1], b = WC.game.api.crew[2];
     a.body.energy = .18;

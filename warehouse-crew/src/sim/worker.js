@@ -615,7 +615,7 @@
       return {
         loadKg: w.carryingId && order ? order.mass : 0,
         distanceNorm: Math.min(1, dist / 18),
-        urgency: order ? Math.max(0, Math.min(1, 1 - Math.max(0, order.deadline - warehouse.state.time) / 90)) : 0,
+        urgency: order && order.direction !== 'return' ? Math.max(0, Math.min(1, 1 - Math.max(0, order.deadline - warehouse.state.time) / 90)) : 0,
         queue: Math.min(1, pending / 8),
         shift: Math.min(1, warehouse.state.time / warehouse.state.shiftLength),
         teamBusy: teamBusy,
@@ -1090,7 +1090,7 @@
         order.pose.yaw = w.heading;
       }
       // Побежал: до дедлайна меньше 18 секунд и руки свободны
-      w.urgentRush = Boolean(order && !carrying && order.deadline - warehouse.state.time < 18);
+      w.urgentRush = Boolean(order && order.direction !== 'return' && !carrying && order.deadline - warehouse.state.time < 18);
       updateNeeds(dt, warehouse, env, order, rng);
 
       // 2b. Правила техники безопасности поверх решений сети + травмы
@@ -1482,15 +1482,11 @@
           order = activeOrder(warehouse);
           if (!order) { setState('idle'); w.orderId = null; w.carryingId = null; break; }
           var truck = order.truckId && warehouse.truckById ? warehouse.truckById(order.truckId) : null;
-          if (order.truckId && (!truck || truck.status !== 'working') && w.carryingId) {
-            // Фура уже уехала — коробку возвращаем на полку
-            if (warehouse.restock) warehouse.restock(order);
-            w.orderId = null;
-            w.carryingId = null;
-            setState('idle');
-            setGoal(null);
-            emit('Фура уехала, коробка возвращена на место', 'warn');
-            break;
+          if (order.direction === 'out' && (!truck || truck.status !== 'working')) {
+            // В том числе снимок до первого шага после отъезда: не
+            // телепортируем груз, а несем его обратно к ячейке.
+            warehouse.returnToStorage(order);
+            truck = null;
           }
           var outbound = Boolean(truck) && order.direction === 'out';
           var dropPoint = outbound ? { x: truck.stand.x, y: truck.stand.y } : carryingPoint(warehouse, order);
@@ -1521,6 +1517,14 @@
                 setState('idle');
                 setGoal(null);
                 if (env.onLoaded) env.onLoaded(w, order, loadRes);
+              } else if (order.direction === 'return') {
+                if (w.onForklift) dismountTech();
+                warehouse.restock(order);
+                w.orderId = null;
+                w.carryingId = null;
+                setState('idle');
+                setGoal(null);
+                emit('Вернул коробку на полку', 'info');
               } else {
                 if (w.onForklift) dismountTech();
                 var res = warehouse.store(order, w.id);
@@ -1533,6 +1537,9 @@
                 if (env.onDelivered) env.onDelivered(w, order, res);
               }
             }
+          } else {
+            // Подготовка к укладке не переносится на другую точку.
+            w.timers.place = 0;
           }
           // Риск уронить коробку
           var risk = model.dropRisk(body, w.decision, w.onForklift ? 0 : order.mass) * dt;
@@ -1652,12 +1659,10 @@
           var heavyBusy = warehouse.state.forklift && warehouse.state.forklift.rider && warehouse.state.forklift.rider !== w.id;
           if (heavyBusy) continue;
         }
-        if (o.truckId) {
-          var tr = warehouse.truckById ? warehouse.truckById(o.truckId) : null;
-          if (!tr || tr.status !== 'working') continue;
-        }
+        var tr = o.truckId && warehouse.truckById ? warehouse.truckById(o.truckId) : null;
+        if (o.direction === 'out' && (!tr || tr.status !== 'working')) continue;
         var dist = Math.hypot(o.x - w.pos.x, o.y - w.pos.y);
-        var timeLeft = Math.max(0, o.deadline - warehouse.state.time);
+        var timeLeft = o.direction === 'return' ? 100 : Math.max(0, o.deadline - warehouse.state.time);
         var urgencyScore = (1 - Math.min(1, timeLeft / 100)) * (0.6 + 1.8 * urgency);
         var massScore = -Math.max(0, o.mass - model.carryCapacity(body)) * 0.12;
         var s = urgencyScore * 6 + o.priority * (1 + 2 * urgency) - dist * 0.14 - o.damage * 2 + massScore;
@@ -1673,7 +1678,7 @@
             (o.mass <= model.safeLift(peer.body) || !techNeeded);
         });
         if (closer) s -= Math.min(2.5, (dist - 2.5) * 0.22) * Math.min(1, timeLeft / 25);
-        if (o.truckId) s += 1.8; // фуру не заставишь ждать
+        if (tr && tr.status === 'working') s += 1.8; // фуру не заставишь ждать
         if (o.mass > model.safeLift(body)) s -= 1.2; // тяжесть — техникой, но не в первую очередь
         if (o.heavy) s += 1.4;                      // тяжёлый груз не должен лежать до просрочки
         // Кооперация: помогаем напарнику, чей заказ почти просрочен
