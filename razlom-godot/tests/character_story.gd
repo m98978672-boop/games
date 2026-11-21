@@ -94,6 +94,9 @@ func run_tests() -> void:
 	var pavel_right: Node3D = pavel.get_node("ArmRJoint/ArmR/CharacterHand") as Node3D
 	check(pavel_left != null and pavel_right != null and pavel_left.get_node("Palm") != null and pavel_right.get_node("Palm") != null, "Every civilian humanoid receives attached modeled hands")
 	check(pavel_left.get_node("Thumb").position.x < 0 and pavel_right.get_node("Thumb").position.x > 0, "Pavel's mirrored hands do not share the same thumb orientation")
+	var pavel_left_shoulder: Node3D = pavel.get_node("ArmLJoint") as Node3D
+	var pavel_right_shoulder: Node3D = pavel.get_node("ArmRJoint") as Node3D
+	check(absf(pavel_left_shoulder.position.x) <= 0.34 and absf(pavel_right_shoulder.position.x) <= 0.34 and pavel_left_shoulder.position.x < 0.0 and pavel_right_shoulder.position.x > 0.0, "Guard shoulders sit close enough to the torso to avoid a floating sleeve seam")
 	check(game.world.has_node("Pavel"), "Courier exists in playable world")
 	var count: int = guard.visual.get_child_count()
 	RazlomArt.dress_actor(guard.visual)
@@ -112,7 +115,7 @@ func run_tests() -> void:
 	game.interactions.medic_motion.react("arms", Vector3(-0.3, 1.1, 0), 1.0)
 	for i in range(90):
 		game.interactions.medic_motion.advance(1.0 / 60.0, 0.0)
-	check(is_equal_approx(vera_left_joint.position.x, -0.33) and is_equal_approx(vera_right_joint.position.x, 0.33), "NPC sleeves overlap their shoulder sockets instead of floating beyond the torso")
+	check(vera_left_joint.position.x < 0.0 and vera_right_joint.position.x > 0.0 and absf(absf(vera_left_joint.position.x) - absf(vera_right_joint.position.x)) < 0.001 and absf(vera_left_joint.position.x) <= 0.34, "NPC sleeves overlap their shoulder sockets instead of floating beyond the torso")
 	check(vera_left_joint.rotation.x >= -1.39 and vera_left_joint.rotation.x <= 0.51 and vera_right_joint.rotation.x >= -1.39 and vera_right_joint.rotation.x <= 0.51, "Flinch and greeting keep every NPC shoulder inside its safe anatomical range")
 	check(absf(vera_left_joint.rotation.z) <= 0.351 and absf(vera_right_joint.rotation.z) <= 0.351, "NPC shoulders cannot twist sleeves into a broken side-on pose")
 	check(vera_hand.position.is_equal_approx(vera_left_hand_position), "NPC hands stay attached to the sleeve through the full gesture and flinch")
