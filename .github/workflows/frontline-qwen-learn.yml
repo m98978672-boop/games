@@ -4,7 +4,7 @@ on:
     inputs:
       steps:
         description: 'Шагов дообучения в этом прогоне'
-        default: '120'
+        default: '360'
       random_articles:
         description: 'Сколько случайных статей Википедии прочитать сверх тем'
         default: '12'
