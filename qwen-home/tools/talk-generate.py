@@ -141,15 +141,27 @@ def digest(extract, query):
         score = sum(1 for k in keywords if k in low)
         if year_bonus and re.search(r'\b\d{3,4}\b', sentence):
             score += 2  # вопрос про год — предложение с годом важнее прочих
-        hit = founding_q and bool(re.search(r'(основа|упомина|впервы)', low))
-        if hit:
-            score += 3  # вопрос про основание — фраза об основании важнее случайной даты из истории города
-        scored.append((score, i, sentence, hit))
-    # Если в статье есть фраза именно об основании — даём только такие:
-    # маленькой модели нельзя подсовывать соседние даты, она выберет любую.
-    pool = [t for t in scored if t[3]] or scored
+        plain = low.replace('на основании', '')  # «на основании данных» — не про основание города
+        if re.search(r'(упомина|впервы)', plain):
+            tier = 1  # «впервые упоминается» — главный признак фразы об основании
+        elif re.search(r'(основан|основан|основан|основал|основали)', plain):
+            tier = 2
+        else:
+            tier = 0
+        scored.append((score, i, sentence, tier))
+    # Для вопроса об основании берём фразы высшего доступного яруса:
+    # сначала «впервые упоминается», потом «основан», иначе — по баллам.
+    # Маленькой модели нельзя подсовывать соседние даты, она выберет любую.
+    pool = scored
+    tiered = False
+    if founding_q:
+        for want in (1, 2):
+            tier_pool = [t for t in scored if t[3] == want]
+            if tier_pool:
+                pool, tiered = tier_pool, True
+                break
     best = sorted(pool, key=lambda t: (-t[0], t[1]))[:2]
-    if not best or best[0][0] == 0:
+    if not best or (best[0][0] == 0 and not tiered):
         return ' '.join(s for _, _, s, *_ in sorted(scored[:2], key=lambda t: t[1]))[:500], 0
     chosen = sorted(best, key=lambda t: t[1])
     return ' '.join(s for _, _, s, *_ in chosen)[:500], best[0][0]
