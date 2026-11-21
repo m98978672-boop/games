@@ -1,0 +1,42 @@
+{
+  "narrator": {
+    "voice_id": "voice-03",
+    "role": "диктор серии: бодрый, чёткий, человеческий (выбран пользователем из пары 20.11.2026)",
+    "lang": "ru",
+    "sample": "narrator_sample.mp3",
+    "clips_prolog": "prolog/p_n1..p_n5.mp3",
+    "used_in": [
+      "boris_ep01_ulitsa.mp4",
+      "boris_ep01_shorts.mp4",
+      "boris_prolog.mp4",
+      "boris_prolog_shorts.mp4"
+    ],
+    "clarity_dsp": "highpass 88-95 Hz; -2..-2.5 dB @ 160-175 Hz (муть); +3..+3.5 dB @ 2800-2900 Hz (презенс); acompressor 3:1 thr -20dB atk 8 rel 160-170; loudnorm I=-14..-16:TP=-1.0",
+    "note_prev": "voice-00 отвергнут пользователем как «ленивый и пьяный»; voice-02 — как недостаточно чёткий"
+  },
+  "cat": {
+    "voice_id": "voice-01",
+    "role": "Борис: комедийный голос кота + процедурное мяуканье/мурчание (boris/sfx.py)",
+    "lang": "ru",
+    "sample": "cat_sample.mp3",
+    "clips_prolog": "prolog/p_c1..p_c5.mp3",
+    "used_in": [
+      "boris_ep01_ulitsa.mp4",
+      "boris_ep01_shorts.mp4",
+      "boris_prolog.mp4",
+      "boris_prolog_shorts.mp4"
+    ]
+  },
+  "retired": [
+    {
+      "voice_id": "voice-00",
+      "reason": "диктор 1-го эпизода; пользователь: «ленивый и пьяный»"
+    },
+    {
+      "voice_id": "voice-02",
+      "reason": "разговорный тембр; пользователь: недостаточно чёткий/натуральный"
+    }
+  ],
+  "sfx": "мяуканье/мурчание/голуби/дождь/миска/пшик синтезируются boris/sfx.py -> boris/audio_pro/sfx/*.wav",
+  "note": "Диктор = voice-03, кот = voice-01. Не менять без явной просьбы пользователя."
+}
