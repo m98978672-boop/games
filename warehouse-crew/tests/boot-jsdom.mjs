@@ -377,6 +377,11 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
       const rows = [...doc.querySelectorAll('#order-list .order')];
       result.queueSorted = rows.length >= 2 && rows[0].querySelector('.o-code').textContent === qSoon.code;
+      const priorityButton = rows[0].querySelector('.o-priority');
+      priorityButton.click();
+      result.priorityWorks = qSoon.dispatchPriority === true && priorityButton.getAttribute('aria-pressed') === 'true';
+      priorityButton.click();
+      result.priorityWorks = result.priorityWorks && qSoon.dispatchPriority === false && priorityButton.getAttribute('aria-pressed') === 'false';
       rows[0].querySelector('.o-take').click();
       window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1 / 30);
       result.queueAssigned = qSoon.status === 'claimed' && qSoon.carrier === game.api.crew[0].id && rows[0].querySelector('.o-take').disabled && rows[1].querySelector('.o-take').disabled;
@@ -442,6 +447,7 @@ for (const mode of modes) {
   if (mode.textureBridge) check(r.textureFallback, 'игра работает без текстуры при несовместимом движке');
   else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
+  check(r.priorityWorks, 'приоритет свободного заказа переключается в очереди');
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
   check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');

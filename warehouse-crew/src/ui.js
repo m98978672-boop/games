@@ -423,6 +423,16 @@ window.WC = window.WC || {};
             }),
             U.el('span', { class: 'o-rack', text: 'ячейка ' + order.slotId }),
           ]),
+          U.el('div', { class: 'o-line' }, [
+            U.el('button', {
+              class: 'o-priority', type: 'button', text: '☆ В приоритет',
+              onclick: function () {
+                var res = game.setOrderPriority(order.id, !order.dispatchPriority);
+                if (!res.ok) U.toast(res.reason || 'Не получилось', 'bad');
+                renderOrders();
+              },
+            }),
+          ]),
         ]);
         uiState.orderRows.set(order.id, row);
         dom.orderList.appendChild(row);
@@ -436,6 +446,14 @@ window.WC = window.WC || {};
       take.disabled = order.status !== 'pending' || !selected || Boolean(busy);
       take.textContent = order.status !== 'pending' ? 'в работе' : busy ? 'рабочий занят' : 'взять';
       take.title = order.status !== 'pending' ? 'Заказ уже назначен' : busy ? 'Сначала завершите текущий заказ' : 'Назначить выбранному рабочему';
+      var priority = row.querySelector('.o-priority');
+      var marked = order.dispatchPriority === true;
+      priority.disabled = order.status !== 'pending' || game.state.shiftEnded;
+      priority.textContent = marked ? '★ Приоритет' : '☆ В приоритет';
+      priority.setAttribute('aria-pressed', marked ? 'true' : 'false');
+      priority.setAttribute('aria-label', (marked ? 'Снять приоритет с заказа ' : 'Отметить приоритет заказа ') + order.code);
+      priority.title = priority.disabled ? 'Метка доступна только для свободного заказа' : 'Предпочтение при выборе бригадой; правила безопасности сохраняются';
+      row.classList.toggle('dispatch-priority', marked);
       row.classList.toggle('urgent', Boolean(order.urgent) && order.status !== 'stored');
       row.classList.toggle('carried', order.status === 'carried');
       var who = order.status === 'carried' ? 'несёт: ' + nameOf(order.carrier)
@@ -678,6 +696,8 @@ window.WC = window.WC || {};
         U.el('p', { html: 'Пульт — <b>нижняя шторка</b>: потяни за «язычок» вверх или тапни по нему. Снизу всегда висят <b>быстрые приказы</b> (Взять · Нести · Перерыв · Авто) — один тап, без меню. Тап по <b>метке над рабочим</b> выбирает его. Кнопка <b>⤢</b> разворачивает игру на весь экран.' }),
         U.el('h3', { text: 'Клавиши' }),
         U.el('p', { html: '<kbd>Пробел</kbd> пауза · <kbd>C</kbd> вид · <kbd>I</kbd> инспектор · <kbd>M</kbd> звук · <kbd>S</kbd> сохранить · <kbd>F</kbd> полный экран · <kbd>H</kbd> справка · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> рабочий' }),
+        U.el('h3', { text: 'Приоритет заказа' }),
+        U.el('p', { text: 'В очереди отметьте свободный заказ кнопкой «В приоритет». Бригада будет чаще выбирать его в автономном режиме; метка не переназначает занятый груз, не отменяет технику безопасности и не меняет награду. Её можно снять до назначения.' }),
         U.el('h3', { text: 'Реплики рабочих' }),
         U.el('p', { text: 'Рабочие отвечают на приказы и иногда разговаривают рядом друг с другом. Текст виден над сценой и в журнале. В пульте можно включить озвучку: используется только установленный на устройстве локальный русский голос. Если его нет, остаются текстовые реплики. Общая кнопка звука отключает и озвучку.' }),
         U.el('h3', { text: 'День и ночь' }),
