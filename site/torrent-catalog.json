@@ -4,8 +4,8 @@
   "chunkSize": 262144,
   "stats": {
     "games": 17,
-    "files": 1251,
-    "totalBytes": 37601122,
+    "files": 1252,
+    "totalBytes": 37621974,
     "chunks": 152,
     "blockedFiles": 3
   },
@@ -5002,11 +5002,11 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "392899f2aa43c2c966b699323b56d06e00c22c6b0056119d727b64e272e6c9a8",
-      "totalSize": 1549170,
+      "infoHash": "e223b5d643e4b4bb9863219ac7b27a39cb18dde4ef95b12e95d68ff4ebedf276",
+      "totalSize": 1570022,
       "chunkSize": 262144,
       "chunkCount": 6,
-      "fileCount": 29,
+      "fileCount": 30,
       "files": [
         {
           "path": "cover.svg",
@@ -5070,8 +5070,8 @@
         },
         {
           "path": "src/config.js",
-          "size": 3670,
-          "sha256": "b472b45eaf349bfccf4a1050a0f13c96744962877193af9dc4e2758a91573dc5"
+          "size": 3742,
+          "sha256": "f5a97fd3bcf5c99102aaf79c8dfb91a85abfcfa474b483f8bf38a47aae69fe9a"
         },
         {
           "path": "src/game.js",
@@ -5100,13 +5100,13 @@
         },
         {
           "path": "src/render/meshes.js",
-          "size": 15238,
-          "sha256": "e5cbd00a3f7429089271c265f5c594b934bf048c608efc9564bd3245b3053b65"
+          "size": 18185,
+          "sha256": "005ca4e077ceb0ac22c6e0eaadeee6d757b44e459934efd09fdcd5e32d4ff34e"
         },
         {
           "path": "src/render/world.js",
-          "size": 36853,
-          "sha256": "526864e31a6e13264d0af0079d5617dc7fa93a9d0da486010a1298b895f9d505"
+          "size": 42742,
+          "sha256": "e7d07783a462648d0edf1daa95b9b6a30c1ec1d0fa34a4bf2c95652cee3b1e0f"
         },
         {
           "path": "src/save.js",
@@ -5142,6 +5142,11 @@
           "path": "style.css",
           "size": 44223,
           "sha256": "bf757c655dd193ae2b6cfec056b0f41a29782d3f441817bb0507a9f266487498"
+        },
+        {
+          "path": "tools/crew-shot.mjs",
+          "size": 11944,
+          "sha256": "05019784a527cc8cd377d6ee981c493bc66eb7f741001ba2ee96b5f12561a54f"
         },
         {
           "path": "tools/embed-brains.mjs",
