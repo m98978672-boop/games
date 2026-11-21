@@ -135,7 +135,7 @@ func start_web_art_review(mode: String) -> void:
 		player.rotation = Vector3.ZERO
 		player.camera.global_position = Vector3(-25.5, 1.9, 20.5)
 		player.camera.look_at(vera.global_position + Vector3(0, 1.16, 0), Vector3.UP)
-		player.camera.fov = 70.0
+		player.camera.fov = 54.0
 		if mode == "vera-greet":
 			interactions.medic_motion.greet()
 		elif mode == "vera-treat":
@@ -146,7 +146,7 @@ func start_web_art_review(mode: String) -> void:
 		player.rotation = Vector3.ZERO
 		player.camera.global_position = Vector3(-14.0, 1.9, 12.0)
 		player.camera.look_at(pavel.global_position + Vector3(0, 1.05, 0), Vector3.UP)
-		player.camera.fov = 70.0
+		player.camera.fov = 54.0
 	elif mode == "shelter-window":
 		vera.hide()
 		pavel.hide()
@@ -175,7 +175,7 @@ func start_web_art_review(mode: String) -> void:
 		player.rotation = Vector3.ZERO
 		player.camera.global_position = player.global_position + Vector3(0, 1.6, 0)
 		player.camera.look_at(guard.visual.global_position + Vector3(0, 1.16, 0), Vector3.UP)
-		player.camera.fov = 70.0
+		player.camera.fov = 54.0
 		guard.update_arm_pose(0.0, 1.0, 0.0)
 	web_art_review_ready = true
 

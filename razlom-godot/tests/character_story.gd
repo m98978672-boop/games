@@ -111,7 +111,8 @@ func run_tests() -> void:
 	check(guard.visual.get_node("Head/EyeL").scale.y == 1.0, "Eyes reopen")
 	game.interactions.medic_motion.greet()
 	game.interactions.medic_motion.advance(0.2, 0)
-	check(game.interactions.medic_motion.joints.ArmR.rotation.x < -0.4, "Conversation gesture raises hand")
+	check(game.interactions.medic_motion.joints.ArmR.rotation.x < -0.4, "Conversation gesture swings Vera's upper arm")
+	check(game.interactions.medic_motion.joints.ArmR.rotation.z > 0.1, "Greeting lifts the hand outward into a visible wave")
 	check(game.interactions.medic_motion.elbows.ArmR.rotation.x > 0.1, "Greeting bends Vera's elbow so the forearm and hand do not move as one rigid bar")
 	var vera_left_joint: Node3D = game.interactions.medic_motion.joints.ArmL
 	var vera_right_joint: Node3D = game.interactions.medic_motion.joints.ArmR

@@ -109,7 +109,7 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 		elif part.begins_with("Arm") and gesture_kind == "listen":
 			swing = lerpf(swing, -0.32, social_blend)
 		elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
-			swing = -0.85 + sin(gesture * 7.0) * 0.08
+			swing = 0.42 + sin(gesture * 7.0) * 0.06
 		swing += float(reactions.get(part, 0)) * (0.65 if part.begins_with("Leg") else -0.8)
 		# Keep every humanoid shoulder inside a usable range; combined flinch,
 		# gait and gesture offsets must never fold a sleeve through the torso.
@@ -127,6 +127,13 @@ func advance(delta: float, speed: float, aiming: Variant = false) -> void:
 			gesture_roll = -0.22 * social_blend
 		elif part == "ArmR" and gesture_kind in ["warm", "listen"]:
 			gesture_roll = 0.22 * social_blend
+		elif part == "ArmR" and gesture > 0.0 and gesture_kind == "greet":
+			# Lift the greeting hand outward so the wave reads in profile and head-on,
+			# instead of being hidden against the coat as a forward-only swing.
+			gesture_roll = 0.82 * social_blend
+		elif part == "ArmL" and gesture > 0.0 and gesture_kind == "treat":
+			# Turn the offered hand slightly outward while it reaches ahead.
+			gesture_roll = -0.32 * social_blend
 		var roll := float(reactions.get(part, 0)) * (0.25 if alternate else -0.25) + gesture_roll
 		if part.begins_with("Arm"):
 			# Mild inward rest cant keeps sleeves joined to the chest and hands
