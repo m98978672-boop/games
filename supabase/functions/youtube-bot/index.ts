@@ -217,17 +217,18 @@ async function verifyGitHubActionsOidc(request: Request): Promise<Record<string,
   const claims = decodeJwtPart(parts[1]);
   const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
   const expectedWorkflow = "m98978672-boop/games/.github/workflows/youtube-shorts-autopilot.yml@refs/heads/main";
-  if (
-    claims.iss !== "https://token.actions.githubusercontent.com" ||
-    !audience.includes("youtube-bot") ||
-    claims.sub !== "repo:m98978672-boop/games:ref:refs/heads/main" ||
-    claims.repository !== "m98978672-boop/games" ||
-    claims.ref !== "refs/heads/main" ||
-    claims.workflow_ref !== expectedWorkflow ||
-    !["schedule", "workflow_dispatch"].includes(String(claims.event_name)) ||
-    typeof claims.exp !== "number" || claims.exp < now ||
-    typeof claims.iat !== "number" || claims.iat > now + 60
-  ) throw new Error("GitHub identity is not from the trusted Games autopilot workflow.");
+  const mismatches: string[] = [];
+  if (claims.iss !== "https://token.actions.githubusercontent.com") mismatches.push("issuer");
+  if (!audience.includes("youtube-bot")) mismatches.push("audience");
+  if (claims.repository !== "m98978672-boop/games") mismatches.push("repository");
+  if (claims.ref !== "refs/heads/main") mismatches.push("ref");
+  if (claims.workflow_ref !== expectedWorkflow) mismatches.push("workflow_ref");
+  if (!["schedule", "workflow_dispatch"].includes(String(claims.event_name))) mismatches.push("event_name");
+  if (typeof claims.exp !== "number" || claims.exp < now) mismatches.push("expiry");
+  if (typeof claims.iat !== "number" || claims.iat > now + 60) mismatches.push("issued_at");
+  // `sub` can be customized by repository policy; the exact repository, ref,
+  // and workflow_ref checks above remain the authorization boundary.
+  if (mismatches.length) throw new Error(`Untrusted GitHub identity claims: ${mismatches.join(", ")}.`);
   return claims;
 }
 
