@@ -194,6 +194,22 @@ class ScheduleTests(unittest.TestCase):
         now = datetime(2026, 11, 24, 9, 0, tzinfo=timezone.utc)
         self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-25T05:00:00+00:00")
 
+    def test_manual_moscow_time_is_converted_and_does_not_change_schedule(self):
+        from datetime import datetime, timezone
+        from schedule_policy import manual_publish_time
+        now = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
+        self.assertEqual(manual_publish_time("2026-11-22 18:30", now=now).isoformat(), "2026-11-22T15:30:00+00:00")
+        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-23T05:00:00+00:00")
+
+    def test_manual_time_rejects_past_near_invalid_and_timezone_suffix(self):
+        from datetime import datetime, timezone
+        from schedule_policy import manual_publish_time
+        now = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
+        for value in ("2026-11-22 15:44", "2026-11-21 18:00", "2026-02-30 18:00", "2026-11-22T18:00", "2026-11-22 18:00+03:00"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                manual_publish_time(value, now=now)
+        self.assertEqual(manual_publish_time("2026-11-22 15:45", now=now).isoformat(), "2026-11-22T12:45:00+00:00")
+
     def test_naive_datetime_is_rejected(self):
         from datetime import datetime
         with self.assertRaises(ValueError):
