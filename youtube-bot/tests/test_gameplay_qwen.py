@@ -51,6 +51,18 @@ class QwenPolicyTests(unittest.TestCase):
         self.assertEqual(len(calls), 2)
         self.assertEqual(agent.decisions, [])
 
+    def test_optional_stall_filter_removes_only_repeated_unchanged_action(self):
+        def choose(_image, prompt):
+            return 'RIGHT' if 'LEFT, RIGHT' in prompt else 'LEFT'
+        agent = QwenVisionAgent('go', ('LEFT', 'RIGHT'), generator=choose, avoid_stalled_actions=True)
+        for step in range(2):
+            self.assertEqual(agent(frame('white'), step)['keys'], ['ArrowRight'])
+        self.assertEqual(agent(frame('white'), 2)['keys'], ['ArrowLeft'])
+        self.assertEqual(agent.filtered_steps, [2])
+        self.assertEqual(agent.allowed, ('LEFT', 'RIGHT'))
+        with self.assertRaises(ValueError):
+            QwenVisionAgent('go', ('LEFT', 'RIGHT'), avoid_stalled_actions='true')
+
     def test_fail_closed(self):
         with self.assertRaises(ValueError): QwenVisionAgent('go', ('SHELL',))
         agent = QwenVisionAgent('go', ('LEFT',), generator=lambda *_: 'RIGHT')

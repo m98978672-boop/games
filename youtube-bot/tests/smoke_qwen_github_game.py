@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
     game.unpack_archive(game.download_archive(), root)
     agent = QwenVisionAgent(
         'Play 2048: combine equal numbered tiles using arrow keys; choose one safe arrow action.',
-        ('LEFT', 'RIGHT', 'UP', 'DOWN'))
+        ('LEFT', 'RIGHT', 'UP', 'DOWN'), avoid_stalled_actions=True)
     outcome = 'step_limit'
     trace = []
     recording = Path(temp) / 'recording'
@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
         raise RuntimeError('Observation clock exceeds recording duration')
     result = {'game': '2048', 'source': 'https://github.com/gabrielecirulli/2048',
               'commit': game.COMMIT, 'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base',
-              'outcome': outcome, 'actions': agent.decisions, 'action_observations': trace, 'moves_attempted': len(agent.decisions),
+              'outcome': outcome, 'actions': agent.decisions, 'stall_filter_enabled': True, 'filtered_steps': agent.filtered_steps, 'action_observations': trace, 'moves_attempted': len(agent.decisions),
               'actual_game_win_verified': False, 'video_recorded': True, 'recording_seconds': round(duration, 2), 'recording_retained': False, 'published': False}
     print('QWEN_GITHUB_GAME_REPORT=' + json.dumps(result, ensure_ascii=True))
     print('::notice title=Qwen external GitHub gameplay test::' + json.dumps(result, ensure_ascii=True))
