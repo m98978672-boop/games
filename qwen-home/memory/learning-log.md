@@ -59,3 +59,10 @@
   Workflow с этого дня перебазируется перед push, чтобы дневник
   больше не терялся.
 - Прогон: https://github.com/m98978672-boop/games/actions/runs/44968326460
+
+## 2026-11-22 — обучение №4
+
+- Шагов: 360 (примеров в датасете — thinking: 12, commander: 100, web: 17, dialogue: 36, wiki-facts: 20, identity: 10, youtube-script: 8, wiki-summary: 20, wiki-read: 20, wiki-qa: 6)
+- Экзамен после: 11/18
+- Адаптер опубликован: да
+- Прогон: https://github.com/m98978672-boop/games/actions/runs/45009534707

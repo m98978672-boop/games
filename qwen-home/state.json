@@ -14,17 +14,17 @@
     "mode": "по запросу во время разговора: модель решает, нужен ли поиск, дом приносит текст статей, журнал — memory/search-log.md",
     "since": "2026-11-16"
   },
-  "totalSteps": 600,
-  "learnRuns": 3,
+  "totalSteps": 960,
+  "learnRuns": 4,
   "lastRunAt": "2026-11-22",
   "lastEval": {
     "base": {
-      "passed": 9,
-      "total": 10
+      "passed": 11,
+      "total": 18
     },
     "adapter": {
-      "passed": 9,
-      "total": 10
+      "passed": 11,
+      "total": 18
     }
   },
   "updatedAt": "2026-11-22",
