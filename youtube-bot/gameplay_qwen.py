@@ -43,15 +43,44 @@ def _vision_runtime():
     return torch, model, processor
 
 
-def qwen_vision(image: Image.Image, prompt: str) -> str:
+def allowed_next_tokens(prefix: tuple[int, ...], paths: tuple[tuple[int, ...], ...], eos: int) -> list[int]:
+    """Constrain generation to exact action token sequences; no action is chosen here."""
+    allowed = set()
+    for path in paths:
+        if path[:len(prefix)] != prefix:
+            continue
+        allowed.add(eos if len(prefix) == len(path) else path[len(prefix)])
+    if not allowed:
+        raise ValueError('Model generated a token outside the action trie')
+    return sorted(allowed)
+
+
+def qwen_vision(image: Image.Image, prompt: str, *, allowed: tuple[str, ...]) -> str:
     torch, model, processor = _vision_runtime()
     messages = [{'role': 'user', 'content': [{'type': 'image', 'image': image}, {'type': 'text', 'text': prompt}]}]
     inputs = processor.apply_chat_template(messages, tokenize=True, add_generation_prompt=True,
                                             return_dict=True, return_tensors='pt', enable_thinking=False)
     inputs = inputs.to(model.device)
+    tokenizer = processor.tokenizer
+    eos = tokenizer.eos_token_id
+    if not isinstance(eos, int):
+        raise ValueError('Tokenizer has no end-of-sequence token')
+    paths = []
+    for action in allowed:
+        path = tuple(tokenizer.encode(action, add_special_tokens=False))
+        if (not path or len(path) > 15 or eos in path
+                or tokenizer.decode(path, skip_special_tokens=True).strip().upper() != action):
+            raise ValueError('Tokenizer cannot represent an exact permitted action')
+        paths.append(path)
+    paths = tuple(paths)
+    input_length = inputs['input_ids'].shape[-1]
+    def restrict(_batch_id, input_ids):
+        prefix = tuple(int(token) for token in input_ids[input_length:].tolist())
+        return allowed_next_tokens(prefix, paths, eos)
     with torch.inference_mode():
         output = model.generate(**inputs, max_new_tokens=16, do_sample=False,
-                                pad_token_id=processor.tokenizer.eos_token_id)
+                                prefix_allowed_tokens_fn=restrict,
+                                pad_token_id=eos, eos_token_id=eos)
     return processor.decode(output[0][inputs['input_ids'].shape[-1]:], skip_special_tokens=True).strip()
 
 
@@ -71,7 +100,10 @@ class QwenVisionAgent:
             raise ValueError('A short trusted objective is required')
         if not isinstance(allowed, tuple) or not allowed or len(set(allowed)) != len(allowed) or any(a not in ACTIONS for a in allowed):
             raise ValueError('Invalid allowed actions')
-        self.objective, self.allowed, self.generator = objective, allowed, generator
+        self.objective, self.allowed = objective, allowed
+        # Test generators keep the two-argument interface; real inference uses
+        # a token trie so the model must choose among the permitted actions.
+        self.generator = (lambda image, prompt: qwen_vision(image, prompt, allowed=self.allowed)) if generator is qwen_vision else generator
         self.history: list[tuple[str, bool | None]] = []
         self.previous: Image.Image | None = None
         self.decisions: list[str] = []

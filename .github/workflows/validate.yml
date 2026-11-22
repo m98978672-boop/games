@@ -47,6 +47,7 @@ jobs:
             youtube-bot/tests/test_gameplay_discovery.py \
             youtube-bot/tests/test_gameplay_2048.py \
             youtube-bot/tests/test_gameplay_finalize.py \
+            youtube-bot/tests/test_gameplay_qwen.py \
             youtube-bot/tests/test_gameplay_captions.py \
             youtube-bot/tests/test_gameplay_edit.py \
             youtube-bot/tests/test_gameplay_release_plan.py \

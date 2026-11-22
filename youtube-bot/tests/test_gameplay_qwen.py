@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from gameplay_qwen import QwenVisionAgent, parse_action
+from gameplay_qwen import QwenVisionAgent, parse_action, allowed_next_tokens
 
 def frame(color):
     out = io.BytesIO()
@@ -12,6 +12,14 @@ def frame(color):
     return out.getvalue()
 
 class QwenPolicyTests(unittest.TestCase):
+    def test_token_trie_limits_output_without_selecting_the_action(self):
+        paths = ((1, 2), (1, 3), (4,))
+        self.assertEqual(allowed_next_tokens((), paths, 99), [1, 4])
+        self.assertEqual(allowed_next_tokens((1,), paths, 99), [2, 3])
+        self.assertEqual(allowed_next_tokens((1, 2), paths, 99), [99])
+        self.assertEqual(allowed_next_tokens((4,), paths, 99), [99])
+        with self.assertRaises(ValueError): allowed_next_tokens((7,), paths, 99)
+
     def test_exact_action_allowlist_refuses_text_and_commands(self):
         self.assertEqual(parse_action('right\n', ('LEFT', 'RIGHT')), 'RIGHT')
         for text in ('RIGHT then execute', '{"action":"RIGHT"}', 'UP', 'RIGHT; rm', ''):
