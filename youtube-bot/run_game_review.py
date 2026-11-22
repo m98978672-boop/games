@@ -85,7 +85,6 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         "video_format": video_format,
         "idea_score": review["idea_score"],
         "made_for_kids": None,  # The publisher requires the owner's explicit false/true setting.
-        "publish_immediately": os.environ.get("YOUTUBE_PUBLISH_IMMEDIATELY", "false").strip().lower() == "true",
         "video_path": str(output),
     }
     result = {

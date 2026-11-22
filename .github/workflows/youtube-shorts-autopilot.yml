@@ -22,22 +22,6 @@ on:
           - long
         default: short
         required: true
-      publish_immediately:
-        description: "Make the new video public immediately instead of scheduling it"
-        type: choice
-        options: ["false", "true"]
-        default: "false"
-        required: true
-      publish_existing_video_id:
-        description: "Optional bot-owned scheduled video to make public immediately"
-        type: string
-        required: false
-      promotion_only:
-        description: "Only publish the specified existing video; do not generate another one"
-        type: choice
-        options: ["false", "true"]
-        default: "false"
-        required: true
 
 permissions:
   contents: read
@@ -56,9 +40,6 @@ jobs:
       # Manual dispatch exposes the same explicit choice; scheduled runs use it too.
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
       VIDEO_FORMAT: ${{ inputs.video_format || 'short' }}
-      YOUTUBE_PUBLISH_IMMEDIATELY: ${{ inputs.publish_immediately || 'false' }}
-      PUBLISH_EXISTING_VIDEO_ID: ${{ inputs.publish_existing_video_id || '' }}
-      PROMOTION_ONLY: ${{ inputs.promotion_only || 'false' }}
       DATA_DIR: youtube-bot/data
     steps:
       - uses: actions/checkout@v7
@@ -67,47 +48,32 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: youtube-bot/requirements-autopilot.txt
-      - name: Require explicit audience and publication choices
+      - name: Require the explicit owner-approved audience value
         run: |
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
             echo "::error::Choose the owner-approved audience value true or false in the workflow input."
             exit 1
           fi
-          if [ "$YOUTUBE_PUBLISH_IMMEDIATELY" != "true" ] && [ "$YOUTUBE_PUBLISH_IMMEDIATELY" != "false" ]; then
-            echo "::error::Choose whether the generated review should be public immediately."
-            exit 1
-          fi
-          if [ "$PROMOTION_ONLY" = "true" ] && [ -z "$PUBLISH_EXISTING_VIDEO_ID" ]; then
-            echo "::error::promotion_only requires a scheduled video ID."
-            exit 1
-          fi
       - name: Set the Russian Piper model path
         run: echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
-      - name: Make the specified scheduled video public now
-        if: ${{ inputs.publish_existing_video_id != '' }}
-        run: python youtube-bot/publish_existing_public.py "$PUBLISH_EXISTING_VIDEO_ID"
       - name: Restore the local Qwen model cache
-        if: ${{ inputs.promotion_only != 'true' }}
         uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/huggingface
           key: qwen-shorts-0-8b-2fc06364715b967f1860aea9cf38778875588b17-v1
       - name: Restore recent game selection memory
-        if: ${{ inputs.promotion_only != 'true' }}
         uses: actions/cache/restore@v6
         with:
           path: youtube-bot/data/recent-games.json
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: youtube-review-history-
       - name: Install renderer and model dependencies
-        if: ${{ inputs.promotion_only != 'true' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
           python -m pip install --upgrade pip
           python -m pip install -r youtube-bot/requirements-autopilot.txt
       - name: Download the local Russian Piper voice model
-        if: ${{ inputs.promotion_only != 'true' }}
         run: |
           curl --fail --location --retry 3 --output "$PIPER_MODEL_PATH" \
             https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
@@ -115,12 +81,10 @@ jobs:
             https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json
           test -s "$PIPER_MODEL_PATH" && test -s "$PIPER_MODEL_PATH.json"
       - name: Generate a Steam-sourced Russian game review with local Qwen
-        if: ${{ inputs.promotion_only != 'true' }}
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
         run: python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4" --format "$VIDEO_FORMAT"
       - name: Start resumable YouTube upload and schedule
-        if: ${{ inputs.promotion_only != 'true' }}
         run: python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
       - name: Retain only non-sensitive model selection memory
         if: always() && hashFiles('youtube-bot/data/recent-games.json') != ''
