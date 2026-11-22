@@ -322,4 +322,18 @@ const badMark = JSON.parse(markedSave); badMark.checkpoint.warehouse.state.order
 const badMarkText = JSON.stringify(badMark); data.set(c.WC.save.CHECKPOINT_KEY,badMarkText);
 c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed'); assert(!c.WC.save.save(c.WC.game));
 assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),badMarkText);
+// Текущая ведомость восстанавливается из состояния доков и заказов,
+// включая места, отвязанные после передачи другому рейсу или возврата.
+data.clear(); c=await boot(); game=c.WC.game; game.setPaused(true);
+const receiving = game.callTruck('unload').truck, receivingItems = game.sim.ordersOfTruck(receiving).slice();
+game.sim.store(receivingItems[0],game.api.crew[0].id); game.sim.store(receivingItems[1],game.api.crew[0].id);
+const shipping = game.callTruck('load').truck;
+assert(game.sim.returnToStorage(receivingItems[2]));
+assert(c.WC.save.save(game)); c=await boot(); game=c.WC.game;
+assert.equal(game.api.resumeStatus,'restored');
+const resumedIn = game.sim.truckById(receiving.id), resumedOut = game.sim.truckById(shipping.id);
+assert.equal(resumedIn.completedDetached,2); assert.equal(resumedIn.unfulfilled,1);
+assert.equal(game.sim.ordersOfTruck(resumedOut).length,2);
+assert(game.sim.ordersOfTruck(resumedOut).some(o=>o.id===receivingItems[0].id));
+assert(!game.sim.ordersOfTruck(resumedIn).some(o=>o.id===receivingItems[2].id));
 console.log('✓ Перезагрузка смены: бригада, мозги, физика, склад, персонал, v1 и защита повреждённого файла');

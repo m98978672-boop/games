@@ -76,6 +76,41 @@ try {
       assert.equal(await panel.isVisible(), true);
       await close.click(); assert.equal(await open.isVisible(), true);
     }
+    // Ведомость фуры на десктопе и в обеих ориентациях телефона.
+    if (scenario.width === 844) { await page.setViewportSize({width:390,height:844}); await page.waitForTimeout(500); }
+    async function openControls() {
+      if (await open.isVisible()) await open.click();
+      else if (await page.locator('#sheet-handle').isVisible() && await page.locator('body').getAttribute('data-sheet') === 'hidden') await page.locator('#sheet-handle').click();
+      await page.waitForTimeout(450);
+    }
+    await openControls();
+    const cargoIds = await page.evaluate(() => {
+      const g=WC.game; g.restart(); g.setPaused(true);
+      const a=g.sim.spawnOrder(), b=g.sim.spawnOrder();
+      g.sim.store(a,g.api.crew[0].id); g.sim.store(b,g.api.crew[0].id);
+      g.setShippingPriority(a.id,true); WC.ui.state.lastUiAt=-Infinity; WC.ui.frame(1/30);
+      return { first:a.id, second:b.id, code:a.code };
+    });
+    const call = page.locator('[data-call-truck="load"]'); await call.scrollIntoViewIfNeeded(); await call.click();
+    const truckId = await page.evaluate(() => WC.game.sim.activeTruck('load').id);
+    let details = page.locator('[data-truck-cargo="'+truckId+'"]');
+    let summary = details.locator('summary'); await summary.scrollIntoViewIfNeeded(); await summary.click();
+    let cargoRow = details.locator('[data-truck-order="'+cargoIds.first+'"]');
+    assert.match(await cargoRow.textContent(), /★ отгрузка/); assert.match(await cargoRow.textContent(), /Ожидает бригаду/);
+    const r = await cargoRow.boundingBox(); assert(r.x >= 0 && r.x+r.width <= (scenario.width === 844 ? 390 : scenario.width));
+    await summary.focus();
+    await page.evaluate(id => { const g=WC.game; g.sim.claim(id,g.api.crew[0].id); WC.ui.state.lastUiAt=-Infinity; WC.ui.frame(1/30); },cargoIds.first);
+    assert.match(await cargoRow.textContent(), /Назначен:/); assert.equal(await summary.evaluate(el=>document.activeElement===el),true);
+    // Восстановление использует сохранённые данные, а не разметку.
+    await page.evaluate(() => WC.save.save(WC.game));
+    await page.reload({waitUntil:'load'}); await page.waitForFunction(() => window.WC && WC.game && WC.game.api.ready, {timeout:60000});
+    await openControls(); details = page.locator('[data-truck-cargo="'+truckId+'"]'); summary=details.locator('summary');
+    await summary.scrollIntoViewIfNeeded(); await summary.click(); cargoRow=details.locator('[data-truck-order="'+cargoIds.first+'"]');
+    assert.match(await cargoRow.textContent(), /Назначен:/); assert.match(await cargoRow.textContent(), /★ отгрузка/);
+    await summary.focus();
+    await page.evaluate(id=>{ WC.game.dispatchTruck(id); WC.ui.state.lastUiAt=-Infinity; WC.ui.frame(1/30); },truckId);
+    assert.equal(await details.isVisible(),false); assert.equal(await page.evaluate(()=>document.activeElement.id),'dock-heading');
+    console.log(`✓ Ведомость фуры: ${scenario.width === 844 ? '390×844' : scenario.width+'×'+scenario.height}, сохранение и отъезд`);
     assert.deepEqual(errors, []);
     console.log(`✓ Chromium ${scenario.width}×${scenario.height}: пульт, фокус и доступность`);
     await browser.close(); browser = null;
