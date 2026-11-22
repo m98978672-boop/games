@@ -1,5 +1,6 @@
 """Actual private browser capture smoke test; no OAuth, uploads or retained video."""
 import json
+from array import array
 import subprocess
 import sys
 import tempfile
@@ -55,4 +56,11 @@ with tempfile.TemporaryDirectory(prefix="gameplay-smoke-") as temp:
     streams = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "json", str(movie)], check=True, capture_output=True, text=True)
     kinds = {item["codec_type"] for item in json.loads(streams.stdout)["streams"]}
     assert {"audio", "video"} <= kinds, kinds
-    print("Narrated recap smoke passed:", json.dumps(final))
+    # Inspect only the original gameplay interval, excluding the spoken outro.
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(movie), "-t", str(final["capture_seconds"]),
+                          "-vn", "-ac", "1", "-ar", "8000", "-f", "s16le", "-"],
+                         check=True, capture_output=True, timeout=30).stdout
+    samples = array("h")
+    samples.frombytes(raw)
+    assert samples and max(abs(value) for value in samples) > 100, "Gameplay interval has no audible commentary"
+    print("Narrated gameplay and recap smoke passed:", json.dumps(final))
