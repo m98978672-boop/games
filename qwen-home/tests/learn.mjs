@@ -121,5 +121,11 @@ check('генератор сначала решает, нужен ли поис�
 check('уроки учат искать: поискала, назвала статью, честно сказала, когда пусто', dialogue.filter((r) => /Википеди/.test(r.response)).length >= 4 && dialogue.some((r) => r.response.includes('Поискала')) && dialogue.some((r) => /только Википедия|только статьи Википедии/.test(r.response)));
 check('персона и состояние честно называют границу поиска: только Википедия', personaMd.includes('Википедии') && st0.internetSearch?.engine === 'ru.wikipedia.org');
 
+/* ---------- характер, эмоции и 3D-моделька ---------- */
+check('персона описывает характер и эмоции: добрая, любопытная, честная', personaMd.includes('## Твой характер') && personaMd.includes('## Эмоции и чувства') && personaMd.includes('Добрая') && personaMd.includes('Любопытная') && personaMd.includes('Честная'));
+check('уроки характера: она говорит о чувствах в женском роде и честно — по-нейросетевому', dialogue.length >= 30 && dialogue.filter((r) => /раду|огорч|волну|скуча|горж|смуща|расцвета/i.test(r.response)).length >= 6 && dialogue.some((r) => r.response.includes('по-нейросетевому')));
+check('уроки внешности: у Квени есть 3D-моделька, лавандовые волосы и вкус к сочетанию цветов', dialogue.some((r) => r.response.includes('3D-модельк')) && dialogue.some((r) => /лавандов/i.test(r.response)) && dialogue.some((r) => /цвета|цветов/.test(r.response) && /дружат|сочета/i.test(r.response)));
+check('персона знает про свою 3D-студию и честную оценку красоты', personaMd.includes('3D-студия') && personaMd.includes('красиво ли получилось'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

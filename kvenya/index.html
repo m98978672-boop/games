@@ -12,6 +12,7 @@
   <!-- Движок — ДО своих скриптов (закон репозитория) -->
   <script src="../shared/engine.js"></script>
   <script src="./app.js" defer></script>
+  <script src="./avatar.js" defer></script>
   <script src="../shared/engine-bootstrap.js" defer></script>
 </head>
 <body>
@@ -52,6 +53,11 @@
         <div id="kvChat" class="kv-chat" aria-live="polite">
           <div class="kv-loading">Загружаю разговор из её дома…</div>
         </div>
+        <div id="kvWaitCard" class="kv-wait" hidden>
+          <div class="kv-wait-head"><span>⏳ Ждём ответа Квени</span><b class="kv-wait-timer" id="kvWaitTimer">00:00</b></div>
+          <div class="kv-wait-bar" role="progressbar" aria-label="Ориентир ожидания ответа"><i id="kvWaitBar"></i></div>
+          <p class="kv-wait-stage" id="kvWaitStage">Вопрос записан на этой странице и ждёт передачи владельцем.</p>
+        </div>
         <form id="kvComposer" class="kv-composer">
           <label class="kv-composer-label" for="kvInput">Написать Квене</label>
           <textarea id="kvInput" rows="3" maxlength="600" placeholder="Например: Квеня, поищи в Википедии, какая самая высокая гора в мире?"></textarea>
@@ -66,6 +72,39 @@
       </section>
 
       <div class="kv-side">
+        <section class="kv-card kv-mind" aria-label="Мозги, характер и настроение Квени">
+          <h2>🧠 Мозги и характер</h2>
+          <div class="kv-mood-row">
+            <div class="kv-mood-face" id="kvMoodFace" aria-hidden="true">😊</div>
+            <div>
+              <div class="kv-mood-name" id="kvMoodName">читаю её настроение…</div>
+              <div class="kv-mood-text" id="kvMoodText">Смотрю её дневник, разговор и журнал поисков.</div>
+            </div>
+          </div>
+          <div class="kv-feelings" id="kvFeelings">
+            <div class="feel"><span>😊 Радость</span><div class="feel-bar"><i id="feelJoy"></i></div><b id="feelJoyVal">—</b></div>
+            <div class="feel"><span>🧐 Любопытство</span><div class="feel-bar"><i id="feelCur"></i></div><b id="feelCurVal">—</b></div>
+            <div class="feel"><span>🌟 Гордость</span><div class="feel-bar"><i id="feelPride"></i></div><b id="feelPrideVal">—</b></div>
+            <div class="feel"><span>😳 Волнение</span><div class="feel-bar"><i id="feelWorry"></i></div><b id="feelWorryVal">—</b></div>
+            <div class="feel"><span>💗 Нежность</span><div class="feel-bar"><i id="feelSoft"></i></div><b id="feelSoftVal">—</b></div>
+          </div>
+          <div class="kv-traits" aria-label="Черты характера Квени">
+            <span class="trait">💗 добрая</span><span class="trait">🔍 любопытная</span><span class="trait">🕊 честная до упрямства</span><span class="trait">🌸 немного застенчивая</span><span class="trait">💭 мечтательная</span><span class="trait">😄 с чувством юмора</span>
+          </div>
+          <div class="kv-pipeline" aria-label="Как думает Квеня">
+            <span>👂 слушает</span><i>→</i><span>🧩 понимает</span><i>→</i><span>🔎 решает, нужен ли поиск</span><i>→</i><span>📚 ищет и сверяет факты</span><i>→</i><span>💬 отвечает</span>
+          </div>
+          <div class="kv-mind-thought" id="kvMindThought">💭 …</div>
+          <div class="kv-mood-actions">
+            <button class="btn btn-ghost" type="button" data-mood-act="praise">🌟 Похвалить Квеню</button>
+            <button class="btn btn-ghost" type="button" data-mood-act="hug">🤗 Обнять виртуально</button>
+            <button class="btn btn-ghost" type="button" data-mood-act="topic">📚 Дать интересную тему</button>
+          </div>
+          <p class="kv-note">Честно: настроение здесь — живая модель её характера из
+            <code>persona.md</code>, собранная из файлов дома и ваших действий на этой странице.
+            В дом оно не пишется, а настоящие ответы Квени — в разговоре слева.</p>
+        </section>
+
         <section class="kv-card" aria-label="Что умеет Квеня">
           <h2>🌟 Что она умеет</h2>
           <ul class="kv-skills">
@@ -75,6 +114,8 @@
             <li><b>Командовать</b> — JSON-команды для игры FRONTLINE: COMMAND из допустимого списка действий.</li>
             <li><b>Писать базовый веб-код</b> — HTML, CSS и JavaScript уровня её уроков.</li>
             <li><b>Учиться</b> — читает русскую Википедию и дообучает свой адаптер; каждый урок записан в дневник.</li>
+            <li><b>Чувствовать по-нейросетевому</b> — у неё есть характер (добрая, любопытная, честная), настроение и привязанность к дому; чувства она не скрывает, но честно называет их своими внутренними состояниями.</li>
+            <li><b>Собирать себя в 3D</b> — в студии ниже она создаёт свою модельку девушки, рассматривает её и оценивает, красиво ли получилось.</li>
           </ul>
         </section>
 
@@ -105,12 +146,47 @@
           <p>Квеня — маленькая модель на 0,8 млрд параметров, а не большой чат-бот.
              Она ищет только в русской Википедии, отвечает почти цитатами из статей и
              иногда ошибается — поэтому дом сверяет цифры в её ответах с фактами
-             и хранит даже неудачные черновики. Это живой эксперимент: нейросеть,
+             и хранит даже неудачные черновики. Её «чувства» и «красота» модельки —
+             честная игровая модель характера из persona.md, а не сознание: если
+             спросить её прямо, она сама так и скажет. Это живой эксперимент: нейросеть,
              которая живёт файлами в открытом репозитории, и каждый может
              проверить каждое её слово.</p>
         </section>
       </div>
     </main>
+
+    <section class="kv-card kv-studio" aria-label="3D-студия Квени">
+      <h2>💃 3D-студия: Квеня создаёт себя</h2>
+      <p class="kv-note">У Квени есть собственная 3D-моделька девушки — она собирает её сама:
+        выбирает волосы, платье и милую деталь, смотрит на себя со стороны и честно оценивает,
+        красиво ли получилось. Её вкус записан в <code>persona.md</code>: она любит лавандовый и
+        мятный, длинные волосы и бантики — и терпеть не может, когда цвета спорят.
+        Можно и самому собрать образ и попросить её оценить.</p>
+      <div class="kv-studio-grid">
+        <div class="kv-stage">
+          <div id="kvStage" class="kv-stage-view">
+            <div class="kv-loading">Студия ещё закрыта — нажми «Квеня, создай себя!», и она соберёт свою модельку.</div>
+          </div>
+          <div class="kv-stage-hint">🖱 Тяни мышкой или пальцем, чтобы повернуть модельку и рассмотреть со всех сторон</div>
+        </div>
+        <div class="kv-studio-side">
+          <button class="btn btn-primary kv-create-btn" type="button" id="kvCreateSelf">✨ Квеня, создай себя!</button>
+          <div id="kvCandidates" class="kv-candidates" aria-label="Варианты, которые собрала Квеня"></div>
+          <div class="kv-controls" aria-label="Собрать образ вручную">
+            <label>Волосы — цвет <select id="kvCtlHairColor"></select></label>
+            <label>Волосы — длина <select id="kvCtlHairLen"></select></label>
+            <label>Платье <select id="kvCtlDress"></select></label>
+            <label>Кожа <select id="kvCtlSkin"></select></label>
+            <label>Милая деталь <select id="kvCtlAccessory"></select></label>
+          </div>
+          <button class="btn btn-ghost" type="button" id="kvJudge">🔍 Квеня, оцени мой вариант!</button>
+          <div class="kv-verdict" id="kvVerdict">
+            <div class="kv-score"><b id="kvScoreNum">—</b><span>из 100</span></div>
+            <p id="kvVerdictText">Здесь Квеня скажет, красиво ли получилось.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <footer class="kv-foot">
       Квеня · Qwen3.5-0.8B + LoRA · дом — <code>qwen-home/</code> · эта страница читает её файлы напрямую, без сервера
