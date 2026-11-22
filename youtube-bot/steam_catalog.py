@@ -10,6 +10,7 @@ import hashlib
 import html
 import json
 import re
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -132,13 +133,21 @@ def _game_from_app(app_id: str, listing: dict[str, Any]) -> dict[str, Any] | Non
     if developer_names:
         features.append("Разработчик в карточке Steam: " + ", ".join(developer_names[:3]))
 
-    reviews_url = f"https://{STEAM_HOST}/appreviews/{app_id}/?json=1&filter=all&language=all&num_per_page=0"
-    review_data = _safe_get_json(reviews_url)
-    query_summary = review_data.get("query_summary", {}) if isinstance(review_data, dict) else {}
-    total = int(query_summary.get("total_reviews", 0) or 0)
-    positive = int(query_summary.get("total_positive", 0) or 0)
-    negative = int(query_summary.get("total_negative", 0) or 0)
-    if total > 0 and positive + negative > 0:
+    reviews_url = f"https://{STEAM_HOST}/appreviews/{app_id}?json=1&filter=all&language=all&num_per_page=0"
+    total = positive = negative = None
+    query_summary: dict[str, Any] = {}
+    try:
+        review_data = _safe_get_json(reviews_url)
+        raw_summary = review_data.get("query_summary") if isinstance(review_data, dict) else None
+        if isinstance(raw_summary, dict):
+            query_summary = raw_summary
+            total = int(query_summary.get("total_reviews", 0) or 0)
+            positive = int(query_summary.get("total_positive", 0) or 0)
+            negative = int(query_summary.get("total_negative", 0) or 0)
+    except (SteamSourceError, TypeError, ValueError) as exc:
+        print(f"Steam review summary unavailable for app {app_id}: {exc}; using store facts only.", file=sys.stderr)
+        total = positive = negative = None
+    if total is not None and positive is not None and negative is not None and total > 0 and positive + negative > 0:
         pct = round(100 * positive / (positive + negative))
         score_desc = _plain_text(query_summary.get("review_score_desc"), 80).lower()
         rating_names = {
@@ -152,6 +161,9 @@ def _game_from_app(app_id: str, listing: dict[str, Any]) -> dict[str, Any] | Non
         }
         score_desc = rating_names.get(score_desc, "оценка по сводке Steam")
         features.append(f"Отзывы Steam: {score_desc}; положительные {pct}% из {total} отзывов")
+
+    if len(features) < 2:
+        return None
 
     store_url = f"https://{STEAM_HOST}/app/{app_id}/"
     screenshot_urls = [
@@ -168,11 +180,10 @@ def _game_from_app(app_id: str, listing: dict[str, Any]) -> dict[str, Any] | Non
         "features": features[:12],
         "source": "Steam Store API (ru-RU)",
         "public_url": store_url,
-        "review_url": reviews_url,
-        "sources": [
-            {"name": "Страница игры в Steam", "url": store_url},
-            {"name": "Сводка отзывов Steam", "url": reviews_url},
-        ],
+        "review_url": reviews_url if total is not None else None,
+        "sources": [{"name": "Страница игры в Steam", "url": store_url}] + (
+            [{"name": "Сводка отзывов Steam", "url": reviews_url}] if total is not None else []
+        ),
         "screenshots": screenshot_urls,
         "source_facts": {
             "genres": genres,

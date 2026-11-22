@@ -33,8 +33,28 @@ class SteamCatalogTests(unittest.TestCase):
         self.assertEqual(get.call_count, 2)
         self.assertTrue(games[0]["public_url"].startswith("https://store.steampowered.com/app/456/"))
         self.assertTrue(any("87%" in fact and "1000" in fact for fact in games[0]["features"]))
-        self.assertIn("https://store.steampowered.com/appreviews/456/", games[0]["sources"][1]["url"])
+        self.assertIn("https://store.steampowered.com/appreviews/456?", games[0]["sources"][1]["url"])
         self.assertEqual(games[0]["screenshots"][0].split("/")[2], "shared.akamai.steamstatic.com")
+
+    def test_invalid_review_response_keeps_verified_store_facts_only(self):
+        featured = {"top_sellers": {"items": [{"id": 123, "name": "Test"}]}}
+        with patch.object(steam_catalog, "_safe_get_json", side_effect=[
+            app_details(), steam_catalog.SteamSourceError("invalid JSON")
+        ]):
+            game = steam_catalog.load_steam_games(featured_payload=featured, limit=1)[0]
+        self.assertGreaterEqual(len(game["features"]), 2)
+        self.assertFalse(any("Отзывы Steam:" in fact for fact in game["features"]))
+        self.assertIsNone(game["source_facts"]["steam_review_total"])
+        self.assertEqual(len(game["sources"]), 1)
+        self.assertIsNone(game["review_url"])
+
+    def test_store_game_without_two_facts_is_not_eligible_when_reviews_fail(self):
+        details = app_details()
+        data = details["123"]["data"]
+        for key in ("genres", "platforms", "developers", "release_date"):
+            data.pop(key)
+        with patch.object(steam_catalog, "_safe_get_json", side_effect=[details, steam_catalog.SteamSourceError("invalid JSON")]):
+            self.assertIsNone(steam_catalog._game_from_app("123", {"id": 123}))
 
     def test_english_only_store_description_is_rejected_instead_of_spoken_as_english(self):
         english = {"999": {"success": True, "data": {
