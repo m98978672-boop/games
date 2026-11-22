@@ -11,6 +11,16 @@ from schedule_policy import next_publish_slot
 
 
 class GameCatalogTests(unittest.TestCase):
+    def test_price_note_does_not_invent_free_or_other_region_price(self):
+        from game_reviews import steam_price_note
+        self.assertIn("не подтверждена", steam_price_note({}))
+        paid = {"source_facts": {"price": {"kind": "paid", "minor_units": 1999, "currency": "EUR", "region": "NL", "checked_at": "2026-11-22"}}}
+        self.assertIn("19 евро 99 центов", steam_price_note(paid))
+        paid["source_facts"]["price"]["region"] = "US"
+        self.assertIn("не подтверждена", steam_price_note(paid))
+        free = {"source_facts": {"price": {"kind": "free_to_play", "region": "NL", "checked_at": "2026-11-22"}}}
+        self.assertIn("дополнительные покупки", steam_price_note(free))
+
     def test_catalog_is_loaded_from_repo_and_has_public_links(self):
         games = load_game_catalog()
         self.assertGreaterEqual(len(games), 5)

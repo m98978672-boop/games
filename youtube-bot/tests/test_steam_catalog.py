@@ -95,6 +95,21 @@ class SteamCatalogTests(unittest.TestCase):
         self.assertEqual(games, [{"id": "123"}])
         self.assertEqual(get.call_args_list[1].args[0], "123")
 
+    def test_price_requires_explicit_regional_data(self):
+        for data_updates, expected in (({"price_overview": {"currency": "EUR", "final": 1999}}, "paid"),
+                                       ({"is_free": True}, "free_to_play"),
+                                       ({"price_overview": {"currency": "USD", "final": 1999}}, None),
+                                       ({"price_overview": {"currency": "EUR", "final": 0}}, None),
+                                       ({}, None)):
+            details = app_details()
+            details["123"]["data"].update(data_updates)
+            with self.subTest(data=data_updates), patch.object(steam_catalog, "_safe_get_json", side_effect=[details, {}]):
+                game = steam_catalog._game_from_app("123", {"id": 123})
+                price = game["source_facts"]["price"]
+                self.assertEqual(price["kind"] if price else None, expected)
+                if price:
+                    self.assertEqual(price["region"], "NL")
+
     def test_no_external_host_is_accepted_for_steam_api(self):
         with self.assertRaises(steam_catalog.SteamSourceError):
             steam_catalog._safe_get_json("https://evil.example/api")

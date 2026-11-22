@@ -466,6 +466,23 @@ def _source_template_long_narration(review: Mapping[str, Any]) -> list[dict[str,
     return scenes
 
 
+def steam_price_note(review: Mapping[str, Any]) -> str:
+    """Describe only validated Steam NL price data; never infer a missing price."""
+    facts = review.get("source_facts")
+    price = facts.get("price") if isinstance(facts, Mapping) else None
+    if not isinstance(price, Mapping) or price.get("region") != "NL":
+        return "Цена не подтверждена; проверьте страницу игры."
+    checked = price.get("checked_at")
+    if not isinstance(checked, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", checked):
+        return "Цена не подтверждена; проверьте страницу игры."
+    if price.get("kind") == "free_to_play":
+        return f"По Steam, базовая игра бесплатна в Нидерландах на {checked}; возможны дополнительные покупки."
+    cents = price.get("minor_units")
+    if price.get("kind") == "paid" and price.get("currency") == "EUR" and type(cents) is int and 0 < cents <= 10_000_000:
+        return f"Цена Steam для Нидерландов на {checked}: {cents // 100} евро {cents % 100:02d} центов; цена может измениться."
+    return "Цена не подтверждена; проверьте страницу игры."
+
+
 def youtube_description(review: Mapping[str, Any]) -> str:
     sources = review.get("sources") or []
     if not sources and review.get("public_url"):
@@ -480,7 +497,8 @@ def youtube_description(review: Mapping[str, Any]) -> str:
         f"Русскоязычный ИИ-разбор внешней игры {review['game_title']} "
         f"({review.get('game_version') or 'дата/версия не указана'}).\n"
         f"Сильные стороны, отмеченные по источникам: {review['pros'][0]}; {review['pros'][1]}.\n"
-        f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus']}.\n\n"
+        f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus']}.\n"
+        f"{steam_price_note(review)}\n\n"
         "Это обзор по опубликованным материалам, а не личное прохождение или независимый тест. "
         "Ссылки можно скопировать ниже:\n"
         f"{provenance}"

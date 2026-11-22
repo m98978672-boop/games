@@ -15,6 +15,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
@@ -123,6 +124,18 @@ def _game_from_app(app_id: str, listing: dict[str, Any]) -> dict[str, Any] | Non
     release_data = data.get("release_date") if isinstance(data.get("release_date"), dict) else {}
     release = _plain_text(release_data.get("date"), 80)
 
+    # A price is a regional, time-sensitive observation, not a permanent claim.
+    # Never infer "free" from a missing price or from a zero discount value.
+    price = None
+    if data.get("is_free") is True:
+        price = {"kind": "free_to_play", "region": "NL", "checked_at": datetime.now(timezone.utc).date().isoformat()}
+    elif isinstance(data.get("price_overview"), dict):
+        raw_price = data["price_overview"]
+        amount = raw_price.get("final")
+        if (raw_price.get("currency") == "EUR" and type(amount) is int and 0 < amount <= 10_000_000):
+            price = {"kind": "paid", "minor_units": amount, "currency": "EUR", "region": "NL",
+                     "checked_at": datetime.now(timezone.utc).date().isoformat()}
+
     features = [f"Описание Steam: {summary}"]
     if genres:
         features.append("Жанры, указанные в Steam: " + ", ".join(genres))
@@ -186,6 +199,7 @@ def _game_from_app(app_id: str, listing: dict[str, Any]) -> dict[str, Any] | Non
         ),
         "screenshots": screenshot_urls,
         "source_facts": {
+            "price": price,
             "genres": genres,
             "platforms": [platform_names[p] for p in platforms],
             "release_date": release,
