@@ -53,6 +53,9 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn("не личное прохождение", youtube_description(review))
         self.assertIn("https://m98978672-boop.github.io/games/", youtube_description(review))
         self.assertEqual(len(review["scenes"]), 5)
+        self.assertEqual(review["scenes"][-1]["label"], "ИТОГ")
+        self.assertIn("8 из 10", review["scenes"][-1]["dialogue"])
+        self.assertIn("Без личной игры", review["scenes"][-1]["dialogue"])
 
     def test_long_catalog_text_is_bounded_for_narration_without_changing_evidence(self):
         game = dict(load_game_catalog()[0])
@@ -147,6 +150,10 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(len(scenes), 10)
         self.assertGreaterEqual(sum(len(scene["dialogue"]) for scene in scenes), 2400)
         self.assertTrue(all("fact_id" in scene for scene in scenes))
+        self.assertIn("Итог по источникам:", scenes[-1]["dialogue"])
+        self.assertIn("7 из 10", scenes[-1]["dialogue"])
+        self.assertIn("Лично я не играл", scenes[-1]["dialogue"])
+        self.assertEqual(scenes[-1]["visual"], "ИТОГ ПО ИСТОЧНИКАМ · 7/10")
 
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()
