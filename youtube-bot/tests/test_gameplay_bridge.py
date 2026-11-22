@@ -25,6 +25,22 @@ class BridgeSafetyTests(unittest.TestCase):
             (game / 'escape').symlink_to('/etc')
             with self.assertRaisesRegex(ValueError, 'symlinks'):
                 docker_command(game, 'games-bridge-' + 'a' * 32)
+    def test_recording_mount_is_optional_separate_and_empty(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); game = root / 'game'; game.mkdir(); (game / 'index.html').write_text('test')
+            recording = root / 'record'; recording.mkdir()
+            command = docker_command(game, 'games-bridge-' + 'a' * 32, record_dir=recording)
+            self.assertEqual(command.count('--mount'), 2)
+            self.assertIn('BRIDGE_RECORD=1', command)
+            self.assertIn('--read-only', command)
+            self.assertEqual(command[command.index('--network') + 1], 'none')
+            (recording / 'preexisting').write_text('do not overwrite')
+            with self.assertRaises(ValueError): docker_command(game, 'games-bridge-' + 'a' * 32, record_dir=recording)
+            child = game / 'child'; child.mkdir()
+            with self.assertRaises(ValueError): docker_command(game, 'games-bridge-' + 'a' * 32, record_dir=child)
+            link = root / 'link'; link.symlink_to(child)
+            with self.assertRaises(ValueError): docker_command(game, 'games-bridge-' + 'a' * 32, record_dir=link)
+
     def test_rights_are_explicit_and_steps_bounded(self):
         with self.assertRaisesRegex(ValueError, 'rights'):
             BrowserBridge(Path('.'))

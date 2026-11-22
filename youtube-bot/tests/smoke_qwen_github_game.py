@@ -1,12 +1,13 @@
 """Private bounded vision-agent test on a pinned foreign GitHub game.
 
-No video, publication, gameplay completion claim or model update. Only real
+An ephemeral video is recorded for verification; no publication, completion claim or model update. Only real
 model actions are used. The game runs offline in the existing sandbox, not in
 this process. Internal test acknowledgement is not a license to publish.
 """
 import base64
 import json
 import os
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
@@ -23,7 +24,9 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
         'Play 2048: combine equal numbered tiles using arrow keys; choose one safe arrow action.',
         ('LEFT', 'RIGHT', 'UP', 'DOWN'))
     outcome = 'step_limit'
-    with BrowserBridge(root, rights_acknowledged=True) as bridge:
+    recording = Path(temp) / 'recording'
+    recording.mkdir()
+    with BrowserBridge(root, rights_acknowledged=True, record_dir=recording) as bridge:
         observation = bridge.receive(timeout=60)
         for step in range(4):
             if observation.get('type') != 'observation' or observation.get('step') != step:
@@ -37,9 +40,14 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
             observation = bridge.step(action)
             if observation.get('type') != 'observation' or observation.get('step') != step + 1:
                 raise RuntimeError('Bridge did not execute the action')
+        video = bridge.finish_recording()
+    info = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', str(video)], check=True, capture_output=True, text=True, timeout=60).stdout)
+    duration = float(info['format']['duration'])
+    if duration <= 0 or not any(stream.get('codec_type') == 'video' for stream in info['streams']):
+        raise RuntimeError('Game recording could not be verified')
     result = {'game': '2048', 'source': 'https://github.com/gabrielecirulli/2048',
               'commit': game.COMMIT, 'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base',
               'outcome': outcome, 'actions': agent.decisions, 'moves_attempted': len(agent.decisions),
-              'actual_game_win_verified': False, 'video_recorded': False, 'published': False}
+              'actual_game_win_verified': False, 'video_recorded': True, 'recording_seconds': round(duration, 2), 'recording_retained': False, 'published': False}
     print('QWEN_GITHUB_GAME_REPORT=' + json.dumps(result, ensure_ascii=True))
     print('::notice title=Qwen external GitHub gameplay test::' + json.dumps(result, ensure_ascii=True))

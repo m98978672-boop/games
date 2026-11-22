@@ -20,7 +20,7 @@ IMAGE = "games-playthrough-2048-experiment:1"
 MAX_LINE = 3_000_000
 
 
-def docker_command(game_dir: Path, container_name: str, entry: str = "index.html") -> list[str]:
+def docker_command(game_dir: Path, container_name: str, entry: str = "index.html", record_dir: Path | None = None) -> list[str]:
     game = game_dir.resolve(strict=True)
     if not isinstance(entry, str) or not re.fullmatch(r"(?:[a-zA-Z0-9_-]+/)*index\.html", entry):
         raise ValueError("Invalid game entry path")
@@ -34,22 +34,32 @@ def docker_command(game_dir: Path, container_name: str, entry: str = "index.html
     for root, dirs, files in os.walk(game, followlinks=False):
         if any((Path(root) / name).is_symlink() for name in dirs + files):
             raise ValueError("Game directory must not contain symlinks")
-    return ["docker", "run", "--rm", "-i", "--name", container_name, "--network", "none", "--read-only",
+    if record_dir is not None:
+        if record_dir.is_symlink() or not record_dir.is_dir() or any(record_dir.iterdir()):
+            raise ValueError("Recording directory must be a new empty regular directory")
+        record = record_dir.resolve(strict=True)
+        if any(c in str(record) for c in (",", "\n", "\r")) or record == game or game in record.parents or record in game.parents:
+            raise ValueError("Recording directory must be separate from the game")
+    command = ["docker", "run", "--rm", "-i", "--name", container_name, "--network", "none", "--read-only",
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "256",
             "--memory", "2g", "--cpus", "2", "--user", f"{os.getuid()}:{os.getgid()}",
             "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m", "--shm-size", "256m",
-            "--mount", f"type=bind,src={game},dst=/game,readonly", "--env", f"BRIDGE_ENTRY={entry}", "--entrypoint", "node", IMAGE,
-            "/runner/browser_bridge.cjs"]
+            "--mount", f"type=bind,src={game},dst=/game,readonly", "--env", f"BRIDGE_ENTRY={entry}"]
+    if record_dir is not None:
+        command.extend(["--mount", f"type=bind,src={record},dst=/record", "--env", "BRIDGE_RECORD=1"])
+    return command + ["--entrypoint", "node", IMAGE, "/runner/browser_bridge.cjs"]
 
 
 class BrowserBridge:
-    def __init__(self, game_dir: Path, *, rights_acknowledged: bool = False, entry: str = "index.html"):
+    def __init__(self, game_dir: Path, *, rights_acknowledged: bool = False, entry: str = "index.html", record_dir: Path | None = None):
         if not rights_acknowledged:
             raise ValueError("Review game, assets and recording rights before starting")
         if shutil.which("docker") is None:
             raise RuntimeError("Docker is required; never run the game on the host")
         self.name = "games-bridge-" + uuid.uuid4().hex
-        command = docker_command(game_dir, self.name, entry)
+        command = docker_command(game_dir, self.name, entry, record_dir)
+        self.record_dir = record_dir
+        self.recording_finalized = False
         self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, bufsize=0)
         self.buffer = b""
@@ -76,7 +86,7 @@ class BrowserBridge:
         if len(line) > MAX_LINE:
             raise RuntimeError("Bridge response too large")
         data = json.loads(line)
-        if not isinstance(data, dict) or data.get("type") not in ("observation", "error"):
+        if not isinstance(data, dict) or data.get("type") not in ("observation", "error", "recording"):
             raise RuntimeError("Invalid bridge response")
         return data
 
@@ -89,6 +99,21 @@ class BrowserBridge:
         assert self.process.stdin is not None
         self.process.stdin.write(message)
         return self.receive()
+
+    def finish_recording(self) -> Path:
+        """Flush a single browser recording; no upload or claim of gameplay success."""
+        if self.record_dir is None or self.recording_finalized:
+            raise RuntimeError("Recording was not enabled or is already finalized")
+        assert self.process.stdin is not None
+        self.process.stdin.write(b'{"type":"close"}\n')
+        response = self.receive(timeout=60)
+        if response.get("type") != "recording" or response.get("filename") != "recording.webm":
+            raise RuntimeError("Bridge failed to finalize recording")
+        video = self.record_dir / "recording.webm"
+        if video.is_symlink() or not video.is_file() or not 1000 <= video.stat().st_size <= 512 * 1024 * 1024:
+            raise RuntimeError("Invalid finalized recording")
+        self.recording_finalized = True
+        return video
 
     def close(self) -> None:
         # Explicitly remove even if the Docker client exited or a request timed out.

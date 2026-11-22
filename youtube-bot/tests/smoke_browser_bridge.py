@@ -30,6 +30,18 @@ with tempfile.TemporaryDirectory(prefix='bridge-test-') as temp:
         assert bridge.step({'click':[800,0]})['type'] == 'error'
         assert pixel(bridge.step({'keys':['KeyW'], 'duration_ms':100})) == (0, 200, 0)
         assert pixel(bridge.step({'click':[400,300], 'duration_ms':100})) == (0, 0, 200)
+    # Actual browser recording of the synthetic fixture, no model or upload.
+    import subprocess, json
+    recording = Path(temp) / 'recording'
+    recording.mkdir()
+    with BrowserBridge(game, rights_acknowledged=True, record_dir=recording) as bridge:
+        bridge.receive()
+        bridge.step({'keys':['KeyW'], 'duration_ms':500})
+        bridge.step({'click':[400,300], 'duration_ms':500})
+        video = bridge.finish_recording()
+    info = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', str(video)], check=True, capture_output=True, text=True).stdout)
+    assert float(info['format']['duration']) > 0 and any(s.get('codec_type') == 'video' for s in info['streams']), info
+    print('Actual browser bridge recording validated; synthetic fixture, no upload')
     def test_agent(png, step):
         color = Image.open(io.BytesIO(png)).convert('RGB').getpixel((400, 300))
         if step == 0:

@@ -38,13 +38,18 @@ function checkAction(action) {
 async function main() {
   await new Promise(resolve => server.listen(PORT, HOST, resolve));
   const browser = await chromium.launch({headless: true});
-  const context = await browser.newContext({viewport:{width:800,height:600}, serviceWorkers:"block", acceptDownloads:false});
+  const recording = process.env.BRIDGE_RECORD === "1";
+  const context = await browser.newContext({viewport:{width:800,height:600}, serviceWorkers:"block", acceptDownloads:false,
+    ...(recording ? {recordVideo:{dir:"/record", size:{width:800,height:600}}} : {})});
   await context.route("**/*", route => {
     const u = new URL(route.request().url());
     return u.protocol === "http:" && u.hostname === HOST && u.port === String(PORT) ? route.continue() : route.abort();
   });
   await context.routeWebSocket("**/*", ws => ws.close());
   const page = await context.newPage();
+  const video = recording ? page.video() : null;
+  let normalClose = false;
+  let step = 0;
   page.on("popup", popup => popup.close().catch(() => {}));
   page.on("dialog", dialog => dialog.dismiss().catch(() => {}));
   try {
@@ -55,13 +60,12 @@ async function main() {
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64")});
     };
     await observe(0);
-    let step = 0;
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});
     for await (const line of lines) {
       if (line.length > 4096) { emit({type:"error", error:"request too large"}); continue; }
       let request;
       try { request = JSON.parse(line); } catch { emit({type:"error", error:"invalid JSON"}); continue; }
-      if (request && request.type === "close" && Object.keys(request).length === 1) break;
+      if (request && request.type === "close" && Object.keys(request).length === 1) { normalClose = true; break; }
       try {
         if (!request || request.type !== "step" || Object.keys(request).some(k => !["type", "action"].includes(k))) throw Error("invalid request");
         const {keys, click, duration} = checkAction(request.action);
@@ -74,6 +78,15 @@ async function main() {
         await observe(step);
       } catch (error) { emit({type:"error", error: error.message.slice(0, 120)}); }
     }
-  } finally { await context.close(); await browser.close(); server.close(); }
+  } finally {
+    await context.close();
+    if (normalClose && video) {
+      const recorded = await video.path();
+      if (path.dirname(recorded) !== "/record" || !/^[a-f0-9]{32}\.webm$/.test(path.basename(recorded))) throw Error("invalid recording output");
+      fs.renameSync(recorded, "/record/recording.webm");
+      emit({type:"recording", filename:"recording.webm", steps:step});
+    }
+    await browser.close(); server.close();
+  }
 }
 main().catch(error => { console.error("Bridge stopped:", error.message); server.close(); process.exitCode = 1; });
