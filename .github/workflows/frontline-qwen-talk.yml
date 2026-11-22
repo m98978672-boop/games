@@ -1,11 +1,16 @@
 name: Frontline Qwen talk (разговор с Квеней)
 on:
   push:
-    # Квеня отвечает на ветках arena/**, когда владелец дописывает
-    # сообщение в файл диалога. Её собственный коммит с ответом помечен
-    # [skip ci] и новый прогон не запускает.
-    branches: ['arena/**']
+    # Квеня отвечает и на ветках arena/**, и прямо в main, когда владелец
+    # дописывает сообщение в файл диалога (например, кнопкой со страницы
+    # kvenya через веб-редактор GitHub). Её собственный коммит с ответом
+    # запускает один пустой прогон: скрипт видит, что последнее слово за
+    # ней, и сразу выходит, а шаг коммита без изменений — no-op. Поэтому
+    # [skip ci] в её коммите НЕТ: иначе GitHub Pages не пересобрал бы сайт
+    # и ответ не появился бы на странице.
+    branches: ['arena/**', 'main']
     paths: ['qwen-home/talk/dialogue.md']
+  workflow_dispatch:
 permissions:
   contents: write
 concurrency:
@@ -69,5 +74,5 @@ jobs:
           git add qwen-home/talk/dialogue.md qwen-home/talk/last-reply.txt
           if [ -f qwen-home/memory/search-log.md ]; then git add qwen-home/memory/search-log.md; fi
           git diff --cached --quiet && exit 0
-          git commit -m 'Квеня ответила в диалоге [skip ci]'
+          git commit -m 'Квеня ответила в диалоге'
           git push origin "HEAD:$GITHUB_REF_NAME"
