@@ -9,7 +9,7 @@
 //   node site/scripts/auto-post-news.mjs --offline  # только локальные новинки + валидация
 //   node site/scripts/auto-post-news.mjs --dry-run  # без записи файла
 import crypto from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadGamesAntivirus } from './scan-submission-antivirus.mjs';
@@ -193,6 +193,32 @@ export function buildNewsCoverSvg(item) {
 `;
 }
 
+// Восстанавливаем только отсутствующие сгенерированные обложки по их коду.
+// Редакционные фото не подменяем; существующие файлы не перезаписываем.
+export async function ensureNewsCovers(items, root, av) {
+  let created = 0;
+  for (const item of items) {
+    const image = String(item?.image || '');
+    if (!/^site\/assets\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(?:svg|jpe?g|png|webp|avif)$/i.test(image)) {
+      throw new Error(`Небезопасный путь обложки: ${image}`);
+    }
+    const target = path.join(root, image);
+    try { await access(target); continue; }
+    catch (err) { if (err.code !== 'ENOENT') throw err; }
+    const code = String(item.code || '');
+    if (!String(item.id || '').startsWith('auto-') || !/^[A-Z]-\d{3}$/.test(code) || image !== `site/assets/news/${code.toLowerCase()}.svg`) {
+      throw new Error(`Отсутствует редакционная обложка: ${image}`);
+    }
+    const svg = buildNewsCoverSvg(item);
+    const verdict = av.scanCoverDataUrl('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
+    if (verdict.verdict === 'blocked') throw new Error(`Обложка ${code} не прошла проверку безопасности`);
+    await mkdir(path.dirname(target), { recursive: true });
+    try { await writeFile(target, svg, { encoding:'utf8', flag:'wx' }); created++; }
+    catch (err) { if (err.code !== 'EEXIST') throw err; }
+  }
+  return created;
+}
+
 export function makeSafeNewsItem(raw, source) {
   const title = String(raw.title || '').replace(/\s+/g, ' ').trim().slice(0, 140);
   const cleanedText = String(raw.desc || '').trim();
@@ -351,7 +377,7 @@ export function promoteScheduledItems(items, now) {
   return { items: out, promoted };
 }
 
-export function mergeNewsFeeds(existingItems, incomingItems, av) {
+export function mergeNewsFeeds(existingItems, incomingItems, av, reservedCoverCodes = []) {
   const byKey = new Map();
   const normalizeUrl = (u) => String(u || '').trim().replace(/\/+$/, '').toLowerCase();
 
@@ -372,10 +398,11 @@ export function mergeNewsFeeds(existingItems, incomingItems, av) {
   for (const item of existingItems) pushSafe(item);
 
   let added = 0;
+  const addedItems = new Set();
   for (const item of incomingItems) {
     const dedupeKey = `url:${normalizeUrl(item.sourceUrl) || item.id}`;
     const alreadyExists = byKey.has(dedupeKey) || existingItems.some((e) => e.id === item.id);
-    if (!alreadyExists && pushSafe(item)) added++;
+    if (!alreadyExists && pushSafe(item)) { added++; addedItems.add(item); }
   }
 
   // Код статьи — префикс рубрики + три цифры из хеша. Круг в 299 номеров на
@@ -385,23 +412,28 @@ export function mergeNewsFeeds(existingItems, incomingItems, av) {
   const all = [...byKey.values()];
   const usedCodes = new Set();
   for (const item of all) if (item && item.code) usedCodes.add(item.code);
+  const reservedCodes = new Set(reservedCoverCodes);
   const seenOnce = new Set();
   for (const item of all) {
     if (!item || !item.code) continue;
-    if (!seenOnce.has(item.code)) { seenOnce.add(item.code); continue; }
-    const m = /^([A-Za-z]+)-(\d+)$/.exec(String(item.code));
-    if (!m) continue;
-    let num = Number(m[2]);
-    let code = item.code;
-    do {
-      num += 1;
-      code = `${m[1]}-${num}`;
-    } while (usedCodes.has(code));
+    const oldCode = String(item.code);
+    if (!seenOnce.has(oldCode) && !(addedItems.has(item) && reservedCodes.has(oldCode))) {
+      seenOnce.add(oldCode); continue;
+    }
+    const m = /^([A-Z])-(\d{3})$/.exec(oldCode);
+    if (!m) throw new Error(`Некорректный код новости: ${oldCode}`);
+    let num = Number(m[2]), code = '';
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      num = (num + 1) % 1000;
+      const candidate = `${m[1]}-${String(num).padStart(3, '0')}`;
+      if (!usedCodes.has(candidate) && !reservedCodes.has(candidate)) { code = candidate; break; }
+    }
+    if (!code) throw new Error(`Закончились свободные коды новостей для ${m[1]}`);
     usedCodes.add(code);
     seenOnce.add(code);
-    const oldImage = String(item.image || '');
     item.code = code;
-    if (/^site\/assets\/news\//.test(oldImage)) item.image = `site/assets/news/${code.toLowerCase()}.svg`;
+    // Переназначаем только генерируемую SVG. Редакционное фото сохраняем.
+    if (String(item.id || '').startsWith('auto-') && item.image === `site/assets/news/${oldCode.toLowerCase()}.svg`) item.image = `site/assets/news/${code.toLowerCase()}.svg`;
   }
   const pinned = all.filter((x) => x.pinned);
   const fresh = all
@@ -484,7 +516,11 @@ async function main() {
 
   const { items: withReleased, promoted } = promoteScheduledItems(existing, Date.now());
   if (promoted.length) console.log(`Из очереди «на будущее» вышло статей: ${promoted.length}`);
-  const { items, added } = mergeNewsFeeds(withReleased, incoming, av);
+  // Старые обложки не удаляются: новые статьи не должны переиспользовать
+  // их код и показывать заголовок другой новости.
+  const names = await readdir(path.join(repoRoot, 'site/assets/news'));
+  const reservedCovers = names.filter(n => /^[a-z]-\d{3}\.svg$/.test(n)).map(n => n.slice(0, -4).toUpperCase());
+  const { items, added } = mergeNewsFeeds(withReleased, incoming, av, reservedCovers);
   const backlog = keepBacklogInvariant(items);
   const nowIso = new Date().toISOString();
 
@@ -514,6 +550,8 @@ async function main() {
   );
 
   if (!dryRun) {
+    const covers = await ensureNewsCovers(items, repoRoot, av);
+    console.log(`Локальных обложек создано: ${covers}`);
     await writeFile(feedPath, `${JSON.stringify(feed, null, 2)}\n`, 'utf8');
   }
 }
