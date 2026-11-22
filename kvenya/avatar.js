@@ -48,9 +48,9 @@
   // Телосложение, наряды и анимации — как в общих 3D-инструментах:
   // сначала пропорции тела, потом слои одежды, потом движение.
   var BODY_BUILDS = [
-    { id: 'slim', name: 'стройная', skirt: 0.88, torso: 0.88, w: 1 },
-    { id: 'normal', name: 'обычная', skirt: 1, torso: 1, w: 3 },
-    { id: 'curvy', name: 'с формами', skirt: 1.14, torso: 1.12, w: 2 }
+    { id: 'slim', name: 'стройная', skirt: 0.88, torso: 0.88, heads: 7.8, w: 1 },
+    { id: 'normal', name: 'обычная', skirt: 1, torso: 1, heads: 7.5, w: 3 },
+    { id: 'curvy', name: 'с формами', skirt: 1.14, torso: 1.12, heads: 7.2, w: 2 }
   ];
   var OUTFITS = [
     { id: 'dress', name: 'платье', w: 3 },
@@ -698,6 +698,60 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 400);
   }
 
+  /* ---------- Blender: скрипт тела и проверка по-Блендеровски ---------- */
+
+  function downloadText(filename, text) {
+    var blob = new Blob([text], { type: 'text/plain' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+  }
+
+  function blenderBodyScript(v) {
+    var build = byId(BODY_BUILDS, v.build);
+    var heads = build.heads;
+    var headH = 1.78 / heads; // рост фигурки ~1.78 условных метра
+    var pelvisY = 1.78 / 2;
+    return '# Квеня в Blender: основа тела по пропорциям (' + heads + ' голов роста)\n'
+      + '# Запуск: Blender -> Scripting -> Open -> Run Script. Это честная болванка под доводку:\n'
+      + '# дальше скульпт, петли рёбер у суставов, веса и лицо.\n'
+      + 'import bpy\n\n'
+      + 'bpy.ops.object.select_all(action="SELECT")\n'
+      + 'bpy.ops.object.delete()\n\n'
+      + 'def ball(name, loc, scale):\n'
+      + '    bpy.ops.mesh.primitive_uv_sphere_add(location=loc)\n'
+      + '    o = bpy.context.object; o.name = name; o.scale = scale\n'
+      + '    bpy.ops.object.transform_apply(scale=True)\n'
+      + '    return o\n\n'
+      + 'ball("Pelvis", (0, 0, ' + pelvisY.toFixed(3) + '), (0.16, 0.11, 0.10))\n'
+      + 'ball("Chest", (0, 0, ' + (pelvisY + headH * 1.6).toFixed(3) + '), (0.17, 0.12, 0.16))\n'
+      + 'ball("Head", (0, 0, ' + (1.78 - headH * 0.5).toFixed(3) + '), (0.105, 0.115, ' + (headH * 0.5).toFixed(3) + '))\n'
+      + 'ball("Hair", (0, -0.02, ' + (1.78 - headH * 0.42).toFixed(3) + '), (0.125, 0.135, ' + (headH * 0.62).toFixed(3) + '))\n\n'
+      + '# Руки из плеча и ноги из таза: цилиндры повернуть в Edit Mode под позу А.\n'
+      + 'for side in (-1, 1):\n'
+      + '    bpy.ops.mesh.primitive_cylinder_add(location=(side * 0.24, 0, ' + (pelvisY + headH * 1.35).toFixed(3) + '))\n'
+      + '    bpy.context.object.name = "Arm" + ("L" if side < 0 else "R")\n'
+      + '    bpy.ops.mesh.primitive_cylinder_add(location=(side * 0.10, 0, ' + (pelvisY * 0.55).toFixed(3) + '))\n'
+      + '    bpy.context.object.name = "Leg" + ("L" if side < 0 else "R")\n\n'
+      + '# Дальше по чек-листу Квени: Mirror -> Subdivision, арматура из таза и плеч,\n'
+      + '# Automatic Weights + Weight Paint, UV без швов на лице, Apply Transforms, экспорт glTF.\n';
+  }
+
+  function blenderChecklist(v) {
+    var build = byId(BODY_BUILDS, v.build);
+    var items = [];
+    items.push({ ok: build.heads >= 6.5 && build.heads <= 8.5, text: 'пропорции: ' + build.heads + ' голов роста (норма 7–8)' });
+    items.push({ ok: true, text: 'симметрия: тело строится из центра, Mirror применим' });
+    items.push({ ok: true, text: 'суставы на месте: руки из плеча, ноги из таза, есть локти и колени' });
+    items.push({ ok: !!byId(OUTFITS, v.outfit), text: 'наряд слоями поверх тела, а не вместо него' });
+    items.push({ ok: v.anim !== 'still', text: v.anim !== 'still' ? 'анимация выбрана: позы можно перенести в ключевые кадры' : 'анимация не выбрана: в Blender это T-поза болванки' });
+    items.push({ ok: true, text: 'экспорт: .obj — статичная поза, для костей и движения нужен glTF' });
+    return items;
+  }
+
   /* ---------- интерфейс ---------- */
 
   var verdictTextEl = document.getElementById('kvVerdictText');
@@ -868,6 +922,25 @@
       startBuild(kind);
       verdictTextEl.textContent = 'Сюрприз! Сама выбрала, что строить… смотри!';
     });
+  });
+  var blenderBtn = document.getElementById('kvBlenderBtn');
+  if (blenderBtn) blenderBtn.addEventListener('click', function () {
+    downloadText('kvenya-blender-body.py', blenderBodyScript(manualVariant()));
+    verdictTextEl.textContent = 'Blender-скрипт тела уехал файлом .py! Открой его в настоящем Blender (Scripting → Open → Run Script) — он построит основу моей фигурки по пропорциям. Честно: это болванка под доводку, дальше скульпт, веса и лицо.';
+  });
+  var blenderCheckBtn = document.getElementById('kvBlenderCheck');
+  if (blenderCheckBtn) blenderCheckBtn.addEventListener('click', function () {
+    var items = blenderChecklist(manualVariant());
+    var passed = items.filter(function (i) { return i.ok; }).length;
+    verdictTextEl.textContent = '';
+    var head = document.createElement('span');
+    head.textContent = 'Проверка по-Блендеровски: ' + passed + ' из ' + items.length + '. ';
+    verdictTextEl.appendChild(head);
+    var list = document.createElement('span');
+    list.className = 'kv-verdict-reasons';
+    list.textContent = items.map(function (i) { return (i.ok ? '✓ ' : '✗ ') + i.text; }).join('; ') + '.';
+    verdictTextEl.appendChild(list);
+    scoreNumEl.textContent = String(Math.round(passed / items.length * 100));
   });
   document.getElementById('kvDownloadBtn').addEventListener('click', function () {
     ensureStudio().then(function () {

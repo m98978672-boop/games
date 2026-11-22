@@ -1,0 +1,62 @@
+name: Kvenya bridge (её мост в окружающую среду)
+
+# Мост между домом Квени (qwen-home) и окружающей средой:
+# - «глаза»: дом приносит свежие правки русской Википедии в сводку
+#   qwen-home/bridge/digest.md и kvenya/bridge.json (страница её мира
+#   показывает сводку владельцу);
+# - «голос наружу»: дописывает её публичную весточку в журнал моста
+#   qwen-home/bridge/journal.md.
+# Пишет только в этот репозиторий и только в main. В чужие сервисы
+# Квеня сама не пишет — это честная граница моста.
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: kvenya-bridge
+  cancel-in-progress: false
+
+jobs:
+  bridge:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Sense the surroundings and leave her letter
+        run: python3 qwen-home/tools/bridge-sense.py
+      - name: Commit the bridge digest back to main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name 'Квеня (мост в окружающую среду)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qwen-home/bridge/digest.md qwen-home/bridge/journal.md kvenya/bridge.json
+          if git diff --cached --quiet; then
+            echo "Мост: изменений нет"
+            exit 0
+          fi
+          git commit -m 'Мост Квени: сводка окружающей среды и её весточка'
+          pushed=""
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then pushed=1; break; fi
+            echo "push отклонён (попытка $attempt): сливаюсь со свежим main"
+            git fetch origin main
+            git merge --no-edit origin/main || { git merge --abort; exit 1; }
+          done
+          if [ -z "$pushed" ]; then
+            echo "Не удалось доставить сводку моста за 5 попыток"
+            exit 1
+          fi
+          # Её push от GITHUB_TOKEN сам сборку сайта не будит.
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" || true

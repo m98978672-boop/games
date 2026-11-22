@@ -75,3 +75,10 @@ body.is-embed .kv-head { display: none; }
   font-size: 12.5px; line-height: 1.5; color: var(--muted);
 }
 .kv-game-journal:empty { display: none; }
+
+.kv-clips { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 14px; }
+.kv-clip .kv-game-video { width: 100%; }
+.kv-bridge { margin-top: 16px; border-top: 1px dashed rgba(255,255,255,.18); padding-top: 12px; }
+.kv-bridge-list { margin: 6px 0 10px; padding-left: 18px; }
+.kv-bridge-search { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.kv-bridge-search input { flex: 1 1 240px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.25); color: inherit; }

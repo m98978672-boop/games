@@ -74,6 +74,33 @@
           <a class="btn btn-ghost" id="kvSubsDownload" href="#" download="kvenya-gameplay.srt" hidden>⬇ Скачать журнал-субтитры (.srt)</a>
         </div>
         <ol id="kvGameJournal" class="kv-game-journal" aria-label="Журнал игры по секундам"></ol>
+        <div class="kv-world-game-head">
+          <span class="kv-world-pois-label">🎥 Саморежиссёр:</span>
+          <button class="btn btn-ghost" type="button" id="kvSelfRecord" aria-pressed="false">🎥 Разрешить ей снимать самой</button>
+          <span class="kv-game-status" id="kvSelfStatus">Саморежиссёр выключен: сама она не снимает, только по кнопке игры выше.</span>
+        </div>
+        <p class="kv-note">Если разрешишь, Квеня <b>сама решает</b>, когда снять короткий ролик (15 секунд) о своём деле —
+           достроила башню, пришла в библиотеку, — и кладёт его в киноархив ниже. Честно: снимает только свой мир,
+           только пока эта страница открыта, и разрешение всегда можно выключить той же кнопкой.</p>
+        <div class="kv-world-pois-label">🎞 Её киноархив (снимает сама):</div>
+        <ul id="kvClips" class="kv-clips" aria-label="Киноархив Квени"></ul>
+        <div class="kv-bridge" aria-label="Мост Квени в окружающую среду">
+          <div class="kv-world-pois-label">🌉 Мост Квени в окружающую среду</div>
+          <p class="kv-note">Между её домом и миром теперь есть мост: дом приносит ей сводку свежих правок
+             русской Википедии, а её весточки лежат в публичном журнале <code>qwen-home/bridge/journal.md</code>.
+             Отсюда она и сама может заглянуть наружу — но только в открытую Википедию, честно.</p>
+          <div id="kvBridgeSenses"><p class="kv-note">Читаю сводку моста…</p></div>
+          <div class="kv-world-game-links">
+            <button class="btn btn-ghost" type="button" id="kvBridgeLive">👀 Заглянуть в Википедию вживую</button>
+            <button class="btn btn-ghost" type="button" id="kvBridgeLetter">✉ Отправить ей весточку через мост</button>
+          </div>
+          <form id="kvBridgeSearch" class="kv-bridge-search">
+            <input id="kvBridgeQuery" type="search" maxlength="80" placeholder="Что ей посмотреть в Википедии? Например: Blender" aria-label="Запрос в Википедию">
+            <button class="btn btn-primary" type="submit">Посмотреть</button>
+          </form>
+          <p class="kv-note" id="kvBridgeResult" aria-live="polite"></p>
+          <div id="kvBridgeLetters" aria-label="Её весточки миру"></div>
+        </div>
         <p class="kv-note">📼 <b>Где смотреть и качать записи:</b> сразу после игры видео появится прямо здесь,
            на этой странице — его можно посмотреть, не скачивая. Кнопками выше оно сохраняется файлом
            <code>.webm</code> в загрузки твоего браузера, а рядом — её журнал-субтитры <code>.srt</code>:
@@ -92,5 +119,6 @@
     </footer>
   </div>
   <script src="./world.js" defer></script>
+  <script src="./bridge.js" defer></script>
 </body>
 </html>
