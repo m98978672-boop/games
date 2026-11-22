@@ -157,7 +157,10 @@ EYES_SUMMARY_JS = r"""
         pipeX = x;
         const gapTop = top[top.length - 1];
         const below = ys.filter(y => y > gapTop + 0.06 * h);
-        const gapBottom = below.length ? below[0] : Math.min(0.86 * h, gapTop + 0.293 * h);
+        let gapBottom = below.length ? below[0] : Math.min(0.86 * h, gapTop + 0.293 * h);
+        if (gapBottom - gapTop < 0.16 * h || gapBottom - gapTop > 0.50 * h) {
+          gapBottom = Math.min(0.86 * h, gapTop + 0.293 * h);
+        }
         gap = [gapTop, gapBottom];
         break;
       }
@@ -276,6 +279,10 @@ def analyze_eyes(raw):
                 gap_top = top[-1]
                 below = [y for y in ys if y > gap_top + 0.06 * h]
                 gap_bottom = below[0] if below else min(0.86 * h, gap_top + 0.293 * h)
+                # проверка просвета: настоящий просвет у таких игр ~0.29 кадра;
+                # прочиталось сильно уже или шире — не верю нижней границе
+                if gap_bottom - gap_top < 0.16 * h or gap_bottom - gap_top > 0.50 * h:
+                    gap_bottom = min(0.86 * h, gap_top + 0.293 * h)
                 gap = (gap_top, gap_bottom)
                 break
     return {'w': w, 'h': h, 'bird': bird, 'gap': gap, 'pipe_x': pipe_x,
@@ -323,11 +330,15 @@ def decide_flap(bird_y, target_y, gap_bottom, h, ms_since_flap, vy=0):
         return False
     if gap_bottom is not None and bird_y > gap_bottom - 0.05 * h:
         return ms_since_flap >= 90
+    # тормозная серия: падаем пулей — серия взмахов гасит скорость,
+    # не дожидаясь, пока птица провалится под цель
+    if vy >= 34 and bird_y > target_y - 0.06 * h:
+        return ms_since_flap >= 80
     if bird_y > target_y + 0.010 * h and vy > -12 and ms_since_flap >= 100:
         return True
-    # упреждение: падаем пулей и уже близко к цели — взмах до того,
+    # упреждение: падаем быстро и уже близко к цели — взмах до того,
     # как инерция унесёт птицу под просвет
-    return vy >= 24 and bird_y > target_y - 0.025 * h and ms_since_flap >= 100
+    return vy >= 20 and bird_y > target_y - 0.06 * h and ms_since_flap >= 90
 
 
 class Report:
@@ -595,7 +606,12 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         if st['bird']:
                             vy = (st['bird'][1] - prev_bird_y) if prev_bird_y is not None else 0
                             prev_bird_y = st['bird'][1]
-                            target = ((gap[0] + gap[1]) / 2 if gap else frame_h * 0.42) + offset
+                            if gap and st.get('pipe_x') is not None and st['pipe_x'] - st['bird'][0] < 0.30 * st['w']:
+                                # труба близко: целимся в верхние 40% просвета —
+                                # между кадрами птица тонет, запас сверху нужнее
+                                target = gap[0] + 0.40 * (gap[1] - gap[0]) + offset
+                            else:
+                                target = ((gap[0] + gap[1]) / 2 if gap else frame_h * 0.42) + offset
                             if not st['game_over'] and not bird_low:
                                 ms = int((now - last_flap) * 1000) if last_flap else 9999
                                 if decide_flap(st['bird'][1], target, gap[1] if gap else None, frame_h, ms, vy):
