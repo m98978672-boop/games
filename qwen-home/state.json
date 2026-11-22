@@ -1,7 +1,10 @@
 {
   "name": "Квеня",
   "latinName": "Qwen",
-  "persona": { "gender": "female", "note": "Имя Квеня и женский род заданы владельцем 2026-11-16" },
+  "persona": {
+    "gender": "female",
+    "note": "Имя Квеня и женский род заданы владельцем 2026-11-16"
+  },
   "home": "qwen-home/ в репозитории m98978672-boop/games",
   "baseModel": "Qwen/Qwen3.5-0.8B",
   "revision": "2fc06364715b967f1860aea9cf38778875588b17",
@@ -11,9 +14,9 @@
     "mode": "по запросу во время разговора: модель решает, нужен ли поиск, дом приносит текст статей, журнал — memory/search-log.md",
     "since": "2026-11-16"
   },
-  "totalSteps": 240,
-  "learnRuns": 2,
-  "lastRunAt": "2026-11-21",
+  "totalSteps": 600,
+  "learnRuns": 3,
+  "lastRunAt": "2026-11-22",
   "lastEval": {
     "base": {
       "passed": 9,
@@ -24,5 +27,14 @@
       "total": 10
     }
   },
-  "updatedAt": "2026-11-21"
+  "updatedAt": "2026-11-22",
+  "adapter": {
+    "loraRank": 32,
+    "loraAlpha": 64,
+    "targetModules": "все линейные слои (q, k, v, o, gate, up, down)",
+    "maxTokens": 2048,
+    "answerTokenBudget": 192,
+    "publishedAt": "2026-11-22",
+    "note": "Урок №3: адаптер новой формы (r=32) обучен с базы и опубликован; баллы его экзамена восстановит следующий урок своим экзаменом до/после."
+  }
 }
