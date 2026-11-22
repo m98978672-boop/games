@@ -507,6 +507,98 @@
     if (followBtn && !follow) followBtn.click();
   }
   if (gameStartBtn) gameStartBtn.addEventListener('click', startGameAndRecord);
+
+  /* ---------- саморежиссёр: Квеня снимает сама, по своему решению ---------- */
+  var selfBtn = document.getElementById('kvSelfRecord');
+  var selfStatusEl = document.getElementById('kvSelfStatus');
+  var clipsEl = document.getElementById('kvClips');
+  var selfRec = {
+    enabled: false, recorder: null, chunks: [], startedAt: 0, lastClipAt: 0,
+    lastPoi: '', lastBuild: -1, timer: null, events: []
+  };
+  try { selfRec.enabled = window.localStorage.getItem('kvenya.world.selfRecord.v1') === '1'; } catch (err) { /* без хранилища — выключено */ }
+  function selfSayStatus(text) { if (selfStatusEl) selfStatusEl.textContent = text; }
+  function renderSelfBtn() {
+    if (!selfBtn) return;
+    selfBtn.setAttribute('aria-pressed', selfRec.enabled ? 'true' : 'false');
+    selfBtn.textContent = selfRec.enabled ? '🎥 Ей разрешено снимать самой' : '🎥 Разрешить ей снимать самой';
+    selfSayStatus(selfRec.enabled
+      ? 'Саморежиссёр включён: она сама решает, когда снять короткий ролик о своём деле, и кладёт его в киноархив ниже.'
+      : 'Саморежиссёр выключен: сама она не снимает, только по кнопке игры выше.');
+  }
+  if (selfBtn) selfBtn.addEventListener('click', function () {
+    selfRec.enabled = !selfRec.enabled;
+    try { window.localStorage.setItem('kvenya.world.selfRecord.v1', selfRec.enabled ? '1' : '0'); } catch (err) { /* не критично */ }
+    if (!selfRec.enabled && selfRec.recorder) stopSelfClip('выключил владелец');
+    renderSelfBtn();
+    say(selfRec.enabled ? 'Спасибо! Теперь я сама буду снимать короткие ролики о своих делах.' : 'Хорошо, сама не снимаю. Только по твоей кнопке.', 4);
+  });
+  function selfInteresting() {
+    // событие, а не пустая беготня: новое дело или рост стройки
+    if (state.poi !== selfRec.lastPoi) { selfRec.lastPoi = state.poi; return 'новое дело: ' + state.poi; }
+    if (buildStack.length !== selfRec.lastBuild) {
+      var grew = buildStack.length > selfRec.lastBuild;
+      selfRec.lastBuild = buildStack.length;
+      if (grew) return 'стройка растёт';
+    }
+    return '';
+  }
+  function startSelfClip(reason) {
+    if (!renderer || !renderer.domElement.captureStream || !('MediaRecorder' in window)) {
+      selfSayStatus('Этот браузер не умеет записывать видео с канваса — сама снять не смогу, честно.');
+      return;
+    }
+    try {
+      var stream = renderer.domElement.captureStream(30);
+      selfRec.recorder = new window.MediaRecorder(stream, pickMime() ? { mimeType: pickMime() } : undefined);
+    } catch (err) { selfRec.recorder = null; return; }
+    selfRec.chunks = []; selfRec.events = []; selfRec.startedAt = performance.now();
+    selfRec.recorder.ondataavailable = function (e) { if (e.data && e.data.size) selfRec.chunks.push(e.data); };
+    selfRec.recorder.onstop = finishSelfClip;
+    selfRec.recorder.start(250);
+    var line = 'Сама снимаю: ' + reason + '. Рассказываю, что делаю!';
+    say('🎬 ' + line, 4);
+    selfRec.events.push(line);
+    selfSayStatus('🔴 Она сама снимает ролик: ' + reason + '…');
+    selfRec.timer = setTimeout(function () { stopSelfClip('прошло 15 секунд'); }, 15000);
+  }
+  function stopSelfClip(why) {
+    if (selfRec.timer) { clearTimeout(selfRec.timer); selfRec.timer = null; }
+    if (selfRec.recorder && selfRec.recorder.state !== 'inactive') selfRec.recorder.stop();
+  }
+  function finishSelfClip() {
+    var rec = selfRec.recorder; selfRec.recorder = null;
+    selfRec.lastClipAt = performance.now();
+    if (!selfRec.chunks.length || !clipsEl) return;
+    var blob = new Blob(selfRec.chunks, { type: selfRec.chunks[0].type || 'video/webm' });
+    var url = URL.createObjectURL(blob);
+    var li = document.createElement('li');
+    li.className = 'kv-clip';
+    var v = document.createElement('video');
+    v.src = url; v.controls = true; v.playsInline = true; v.className = 'kv-game-video';
+    var cap = document.createElement('p');
+    cap.className = 'kv-note';
+    cap.textContent = '🎬 Сняла сама · ' + new Date().toLocaleTimeString('ru-RU') + ' · ' + selfRec.events.join(' ');
+    var a = document.createElement('a');
+    a.href = url; a.download = 'kvenya-selfclip.webm'; a.className = 'btn btn-ghost'; a.textContent = '⬇ Скачать этот ролик (.webm)';
+    li.appendChild(v); li.appendChild(cap); li.appendChild(a);
+    clipsEl.insertBefore(li, clipsEl.firstChild);
+    while (clipsEl.children.length > 6) {
+      var old = clipsEl.lastChild;
+      var oldVideo = old.querySelector('video');
+      if (oldVideo) URL.revokeObjectURL(oldVideo.src);
+      clipsEl.removeChild(old);
+    }
+    selfSayStatus('🎞 Новый ролик в её киноархиве ниже — она сняла его сама. Смотри прямо здесь или скачай.');
+    say('Сняла! Ролик лежит в моём киноархиве под миром.', 4);
+  }
+  setInterval(function () {
+    if (!selfRec.enabled || selfRec.recorder || recording || game.active || !kvenya) return;
+    if (performance.now() - selfRec.lastClipAt < 45000) return;
+    var reason = selfInteresting();
+    if (reason) startSelfClip(reason);
+  }, 1500);
+  renderSelfBtn();
   if (gameStopBtn) gameStopBtn.addEventListener('click', function () { finishGame(true); });
 
   /* ---------- запуск ---------- */

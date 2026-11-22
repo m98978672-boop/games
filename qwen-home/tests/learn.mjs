@@ -28,8 +28,9 @@ const web = await readJsonl(path.join(home, 'curriculum', 'web-code.jsonl'));
 const identity = await readJsonl(path.join(home, 'curriculum', 'identity.jsonl'));
 const youtubeScripts = await readJsonl(path.join(home, 'curriculum', 'youtube-scripts.jsonl'));
 const dialogue = await readJsonl(path.join(home, 'curriculum', 'dialogue.jsonl'));
+const blender = await readJsonl(path.join(home, 'curriculum', 'blender.jsonl'));
 const evalRows = await readJsonl(path.join(home, 'curriculum', 'eval.jsonl'));
-const all = [...thinking, ...web, ...identity, ...youtubeScripts, ...dialogue];
+const all = [...thinking, ...web, ...identity, ...youtubeScripts, ...dialogue, ...blender];
 check('учебный план непуст: мышление, веб, самоописание и мульт-сценарии на месте', thinking.length >= 8 && web.length >= 10 && identity.length >= 5 && youtubeScripts.length >= 8);
 check('каждый урок: id, kind, непустые instruction и response', all.every((r) => r.id && r.kind && r.instruction?.length > 3 && r.response?.length > 3));
 check('идентификаторы уроков не повторяются', new Set(all.map((r) => r.id)).size === all.length);
@@ -171,6 +172,13 @@ const worldJs = await readFile(path.join(home, '..', 'kvenya', 'world.js'), 'utf
 const worldHtml = await readFile(path.join(home, '..', 'kvenya', 'world.html'), 'utf8');
 check('Квеня играет и записывает настоящий геймплей: сама бежит за звёздами, видео пишется и скачивается со страницы мира', worldJs.includes('MediaRecorder') && worldJs.includes('captureStream') && worldJs.includes('startGameAndRecord') && worldJs.includes('spawnStar') && worldHtml.includes('kvGameStart') && worldHtml.includes('kvVideoDownload') && worldHtml.includes('kvGameVideo') && personaMd.includes('## Игра и запись геймплея') && dialogue.some((r) => r.response.includes('MediaRecorder')) && dialogue.some((r) => r.response.includes('разрешения')) && evalRows.some((r) => r.id === 'eval-record-gameplay'));
 check('персона знает про свою 3D-студию и честную оценку красоты', personaMd.includes('3D-студия') && personaMd.includes('красиво ли получилось'));
+
+check('Квеня снимает сама: саморежиссёр в мире, киноархив и уроки честности', worldJs.includes('startSelfClip') && worldJs.includes('kvSelfRecord') && worldJs.includes('kvenya.world.selfRecord.v1') && worldHtml.includes('kvClips') && worldHtml.includes('снимать самой') && personaMd.includes('саморежиссёр') && dialogue.some((r) => r.response.includes('киноархив')) && evalRows.some((r) => r.id === 'eval-self-record'));
+const bridgeJs = await readFile(path.join(home, '..', 'kvenya', 'bridge.js'), 'utf8');
+const bridgePy = await readFile(path.join(home, 'tools', 'bridge-sense.py'), 'utf8');
+const bridgeSeed = JSON.parse(await readFile(path.join(home, '..', 'kvenya', 'bridge.json'), 'utf8'));
+check('мост в окружающую среду: глаза в Википедию, весточки наружу, сводка на странице мира', bridgeJs.includes('ru.wikipedia.org/w/api.php') && bridgeJs.includes('bridge.json') && bridgePy.includes('recentchanges') && bridgePy.includes('journal.md') && bridgeSeed.source === 'ru.wikipedia.org' && worldHtml.includes('kvBridgeLive') && worldHtml.includes('kvBridgeSearch') && personaMd.includes('## Мост в окружающую среду') && dialogue.some((r) => r.response.includes('моего моста') || r.response.includes('через мост')) && evalRows.some((r) => r.id === 'eval-bridge-senses'));
+check('Blender-школа: учебный план, скрипт тела из студии и автоматическая проверка по чек-листу', blender.length >= 12 && blender.every((r) => r.kind === 'blender') && blender.some((r) => r.response.includes('Automatic Weights')) && blender.some((r) => (r.instruction + r.response).toLowerCase().includes('чек-лист')) && avatarJs.includes('blenderBodyScript') && avatarJs.includes('blenderChecklist') && avatarJs.includes('kvBlenderBtn') && avatarJs.includes('heads: 7.5') && evalRows.some((r) => r.id === 'eval-blender-checklist') && evalRows.some((r) => r.id === 'eval-blender-script'));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
