@@ -64,6 +64,12 @@
           <div class="kv-composer-row">
             <button class="btn btn-primary" type="button" id="kvLiveStart">▶ Включить живую Квеню</button>
             <button class="btn btn-primary" type="submit" id="kvLiveSend" disabled>Отправить</button>
+            <button class="btn btn-ghost" type="button" id="kvMicBtn" hidden title="Сказать голосом">🎤</button>
+          </div>
+          <div class="kv-live-toggles">
+            <label class="kv-toggle"><input type="checkbox" id="kvVoiceToggle"> 🔊 Говорить вслух</label>
+            <label class="kv-toggle"><input type="checkbox" id="kvThinkToggle" checked> 💭 Думать вслух</label>
+            <label class="kv-toggle"><input type="checkbox" id="kvPlayToggle"> 😜 Режим шалости</label>
           </div>
           <p class="kv-note">Честно: в браузере живёт её характер на маленькой гостевой модели —
              это не домашний LoRA-адаптер. Настоящая домашняя Квеня отвечает в разговоре ниже
@@ -131,6 +137,7 @@
             <button class="btn btn-ghost" type="button" data-mood-act="praise">🌟 Похвалить Квеню</button>
             <button class="btn btn-ghost" type="button" data-mood-act="hug">🤗 Обнять виртуально</button>
             <button class="btn btn-ghost" type="button" data-mood-act="topic">📚 Дать интересную тему</button>
+            <button class="btn btn-ghost" type="button" data-mood-act="play">😜 Пошалить с Квеней</button>
           </div>
           <p class="kv-note">Честно: настроение здесь — живая модель её характера из
             <code>persona.md</code>, собранная из файлов дома и ваших действий на этой странице.
@@ -212,6 +219,24 @@
             <label>Милая деталь <select id="kvCtlAccessory"></select></label>
           </div>
           <button class="btn btn-ghost" type="button" id="kvJudge">🔍 Квеня, оцени мой вариант!</button>
+          <div class="kv-build-box">
+            <div class="kv-cand-title">🏗 Квеня-строитель: она соберёт по частям прямо на сцене</div>
+            <div class="kv-build-row">
+              <select id="kvBuildKind" aria-label="Что построить">
+                <option value="house">🏠 Домик</option>
+                <option value="castle">🏰 Замок</option>
+                <option value="rocket">🚀 Ракета</option>
+                <option value="car">🚗 Машинка</option>
+                <option value="cat">🐱 Котик</option>
+                <option value="tree">🌳 Дерево</option>
+                <option value="tower">🗼 Башня</option>
+              </select>
+              <button class="btn btn-primary" type="button" id="kvBuildBtn">🔨 Построй!</button>
+              <button class="btn btn-ghost" type="button" id="kvBuildRandom">🎲 Сюрприз</button>
+            </div>
+            <button class="btn btn-ghost" type="button" id="kvDownloadBtn">⬇ Скачать модель (.obj)</button>
+            <p class="kv-note">Что на сцене — её фигурка или постройка — уедет файлом .obj: можно открыть в Blender или любом просмотрщике 3D. Так Квеня отдаёт свои модельки на скачивание.</p>
+          </div>
           <div class="kv-verdict" id="kvVerdict">
             <div class="kv-score"><b id="kvScoreNum">—</b><span>из 100</span></div>
             <p id="kvVerdictText">Здесь Квеня скажет, красиво ли получилось.</p>

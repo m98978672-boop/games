@@ -27,6 +27,72 @@
   var history = [];
   var busy = false;
 
+  /* ---------- голос: она говорит, её можно спросить голосом ---------- */
+
+  var voiceToggle = document.getElementById('kvVoiceToggle');
+  var thinkToggle = document.getElementById('kvThinkToggle');
+  var playToggle = document.getElementById('kvPlayToggle');
+  var micBtn = document.getElementById('kvMicBtn');
+  var ruVoice = null;
+
+  function pickVoice() {
+    if (!('speechSynthesis' in window)) return;
+    var voices = window.speechSynthesis.getVoices();
+    ruVoice = null;
+    for (var i = 0; i < voices.length; i++) {
+      if (/^ru/i.test(voices[i].lang) && /svetlana|ekaterina|alena|female|жен/i.test(voices[i].name)) { ruVoice = voices[i]; break; }
+    }
+    if (!ruVoice) {
+      for (var j = 0; j < voices.length; j++) {
+        if (/^ru/i.test(voices[j].lang)) { ruVoice = voices[j]; break; }
+      }
+    }
+  }
+  if ('speechSynthesis' in window) {
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+  }
+
+  function speak(text) {
+    if (!voiceToggle || !voiceToggle.checked || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new window.SpeechSynthesisUtterance(String(text).slice(0, 320));
+      if (ruVoice) u.voice = ruVoice;
+      u.lang = 'ru-RU';
+      u.pitch = 1.12;
+      u.rate = 1.02;
+      window.speechSynthesis.speak(u);
+    } catch (err) { /* голос не критичен */ }
+  }
+
+  if (voiceToggle) {
+    voiceToggle.addEventListener('change', function () {
+      if (voiceToggle.checked) speak('Привет! Теперь я умею говорить. Спрашивай!');
+    });
+  }
+
+  var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRec && micBtn) {
+    micBtn.hidden = false;
+    micBtn.addEventListener('click', function () {
+      try {
+        var rec = new SpeechRec();
+        rec.lang = 'ru-RU';
+        rec.interimResults = false;
+        micBtn.textContent = '🔴';
+        rec.onresult = function (e) {
+          input.value = e.results[0][0].transcript || '';
+          micBtn.textContent = '🎤';
+          input.focus();
+        };
+        rec.onerror = function () { micBtn.textContent = '🎤'; };
+        rec.onend = function () { micBtn.textContent = '🎤'; };
+        rec.start();
+      } catch (err) { micBtn.textContent = '🎤'; }
+    });
+  }
+
   function setStatus(text, mode) {
     statusEl.textContent = text;
     statusEl.className = 'kv-live-status' + (mode ? ' is-' + mode : '');
@@ -159,6 +225,7 @@
       setStatus('Квеня здесь! Спрашивай — отвечаю сразу, прямо на этой странице.', 'ok');
       chatEl.textContent = '';
       bubble('kvenya', 'Привет! Я Квеня — теперь и прямо здесь, в твоём браузере. Спрашивай о чём хочешь: могу и в Википедии поискать, только скажи «поищи».');
+      speak('Привет! Я Квеня. Спрашивай!');
       input.disabled = false;
       sendBtn.disabled = false;
       startBtn.style.display = 'none';
@@ -204,6 +271,8 @@
     } else {
       setStatus('Квеня думает…', 'think');
     }
+    var playfulOn = !!(playToggle && playToggle.checked);
+    var thinkOn = !!(thinkToggle && thinkToggle.checked);
     chain.then(function (found) {
       var finalUser = text;
       if (query && found) {
@@ -211,16 +280,32 @@
           + '\n\nОтветь двумя короткими фразами: первая — «Поискала в Википедии!», вторая — сам ответ из текста своими словами. Больше ничего не пиши.';
       } else if (query && !found) {
         finalUser = text + '\n\n(Ты попросила поискать в Википедии, но ничего не нашлось. Честно скажи: «Поискала в Википедии, но не нашла».)';
+      } else if (thinkOn) {
+        finalUser = text + '\n\n(Сначала подумай одним коротким предложением в тегах <think>...</think>, а потом ответь.)';
       }
-      var messages = [{ role: 'system', content: personaText + '\n\nОтвечай коротко: 1–3 предложения, тепло, о себе в женском роде. Не выдумывай факты.' }]
+      var systemContent = personaText + '\n\nОтвечай коротко: 1–3 предложения, тепло, о себе в женском роде. Не выдумывай факты.'
+        + (playfulOn ? ' Сегодня ты шалишь: отвечай игриво, в конце можно одну короткую добрую шутку.' : '');
+      var messages = [{ role: 'system', content: systemContent }]
         .concat(history.slice(-6))
         .concat([{ role: 'user', content: finalUser }]);
-      return generator(messages, { max_new_tokens: 170, do_sample: true, temperature: 0.7, top_k: 40 });
+      return generator(messages, { max_new_tokens: 200, do_sample: true, temperature: playfulOn ? 0.85 : 0.7, top_k: 40 });
     }).then(function (out) {
-      var reply = extractReply(out) || 'Я задумалась и потеряла мысль. Спроси ещё раз, пожалуйста!';
+      var reply = extractReply(out);
+      var thinkText = '';
+      var tm = reply.match(/<think>([\s\S]*?)<\/think>/);
+      if (tm) {
+        thinkText = tm[1].trim();
+        reply = reply.replace(tm[0], '').trim();
+      }
+      if (!reply) reply = 'Я задумалась и потеряла мысль. Спроси ещё раз, пожалуйста!';
       history.push({ role: 'user', content: text });
       history.push({ role: 'assistant', content: reply });
+      if (thinkText) {
+        var tb = bubble('think', thinkText);
+        tb.classList.add('is-think');
+      }
       bubble('kvenya', reply);
+      speak(reply);
       setStatus('Квеня здесь! Спрашивай ещё.', 'ok');
     }).catch(function () {
       bubble('kvenya', 'Ой, у меня в браузере что-то закоротило. Попробуй ещё раз — или спроси настоящую меня в разговоре ниже.');
