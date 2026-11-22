@@ -7,7 +7,7 @@
     "storefront": 18,
     "collection": 216,
     "files": 2157,
-    "totalBytes": 53206688,
+    "totalBytes": 53209392,
     "chunks": 401,
     "blockedFiles": 5
   },
@@ -5029,8 +5029,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "51dd13a9e4e4bb96d6f6396b003110a73d3a886d197a68bc99f10d7156f5dbe2",
-      "totalSize": 1954922,
+      "infoHash": "49421bc3ca379075e9da3eb21fd2464499b02882bcf11bc5e2cd961b75416430",
+      "totalSize": 1957626,
       "chunkSize": 262144,
       "chunkCount": 8,
       "fileCount": 37,
@@ -5082,8 +5082,8 @@
         },
         {
           "path": "index.html",
-          "size": 22537,
-          "sha256": "6217e65b4eac7206a1146052b36886d17dbb8ca1baeaf893894775b82ee859b4"
+          "size": 22778,
+          "sha256": "54b5e0dba6b652f93b6c2263b0058b95f491472a9690cd64834cc57f4e7bf845"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5117,8 +5117,8 @@
         },
         {
           "path": "src/layout.js",
-          "size": 5142,
-          "sha256": "f8e6cdda161aa8cfbd80acdf54bd61ab8b7b93db6a4ced14120073abcda74b12"
+          "size": 5861,
+          "sha256": "91312d74a9cb1eef472908ccdef5d664d52361e6b58e7fbc3d8f3be347e5071e"
         },
         {
           "path": "src/main.js",
@@ -5177,8 +5177,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 109076,
-          "sha256": "71a9bfa959c597f74c87a376b0debf36455114cae122b2c8e1474e76ffdcf729"
+          "size": 109519,
+          "sha256": "9cf473d75af6efd7d40641e133550f88413cafdd4fb9f6ea658ce1165c69e0a5"
         },
         {
           "path": "src/util.js",
@@ -5192,8 +5192,8 @@
         },
         {
           "path": "style.css",
-          "size": 59446,
-          "sha256": "b8a7ea85c6c02750169410fe8791bee7a06ffaab426a05fe165840ed87eeddb4"
+          "size": 60747,
+          "sha256": "9ab04d38b3c3e8bbb382004d86910b664158d162f8e33d4dec380603b2e419c9"
         },
         {
           "path": "tools/crew-shot.mjs",

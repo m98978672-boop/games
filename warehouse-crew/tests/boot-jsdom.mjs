@@ -166,6 +166,10 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
     // Карточки бригады и карточка выбранного не должны пересобираться:
     // иначе анимации и переходы полосок перезапускаются каждые 110 мс.
     const doc = window.document;
+    const focusView = doc.getElementById('btn-scene-focus'), side = doc.getElementById('side');
+    const beforeFocus = JSON.stringify(game.captureCheckpoint()); focusView.focus(); focusView.click();
+    result.sceneFocus = side.hidden && focusView.getAttribute('aria-pressed') === 'true' && doc.activeElement === focusView && JSON.stringify(game.captureCheckpoint()) === beforeFocus;
+    focusView.click(); result.sceneFocus = result.sceneFocus && !side.hidden && focusView.getAttribute('aria-pressed') === 'false' && JSON.stringify(game.captureCheckpoint()) === beforeFocus;
     const cards = doc.querySelectorAll('.crew-card');
     result.crewCards = cards.length;
     const firstCard = cards[0] || null;
@@ -791,6 +795,7 @@ for (const mode of modes) {
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
   check(r.panelOpener, 'кнопка пульта синхронизирует состояние, aria и фокус');
+  check(r.sceneFocus, 'режим обзора прячет и возвращает сводку без изменения смены');
   check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');
   check(r.haloRecipe, 'рецепт подсветки halo в движке');
   check(r.cycleWorks !== false, 'тап по имени в quickbar переключает рабочего');
