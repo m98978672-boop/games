@@ -623,7 +623,7 @@
     }
 
     function spawnTruck(kind) {
-      var order = ['load', 'unload'];
+      if (kind && kind !== 'load' && kind !== 'unload') return null;
       if (!kind) {
         kind = state.truckTurn || 'unload';
         state.truckTurn = kind === 'load' ? 'unload' : 'load';
@@ -801,10 +801,10 @@
       return order;
     }
 
-    // Превращаем незавершённую отгрузку в задачу возврата. Если коробка
+    // Превращаем просроченный груз или незавершённую отгрузку в возврат. Если коробка
     // ещё физически лежит в своей ячейке, ничего переносить не нужно.
     function returnToStorage(order) {
-      if (!order || (order.direction !== 'out' && order.direction !== 'in') ||
+      if (!order || (order.direction != null && order.direction !== 'out' && order.direction !== 'in') ||
           (order.status !== 'pending' && order.status !== 'claimed' && order.status !== 'carried')) return false;
       var slot = null;
       for (var i = 0; i < state.slots.length; i++) {
@@ -884,15 +884,10 @@
         var o = state.orders[i];
         if (o.status === 'missed' || o.status === 'stored' || o.status === 'ruined' || o.status === 'loaded') continue;
         if (o.direction !== 'return' && state.time > o.deadline + 35) {
-          if (o.direction === 'out' || o.direction === 'in') {
-            // Штраф за срок, но физический груз остаётся на складе.
-            returnToStorage(o);
-          } else {
-            o.status = 'missed';
-            delete o.dispatchPriority;
-            o.carrier = null;
-            releaseSlot(o);
-          }
+          // Просрочка фиксируется один раз, но любая коробка остаётся
+          // там, где была: на приёмке, в физике или в руках рабочего.
+          // Ячейка остаётся зарезервирована до реального возврата.
+          returnToStorage(o);
           state.stats.missed += 1;
           state.stats.perfectStreak = 0;
           state.stats.score -= 6;

@@ -191,7 +191,7 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       result.lightingWorks = result.lightingWorks && game.api.shiftMode === 'day' && dayButton.getAttribute('aria-pressed') === 'true';
     }
     result.truckPanel = Boolean(doc.getElementById('truck-list'));
-    result.truckButton = Boolean(doc.getElementById('btn-truck'));
+    result.truckButton = Boolean(doc.querySelector('[data-call-truck="load"]') && doc.querySelector('[data-call-truck="unload"]'));
     if (window.WC.world && window.WC.world.cycleMode) {
       const first = window.WC.world.cycleMode();
       const second = window.WC.world.cycleMode();
@@ -597,6 +597,13 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
   try {
     const doc = window.document; game.restart();
     window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+    const unload = doc.querySelector('[data-call-truck="unload"]');
+    const load = doc.querySelector('[data-call-truck="load"]');
+    const savedBefore = game.sim.state.truckTurn;
+    load.click();
+    const noStock = !game.sim.activeTruck('load');
+    unload.click();
+    result.dockControls = noStock && game.sim.activeTruck('unload') && game.sim.state.truckTurn === savedBefore && doc.getElementById('dock-summary').textContent.includes('Свободных ячеек');
     const button = doc.querySelector('#contracts-list [data-contract="intake"]');
     button.click();
     const active = game.api.contracts.items[0].status === 'active' && doc.querySelector('#contracts-count').textContent === '1 / 2';
@@ -637,6 +644,7 @@ for (const mode of modes) {
   else check(r.textureMaterial, 'текстуры RatCore подключены к полу и двору');
   check(r.opaqueArms, 'руки и суставы непрозрачны и видны с обеих сторон');
   check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
+  check(r.dockControls, 'выбор фуры: проверки груза и свободных ячеек', {error:r.contractError});
   check(r.contractUi, 'контракты в пульте: взять, сохранить, отменить и увидеть в отчёте', {error:r.contractError});
   check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});
   check(r.reportDisplay && r.reportRefresh && r.reportInspect && r.reportExport && r.reportEnd && r.reportEmpty && r.reportFocus, 'отчёт смены: снимок, обновление, инспектор, экспорт и итоги', {display:r.reportDisplay, refresh:r.reportRefresh, inspect:r.reportInspect, export:r.reportExport, end:r.reportEnd, empty:r.reportEmpty, focus:r.reportFocus, error:r.featureError});

@@ -206,4 +206,43 @@ assert(c.WC.save.save(game)); c = await boot(); game = c.WC.game;
 assert.equal(game.api.contracts.items[0].status, 'completed');
 assert(!game.acceptContract('intake').ok); assert.equal(game.summary().contracts[0].reward, 35);
 game.restart(); assert.equal(game.api.contracts.items[0].status, 'available');
+// Ручной вызов выбирает направление, проверяет ограничения и не меняет
+// очередь автоматических рейсов. Снимок сразу после вызова восстанавливается.
+data.clear(); c = await boot(); game = c.WC.game;
+const turn = game.sim.state.truckTurn, rngState = game.sim.rng.getState(), balance = game.sim.state.stats.score;
+assert(!game.callTruck('wrong').ok); assert(!game.callTruck('load').ok);
+assert.equal(game.sim.rng.getState(), rngState); assert.equal(game.sim.state.stats.score,balance);
+assert(game.callTruck('unload').ok); assert(!game.callTruck('unload').ok);
+assert.equal(game.sim.state.truckTurn, turn);
+c = await boot(); game = c.WC.game;
+assert.equal(game.api.resumeStatus,'restored'); assert(game.sim.activeTruck('unload'));
+const box = game.sim.ordersOfTruck(game.sim.activeTruck('unload'))[0];
+game.sim.store(box,game.api.crew[0].id);
+assert(game.callTruck('load').ok); assert(!game.callTruck('load').ok);
+assert.equal(game.sim.state.truckTurn, turn);
+game.endShift(); const savedEnd = data.get(c.WC.save.CHECKPOINT_KEY);
+assert(!game.callTruck('unload').ok); assert(!game.callTruck('load').ok);
+assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),savedEnd);
+// Полный склад: отказ без изменения ГПСЧ и счёта.
+game.restart(); game.sim.state.slots.forEach(slot => { slot.occupied = true; });
+const beforeFull = game.sim.rng.getState(); assert(!game.callTruck('unload').ok);
+assert.equal(game.sim.rng.getState(),beforeFull);
+// Обычная просрочка в руках сохраняется и продолжается после загрузки.
+data.clear(); c = await boot(); game = c.WC.game;
+assert(game.acceptContract('intake').ok);
+game.api.crew.slice(1).forEach(w => game.command(w.id,'wait'));
+const carryingActor = game.api.crew[0], ordinary = game.sim.spawnOrder(); ordinary.mass=8;
+game.sim.claim(ordinary.id, carryingActor.id); game.sim.markCarried(ordinary, carryingActor.id);
+carryingActor.state.mode='manual'; carryingActor.state.orderId=ordinary.id; carryingActor.state.carryingId=ordinary.id; carryingActor.state.state='toDrop';
+ordinary.deadline=-36; game.sim.step(.05);
+assert.equal(ordinary.direction,'return'); assert(c.WC.save.save(game));
+c = await boot(); game = c.WC.game;
+assert.equal(game.api.resumeStatus,'restored');
+assert.equal(game.sim.state.orders.find(o=>o.id===ordinary.id).direction,'return');
+assert.equal(game.api.crew[0].state.carryingId,ordinary.id);
+assert.equal(game.sim.state.stats.missed,1);
+for(let i=0;i<1600 && game.api.crew[0].state.carryingId;i++) game.update(.05);
+assert.equal(game.sim.state.orders.find(o=>o.id===ordinary.id).status,'stored');
+assert.equal(game.sim.state.stats.missed,1);
+assert.equal(game.api.contracts.items[0].progress,0);
 console.log('✓ Перезагрузка смены: бригада, мозги, физика, склад, персонал, v1 и защита повреждённого файла');

@@ -247,6 +247,20 @@ WC.game = (function () {
     return result;
   }
 
+  // Ручной вызов конкретного дока не меняет очередность автоматических рейсов.
+  function callTruck(kind) {
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена не активна' };
+    if (kind !== 'load' && kind !== 'unload') return { ok: false, reason: 'Неизвестный тип фуры' };
+    if (api.sim.activeTruck(kind)) return { ok: false, reason: 'Этот док занят — дождитесь отъезда фуры' };
+    if (kind === 'load' && !api.sim.state.orders.some(function (o) { return o.status === 'stored'; })) return { ok: false, reason: 'На стеллажах нет груза для отгрузки' };
+    if (kind === 'unload' && !api.sim.state.slots.some(function (slot) { return !slot.occupied; })) return { ok: false, reason: 'Нет свободных ячеек для разгрузки' };
+    var truck = api.sim.spawnTruck(kind);
+    if (!truck) return { ok: false, reason: 'Не удалось вызвать фуру' };
+    pushLog('Вызвана фура ' + truck.plate + ': ' + (kind === 'load' ? 'загрузка' : 'разгрузка') + ', мест: ' + truck.total, 'info');
+    WC.save.autosave(api);
+    return { ok: true, truck: truck };
+  }
+
   function createSim() {
     api.contracts = WC.contracts.create();
     api.dialogueState = WC.dialogue.create(0);
@@ -1138,6 +1152,7 @@ WC.game = (function () {
     command: command,
     teamCommand: teamCommand,
     setOrderPriority: setOrderPriority,
+    callTruck: callTruck,
     acceptContract: acceptContract,
     cancelContract: cancelContract,
     buyStaff: buyStaff,
