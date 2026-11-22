@@ -1,0 +1,58 @@
+/* 3D-мир Квени: сцена, пузырь речи, HUD и управление островком. */
+
+.kv-world-card { border-color: rgba(166, 120, 255, 0.55); background: linear-gradient(170deg, #16202d, var(--panel) 55%); }
+.kv-world-stage-wrap { position: relative; }
+.kv-world-stage {
+  height: 560px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(166, 120, 255, 0.45);
+  background: radial-gradient(ellipse at 50% 30%, #2c4470 0%, #101a2c 75%);
+  display: grid; place-items: center;
+}
+.kv-world-stage canvas { display: block; touch-action: none; cursor: grab; }
+.kv-world-stage canvas:active { cursor: grabbing; }
+
+.kv-world-hud {
+  position: absolute; left: 12px; top: 12px;
+  display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none;
+}
+.kv-world-now, .kv-world-mood {
+  font-size: 13px; font-weight: 700; color: #fff;
+  background: rgba(10, 14, 22, 0.72); border: 1px solid rgba(166, 120, 255, 0.5);
+  border-radius: 999px; padding: 6px 12px;
+  backdrop-filter: blur(3px);
+}
+.kv-world-mood { color: #e9e2ff; }
+
+.kv-bubble {
+  position: absolute; z-index: 5;
+  max-width: 250px;
+  transform: translate(-50%, -115%);
+  background: #fff; color: #23202e;
+  font-size: 13.5px; line-height: 1.4; font-weight: 600;
+  border-radius: 14px; padding: 9px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.kv-bubble::after {
+  content: ''; position: absolute; left: 50%; bottom: -7px;
+  transform: translateX(-50%);
+  border: 8px solid transparent; border-top-color: #fff; border-bottom: 0;
+}
+
+.kv-world-controls {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-top: 12px;
+}
+.kv-world-pois, .kv-world-toggles { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kv-world-pois-label { font-size: 13px; font-weight: 700; color: #fff; }
+.kv-world-controls .btn { font-size: 13px; padding: 8px 11px; }
+.kv-world-toggles .btn[aria-pressed="true"] { border-color: var(--violet); color: #fff; background: var(--violet-soft); }
+
+body.is-embed .kv-head { display: none; }
+
+@media (max-width: 980px) {
+  .kv-world-stage { height: 430px; }
+  .kv-bubble { max-width: 200px; font-size: 12.5px; }
+}

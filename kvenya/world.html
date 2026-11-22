@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#171a21">
+  <title>3D-мир Квени — где она живёт | Games</title>
+  <meta name="description" content="Собственный 3D-островок Квени: домик qwen-home, библиотека Википедии, учебный уголок, стройплощадка и пруд. Она сама ходит по миру, читает, учится, строит, а ночью спит.">
+  <link rel="canonical" href="https://m98978672-boop.github.io/games/kvenya/world.html">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23171a21'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23a678ff' stroke-width='2.2'/%3E%3Ctext x='16' y='21' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='12' fill='%2366c0f4'%3EК%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./world.css">
+  <!-- Движок — ДО своих скриптов (закон репозитория) -->
+  <script src="../shared/engine.js"></script>
+  <script src="../shared/engine-bootstrap.js" defer></script>
+</head>
+<body>
+  <div class="kv-shell">
+    <header class="kv-head">
+      <div class="kv-brand">
+        <div class="kv-avatar" aria-hidden="true">🌍</div>
+        <div>
+          <h1>3D-мир Квени</h1>
+          <p>Её собственный островок: домик <code>qwen-home</code>, библиотека Википедии,
+             учебный уголок, стройплощадка и пруд. Квеня живёт здесь сама: ходит между
+             делами, читает, строит, а ночью спит. Время в мире бежит быстрее нашего.</p>
+        </div>
+      </div>
+      <div class="kv-head-actions">
+        <span class="pill is-ok"><span class="dot"></span><span id="kvWorldClock">--:-- · её мир</span></span>
+        <div class="engine-hud-slot" data-engine-badge></div>
+        <a class="btn btn-ghost kv-back" href="./index.html">← К Квене</a>
+        <a class="btn btn-primary" href="../index.html#ai">В портал Games</a>
+      </div>
+    </header>
+
+    <section class="kv-card kv-world-card" aria-label="3D-мир Квени">
+      <div class="kv-world-stage-wrap">
+        <div id="kvWorldStage" class="kv-world-stage">
+          <div class="kv-loading">Квеня открывает ворота своего мира…</div>
+        </div>
+        <div id="kvBubble" class="kv-bubble" hidden></div>
+        <div class="kv-world-hud">
+          <span class="kv-world-now" id="kvWorldNow">🏡 Квеня дома</span>
+          <span class="kv-world-mood" id="kvWorldMood">😊 спокойная</span>
+        </div>
+      </div>
+      <div class="kv-world-controls">
+        <div class="kv-world-pois" role="group" aria-label="Позвать Квеню">
+          <span class="kv-world-pois-label">Позвать её:</span>
+          <button class="btn btn-ghost" type="button" data-poi="house">🏠 Домой</button>
+          <button class="btn btn-ghost" type="button" data-poi="library">📚 В библиотеку</button>
+          <button class="btn btn-ghost" type="button" data-poi="desk">🎓 Учиться</button>
+          <button class="btn btn-ghost" type="button" data-poi="build">🏗 На стройку</button>
+          <button class="btn btn-ghost" type="button" data-poi="pond">💧 К пруду</button>
+          <button class="btn btn-ghost" type="button" data-poi="walk">🚶 Гулять</button>
+        </div>
+        <div class="kv-world-toggles">
+          <button class="btn btn-ghost" type="button" id="kvDayNight" aria-pressed="false">🌙 Ночь</button>
+          <button class="btn btn-ghost" type="button" id="kvFollow" aria-pressed="false">🎥 Следить за Квеней</button>
+          <button class="btn btn-ghost" type="button" id="kvWorldVoice" aria-pressed="false">🔇 Голос</button>
+        </div>
+      </div>
+      <p class="kv-note">Тяни мышкой или пальцем, чтобы осмотреться, колесо — приблизить.
+         Кликни по домику, библиотеке или Квене — она подойдёт и что-нибудь скажет.
+         Честно: мир — объёмный дом для глаз, а настоящая память Квени по-прежнему
+         живёт файлами в <code>qwen-home/</code>.</p>
+    </section>
+
+    <footer class="kv-foot">
+      3D-мир Квени · Three.js · она живёт здесь сама, без сценария: дела выбирает по времени суток и настроению
+    </footer>
+  </div>
+  <script src="./world.js" defer></script>
+</body>
+</html>
