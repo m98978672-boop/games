@@ -23,6 +23,7 @@ jobs:
           node site/tests/community-catalog.mjs
           node site/tests/portal.mjs
           node site/tests/news-and-antivirus.mjs
+          node site/tests/news-covers.mjs
           node site/scripts/scan-submission-antivirus.mjs
       - name: Check that the RatCore browser bundle is up to date (engine is wired into every section)
         run: |
@@ -196,6 +197,15 @@ jobs:
           node tests/smoke.mjs
           node tests/mechanics.test.mjs
           node tests/brain.test.mjs
+          node tests/layout.test.mjs
+          node tests/features.test.mjs
+          node tests/physics.test.mjs
+          node tests/lighting.test.mjs
+          node tests/dialogue.test.mjs
+          node tests/safety.test.mjs
+          node tests/contracts.test.mjs
+          node tests/checkpoint.test.mjs
+          node tests/save-status.test.mjs
           # boot-jsdom честно пропускается без зависимостей — ставим их
           # сюда же, чтобы запуск игры в CI проверялся по-настоящему.
           npm install --no-save --no-package-lock jsdom three

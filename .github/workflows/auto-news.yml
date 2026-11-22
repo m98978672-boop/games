@@ -29,16 +29,19 @@ jobs:
         run: node site/scripts/auto-post-news.mjs
 
       - name: Verify updated news feed with 10-pass Games Antivirus
-        run: node site/scripts/scan-submission-antivirus.mjs
-
-      - name: Commit and push updated site/news-feed.json if changed
         run: |
-          if git diff --quiet site/news-feed.json; then
+          node site/scripts/scan-submission-antivirus.mjs
+          node site/tests/news-and-antivirus.mjs
+          node site/tests/news-covers.mjs
+
+      - name: Commit and push news feed with its covers
+        run: |
+          git add site/news-feed.json site/assets/news
+          if git diff --cached --quiet; then
             echo "No new news articles to publish."
             exit 0
           fi
           git config user.name "Games News AutoPoster"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add site/news-feed.json
           git commit -m "chore(news): auto-post fresh multi-category news feed"
           git push
