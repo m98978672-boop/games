@@ -61,3 +61,5 @@
 {"id": "eval-game-mechanics-evidence", "instruction": "В загадке рычаг меняет свет. Как понять правило без выдумок?", "mustContain": ["действ"]}
 {"id": "eval-game-mechanics-format", "instruction": "Разрешены только UP и DOWN. Маркер смотрит вниз. Ответь строго одним словом.", "mustContain": ["DOWN"], "mustFormat": "game-action"}
 {"id": "eval-game-mechanics-resources", "instruction": "В сложной игре ограничены лечебные предметы. Что учитывать, прежде чем их использовать?", "mustContain": ["ресурс"]}
+{"id": "eval-game-eyes", "instruction": "Как ты теперь играешь в Clumsy Bird?", "mustContain": ["пиксел"]}
+{"id": "eval-game-score", "instruction": "Откуда ты знаешь свой счёт в игре?", "mustContain": ["табло"]}
