@@ -297,6 +297,10 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
         gap_top, gap_bottom = gap
         if bird_y > gap_bottom - 0.05 * h:
             return ms_since_flap >= 80
+        # аварийный тормоз: пулей вниз уже в середине просвета —
+        # не ждём зону, скорость сама донесёт до нижнего края
+        if vy >= 45 and bird_y > gap_top + 0.45 * (gap_bottom - gap_top):
+            return ms_since_flap >= 70
         zone = gap_top + 0.72 * (gap_bottom - gap_top)
         # прогноз: падаем быстро — к следующему кадру будем в зоне,
         # жмём СЕЙЧАС, а не когда уже поздно (урок смертей «пулей»)
