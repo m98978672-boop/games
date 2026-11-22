@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 49.526,
+  "elapsedSeconds": 47.142,
   "checks": [
     {
       "name": "import",
@@ -229,8 +229,8 @@
     },
     {
       "name": "body-reactions",
-      "exitCode": 0,
-      "passed": true,
+      "exitCode": 1,
+      "passed": false,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -239,9 +239,11 @@
         "--script",
         "res://tests/body_reactions.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 50; failures: 0\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 51; failures: 1\nFAIL: Rifle-ready elbows stay bent and tucked at mid-torso height\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": []
+      "unexpectedDiagnostics": [
+        "FAIL: Rifle-ready elbows stay bent and tucked at mid-torso height"
+      ]
     },
     {
       "name": "quests",
@@ -292,7 +294,7 @@
       "unexpectedDiagnostics": []
     }
   ],
-  "passed": true,
+  "passed": false,
   "limitations": [
     "Headless dummy renderer; no image/audio validation",
     "Automated mission uses teleportation and frozen enemy ticks for isolation",
