@@ -982,7 +982,20 @@
   function wikiSearch(query) {
     var keys = keywords(query);
     var terms = keys.join(' ') || query;
-    return wikiApi({ list: 'search', srsearch: terms, srnamespace: '0', srlimit: '5' })
+    function searchOnce(t) { return wikiApi({ list: 'search', srsearch: t, srnamespace: '0', srlimit: '5' }); }
+    // Её правило: споткнулась — переформулируй короче и попробуй ещё раз,
+    // а не сдавайся после первого пустого поиска.
+    return searchOnce(terms)
+      .then(function (found) {
+        var hits = (found.query && found.query.search) || [];
+        if (hits.length || keys.length <= 2) return found;
+        return searchOnce(keys.slice(0, 2).join(' '));
+      })
+      .then(function (found) {
+        var hits = (found.query && found.query.search) || [];
+        if (hits.length || keys.length <= 1) return found;
+        return searchOnce(keys[0]);
+      })
       .then(function (found) {
         var hits = (found.query && found.query.search) || [];
         if (!hits.length) return null;
