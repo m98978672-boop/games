@@ -180,8 +180,21 @@ class GameCatalogTests(unittest.TestCase):
         review = {"evidence": {"a": "Один факт", "b": "Другой факт"}, "game_title": "Test", "idea_score": 7,
                   "hook": "Что предлагает игра?", "pros": ["Один факт", "Другой факт"], "possible_minus": "Возможно, не для всех."}
         with patch("game_reviews.generate_with_qwen", return_value=json.dumps({"scenes": []})):
-            with self.assertRaisesRegex(ValueError, "could not produce chapter 1"):
+            with self.assertRaisesRegex(ValueError, "requires two Russian source facts"):
                 generate_long_narration(review)
+
+    def test_long_fallback_uses_only_bounded_source_facts_and_identifies_template(self):
+        review = {"evidence": {"a": "В описании упомянуты логические задачи.", "b": "В карточке указан одиночный режим."},
+                  "game_title": "Игра", "idea_score": 7, "hook": "Что предлагает игра?",
+                  "pros": ["В описании упомянуты логические задачи.", "В карточке указан одиночный режим."],
+                  "possible_minus": "Возможно, это не для всех."}
+        with patch("game_reviews.generate_with_qwen", return_value=json.dumps({"scenes": []})):
+            scenes = generate_long_narration(review)
+        self.assertEqual(len(scenes), 10)
+        self.assertGreaterEqual(sum(len(scene["dialogue"]) for scene in scenes), 3000)
+        self.assertTrue(all(scene["generation"] == "source-template" for scene in scenes))
+        self.assertTrue(all(scene["fact_id"] in review["evidence"] for scene in scenes))
+        self.assertIn("Лично я не играл", scenes[-1]["dialogue"])
 
     def test_plan_fallback_repairs_non_russian_and_contact_fields(self):
         games = load_game_catalog()

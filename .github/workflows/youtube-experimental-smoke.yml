@@ -25,6 +25,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Install video verifier
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Build isolated recording container
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Capture actual gameplay and verify recording
@@ -52,7 +54,13 @@ jobs:
           cache-dependency-path: youtube-bot/requirements-autopilot.txt
       - name: Install local Qwen
         run: pip install -r youtube-bot/requirements-autopilot.txt
+      - name: Download Russian voice for duration validation
+        run: |
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/voice.onnx" https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/voice.onnx.json" https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json
       - name: Generate and validate a real long script without publishing
+        env:
+          PIPER_MODEL_PATH: ${{ runner.temp }}/voice.onnx
         shell: bash
         run: |
           set +e

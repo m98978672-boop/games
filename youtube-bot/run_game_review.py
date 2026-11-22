@@ -85,6 +85,8 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         source_description
         + f"\n\nФормат: {'длинный видеообзор' if video_format == 'long' else 'Shorts'}."
         + "\nОценка основана на открытых данных Steam; личное прохождение не заявляется."
+        + ("\nСценарий создан по шаблону из открытых источников: ИИ не смог подготовить корректный текст."
+           if any(scene.get("generation") == "source-template" for scene in review.get("scenes", [])) else "")
     )
     metadata = {
         "job_id": str(uuid.uuid4()),

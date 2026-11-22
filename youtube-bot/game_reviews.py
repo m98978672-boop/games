@@ -414,14 +414,56 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                 last_error = exc
                 messages.append({"role": "user", "content": f"Ошибка формата: {exc}. Верни один исправленный JSON, dialogue 220–320 символов."})
         else:
-            raise ValueError(f"Qwen could not produce chapter {index + 1}: {last_error}")
+            print(f"Qwen could not produce chapter {index + 1}: {last_error}; using clearly labelled source-based template.", file=sys.stderr)
+            return _source_template_long_narration(review)
     if sum(len(scene["dialogue"]) for scene in clean) < 2400:
-        raise ValueError("long narration is too short to count as a full video")
+        print("Qwen chapter total too short; using clearly labelled source-based template.", file=sys.stderr)
+        return _source_template_long_narration(review)
     summary = speech_excerpt(str(review["pros"][0]), 50)
     verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
     clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
     clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
     return clean
+
+
+
+def _source_template_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
+    """A transparent source-only fallback when the model cannot follow its schema.
+
+    This deliberately avoids treating catalog copy as firsthand evidence or
+    invented gameplay; it fails closed when there aren't two narratable facts.
+    It may be less engaging than a model-written review.
+    """
+    usable = []
+    for key, value in review["evidence"].items():
+        text = re.sub(r"\s+", " ", str(value)).strip()
+        if len(text) < 10 or _russian_ratio(text) < 0.5 or re.search(r"https?://|www\.|@[\w.-]+", text, re.I):
+            continue
+        usable.append((str(key), speech_excerpt(text, 90)))
+    if len(usable) < 2:
+        raise ValueError("Template review requires two Russian source facts without links")
+    commentary = [
+        "Начнём с того, что это обзор открытой карточки, а не рассказ о личном прохождении. Описание помогает увидеть заявленную концепцию, но само по себе не подтверждает, насколько она хорошо реализована. За подробностями и актуальной информацией стоит обратиться к первоисточнику.",
+        "Теперь обратим внимание на ещё один пункт карточки. Он помогает составить первое впечатление о проекте и понять, на что авторы обращают внимание в опубликованных материалах. Это не независимый тест: впечатление от реальной игры может отличаться от того, что обещает описание.",
+        "Первую из указанных особенностей полезно рассматривать как ориентир, а не как гарантию качества. Из короткой карточки нельзя уверенно определить сложность, удобство или стабильность игры. Такие выводы требуют отдельной проверки, которой в этом обзоре не было.",
+        "Второй пункт даёт ещё одну точку отсчёта для знакомства с проектом. Кому-то такой акцент может показаться интересным, а кому-то не подойти: предпочтения у игроков разные. По одному опубликованному описанию мы не можем предсказать личные впечатления каждого зрителя.",
+        "Отдельно отмечу пределы этого разбора. Данные взяты из открытой карточки, поэтому мы пересказываем только опубликованные сведения. Здесь нет собственных измерений производительности, проверки управления или заключения о техническом состоянии игры на конкретном устройстве.",
+        "Возможный минус здесь рассматривается как гипотеза, а не как обнаруженный недостаток. Даже интересная на бумаге идея не обязательно понравится каждому. Если особенность важна именно вам, лучше изучить подробности в источнике и проверить актуальные материалы перед выбором.",
+        "При знакомстве с проектом важно различать слова авторов и независимый опыт игроков. Описание позволяет увидеть заявленный замысел, но не заменяет личную игровую сессию. В этом выпуске мы не приписываем себе прохождение и не придумываем впечатления от игры.",
+        "Этот выпуск можно использовать как отправную точку для собственного знакомства. Ознакомьтесь со страницей игры, обратите внимание на доступные сведения и решите, какие особенности важны именно вам. Ссылки на использованные источники приведены в описании ролика.",
+        "Напомню, что информация на странице со временем может измениться. Дата, режимы или другие характеристики стоит сверять непосредственно в источнике на момент просмотра. Мы обсуждаем опубликованную карточку, а не гарантируем, что все её детали останутся прежними.",
+        "Подведём итог: представленные сведения помогают оценить замысел, но этого недостаточно для окончательного вывода об игре. Это осторожная оценка идеи по открытым данным, а не результат тестирования. Личный опыт и актуальную информацию нужно проверять отдельно.",
+    ]
+    scenes = []
+    for index, paragraph in enumerate(commentary):
+        fact_id, fact = usable[index % len(usable)]
+        prefix = "В источнике указано: " + fact.rstrip(". ") + ". "
+        scenes.append({"fact_id": fact_id, "dialogue": prefix + paragraph,
+                       "visual": "ОПИСАНИЕ ИЗ ИСТОЧНИКА", "generation": "source-template"})
+    summary = speech_excerpt(str(review["pros"][0]), 50)
+    scenes[-1]["dialogue"] += f" Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
+    scenes[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
+    return scenes
 
 
 def youtube_description(review: Mapping[str, Any]) -> str:
