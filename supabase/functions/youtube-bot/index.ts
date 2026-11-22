@@ -2,7 +2,10 @@ const PROJECT_URL = "https://cuhfnzgytndyntpbnbda.supabase.co";
 const SITE_URL = "https://m98978672-boop.github.io/games/youtube-bot/";
 const CALLBACK_URL = `${PROJECT_URL}/functions/v1/youtube-bot/oauth/callback`;
 const DEMO_VIDEO_URL = `${SITE_URL}assets/demo-short.mp4`;
-const YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload"];
+const YOUTUBE_SCOPES = [
+  "https://www.googleapis.com/auth/youtube.upload",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
+];
 const encoder = new TextEncoder();
 
 function env(name: string): string {
