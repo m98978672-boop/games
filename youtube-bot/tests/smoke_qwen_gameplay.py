@@ -56,3 +56,33 @@ with tempfile.TemporaryDirectory(prefix='qwen-game-') as temp:
               'model_finetuned': False, 'published': False}
     print('QWEN_GAMEPLAY_REPORT=' + json.dumps(report, ensure_ascii=True))
     print(f"::notice title=Qwen gameplay test::{json.dumps(report, ensure_ascii=True)}")
+
+# Also try one model-selected action on the repository's driving game. A visual
+# change alone is not proof that the model has learned to drive or opened it.
+import shutil
+from PIL import ImageChops, ImageStat
+repo = Path(__file__).resolve().parents[2]
+with tempfile.TemporaryDirectory(prefix='qwen-taxi-') as temp:
+    root = Path(temp) / 'public'
+    root.mkdir()
+    shutil.copytree(repo / 'night-taxi', root / 'night-taxi', ignore=shutil.ignore_patterns('node_modules', 'tests', 'src', 'package*.json'))
+    shutil.copytree(repo / 'shared', root / 'shared')
+    agent = QwenVisionAgent('In Night Taxi open the driver tablet. TABLET presses the tablet key; WAIT does nothing.', ('TABLET', 'WAIT'))
+    with BrowserBridge(root, rights_acknowledged=True, entry='night-taxi/index.html') as bridge:
+        bridge.receive(timeout=60)
+        before = bridge.step({'duration_ms': 2000})
+        png = base64.b64decode(before['screenshot_png_base64'], validate=True)
+        try:
+            action = agent(png, 0)
+        except ValueError:
+            result = {'outcome': 'invalid_model_action', 'qwen_actions': [], 'published': False}
+        else:
+            after = bridge.step(action)
+            assert after['type'] == 'observation', after
+            picture1 = Image.open(io.BytesIO(png)).convert('RGB')
+            picture2 = Image.open(io.BytesIO(base64.b64decode(after['screenshot_png_base64']))).convert('RGB')
+            delta = sum(ImageStat.Stat(ImageChops.difference(picture1, picture2)).mean) / 3
+            result = {'outcome': 'action_executed', 'qwen_actions': agent.decisions,
+                      'screen_changed': delta >= 2.0, 'published': False}
+    print('QWEN_NIGHT_TAXI_REPORT=' + json.dumps(result, ensure_ascii=True))
+    print(f"::notice title=Qwen Night Taxi test::{json.dumps(result, ensure_ascii=True)}")

@@ -18,6 +18,8 @@ ACTIONS = {
     'DOWN': {'keys': ['ArrowDown'], 'duration_ms': 250},
     'SPACE': {'keys': ['Space'], 'duration_ms': 250},
     'WAIT': {'duration_ms': 250},
+    'TABLET': {'keys': ['KeyT'], 'duration_ms': 250},
+    'FORWARD': {'keys': ['KeyW'], 'duration_ms': 1000},
 }
 
 
