@@ -134,4 +134,13 @@ jobs:
         env:
           OMP_NUM_THREADS: '2'
           MKL_NUM_THREADS: '2'
-        run: python youtube-bot/tests/smoke_qwen_gameplay.py
+        shell: bash
+        run: |
+          set +e
+          python youtube-bot/tests/smoke_qwen_gameplay.py > "$RUNNER_TEMP/qwen-gameplay.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/qwen-gameplay.log"
+          if [ "$result" -ne 0 ]; then
+            python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/qwen-gameplay.log"
+          fi
+          exit "$result"
