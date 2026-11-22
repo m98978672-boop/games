@@ -27,7 +27,7 @@ CHUNK_BYTES = 256 * 1024  # YouTube resumable uploads require 256 KiB multiples,
 API_ATTEMPTS = 4
 CHUNK_ATTEMPTS = 5
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
-OIDC_HOSTS = {"pipelines.actions.githubusercontent.com", "token.actions.githubusercontent.com"}
+OIDC_HOST_SUFFIX = ".actions.githubusercontent.com"
 SUPABASE_PATHS = {"/autopilot/prepare", "/autopilot/complete", "/autopilot/fail"}
 
 
@@ -54,6 +54,23 @@ def _mask(secret: str) -> None:
         print(f"::add-mask::{secret}")
 
 
+def _is_github_oidc_endpoint(parsed: urllib.parse.SplitResult) -> bool:
+    """Accept HTTPS OIDC endpoints on GitHub Actions-owned subdomains only."""
+    host = (parsed.hostname or "").lower().rstrip(".")
+    github_actions_host = host.endswith(OIDC_HOST_SUFFIX) and bool(host.removesuffix(OIDC_HOST_SUFFIX))
+    try:
+        port_ok = parsed.port in (None, 443)
+    except ValueError:
+        return False
+    return (
+        parsed.scheme.lower() == "https"
+        and github_actions_host
+        and parsed.username is None
+        and parsed.password is None
+        and port_ok
+    )
+
+
 def github_oidc_token() -> str:
     """Request a fresh audience-scoped GitHub token for each Supabase API call."""
     request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
@@ -61,9 +78,13 @@ def github_oidc_token() -> str:
     if not request_url or not request_token:
         raise PublishError("GitHub Actions OIDC is unavailable; refusing unauthenticated publish.")
     parsed = urllib.parse.urlsplit(request_url)
-    if (parsed.scheme != "https" or parsed.hostname not in OIDC_HOSTS or parsed.username or parsed.password or
-            parsed.port not in (None, 443)):
-        raise PublishError("GitHub provided an unexpected OIDC endpoint; refusing to send its credential.")
+    if not _is_github_oidc_endpoint(parsed):
+        # Host and URL path/query are intentionally omitted: the latter may contain sensitive data.
+        host = parsed.hostname or "(missing)"
+        raise PublishError(
+            f"GitHub provided an unexpected OIDC endpoint (HTTPS GitHub Actions host required; got {host!r}); "
+            "refusing to send its credential."
+        )
     query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
     query = [(key, value) for key, value in query if key != "audience"]
     query.append(("audience", "youtube-bot"))

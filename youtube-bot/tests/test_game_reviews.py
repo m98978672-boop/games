@@ -53,6 +53,23 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn("не личное прохождение", youtube_description(review))
         self.assertEqual(len(review["scenes"]), 5)
 
+    def test_long_catalog_text_is_bounded_for_narration_without_changing_evidence(self):
+        game = dict(load_game_catalog()[0])
+        game["features"] = ["Сильная сторона " + "подробное описание " * 18, "Вторая сторона " + "ещё деталей " * 18]
+        long_title = "Очень длинное название игрового проекта " * 3
+        game["title"] = long_title
+        game["version"] = "1.0"
+        feature_ids = [f"{game['id']}-f1", f"{game['id']}-f2"]
+        review = validate_review({
+            "schema_version": 1, "game_id": game["id"], "selected_feature_ids": feature_ids,
+            "possible_minus": "Возможно, подробная концепция подойдёт не каждому игроку.",
+            "minus_feature_id": feature_ids[0], "idea_score": 7,
+            "hook": "Как устроен этот проект и чем он может заинтересовать зрителя?",
+        }, [game])
+        self.assertEqual(review["pros"], game["features"][:2])
+        self.assertTrue(all(len(scene["dialogue"]) <= 130 for scene in review["scenes"]))
+        self.assertIn(long_title, review["game_title"])
+
     def test_rejects_unknown_feature_repeated_game_and_unmarked_negative_claim(self):
         games = load_game_catalog()
         game = games[0]
