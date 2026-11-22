@@ -552,6 +552,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         frames += 1
                         now = time.monotonic()
                         frame_h = st['h']
+                        bird_low = bool(st['bird'] and st['bird'][1] > 0.72 * frame_h)
                         if st['gap']:
                             gap_frames += 1
                             last_gap = st['gap']
@@ -589,7 +590,6 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         gap = st['gap'] or (last_gap if now - last_gap_at < 1.2 else None)
                         # мёртвую не дёргать: птица у самой земли или конец игры —
                         # пробел там уже не взмах, а кнопка «в меню»
-                        bird_low = st['bird'] and st['bird'][1] > 0.72 * frame_h
                         target = None
                         flapped = False
                         if st['bird']:
