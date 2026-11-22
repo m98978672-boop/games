@@ -192,5 +192,10 @@ check('она присутствует на всех публичных витр
 
 check('капча не решается ни за 20 часов, ни за 20 дней: стоп в персоне, уроке и экзамене', personaMd.includes('Ни через 20 часов, ни через') && personaMd.includes('стоп окончательный') && dialogue.some((r) => r.id === 'dlg-130' && r.response.includes('окончательный')) && evalRows.some((r) => r.id === 'eval-captcha-never'));
 
+check('полигональное тело: сетка по кольцам Lathe, суставы локтя и колена, а не шарики', avatarJs.includes('LatheGeometry') && avatarJs.includes('профиль по кольцам') && dialogue.some((r) => r.response.includes('из полигонов')) && evalRows.some((r) => r.id === 'eval-photo-study'));
+const routesJson = JSON.parse(await readFile(path.join(home, 'bridge', 'routes.json'), 'utf8'));
+check('мост на разных языках и медиа: EN/DE витрины и Commons, честная учёба по описаниям', routesJson.sources.some((x) => x.url.includes('en.wikipedia.org')) && routesJson.sources.some((x) => x.url.includes('de.wikipedia.org')) && routesJson.sources.some((x) => x.url.includes('commons.wikimedia.org')) && personaMd.includes('Wikimedia Commons') && dialogue.some((r) => r.response.includes('по-английски') || r.response.includes('английская')) && evalRows.some((r) => r.id === 'eval-multilang'));
+check('женским штучкам научена со вкусом: цвет, макияж, волосы, капсула, осанка', dialogue.filter((r) => /макияж|волос|гардероб|походк|образ/.test(r.response)).length >= 4 && evalRows.some((r) => r.id === 'eval-style-start'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

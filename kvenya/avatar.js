@@ -268,11 +268,15 @@
     // Ноги — группы из таза (как кости в риге): шаг качает всю ногу с
     // туфлей, а не отдельный цилиндр.
     function makeLeg(side) {
+      // Нога из полигонов по анатомии: бедро, колено-шар, голень, туфля.
       var g = new THREE.Group();
       g.position.set(0.16 * side, 0.72, 0);
       var pants = outfit3d === 'pantsuit';
-      addMesh(new THREE.CylinderGeometry(pants ? 0.12 : 0.085, pants ? 0.145 : 0.1, 0.62, 14), pants ? dressM : skinM, 0, -0.31, 0, g);
-      addMesh(new THREE.BoxGeometry(0.17, 0.1, 0.28), darkM, 0, -0.67, 0.04, g);
+      var legM = pants ? dressM : skinM;
+      addMesh(new THREE.CylinderGeometry(pants ? 0.13 : 0.105, pants ? 0.11 : 0.082, 0.34, 16), legM, 0, -0.17, 0, g);
+      addMesh(new THREE.SphereGeometry(0.082, 14, 10), legM, 0, -0.36, 0, g);
+      addMesh(new THREE.CylinderGeometry(0.078, 0.058, 0.3, 16), legM, 0, -0.53, 0, g);
+      addMesh(new THREE.BoxGeometry(0.17, 0.1, 0.28), darkM, 0, -0.7, 0.04, g);
       modelGroup.add(g);
       return g;
     }
@@ -286,17 +290,27 @@
         ? mat(new THREE.Color(byId(DRESSES, v.dress).hex).multiplyScalar(0.72).getHex(), 0.6) : dressM, 0, 1.18, 0);
       skirt.scale.set(build3d.skirt, 1, build3d.skirt);
     }
-    var torso = addMesh(new THREE.SphereGeometry(0.31, 22, 16), dressM, 0, 1.7, 0);
-    torso.scale.set(build3d.torso, 0.82, 0.9 * build3d.torso);
+    // Тело — настоящая полигональная сетка: профиль по кольцам
+    // (таз → талия → грудь → плечи → шея) через LatheGeometry, как
+    // строят тела в Blender, а не приплюснутый шарик.
+    var profile = [
+      [0.03, 1.0], [0.28, 1.06], [0.34, 1.2], [0.3, 1.34], [0.25, 1.44],
+      [0.29, 1.58], [0.31, 1.7], [0.24, 1.82], [0.13, 1.92], [0.07, 1.98]
+    ].map(function (pt) { return new THREE.Vector2(pt[0], pt[1]); });
+    var torso = addMesh(new THREE.LatheGeometry(profile, 30), dressM, 0, 0, 0);
+    torso.scale.set(build3d.torso, 1, 0.96 * build3d.torso);
     torsoBaseScale = { x: torso.scale.x, y: torso.scale.y, z: torso.scale.z };
 
     // Руки — группы из плеча: махать и танцевать рука должна от
     // сустава, как в настоящем риге.
     function makeArm(side) {
+      // Рука из полигонов: плечо, локоть-шар, предплечье, кисть.
       var g = new THREE.Group();
       g.position.set(0.4 * side, 1.82, 0);
-      addMesh(new THREE.CylinderGeometry(0.065, 0.075, 0.62, 12), skinM, 0, -0.3, 0, g);
-      addMesh(new THREE.SphereGeometry(0.085, 12, 10), skinM, 0, -0.62, 0, g);
+      addMesh(new THREE.CylinderGeometry(0.072, 0.06, 0.3, 14), skinM, 0, -0.15, 0, g);
+      addMesh(new THREE.SphereGeometry(0.062, 12, 10), skinM, 0, -0.32, 0, g);
+      addMesh(new THREE.CylinderGeometry(0.056, 0.048, 0.28, 14), skinM, 0, -0.47, 0, g);
+      addMesh(new THREE.SphereGeometry(0.07, 12, 10), skinM, 0, -0.65, 0, g);
       g.rotation.z = side < 0 ? 0.5 : -0.5;
       modelGroup.add(g);
       return g;
