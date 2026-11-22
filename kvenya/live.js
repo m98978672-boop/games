@@ -5,9 +5,10 @@
    persona.md (читается в рантайме, всегда в синхроне с домом), факты
    при нужде ищутся в живой русской Википедии тем же приёмом, что дома:
    ключевые слова → статья с точным названием → короткая выжимка.
-   Скачанные файлы модели остаются в постоянном хранилище этого браузера:
-   при следующем визите Квеня берётся из сохранённой копии, а если первая
-   загрузка прервалась, готовые файлы не скачиваются заново.
+   Скачанные файлы модели остаются в отдельном хранилище этого браузера:
+   при следующем визите Квеня берётся из сохранённой копии, а загрузка идёт
+   кусочками — если она прервалась хоть на середине большого файла, уже
+   сохранённые мегабайты не скачиваются заново.
    Честная граница: это её характер на гостевой браузерной модели, а не
    домашний LoRA-адаптер — тот отвечает в разговоре из файлов ниже. */
 (function () {
@@ -16,6 +17,11 @@
   var CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/dist/transformers.min.js';
   var MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
   var MODEL_CACHE_NAME = 'transformers-cache';
+  var MODEL_DB_NAME = 'kvenya-model-store';
+  var MODEL_DB_VERSION = 1;
+  var FILE_STORE = 'files';
+  var PART_STORE = 'parts';
+  var CHUNK_SIZE = 4 * 1024 * 1024;
   var SAVE_KEY = 'kvenya.liveModel.saved.v1';
   var PARTIAL_KEY = 'kvenya.liveModel.partial.v1';
 
@@ -38,6 +44,9 @@
   var completedFiles = [];
   var progressByFile = {};
   var lastProgressSave = 0;
+  var modelDbPromise = null;
+  var dedicatedStoreAvailable = false;
+  var downloadPromises = {};
 
   /* ---------- голос: она говорит, её можно спросить голосом ---------- */
 
@@ -131,16 +140,60 @@
   function rememberFile(file) {
     if (file && completedFiles.indexOf(file) < 0) completedFiles.push(file);
   }
+  function formatBytes(bytes) {
+    var n = Number(bytes) || 0;
+    if (n >= 1024 * 1024) return (n / (1024 * 1024)).toFixed(n >= 100 * 1024 * 1024 ? 0 : 1).replace('.', ',') + ' МБ';
+    if (n >= 1024) return Math.round(n / 1024) + ' КБ';
+    return n + ' Б';
+  }
+  function cloneProgress() {
+    var out = {};
+    Object.keys(progressByFile).forEach(function (file) {
+      var item = progressByFile[file] || {};
+      out[file] = { loaded: item.loaded || 0, total: item.total || 0, progress: item.progress || 0 };
+    });
+    return out;
+  }
+  function progressTotals() {
+    var loaded = 0;
+    var total = 0;
+    Object.keys(progressByFile).forEach(function (file) {
+      var item = progressByFile[file] || {};
+      if (item.total > 0) { loaded += item.loaded || 0; total += item.total; }
+    });
+    return { loaded: loaded, total: total, pct: total > 0 ? (loaded / total) * 100 : 0 };
+  }
   function savePartial(force) {
     var now = Date.now();
     if (!force && now - lastProgressSave < 1500) return;
     lastProgressSave = now;
+    var totals = progressTotals();
     writeStore(PARTIAL_KEY, {
       model: MODEL_ID,
       dtype: 'q4',
       updatedAt: now,
-      filesDone: completedFiles.slice()
+      filesDone: completedFiles.slice(),
+      progressByFile: cloneProgress(),
+      downloadedBytes: totals.loaded,
+      totalBytes: totals.total
     });
+  }
+  function noteFileProgress(file, loaded, total, mode) {
+    if (!file) return;
+    progressByFile[file] = {
+      loaded: loaded || 0,
+      total: total || 0,
+      progress: total > 0 ? ((loaded || 0) / total) * 100 : 0
+    };
+    var totals = progressTotals();
+    setProgress(totals.pct || progressByFile[file].progress || 0);
+    if (mode === 'download') {
+      setStatus('Скачиваю Квеню кусочками и сохраняю: ' + formatBytes(totals.loaded || loaded || 0)
+        + (totals.total || total ? ' из ' + formatBytes(totals.total || total) : '') + ' (' + file + ')');
+    } else if (mode === 'local') {
+      setStatus('Беру Квеню из сохранённого хранилища: ' + Math.round(totals.pct || progressByFile[file].progress || 0) + '% (' + file + ')');
+    }
+    savePartial(false);
   }
   function storagePersisted() {
     if (!navigator.storage || !navigator.storage.persisted) return Promise.resolve(false);
@@ -157,6 +210,199 @@
       return persistentStorageGranted;
     }).catch(function () { return false; });
   }
+  function requestPromise(req) {
+    return new Promise(function (resolve, reject) {
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error || new Error('Ошибка IndexedDB')); };
+    });
+  }
+  function openModelDb() {
+    if (modelDbPromise) return modelDbPromise;
+    modelDbPromise = new Promise(function (resolve, reject) {
+      if (!('indexedDB' in window) || !window.indexedDB) { reject(new Error('IndexedDB недоступна')); return; }
+      var req = window.indexedDB.open(MODEL_DB_NAME, MODEL_DB_VERSION);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains(FILE_STORE)) db.createObjectStore(FILE_STORE, { keyPath: 'url' });
+        if (!db.objectStoreNames.contains(PART_STORE)) {
+          var parts = db.createObjectStore(PART_STORE, { keyPath: 'key' });
+          parts.createIndex('url', 'url', { unique: false });
+        }
+      };
+      req.onsuccess = function () { dedicatedStoreAvailable = true; resolve(req.result); };
+      req.onerror = function () { reject(req.error || new Error('IndexedDB не открылась')); };
+      req.onblocked = function () { reject(new Error('IndexedDB заблокирована другой вкладкой')); };
+    });
+    return modelDbPromise.then(function (db) { return db; }, function (err) {
+      modelDbPromise = null;
+      dedicatedStoreAvailable = false;
+      throw err;
+    });
+  }
+  function partKey(url, index) {
+    return url + '\n' + ('00000000' + index).slice(-8);
+  }
+  function metaFor(url, file, total, downloaded, complete, contentType) {
+    return {
+      url: url,
+      file: file || fileNameFromUrl(url),
+      total: total || 0,
+      downloaded: downloaded || 0,
+      complete: !!complete,
+      contentType: contentType || 'application/octet-stream',
+      updatedAt: Date.now()
+    };
+  }
+  function getFileMeta(url) {
+    return openModelDb().then(function (db) {
+      return requestPromise(db.transaction(FILE_STORE, 'readonly').objectStore(FILE_STORE).get(url));
+    }).then(function (meta) { return meta || null; });
+  }
+  function putFileMeta(meta) {
+    return openModelDb().then(function (db) {
+      return requestPromise(db.transaction(FILE_STORE, 'readwrite').objectStore(FILE_STORE).put(meta));
+    }).then(function () { return meta; });
+  }
+  function getAllFileMetas() {
+    return openModelDb().then(function (db) {
+      return requestPromise(db.transaction(FILE_STORE, 'readonly').objectStore(FILE_STORE).getAll());
+    }).then(function (metas) { return metas || []; });
+  }
+  function putPart(part) {
+    return openModelDb().then(function (db) {
+      return requestPromise(db.transaction(PART_STORE, 'readwrite').objectStore(PART_STORE).put(part));
+    });
+  }
+  function getParts(url) {
+    return openModelDb().then(function (db) {
+      var index = db.transaction(PART_STORE, 'readonly').objectStore(PART_STORE).index('url');
+      return requestPromise(index.getAll(url));
+    }).then(function (parts) {
+      return (parts || []).sort(function (a, b) { return a.index - b.index; });
+    });
+  }
+  function getPartCount(url) {
+    return openModelDb().then(function (db) {
+      return requestPromise(db.transaction(PART_STORE, 'readonly').objectStore(PART_STORE).index('url').count(url));
+    }).then(function (count) { return count || 0; }).catch(function () { return 0; });
+  }
+  function clearParts(url) {
+    if (typeof IDBKeyRange === 'undefined') {
+      return getParts(url).then(function (parts) {
+        if (!parts.length) return null;
+        return openModelDb().then(function (db) {
+          return new Promise(function (resolve, reject) {
+            var tx = db.transaction(PART_STORE, 'readwrite');
+            var store = tx.objectStore(PART_STORE);
+            parts.forEach(function (part) { store.delete(part.key); });
+            tx.oncomplete = function () { resolve(true); };
+            tx.onerror = function () { reject(tx.error || new Error('Не удалось очистить кусочки файла')); };
+            tx.onabort = function () { reject(tx.error || new Error('Очистка кусочков прервалась')); };
+          });
+        });
+      });
+    }
+    return openModelDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(PART_STORE, 'readwrite');
+        var store = tx.objectStore(PART_STORE);
+        var cursorReq = store.index('url').openKeyCursor(IDBKeyRange.only(url));
+        cursorReq.onsuccess = function () {
+          var cursor = cursorReq.result;
+          if (cursor) { store.delete(cursor.primaryKey); cursor.continue(); }
+        };
+        cursorReq.onerror = function () { reject(cursorReq.error || new Error('Не удалось очистить кусочки файла')); };
+        tx.oncomplete = function () { resolve(true); };
+        tx.onerror = function () { reject(tx.error || new Error('Не удалось очистить кусочки файла')); };
+        tx.onabort = function () { reject(tx.error || new Error('Очистка кусочков прервалась')); };
+      });
+    });
+  }
+  function contiguousParts(url) {
+    return getParts(url).then(function (parts) {
+      var expected = 0;
+      var good = [];
+      for (var i = 0; i < parts.length; i++) {
+        var part = parts[i];
+        var size = part.blob ? part.blob.size : part.size || 0;
+        if (part.start !== expected) break;
+        good.push(part);
+        expected += size;
+      }
+      return { parts: good, downloaded: expected, nextIndex: good.length };
+    });
+  }
+  function assembleBlob(meta, parts) {
+    var expected = 0;
+    var blobs = [];
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      var size = part.blob ? part.blob.size : part.size || 0;
+      if (part.start !== expected) return null;
+      blobs.push(part.blob);
+      expected += size;
+    }
+    if (meta && meta.total > 0 && expected !== meta.total) return null;
+    return new Blob(blobs, { type: (meta && meta.contentType) || 'application/octet-stream' });
+  }
+  function getCompleteBlob(url) {
+    return getFileMeta(url).then(function (meta) {
+      if (!meta || !meta.complete) return null;
+      return contiguousParts(url).then(function (cont) { return assembleBlob(meta, cont.parts); });
+    }).catch(function () { return null; });
+  }
+  function storeBlobAsParts(url, file, blob) {
+    file = file || fileNameFromUrl(url);
+    return getFileMeta(url).then(function (meta) {
+      if (meta && meta.complete && meta.total === blob.size) return true;
+      return clearParts(url).then(function () {
+        return putFileMeta(metaFor(url, file, blob.size, 0, false, blob.type || 'application/octet-stream')).then(function () {
+          var start = 0;
+          var index = 0;
+          function step() {
+            if (start >= blob.size) {
+              return putFileMeta(metaFor(url, file, blob.size, blob.size, true, blob.type || 'application/octet-stream')).then(function () {
+                rememberFile(file);
+                return true;
+              });
+            }
+            var end = Math.min(blob.size, start + CHUNK_SIZE);
+            var slice = blob.slice(start, end);
+            return putPart({ key: partKey(url, index), url: url, index: index, start: start, end: end, size: slice.size, blob: slice }).then(function () {
+              start = end;
+              index++;
+              return putFileMeta(metaFor(url, file, blob.size, start, false, blob.type || 'application/octet-stream')).then(step);
+            });
+          }
+          return step();
+        });
+      });
+    });
+  }
+  function storeBlobSegment(url, file, blob, baseOffset, total, contentType) {
+    var start = 0;
+    var index = 0;
+    // Индекс следующего кусочка узнаём по уже лежащему началу файла.
+    return getPartCount(url).then(function (count) {
+      index = count || 0;
+      function step() {
+        if (start >= blob.size) {
+          var done = baseOffset + blob.size;
+          return putFileMeta(metaFor(url, file, total || done, done, (total || done) === done, contentType)).then(function () { return done; });
+        }
+        var end = Math.min(blob.size, start + CHUNK_SIZE);
+        var slice = blob.slice(start, end);
+        var partStart = baseOffset + start;
+        return putPart({ key: partKey(url, index), url: url, index: index, start: partStart, end: baseOffset + end, size: slice.size, blob: slice }).then(function () {
+          start = end;
+          index++;
+          return putFileMeta(metaFor(url, file, total || baseOffset + start, baseOffset + start, false, contentType)).then(step);
+        });
+      }
+      return step();
+    });
+  }
+
   function fileNameFromUrl(url) {
     var marker = '/resolve/main/';
     var at = url.indexOf(marker);
@@ -164,9 +410,9 @@
     try { return decodeURIComponent(String(file || '').split('?')[0]); }
     catch (err) { return String(file || '').split('?')[0]; }
   }
-  function inspectModelCache() {
+  function inspectBrowserCache() {
     if (!('caches' in window)) {
-      return Promise.resolve({ supported: false, files: [], complete: false, partial: false });
+      return Promise.resolve({ supported: false, storage: 'none', files: [], complete: false, partial: false, downloaded: 0, total: 0 });
     }
     return window.caches.open(MODEL_CACHE_NAME).then(function (cache) { return cache.keys(); })
       .then(function (requests) {
@@ -178,28 +424,266 @@
           if (file && files.indexOf(file) < 0) files.push(file);
         });
         var saved = readStore(SAVE_KEY);
-        var expected = saved && Array.isArray(saved.files) ? saved.files : [];
+        var expected = saved && saved.storage === 'browser' && Array.isArray(saved.files) ? saved.files : [];
         var hasModel = files.some(function (file) { return /\.onnx($|\?)/.test(file); });
         var allExpected = expected.length > 0 && expected.every(function (file) { return files.indexOf(file) >= 0; });
         // Запись могла остаться от версии страницы до этой проверки: набор
         // файлов с самой моделью внутри тоже честно считаем сохранённой Квеней.
         var complete = !!hasModel && (allExpected || files.length >= 4);
-        return { supported: true, files: files, complete: complete, partial: files.length > 0 && !complete };
+        return { supported: true, storage: 'browser', files: files, complete: complete, partial: files.length > 0 && !complete, downloaded: 0, total: 0 };
       })
-      .catch(function () { return { supported: false, files: [], complete: false, partial: false }; });
+      .catch(function () { return { supported: false, storage: 'none', files: [], complete: false, partial: false, downloaded: 0, total: 0 }; });
   }
+  function inspectDedicatedStore() {
+    return getAllFileMetas().then(function (metas) {
+      metas = (metas || []).filter(function (meta) { return meta && meta.url && meta.url.indexOf(MODEL_ID) >= 0; });
+      var completeFiles = [];
+      var downloaded = 0;
+      var total = 0;
+      progressByFile = {};
+      metas.forEach(function (meta) {
+        var file = meta.file || fileNameFromUrl(meta.url);
+        var loaded = meta.downloaded || 0;
+        var size = meta.total || 0;
+        downloaded += loaded;
+        total += size;
+        progressByFile[file] = { loaded: loaded, total: size, progress: size > 0 ? (loaded / size) * 100 : 0 };
+        if (meta.complete && completeFiles.indexOf(file) < 0) completeFiles.push(file);
+      });
+      var saved = readStore(SAVE_KEY);
+      var expected = saved && saved.storage === 'indexeddb' && Array.isArray(saved.files) ? saved.files : [];
+      var hasModel = metas.some(function (meta) { return meta.complete && /\.onnx/.test(meta.file || fileNameFromUrl(meta.url)); });
+      var allExpected = expected.length > 0 && expected.every(function (file) { return completeFiles.indexOf(file) >= 0; });
+      var complete = !!hasModel && (allExpected || completeFiles.length >= 4);
+      return {
+        supported: true,
+        storage: 'indexeddb',
+        files: completeFiles,
+        metas: metas,
+        complete: complete,
+        hasModelFile: !!hasModel,
+        partial: metas.length > 0 && !complete,
+        downloaded: downloaded,
+        total: total
+      };
+    }).catch(function () {
+      return { supported: false, storage: 'none', files: [], complete: false, partial: false, downloaded: 0, total: 0 };
+    });
+  }
+  function inspectModelCache() {
+    return inspectDedicatedStore().then(function (state) {
+      if (state.complete || state.partial) { state.legacy = false; return state; }
+      return inspectBrowserCache().then(function (old) {
+        if (old.complete || old.partial) { old.legacy = true; return old; }
+        return state.supported ? state : old;
+      });
+    });
+  }
+  function migrateBrowserCacheToStore() {
+    if (!('caches' in window)) return Promise.resolve(false);
+    return window.caches.open(MODEL_CACHE_NAME).then(function (cache) {
+      return cache.keys().then(function (requests) {
+        var chain = Promise.resolve();
+        requests.filter(function (request) { return request && request.url && request.url.indexOf(MODEL_ID) >= 0; })
+          .forEach(function (request) {
+            chain = chain.then(function () {
+              return getCompleteBlob(request.url).then(function (existing) {
+                if (existing) return null;
+                return cache.match(request).then(function (response) {
+                  if (!response) return null;
+                  return response.blob().then(function (blob) {
+                    return storeBlobAsParts(request.url, fileNameFromUrl(request.url), blob);
+                  });
+                });
+              });
+            });
+          });
+        return chain.then(function () { return true; });
+      });
+    }).catch(function () { return false; });
+  }
+  function parseContentRange(value) {
+    var m = /bytes\s+(\d+)-(\d+)\/(\d+|\*)/.exec(value || '');
+    if (!m) return null;
+    return { start: Number(m[1]), end: Number(m[2]), total: m[3] === '*' ? 0 : Number(m[3]) };
+  }
+  function downloadFileResumable(url) {
+    var file = fileNameFromUrl(url);
+    if (downloadPromises[url]) return downloadPromises[url];
+    downloadPromises[url] = getCompleteBlob(url).then(function (ready) {
+      if (ready) { rememberFile(file); return ready; }
+      return getFileMeta(url).then(function (meta) {
+        return contiguousParts(url).then(function (cont) {
+          var downloaded = cont.downloaded;
+          var partCount = cont.nextIndex;
+          var total = meta && meta.total ? meta.total : 0;
+          var contentType = meta && meta.contentType ? meta.contentType : 'application/octet-stream';
+          noteFileProgress(file, downloaded, total, 'download');
+          if (total > 0 && downloaded >= total) {
+            return putFileMeta(metaFor(url, file, total, downloaded, true, contentType)).then(function () {
+              rememberFile(file);
+              return getCompleteBlob(url);
+            });
+          }
+          var headers = {};
+          if (downloaded > 0) headers.Range = 'bytes=' + downloaded + '-';
+          return fetch(url, { headers: headers, cache: 'no-store' }).then(function (response) {
+            if (response.status === 404) return null;
+            if (response.status === 416 && total > 0 && downloaded >= total) return getCompleteBlob(url);
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            var range = parseContentRange(response.headers.get('Content-Range'));
+            if (downloaded > 0 && response.status === 200) {
+              // Сервер не умеет продолжать: начинаем этот файл заново,
+              // но уже внутри кусочного хранилища.
+              downloaded = 0;
+              total = Number(response.headers.get('Content-Length')) || 0;
+              return clearParts(url).then(function () {
+                return readDownloadResponse(url, file, response, 0, total, contentType);
+              });
+            }
+            if (response.status === 206) {
+              if (!range || range.start !== downloaded) throw new Error('Сервер вернул не тот кусок файла');
+              total = range.total || total;
+              contentType = response.headers.get('Content-Type') || contentType;
+              return readDownloadResponse(url, file, response, downloaded, total, contentType, partCount);
+            }
+            total = response.headers.get('Content-Encoding') ? 0 : (Number(response.headers.get('Content-Length')) || total);
+            contentType = response.headers.get('Content-Type') || contentType;
+            return readDownloadResponse(url, file, response, downloaded, total, contentType, partCount);
+          });
+        });
+      });
+    }).then(function (blob) {
+      delete downloadPromises[url];
+      return blob;
+    }, function (err) {
+      delete downloadPromises[url];
+      throw err;
+    });
+    return downloadPromises[url];
+  }
+  function readDownloadResponse(url, file, response, baseOffset, total, contentType, nextIndex) {
+    if (!response.body || !response.body.getReader) {
+      return response.blob().then(function (blob) {
+        return storeBlobSegment(url, file, blob, baseOffset, total, contentType).then(function () {
+          return getCompleteBlob(url);
+        });
+      });
+    }
+    return Promise.resolve().then(function () {
+      var reader = response.body.getReader();
+      var offset = baseOffset;
+      nextIndex = typeof nextIndex === 'number' ? nextIndex : 0;
+      var pending = [];
+      var pendingSize = 0;
+      function flush(final) {
+        if (!pendingSize || (pendingSize < CHUNK_SIZE && !final)) return Promise.resolve();
+        var blob = new Blob(pending);
+        var partStart = offset;
+        pending = [];
+        pendingSize = 0;
+        return putPart({
+          key: partKey(url, nextIndex), url: url, index: nextIndex,
+          start: partStart, end: partStart + blob.size, size: blob.size, blob: blob
+        }).then(function () {
+          offset = partStart + blob.size;
+          nextIndex++;
+          noteFileProgress(file, offset, total, 'download');
+          return putFileMeta(metaFor(url, file, total || offset, offset, false, contentType));
+        });
+      }
+      function pump() {
+        return reader.read().then(function (res) {
+          if (res.done) return flush(true);
+          pending.push(res.value);
+          pendingSize += res.value.byteLength;
+          return flush(false).then(pump);
+        }, function (err) {
+          return flush(true).then(function () { throw err; });
+        });
+      }
+      return pump().then(function () {
+        if (total > 0 && offset !== total) throw new Error('Файл оборвался на ' + offset + ' из ' + total + ' байт');
+        var finalTotal = total || offset;
+        return putFileMeta(metaFor(url, file, finalTotal, offset, true, contentType)).then(function () {
+          rememberFile(file);
+          savePartial(true);
+          return getCompleteBlob(url);
+        });
+      });
+    });
+  }
+  function migrateFromBrowserCache(url) {
+    if (!('caches' in window)) return Promise.resolve(null);
+    return window.caches.open(MODEL_CACHE_NAME).then(function (cache) { return cache.match(url); })
+      .then(function (response) {
+        if (!response) return null;
+        return response.blob().then(function (blob) {
+          return storeBlobAsParts(url, fileNameFromUrl(url), blob).then(function () { return blob; });
+        });
+      })
+      .catch(function () { return null; });
+  }
+  function requestToCacheUrl(request) {
+    if (typeof request === 'string') return request;
+    if (request && request.url) return request.url;
+    return '';
+  }
+  var kvenyaModelCache = {
+    match: function (request) {
+      var url = requestToCacheUrl(request);
+      if (!url || url.indexOf('http') !== 0 || url.indexOf(MODEL_ID) < 0) return Promise.resolve(undefined);
+      return getCompleteBlob(url).then(function (blob) {
+        if (blob) { rememberFile(fileNameFromUrl(url)); return new Response(blob); }
+        return migrateFromBrowserCache(url).then(function (migrated) {
+          if (migrated) { rememberFile(fileNameFromUrl(url)); return new Response(migrated); }
+          return downloadFileResumable(url).then(function (downloaded) {
+            return downloaded ? new Response(downloaded) : undefined;
+          });
+        });
+      }).catch(function (err) {
+        try { console.warn('Квеня: хранилище модели недоступно, попробую обычную загрузку', err); } catch (ignore) {}
+        return undefined;
+      });
+    },
+    put: function (request, response) {
+      var url = requestToCacheUrl(request);
+      if (!url || url.indexOf(MODEL_ID) < 0 || !response || response.status !== 200) return Promise.resolve();
+      return response.clone().blob().then(function (blob) {
+        return storeBlobAsParts(url, fileNameFromUrl(url), blob);
+      }).catch(function (err) {
+        try { console.warn('Квеня: не удалось сохранить файл модели', err); } catch (ignore) {}
+      });
+    }
+  };
   function rememberSavedModel() {
     return inspectModelCache().then(function (state) {
+      // Этот вызов идёт только после успешного старта генератора: если сама
+      // модель целиком лежит в отдельном хранилище, не спорим из-за числа
+      // мелких служебных файлов — Квеня только что из них запустилась.
+      if (!state.complete && state.storage === 'indexeddb' && state.hasModelFile && state.files.length) state.complete = true;
       if (!state.complete) return false;
-      writeStore(SAVE_KEY, {
-        model: MODEL_ID,
-        dtype: 'q4',
-        savedAt: Date.now(),
-        files: state.files.slice()
-      });
-      writeStore(PARTIAL_KEY, null);
-      completedFiles = state.files.slice();
-      return true;
+      var finish = function (finalState, storageName) {
+        writeStore(SAVE_KEY, {
+          model: MODEL_ID,
+          dtype: 'q4',
+          storage: storageName,
+          savedAt: Date.now(),
+          files: finalState.files.slice()
+        });
+        writeStore(PARTIAL_KEY, null);
+        completedFiles = finalState.files.slice();
+        return true;
+      };
+      if (state.legacy && state.storage === 'browser') {
+        return migrateBrowserCacheToStore().then(function (migrated) {
+          if (!migrated) return finish(state, 'browser');
+          return inspectDedicatedStore().then(function (newState) {
+            return newState.complete ? finish(newState, 'indexeddb') : finish(state, 'browser');
+          });
+        });
+      }
+      return finish(state, state.storage || 'indexeddb');
     }).catch(function () { return false; });
   }
   function refreshSavedModelUi() {
@@ -207,42 +691,50 @@
     return Promise.all([inspectModelCache(), storagePersisted()]).then(function (values) {
       var state = values[0];
       var persisted = values[1];
+      completedFiles = state.files ? state.files.slice() : completedFiles;
       if (state.complete) {
         if (!readStore(SAVE_KEY)) {
-          writeStore(SAVE_KEY, { model: MODEL_ID, dtype: 'q4', savedAt: Date.now(), files: state.files.slice(), inferred: true });
+          writeStore(SAVE_KEY, {
+            model: MODEL_ID, dtype: 'q4', storage: state.storage || 'browser',
+            savedAt: Date.now(), files: state.files.slice(), inferred: true
+          });
         }
         writeStore(PARTIAL_KEY, null);
-        completedFiles = state.files.slice();
         startBtn.textContent = '▶ Включить Квеню — уже скачана';
         setStatus(persisted
           ? 'Квеня уже живёт в этом браузере и закреплена в постоянном хранилище. Скачивать ещё раз не нужно.'
           : 'Квеня уже скачана в этот браузер. Нажми включить — возьму её из сохранённой копии, без новой загрузки.', 'ok');
         if (storageEl) {
-          storageEl.textContent = persisted
-            ? '💾 Сохранённая Квеня на месте: при следующем визите загрузка не понадобится.'
-            : '💾 Сохранённая Квеня на месте. При включении попрошу браузер закрепить её постоянным хранением.';
+          if (state.legacy) storageEl.textContent = '💾 Нашла старую копию Квени в кэше. При включении перенесу её в отдельное постоянное хранилище — интернет для этого не нужен.';
+          else storageEl.textContent = persisted
+            ? '💾 Сохранённая Квеня на месте в отдельном хранилище: при следующем визите загрузка не понадобится.'
+            : '💾 Сохранённая Квеня на месте в отдельном хранилище. При включении попрошу браузер закрепить её постоянным хранением.';
         }
         setProgress(100);
         return true;
       }
       var partial = readStore(PARTIAL_KEY);
       if (state.partial || partial) {
-        if (state.files.length) {
-          writeStore(PARTIAL_KEY, { model: MODEL_ID, dtype: 'q4', updatedAt: Date.now(), filesDone: state.files.slice() });
-          completedFiles = state.files.slice();
-        }
+        savePartial(true);
         startBtn.textContent = '▶ Продолжить загрузку Квени';
-        setStatus('Нашлась недогруженная Квеня: готовые файлы остались в браузере. Продолжим — их заново не качаем.', 'think');
+        if (state.total > 0 && state.downloaded > 0) {
+          setStatus('Квеня уже частично живёт в браузере: сохранено ' + formatBytes(state.downloaded) + ' из ' + formatBytes(state.total) + '. Продолжим с этого места.', 'think');
+          setProgress((state.downloaded / state.total) * 100);
+        } else {
+          setStatus('Нашлась недогруженная Квеня: готовые кусочки и файлы остались в браузере. Продолжим — их заново не качаем.', 'think');
+        }
         if (storageEl) {
-          storageEl.textContent = '💾 Уже сохранено файлов модели: ' + completedFiles.length + '. Продолжение скачает только недостающее.';
+          storageEl.textContent = state.total > 0
+            ? '💾 Сохранено ' + formatBytes(state.downloaded) + ' из ' + formatBytes(state.total) + '. Даже оборванный большой файл продолжится с сохранённого места.'
+            : '💾 Уже сохранено файлов модели: ' + completedFiles.length + '. Продолжение скачает только недостающее.';
         }
         return false;
       }
       if (readStore(SAVE_KEY)) writeStore(SAVE_KEY, null);
       if (storageEl) {
         storageEl.textContent = state.supported
-          ? '💾 В этом браузере Квеня пока не сохранена. Первая загрузка — около 400 МБ; после неё она останется здесь.'
-          : '💾 Этот браузер не даёт постоянного кэша модели: Квене придётся скачиваться при каждом визите.';
+          ? '💾 В этом браузере Квеня пока не сохранена. Первая загрузка — около 400 МБ кусочками; после неё она останется здесь.'
+          : '💾 Этот браузер не дал хранилища модели: Квеня сможет работать сейчас, но при следующем визите может скачаться снова.';
       }
       return false;
     }).catch(function () { return false; });
@@ -366,29 +858,41 @@
     }).then(function (state) {
       startingFromCache = !!state.complete;
       completedFiles = state.files ? state.files.slice() : completedFiles;
-      if (startingFromCache) setStatus('Квеня нашлась в сохранённой копии — открываю без скачивания…');
-      else if (state.partial) setStatus('Продолжаю загрузку: готовые файлы уже на месте, качаю только недостающее…');
-      else setStatus('Скачиваю её мозги для браузера (~400 МБ, один раз) и сохраняю здесь…');
+      if (startingFromCache && state.legacy) setStatus('Нашёл Квеню в старом кэше — перенесу её в постоянное хранилище без новой загрузки…');
+      else if (startingFromCache) setStatus('Квеня нашлась в сохранённой копии — открываю без скачивания…');
+      else if (state.partial && state.total > 0) setStatus('Продолжаю с сохранённого места: уже лежит ' + formatBytes(state.downloaded) + ' из ' + formatBytes(state.total) + '…');
+      else if (state.partial) setStatus('Продолжаю загрузку: готовые кусочки уже на месте, качаю только недостающее…');
+      else setStatus('Скачиваю её мозги для браузера (~400 МБ, один раз) кусочками и сохраняю здесь…');
       return import(CDN);
     }).then(function (mod) {
       mod.env.allowLocalModels = false;
       mod.env.allowRemoteModels = true;
-      mod.env.useBrowserCache = typeof window.caches !== 'undefined';
-      mod.env.useCustomCache = false;
+      if (dedicatedStoreAvailable) {
+        // Своё кусочное хранилище: файл остаётся в IndexedDB даже после
+        // обрыва на середине, а service worker-ы не могут его снести.
+        mod.env.useBrowserCache = false;
+        mod.env.useCustomCache = true;
+        mod.env.customCache = kvenyaModelCache;
+      } else {
+        mod.env.useBrowserCache = typeof window.caches !== 'undefined';
+        mod.env.useCustomCache = false;
+      }
       var onProgress = function (e) {
         if (!e) return;
         if (e.status === 'progress' && e.file) {
-          progressByFile[e.file] = {
-            loaded: typeof e.loaded === 'number' ? e.loaded : 0,
-            total: typeof e.total === 'number' ? e.total : 0,
-            progress: typeof e.progress === 'number' ? e.progress : 0
-          };
-          var pct = overallProgress() || e.progress || 0;
-          setProgress(pct);
-          setStatus((startingFromCache
-            ? 'Беру Квеню из сохранённого хранилища: '
-            : 'Скачиваю и сохраняю Квеню: ') + Math.round(pct) + '% (' + e.file + ')');
-          savePartial(false);
+          if (typeof e.total === 'number' && e.total > 0) {
+            noteFileProgress(e.file, e.loaded || 0, e.total || 0, startingFromCache ? 'local' : 'download');
+          } else {
+            progressByFile[e.file] = {
+              loaded: typeof e.loaded === 'number' ? e.loaded : 0,
+              total: 0,
+              progress: typeof e.progress === 'number' ? e.progress : 0
+            };
+            setProgress(e.progress || 0);
+            setStatus((startingFromCache ? 'Беру Квеню из сохранённого хранилища: ' : 'Скачиваю и сохраняю Квеню: ')
+              + Math.round(e.progress || 0) + '% (' + e.file + ')');
+            savePartial(false);
+          }
         } else if (e.status === 'done' && e.file) {
           rememberFile(e.file);
           savePartial(true);
@@ -420,8 +924,8 @@
             : 'Квеня здесь! Она сохранена в этом браузере — в следующий раз скачивать не нужно.', 'ok');
           if (storageEl) {
             storageEl.textContent = storage.persisted
-              ? '💾 Квеня закреплена в постоянном хранилище этого браузера.'
-              : '💾 Квеня сохранена в кэше этого браузера; постоянное хранение браузер пока не подтвердил.';
+              ? '💾 Квеня закреплена в отдельном постоянном хранилище этого браузера.'
+              : '💾 Квеня сохранена в отдельном хранилище этого браузера; вечное хранение браузер пока не подтвердил.';
           }
         } else {
           setStatus('Квеня здесь! Но браузер не подтвердил сохранение файлов — при следующем визите загрузка может повториться.', 'think');
@@ -441,9 +945,12 @@
       startBtn.disabled = false;
       startBtn.textContent = completedFiles.length ? '▶ Продолжить загрузку Квени' : '▶ Включить живую Квеню';
       setProgress(0);
-      setStatus('Загрузка прервалась (' + (err && err.message ? err.message : 'ошибка загрузки') + '). Готовые файлы уже остались в браузере — нажми ещё раз, их заново не качаем. Настоящая Квеня ждёт в разговоре ниже.', 'err');
-      if (storageEl && completedFiles.length) {
-        storageEl.textContent = '💾 Сохранено готовых файлов: ' + completedFiles.length + '. Продолжение не начнёт их скачивать заново.';
+      setStatus('Загрузка прервалась (' + (err && err.message ? err.message : 'ошибка загрузки') + '). Уже сохранённые кусочки остались в браузере — нажми ещё раз, продолжим с этого места. Настоящая Квеня ждёт в разговоре ниже.', 'err');
+      if (storageEl) {
+        var totals = progressTotals();
+        storageEl.textContent = totals.loaded > 0
+          ? '💾 Уже сохранено ' + formatBytes(totals.loaded) + (totals.total ? ' из ' + formatBytes(totals.total) : '') + '. Продолжение не начнёт скачивать это заново.'
+          : '💾 Готовые файлы уже остались в браузере. Продолжение не начнёт их скачивать заново.';
       }
     });
   }
