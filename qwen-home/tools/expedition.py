@@ -70,44 +70,6 @@ def detect_controls(text):
     return list(KEY_PLAN), 650, 'cycle', 'подсказок на экране нет — запасной план'
 
 
-EYES_JS = r"""
-() => {
-  const c = document.querySelector('canvas');
-  if (!c) return {ok: false, why: 'no canvas'};
-  let ctx = null;
-  try { ctx = c.getContext('2d'); } catch (e) {}
-  if (!ctx) return {ok: false, why: 'no 2d context'};
-  let img;
-  try { img = ctx.getImageData(0, 0, c.width, c.height); }
-  catch (e) { return {ok: false, why: 'pixels closed'}; }
-  const w = c.width, h = c.height, d = img.data, step = 3;
-  const bird = [], pipe = [], dark = [];
-  let cream = 0, creamAll = 0;
-  const cx0 = w * 0.30, cx1 = w * 0.70, cy0 = h * 0.20, cy1 = h * 0.62;
-  for (let y = 0; y < h; y += step) {
-    for (let x = 0; x < w; x += step) {
-      const i = (y * w + x) * 4;
-      const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
-      if (a < 200) continue;
-      // птица: жёлтое тело и оранжевый клюв спрайта clumsy
-      if (r > 200 && g > 150 && b < 120 && r - b > 90) bird.push(x, y);
-      // трубы: зелень спрайта pipe (кусты фона отсечёт разбор по строкам)
-      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205)) pipe.push(x, y);
-      // чёрная окантовка труб и текста
-      if (r < 70 && g < 70 && b < 70) dark.push(x, y);
-      // кремовая панель game over по центру кадра
-      if (x >= cx0 && x <= cx1 && y >= cy0 && y <= cy1) {
-        creamAll++;
-        if (r > 220 && g > 220 && b > 140 && b < 225) cream++;
-      }
-    }
-  }
-  return {ok: true, w: w, h: h, bird: bird, pipe: pipe, dark: dark,
-          cream: creamAll ? cream / creamAll : 0};
-}
-"""
-
-
 EYES_SUMMARY_JS = r"""
 () => {
   const c = document.querySelector('canvas');
@@ -118,7 +80,7 @@ EYES_SUMMARY_JS = r"""
   let img;
   try { img = ctx.getImageData(0, 0, c.width, c.height); }
   catch (e) { return {ok: false, why: 'pixels closed'}; }
-  const w = c.width, h = c.height, d = img.data, step = 3;
+  const w = c.width, h = c.height, d = img.data, step = 4;
   const birdPts = [], cols = {}, darkCols = {}, rowCols = {};
   let cream = 0, creamAll = 0;
   const cx0 = w * 0.30, cx1 = w * 0.70, cy0 = h * 0.20, cy1 = h * 0.62;
@@ -233,7 +195,7 @@ def _decode_png(data):
 def analyze_eyes(raw):
     """Разобрать кадр: где птица, где просвет труб, не конец ли игры.
 
-    На входе — кандидаты пикселей из EYES_JS (или из PNG-скриншота).
+    На входе — кандидаты пикселей из скриншота канваса (PNG-путь глаз).
     Птица живёт слева (в Clumsy Bird x=60 из 900), поэтому жёлтое
     ищем только в левой четверти кадра: по центру тот же жёлтый —
     надписи «get ready» и «game over», это не птица."""
@@ -621,8 +583,10 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                                 ms = int((now - last_flap) * 1000) if last_flap else 9999
                                 if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy):
                                     flap_key = keys[0] if keys else 'Space'
+                                    # на пуле держим дольше: игра опрашивает клавиши
+                                    # по своим кадрам, короткое нажатие между ними теряется
                                     page.keyboard.down(flap_key)
-                                    page.wait_for_timeout(70)
+                                    page.wait_for_timeout(130 if vy >= 30 else 80)
                                     page.keyboard.up(flap_key)
                                     flaps += 1
                                     last_flap = now
