@@ -201,6 +201,11 @@ window.WC = window.WC || {};
         if (h < self.heights.half * 0.72) self.set(h < self.heights.half * 0.45 ? 'hidden' : 'half');
         else self.set('full');
       };
+      // Pointerup уже обрабатывает тап и перетаскивание; click без detail
+      // приходит при активации клавиатурой и не должен теряться.
+      handle.addEventListener('click', function (event) {
+        if (event.detail === 0) self.toggle();
+      });
       handle.addEventListener('pointerup', finish);
       handle.addEventListener('pointercancel', finish);
       handle.addEventListener('pointerleave', function () { if (!drag) return; });
@@ -231,6 +236,8 @@ window.WC = window.WC || {};
       var handle = dom.sheetHandle;
       if (collapse) collapse.setAttribute('aria-expanded', name === 'hidden' ? 'false' : 'true');
       if (handle) handle.setAttribute('aria-expanded', name === 'hidden' ? 'false' : 'true');
+      var opener = document.getElementById('btn-panel-open');
+      if (opener) opener.setAttribute('aria-expanded', name === 'hidden' ? 'false' : 'true');
       if (!silent) {
         buzz(8);
         if (name === 'hidden') U.toast('Пульт свёрнут — приказы в панели снизу', 'info', 1800);
@@ -1499,7 +1506,19 @@ window.WC = window.WC || {};
     q('btn-sound').addEventListener('click', function () { toggleSound(); });
 
     var collapseButton = document.getElementById('btn-panel-collapse');
-    if (collapseButton) collapseButton.addEventListener('click', function () { sheet.toggle(); });
+    var openPanelButton = q('btn-panel-open');
+    if (openPanelButton) openPanelButton.addEventListener('click', function () {
+      sheet.set('half');
+      if (collapseButton) collapseButton.focus({ preventScroll: true });
+    });
+    if (collapseButton) collapseButton.addEventListener('click', function () {
+      sheet.toggle();
+      if (uiState.sheet === 'hidden') {
+        // Кнопка закрытия оказалась за экраном; возвращаем фокус на видимый способ открыть пульт.
+        var target = openPanelButton && window.getComputedStyle(openPanelButton).display !== 'none' ? openPanelButton : dom.sheetHandle;
+        if (target && window.getComputedStyle(target).display !== 'none') target.focus({ preventScroll: true });
+      }
+    });
 
     var fullscreenButton = q('btn-fullscreen');
     if (fullscreenButton) fullscreenButton.addEventListener('click', toggleFullscreen);

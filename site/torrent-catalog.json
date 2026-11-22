@@ -7,7 +7,7 @@
     "storefront": 18,
     "collection": 216,
     "files": 2157,
-    "totalBytes": 53196623,
+    "totalBytes": 53198991,
     "chunks": 401,
     "blockedFiles": 5
   },
@@ -5029,8 +5029,8 @@
       "play": "warehouse-crew/index.html",
       "cover": "site/assets/warehouse-crew.webp",
       "dir": "warehouse-crew",
-      "infoHash": "70f5c70545d197a23942114d478e2c323472976c37a5add9c4c4e895997840fd",
-      "totalSize": 1944857,
+      "infoHash": "bffb37c46fd8645fbd8bf46192cb3a752c4620b6505a7ccac0e5afec9c8cdf98",
+      "totalSize": 1947225,
       "chunkSize": 262144,
       "chunkCount": 8,
       "fileCount": 37,
@@ -5082,8 +5082,8 @@
         },
         {
           "path": "index.html",
-          "size": 22194,
-          "sha256": "08ca6a90dc1f37063869af0fbf91ba93fc592515365be114405d0783012f7e8b"
+          "size": 22537,
+          "sha256": "86a6abb68413453a45cb7159a4a648b4601bdf57c094e188b3450a5b33343eeb"
         },
         {
           "path": "src/ai/brain-net.js",
@@ -5177,8 +5177,8 @@
         },
         {
           "path": "src/ui.js",
-          "size": 101398,
-          "sha256": "0f06a6756adeba4592f289e0bc90f49c898e3b70b7fd7abf6d3f9f20731b377b"
+          "size": 102609,
+          "sha256": "a218d21c4cbef48d88ec9b3bf6b7772d4403705a61b2d701d006c89f54a48908"
         },
         {
           "path": "src/util.js",
@@ -5192,8 +5192,8 @@
         },
         {
           "path": "style.css",
-          "size": 57402,
-          "sha256": "cbed3cbd68babd065bc7deb8310426b0b4475399470bb9edc27aeea7665086f8"
+          "size": 58216,
+          "sha256": "8d4b88745b7629661b7dfe4f49977c600b6c640f30742d5ea6e12796354381d0"
         },
         {
           "path": "tools/crew-shot.mjs",

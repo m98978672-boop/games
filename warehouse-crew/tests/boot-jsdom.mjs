@@ -265,6 +265,15 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
       result.cycleWorks = window.WC.game.api.activeWorkerId !== before;
       window.WC.game.selectWorker(before);
     }
+    const opener = window.document.getElementById('btn-panel-open');
+    window.WC.ui.sheet.set('hidden', true);
+    const collapsedAria = opener.getAttribute('aria-expanded') === 'false';
+    opener.click();
+    result.panelOpener = collapsedAria && body.getAttribute('data-sheet') === 'half' && opener.getAttribute('aria-expanded') === 'true' && window.document.getElementById('btn-panel-collapse').getAttribute('aria-expanded') === 'true' && window.document.activeElement === window.document.getElementById('btn-panel-collapse');
+    window.document.getElementById('btn-panel-collapse').click();
+    result.panelOpener = result.panelOpener && body.getAttribute('data-sheet') === 'hidden' && opener.getAttribute('aria-expanded') === 'false';
+    window.document.getElementById('sheet-handle').click();
+    result.panelOpener = result.panelOpener && body.getAttribute('data-sheet') === 'half';
     if (window.WC.ui && window.WC.ui.sheet) {
       window.WC.ui.sheet.set('full', true);
       result.sheetFull = body.getAttribute('data-sheet');
@@ -715,6 +724,7 @@ for (const mode of modes) {
   check(r.queueFilters && r.queueFocus && r.queueSummary && r.queueMore, 'фильтры, сводка, доступность и полная очередь', {filters:r.queueFilters, focus:r.queueFocus, summary:r.queueSummary, more:r.queueMore, error:r.featureError});
   check(r.queueSorted && r.queueAssigned && r.queueRestart, 'срочность, назначение заказов и перезапуск очереди', { sorted:r.queueSorted, assigned:r.queueAssigned, restart:r.queueRestart, error:r.featureError });
   check(r.floorSeparation, 'пол, двор и разметка не совпадают по глубине', r.floorSurfaces);
+  check(r.panelOpener, 'кнопка пульта синхронизирует состояние, aria и фокус');
   check(r.shopShortcut && r.noCabinLetters, 'магазин открывается кнопкой, подписи кабинок убраны');
   check(r.haloRecipe, 'рецепт подсветки halo в движке');
   check(r.cycleWorks !== false, 'тап по имени в quickbar переключает рабочего');
