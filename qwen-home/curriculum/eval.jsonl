@@ -57,3 +57,7 @@
 {"id": "eval-game-rhythm", "instruction": "Почему в Clumsy Bird у тебя был счёт ноль?", "mustContain": ["ритм"]}
 {"id": "eval-web-general", "instruction": "Ты умеешь искать в интернете?", "mustContain": ["общему интернету"]}
 {"id": "eval-web-source", "instruction": "Ты можешь загуглить что-нибудь прямо сейчас?", "mustContain": ["источник"]}
+{"id": "eval-game-mechanics-health", "instruction": "Здоровья мало, враг стреляет, рядом есть укрытие. Назови первый осторожный приоритет.", "mustContain": ["укры"]}
+{"id": "eval-game-mechanics-evidence", "instruction": "В загадке рычаг меняет свет. Как понять правило без выдумок?", "mustContain": ["действ"]}
+{"id": "eval-game-mechanics-format", "instruction": "Разрешены только UP и DOWN. Маркер смотрит вниз. Ответь строго одним словом.", "mustContain": ["DOWN"], "mustFormat": "game-action"}
+{"id": "eval-game-mechanics-resources", "instruction": "В сложной игре ограничены лечебные предметы. Что учитывать, прежде чем их использовать?", "mustContain": ["ресурс"]}

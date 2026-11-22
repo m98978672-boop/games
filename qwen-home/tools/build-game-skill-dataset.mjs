@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Isolated research dataset: no publishing, no network games, four held-out questions. */
+/* Isolated research dataset: no publishing, no network games, eight held-out questions. */
 import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -9,8 +9,8 @@ import { buildDataset, SYSTEM_PROMPT } from './build-dataset.mjs';
 export async function buildGameDataset(home, out) {
   const all = await buildDataset({home});
   const train = all.train.filter(r => r.kind === 'game-skills');
-  const evalRows = all.evalRows.filter(r => r.id.startsWith('eval-game-') && ['eval-game-action-format', 'eval-game-no-fake', 'eval-game-captcha', 'eval-game-math'].includes(r.id));
-  if (train.length < 20 || evalRows.length !== 4 || train.some(t => evalRows.some(e => e.instruction === t.instruction))) throw Error('Game dataset or held-out exam invalid');
+  const evalRows = all.evalRows.filter(r => r.id.startsWith('eval-game-') && ['eval-game-action-format', 'eval-game-no-fake', 'eval-game-captcha', 'eval-game-math', 'eval-game-mechanics-health', 'eval-game-mechanics-evidence', 'eval-game-mechanics-format', 'eval-game-mechanics-resources'].includes(r.id));
+  if (train.length < 20 || evalRows.length !== 8 || train.some(t => evalRows.some(e => e.instruction === t.instruction))) throw Error('Game dataset or held-out exam invalid');
   await mkdir(out, {recursive:true});
   const files = {};
   for (const [name, rows] of Object.entries({train, eval:evalRows})) {

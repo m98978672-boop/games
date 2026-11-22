@@ -81,7 +81,7 @@ check('экзамен не попадает в обучение', dsEval.length 
 check('игровые уроки попадают в тренировку, но контрольные вопросы остаются отдельными', counts['game-skills'] >= 20 && !train.some(r => evalRows.some(e => e.id === r.id)));
 check('игровой экзамен требует ровно одну допустимую команду', formatOk('LEFT', 'game-action') && !formatOk('LEFT и RIGHT', 'game-action') && !formatOk('пожалуй LEFT', 'game-action'));
 const isolated = await buildGameDataset(home, path.join(tmp, 'game-dataset'));
-check('игровой датасет имеет изолированный контрольный набор', isolated.training >= 20 && isolated.exam === 4);
+check('игровой датасет имеет изолированный контрольный набор', isolated.training >= 20 && isolated.exam === 8);
 check('в датасете нет дублей по вопросу', new Set(train.map((r) => r.instruction)).size === train.length);
 check('командирский повтор: JSON-вопрос и JSON-ответ сохранены', convertCommander([{ input: { a: 1 }, response: '{"action":"none"}' }])[0].response === '{"action":"none"}');
 check('системная подсказка единая и говорит про дом', SYSTEM_PROMPT.includes('qwen-home') && SYSTEM_PROMPT.includes('<think>'));

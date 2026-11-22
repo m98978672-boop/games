@@ -38,21 +38,22 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
     base = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
     base.eval()
+    # PEFT mutates the supplied base model in place. Generate every baseline
+    # answer before attaching the adapter, or the comparison is contaminated.
     results = []
-    models = [('base', base)]
-    adapter_model = None
-    if args.adapter:
-        adapter_model = PeftModel.from_pretrained(base, args.adapter)
-        adapter_model.eval()
-        models.append(('adapter', adapter_model))
     for row in rows:
         item = {'id': row['id'], 'instruction': row['instruction'], 'mustContain': row.get('mustContain', [])}
         if row.get('mustFormat'):
             item['mustFormat'] = row['mustFormat']
-        for name, model in models:
-            item[name] = generate(model, tokenizer, manifest['systemPrompt'], row['instruction'], args.max_new)
-            print(f"{row['id']} [{name}] done", flush=True)
+        item['base'] = generate(base, tokenizer, manifest['systemPrompt'], row['instruction'], args.max_new)
+        print(f"{row['id']} [base] done", flush=True)
         results.append(item)
+    if args.adapter:
+        adapter_model = PeftModel.from_pretrained(base, args.adapter)
+        adapter_model.eval()
+        for row, item in zip(rows, results):
+            item['adapter'] = generate(adapter_model, tokenizer, manifest['systemPrompt'], row['instruction'], args.max_new)
+            print(f"{row['id']} [adapter] done", flush=True)
     args.output.write_text(json.dumps({'results': results}, ensure_ascii=False, indent=2) + '\n')
     print(f'wrote {len(results)} results to {args.output}', flush=True)
 
