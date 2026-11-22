@@ -47,9 +47,27 @@ def detect_captcha(text):
 
 
 def plan_keys(seconds):
-    """План честного ввода: чем дольше экспедиция, тем больше ходов."""
+    """Запасной план, если экран старта ничего не подсказал."""
     rounds = max(1, min(6, int(seconds // 12) + 1))
     return list(KEY_PLAN) * rounds
+
+
+def detect_controls(text):
+    """Подготовка к игре: прочитать экран старта и собрать план под игру.
+
+    Возвращает (keys, interval_ms, mode, hint): mode 'flap' — одна
+    клавиша ритмом (Flappy и подобные), 'cycle' — набор клавиш по
+    кругу, 'click' — игра слушается мышь."""
+    low = (text or '').lower()
+    if 'space' in low or 'пробел' in low:
+        return ['Space'], 430, 'flap', 'экран просит пробел — играю одной клавишей ритмом'
+    if 'arrow' in low or 'стрелк' in low:
+        return ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'], 480, 'cycle', 'экран просит стрелки'
+    if 'wasd' in low:
+        return ['KeyW', 'KeyA', 'KeyS', 'KeyD'], 480, 'cycle', 'экран просит WASD'
+    if 'click' in low or 'клик' in low or 'мыш' in low:
+        return [], 450, 'click', 'экран просит клики мышью'
+    return list(KEY_PLAN), 650, 'cycle', 'подсказок на экране нет — запасной план'
 
 
 class Report:
@@ -179,29 +197,59 @@ def run(url, seconds, out):
                 report.step('игровой канвас', 'не появился — игры на этой странице руками не вышло')
                 return finish(browser, context, video_dir, out, report)
 
-            report.step('игровой канвас', f"найден {int(box['width'])}x{int(box['height'])} — играю клавишами и кликами")
+            report.step('игровой канвас', f"найден {int(box['width'])}x{int(box['height'])}")
             cx, cy = box['x'] + box['width'] / 2, box['y'] + box['height'] / 2
+
+            # Подготовка: сначала читаю экран старта, а не жму всё подряд.
+            hints = (page_text() + ' ' + (page.title() or '')).strip()
+            keys, interval, mode, why = detect_controls(hints)
+            if args.keys:
+                keys = [k.strip() for k in args.keys.split(',') if k.strip()]
+                mode = 'flap' if len(keys) == 1 else 'cycle'
+                why = 'план клавиш задан заданием владельца'
+            if args.interval_ms:
+                interval = max(150, min(2000, args.interval_ms))
+            report.step('подготовка к игре', f'{why}: клавиши {keys or "клик"}, ритм {interval} мс; подсказки экрана: {hints[:140]!r}')
+
             page.mouse.click(cx, cy)
-            shots = 3
-            for key in plan_keys(int(deadline - time.monotonic())):
-                if time.monotonic() > deadline:
-                    break
-                page.keyboard.press(key)
-                report.step('ход', key)
-                page.wait_for_timeout(650)
-                if detect_captcha(page_text()):
-                    report.data['status'] = 'captcha-wall'
-                    report.step('стена капчи во время игры', 'останавливаюсь: капчу не решаю')
-                    shot('09-captcha.png')
-                    return finish(browser, context, video_dir, out, report)
-                if shots <= 5 and int(time.monotonic()) % 9 < 1:
-                    shot(f'0{shots}-play.png')
-                    shots += 1
+            rhythms = [interval, max(200, int(interval * 0.8)), int(interval * 1.3)] if mode == 'flap' else [interval]
+            shot_no = 3
+            attempt = 0
+            while time.monotonic() < deadline and attempt < len(rhythms):
+                attempt += 1
+                pace = rhythms[attempt - 1]
+                span = max(9, int((deadline - time.monotonic()) / max(1, len(rhythms) - attempt + 1)))
+                attempt_end = min(deadline, time.monotonic() + span)
+                report.step(f'попытка {attempt}', f'стартую игру, ритм {pace} мс')
+                if mode == 'click':
+                    page.mouse.click(cx, cy)
+                elif keys:
+                    page.keyboard.press(keys[0])
+                moves = 0
+                while time.monotonic() < attempt_end:
+                    if mode == 'click':
+                        page.mouse.click(cx, cy)
+                    else:
+                        page.keyboard.press(keys[moves % len(keys)])
+                    moves += 1
+                    page.wait_for_timeout(pace)
+                    if detect_captcha(page_text()):
+                        report.data['status'] = 'captcha-wall'
+                        report.step('стена капчи во время игры', 'останавливаюсь: капчу не решаю')
+                        shot('09-captcha.png')
+                        return finish(browser, context, video_dir, out, report)
+                report.step(f'попытка {attempt} сыграна', f'ходов: {moves}, ритм {pace} мс')
+                if shot_no <= 5:
+                    shot(f'0{shot_no}-play.png')
+                    shot_no += 1
+                if attempt < len(rhythms):
+                    report.step('разбор попытки', 'перезапускаю игру и меняю ритм — учусь на этой же игре, а не жму вслепую дальше')
+                    page.wait_for_timeout(900)
             page.mouse.click(cx + box['width'] * 0.2, cy)
             page.wait_for_timeout(800)
             shot('08-final.png')
             report.data['status'] = 'played'
-            report.step('игра состоялась', 'ввод уходил в канвас, видео экспедиции записано')
+            report.step('игра состоялась', f'попыток: {attempt}, ввод уходил в канвас по подготовленному плану, видео записано')
             return finish(browser, context, video_dir, out, report)
         except Exception as err:
             report.data['status'] = 'error'
@@ -239,6 +287,8 @@ def main():
     parser = argparse.ArgumentParser(description='Экспедиция Квени: браузерные руки в интернет')
     parser.add_argument('--url', default='https://yandex.ru/games/app/ukradi-iaitso-580426')
     parser.add_argument('--seconds', type=int, default=60)
+    parser.add_argument('--keys', default='', help='план клавиш из задания, через запятую')
+    parser.add_argument('--interval-ms', type=int, default=0, help='ритм нажатий из задания, мс')
     parser.add_argument('--out', type=Path, required=True)
     args = parser.parse_args()
     return run(args.url, args.seconds, args.out)
