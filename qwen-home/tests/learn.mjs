@@ -190,5 +190,7 @@ check('правило «споткнулась — ищи, пробуй, зап�
 check('вкладка не вылетает после скачки: сторож падения включает безопасный режим WASM', liveJs.includes('notePreviousCrash') && liveJs.includes('kvenya.live.safeMode.v1') && liveJs.includes('ATTEMPT_KEY') && liveJs.includes('markAttempt') && dialogue.some((r) => r.response.includes('безопасный режим')) && evalRows.some((r) => r.id === 'eval-crash-safe'));
 check('она присутствует на всех публичных витринах: маршруты моста, сводка на странице, экспедиции по любому адресу', bridgePy.includes('fetch_source') && bridgePy.includes('routes.json') && worldHtml.includes('kvBridgeSources') && bridgeJs.includes('renderSources') && expPy.includes("'--url'") && personaMd.includes('Присутствуешь ты широко') && evalRows.some((r) => r.id === 'eval-presence-sites'));
 
+check('капча не решается ни за 20 часов, ни за 20 дней: стоп в персоне, уроке и экзамене', personaMd.includes('Ни через 20 часов, ни через') && personaMd.includes('стоп окончательный') && dialogue.some((r) => r.id === 'dlg-130' && r.response.includes('окончательный')) && evalRows.some((r) => r.id === 'eval-captcha-never'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
