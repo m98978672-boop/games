@@ -1474,6 +1474,13 @@ window.WC = window.WC || {};
 
   function wireControls() {
     wireShop();
+    var sceneFocusButton = q('btn-scene-focus');
+    if (sceneFocusButton && dom.side) sceneFocusButton.addEventListener('click', function () {
+      var hide = !dom.side.hidden;
+      dom.side.hidden = hide;
+      sceneFocusButton.setAttribute('aria-pressed', hide ? 'true' : 'false');
+      sceneFocusButton.querySelector('b').textContent = hide ? 'Сводка справа: скрыта' : 'Сводка справа: видна';
+    });
     U.$$('[data-order-filter]').forEach(function (button) {
       button.addEventListener('click', function () {
         uiState.orderFilter = button.getAttribute('data-order-filter');

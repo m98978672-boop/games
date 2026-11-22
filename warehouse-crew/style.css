@@ -5,7 +5,7 @@
    Тема общая (shared/theme.css), здесь только складское.
 
    Автомасштаб: размеры HUD считаются от --ui (его ставит
-   src/layout.js по короткой стороне экрана). На телефоне пульт
+   src/layout.js по размерам окна). На телефоне пульт
    превращается в нижнюю шторку с тремя положениями, приказы
    вынесены в quickbar в один тап, всё остальное — от --ui.
    ============================================================ */
@@ -325,9 +325,10 @@ body[data-sheet="full"] .quickbar {
 
 /* -------------------------------- пульт -------------------------------- */
 
+.panel.tools, .panel.side { top: calc(72px * var(--ui) + var(--safe-t)); }
 .panel.tools {
   width: calc(322px * var(--ui));
-  max-height: calc(var(--app-h) - 156px);
+  max-height: calc(var(--app-h) - 132px * var(--ui) - var(--safe-t) - var(--safe-b));
   display: flex;
   flex-direction: column;
   gap: calc(10px * var(--ui));
@@ -349,7 +350,7 @@ body.ready .panel.tools { animation: panelIn 0.5s var(--ease-out) both; }
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
 }
-.panel.side { width: calc(286px * var(--ui)); max-height: calc(var(--app-h) - 156px); overflow-y: auto; scrollbar-width: thin; }
+.panel.side { width: calc(286px * var(--ui)); max-height: calc(var(--app-h) - 132px * var(--ui) - var(--safe-t) - var(--safe-b)); overflow-y: auto; scrollbar-width: thin; }
 
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .panel-head h3 { margin: 0; font-size: calc(10px * var(--ui)); }
@@ -1071,7 +1072,6 @@ body.ready .panel.side { animation: panelIn 0.55s 0.08s var(--ease-out) both; }
 
 /* ---- высокие экраны, но низкая высота ---- */
 @media (max-height: 700px) and (min-width: 901px) {
-  .panel.tools { max-height: calc(var(--app-h) - 140px); }
   .order-list { max-height: 120px; }
 }
 
@@ -1223,3 +1223,22 @@ body.view-map #scene { filter: saturate(0.92) contrast(1.04); }
 .truck-cargo-jump { justify-self: start; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--panel-2); color: var(--ink); font: inherit; cursor: pointer; }
 .truck-cargo-jump:focus-visible, .order:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 .truck-cargo-jump[hidden] { display: none; }
+
+/* Управление обзором доступно в полноценной раскладке ПК. */
+:root:not([data-device="desktop"]) .desktop-scene-toggle { display: none; }
+.panel.side[hidden] { display: none; }
+
+/* Недавно добавленные карточки тоже масштабируются на больших экранах ПК. */
+:root[data-device="desktop"] .dock-summary,
+:root[data-device="desktop"] .stock-help,
+:root[data-device="desktop"] .contract-help,
+:root[data-device="desktop"] .contract-card p,
+:root[data-device="desktop"] .contract-head span,
+:root[data-device="desktop"] .contract-progress,
+:root[data-device="desktop"] .truck-cargo summary { font-size: calc(12px * var(--ui)); }
+:root[data-device="desktop"] .stock-details summary { font-size: calc(12px * var(--ui)); }
+:root[data-device="desktop"] .stock-item-detail,
+:root[data-device="desktop"] .truck-cargo-list li,
+:root[data-device="desktop"] .truck-cargo-notes { font-size: calc(11px * var(--ui)); }
+:root[data-device="desktop"] .shop-shortcut { min-height: calc(34px * var(--ui)); font-size: calc(12px * var(--ui)); }
+:root[data-device="desktop"] .bottom-bar .chip { font-size: calc(11px * var(--ui)); }

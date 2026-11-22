@@ -1,7 +1,6 @@
 // Автомасштаб и адаптив. Один источник правды о размерах экрана:
 // телефон / планшет / десктоп, ориентация, безопасные отступы, --ui.
-// Все размеры HUD считаются от --ui, поэтому на любом телефоне
-// интерфейс подстраивается сам, без отдельных «мобильных» вёрсток.
+// Размеры HUD считаются от --ui: он адаптируется и на ПК, и на телефоне.
 window.WC = window.WC || {};
 
 WC.layout = (function () {
@@ -32,27 +31,28 @@ WC.layout = (function () {
     return { w: Math.max(240, Math.round(w)), h: Math.max(280, Math.round(h)) };
   }
 
-  function classify(w, h) {
-    var short = Math.min(w, h);
-    if (short <= 520) return 'phone';
-    if (short <= 800) return 'tablet';
-    return 'desktop';
+  // Выбор раскладки совпадает с CSS media queries. Маленькое окно ПК не
+  // становится телефоном только из-за высоты; узкое окно использует шторку.
+  function classify(w, h, coarse) {
+    var compact = w <= 900 || w / h <= 0.75 || (w <= 1180 && coarse) ||
+      (h <= 560 && w > h && w <= 1000);
+    if (!compact) return 'desktop';
+    return Math.min(w, h) <= 520 ? 'phone' : 'tablet';
   }
 
-  // --ui: 1 — «эталонные» 390 px по короткой стороне телефона.
-  // Зажимаем, чтобы на крошечных экранах не мельчало, а на крупных не раздувалось.
+  // Размеры в CSS-пикселях (включая масштаб браузера), не физические пиксели.
+  // На больших мониторах элементы становятся крупнее; на низком/узком окне
+  // не разрастаются. Границы защищают от экстремальных размеров и zoom.
   function scaleFor(device, w, h) {
     var short = Math.min(w, h);
     var long = Math.max(w, h);
     var raw;
     if (device === 'phone') raw = Math.min(short / 390, long / 800);
     else if (device === 'tablet') raw = Math.min(short / 720, long / 1000);
-    else raw = 1;
-    var lo = device === 'phone' ? 0.84 : 0.9;
-    var hi = device === 'phone' ? 1.18 : 1.12;
-    if (raw < lo) raw = lo;
-    if (raw > hi) raw = hi;
-    return Math.round(raw * 1000) / 1000;
+    else raw = 1 + 0.5 * (Math.min(w / 1440, h / 900) - 1);
+    var lo = device === 'phone' ? 0.84 : device === 'tablet' ? 0.9 : 0.85;
+    var hi = device === 'phone' ? 1.18 : device === 'tablet' ? 1.12 : 1.35;
+    return Math.round(Math.max(lo, Math.min(hi, raw)) * 1000) / 1000;
   }
 
   function apply() {
@@ -60,7 +60,9 @@ WC.layout = (function () {
     state.w = vp.w;
     state.h = vp.h;
     state.touch = mq('(pointer: coarse)') || 'ontouchstart' in window || (window.navigator && window.navigator.maxTouchPoints > 0);
-    state.device = classify(vp.w, vp.h);
+    // CSS media queries относятся к layout viewport, а не к visualViewport
+    // (при pinch zoom последний может стать меньше без смены раскладки).
+    state.device = classify(window.innerWidth || vp.w, window.innerHeight || vp.h, mq('(pointer: coarse)'));
     state.orient = vp.w >= vp.h ? 'landscape' : 'portrait';
     state.ui = scaleFor(state.device, vp.w, vp.h);
     state.dpr = Math.min(window.devicePixelRatio || 1, state.device === 'phone' ? 2 : 2.5);
