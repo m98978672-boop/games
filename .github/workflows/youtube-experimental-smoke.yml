@@ -127,7 +127,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install Qwen and image dependencies
-        run: pip install -r youtube-bot/requirements-autopilot.txt
+        run: pip install -r youtube-bot/requirements-autopilot.txt "torchvision>=0.20,<1.0"
       - name: Build isolated browser bridge
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Let real Qwen control the visual test game
