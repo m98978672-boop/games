@@ -52,7 +52,6 @@ jobs:
       VIDEO_FORMAT: ${{ inputs.video_format || 'short' }}
       YOUTUBE_PUBLISH_IMMEDIATELY: ${{ inputs.publish_immediately || 'false' }}
       PUBLISH_EXISTING_VIDEO_ID: ${{ inputs.publish_existing_video_id || '' }}
-      PIPER_MODEL_PATH: ${{ runner.temp }}/ru_RU-irina-medium.onnx
       DATA_DIR: youtube-bot/data
     steps:
       - uses: actions/checkout@v7
@@ -71,6 +70,8 @@ jobs:
             echo "::error::Choose whether the generated review should be public immediately."
             exit 1
           fi
+      - name: Set the Russian Piper model path
+        run: echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
       - name: Make the specified scheduled video public now
         if: ${{ inputs.publish_existing_video_id != '' }}
         run: python youtube-bot/publish_existing_public.py "$PUBLISH_EXISTING_VIDEO_ID"

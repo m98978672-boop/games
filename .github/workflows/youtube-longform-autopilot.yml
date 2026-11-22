@@ -48,7 +48,6 @@ jobs:
     env:
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
       VIDEO_FORMAT: long
-      PIPER_MODEL_PATH: ${{ runner.temp }}/ru_RU-irina-medium.onnx
       DATA_DIR: youtube-bot/data
     steps:
       - uses: actions/checkout@v7
@@ -63,6 +62,8 @@ jobs:
             echo "::error::Choose the owner-approved audience value true or false."
             exit 1
           fi
+      - name: Set the Russian Piper model path
+        run: echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
       - name: Restore the local Qwen model cache
         uses: actions/cache@v6
         with:
