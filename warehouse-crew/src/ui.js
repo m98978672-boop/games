@@ -24,6 +24,7 @@ window.WC = window.WC || {};
     lastUiAt: 0,
     newsIndex: 0,
     orderRows: new Map(),
+    truckRows: new Map(),
     safetyRows: new Map(),
     orderFilter: 'all',
     orderVisibleLimit: 14,
@@ -423,9 +424,17 @@ window.WC = window.WC || {};
   }
 
   function renderTrucks() {
-    if (!dom.truckList) return;
-    var trucks = (game.sim.state.trucks || []).slice(-3).reverse();
-    var active = (game.sim.state.trucks || []).filter(function (t) { return t.status === 'working'; });
+    if (!dom.truckList || !game.sim) return;
+    if (uiState.trucksSim !== game.sim) {
+      dom.truckList.innerHTML = '';
+      uiState.truckRows.clear();
+      uiState.trucksSim = game.sim;
+    }
+    var all = game.sim.state.trucks || [];
+    var active = all.filter(function (t) { return t.status === 'working'; }).reverse();
+    // Работающие доки всегда видны, даже если за их время другие фуры ушли.
+    var recent = all.filter(function (t) { return t.status !== 'working'; }).reverse();
+    var trucks = active.concat(recent.slice(0, Math.max(0, 3 - active.length)));
     if (dom.truckCount) dom.truckCount.textContent = String(active.length);
     if (dom.dockSummary) {
       var freeSlots = game.sim.state.slots.filter(function (s) { return !s.occupied; }).length;
@@ -433,34 +442,52 @@ window.WC = window.WC || {};
       dom.dockSummary.textContent = 'Свободных ячеек: ' + freeSlots + ' · грузов на полках: ' + stock;
     }
     U.$$('[data-call-truck]').forEach(function (button) { button.disabled = game.state.shiftEnded; });
-    var key = trucks.map(function (t) {
-      return t.id + ':' + t.done + '/' + t.total + ':' + t.status;
-    }).join('|');
-    if (uiState.truckKey === key) return;
-    uiState.truckKey = key;
-    dom.truckList.innerHTML = '';
-    if (!trucks.length) {
-      dom.truckList.appendChild(U.el('div', { class: 'truck empty', text: 'Доки свободны — ждём фуру' }));
-      return;
-    }
-    trucks.forEach(function (truck) {
-      var total = truck.total || 1;
-      var progress = Math.round((truck.done / total) * 100);
+    var empty = dom.truckList.querySelector('.truck.empty');
+    if (!trucks.length && !empty) dom.truckList.appendChild(U.el('div', { class: 'truck empty', text: 'Доки свободны — ждём фуру' }));
+    else if (trucks.length && empty) empty.remove();
+    var visible = Object.create(null);
+    trucks.forEach(function (truck, index) {
+      visible[truck.id] = true;
+      var row = uiState.truckRows.get(truck.id);
+      if (!row) {
+        var title = U.el('b'), plate = U.el('span', { class: 't-plate' });
+        var route = U.el('span'), count = U.el('span', { class: 't-num' });
+        var bar = U.el('i'), status = U.el('div', { class: 't-state' });
+        var button = U.el('button', { class: 'btn truck-depart', type: 'button', 'data-depart-truck': truck.id, text: 'Отправить досрочно', onclick: function () { openTruckDeparture(truck.id); } });
+        var node = U.el('div', { class: 'truck' }, [
+          U.el('div', { class: 't-head' }, [title, plate]),
+          U.el('div', { class: 't-line' }, [route, count]),
+          U.el('div', { class: 'track' }, [bar]), status, button,
+        ]);
+        row = { node: node, title: title, plate: plate, route: route, count: count, bar: bar, status: status, button: button };
+        uiState.truckRows.set(truck.id, row);
+      }
+      if (dom.truckList.children[index] !== row.node) {
+        var focus = row.node.contains(document.activeElement) ? document.activeElement : null;
+        dom.truckList.insertBefore(row.node, dom.truckList.children[index] || null);
+        if (focus) focus.focus({ preventScroll: true });
+      }
       var unloading = truck.kind === 'unload';
-      dom.truckList.appendChild(U.el('div', {
-        class: 'truck ' + (unloading ? 'unload' : 'load') + (truck.status === 'working' ? ' live' : ''),
-      }, [
-        U.el('div', { class: 't-head' }, [
-          U.el('b', { text: unloading ? 'Разгрузка' : 'Загрузка' }),
-          U.el('span', { class: 't-plate', text: truck.plate }),
-        ]),
-        U.el('div', { class: 't-line' }, [
-          U.el('span', { text: unloading ? 'из фуры → стеллаж' : 'стеллаж → в фуру' }),
-          U.el('span', { class: 't-num', text: truck.done + '/' + truck.total }),
-        ]),
-        U.el('div', { class: 'track' }, [U.el('i', { style: 'width:' + progress + '%' })]),
-        U.el('div', { class: 't-state', text: truck.status === 'working' ? 'у дока, работают' : 'уехала' }),
-      ]));
+      var progress = truck.status === 'working' ? game.sim.truckProgress(truck) : { done: truck.done, total: truck.total };
+      row.node.classList.toggle('live', truck.status === 'working');
+      row.node.classList.toggle('load', !unloading);
+      row.title.textContent = unloading ? 'Разгрузка' : 'Загрузка';
+      row.plate.textContent = truck.plate;
+      row.route.textContent = unloading ? 'из фуры → стеллаж' : 'стеллаж → в фуру';
+      row.count.textContent = progress.done + '/' + progress.total;
+      row.bar.style.width = Math.round(100 * progress.done / Math.max(1, progress.total)) + '%';
+      var remaining = Math.max(0, Math.ceil(game.sim.truckWindow - (game.sim.state.time - truck.arrivedAt)));
+      row.status.textContent = truck.status === 'working' ? 'У дока · окно: ' + remaining + ' с' : 'Уехала';
+      row.status.classList.toggle('warning', truck.status === 'working' && remaining <= 30);
+      var hideButton = truck.status !== 'working' || game.state.shiftEnded;
+      if (hideButton && document.activeElement === row.button) { var dockHeading = q('dock-heading'); if (dockHeading) dockHeading.focus({ preventScroll: true }); }
+      row.button.hidden = hideButton;
+      row.button.setAttribute('aria-label', 'Отправить досрочно фуру ' + truck.plate);
+    });
+    uiState.truckRows.forEach(function (row, id) {
+      if (visible[id]) return;
+      if (row.node.contains(document.activeElement)) { var heading = q('dock-heading'); if (heading) heading.focus({ preventScroll: true }); }
+      row.node.remove(); uiState.truckRows.delete(id);
     });
   }
 
@@ -800,14 +827,21 @@ window.WC = window.WC || {};
 
   // ------------------------------------------------------------------ модалки
   var reportReturnFocus = null;
+  var truckReturnFocus = null;
   function closeModal() {
     var wasReport = Boolean(dom.modalRoot.querySelector('.shift-report'));
+    var wasTruck = Boolean(dom.modalRoot.querySelector('.truck-confirm'));
     dom.modalRoot.classList.remove('open');
     dom.modalRoot.innerHTML = '';
     uiState.inspectorOpen = false;
     uiState.helpOpen = false;
     if (wasReport && reportReturnFocus && reportReturnFocus.isConnected) reportReturnFocus.focus({ preventScroll: true });
     if (wasReport) reportReturnFocus = null;
+    if (wasTruck) {
+      var target = truckReturnFocus && truckReturnFocus.isConnected && !truckReturnFocus.hidden && !truckReturnFocus.disabled ? truckReturnFocus : q('dock-heading');
+      if (target) target.focus({ preventScroll: true });
+      truckReturnFocus = null;
+    }
   }
 
   function openModal(node) {
@@ -817,6 +851,38 @@ window.WC = window.WC || {};
     node.addEventListener('click', function (event) { event.stopPropagation(); });
     dom.modalRoot.appendChild(U.el('div', { class: 'modal-backdrop', onclick: closeModal }, [node]));
     dom.modalRoot.classList.add('open');
+  }
+
+  function openTruckDeparture(id) {
+    var sim = game.sim, truck = sim && sim.truckById(id);
+    if (!truck || truck.status !== 'working' || game.state.shiftEnded) { U.toast('Эта фура уже уехала', 'warn'); return; }
+    truckReturnFocus = document.activeElement;
+    var progress = sim.truckProgress(truck);
+    var hint = truck.kind === 'load'
+      ? 'Незагруженные коробки останутся на складе: груз в руках и на полу придётся вернуть на полку. Бонус за полный рейс не начисляется.'
+      : 'Уже разгруженные коробки останутся на складе и в очереди; их можно будет разложить. Бонус за полный рейс не начисляется.';
+    var cancel = U.el('button', { class: 'btn', type: 'button', text: 'Не отправлять', onclick: closeModal });
+    var confirm = U.el('button', { class: 'btn truck-confirm-send', type: 'button', text: 'Отправить фуру', onclick: function () {
+      // Игра продолжается под диалогом: фура могла уехать или смена смениться.
+      var result = game.sim === sim ? game.dispatchTruck(id) : { ok: false, reason: 'Смена изменилась' };
+      renderTrucks();
+      closeModal();
+      U.toast(result.ok ? 'Фура отправлена досрочно' : result.reason, result.ok ? 'info' : 'warn', 2400);
+    } });
+    var modal = U.el('div', { class: 'inspector truck-confirm', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'truck-confirm-title', 'aria-describedby': 'truck-confirm-description' }, [
+      U.el('div', { class: 'insp-head' }, [U.el('h2', { id: 'truck-confirm-title', text: 'Отправить фуру ' + truck.plate + '?' })]),
+      U.el('div', { class: 'help-doc' }, [
+        U.el('p', { id: 'truck-confirm-description', text: 'На момент открытия обработано ' + progress.done + ' из ' + progress.total + '. ' + hint }),
+        U.el('p', { text: 'Окно не меняет паузу: если смена идёт, данные могут измениться до подтверждения.' }),
+      ]),
+      U.el('div', { class: 'help-actions' }, [cancel, confirm]),
+    ]);
+    modal.addEventListener('keydown', function (event) {
+      if (event.key !== 'Tab') return;
+      if (event.shiftKey && document.activeElement === cancel) { event.preventDefault(); confirm.focus(); }
+      else if (!event.shiftKey && document.activeElement === confirm) { event.preventDefault(); cancel.focus(); }
+    });
+    openModal(modal); cancel.focus({ preventScroll: true });
   }
 
   function openHelp() {
@@ -837,7 +903,7 @@ window.WC = window.WC || {};
         U.el('p', { html: '<kbd>I</kbd> открывает <b>инспектор тела</b> с 3D-разрезом: видно сердце, лёгкие, ЖКТ, печень, почки, мозг, мышцы и гормоны. Кнопка «Разрез» раздвигает кожу.' }),
         U.el('p', { html: 'Каждый рабочий думает <b>своей обученной нейросетью</b> (18 признаков → 24 → 16 → 6 решений). Она учитывает энергию, боль, стресс, груз и срочность заказа.' }),
         U.el('h3', { text: 'Доки и просроченные грузы' }),
-        U.el('p', { text: 'В пульте можно вызвать фуру на разгрузку (нужны свободные ячейки) или на загрузку (нужен груз на полках). Спустя 35 секунд после срока заказ штрафуется один раз: коробка не исчезает, её нужно вернуть на полку без награды.' }),
+        U.el('p', { text: 'В пульте можно вызвать фуру на разгрузку (нужны свободные ячейки) или на загрузку (нужен груз на полках), следить за окном и отправить её досрочно с подтверждением. Спустя 35 секунд после срока заказ штрафуется один раз: коробка не исчезает, её нужно вернуть на полку без награды.' }),
         U.el('h3', { text: 'Что приносит очки' }),
         U.el('p', { html: 'Коробка доставлена в ячейку вовремя и без повреждений — плюс. Упала и разбилась — минус и травма у рабочего. Просроченный заказ — тоже минус.' }),
         U.el('h3', { text: 'На телефоне' }),
@@ -1563,6 +1629,7 @@ window.WC = window.WC || {};
     renderSafety();
     renderJournal();
     renderOrders();
+    renderTrucks();
     renderShop();
     renderNews(true);
     U.$$('[data-view]').forEach(function (button) {
@@ -1576,6 +1643,7 @@ window.WC = window.WC || {};
         uiState.journalVisibleLimit = 12;
         U.$$('[data-journal-filter]').forEach(function (item) { item.setAttribute('aria-pressed', item.getAttribute('data-journal-filter') === 'all' ? 'true' : 'false'); });
         renderJournal();
+        renderTrucks();
         var subtitle = q('dialogue-subtitle');
         if (subtitle) subtitle.hidden = true;
         clearTimeout(subtitleTimer);
