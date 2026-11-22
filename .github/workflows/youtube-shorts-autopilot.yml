@@ -40,7 +40,7 @@ concurrency:
 jobs:
   create-and-schedule:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
     env:
       # The channel owner explicitly classified the audience as not made for kids.
       # Manual dispatch exposes the same explicit choice; scheduled runs use it too.
@@ -128,7 +128,20 @@ jobs:
       - name: Generate a Steam-sourced Russian game review with local Qwen
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
-        run: python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4" --format "$VIDEO_FORMAT"
+        run: |
+          # Retry rendering once only, before the upload step has started.
+          # Never rerun the publisher automatically: a video might already exist.
+          for attempt in 1 2; do
+            if python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4" --format "$VIDEO_FORMAT"; then
+              exit 0
+            fi
+            if [ "$attempt" = 1 ]; then
+              echo "::warning::Review rendering failed; retrying once before any upload."
+              sleep 20
+            fi
+          done
+          echo "::error::Review rendering failed twice; no upload was started."
+          exit 1
       - name: Start resumable YouTube upload and schedule
         run: python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
       - name: Retain only non-sensitive model selection memory

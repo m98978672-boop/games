@@ -21,9 +21,21 @@ class ReviewWorkflowFormatTests(unittest.TestCase):
         self.assertIn(f'cron: "{LONG_CRON}"', authorized)
         self.assertIn(f'cron: "{SHORT_CRON}"', authorized)
         self.assertIn('review_workflow_format.py', authorized)
-        self.assertIn('timeout-minutes: 120', authorized)
+        self.assertIn('timeout-minutes: 150', authorized)
+        self.assertIn('for attempt in 1 2; do', authorized)
+        self.assertLess(authorized.index('for attempt in 1 2; do'), authorized.index('publish_to_supabase.py'))
         self.assertNotIn('schedule:', legacy)
         self.assertNotIn('publish_to_supabase.py', legacy)
         self.assertIn('youtube-shorts-autopilot.yml', legacy)
+
+    def test_monitor_reports_but_does_not_retry_upload(self):
+        root = Path(__file__).resolve().parents[2]
+        monitor = (root / '.github/workflows/youtube-autopilot-monitor.yml').read_text()
+        self.assertIn('YouTube reviews autopilot (Shorts and long)', monitor)
+        self.assertIn("github.event.workflow_run.conclusion == 'failure'", monitor)
+        self.assertIn('gh issue create', monitor)
+        self.assertNotIn('publish_to_supabase.py', monitor)
+        self.assertNotIn('gh run rerun', monitor)
+        self.assertNotIn('gh workflow run', monitor)
 
 if __name__ == '__main__': unittest.main()
