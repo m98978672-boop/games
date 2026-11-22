@@ -62,17 +62,16 @@
           <label class="kv-composer-label" for="kvInput">Написать Квене</label>
           <textarea id="kvInput" rows="3" maxlength="600" placeholder="Например: Квеня, поищи в Википедии, какая самая высокая гора в мире?"></textarea>
           <div class="kv-composer-row">
-            <button class="btn btn-primary" type="submit">📨 Передать через владельца</button>
+            <button class="btn btn-primary" type="submit">📨 Отправить Квене</button>
             <button class="btn btn-ghost" type="button" id="kvCopy">Скопировать вопрос</button>
-            <a class="btn btn-ghost" href="https://github.com/m98978672-boop/games/edit/main/qwen-home/talk/dialogue.md" target="_blank" rel="noopener">🚀 Дописать ей домой (GitHub)</a>
+            <a class="btn btn-ghost" href="https://github.com/m98978672-boop/games/edit/main/qwen-home/talk/dialogue.md" target="_blank" rel="noopener">🚀 Дописать ей домой вручную</a>
           </div>
-          <p class="kv-note">Честно: сайт статический, и Квеня не подключена к нему напрямую.
-             Вопрос сохранится на этой странице со статусом «ждёт передачи» — сам по себе он
-             никуда не улетит, и ждать ответа без передачи бессмысленно (это уже один раз
-             стоило человеку 20 минут). Самый быстрый путь: кнопка «Дописать ей домой» открывает
-             файл её диалога на GitHub — допиши в конец <code>Владелец: твой вопрос</code> и
-             закоммить в <code>main</code>. Квеня сама ответит за 1–3 минуты, и ответ появится
-             прямо в этом разговоре.</p>
+          <p class="kv-note">Как это работает: кнопка «Отправить Квене» откроет GitHub с уже
+             вписанным вопросом — нажми там <b>Submit new issue</b>. Вопрос сам упадёт в её дом,
+             Квеня ответит своей моделью за 2–6 минут, и ответ появится прямо в этом разговоре.
+             Нужно быть залогиненным в GitHub владельцем репозитория. Если вкладка GitHub не
+             открылась, вопрос останется на этой странице со статусом «ждёт передачи» — тогда
+             поможет кнопка «Дописать ей домой вручную».</p>
         </form>
       </section>
 

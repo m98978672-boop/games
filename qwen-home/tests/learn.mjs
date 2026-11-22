@@ -127,6 +127,8 @@ check('разговор живёт и в main: владелец пишет пр�
 const learnWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'frontline-qwen-learn.yml'), 'utf8');
 check('параметры выросли и записаны: LoRA r=32 по всем слоям, контекст 2048, бюджет ответа 192', trainLearn.includes('LORA_R = 32') && trainLearn.includes('MAX_TOKENS = 2048') && trainLearn.includes('adapter_matches') && st0.adapter?.loraRank === 32 && st0.adapter?.answerTokenBudget === 192);
 check('дневник и ответы не теряются в гонке: коммиты перебазируются на свежий main', learnWorkflow.includes('git rebase') && talkWorkflow.includes('git rebase'));
+const relayWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-relay.yml'), 'utf8');
+check('вопрос с сайта доезжает сам: ретранслятор issue → диалог, только от владельца', relayWorkflow.includes('issues:') && relayWorkflow.includes("author_association == 'OWNER'") && relayWorkflow.includes('qwen-home/talk/dialogue.md') && relayWorkflow.includes('HEAD:main'));
 check('уроки учат искать: поискала, назвала статью, честно сказала, когда пусто', dialogue.filter((r) => /Википеди/.test(r.response)).length >= 4 && dialogue.some((r) => r.response.includes('Поискала')) && dialogue.some((r) => /только Википедия|только статьи Википедии/.test(r.response)));
 check('персона и состояние честно называют границу поиска: только Википедия', personaMd.includes('Википедии') && st0.internetSearch?.engine === 'ru.wikipedia.org');
 
