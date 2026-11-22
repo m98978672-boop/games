@@ -1,0 +1,39 @@
+{
+  "url": "https://ellisonleao.github.io/clumsy-bird/",
+  "startedAt": "2026-11-22 22:15 UTC",
+  "status": "error",
+  "steps": [
+    {
+      "t": 54.1,
+      "action": "вежливый гость: проверка robots.txt",
+      "result": "robots.txt прочитан"
+    },
+    {
+      "t": 59.9,
+      "action": "открыла страницу",
+      "result": "Clumsy Bird"
+    },
+    {
+      "t": 60.0,
+      "action": "кнопка игры",
+      "result": "не нашлась — пробую играть прямо на открытой странице"
+    },
+    {
+      "t": 64.1,
+      "action": "игровой канвас",
+      "result": "найден 1200x800"
+    },
+    {
+      "t": 64.1,
+      "action": "экспедиция прервалась",
+      "result": "AttributeError: 'list' object has no attribute 'split'"
+    }
+  ],
+  "screenshots": [
+    "01-open.png",
+    "02-after-play.png",
+    "09-error.png"
+  ],
+  "hasVideo": true,
+  "textSample": ""
+}
