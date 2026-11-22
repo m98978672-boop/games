@@ -6,17 +6,21 @@ speech. It downloads no images, music, or third-party footage.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 import subprocess
 import wave
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from speech_policy import fit_speech_text
 
-WIDTH, HEIGHT, FPS = 720, 1280, 12
+WIDTH, HEIGHT = 720, 1280
+OUTPUT_WIDTH, OUTPUT_HEIGHT = 1080, 1920
+SOURCE_FPS, OUTPUT_FPS = 25, 50
 PALETTE = ["#68a8ff", "#ff8c69", "#9c7af2", "#53cba5", "#f4bd4f", "#f078a2"]
 FONT_PATHS = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -52,12 +56,28 @@ def color_for(name: str) -> str:
 
 
 def synthesize(text: str, output: Path, voice: str = "ru") -> float:
+    """Synthesize strictly Russian speech, preferring the local Piper neural voice."""
+    import os
+    if not any("\u0400" <= char <= "\u04ff" for char in text):
+        raise ValueError("Narration must contain Russian Cyrillic; refusing accidental English TTS.")
     output.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        ["espeak-ng", "-v", voice, "-s", "158", "-a", "165", "-w", str(output), text],
-        check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-    )
+    configured_model = os.environ.get("PIPER_MODEL_PATH", "").strip()
+    if configured_model:
+        model_path = Path(configured_model)
+        if not model_path.is_file():
+            raise RuntimeError("Configured Russian Piper voice model is missing; refusing broken fallback audio.")
+        subprocess.run(
+            ["piper", "--model", str(model_path), "--output_file", str(output), "--length_scale", "0.98"],
+            input=text, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
+    else:
+        subprocess.run(
+            ["espeak-ng", "-v", voice, "-s", "145", "-a", "165", "-w", str(output), text],
+            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        )
     with wave.open(str(output), "rb") as stream:
+        if stream.getnframes() <= 0 or stream.getframerate() <= 0:
+            raise RuntimeError("TTS produced an empty or invalid WAV file.")
         return stream.getnframes() / stream.getframerate()
 
 
@@ -106,8 +126,8 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
     image = Image.new("RGB", (WIDTH, HEIGHT), "#e8f3ff")
     draw = ImageDraw.Draw(image)
     if script.get("format") == "game-review":
-        # Original typography-first review cards; no fake gameplay footage or
-        # third-party game art is presented as if it were captured gameplay.
+        # Official Steam screenshots are shown as source material, never passed off
+        # as original gameplay capture; their copyable links are in the description.
         for y in range(HEIGHT):
             blend = y / HEIGHT
             color = (int(12 + 8 * blend), int(19 + 5 * blend), int(35 + 13 * blend))
@@ -129,13 +149,30 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
         label_box = draw.textbbox((0, 0), label, font=font(25))
         draw.text(((WIDTH - (label_box[2] - label_box[0])) / 2, 361), label, font=font(25), fill="#ffffff")
         visual = str(scene.get("visual", ""))[:160]
-        lines = wrap_text(draw, visual, font(30), 560)[:5]
         card_y0, card_y1 = 445, 785
         draw.rounded_rectangle((42, card_y0, 678, card_y1), radius=28, fill="#f3f6fb", outline="#cad7eb", width=3)
-        line_y = card_y0 + 50
+        shots = script.get("screenshot_paths") or []
+        shot_path = shots[scene_index % len(shots)] if shots else ""
+        if shot_path:
+            try:
+                with Image.open(shot_path) as source:
+                    screenshot = ImageOps.fit(source.convert("RGB"), (560, 190), method=Image.Resampling.LANCZOS)
+                image.paste(screenshot, (80, card_y0 + 14))
+                draw.rounded_rectangle((80, card_y0 + 14, 640, card_y0 + 204), radius=12, outline="#ffffff", width=3)
+                lines = wrap_text(draw, visual, font(21), 540)[:3]
+                line_y = card_y0 + 228
+                line_gap = 31
+            except (OSError, ValueError):
+                lines = wrap_text(draw, visual, font(27), 560)[:4]
+                line_y = card_y0 + 48
+                line_gap = 42
+        else:
+            lines = wrap_text(draw, visual, font(27), 560)[:4]
+            line_y = card_y0 + 48
+            line_gap = 42
         for line in lines:
-            draw.text((72, line_y), line, font=font(30), fill="#172033")
-            line_y += 48
+            draw.text((72, line_y), line, font=font(21 if shot_path else 27), fill="#172033")
+            line_y += line_gap
         dialogue = str(scene.get("dialogue", ""))[:150]
         caption_lines = wrap_text(draw, dialogue, font(24), 600)[:3]
         caption_y = 850
@@ -143,7 +180,7 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
             draw.text((54, caption_y), line, font=font(24), fill="#ffffff")
             caption_y += 38
         draw.text((44, 1160), "Оценка по описанию проекта · не личное прохождение", font=font(16), fill="#bac8dc")
-        draw.text((44, 1190), "Проверьте подробности в каталоге Games", font=font(16), fill="#bac8dc")
+        draw.text((44, 1190), "Проверяемые ссылки на Steam — в описании видео", font=font(16), fill="#bac8dc")
     else:
         # Warm, simple background with a small decorative horizon.
         for y in range(0, HEIGHT, 4):
@@ -178,7 +215,7 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
                 draw.text((60, caption_y), line, font=caption_font, fill="#37445a")
                 caption_y += 24
     out.parent.mkdir(parents=True, exist_ok=True)
-    image.save(out, optimize=True)
+    image.resize((OUTPUT_WIDTH, OUTPUT_HEIGHT), Image.Resampling.LANCZOS).save(out, optimize=True)
 
 
 def ffmpeg_executable() -> str:
@@ -192,6 +229,28 @@ def ffmpeg_executable() -> str:
         raise RuntimeError("FFmpeg is required; install ffmpeg or the imageio-ffmpeg Python package.") from exc
 
 
+def verify_video_profile(path: Path) -> dict[str, Any]:
+    """Fail closed unless the encoded file is truly 1080p and at least 50 fps."""
+    ffprobe = subprocess.run(["which", "ffprobe"], capture_output=True, text=True).stdout.strip()
+    if not ffprobe:
+        raise RuntimeError("ffprobe is required to verify output resolution and frame rate.")
+    probe = subprocess.run([
+        ffprobe, "-v", "error", "-select_streams", "v:0", "-show_entries",
+        "stream=width,height,avg_frame_rate,r_frame_rate", "-of", "json", str(path),
+    ], check=True, capture_output=True, text=True)
+    payload = json.loads(probe.stdout)
+    streams = payload.get("streams", [])
+    if not streams:
+        raise RuntimeError("Encoded video contains no video stream.")
+    stream = streams[0]
+    rate = Fraction(stream.get("avg_frame_rate") or stream.get("r_frame_rate") or "0/1")
+    if int(stream.get("width", 0)) < 1080 or int(stream.get("height", 0)) < 1080 or rate < 50:
+        raise RuntimeError(
+            f"Encoded profile is below requirement: {stream.get('width')}x{stream.get('height')} at {float(rate):.2f} fps."
+        )
+    return {"fps": float(rate), "width": int(stream["width"]), "height": int(stream["height"])}
+
+
 def render_silent_short(script: dict[str, Any], output: Path, workdir: Path, *, seconds_per_scene: float = 5.0) -> dict[str, Any]:
     """Render a speech-bubble-only test Short; useful when a TTS engine isn't installed."""
     ffmpeg = ffmpeg_executable()
@@ -201,28 +260,34 @@ def render_silent_short(script: dict[str, Any], output: Path, workdir: Path, *, 
     frames_dir.mkdir(parents=True, exist_ok=True)
     frame_count = 0
     for scene_index, scene in enumerate(script["scenes"]):
-        for frame in range(math.ceil(seconds_per_scene * FPS)):
+        for frame in range(math.ceil(seconds_per_scene * SOURCE_FPS)):
             path = frames_dir / f"frame-{frame_count:06d}.png"
             render_frame(script, scene, scene_index, frame, path)
             frame_count += 1
-    duration = frame_count / FPS
+    duration = frame_count / SOURCE_FPS
     if not 15 <= duration <= 60:
         raise ValueError(f"Short duration must be 15–60 seconds; rendered duration is {duration:.1f}s.")
     output.parent.mkdir(parents=True, exist_ok=True)
     pattern = str(frames_dir / "frame-%06d.png")
     process = subprocess.run([
-        ffmpeg, "-y", "-framerate", str(FPS), "-i", pattern,
-        "-vf", "scale=720:1280,fps=24,format=yuv420p", "-c:v", "libx264",
-        "-preset", "veryfast", "-crf", "22", "-an", "-movflags", "+faststart", str(output),
+        ffmpeg, "-y", "-framerate", str(SOURCE_FPS), "-i", pattern,
+        "-vf", f"minterpolate=fps={OUTPUT_FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:flags=lanczos,format=yuv420p",
+        "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-maxrate", "12M", "-bufsize", "24M",
+        "-r", str(OUTPUT_FPS), "-fps_mode", "cfr", "-an", "-movflags", "+faststart", str(output),
     ], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     if process.returncode:
         raise RuntimeError(f"FFmpeg could not encode the test Short: {process.stderr[-1200:]}")
-    return {"path": str(output), "duration_seconds": round(duration, 2), "frames": frame_count, "audio": False}
+    profile = verify_video_profile(output)
+    return {"path": str(output), "duration_seconds": round(duration, 2), "frames": round(duration * OUTPUT_FPS), **profile, "audio": False}
 
 
 def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[str, Any]:
-    if not Path("/usr/bin/espeak-ng").exists() and not subprocess.run(["which", "espeak-ng"], capture_output=True).stdout:
-        raise RuntimeError("eSpeak-NG is required; install it with the espeak-ng system package.")
+    import os
+    if os.environ.get("PIPER_MODEL_PATH"):
+        if not Path(os.environ["PIPER_MODEL_PATH"]).is_file():
+            raise RuntimeError("Configured Russian Piper voice model is missing.")
+    elif not Path("/usr/bin/espeak-ng").exists() and not subprocess.run(["which", "espeak-ng"], capture_output=True).stdout:
+        raise RuntimeError("A Russian TTS engine is required; install Piper voice or eSpeak-NG ru.")
     ffmpeg = ffmpeg_executable()
     frames_dir = workdir / "frames"
     audio_dir = workdir / "audio"
@@ -252,7 +317,7 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
             target.writeframes(spoken)
             target.writeframes(b"\0" * silence_frames * params.sampwidth * params.nchannels)
         wavs.append(audio_path)
-        nframes = max(12, math.ceil(scene_seconds * FPS))
+        nframes = max(SOURCE_FPS, math.ceil(scene_seconds * SOURCE_FPS))
         for frame in range(nframes):
             path = frames_dir / f"frame-{len(all_frames):06d}.png"
             render_frame(script, scene, scene_index, frame, path)
@@ -268,8 +333,112 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
     output.parent.mkdir(parents=True, exist_ok=True)
     pattern = str(frames_dir / "frame-%06d.png")
     subprocess.run([
-        ffmpeg, "-y", "-framerate", str(FPS), "-i", pattern, "-i", str(full_audio),
-        "-vf", "scale=720:1280,fps=24,format=yuv420p", "-c:v", "libx264", "-preset", "veryfast",
-        "-crf", "22", "-c:a", "aac", "-b:a", "128k", "-shortest", "-movflags", "+faststart", str(output),
+        ffmpeg, "-y", "-framerate", str(SOURCE_FPS), "-i", pattern, "-i", str(full_audio),
+        "-vf", f"minterpolate=fps={OUTPUT_FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:flags=lanczos,format=yuv420p",
+        "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-maxrate", "12M", "-bufsize", "24M",
+        "-r", str(OUTPUT_FPS), "-fps_mode", "cfr", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", str(output),
     ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    return {"path": str(output), "duration_seconds": round(total_seconds, 2), "frames": len(all_frames)}
+    profile = verify_video_profile(output)
+    return {"path": str(output), "duration_seconds": round(total_seconds, 2), "frames": round(total_seconds * OUTPUT_FPS), **profile}
+
+
+def _render_long_card(script: dict[str, Any], scene: dict[str, Any], scene_index: int, out: Path) -> None:
+    """Create a full-HD 16:9 chapter card using licensed/source-provided Steam imagery."""
+    from PIL import ImageEnhance, ImageOps
+
+    width, height = 1920, 1080
+    shots = script.get("screenshot_paths") or []
+    image: Image.Image
+    if shots:
+        try:
+            with Image.open(shots[scene_index % len(shots)]) as source:
+                image = ImageOps.fit(source.convert("RGB"), (width, height), method=Image.Resampling.LANCZOS)
+            image = ImageEnhance.Brightness(image).enhance(0.32)
+            image = ImageEnhance.Color(image).enhance(0.72)
+        except (OSError, ValueError):
+            image = Image.new("RGB", (width, height), "#101827")
+    else:
+        image = Image.new("RGB", (width, height), "#101827")
+    draw = ImageDraw.Draw(image, "RGBA")
+    draw.rectangle((0, 0, width, height), fill=(7, 12, 22, 110))
+    draw.rounded_rectangle((88, 56, 650, 118), radius=24, fill=(16, 26, 43, 225), outline=(132, 190, 255, 210), width=2)
+    draw.text((120, 70), "GAMES  ·  ОБЗОР ПО ИСТОЧНИКАМ", font=font(25), fill="#c9f3e6")
+    title = str(script.get("game_title", "Игра"))[:80]
+    title_lines = wrap_text(draw, title, font(54), 1570)[:2]
+    for i, line in enumerate(title_lines):
+        draw.text((100, 155 + i * 70), line, font=font(54), fill="#ffffff", stroke_width=1, stroke_fill="#111827")
+    draw.rounded_rectangle((100, 330, 1820, 868), radius=38, fill=(9, 16, 30, 222), outline=(255, 255, 255, 110), width=2)
+    chapter = f"ГЛАВА {scene_index + 1:02d} / {len(script['scenes']):02d}"
+    draw.text((150, 365), chapter, font=font(26), fill="#86d9ff")
+    visual = str(scene.get("visual", ""))[:110]
+    visual_lines = wrap_text(draw, visual, font(34), 1560)[:2]
+    for i, line in enumerate(visual_lines):
+        draw.text((150, 420 + i * 46), line, font=font(34), fill="#ffe29a")
+    narration = str(scene.get("dialogue", ""))
+    narration_lines = wrap_text(draw, narration, font(30), 1540)[:8]
+    y = 520
+    for line in narration_lines:
+        draw.text((150, y), line, font=font(30), fill="#f4f7fb")
+        y += 42
+    source_domain = "store.steampowered.com · ссылки на все источники в описании"
+    draw.text((105, 965), source_domain, font=font(20), fill="#d4dced")
+    draw.text((1620, 965), f"ОЦЕНКА ИДЕИ {script.get('idea_score', '—')}/10", font=font(20), fill="#ffcf70")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    image.save(out, optimize=True)
+
+
+def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> dict[str, Any]:
+    """Render a landscape 3–10 minute sourced review at 1080p and constant 50 fps."""
+    if len(script.get("scenes", [])) != 10:
+        raise ValueError("A long-form review must contain ten validated chapters.")
+    ffmpeg = ffmpeg_executable()
+    cards = workdir / "cards"
+    audio_dir = workdir / "audio"
+    segments = workdir / "segments"
+    for directory in (cards, audio_dir, segments):
+        directory.mkdir(parents=True, exist_ok=True)
+    segment_paths: list[Path] = []
+    total_seconds = 0.0
+    for scene_index, scene in enumerate(script["scenes"]):
+        wav = audio_dir / f"chapter-{scene_index:02d}.wav"
+        dialogue, seconds = fit_speech_text(
+            str(scene["dialogue"]), lambda candidate: synthesize(candidate, wav),
+            max_seconds=40.0, attempts=6,
+        )
+        scene["dialogue"] = dialogue
+        with wave.open(str(wav), "rb") as source:
+            params = source.getparams()
+            speech = source.readframes(source.getnframes())
+        scene_seconds = max(8.0, seconds + 1.2)
+        pad_frames = max(0, math.ceil(scene_seconds * params.framerate) - len(speech) // params.sampwidth // params.nchannels)
+        with wave.open(str(wav), "wb") as target:
+            target.setparams(params)
+            target.writeframes(speech)
+            target.writeframes(b"\0" * pad_frames * params.sampwidth * params.nchannels)
+        card = cards / f"chapter-{scene_index:02d}.png"
+        _render_long_card(script, scene, scene_index, card)
+        segment = segments / f"chapter-{scene_index:02d}.mp4"
+        subprocess.run([
+            ffmpeg, "-y", "-loop", "1", "-framerate", str(OUTPUT_FPS), "-i", str(card),
+            "-i", str(wav), "-t", f"{scene_seconds:.3f}",
+            "-vf", f"zoompan=z='min(zoom+0.00015,1.035)':d=1:s=1920x1080:fps={OUTPUT_FPS},format=yuv420p",
+            "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-maxrate", "12M", "-bufsize", "24M",
+            "-r", str(OUTPUT_FPS), "-fps_mode", "cfr", "-c:a", "aac", "-b:a", "192k", "-shortest",
+            "-movflags", "+faststart", str(segment),
+        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        segment_paths.append(segment)
+        total_seconds += scene_seconds
+    if not 180 <= total_seconds <= 600:
+        raise ValueError(f"Long review must be 3–10 minutes; generated duration is {total_seconds:.1f}s.")
+    concat_list = workdir / "video-list.txt"
+    concat_list.write_text("".join(f"file '{segment.resolve()}'\n" for segment in segment_paths), encoding="utf-8")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run([
+        ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy",
+        "-movflags", "+faststart", str(output),
+    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    profile = verify_video_profile(output)
+    return {
+        "path": str(output), "duration_seconds": round(total_seconds, 2),
+        "frames": round(total_seconds * OUTPUT_FPS), **profile, "format": "long-form",
+    }

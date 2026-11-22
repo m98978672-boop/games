@@ -22,7 +22,7 @@ SUPABASE_BASE = "https://cuhfnzgytndyntpbnbda.supabase.co/functions/v1/youtube-b
 SUPABASE_HOST = "cuhfnzgytndyntpbnbda.supabase.co"
 YOUTUBE_INIT_URL = "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status"
 YOUTUBE_UPLOAD_HOST = "www.googleapis.com"
-MAX_VIDEO_BYTES = 5 * 1024 * 1024
+MAX_VIDEO_BYTES = 512 * 1024 * 1024
 CHUNK_BYTES = 256 * 1024  # YouTube resumable uploads require 256 KiB multiples, except the last chunk.
 API_ATTEMPTS = 4
 CHUNK_ATTEMPTS = 5
@@ -154,8 +154,13 @@ def _supabase_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
         except urllib.error.HTTPError as exc:
             status, headers, response_body = _read_http_error(exc)
             result = _safe_json(response_body)
-            # The same reserved job can be queried repeatedly without creating a second upload.
-            if status == 409 and result.get("status") in {"scheduled", "processing"}:
+            # A conflict is idempotent only when the publisher identifies the exact
+            # same job. A different job sharing a publish slot must never look successful.
+            expected_job_id = payload.get("job_id")
+            if isinstance(payload.get("metadata"), dict):
+                expected_job_id = payload["metadata"].get("job_id")
+            if (status == 409 and result.get("status") in {"scheduled", "processing"}
+                    and result.get("job_id") == expected_job_id):
                 return result
             if status not in TRANSIENT_HTTP:
                 detail = result.get("error") or result.get("message") or f"HTTP {status}"
@@ -316,6 +321,13 @@ def _upload_resumably(upload_url: str, video: bytes, access_token: str) -> str:
 
 
 def _start_youtube_session(metadata: dict[str, Any], video: bytes, access_token: str) -> str:
+    immediate = metadata.get("publish_immediately") is True
+    video_status: dict[str, Any] = {
+        "privacyStatus": "public" if immediate else "private",
+        "selfDeclaredMadeForKids": metadata["made_for_kids"],
+    }
+    if not immediate:
+        video_status["publishAt"] = metadata["publish_at"]
     youtube_metadata = {
         "snippet": {
             "title": metadata["title"],
@@ -323,11 +335,7 @@ def _start_youtube_session(metadata: dict[str, Any], video: bytes, access_token:
             "tags": metadata["tags"],
             "categoryId": metadata["category_id"],
         },
-        "status": {
-            "privacyStatus": "private",
-            "publishAt": metadata["publish_at"],
-            "selfDeclaredMadeForKids": metadata["made_for_kids"],
-        },
+        "status": video_status,
     }
     body = json.dumps(youtube_metadata, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     last_status = 0
@@ -371,13 +379,15 @@ def publish(result_path: Path) -> dict[str, Any]:
         raise PublishError("Rendered video file is missing.")
     video = video_path.read_bytes()
     if len(video) < 1024 or len(video) > MAX_VIDEO_BYTES:
-        raise PublishError(f"Rendered video must be 1 KiB–5 MiB; got {len(video)} bytes.")
+        raise PublishError(f"Rendered video must be 1 KiB–512 MiB; got {len(video)} bytes.")
     for field in ("job_id", "game_id", "title", "description", "tags", "category_id", "publish_at"):
         if field not in metadata:
             raise PublishError(f"Review metadata is missing {field}.")
 
     prepared = _supabase_post("/autopilot/prepare", {"metadata": metadata})
     if prepared.get("status") == "scheduled" and prepared.get("video_id"):
+        if prepared.get("job_id") != metadata["job_id"]:
+            raise PublishError("Publisher returned a different job for this slot; no second video was uploaded.")
         print(json.dumps({"status": "scheduled", "video_id": prepared["video_id"], "watch_url": prepared.get("watch_url"), "publish_at": metadata["publish_at"], "reused": True}, ensure_ascii=False))
         return prepared
     if prepared.get("status") != "ready_for_upload":

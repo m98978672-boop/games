@@ -1,6 +1,7 @@
-"""Generate one source-grounded Games review Short for the scheduled workflow."""
+"""Generate a source-linked Russian Steam review as a Short or long-form video."""
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -9,9 +10,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from game_reviews import generate_game_review, load_game_catalog, youtube_description
-from renderer import render_short
+from game_reviews import generate_game_review, generate_long_narration, youtube_description
+from renderer import render_long_review, render_short
 from schedule_policy import next_publish_slot
+from steam_catalog import download_screenshots, load_steam_games
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data"))).resolve()
@@ -22,40 +24,76 @@ def recent_games(path: Path) -> list[str]:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
-    return [str(item) for item in value if isinstance(item, str)][-12:] if isinstance(value, list) else []
+    return [str(item) for item in value if isinstance(item, str)][-24:] if isinstance(value, list) else []
 
 
-def run(output: Path) -> dict[str, Any]:
+def remember_game(path: Path, game_id: str) -> list[str]:
+    history = recent_games(path)
+    updated = [item for item in history if item != game_id] + [game_id]
+    updated = updated[-24:]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(".tmp")
+    temp.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
+    temp.replace(path)
+    return updated
+
+
+def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
+    if video_format not in {"short", "long"}:
+        raise ValueError("video_format must be short or long")
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
-    games = load_game_catalog()
+    # Deliberately source only games listed by Steam's live public shelves; never
+    # silently switch back to the repository's own community games.
+    games = load_steam_games(recent_game_ids=previous)
     review = generate_game_review(
         games,
         recent_game_ids=previous,
         seed=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
+    remember_game(history_path, review["game_id"])
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     workdir = output.parent / f"{output.stem}-work"
-    rendered = render_short(review, output, workdir)
-    game = next(item for item in games if item["id"] == review["game_id"])
-    scheduled = next_publish_slot()
+    review["screenshot_paths"] = download_screenshots(
+        list(review.get("screenshots", [])), workdir / "steam-assets", limit=6,
+    )
+    if video_format == "long":
+        review["scenes"] = generate_long_narration(review)
+        review["format"] = "game-review-long"
+        rendered = render_long_review(review, output, workdir)
+        title = f"Полный обзор: {review['game_title']} — разбор по источникам"[:100]
+    else:
+        review["format"] = "game-review"
+        rendered = render_short(review, output, workdir)
+        title = review["title"][:100]
+    scheduled = next_publish_slot(video_format=video_format)
+    source_description = youtube_description(review)
+    description = (
+        source_description
+        + f"\n\nФормат: {'длинный видеообзор' if video_format == 'long' else 'Shorts'}."
+        + "\nОценка основана на открытых данных Steam; личное прохождение не заявляется."
+    )
     metadata = {
         "job_id": str(uuid.uuid4()),
         "game_id": review["game_id"],
-        "title": review["title"],
-        "description": youtube_description(review) + f"\n\nСтраница игры: {game['public_url']}",
-        "tags": ["shorts", "games", "game-review", f"bot-topic:game-review", f"game:{review['game_id']}"],
+        "title": title,
+        "description": description[:5000],
+        "tags": ["games", "steam", "game-review", f"bot-topic:game-review", f"steam-app:{review['game_id']}", video_format],
         "category_id": "20",
         "publish_at": scheduled.isoformat().replace("+00:00", "Z"),
+        "video_format": video_format,
         "idea_score": review["idea_score"],
-        "made_for_kids": None,  # The publisher must get an explicit owner setting.
+        "made_for_kids": None,  # The publisher requires the owner's explicit false/true setting.
+        "publish_immediately": os.environ.get("YOUTUBE_PUBLISH_IMMEDIATELY", "false").strip().lower() == "true",
         "video_path": str(output),
     }
     result = {
         "episode_id": output.stem,
         "game_id": review["game_id"],
         "game_title": review["game_title"],
+        "format": video_format,
+        "sources": review.get("sources", []),
         "review": review,
         "metadata": metadata,
         "video": rendered,
@@ -69,9 +107,12 @@ def run(output: Path) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    output = Path(sys.argv[1]) if len(sys.argv) > 1 else DATA_DIR / "episodes" / "game-review.mp4"
+    parser = argparse.ArgumentParser(description="Generate a locally inferred Steam game review.")
+    parser.add_argument("output", nargs="?", type=Path, default=DATA_DIR / "episodes" / "game-review.mp4")
+    parser.add_argument("--format", choices=("short", "long"), default="short")
+    args = parser.parse_args()
     try:
-        run(output)
+        run(args.output, video_format=args.format)
     except Exception as exc:
         print(f"Game-review cycle stopped safely: {exc}", file=sys.stderr)
         raise SystemExit(1)
