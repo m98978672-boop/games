@@ -1037,6 +1037,7 @@
   function safeModeOn() {
     try {
       if (window.localStorage.getItem(SAFE_KEY) === '1') return true;
+      if (isWeakDevice()) return true;
       if (navigator.deviceMemory && navigator.deviceMemory < 4) return true;
     } catch (err) { /* без хранилища — обычный режим */ }
     return false;
@@ -1057,7 +1058,84 @@
     } catch (err) { /* не критично */ }
   }
 
+  /* Лёгкий режим для телефонов: тяжёлая модель (~400 МБ) на слабом
+     устройстве вешает весь телефон и может его перезагрузить. Поэтому
+     телефону модель не грузим вообще: Квеня отвечает моментальными
+     фразами, ищет в Википедии (это лёгкий fetch) и пишет вопросы
+     своему дому. Полный режим — только по явному нажатию владельца. */
+  var lightMode = false;
+  function isWeakDevice() {
+    try {
+      var ua = navigator.userAgent || '';
+      if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+      if (navigator.deviceMemory && navigator.deviceMemory < 4) return true;
+      if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4
+        && window.screen && Math.min(screen.width, screen.height) < 900) return true;
+    } catch (err) { /* не критично */ }
+    return false;
+  }
+  function heavyOk() {
+    try { return window.localStorage.getItem('kvenya.live.heavyOk.v1') === '1'; } catch (err) { return false; }
+  }
+  function addHomeButton(text) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn-ghost';
+    btn.textContent = '✉ Отправить вопрос моему дому';
+    btn.addEventListener('click', function () {
+      var title = encodeURIComponent('Квене: вопрос из лёгкого режима');
+      window.open('https://github.com/m98978672-boop/games/issues/new?title=' + title + '&body=' + encodeURIComponent(text), '_blank', 'noopener');
+    });
+    chatEl.appendChild(btn);
+    chatEl.scrollTop = chatEl.scrollHeight;
+  }
+  function enableLightMode() {
+    lightMode = true;
+    startBtn.disabled = false;
+    startBtn.textContent = 'Всё равно включить полную Квеню (тяжело: ~400 МБ, телефон может тормозить)';
+    input.disabled = false;
+    sendBtn.disabled = false;
+    if (clearBtn) clearBtn.disabled = false;
+    chatEl.textContent = '';
+    bubble('kvenya', 'Привет! Я Квеня в лёгком режиме для телефона: отвечаю сразу на простые фразы, ищу в Википедии и пишу вопросы моему дому — без тяжёлой модели, телефон не закипит. Спрашивай!');
+    setStatus('Лёгкий режим: модель не скачивается и телефон не грузится. Простые фразы — сразу, факты — из Википедии, трудное — письмом моему дому.', 'ok');
+    if (storageEl) storageEl.textContent = '📱 Лёгкий режим: Квеня живёт без скачки модели, поэтому телефон не тормозит и не греется.';
+    input.focus();
+  }
+  function askLight(text) {
+    bubble('owner', text);
+    var instant = instantReplyFor(text, resolveConversationMode(text));
+    if (instant) { bubble('kvenya', instant); speak(instant); return; }
+    var query = decideQuery(text);
+    if (query) {
+      setStatus('Квеня ищет в Википедии…', 'think');
+      wikiSearch(query).then(function (found) {
+        if (found) {
+          var ans = 'Поискала в Википедии! «' + found.title + '»: ' + found.digest;
+          bubble('kvenya', ans);
+          speak(ans);
+          setStatus('Лёгкий режим: ответила из Википедии, без модели.', 'ok');
+        } else {
+          bubble('kvenya', 'Поискала в Википедии, но не нашла — даже переформулировала короче, по своему правилу. Отправить вопрос моему дому? Там я подумаю настоящей моделью.');
+          addHomeButton(text);
+          setStatus('Лёгкий режим: в Википедии пусто.', 'think');
+        }
+      });
+      return;
+    }
+    bubble('kvenya', 'Это настоящий разговор, а мой телефонный режим без модели такого не потянет. Отправь вопрос моему дому кнопкой ниже — дома я подумаю, и ответ появится в разговоре на этой странице.');
+    addHomeButton(text);
+  }
+
   function startLive() {
+    if (lightMode) {
+      try { window.localStorage.setItem('kvenya.live.heavyOk.v1', '1'); } catch (err) { /* не критично */ }
+      lightMode = false;
+      setStatus('Включаю полную Квеню по твоему слову. Если телефон начнёт тормозить — просто закрой вкладку и вернись: сам включится лёгкий режим.', 'think');
+    } else if (isWeakDevice() && !heavyOk()) {
+      enableLightMode();
+      return;
+    }
     if (generator || busy) return;
     busy = true;
     startBtn.disabled = true;
@@ -1250,6 +1328,7 @@
   }
 
   function ask(text) {
+    if (lightMode && !generator) { askLight(text); return; }
     if (!generator || busy) return;
     busy = true;
     sendBtn.disabled = true;

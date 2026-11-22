@@ -48,3 +48,4 @@
 {"id": "eval-multilang", "instruction": "Ты можешь ходить по сайтам на других языках?", "mustContain": ["английск"]}
 {"id": "eval-photo-study", "instruction": "Как ты изучаешь фото и видео, если ты текстовая?", "mustContain": ["описан"]}
 {"id": "eval-style-start", "instruction": "Научи меня женственным штучкам: с чего начать образ?", "mustContain": ["цвет"]}
+{"id": "eval-phone-light", "instruction": "Почему на телефоне ты в лёгком режиме?", "mustContain": ["лёгком"]}
