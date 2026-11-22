@@ -1182,3 +1182,15 @@ body.view-map #scene { filter: saturate(0.92) contrast(1.04); }
 .truck-depart { min-height: 40px; justify-self: start; }
 .truck-confirm .help-actions .btn { min-height: 44px; }
 .truck-depart[hidden] { display: none; }
+
+/* Складские остатки и выбор товаров для следующей фуры. */
+.stock-details { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.stock-details summary { cursor: pointer; color: var(--ink); font-weight: 700; font-size: 12px; min-height: 36px; }
+.stock-help { color: var(--ink-faint); font-size: 12px; line-height: 1.4; }
+.stock-list { display: grid; gap: 6px; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; }
+.stock-item { display: grid; gap: 5px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel-2); }
+.stock-item.marked { border-color: var(--accent-2); }
+.stock-item-detail { font-size: 11px; color: var(--ink-dim); overflow-wrap: anywhere; }
+.stock-mark { justify-self: start; min-height: 40px; }
+
+.stock-list[hidden] { display: none; }

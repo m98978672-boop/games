@@ -560,6 +560,7 @@
       if (order.damage >= 0.85) {
         order.status = 'ruined';
         delete order.dispatchPriority;
+        delete order.shippingPriority;
         releaseSlot(order);
         state.stats.ruined += 1;
         state.stats.perfectStreak = 0;
@@ -696,7 +697,11 @@
       } else {
         // На загрузку собираем то, что уже лежит на стеллажах
         var stored = state.orders.filter(function (o) { return o.status === 'stored'; });
-        stored.sort(function (a, b) { return (b.priority || 0) - (a.priority || 0); });
+        // Отмеченный диспетчером запас грузим первым; среди одинаковых
+        // отметок сохраняем прежний порядок по ценности заказа.
+        stored.sort(function (a, b) {
+          return Number(b.shippingPriority === true) - Number(a.shippingPriority === true) || (b.priority || 0) - (a.priority || 0);
+        });
         for (var k = 0; k < stored.length && k < count; k++) {
           var so = stored[k];
           var sl = null;
@@ -749,6 +754,7 @@
       var truck = order.truckId ? truckById(order.truckId) : null;
       order.status = 'loaded';
       delete order.dispatchPriority;
+      delete order.shippingPriority;
       order.carrier = null;
       order.loadedAt = state.time;
       syncDest(order);
