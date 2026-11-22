@@ -437,6 +437,7 @@ window.WC = window.WC || {};
   function renderTrucks() {
     if (!dom.truckList || !game.sim) return;
     if (uiState.trucksSim !== game.sim) {
+      if (dom.truckList.contains(document.activeElement)) { var dock = q('dock-heading'); if (dock) dock.focus({ preventScroll: true }); }
       dom.truckList.innerHTML = '';
       uiState.truckRows.clear();
       uiState.trucksSim = game.sim;
@@ -464,13 +465,17 @@ window.WC = window.WC || {};
         var title = U.el('b'), plate = U.el('span', { class: 't-plate' });
         var route = U.el('span'), count = U.el('span', { class: 't-num' });
         var bar = U.el('i'), status = U.el('div', { class: 't-state' });
+        var manifestSummary = U.el('summary');
+        var manifestList = U.el('ul', { class: 'truck-cargo-list' });
+        var manifestNotes = U.el('div', { class: 'truck-cargo-notes' });
+        var manifest = U.el('details', { class: 'truck-cargo', 'data-truck-cargo': truck.id }, [manifestSummary, manifestList, manifestNotes]);
         var button = U.el('button', { class: 'btn truck-depart', type: 'button', 'data-depart-truck': truck.id, text: 'Отправить досрочно', onclick: function () { openTruckDeparture(truck.id); } });
         var node = U.el('div', { class: 'truck' }, [
           U.el('div', { class: 't-head' }, [title, plate]),
           U.el('div', { class: 't-line' }, [route, count]),
-          U.el('div', { class: 'track' }, [bar]), status, button,
+          U.el('div', { class: 'track' }, [bar]), status, manifest, button,
         ]);
-        row = { node: node, title: title, plate: plate, route: route, count: count, bar: bar, status: status, button: button };
+        row = { node: node, title: title, plate: plate, route: route, count: count, bar: bar, status: status, button: button, manifest: manifest, manifestSummary: manifestSummary, manifestList: manifestList, manifestNotes: manifestNotes, cargoRows: new Map() };
         uiState.truckRows.set(truck.id, row);
       }
       if (dom.truckList.children[index] !== row.node) {
@@ -490,6 +495,44 @@ window.WC = window.WC || {};
       var remaining = Math.max(0, Math.ceil(game.sim.truckWindow - (game.sim.state.time - truck.arrivedAt)));
       row.status.textContent = truck.status === 'working' ? 'У дока · окно: ' + remaining + ' с' : 'Уехала';
       row.status.classList.toggle('warning', truck.status === 'working' && remaining <= 30);
+      if (truck.status === 'working') {
+        var cargo = game.sim.ordersOfTruck(truck);
+        row.manifestSummary.textContent = 'Грузы рейса · ' + cargo.length;
+        row.manifestSummary.setAttribute('aria-label', 'Грузы рейса ' + truck.plate + ': ' + cargo.length);
+        var cargoLive = Object.create(null);
+        cargo.forEach(function (order, i) {
+          cargoLive[order.id] = true;
+          var item = row.cargoRows.get(order.id);
+          if (!item) {
+            item = U.el('li', { 'data-truck-order': order.id }, [U.el('b'), U.el('span')]);
+            row.cargoRows.set(order.id, item);
+          }
+          if (row.manifestList.children[i] !== item) row.manifestList.insertBefore(item, row.manifestList.children[i] || null);
+          var stateLabel;
+          if (order.status === 'stored') stateLabel = 'Уложен · ' + order.slotId;
+          else if (order.status === 'loaded') stateLabel = 'Погружен';
+          else if (order.status === 'ruined') stateLabel = 'Испорчен';
+          else if (order.status === 'missed') stateLabel = 'Пропущен';
+          else if (order.status === 'carried') stateLabel = 'Несёт: ' + nameOf(order.carrier);
+          else if (order.status === 'claimed') stateLabel = (order.physics ? 'Ждёт остановки: ' : 'Назначен: ') + nameOf(order.carrier);
+          else if (order.status === 'pending') stateLabel = order.physics ? 'После падения · движется' : 'Ожидает бригаду';
+          else stateLabel = 'Неизвестное состояние';
+          item.firstChild.textContent = order.code + (order.shippingPriority === true ? ' · ★ отгрузка' : '');
+          item.lastChild.textContent = order.goods + ' · ' + order.mass + ' кг · ' + stateLabel;
+        });
+        row.cargoRows.forEach(function (item, id) {
+          if (!cargoLive[id]) { item.remove(); row.cargoRows.delete(id); }
+        });
+        var notes = [];
+        if (truck.completedDetached) notes.push('Уложены и переданы в другой рейс: ' + truck.completedDetached);
+        if (truck.unfulfilled) notes.push('Невыполненные места (возврат): ' + truck.unfulfilled);
+        row.manifestNotes.textContent = notes.join(' · ');
+      }
+      // После отъезда ссылки грузов могут меняться; не выдаём неполную
+      // текущую выборку за историческую ведомость рейса.
+      var hideManifest = truck.status !== 'working';
+      if (hideManifest && row.manifest.contains(document.activeElement)) { var manifestHeading = q('dock-heading'); if (manifestHeading) manifestHeading.focus({ preventScroll: true }); }
+      row.manifest.hidden = hideManifest;
       var hideButton = truck.status !== 'working' || game.state.shiftEnded;
       if (hideButton && document.activeElement === row.button) { var dockHeading = q('dock-heading'); if (dockHeading) dockHeading.focus({ preventScroll: true }); }
       row.button.hidden = hideButton;
