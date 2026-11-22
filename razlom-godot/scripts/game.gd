@@ -169,10 +169,13 @@ func start_web_art_review(mode: String) -> void:
 		guard.alert = true
 		guard.visible_contact = true
 		guard.weapon_raise = 1.0
-		guard.visual.rotation.y = PI
 		guard.think_label.hide()
-		player.position = guard.global_position + Vector3(0, 0.0, 3.6)
+		var view_offset := Vector3(3.0, 0.0, 3.6)
+		player.position = guard.global_position + view_offset
 		player.rotation = Vector3.ZERO
+		# Keep the guard aimed downrange; the oblique art-review camera reveals
+		# the full rifle and elbow placement instead of looking down the muzzle.
+		guard.visual.rotation.y = PI
 		player.camera.global_position = player.global_position + Vector3(0, 1.6, 0)
 		player.camera.look_at(guard.visual.global_position + Vector3(0, 1.16, 0), Vector3.UP)
 		player.camera.fov = 54.0

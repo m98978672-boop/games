@@ -10,13 +10,15 @@ var hand: Node3D
 var hand_knuckles: Array[Node3D] = []
 var fist_mode := false
 var handedness := -1.0
+var pole_bias := Vector3.ZERO
 var last_pole := Vector3.ZERO
-const BONE_LENGTH := 0.52
-const MAX_REACH := 1.01
+var bone_length := 0.52
+var max_reach := 1.01
 
 func _init(host: Node3D, hand_side: float = -1.0) -> void:
 	parent = host
 	handedness = -1.0 if hand_side < 0 else 1.0
+	pole_bias = Vector3(-1.0 if handedness < 0 else 1.0, -0.75, 0.28)
 	var cloth := RazlomArt.material(Color("65756b"), "cloth")
 	for i in range(2):
 		var segment := Node3D.new()
@@ -25,7 +27,6 @@ func _init(host: Node3D, hand_side: float = -1.0) -> void:
 		var visual := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(0.09, 0.09, 1.0)
-		visual.rotation.x = PI * 0.5
 		visual.mesh = mesh
 		visual.material_override = cloth
 		segment.add_child(visual)
@@ -90,10 +91,10 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 	var axis := target - shoulder
 	if axis.length_squared() < 0.000001:
 		axis = Vector3(0, -0.01, -0.01)
-	var distance := clampf(axis.length(), 0.06, MAX_REACH)
+	var distance := clampf(axis.length(), 0.06, max_reach)
 	var direction := axis.normalized()
 	wrist = shoulder + direction * distance
-	var pole := Vector3(-1.0 if side < 0.0 else 1.0, -0.75, 0.28)
+	var pole := pole_bias
 	pole -= direction * pole.dot(direction)
 	if pole.length_squared() < 0.001 and last_pole.length_squared() > 0.001:
 		pole = last_pole - direction * last_pole.dot(direction)
@@ -107,7 +108,7 @@ func solve(shoulder: Vector3, target: Vector3, side: float) -> void:
 		pole = -pole
 	last_pole = pole
 	# Equal finite upper/lower lengths prevent hyperextension and elbow flips.
-	elbow = (shoulder + wrist) * 0.5 + pole * sqrt(maxf(0.0025, BONE_LENGTH * BONE_LENGTH - distance * distance * 0.25))
+	elbow = (shoulder + wrist) * 0.5 + pole * sqrt(maxf(0.0025, bone_length * bone_length - distance * distance * 0.25))
 	place(segments[0], shoulder, elbow)
 	place(segments[1], elbow, wrist)
 	joint.position = elbow

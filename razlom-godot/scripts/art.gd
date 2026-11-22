@@ -198,7 +198,8 @@ static func dress_actor(root: Node3D, medic: bool = false) -> void:
 		box(elbow, Vector3(0, -0.01, -0.002), Vector3(0.145, 0.055, 0.185), fabric).name = "ElbowSeam"
 	for side in [-1, 1]:
 		box(root, Vector3(side * 0.15, 1.1, -0.17), Vector3(0.16, 0.17, 0.065), fabric).reparent(torso, true)
-		box(root, Vector3(side * 0.19, 1.25, -0.17), Vector3(0.035, 0.39, 0.035), material(Color("473f33"), "wood")).reparent(torso, true)
+		# Flat cloth webbing sits on the chest rather than reading as two extra arms.
+		box(root, Vector3(side * 0.19, 1.2, -0.165), Vector3(0.026, 0.32, 0.018), material(Color("4b5548"), "cloth")).reparent(torso, true)
 	box(root, Vector3(0, 0.86, 0), Vector3(0.58, 0.055, 0.33), material(Color("454337"))).reparent(torso, true)
 	box(root, Vector3(0, 1.13, 0.22), Vector3(0.38, 0.45, 0.18), fabric).reparent(torso, true)
 	if medic:
