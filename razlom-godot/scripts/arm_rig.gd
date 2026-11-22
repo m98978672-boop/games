@@ -27,7 +27,6 @@ func _init(host: Node3D, hand_side: float = -1.0) -> void:
 		var visual := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(0.09, 0.09, 1.0)
-		visual.rotation.x = PI * 0.5
 		visual.mesh = mesh
 		visual.material_override = cloth
 		segment.add_child(visual)

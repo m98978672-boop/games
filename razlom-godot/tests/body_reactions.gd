@@ -29,6 +29,9 @@ func run_tests() -> void:
 	var target := Vector3(-0.15, -0.3, -0.7)
 	rig.solve(shoulder, target, -1)
 	check(rig.wrist.is_equal_approx(target), "Scaled rotated parent preserves local wrist target")
+	var limb_mesh := rig.segments[0].get_child(0) as MeshInstance3D
+	var upper_arm_direction := (rig.elbow - shoulder).normalized()
+	check(absf(limb_mesh.global_transform.basis.z.normalized().dot(upper_arm_direction)) > 0.999, "Sleeve mesh length axis follows the solved upper arm")
 	var before := rig.elbow
 	host.rotate_y(2.0)
 	rig.solve(shoulder, target, -1)
