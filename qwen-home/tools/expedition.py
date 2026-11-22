@@ -70,6 +70,199 @@ def detect_controls(text):
     return list(KEY_PLAN), 650, 'cycle', 'подсказок на экране нет — запасной план'
 
 
+EYES_JS = r"""
+() => {
+  const c = document.querySelector('canvas');
+  if (!c) return {ok: false, why: 'no canvas'};
+  let ctx = null;
+  try { ctx = c.getContext('2d'); } catch (e) {}
+  if (!ctx) return {ok: false, why: 'no 2d context'};
+  let img;
+  try { img = ctx.getImageData(0, 0, c.width, c.height); }
+  catch (e) { return {ok: false, why: 'pixels closed'}; }
+  const w = c.width, h = c.height, d = img.data, step = 3;
+  const bird = [], pipe = [], dark = [];
+  let cream = 0, creamAll = 0;
+  const cx0 = w * 0.30, cx1 = w * 0.70, cy0 = h * 0.20, cy1 = h * 0.62;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const i = (y * w + x) * 4;
+      const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+      if (a < 200) continue;
+      // птица: жёлтое тело и оранжевый клюв спрайта clumsy
+      if (r > 200 && g > 150 && b < 120 && r - b > 90) bird.push(x, y);
+      // трубы: зелень спрайта pipe (кусты фона отсечёт разбор по строкам)
+      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205)) pipe.push(x, y);
+      // чёрная окантовка труб и текста
+      if (r < 70 && g < 70 && b < 70) dark.push(x, y);
+      // кремовая панель game over по центру кадра
+      if (x >= cx0 && x <= cx1 && y >= cy0 && y <= cy1) {
+        creamAll++;
+        if (r > 220 && g > 220 && b > 140 && b < 225) cream++;
+      }
+    }
+  }
+  return {ok: true, w: w, h: h, bird: bird, pipe: pipe, dark: dark,
+          cream: creamAll ? cream / creamAll : 0};
+}
+"""
+
+
+def _decode_png(data):
+    """Минимальный PNG-декодер (stdlib): запасные глаза через скриншот канваса."""
+    import struct
+    import zlib
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        return None
+    pos, idat, meta = 8, b'', {}
+    while pos < len(data):
+        ln, typ = struct.unpack('>I4s', data[pos:pos + 8])
+        pos += 8
+        chunk = data[pos:pos + ln]
+        pos += ln + 4
+        if typ == b'IHDR':
+            w, h, depth, ctype = struct.unpack('>IIBB', chunk[:10])
+            meta = {'w': w, 'h': h, 'depth': depth, 'ctype': ctype}
+        elif typ == b'IDAT':
+            idat += chunk
+        elif typ == b'IEND':
+            break
+    if meta.get('depth') != 8:
+        return None
+    ch = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}.get(meta.get('ctype'), 0)
+    if not ch:
+        return None
+    w, h = meta['w'], meta['h']
+    raw = zlib.decompress(idat)
+    stride = w * ch
+    out = bytearray(w * h * ch)
+    prev = bytearray(stride)
+    pp = 0
+    for y in range(h):
+        f = raw[pp]
+        pp += 1
+        line = bytearray(raw[pp:pp + stride])
+        pp += stride
+        if f == 1:
+            for i in range(ch, stride):
+                line[i] = (line[i] + line[i - ch]) & 0xff
+        elif f == 2:
+            for i in range(stride):
+                line[i] = (line[i] + prev[i]) & 0xff
+        elif f == 3:
+            for i in range(stride):
+                a = line[i - ch] if i >= ch else 0
+                line[i] = (line[i] + ((a + prev[i]) >> 1)) & 0xff
+        elif f == 4:
+            for i in range(stride):
+                a = line[i - ch] if i >= ch else 0
+                b = prev[i]
+                cc = prev[i - ch] if i >= ch else 0
+                pa, pb, pc = abs(b - cc), abs(a - cc), abs(a + b - 2 * cc)
+                pr = a if (pa <= pb and pa <= pc) else (b if pb <= pc else cc)
+                line[i] = (line[i] + pr) & 0xff
+        out[y * stride:(y + 1) * stride] = line
+        prev = line
+    return meta['w'], meta['h'], ch, bytes(out)
+
+
+def analyze_eyes(raw):
+    """Разобрать кадр: где птица, где просвет труб, не конец ли игры.
+
+    На входе — кандидаты пикселей из EYES_JS (или из PNG-скриншота).
+    Птица живёт слева (в Clumsy Bird x=60 из 900), поэтому жёлтое
+    ищем только в левой четверти кадра: по центру тот же жёлтый —
+    надписи «get ready» и «game over», это не птица."""
+    if not raw or not raw.get('ok'):
+        return None
+    from collections import defaultdict
+    w, h = raw['w'], raw['h']
+
+    def pairs(flat):
+        return list(zip(flat[0::2], flat[1::2]))
+
+    bird_pts = [(x, y) for x, y in pairs(raw.get('bird', []))
+                if 0.02 * w <= x <= 0.24 * w and y < 0.80 * h]
+    bird = None
+    if len(bird_pts) >= 5:
+        xs = sorted(q[0] for q in bird_pts)
+        ys = sorted(q[1] for q in bird_pts)
+        bird = (xs[len(xs) // 2], ys[len(ys) // 2])
+
+    cols = defaultdict(list)
+    for x, y in pairs(raw.get('pipe', [])):
+        if y < 0.86 * h:
+            cols[x].append(y)
+    dark_cols = defaultdict(int)
+    for x, y in pairs(raw.get('dark', [])):
+        dark_cols[x] += 1
+    # строки, зелёные почти по всей ширине, — это фон (кусты), а не труба
+    row_cols = defaultdict(set)
+    for x, ys in cols.items():
+        for y in ys:
+            row_cols[y].add(x)
+    wide = max(6, int(0.15 * w))
+    bg_rows = {y for y, ss in row_cols.items() if len(ss) >= wide}
+
+    gap = None
+    pipe_x = None
+    if bird:
+        for x in sorted(xx for xx in cols if xx > bird[0] + 0.05 * w):
+            ys = sorted(y for y in cols[x] if y not in bg_rows)
+            top = [y for y in ys if y < 0.30 * h]
+            if len(top) >= 3 and dark_cols.get(x, 0) >= 4:
+                pipe_x = x
+                gap_top = top[-1]
+                below = [y for y in ys if y > gap_top + 0.06 * h]
+                gap_bottom = below[0] if below else min(0.86 * h, gap_top + 0.293 * h)
+                gap = (gap_top, gap_bottom)
+                break
+    return {'w': w, 'h': h, 'bird': bird, 'gap': gap, 'pipe_x': pipe_x,
+            'game_over': raw.get('cream', 0) > 0.35}
+
+
+def eyes_from_png(data):
+    """Запасные глаза: PNG-скриншот канваса -> те же кандидаты пикселей."""
+    decoded = _decode_png(data)
+    if not decoded:
+        return None
+    w, h, ch, px = decoded
+    bird, pipe, dark = [], [], []
+    cream = cream_all = 0
+    step = 4
+    for yy in range(0, h, step):
+        for xx in range(0, w, step):
+            i = (yy * w + xx) * ch
+            r, g, b = px[i], px[i + 1], px[i + 2]
+            a = px[i + 3] if ch == 4 else 255
+            if a < 200:
+                continue
+            if r > 200 and g > 150 and b < 120 and r - b > 90:
+                bird += [xx, yy]
+            if g > 100 and g >= r - 10 and b < 150 and not (r > 205 and g > 205):
+                pipe += [xx, yy]
+            if r < 70 and g < 70 and b < 70:
+                dark += [xx, yy]
+            if w * 0.30 <= xx <= w * 0.70 and h * 0.20 <= yy <= h * 0.62:
+                cream_all += 1
+                if r > 220 and g > 220 and 140 < b < 225:
+                    cream += 1
+    return {'ok': True, 'w': w, 'h': h, 'bird': bird, 'pipe': pipe,
+            'dark': dark, 'cream': (cream / cream_all) if cream_all else 0}
+
+
+def decide_flap(bird_y, target_y, gap_bottom, h, ms_since_flap):
+    """Решение глаз: жать ли клавишу взмаха на этом кадре.
+
+    Птица ниже цели — взмах; птица у нижнего края просвета — взмах
+    срочно; только что взмахнули — не спамим, физике нужно время."""
+    if bird_y is None:
+        return False
+    if gap_bottom is not None and bird_y > gap_bottom - 0.05 * h:
+        return ms_since_flap >= 90
+    return bird_y > target_y + 0.012 * h and ms_since_flap >= 120
+
+
 class Report:
     def __init__(self, url):
         self.data = {
@@ -209,9 +402,128 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 why = 'план клавиш задан заданием владельца'
             if interval_ms:
                 interval = max(150, min(2000, interval_ms))
+            eyes_png_mode = {'on': False}
+
+            def read_eyes():
+                """Кадр глазами: сначала пиксели канваса изнутри страницы,
+                если браузер не даёт — скриншот канваса и свой декодер."""
+                if not eyes_png_mode['on']:
+                    try:
+                        raw = page.evaluate(EYES_JS)
+                        if raw and raw.get('ok'):
+                            return analyze_eyes(raw)
+                        eyes_png_mode['on'] = True
+                        report.step('глаза экспедиции', f"пиксели канваса изнутри не дались ({(raw or {}).get('why', '?')}) — смотрю скриншотами канваса")
+                    except Exception:
+                        eyes_png_mode['on'] = True
+                try:
+                    return analyze_eyes(eyes_from_png(canvas.screenshot()))
+                except Exception:
+                    return None
+
+            def scoreboard():
+                """Табло игры, если страница его показывает (счёт Steps)."""
+                try:
+                    return page.evaluate("() => (window.game && game.data) ? {steps: game.data.steps, start: !!game.data.start} : null")
+                except Exception:
+                    return None
+
             report.step('подготовка к игре', f'{why}: клавиши {keys or "клик"}, ритм {interval} мс; подсказки экрана: {hints[:140]!r}')
 
             page.mouse.click(cx, cy)
+            probe = read_eyes() if mode == 'flap' else None
+            if mode == 'flap' and probe is not None:
+                report.step('глаза экспедиции', 'вижу канвас пикселями: ищу жёлтую птицу слева и зелёные трубы с чёрной окантовкой, клавишу жму по положению птицы в просвете, а не по часам')
+                vision = {'eyes': True, 'attempts': [], 'bestSteps': None}
+                offset = 0
+                attempt = 0
+                shot_no = 3
+                first_start = True
+                while time.monotonic() < deadline - 6 and attempt < 3:
+                    attempt += 1
+                    if first_start:
+                        page.keyboard.press(keys[0] if keys else 'Space')
+                        first_start = False
+                    else:
+                        page.keyboard.press('Space')
+                        page.wait_for_timeout(700)
+                        page.mouse.click(cx, cy)
+                        page.wait_for_timeout(500)
+                        page.keyboard.press(keys[0] if keys else 'Space')
+                    report.step(f'попытка {attempt} (зрение)', f'стартую игру глазами, сдвиг цели {offset:+d} px')
+                    attempt_start = time.monotonic()
+                    attempt_end = min(deadline, attempt_start + max(14, int((deadline - attempt_start) / (3 - attempt + 1))))
+                    flaps = 0
+                    last_flap = 0.0
+                    last_gap = None
+                    last_gap_at = 0.0
+                    last_bird_y = None
+                    frame_h = probe['h']
+                    over_hits = 0
+                    eyes_lost = 0
+                    saw_bird = False
+                    while time.monotonic() < attempt_end:
+                        st = read_eyes()
+                        if st is None:
+                            eyes_lost += 1
+                            if eyes_lost >= 4:
+                                break
+                            page.wait_for_timeout(120)
+                            continue
+                        eyes_lost = 0
+                        now = time.monotonic()
+                        frame_h = st['h']
+                        if st['gap']:
+                            last_gap = st['gap']
+                            last_gap_at = now
+                        if st['bird']:
+                            saw_bird = True
+                            last_bird_y = st['bird'][1]
+                        if st['game_over'] and saw_bird and now - attempt_start > 4:
+                            over_hits += 1
+                            if over_hits >= 2:
+                                break
+                        else:
+                            over_hits = 0
+                        gap = st['gap'] or (last_gap if now - last_gap_at < 1.2 else None)
+                        if st['bird']:
+                            target = ((gap[0] + gap[1]) / 2 if gap else frame_h * 0.42) + offset
+                            ms = int((now - last_flap) * 1000) if last_flap else 9999
+                            if decide_flap(st['bird'][1], target, gap[1] if gap else None, frame_h, ms):
+                                page.keyboard.press(keys[0] if keys else 'Space')
+                                flaps += 1
+                                last_flap = now
+                        page.wait_for_timeout(105)
+                    sb = scoreboard()
+                    steps_now = sb.get('steps') if sb else None
+                    alive = round(time.monotonic() - attempt_start, 1)
+                    vision['attempts'].append({'n': attempt, 'seconds': alive, 'flaps': flaps, 'steps': steps_now, 'offset': offset})
+                    if steps_now is not None:
+                        vision['bestSteps'] = steps_now if vision['bestSteps'] is None else max(vision['bestSteps'], steps_now)
+                    score_txt = f'труб по табло игры: {steps_now}' if steps_now is not None else 'табло не читается — счёт кадрами не подтверждён'
+                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, {score_txt}')
+                    if shot_no <= 5:
+                        shot(f'0{shot_no}-play.png')
+                        shot_no += 1
+                    if time.monotonic() < deadline - 8 and attempt < 3:
+                        if last_bird_y is not None and last_bird_y > 0.78 * frame_h:
+                            offset = max(-40, offset - 14)
+                            cause = 'упала к земле — в следующий раз держу птицу выше'
+                        elif last_gap and last_bird_y is not None and last_bird_y < last_gap[0]:
+                            offset = min(40, offset + 14)
+                            cause = 'была выше просвета — в следующий раз цель ниже'
+                        else:
+                            cause = 'разбираю полёт и повторяю тем же планом глаз'
+                        report.step('разбор попытки', cause)
+                        page.wait_for_timeout(900)
+                report.data['vision'] = vision
+                page.wait_for_timeout(600)
+                shot('08-final.png')
+                report.data['status'] = 'played'
+                best = vision['bestSteps']
+                report.step('игра состоялась', f"попыток глазами: {attempt}, лучший счёт по табло: {best if best is not None else 'не читается'}, видео записано")
+                return finish(browser, context, video_dir, out, report)
+
             rhythms = [interval, max(200, int(interval * 0.8)), int(interval * 1.3)] if mode == 'flap' else [interval]
             shot_no = 3
             attempt = 0

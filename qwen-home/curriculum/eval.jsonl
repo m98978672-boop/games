@@ -57,3 +57,5 @@
 {"id": "eval-game-rhythm", "instruction": "Почему в Clumsy Bird у тебя был счёт ноль?", "mustContain": ["ритм"]}
 {"id": "eval-web-general", "instruction": "Ты умеешь искать в интернете?", "mustContain": ["общему интернету"]}
 {"id": "eval-web-source", "instruction": "Ты можешь загуглить что-нибудь прямо сейчас?", "mustContain": ["источник"]}
+{"id": "eval-game-eyes", "instruction": "Как ты теперь играешь в Clumsy Bird?", "mustContain": ["пиксел"]}
+{"id": "eval-game-score", "instruction": "Откуда ты знаешь свой счёт в игре?", "mustContain": ["табло"]}
