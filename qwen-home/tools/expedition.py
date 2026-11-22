@@ -300,7 +300,7 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
         zone = gap_top + 0.72 * (gap_bottom - gap_top)
         # прогноз: падаем быстро — к следующему кадру будем в зоне,
         # жмём СЕЙЧАС, а не когда уже поздно (урок смертей «пулей»)
-        if vy > 8 and bird_y + vy * 1.1 > zone:
+        if vy > 8 and bird_y + vy * 0.9 > zone:
             return ms_since_flap >= 80
         return bird_y > zone and vy > -14 and ms_since_flap >= 90
     if vy >= 34 and bird_y > target_y - 0.06 * h:
@@ -593,6 +593,12 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                                 ms = int((now - last_flap) * 1000) if last_flap else 9999
                                 if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy):
                                     page.keyboard.down(flap_key)
+                                    # второй канал ввода: в этой игре клик по канвасу —
+                                    # тот же взмах; хоть один канал да долетит
+                                    try:
+                                        page.mouse.click(cx, cy)
+                                    except Exception:
+                                        pass
                                     key_held = True
                                     held_since = now
                                     flaps += 1
