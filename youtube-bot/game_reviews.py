@@ -225,19 +225,17 @@ def _catalog_only_fallback(
     score = min(10, max(1, score))
 
     hook = str(data.get("hook", "")).strip()
-    if not 8 <= len(hook) <= 100:
-        hook = f"Что предлагает игра {game.get('title', 'Games')}?"[:100]
-        if len(hook) < 8:
-            hook = "Коротко об игре Games!"
+    if not 8 <= len(hook) <= 100 or _russian_ratio(hook) < 0.5:
+        hook = "Что интересного предлагает эта игра?"
 
     possible_minus = str(data.get("possible_minus", "")).strip()
     if (
         not 10 <= len(possible_minus) <= 100
-        or re.search(r"https?://|www\\.|@[\\w.-]+", possible_minus, re.I)
+        or re.search(r"https?://|www\.|@[\w.-]+", possible_minus, re.I)
         or not re.search(r"может|возможно|похоже|вероятно", possible_minus, re.I)
+        or _russian_ratio(possible_minus) < 0.5
     ):
-        evidence = features[int(minus_id.rsplit("-f", 1)[1]) - 1][:45]
-        possible_minus = f"Возможно, акцент на «{evidence}» подойдёт не всем."
+        possible_minus = "Возможно, описанная особенность подойдёт не каждому игроку."
 
     repaired = {
         "schema_version": 1,
@@ -329,7 +327,7 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
         },
     ]
     last_error: ValueError | None = None
-    for attempt in range(2):
+    for attempt in range(1):
         raw = generate_with_qwen(messages, max_new_tokens=2400)
         try:
             data = _extract_json(raw)
@@ -368,7 +366,104 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 "role": "user",
                 "content": f"Предыдущий JSON не прошёл проверку: {exc}. Исправь его точно по требованиям, верни только JSON.",
             })
-    raise ValueError(f"Qwen could not produce a validated long-form Russian script: {last_error}")
+    print(f"Qwen could not produce ten chapters at once ({last_error}); trying smaller batches.", file=sys.stderr)
+    return _generate_long_in_batches(review)
+
+
+def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]:
+    """Ask for one bounded chapter at a time and reject malformed model output.
+
+    Shorter completions reduce truncation and count errors from small models. No
+    model text is accepted without the same language, length and source-ID checks.
+    If a chapter still fails twice, stop rather than fabricate material.
+    """
+    evidence = review["evidence"]
+    allowed = {str(key) for key in evidence}
+    clean: list[dict[str, str]] = []
+    for index in range(10):
+        messages = [
+            {"role": "system", "content": (
+                "Напиши одну главу для русскоязычного обзора игры на основе источников. "
+                "Не добавляй фактов, не заявляй личное прохождение. "
+                "Мнение помечай как впечатление от описания. "
+                'Верни один JSON: {"fact_id":"точный ID", "dialogue":"текст", "visual":"короткая подпись"}.'
+            )},
+            {"role": "user", "content": json.dumps({
+                "chapter": index + 1, "total_chapters": 10,
+                "sources": evidence,
+                "task": "Одна глава, dialogue от 220 до 320 символов по-русски; используй точный fact_id из sources. Без ссылок в тексте.",
+            }, ensure_ascii=False)},
+        ]
+        last_error: ValueError | None = None
+        for _ in range(2):
+            raw = generate_with_qwen(messages, max_new_tokens=700)
+            try:
+                scene = _extract_json(raw)
+                fact_id = str(scene.get("fact_id", ""))
+                dialogue = re.sub(r"\s+", " ", str(scene.get("dialogue", ""))).strip()
+                visual = re.sub(r"\s+", " ", str(scene.get("visual", ""))).strip()
+                if fact_id not in allowed or not 220 <= len(dialogue) <= 320:
+                    raise ValueError("long narration fact id or chapter length is invalid")
+                if _russian_ratio(dialogue) < 0.7:
+                    raise ValueError("long narration must be Russian, not English text")
+                if not visual or len(visual) > 120 or re.search(r"https?://|www\.|@[\w.-]+", dialogue, re.I):
+                    raise ValueError("long narration visuals or spoken dialogue are invalid")
+                clean.append({"fact_id": fact_id, "dialogue": dialogue, "visual": visual})
+                break
+            except ValueError as exc:
+                last_error = exc
+                messages.append({"role": "user", "content": f"Ошибка формата: {exc}. Верни один исправленный JSON, dialogue 220–320 символов."})
+        else:
+            print(f"Qwen could not produce chapter {index + 1}: {last_error}; using clearly labelled source-based template.", file=sys.stderr)
+            return _source_template_long_narration(review)
+    if sum(len(scene["dialogue"]) for scene in clean) < 2400:
+        print("Qwen chapter total too short; using clearly labelled source-based template.", file=sys.stderr)
+        return _source_template_long_narration(review)
+    summary = speech_excerpt(str(review["pros"][0]), 50)
+    verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
+    clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
+    clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
+    return clean
+
+
+
+def _source_template_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
+    """A transparent source-only fallback when the model cannot follow its schema.
+
+    This deliberately avoids treating catalog copy as firsthand evidence or
+    invented gameplay; it fails closed when there aren't two narratable facts.
+    It may be less engaging than a model-written review.
+    """
+    usable = []
+    for key, value in review["evidence"].items():
+        text = re.sub(r"\s+", " ", str(value)).strip()
+        if len(text) < 10 or _russian_ratio(text) < 0.5 or re.search(r"https?://|www\.|@[\w.-]+", text, re.I):
+            continue
+        usable.append((str(key), speech_excerpt(text, 90)))
+    if len(usable) < 2:
+        raise ValueError("Template review requires two Russian source facts without links")
+    commentary = [
+        "Начнём с того, что это обзор открытой карточки, а не рассказ о личном прохождении. Описание помогает увидеть заявленную концепцию, но само по себе не подтверждает, насколько она хорошо реализована. За подробностями и актуальной информацией стоит обратиться к первоисточнику.",
+        "Теперь обратим внимание на ещё один пункт карточки. Он помогает составить первое впечатление о проекте и понять, на что авторы обращают внимание в опубликованных материалах. Это не независимый тест: впечатление от реальной игры может отличаться от того, что обещает описание.",
+        "Первую из указанных особенностей полезно рассматривать как ориентир, а не как гарантию качества. Из короткой карточки нельзя уверенно определить сложность, удобство или стабильность игры. Такие выводы требуют отдельной проверки, которой в этом обзоре не было.",
+        "Второй пункт даёт ещё одну точку отсчёта для знакомства с проектом. Кому-то такой акцент может показаться интересным, а кому-то не подойти: предпочтения у игроков разные. По одному опубликованному описанию мы не можем предсказать личные впечатления каждого зрителя.",
+        "Отдельно отмечу пределы этого разбора. Данные взяты из открытой карточки, поэтому мы пересказываем только опубликованные сведения. Здесь нет собственных измерений производительности, проверки управления или заключения о техническом состоянии игры на конкретном устройстве.",
+        "Возможный минус здесь рассматривается как гипотеза, а не как обнаруженный недостаток. Даже интересная на бумаге идея не обязательно понравится каждому. Если особенность важна именно вам, лучше изучить подробности в источнике и проверить актуальные материалы перед выбором.",
+        "При знакомстве с проектом важно различать слова авторов и независимый опыт игроков. Описание позволяет увидеть заявленный замысел, но не заменяет личную игровую сессию. В этом выпуске мы не приписываем себе прохождение и не придумываем впечатления от игры.",
+        "Этот выпуск можно использовать как отправную точку для собственного знакомства. Ознакомьтесь со страницей игры, обратите внимание на доступные сведения и решите, какие особенности важны именно вам. Ссылки на использованные источники приведены в описании ролика.",
+        "Напомню, что информация на странице со временем может измениться. Дата, режимы или другие характеристики стоит сверять непосредственно в источнике на момент просмотра. Мы обсуждаем опубликованную карточку, а не гарантируем, что все её детали останутся прежними.",
+        "Подведём итог: представленные сведения помогают оценить замысел, но этого недостаточно для окончательного вывода об игре. Это осторожная оценка идеи по открытым данным, а не результат тестирования. Личный опыт и актуальную информацию нужно проверять отдельно.",
+    ]
+    scenes = []
+    for index, paragraph in enumerate(commentary):
+        fact_id, fact = usable[index % len(usable)]
+        prefix = "В источнике указано: " + fact.rstrip(". ") + ". "
+        scenes.append({"fact_id": fact_id, "dialogue": prefix + paragraph,
+                       "visual": "ОПИСАНИЕ ИЗ ИСТОЧНИКА", "generation": "source-template"})
+    summary = speech_excerpt(str(review["pros"][0]), 50)
+    scenes[-1]["dialogue"] += f" Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
+    scenes[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
+    return scenes
 
 
 def youtube_description(review: Mapping[str, Any]) -> str:

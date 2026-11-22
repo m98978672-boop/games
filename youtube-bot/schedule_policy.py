@@ -29,6 +29,27 @@ def manual_publish_time(value: str, *, now: datetime | None = None) -> datetime:
     return result
 
 
+
+def resolve_manual_after_render(requested: datetime, *, now: datetime | None = None) -> tuple[datetime, bool]:
+    """Keep a valid selection, or choose a transparent safe delay after slow rendering.
+
+    The caller must validate the manual wall time before rendering. Only this
+    post-render delay is automatic; it never changes future recurring slots.
+    An hour of lead time leaves extra room for the upload reservation.
+    """
+    current = now or datetime.now(timezone.utc)
+    if requested.tzinfo is None or current.tzinfo is None:
+        raise ValueError("requested and now must include a timezone")
+    current = current.astimezone(timezone.utc)
+    requested = requested.astimezone(timezone.utc)
+    if requested >= current + MIN_LEAD:
+        return requested, False
+    earliest = current + timedelta(minutes=60)
+    if earliest.second or earliest.microsecond:
+        earliest = earliest.replace(second=0, microsecond=0) + timedelta(minutes=1)
+    return earliest, True
+
+
 def long_video_is_due(now: datetime | None = None) -> bool:
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:

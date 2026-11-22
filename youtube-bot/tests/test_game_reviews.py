@@ -155,6 +155,59 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn("Лично я не играл", scenes[-1]["dialogue"])
         self.assertEqual(scenes[-1]["visual"], "ИТОГ ПО ИСТОЧНИКАМ · 7/10")
 
+    def test_long_review_retries_chapters_individually_after_count_error(self):
+        games = load_game_catalog()
+        game = games[0]
+        review = validate_review({
+            "schema_version": 1, "game_id": game["id"],
+            "selected_feature_ids": [f"{game['id']}-f1", f"{game['id']}-f2"],
+            "possible_minus": "Возможно, такой акцент подойдёт не каждому игроку.",
+            "minus_feature_id": f"{game['id']}-f1", "idea_score": 7,
+            "hook": "Что интересного в этом игровом проекте?",
+        }, games)
+        text = ("По опубликованному описанию можно составить впечатление о проекте. "
+                "Эта особенность помогает оценить представленную идею, но без личного прохождения "
+                "нельзя судить о качестве исполнения или делать выводы о впечатлениях других игроков. "
+                "Посмотрите первоисточник и решите, подходит ли вам предложенная концепция.")
+        chapter = {"fact_id": f"{game['id']}-f1", "dialogue": text, "visual": "Описание из источника"}
+        with patch("game_reviews.generate_with_qwen", side_effect=[json.dumps({"scenes": []})] + [json.dumps(chapter)] * 10) as generate:
+            scenes = generate_long_narration(review)
+        self.assertEqual(generate.call_count, 11)
+        self.assertEqual(len(scenes), 10)
+        self.assertIn("Итог по источникам:", scenes[-1]["dialogue"])
+
+    def test_long_review_rejects_invalid_individual_chapters(self):
+        review = {"evidence": {"a": "Один факт", "b": "Другой факт"}, "game_title": "Test", "idea_score": 7,
+                  "hook": "Что предлагает игра?", "pros": ["Один факт", "Другой факт"], "possible_minus": "Возможно, не для всех."}
+        with patch("game_reviews.generate_with_qwen", return_value=json.dumps({"scenes": []})):
+            with self.assertRaisesRegex(ValueError, "requires two Russian source facts"):
+                generate_long_narration(review)
+
+    def test_long_fallback_uses_only_bounded_source_facts_and_identifies_template(self):
+        review = {"evidence": {"a": "В описании упомянуты логические задачи.", "b": "В карточке указан одиночный режим."},
+                  "game_title": "Игра", "idea_score": 7, "hook": "Что предлагает игра?",
+                  "pros": ["В описании упомянуты логические задачи.", "В карточке указан одиночный режим."],
+                  "possible_minus": "Возможно, это не для всех."}
+        with patch("game_reviews.generate_with_qwen", return_value=json.dumps({"scenes": []})):
+            scenes = generate_long_narration(review)
+        self.assertEqual(len(scenes), 10)
+        self.assertGreaterEqual(sum(len(scene["dialogue"]) for scene in scenes), 3000)
+        self.assertTrue(all(scene["generation"] == "source-template" for scene in scenes))
+        self.assertTrue(all(scene["fact_id"] in review["evidence"] for scene in scenes))
+        self.assertIn("Лично я не играл", scenes[-1]["dialogue"])
+
+    def test_plan_fallback_repairs_non_russian_and_contact_fields(self):
+        games = load_game_catalog()
+        game = games[0]
+        invalid = {"schema_version": 1, "game_id": game["id"],
+                   "selected_feature_ids": [f"{game['id']}-f1", f"{game['id']}-f2"],
+                   "minus_feature_id": f"{game['id']}-f1", "idea_score": 5,
+                   "hook": "English-only introduction", "possible_minus": "Возможно, visit www.example.com"}
+        with patch("game_reviews.generate_with_qwen", return_value=json.dumps(invalid)):
+            review = generate_game_review(games)
+        self.assertNotIn("www.", review["possible_minus"])
+        self.assertIn("игра", review["hook"])
+
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()
         game = games[0]
@@ -216,6 +269,18 @@ class ScheduleTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 manual_publish_time(value, now=now)
         self.assertEqual(manual_publish_time("2026-11-22 15:45", now=now).isoformat(), "2026-11-22T12:45:00+00:00")
+
+    def test_post_render_manual_slot_keeps_or_delays_once(self):
+        from datetime import datetime, timezone
+        from schedule_policy import resolve_manual_after_render
+        now = datetime(2026, 11, 22, 12, 10, 10, tzinfo=timezone.utc)
+        chosen = datetime(2026, 11, 22, 13, 0, tzinfo=timezone.utc)
+        self.assertEqual(resolve_manual_after_render(chosen, now=now), (chosen, False))
+        delayed, changed = resolve_manual_after_render(chosen, now=datetime(2026, 11, 22, 12, 30, 10, tzinfo=timezone.utc))
+        self.assertTrue(changed)
+        self.assertEqual(delayed.isoformat(), "2026-11-22T13:31:00+00:00")
+        with self.assertRaises(ValueError):
+            resolve_manual_after_render(datetime(2026, 11, 22, 13), now=now)
 
     def test_naive_datetime_is_rejected(self):
         from datetime import datetime

@@ -43,7 +43,10 @@ jobs:
             youtube-bot/tests/test_youtube_api.py \
             youtube-bot/tests/test_playthrough_feedback.py \
             youtube-bot/tests/test_comment_assistant.py \
-            youtube-bot/tests/test_gameplay_discovery.py
+            youtube-bot/tests/test_gameplay_discovery.py \
+            youtube-bot/tests/test_gameplay_2048.py
+          node youtube-bot/gameplay/test-solver2048.cjs
+          node --check youtube-bot/gameplay/play2048.cjs
       - name: Check that the RatCore browser bundle is up to date (engine is wired into every section)
         run: |
           node ratcore/tools/build-browser-bundle.mjs --check

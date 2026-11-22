@@ -1,0 +1,16 @@
+"use strict";
+const assert = require("node:assert/strict");
+const {collapse, move, choose} = require("./solver2048.cjs");
+assert.deepEqual(collapse([2, 2, 2, 2]), [4, 4, 0, 0]);
+assert.deepEqual(collapse([0, 2, 0, 2]), [4, 0, 0, 0]);
+const board = [[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+assert.deepEqual(move(board, "ArrowLeft")[0], [4, 0, 0, 0]);
+assert.deepEqual(move(board, "ArrowRight")[0], [0, 0, 0, 4]);
+assert.equal(move(board, "ArrowDown")[3][0], 2);
+assert.equal(move(board, "ArrowUp")[0][1], 2);
+assert.ok(["ArrowLeft", "ArrowRight", "ArrowDown"].includes(choose(board)));
+const stuck = [[2,4,2,4],[4,2,4,2],[2,4,2,4],[4,2,4,2]];
+assert.equal(choose(stuck), null);
+assert.throws(() => move([[1]], "ArrowLeft"), /invalid board/);
+assert.throws(() => move(board, "eval"), /invalid direction/);
+console.log("2048 solver tests passed");
