@@ -342,3 +342,14 @@ body.is-embed .kv-shell { padding-top: 12px; }
   .kv-studio-grid { grid-template-columns: 1fr; }
   .kv-stage-view { height: 380px; }
 }
+
+/* ---------- живая Квеня в браузере ---------- */
+.kv-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.kv-live { border-color: rgba(164, 208, 7, 0.55); background: linear-gradient(165deg, #1d2b16, var(--panel) 60%); }
+.kv-live-status { font-weight: 700; color: #ffe1a8; font-size: 14px; margin: 6px 0 8px; }
+.kv-live-status.is-ok { color: var(--accent-2); }
+.kv-live-status.is-think { color: var(--violet); }
+.kv-live-status.is-err { color: #e88a8a; }
+.kv-live-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin-bottom: 10px; }
+.kv-live-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent-2), var(--violet)); transition: width 0.4s ease; }
+.kv-live-chat { max-height: 430px; }
