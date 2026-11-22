@@ -2,6 +2,7 @@ __pycache__/
 .venv/
 .env
 client_secret.json
+comment_client_secret.json
 data/
 *.log
 .preview-password

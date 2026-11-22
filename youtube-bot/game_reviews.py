@@ -157,7 +157,7 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
         {"speaker": "Games AI", "dialogue": f"По Steam, сильная сторона: «{speech_excerpt(pros[0], 76)}».", "visual": pros[0], "emotion": "happy", "label": "ФАКТ ИЗ STEAM"},
         {"speaker": "Games AI", "dialogue": f"Ещё один факт Steam: «{speech_excerpt(pros[1], 76)}».", "visual": pros[1], "emotion": "happy", "label": "ЕЩЁ ФАКТ STEAM"},
         {"speaker": "Games AI", "dialogue": f"Возможный минус: {speech_excerpt(possible_minus, 76)}.", "visual": f"Основание из Steam: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
-        {"speaker": "Games AI", "dialogue": f"Оценка идеи по источникам — {score} из 10. Это не личное прохождение.", "visual": "Оценка по источникам, не личное прохождение", "emotion": "calm", "label": "ВЕРДИКТ"},
+        {"speaker": "Games AI", "dialogue": f"Итог по Steam: {speech_excerpt(pros[0], 40)}. Оценка идеи — {score} из 10. Без личной игры.", "visual": f"ИТОГ ПО ИСТОЧНИКАМ · {score}/10 · НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", "emotion": "calm", "label": "ИТОГ"},
     ]
     if any(_russian_ratio(scene["dialogue"]) < 0.45 for scene in scenes):
         raise ValueError("A fact cannot be safely narrated in Russian; refusing English or mixed-language audio.")
@@ -355,6 +355,12 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 clean.append({"fact_id": fact_id, "dialogue": dialogue, "visual": visual})
             if sum(len(scene["dialogue"]) for scene in clean) < 2400:
                 raise ValueError("long narration is too short to count as a full video")
+            # Put a deterministic, source-limited verdict at the end even when
+            # the model's final chapter forgot one. Keep it short enough for TTS.
+            summary = speech_excerpt(str(review["pros"][0]), 50)
+            verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
+            clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
+            clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
             return clean
         except ValueError as exc:
             last_error = exc

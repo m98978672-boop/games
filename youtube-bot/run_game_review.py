@@ -12,7 +12,7 @@ from typing import Any
 
 from game_reviews import generate_game_review, generate_long_narration, youtube_description
 from renderer import render_long_review, render_short
-from schedule_policy import next_publish_slot
+from schedule_policy import manual_publish_time, next_publish_slot
 from steam_catalog import download_screenshots, load_steam_games
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -41,6 +41,9 @@ def remember_game(path: Path, game_id: str) -> list[str]:
 def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     if video_format not in {"short", "long"}:
         raise ValueError("video_format must be short or long")
+    manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
+    if manual_time:
+        manual_publish_time(manual_time)  # Fail before model downloads/rendering if invalid.
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
     # Deliberately source only games listed by Steam's live public shelves; never
@@ -67,7 +70,9 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
         title = review["title"][:100]
-    scheduled = next_publish_slot(video_format=video_format)
+    # Revalidate after rendering: never silently substitute another slot if the
+    # requested time is now too close for a safe scheduled upload.
+    scheduled = manual_publish_time(manual_time) if manual_time else next_publish_slot(video_format=video_format)
     source_description = youtube_description(review)
     description = (
         source_description

@@ -53,6 +53,9 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn("не личное прохождение", youtube_description(review))
         self.assertIn("https://m98978672-boop.github.io/games/", youtube_description(review))
         self.assertEqual(len(review["scenes"]), 5)
+        self.assertEqual(review["scenes"][-1]["label"], "ИТОГ")
+        self.assertIn("8 из 10", review["scenes"][-1]["dialogue"])
+        self.assertIn("Без личной игры", review["scenes"][-1]["dialogue"])
 
     def test_long_catalog_text_is_bounded_for_narration_without_changing_evidence(self):
         game = dict(load_game_catalog()[0])
@@ -147,6 +150,10 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(len(scenes), 10)
         self.assertGreaterEqual(sum(len(scene["dialogue"]) for scene in scenes), 2400)
         self.assertTrue(all("fact_id" in scene for scene in scenes))
+        self.assertIn("Итог по источникам:", scenes[-1]["dialogue"])
+        self.assertIn("7 из 10", scenes[-1]["dialogue"])
+        self.assertIn("Лично я не играл", scenes[-1]["dialogue"])
+        self.assertEqual(scenes[-1]["visual"], "ИТОГ ПО ИСТОЧНИКАМ · 7/10")
 
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()
@@ -168,30 +175,47 @@ class GameCatalogTests(unittest.TestCase):
 
 
 class ScheduleTests(unittest.TestCase):
-    def test_shorts_have_two_daily_amsterdam_slots(self):
+    def test_shorts_have_two_daily_moscow_slots_in_winter_and_summer(self):
         from datetime import datetime, timezone
-        morning = next_publish_slot(datetime(2026, 11, 23, 8, 0, tzinfo=timezone.utc))
-        evening = next_publish_slot(datetime(2026, 11, 23, 16, 0, tzinfo=timezone.utc))
-        self.assertEqual(morning.isoformat(), "2026-11-23T09:00:00+00:00")  # 10:00 CET
-        self.assertEqual(evening.isoformat(), "2026-11-23T17:00:00+00:00")  # 18:00 CET
+        for month in (1, 7, 11):
+            morning = next_publish_slot(datetime(2026, month, 23, 1, 0, tzinfo=timezone.utc))
+            noon = next_publish_slot(datetime(2026, month, 23, 5, 0, tzinfo=timezone.utc))
+            self.assertEqual(morning.isoformat(), f"2026-{month:02d}-23T05:00:00+00:00")
+            self.assertEqual(noon.isoformat(), f"2026-{month:02d}-23T09:00:00+00:00")
 
-    def test_long_video_schedule_is_exactly_every_other_local_date(self):
+    def test_long_video_schedule_is_daily_at_06_moscow(self):
         from datetime import datetime, timezone
         from schedule_policy import long_video_is_due
-        due_day = datetime(2026, 11, 24, 8, 0, tzinfo=timezone.utc)
-        off_day = datetime(2026, 11, 25, 8, 0, tzinfo=timezone.utc)
+        # 22:00 UTC on the preceding day is 01:00 on the Moscow due date.
+        due_day = datetime(2026, 11, 23, 22, 0, tzinfo=timezone.utc)
+        off_day = datetime(2026, 11, 24, 22, 0, tzinfo=timezone.utc)
         self.assertTrue(long_video_is_due(due_day))
-        self.assertFalse(long_video_is_due(off_day))
-        self.assertEqual(
-            next_publish_slot(off_day, video_format="long").isoformat(),
-            "2026-11-26T13:00:00+00:00",
-        )
+        self.assertTrue(long_video_is_due(off_day))
+        self.assertEqual(next_publish_slot(due_day, video_format="long").isoformat(), "2026-11-24T03:00:00+00:00")
+        self.assertEqual(next_publish_slot(off_day, video_format="long").isoformat(), "2026-11-25T03:00:00+00:00")
 
-    def test_schedule_moves_forward_when_today_slot_is_too_close(self):
+    def test_schedule_moves_forward_when_slot_is_too_close(self):
         from datetime import datetime, timezone
-        now = datetime(2026, 11, 24, 17, 30, tzinfo=timezone.utc)  # 18:30 CET; today's slots passed.
-        result = next_publish_slot(now)
-        self.assertEqual(result.isoformat(), "2026-11-25T09:00:00+00:00")
+        now = datetime(2026, 11, 24, 4, 30, tzinfo=timezone.utc)
+        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-24T09:00:00+00:00")
+        now = datetime(2026, 11, 24, 9, 0, tzinfo=timezone.utc)
+        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-25T05:00:00+00:00")
+
+    def test_manual_moscow_time_is_converted_and_does_not_change_schedule(self):
+        from datetime import datetime, timezone
+        from schedule_policy import manual_publish_time
+        now = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
+        self.assertEqual(manual_publish_time("2026-11-22 18:30", now=now).isoformat(), "2026-11-22T15:30:00+00:00")
+        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-23T05:00:00+00:00")
+
+    def test_manual_time_rejects_past_near_invalid_and_timezone_suffix(self):
+        from datetime import datetime, timezone
+        from schedule_policy import manual_publish_time
+        now = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
+        for value in ("2026-11-22 15:44", "2026-11-21 18:00", "2026-02-30 18:00", "2026-11-22T18:00", "2026-11-22 18:00+03:00"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                manual_publish_time(value, now=now)
+        self.assertEqual(manual_publish_time("2026-11-22 15:45", now=now).isoformat(), "2026-11-22T12:45:00+00:00")
 
     def test_naive_datetime_is_rejected(self):
         from datetime import datetime

@@ -40,6 +40,41 @@ class RunReviewTests(unittest.TestCase):
             render.assert_called_once()
             self.assertEqual(json.loads((root / "recent-games.json").read_text()), ["12345"])
 
+    def test_manual_choice_is_validated_twice_and_passed_to_metadata(self):
+        game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
+        review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7,
+                  "sources": [], "screenshots": [], "pros": game["features"], "possible_minus": "Возможно, не всем подойдёт."}
+        chosen = datetime(2026, 11, 25, 7, 0, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict("os.environ", {"MANUAL_PUBLISH_AT": "2026-11-25 10:00"}), \
+             patch.object(run_game_review, "DATA_DIR", Path(temp)), \
+             patch.object(run_game_review, "manual_publish_time", return_value=chosen) as validate, \
+             patch.object(run_game_review, "next_publish_slot") as default_slot, \
+             patch.object(run_game_review, "load_steam_games", return_value=[game]), \
+             patch.object(run_game_review, "generate_game_review", return_value=review), \
+             patch.object(run_game_review, "download_screenshots", return_value=[]), \
+             patch.object(run_game_review, "render_short", return_value={}), \
+             patch.object(run_game_review, "youtube_description", return_value="Описание"):
+            result = run_game_review.run(Path(temp) / "short.mp4")
+        self.assertEqual(validate.call_count, 2)
+        default_slot.assert_not_called()
+        self.assertEqual(result["metadata"]["publish_at"], "2026-11-25T07:00:00Z")
+
+    def test_expired_manual_time_after_render_stops_before_result_written(self):
+        game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
+        review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7, "screenshots": []}
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict("os.environ", {"MANUAL_PUBLISH_AT": "2026-11-25 10:00"}), \
+             patch.object(run_game_review, "DATA_DIR", Path(temp)), \
+             patch.object(run_game_review, "manual_publish_time", side_effect=[datetime(2026, 11, 25, 7, tzinfo=timezone.utc), ValueError("too close")]), \
+             patch.object(run_game_review, "load_steam_games", return_value=[game]), \
+             patch.object(run_game_review, "generate_game_review", return_value=review), \
+             patch.object(run_game_review, "download_screenshots", return_value=[]), \
+             patch.object(run_game_review, "render_short", return_value={}):
+            with self.assertRaisesRegex(ValueError, "too close"):
+                run_game_review.run(Path(temp) / "short.mp4")
+            self.assertFalse((Path(temp) / "short.result.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -40,7 +40,10 @@ jobs:
             youtube-bot/tests/test_publish_to_supabase.py \
             youtube-bot/tests/test_speech_policy.py \
             youtube-bot/tests/test_autopilot.py \
-            youtube-bot/tests/test_youtube_api.py
+            youtube-bot/tests/test_youtube_api.py \
+            youtube-bot/tests/test_playthrough_feedback.py \
+            youtube-bot/tests/test_comment_assistant.py \
+            youtube-bot/tests/test_gameplay_discovery.py
       - name: Check that the RatCore browser bundle is up to date (engine is wired into every section)
         run: |
           node ratcore/tools/build-browser-bundle.mjs --check
