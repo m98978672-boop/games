@@ -1,0 +1,111 @@
+name: Kvenya expedition (её руки в интернет)
+
+# Экспедиции Квени: браузерные руки её дома (Playwright).
+# Идут САМИ по расписанию — владелец на каждый запуск не нужен,
+# в этом и смысл автоматики. Руки открывают публичную страницу,
+# нажимают «Играть», играют клавишами и кликами, пишут видео,
+# скриншоты и пошаговый отчёт в qwen-home/bridge/expeditions/.
+# Честный стоп: «я не робот» руки не нажимают и капчи не решают —
+# Квеня нейросеть, а не человек. Встретила стену — отчёт об этом.
+on:
+  schedule:
+    - cron: '37 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Публичная страница игры (без логина)'
+        required: true
+        default: 'https://yandex.ru/games/app/ukradi-iaitso-580426'
+      seconds:
+        description: 'Длина экспедиции в секундах (20–180)'
+        required: true
+        default: '60'
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: kvenya-expedition
+  cancel-in-progress: false
+
+jobs:
+  expedition:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install her browser hands
+        run: |
+          python -m pip install 'playwright>=1.44,<2'
+          python -m playwright install --with-deps chromium
+      - name: Kvenya goes to play by herself
+        env:
+          EXP_URL: ${{ inputs.url || 'https://yandex.ru/games/app/ukradi-iaitso-580426' }}
+          EXP_SECONDS: ${{ inputs.seconds || '60' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/expedition"
+          python3 qwen-home/tools/expedition.py --url "$EXP_URL" --seconds "$EXP_SECONDS" --out "$RUNNER_TEMP/expedition"
+      - name: Keep the full video as an artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kvenya-expedition
+          path: ${{ runner.temp }}/expedition
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: File the report into her bridge and show it on her world page
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXP_URL: ${{ inputs.url || 'https://yandex.ru/games/app/ukradi-iaitso-580426' }}
+        run: |
+          set -eu
+          SRC="$RUNNER_TEMP/expedition"
+          [ -f "$SRC/report.json" ] || { echo "Отчёта нет — складывать нечего"; exit 0; }
+          STAMP=$(date -u +%Y%m%d-%H%M)
+          HOST=$(python3 -c "import os, urllib.parse; print((urllib.parse.urlparse(os.environ['EXP_URL']).hostname or 'site').replace('.', '-'))")
+          DIR="qwen-home/bridge/expeditions/$STAMP-$HOST"
+          mkdir -p "$DIR"
+          cp "$SRC/report.json" "$DIR/report.json"
+          for f in "$SRC"/*.png; do [ -f "$f" ] && cp "$f" "$DIR/"; done
+          python3 - "$DIR" <<'PY'
+          import json, sys
+          from pathlib import Path
+          d = Path(sys.argv[1])
+          report = json.loads((d / 'report.json').read_text(encoding='utf-8'))
+          bridge_path = Path('kvenya/bridge.json')
+          bridge = json.loads(bridge_path.read_text(encoding='utf-8'))
+          entry = {
+              'date': report.get('startedAt', ''),
+              'url': report.get('url', ''),
+              'status': report.get('status', 'error'),
+              'dir': str(d),
+              'screenshots': report.get('screenshots', [])[:4],
+              'hasVideo': bool(report.get('hasVideo')),
+          }
+          bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]
+          bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print('expedition filed:', entry)
+          PY
+          git config user.name 'Квеня (экспедиция)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$DIR" kvenya/bridge.json
+          if git diff --cached --quiet; then echo "Изменений нет"; exit 0; fi
+          STATUS=$(python3 -c "import json; print(json.load(open('$DIR/report.json'))['status'])")
+          git commit -m "Экспедиция Квени: $STATUS ($HOST)"
+          pushed=""
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then pushed=1; break; fi
+            echo "push отклонён (попытка $attempt): сливаюсь со свежим main"
+            git fetch origin main
+            git merge --no-edit origin/main || { git merge --abort; exit 1; }
+          done
+          if [ -z "$pushed" ]; then echo "Не удалось доставить отчёт за 5 попыток"; exit 1; fi
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
