@@ -1013,6 +1013,21 @@
             return text ? { title: title, digest: text } : null;
           });
       })
+      .then(function (res) { return res || ddgInstant(query); })
+      .catch(function () { return null; });
+  }
+
+  function ddgInstant(query) {
+    // Второй шанс браузерного поиска: мгновенные ответы DuckDuckGo.
+    return fetch('https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return null;
+        var text = (d.AbstractText || '').trim();
+        if (!text && d.RelatedTopics && d.RelatedTopics[0]) text = (d.RelatedTopics[0].Text || '').trim();
+        if (!text) return null;
+        return { title: d.Heading || 'DuckDuckGo', digest: text.slice(0, 500), web: true };
+      })
       .catch(function () { return null; });
   }
 
@@ -1111,7 +1126,7 @@
       setStatus('Квеня ищет в Википедии…', 'think');
       wikiSearch(query).then(function (found) {
         if (found) {
-          var ans = 'Поискала в Википедии! «' + found.title + '»: ' + found.digest;
+          var ans = (found.web ? 'Поискала в интернете! «' : 'Поискала в Википедии! «') + found.title + '»: ' + found.digest;
           bubble('kvenya', ans);
           speak(ans);
           setStatus('Лёгкий режим: ответила из Википедии, без модели.', 'ok');
@@ -1367,10 +1382,10 @@
       var willThink = thinkOn && (!fastOnNow || REASONING_ASK.test(text));
       var finalUser = text;
       if (query && found) {
-        finalUser = 'Владелец спрашивает: ' + text + '\n\nТекст из русской Википедии, статья «' + found.title + '»: ' + found.digest
-          + '\n\nОтветь двумя короткими фразами: первая — «Поискала в Википедии!», вторая — сам ответ из текста своими словами. Больше ничего не пиши.';
+        finalUser = 'Владелец спрашивает: ' + text + '\n\nТекст из ' + (found.web ? 'интернета, страница' : 'русской Википедии, статья') + ' «' + found.title + '»: ' + found.digest
+          + '\n\nОтветь двумя короткими фразами: первая — «' + (found.web ? 'Поискала в интернете!' : 'Поискала в Википедии!') + '», вторая — сам ответ из текста своими словами. Больше ничего не пиши.';
       } else if (query && !found) {
-        finalUser = text + '\n\n(Ты попросила поискать в Википедии, но ничего не нашлось. Честно скажи: «Поискала в Википедии, но не нашла».)';
+        finalUser = text + '\n\n(Ты попросила поискать в интернете и в Википедии, но ничего не нашлось. Честно скажи: «Поискала в интернете, но не нашла».)';
       } else if (willThink) {
         // В быстром режиме не тратим токены на «думание» над болтовнёй:
         // вслух она рассуждает только над настоящим вопросом.
