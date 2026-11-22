@@ -1,10 +1,12 @@
+import json
+import tempfile
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_2048 import COMMIT
-from gameplay_finalize import narration, validate_report
+from gameplay_finalize import commentary_events, commentary_text, narration, validate_report
 
 
 class GameplayFinalizeTests(unittest.TestCase):
@@ -25,6 +27,23 @@ class GameplayFinalizeTests(unittest.TestCase):
                        {"score": True}, {"uploaded": True}, {"commit": "different"}, {"elapsed_seconds": 9}):
             with self.subTest(change=change):
                 with self.assertRaises(ValueError): validate_report({**self.report(), **change})
+
+    def test_timed_commentary_validates_telemetry_and_uses_only_measured_data(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / "commentary-events.json"
+            events = [{"at": 1.0, "moves": 0, "score": 0, "max_tile": 2},
+                      {"at": 26.0, "moves": 15, "score": 80, "max_tile": 16}]
+            path.write_text(json.dumps(events))
+            self.assertEqual(commentary_events(root, self.report(), 40), events)
+            self.assertIn("80", commentary_text(events[1]))
+            for bad in ([{**events[0], "at": -1}], [{**events[0], "score": 10000}],
+                        [events[0], {**events[1], "at": 2}], [{**events[0], "text": "injected"}]):
+                path.write_text(json.dumps(bad))
+                with self.assertRaises(ValueError):
+                    commentary_events(root, self.report(), 40)
+            path.unlink()
+            self.assertEqual(commentary_events(root, self.report(), 40), [])
 
     def test_every_two_day_cadence_uses_moscow_dates_across_month_boundary(self):
         from datetime import datetime, timezone

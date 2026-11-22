@@ -43,6 +43,38 @@ def narration(report: dict[str, Any]) -> str:
             + ("Победа достигнута в этой сессии." if report["outcome"] == "won" else "Это результат сессии, а не завершённое прохождение."))
 
 
+def commentary_events(root: Path, report: dict[str, Any], duration: float) -> list[dict[str, Any]]:
+    """Accept only bounded measured telemetry; never speak untrusted arbitrary text."""
+    path = root / "commentary-events.json"
+    if not path.exists():
+        return []  # Older captures have no telemetry.
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 100_000:
+        raise ValueError("Invalid commentary events file")
+    events = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(events, list) or len(events) > 150:
+        raise ValueError("Invalid commentary events")
+    previous = None
+    for event in events:
+        if not isinstance(event, dict) or set(event) != {"at", "moves", "score", "max_tile"}:
+            raise ValueError("Invalid commentary event")
+        at = event["at"]
+        if (type(at) not in (int, float) or not 0 <= at < duration
+                or (previous is not None and at < previous + 24)):
+            raise ValueError("Invalid commentary timing")
+        for key in ("moves", "score", "max_tile"):
+            if type(event[key]) is not int or not 0 <= event[key] <= report[key]:
+                raise ValueError("Invalid commentary data")
+        previous = at
+    return events
+
+
+def commentary_text(event: dict[str, Any]) -> str:
+    if event["moves"] == 0:
+        return "Начинаем сессию в две тысячи сорок восемь. Программа выбирает ходы по простой стратегии."
+    return (f"Сделано ходов: {event['moves']}. Счёт: {event['score']}. "
+            f"Самая большая плитка сейчас: {event['max_tile']}.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Prepare a local recording with a spoken factual recap; no upload.")
     parser.add_argument("output_dir", type=Path)
@@ -59,6 +91,7 @@ def main() -> None:
     duration = float(json.loads(probe.stdout)["format"]["duration"])
     if not 10 <= duration <= 3665 or abs(duration - report["elapsed_seconds"]) > 20:
         raise ValueError("Video duration does not match capture report")
+    events = commentary_events(root, report, duration)
     text = narration(report)
     wav = root / "recap.wav"
     subprocess.run(["espeak-ng", "-v", "ru", "-s", "145", "-w", str(wav), text], check=True)
@@ -82,21 +115,43 @@ def main() -> None:
     card_path = root / "recap.png"
     card.save(card_path)
     output = root / "gameplay-with-recap.mp4"
-    # The black outro is deliberately a separate recap, never looped gameplay.
+    # Commentary is synthesized after capture from timestamped game observations;
+    # it is not generated live and cannot access credentials or game code.
+    audio_inputs = []
+    audio_filters = []
+    labels = ["[silence]"]
+    spoken = 0
+    for event in events:
+        clip = root / f"commentary-{spoken:03d}.wav"
+        subprocess.run(["espeak-ng", "-v", "ru", "-s", "145", "-w", str(clip), commentary_text(event)], check=True)
+        with wave.open(str(clip), "rb") as stream:
+            clip_seconds = stream.getnframes() / stream.getframerate()
+        # Do not cut a sentence or let commentary overlap the recap.
+        if not 0 < clip_seconds <= 20 or event["at"] + clip_seconds > duration:
+            clip.unlink()
+            continue
+        index = 3 + spoken
+        audio_inputs.extend(["-i", str(clip)])
+        audio_filters.append(f"[{index}:a]aresample=48000,aformat=channel_layouts=stereo,adelay={int(event['at'] * 1000)}:all=1[c{spoken}]")
+        labels.append(f"[c{spoken}]")
+        spoken += 1
+    # The outro is deliberately a separate recap, never looped gameplay.
     filters = (f"[0:v]fps=25,scale=1280:720,setsar=1,format=yuv420p,setpts=PTS-STARTPTS[game];"
                f"[1:v]trim=duration={outro_seconds:.3f},setpts=PTS-STARTPTS,format=yuv420p[outro];"
                "[game][outro]concat=n=2:v=1:a=0[v];"
-               f"anullsrc=r=48000:cl=stereo,atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[silence];"
-               f"[2:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration={outro_seconds:.3f},asetpts=PTS-STARTPTS[voice];"
-               "[silence][voice]concat=n=2:v=0:a=1[a]")
+               f"anullsrc=r=48000:cl=stereo,atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[silence]"
+               + (";" + ";".join(audio_filters) if audio_filters else "")
+               + ";" + "".join(labels) + f"amix=inputs={len(labels)}:duration=first:normalize=0[gameaudio];"
+               + f"[2:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration={outro_seconds:.3f},asetpts=PTS-STARTPTS[voice];"
+               "[gameaudio][voice]concat=n=2:v=0:a=1[a]")
     subprocess.run(["ffmpeg", "-nostdin", "-y", "-i", str(video), "-loop", "1", "-framerate", "25", "-i", str(card_path),
-                    "-i", str(wav), "-filter_complex", filters, "-map", "[v]", "-map", "[a]", "-c:v", "libx264",
+                    "-i", str(wav), *audio_inputs, "-filter_complex", filters, "-map", "[v]", "-map", "[a]", "-c:v", "libx264",
                     "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(output)],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     summary = {"capture_seconds": round(duration, 2), "recap_seconds": round(outro_seconds, 2),
                "outcome": report["outcome"], "moves": report["moves"], "score": report["score"],
                "max_tile": report["max_tile"], "video": output.name, "uploaded": False,
-               "voice": "espeak-ng Russian; deterministic factual recap", "game_audio": False}
+               "commentary_clips": spoken, "voice": "espeak-ng Russian; deterministic timed commentary and recap", "game_audio": False}
     (root / "final-report.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False))
 

@@ -1,5 +1,6 @@
 """Actual private browser capture smoke test; no OAuth, uploads or retained video."""
 import json
+from array import array
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,7 @@ with tempfile.TemporaryDirectory(prefix="gameplay-smoke-") as temp:
     finally:
         subprocess.run(["docker", "rm", "-f", name], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     report = json.loads((output / "report.json").read_text())
+    assert set(report["training"]["parameters"]) == {"emptyWeight", "positionalWeight"}, report
     assert report["moves"] > 0 and report["elapsed_seconds"] >= 10, report
     assert report["outcome"] == "time_limit" and report["uploaded"] is False, report
     video = output / Path(report["video"]).name
@@ -49,8 +51,16 @@ with tempfile.TemporaryDirectory(prefix="gameplay-smoke-") as temp:
     subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / "gameplay_finalize.py"), str(output)], check=True, timeout=180)
     final = json.loads((output / "final-report.json").read_text())
     assert final["uploaded"] is False and final["capture_seconds"] >= 10
+    assert final["commentary_clips"] >= 1, final
     movie = output / final["video"]
     streams = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "json", str(movie)], check=True, capture_output=True, text=True)
     kinds = {item["codec_type"] for item in json.loads(streams.stdout)["streams"]}
     assert {"audio", "video"} <= kinds, kinds
-    print("Narrated recap smoke passed:", json.dumps(final))
+    # Inspect only the original gameplay interval, excluding the spoken outro.
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(movie), "-t", str(final["capture_seconds"]),
+                          "-vn", "-ac", "1", "-ar", "8000", "-f", "s16le", "-"],
+                         check=True, capture_output=True, timeout=30).stdout
+    samples = array("h")
+    samples.frombytes(raw)
+    assert samples and max(abs(value) for value in samples) > 100, "Gameplay interval has no audible commentary"
+    print("Narrated gameplay and recap smoke passed:", json.dumps(final))

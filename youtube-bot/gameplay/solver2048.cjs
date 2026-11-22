@@ -32,7 +32,11 @@ function move(board, direction) {
   return result;
 }
 
-function choose(board) {
+function choose(board, parameters = {}) {
+  const emptyWeight = parameters.emptyWeight ?? 300;
+  const positionalWeight = parameters.positionalWeight ?? 3;
+  if (!Number.isFinite(emptyWeight) || emptyWeight < 0 || emptyWeight > 1000 ||
+      !Number.isFinite(positionalWeight) || positionalWeight < 0 || positionalWeight > 30) throw Error("invalid parameters");
   const weights = [[8,7,6,5],[1,2,3,4],[0,-1,-2,-3],[-7,-6,-5,-4]];
   let best = null, bestScore = -Infinity;
   for (const direction of DIRECTIONS) {
@@ -41,8 +45,8 @@ function choose(board) {
     let score = 0;
     for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
       const tile = next[y][x];
-      if (!tile) score += 300;
-      else score += Math.log2(tile) * weights[y][x] * 3;
+      if (!tile) score += emptyWeight;
+      else score += Math.log2(tile) * weights[y][x] * positionalWeight;
     }
     if (score > bestScore) { bestScore = score; best = direction; }
   }
