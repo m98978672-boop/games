@@ -5,6 +5,7 @@ Failure to solve is reported as a model result, never replaced by scripted moves
 """
 import base64
 import io
+import os
 import json
 import tempfile
 from pathlib import Path
@@ -53,7 +54,7 @@ with tempfile.TemporaryDirectory(prefix='qwen-game-') as temp:
                 break
     report = {'outcome': outcome, 'qwen_actions': agent.decisions,
               'model': 'Qwen/Qwen3.5-0.8B', 'game': 'two-stage visual arrow test',
-              'model_finetuned': False, 'published': False}
+              'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base', 'game_finetuned': False, 'published': False}
     print('QWEN_GAMEPLAY_REPORT=' + json.dumps(report, ensure_ascii=True))
     print(f"::notice title=Qwen gameplay test::{json.dumps(report, ensure_ascii=True)}")
 
@@ -75,7 +76,7 @@ with tempfile.TemporaryDirectory(prefix='qwen-taxi-') as temp:
         try:
             action = agent(png, 0)
         except ValueError:
-            result = {'outcome': 'invalid_model_action', 'qwen_actions': [], 'published': False}
+            result = {'outcome': 'invalid_model_action', 'qwen_actions': [], 'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base', 'published': False}
         else:
             after = bridge.step(action)
             assert after['type'] == 'observation', after
@@ -83,6 +84,6 @@ with tempfile.TemporaryDirectory(prefix='qwen-taxi-') as temp:
             picture2 = Image.open(io.BytesIO(base64.b64decode(after['screenshot_png_base64']))).convert('RGB')
             delta = sum(ImageStat.Stat(ImageChops.difference(picture1, picture2)).mean) / 3
             result = {'outcome': 'action_executed', 'qwen_actions': agent.decisions,
-                      'screen_changed': delta >= 2.0, 'published': False}
+                      'screen_changed': delta >= 2.0, 'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base', 'published': False}
     print('QWEN_NIGHT_TAXI_REPORT=' + json.dumps(result, ensure_ascii=True))
     print(f"::notice title=Qwen Night Taxi test::{json.dumps(result, ensure_ascii=True)}")

@@ -1,11 +1,14 @@
 """Experimental Qwen vision policy for the isolated screenshot/action bridge.
 
-The model is not fine-tuned. Its short action history is session-local context,
+A home LoRA adapter can be explicitly supplied; no game-specific fine-tuning is performed.
+Its short action history is session-local context,
 not persistent learning. Untrusted screenshots never get tool or network access.
 """
 from __future__ import annotations
 
 import io
+import os
+from pathlib import Path
 import re
 from functools import lru_cache
 from typing import Callable
@@ -28,6 +31,14 @@ def _vision_runtime():
     from transformers import AutoProcessor
     from script_contract import _load_qwen_runtime
     torch, _, model = _load_qwen_runtime()
+    adapter_path = os.environ.get('QWEN_GAME_ADAPTER_PATH')
+    if adapter_path:
+        adapter = Path(adapter_path).resolve(strict=True)
+        if not adapter.is_dir() or not (adapter / 'adapter_config.json').is_file() or not (adapter / 'adapter_model.safetensors').is_file():
+            raise ValueError('Home adapter is missing required files')
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, adapter)
+        model.eval()
     processor = AutoProcessor.from_pretrained('Qwen/Qwen3.5-0.8B', revision='2fc06364715b967f1860aea9cf38778875588b17')
     return torch, model, processor
 

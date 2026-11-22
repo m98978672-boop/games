@@ -7,6 +7,7 @@ on:
       - 'youtube-bot/gameplay_2048.py'
       - 'youtube-bot/gameplay_bridge.py'
       - 'youtube-bot/gameplay_qwen.py'
+      - 'youtube-bot/prepare_kvenya_adapter.py'
       - 'youtube-bot/gameplay_finalize.py'
       - 'youtube-bot/game_reviews.py'
       - 'youtube-bot/renderer.py'
@@ -127,7 +128,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install Qwen and image dependencies
-        run: pip install -r youtube-bot/requirements-autopilot.txt "torchvision>=0.20,<1.0"
+        run: pip install -r youtube-bot/requirements-autopilot.txt "torchvision>=0.20,<1.0" "transformers==5.5.4" "peft==0.19.1" "accelerate==1.13.0"
       - name: Build isolated browser bridge
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Let real Qwen control the visual test game
@@ -142,5 +143,27 @@ jobs:
           cat "$RUNNER_TEMP/qwen-gameplay.log"
           if [ "$result" -ne 0 ]; then
             python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/qwen-gameplay.log"
+          fi
+          exit "$result"
+      - name: Fetch and verify pinned Kvenya home adapter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kvenya-release"
+          gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
+          python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Test Kvenya home adapter in the same games
+        env:
+          OMP_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+        shell: bash
+        run: |
+          set +e
+          python youtube-bot/tests/smoke_qwen_gameplay.py > "$RUNNER_TEMP/kvenya-gameplay.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/kvenya-gameplay.log"
+          if [ "$result" -ne 0 ]; then
+            python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/kvenya-gameplay.log"
           fi
           exit "$result"
