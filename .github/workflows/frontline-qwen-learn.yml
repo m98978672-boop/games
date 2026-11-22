@@ -18,6 +18,7 @@ on:
     paths: ['qwen-home/start-learning.flag']
 permissions:
   contents: write
+  pages: write
 jobs:
   learn:
     if: github.repository == 'm98978672-boop/games'
@@ -134,6 +135,7 @@ jobs:
             gh release create frontline-qwen-home --title 'Frontline Qwen — домашний адаптер' --notes 'LoRA-адаптер домашней линии обучения Qwen (мышление, Википедия, базовый веб-код). Исследовательский артефакт: не WebLLM-модель, не командирский адаптер игры и не доказательство навыков. История прогонов — qwen-home/memory/learning-log.md.' "$RUNNER_TEMP/adapter.tar.gz"
           fi
       - name: Write the diary and commit memory home
+        id: commit
         run: |
           set -eu
           node qwen-home/tools/update-memory.mjs --report "$RUNNER_TEMP/learn-output/report.json" --scores "$RUNNER_TEMP/eval-after.json" --published "${{ steps.gate.outputs.publish }}" --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --date "$(date -u +%F)"
@@ -151,6 +153,14 @@ jobs:
             git fetch origin "$GITHUB_REF_NAME"
             git rebase "origin/$GITHUB_REF_NAME" || { git rebase --abort; exit 1; }
           done
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+      # Коммит бота от GITHUB_TOKEN сам сборку сайта не будит — просим
+      # GitHub Pages пересобраться, чтобы сайт показал свежий дневник.
+      - name: Ask GitHub Pages to rebuild the site with the diary
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds"
       - name: Retain learning artifacts
         if: always()
         uses: actions/upload-artifact@v4

@@ -13,6 +13,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  pages: write
 concurrency:
   group: qwen-talk-${{ github.ref }}
   cancel-in-progress: false
@@ -68,6 +69,7 @@ jobs:
             python -u qwen-home/tools/talk-generate.py
           fi
       - name: Commit her words back to the branch
+        id: commit
         run: |
           git config user.name 'Квеня (Qwen home bot)'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -83,3 +85,11 @@ jobs:
             git fetch origin "$GITHUB_REF_NAME"
             git rebase "origin/$GITHUB_REF_NAME" || { git rebase --abort; exit 1; }
           done
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+      # Её push идёт от GITHUB_TOKEN и сам сборку сайта не будит —
+      # просим GitHub Pages пересобраться явно, чтобы ответ был виден.
+      - name: Ask GitHub Pages to rebuild the site with her answer
+        if: steps.commit.outputs.pushed == 'true' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds"
