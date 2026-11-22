@@ -12,12 +12,6 @@ on:
         options: ["false", "true"]
         default: "false"
         required: true
-      publish_immediately:
-        description: "Make the long video public immediately instead of waiting for its slot"
-        type: choice
-        options: ["false", "true"]
-        default: "false"
-        required: true
 
 permissions:
   contents: read
@@ -53,7 +47,6 @@ jobs:
     timeout-minutes: 120
     env:
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
-      YOUTUBE_PUBLISH_IMMEDIATELY: ${{ inputs.publish_immediately || 'false' }}
       VIDEO_FORMAT: long
       DATA_DIR: youtube-bot/data
     steps:

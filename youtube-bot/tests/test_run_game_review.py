@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 import tempfile
 import unittest
@@ -26,8 +25,7 @@ class RunReviewTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            with patch.dict(os.environ, {"YOUTUBE_PUBLISH_IMMEDIATELY": "true"}), \
-                 patch.object(run_game_review, "DATA_DIR", root), \
+            with patch.object(run_game_review, "DATA_DIR", root), \
                  patch.object(run_game_review, "load_steam_games", return_value=[game]), \
                  patch.object(run_game_review, "generate_game_review", return_value=review), \
                  patch.object(run_game_review, "generate_long_narration", return_value=[{"dialogue": "текст"} for _ in range(10)]), \
@@ -37,7 +35,6 @@ class RunReviewTests(unittest.TestCase):
                 result = run_game_review.run(root / "long.mp4", video_format="long")
             self.assertEqual(result["format"], "long")
             self.assertEqual(result["metadata"]["video_format"], "long")
-            self.assertTrue(result["metadata"]["publish_immediately"])
             self.assertIn("https://store.steampowered.com/app/12345/", result["metadata"]["description"])
             self.assertEqual(result["metadata"]["publish_at"], "2026-11-24T13:00:00Z")
             render.assert_called_once()

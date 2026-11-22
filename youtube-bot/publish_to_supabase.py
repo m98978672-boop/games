@@ -321,13 +321,11 @@ def _upload_resumably(upload_url: str, video: bytes, access_token: str) -> str:
 
 
 def _start_youtube_session(metadata: dict[str, Any], video: bytes, access_token: str) -> str:
-    immediate = metadata.get("publish_immediately") is True
-    video_status: dict[str, Any] = {
-        "privacyStatus": "public" if immediate else "private",
+    video_status = {
+        "privacyStatus": "private",
+        "publishAt": metadata["publish_at"],
         "selfDeclaredMadeForKids": metadata["made_for_kids"],
     }
-    if not immediate:
-        video_status["publishAt"] = metadata["publish_at"]
     youtube_metadata = {
         "snippet": {
             "title": metadata["title"],

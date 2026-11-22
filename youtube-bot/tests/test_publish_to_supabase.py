@@ -198,24 +198,6 @@ class PublisherNetworkTests(unittest.TestCase):
                  patch.object(publisher, "_mask"), self.assertRaisesRegex(publisher.PublishError, "different job"):
                 publisher.publish(result_path)
 
-    def test_immediate_publish_omits_publish_at_and_uses_public_privacy(self):
-        captured = {}
-
-        def fake_http(request, timeout=45):
-            captured.update(json.loads(request.data.decode("utf-8")))
-            return 200, {"Location": "https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret"}, b""
-
-        metadata = {
-            "title": "Review", "description": "Grounded review", "tags": ["shorts"],
-            "category_id": "20", "publish_at": "2026-12-01T17:30:00Z",
-            "made_for_kids": False, "publish_immediately": True,
-        }
-        with patch.object(publisher, "_http_request", side_effect=fake_http):
-            publisher._start_youtube_session(metadata, b"x" * 2048, "access-token")
-        self.assertEqual(captured["status"]["privacyStatus"], "public")
-        self.assertFalse(captured["status"]["selfDeclaredMadeForKids"])
-        self.assertNotIn("publishAt", captured["status"])
-
     def test_publish_fails_closed_without_owner_audience_value(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
