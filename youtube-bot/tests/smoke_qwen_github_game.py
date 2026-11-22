@@ -24,6 +24,7 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
         'Play 2048: combine equal numbered tiles using arrow keys; choose one safe arrow action.',
         ('LEFT', 'RIGHT', 'UP', 'DOWN'))
     outcome = 'step_limit'
+    trace = []
     recording = Path(temp) / 'recording'
     recording.mkdir()
     with BrowserBridge(root, rights_acknowledged=True, record_dir=recording) as bridge:
@@ -40,14 +41,20 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
             observation = bridge.step(action)
             if observation.get('type') != 'observation' or observation.get('step') != step + 1:
                 raise RuntimeError('Bridge did not execute the action')
+            elapsed = observation.get('recording_elapsed_ms')
+            if type(elapsed) is not int or elapsed < 0 or (trace and elapsed < trace[-1]['observed_ms']):
+                raise RuntimeError('Invalid recording observation clock')
+            trace.append({'step': step + 1, 'action': agent.decisions[-1], 'observed_ms': elapsed})
         video = bridge.finish_recording()
     info = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', str(video)], check=True, capture_output=True, text=True, timeout=60).stdout)
     duration = float(info['format']['duration'])
     if duration <= 0 or not any(stream.get('codec_type') == 'video' for stream in info['streams']):
         raise RuntimeError('Game recording could not be verified')
+    if trace and trace[-1]['observed_ms'] / 1000 > duration + 2:
+        raise RuntimeError('Observation clock exceeds recording duration')
     result = {'game': '2048', 'source': 'https://github.com/gabrielecirulli/2048',
               'commit': game.COMMIT, 'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base',
-              'outcome': outcome, 'actions': agent.decisions, 'moves_attempted': len(agent.decisions),
+              'outcome': outcome, 'actions': agent.decisions, 'action_observations': trace, 'moves_attempted': len(agent.decisions),
               'actual_game_win_verified': False, 'video_recorded': True, 'recording_seconds': round(duration, 2), 'recording_retained': False, 'published': False}
     print('QWEN_GITHUB_GAME_REPORT=' + json.dumps(result, ensure_ascii=True))
     print('::notice title=Qwen external GitHub gameplay test::' + json.dumps(result, ensure_ascii=True))

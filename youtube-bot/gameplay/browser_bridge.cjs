@@ -46,6 +46,8 @@ async function main() {
     return u.protocol === "http:" && u.hostname === HOST && u.port === String(PORT) ? route.continue() : route.abort();
   });
   await context.routeWebSocket("**/*", ws => ws.close());
+  // Approximate browser recording origin for diagnostics, not frame-accurate subtitles.
+  const recordingOrigin = process.hrtime.bigint();
   const page = await context.newPage();
   const video = recording ? page.video() : null;
   let normalClose = false;
@@ -57,7 +59,9 @@ async function main() {
     const observe = async step => {
       const png = await page.screenshot({type:"png", timeout:10000, animations:"disabled"});
       if (png.length > 2_000_000) throw Error("screenshot too large");
-      emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64")});
+      const recording_elapsed_ms = recording ? Number((process.hrtime.bigint() - recordingOrigin) / 1000000n) : null;
+      emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
+        ...(recording ? {recording_elapsed_ms} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});
