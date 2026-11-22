@@ -69,6 +69,13 @@ jobs:
         with:
           path: ${{ runner.temp }}/huggingface
           key: qwen-shorts-0-8b-2fc06364715b967f1860aea9cf38778875588b17-v1
+      - name: Restore the Russian Piper voice model cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ${{ runner.temp }}/ru_RU-irina-medium.onnx
+            ${{ runner.temp }}/ru_RU-irina-medium.onnx.json
+          key: piper-ru-irina-medium-v1
       - name: Restore recent Steam game selection memory
         uses: actions/cache/restore@v6
         with:
@@ -82,12 +89,37 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r youtube-bot/requirements-autopilot.txt
       - name: Download local Russian Piper voice model
+        id: piper-download
         run: |
-          curl --fail --location --retry 3 --output "$PIPER_MODEL_PATH" \
-            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
-          curl --fail --location --retry 3 --output "$PIPER_MODEL_PATH.json" \
-            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json
+          set -euo pipefail
+          download_model() {
+            local url="$1"
+            local target="$2"
+            if [ -s "$target" ]; then
+              return
+            fi
+            local partial="${target}.partial"
+            rm -f "$partial"
+            curl --fail --location --retry 8 --retry-all-errors --retry-delay 5 \
+              --connect-timeout 30 --max-time 600 --output "$partial" "$url"
+            test -s "$partial"
+            mv "$partial" "$target"
+          }
+          download_model \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx \
+            "$PIPER_MODEL_PATH"
+          download_model \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json \
+            "$PIPER_MODEL_PATH.json"
           test -s "$PIPER_MODEL_PATH" && test -s "$PIPER_MODEL_PATH.json"
+      - name: Save the Russian Piper voice model cache
+        if: always() && steps.piper-download.outcome == 'success'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ${{ runner.temp }}/ru_RU-irina-medium.onnx
+            ${{ runner.temp }}/ru_RU-irina-medium.onnx.json
+          key: piper-ru-irina-medium-v1
       - name: Generate sourced Russian long-form review with local Qwen
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
