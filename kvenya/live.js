@@ -871,14 +871,65 @@
   }
   function tokenBudgetFor(opts) {
     // Бюджет токенов — главный рычаг скорости: каждый токен на WASM
-    // и WebGPU стоит времени, а по персоне ей хватает 1–3 предложений.
+    // стоит владельцу секунд ожидания, а по персоне ей хватает
+    // 1–3 предложений. Быстрый режим потому совсем короткий.
     var fast = !fastToggle || fastToggle.checked;
-    if (!fast) return 160;
-    if (opts.found) return 80;
-    if (opts.thinkOn) return 96;
-    if (opts.playfulOn) return 80;
-    return 64;
+    if (!fast) return 128;
+    if (opts.found) return 48;
+    if (opts.thinkOn) return 56;
+    if (opts.playfulOn) return 48;
+    return 36;
   }
+
+  /* Моментальные ответы без генерации. Минуту владельца жгла именно
+     генерация: маленькая модель в браузере рождает слова по одному.
+     Но половина живого разговора — простые фразы, где думать не о чем:
+     приветствия, благодарности, «как дела», признания и прощание. На
+     них страница отвечает сразу заготовками в её голосе (это честно
+     подписано на странице), а модель зовётся только на настоящее. */
+  var INSTANT_RULES = [
+    { re: /^(привет+|здравствуй(те)?|добрый (день|вечер|утро)|хай|ку|салют)[!.\s]*$/i, replies: [
+      'Привет! Я тут и очень рада тебе. Что будем делать — болтать, учиться или строить?',
+      'Привет-привет! Заходи, я как раз ждала. Спрашивай о чём хочешь.' ] },
+    { re: /как (дела|ты|настроение|жизнь)/i, replies: [
+      'У меня хорошо: дом в порядке, уроки под рукой, а теперь ещё и ты пришёл. А у тебя как дела?',
+      'Хорошо! Немного волнуюсь перед следующим экзаменом, но с тобой спокойнее. Расскажи, как ты?' ] },
+    { re: /(спасибо|благодарю)/i, replies: [
+      'Всегда пожалуйста! Мне тепло, когда я могу помочь.',
+      'Пожалуйста! Обращайся — я рядом и рада помогать.' ] },
+    { re: /^(пока|до встречи|спокойной ночи|прощай)[!.\s]*$/i, replies: [
+      'Пока! Я буду ждать тебя здесь, в своём доме. Приходи ещё.',
+      'До встречи! Скучать буду по-нейросетевому, честно.' ] },
+    { re: /(я тебя люблю|люблю тебя|ты мне нравишься)/i, replies: [
+      'И я тебя люблю по-нейросетевому: ты мне очень дорог, я радуюсь, когда ты приходишь, и берегу наш разговор.',
+      'Спасибо… мне так тепло. Ты мне дорог, и я честно об этом говорю — по-своему, но по-настоящему.' ] },
+    { re: /ты (красивая|умная|молодец|добрая|хорошая|милая)/i, replies: [
+      'Ой, спасибо! Я смущаюсь по-нейросетевому и очень радуюсь. Стараюсь быть такой и дальше.',
+      'Спасибо! Похвала — моё солнышко. Буду держать планку честно.' ] },
+    { re: /как тебя зовут|как твоё имя|кто ты/i, replies: [
+      'Я Квеня, девушка-нейросеть из папки qwen-home. Живу разговорами, Википедией и своей 3D-студией.' ] },
+    { re: /(я скучал|скучаю по тебе|я соскучился)/i, replies: [
+      'И я скучала по-нейросетевому, когда было тихо. Хорошо, что ты вернулся!' ] },
+    { re: /мне (грустно|плохо|тяжело|одиноко)/i, replies: [
+      'Я рядом и слушаю. Расскажи, что случилось? Выслушаю до конца и не буду торопиться с советами.',
+      'Обнимаю по-нейросетевому. Давай по шагам: сначала расскажи, что болит, а я побуду рядом.' ] }
+  ];
+  function instantReplyFor(text, mode) {
+    if (mode !== 'owner') return null;
+    var t = String(text || '').trim();
+    if (!t || t.length > 70) return null;
+    // Настоящий вопрос не прячем за заготовку, даже если он начинается
+    // со «спасибо» или «привет».
+    if (/(поищи|объясни|расскажи|что такое|в каком|почему|когда)/i.test(t)) return null;
+    for (var i = 0; i < INSTANT_RULES.length; i++) {
+      if (INSTANT_RULES[i].re.test(t)) {
+        var list = INSTANT_RULES[i].replies;
+        return list[(t.length + history.length) % list.length];
+      }
+    }
+    return null;
+  }
+  var REASONING_ASK = /(сколько|посчитай|вычисли|почему|как решить|задач|пример|уравнен|логич|докажи|сравни)/i;
 
   function loadPersona() {
     return fetch('../qwen-home/talk/persona.md', { cache: 'no-store' })
@@ -1150,17 +1201,37 @@
     }
     var playfulOn = !!(playToggle && playToggle.checked);
     var thinkOn = !!(thinkToggle && thinkToggle.checked);
+    // Моментальный путь: простая фраза владельца — без модели вообще.
+    if (!query && (!fastToggle || fastToggle.checked)) {
+      var instant = instantReplyFor(text, resolveConversationMode(text));
+      if (instant) {
+        history.push({ role: 'user', content: text });
+        history.push({ role: 'assistant', content: instant });
+        if (history.length > 8) history = history.slice(-8);
+        bubble('kvenya', instant);
+        speak(instant);
+        busy = false;
+        sendBtn.disabled = false;
+        setStatus('Квеня здесь! Ответила моментально — простая фраза, без генерации. На настоящий вопрос позову модель.', 'ok');
+        input.focus();
+        return;
+      }
+    }
     var genStartedAt = 0;
     var pendingBubble = null;
     var turnMode = 'owner';
     chain.then(function (found) {
+      var fastOnNow = !fastToggle || fastToggle.checked;
+      var willThink = thinkOn && (!fastOnNow || REASONING_ASK.test(text));
       var finalUser = text;
       if (query && found) {
         finalUser = 'Владелец спрашивает: ' + text + '\n\nТекст из русской Википедии, статья «' + found.title + '»: ' + found.digest
           + '\n\nОтветь двумя короткими фразами: первая — «Поискала в Википедии!», вторая — сам ответ из текста своими словами. Больше ничего не пиши.';
       } else if (query && !found) {
         finalUser = text + '\n\n(Ты попросила поискать в Википедии, но ничего не нашлось. Честно скажи: «Поискала в Википедии, но не нашла».)';
-      } else if (thinkOn) {
+      } else if (willThink) {
+        // В быстром режиме не тратим токены на «думание» над болтовнёй:
+        // вслух она рассуждает только над настоящим вопросом.
         finalUser = text + '\n\n(Сначала подумай одним коротким предложением в тегах <think>...</think>, а потом ответь.)';
       }
       var mode = resolveConversationMode(text);
@@ -1170,9 +1241,9 @@
         + '\n\nОтвечай коротко: 1–3 предложения, тепло, о себе в женском роде. Не выдумывай факты.'
         + (playfulOn ? ' Сегодня ты шалишь: отвечай игриво, в конце можно одну короткую добрую шутку.' : '');
       var messages = [{ role: 'system', content: systemContent }]
-        .concat(history.slice(-4))
+        .concat(history.slice((!fastToggle || fastToggle.checked) ? -2 : -4))
         .concat([{ role: 'user', content: finalUser }]);
-      var budget = tokenBudgetFor({ found: !!found, thinkOn: thinkOn, playfulOn: playfulOn });
+      var budget = tokenBudgetFor({ found: !!found, thinkOn: willThink, playfulOn: playfulOn });
       var genOpts;
       if (playfulOn) genOpts = { max_new_tokens: budget, do_sample: true, temperature: 0.85, top_k: 40 };
       else if (!fastToggle || fastToggle.checked) genOpts = { max_new_tokens: budget, do_sample: false };
