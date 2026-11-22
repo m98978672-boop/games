@@ -253,3 +253,92 @@ body.is-embed .kv-shell { padding-top: 12px; }
   .kv-grid { grid-template-columns: 1fr; }
   .kv-brand p { max-width: none; }
 }
+
+/* ---------- таймер ожидания ---------- */
+.msg .msg-timer { display: block; margin-top: 3px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.kv-wait {
+  margin-top: 12px;
+  border: 1.5px dashed #e8b45a;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(232, 180, 90, 0.08);
+}
+.kv-wait-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; color: #ffe1a8; font-weight: 700; }
+.kv-wait-timer { font-size: 24px; color: #fff; font-variant-numeric: tabular-nums; }
+.kv-wait-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.12); margin: 9px 0; overflow: hidden; }
+.kv-wait-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #e8b45a, var(--violet)); transition: width 0.6s ease; }
+.kv-wait-stage { margin: 0; color: var(--text); font-size: 13px; line-height: 1.5; }
+
+/* ---------- мозги и настроение ---------- */
+.kv-mind { border-color: rgba(166, 120, 255, 0.55); background: linear-gradient(165deg, #241a3d, var(--panel) 65%); }
+.kv-mood-row { display: flex; gap: 13px; align-items: center; }
+.kv-mood-face {
+  flex: 0 0 auto; width: 56px; height: 56px;
+  display: grid; place-items: center; font-size: 30px;
+  background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(166, 120, 255, 0.5); border-radius: 50%;
+}
+.kv-mood-name { font-weight: 800; color: #fff; font-size: 16px; }
+.kv-mood-text { color: var(--text); font-size: 13.5px; line-height: 1.45; margin-top: 2px; }
+.kv-feelings { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+.feel { display: grid; grid-template-columns: 118px 1fr 40px; align-items: center; gap: 9px; font-size: 12.5px; color: var(--text); }
+.feel-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.feel-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--violet)); transition: width 0.7s ease; }
+.feel b { color: #fff; font-variant-numeric: tabular-nums; text-align: right; }
+.kv-traits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.trait { font-size: 12px; font-weight: 600; color: #e9e2ff; background: var(--violet-soft); border: 1px solid rgba(166, 120, 255, 0.4); border-radius: 999px; padding: 4px 9px; }
+.kv-pipeline { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 13px; font-size: 12px; color: var(--text); }
+.kv-pipeline span { background: rgba(102, 192, 244, 0.1); border: 1px solid rgba(102, 192, 244, 0.3); border-radius: 7px; padding: 4px 7px; }
+.kv-pipeline i { color: var(--muted); font-style: normal; }
+.kv-mind-thought {
+  margin-top: 13px; padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.28); border: 1px dashed rgba(166, 120, 255, 0.5); border-radius: 10px;
+  color: #e9e2ff; font-size: 13.5px; line-height: 1.5; min-height: 44px;
+}
+.kv-mood-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.kv-mood-actions .btn { font-size: 13px; padding: 8px 11px; }
+
+/* ---------- 3D-студия ---------- */
+.kv-studio { border-color: rgba(166, 120, 255, 0.55); background: linear-gradient(170deg, #1d1433, var(--panel) 60%); }
+.kv-studio-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+.kv-stage-view {
+  height: 430px; border-radius: 12px; overflow: hidden;
+  border: 1px solid rgba(166, 120, 255, 0.45);
+  background: radial-gradient(ellipse at 50% 35%, #2c1e52 0%, #140f26 70%);
+  display: grid; place-items: center;
+}
+.kv-stage-view canvas { display: block; touch-action: none; }
+.kv-stage-hint { color: var(--muted); font-size: 12.5px; margin-top: 8px; text-align: center; }
+.kv-studio-side { display: flex; flex-direction: column; gap: 12px; }
+.kv-create-btn { justify-content: center; font-size: 15px; padding: 12px 16px; }
+.kv-candidates { display: flex; flex-direction: column; gap: 8px; }
+.kv-cand-title { font-size: 13px; font-weight: 700; color: #fff; }
+.kv-cand {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  font: inherit; font-size: 13px; color: var(--text);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 9px 11px; cursor: pointer;
+}
+.kv-cand:hover { border-color: var(--violet); }
+.kv-cand.is-fav { border-color: var(--violet); background: var(--violet-soft); }
+.kv-cand-dots { display: inline-flex; gap: 4px; flex: 0 0 auto; }
+.kv-cand-dots i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.45); }
+.kv-cand-txt { flex: 1 1 auto; line-height: 1.35; }
+.kv-cand-score { color: #fff; font-size: 15px; }
+.kv-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.kv-controls label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.kv-controls select {
+  font: inherit; font-size: 13.5px; color: var(--text);
+  background: var(--bg-deep); border: 1px solid var(--line); border-radius: 8px; padding: 8px 9px;
+}
+.kv-controls select:focus { outline: 2px solid rgba(166, 120, 255, 0.6); border-color: var(--violet); }
+.kv-verdict { display: flex; gap: 13px; align-items: flex-start; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(166, 120, 255, 0.45); border-radius: 12px; padding: 12px 14px; }
+.kv-score { flex: 0 0 auto; text-align: center; }
+.kv-score b { display: block; font-size: 30px; line-height: 1; color: #fff; }
+.kv-score span { font-size: 11px; color: var(--muted); }
+.kv-verdict p { margin: 2px 0 0; font-size: 13.5px; line-height: 1.5; color: #e9e2ff; }
+.kv-verdict-reasons { color: var(--muted); }
+
+@media (max-width: 980px) {
+  .kv-studio-grid { grid-template-columns: 1fr; }
+  .kv-stage-view { height: 380px; }
+}
