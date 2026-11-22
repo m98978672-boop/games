@@ -267,6 +267,46 @@ def search_wikipedia(query, limit=5):
     return results
 
 
+def simplify_query(query):
+    """Короткий повторный запрос: только опорные слова, без «что такое»."""
+    words = re.findall(r'[\w\-]{3,}', query or '', flags=re.UNICODE)
+    stop = {'что', 'такое', 'как', 'где', 'когда', 'кто', 'почему', 'какой', 'какая', 'какое',
+            'расскажи', 'найти', 'найди', 'поищи', 'мне', 'про', 'для', 'или', 'это', 'the',
+            'нём', 'ней', 'него', 'неё', 'них', 'мной', 'тобой', 'него'}
+    keep = [w for w in words if w.lower() not in stop]
+    return ' '.join(keep[:3]) or (words[0] if words else (query or ''))
+
+
+def log_lesson(first_query, good_query):
+    """Запомнила урок из спотыкания: какой запрос не сработал, а какой — да."""
+    stamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
+    SEARCH_LOG.parent.mkdir(parents=True, exist_ok=True)
+    old = SEARCH_LOG.read_text(encoding='utf-8') if SEARCH_LOG.exists() else '# Журнал поисков Квени\n'
+    note = (f'\n## {stamp} — урок из спотыкания\n\n'
+            f'- Запрос «{first_query}» ничего не дал. Переформулировала в «{good_query}» — нашлось. '
+            f'Запомнила: споткнулась — ищи другими словами, пока не получится.\n')
+    SEARCH_LOG.write_text(old.rstrip() + '\n' + note, encoding='utf-8')
+
+
+def search_with_retry(query):
+    """Её правило: споткнулась — переформулируй и попробуй ещё раз.
+
+    Возвращает (results, attempts): attempts — список (запрос, найдено).
+    Если короткий запрос сработал после пустого длинного, урок пишется
+    в журнал поисков: она запоминает, как искать лучше."""
+    results = search_wikipedia(query)
+    attempts = [(query, len(results))]
+    if not results:
+        simpler = simplify_query(query)
+        if simpler and simpler.lower() != (query or '').lower():
+            retry = search_wikipedia(simpler)
+            attempts.append((simpler, len(retry)))
+            if retry:
+                log_lesson(query, simpler)
+                return retry, attempts
+    return results, attempts
+
+
 def log_search(query, results, best=None):
     stamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
     lines = [f'## {stamp} — «{query}»', '']
@@ -340,7 +380,13 @@ def main():
             print('Быстрое правило: обычный разговор о ней самой, без поиска', flush=True)
         else:
             query = decide_search(model, tokenizer, owner_text)
-    results = search_wikipedia(query) if query else []
+    results = []
+    if query:
+        results, attempts = search_with_retry(query)
+        if len(attempts) > 1:
+            print(f'Споткнулась в поиске и переформулировала: {attempts}', flush=True)
+            if results:
+                query = attempts[-1][0]
     context_note = ''
     best = None
     if query:
