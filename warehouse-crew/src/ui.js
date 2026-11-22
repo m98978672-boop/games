@@ -434,6 +434,36 @@ window.WC = window.WC || {};
     });
   }
 
+  function sortedActiveOrders() {
+    return game.sim.activeOrders().slice().sort(function (a, b) {
+      return (a.direction === 'return') - (b.direction === 'return') || a.deadline - b.deadline || a.createdAt - b.createdAt;
+    });
+  }
+
+  // Переход только показывает карточку, не отдаёт приказ и не меняет смену.
+  // Сверяем симуляцию и фуру на момент нажатия: груз мог уйти за время кадра.
+  function showTruckOrder(sim, truckId, orderId) {
+    var truck = game.sim === sim && sim.truckById(truckId);
+    var active = game.sim === sim && sortedActiveOrders();
+    var index = active ? active.findIndex(function (o) { return o.id === orderId && o.truckId === truckId; }) : -1;
+    if (!truck || truck.status !== 'working' || index < 0) {
+      U.toast('Груз уже недоступен в этом рейсе', 'warn', 2400);
+      renderTrucks();
+      return;
+    }
+    // Очистка карточек старой симуляции должна произойти до изменения лимита.
+    if (uiState.ordersSim !== sim) renderOrders();
+    uiState.orderFilter = 'all';
+    uiState.orderVisibleLimit = Math.max(uiState.orderVisibleLimit, Math.ceil((index + 1) / 14) * 14);
+    U.$$('[data-order-filter]').forEach(function (button) { button.setAttribute('aria-pressed', button.getAttribute('data-order-filter') === 'all' ? 'true' : 'false'); });
+    renderOrders();
+    var card = uiState.orderRows.get(orderId);
+    if (card) {
+      card.focus({ preventScroll: true });
+      if (card.scrollIntoView) card.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+    }
+  }
+
   function renderTrucks() {
     if (!dom.truckList || !game.sim) return;
     if (uiState.trucksSim !== game.sim) {
@@ -504,10 +534,16 @@ window.WC = window.WC || {};
           cargoLive[order.id] = true;
           var item = row.cargoRows.get(order.id);
           if (!item) {
-            item = U.el('li', { 'data-truck-order': order.id }, [U.el('b'), U.el('span')]);
+            var sim = game.sim;
+            var jump = U.el('button', { type: 'button', class: 'truck-cargo-jump', 'data-cargo-order': order.id, text: 'В очередь', onclick: function () { showTruckOrder(sim, truck.id, order.id); } });
+            item = U.el('li', { 'data-truck-order': order.id }, [U.el('b'), U.el('span'), jump]);
             row.cargoRows.set(order.id, item);
           }
-          if (row.manifestList.children[i] !== item) row.manifestList.insertBefore(item, row.manifestList.children[i] || null);
+          if (row.manifestList.children[i] !== item) {
+            var cargoFocus = item.contains(document.activeElement) ? document.activeElement : null;
+            row.manifestList.insertBefore(item, row.manifestList.children[i] || null);
+            if (cargoFocus) cargoFocus.focus({ preventScroll: true });
+          }
           var stateLabel;
           if (order.status === 'stored') stateLabel = 'Уложен · ' + order.slotId;
           else if (order.status === 'loaded') stateLabel = 'Погружен';
@@ -518,10 +554,15 @@ window.WC = window.WC || {};
           else if (order.status === 'pending') stateLabel = order.physics ? 'После падения · движется' : 'Ожидает бригаду';
           else stateLabel = 'Неизвестное состояние';
           item.firstChild.textContent = order.code + (order.shippingPriority === true ? ' · ★ отгрузка' : '');
-          item.lastChild.textContent = order.goods + ' · ' + order.mass + ' кг · ' + stateLabel;
+          item.children[1].textContent = order.goods + ' · ' + order.mass + ' кг · ' + stateLabel;
+          var canJump = order.status === 'pending' || order.status === 'claimed' || order.status === 'carried';
+          var jumpButton = item.children[2];
+          if (!canJump && document.activeElement === jumpButton) row.manifestSummary.focus({ preventScroll: true });
+          jumpButton.hidden = !canJump;
+          jumpButton.setAttribute('aria-label', 'Найти заказ ' + order.code + ' в очереди');
         });
         row.cargoRows.forEach(function (item, id) {
-          if (!cargoLive[id]) { item.remove(); row.cargoRows.delete(id); }
+          if (!cargoLive[id]) { if (item.contains(document.activeElement)) row.manifestSummary.focus({ preventScroll: true }); item.remove(); row.cargoRows.delete(id); }
         });
         var notes = [];
         if (truck.completedDetached) notes.push('Уложены и переданы в другой рейс: ' + truck.completedDetached);
@@ -602,15 +643,14 @@ window.WC = window.WC || {};
     // После новой смены идентификаторы заказов начинаются заново: старые
     // обработчики кнопок и подписи нельзя переносить в другую симуляцию.
     if (uiState.ordersSim !== game.sim) {
+      if (dom.orderList.contains(document.activeElement)) { var filter = document.querySelector('[data-order-filter="' + uiState.orderFilter + '"]'); if (filter) filter.focus({ preventScroll: true }); }
       uiState.orderRows.forEach(function (row) { if (row.parentNode) row.parentNode.removeChild(row); });
       uiState.orderRows.clear();
       uiState.orderVisibleLimit = 14;
       uiState.ordersSim = game.sim;
     }
     // Ближайший дедлайн сверху — срочные заказы не теряются в очереди.
-    var active = game.sim.activeOrders().slice().sort(function (a, b) {
-      return (a.direction === 'return') - (b.direction === 'return') || a.deadline - b.deadline || a.createdAt - b.createdAt;
-    });
+    var active = sortedActiveOrders();
     var now = game.sim.state.time;
     var slots = game.sim.state.slots;
     var free = slots.filter(function (slot) { return !slot.occupied; }).length;
@@ -637,7 +677,7 @@ window.WC = window.WC || {};
       live[order.id] = true;
       var row = uiState.orderRows.get(order.id);
       if (!row) {
-        row = U.el('div', { class: 'order' }, [
+        row = U.el('div', { class: 'order', tabindex: '-1', role: 'group', 'aria-label': 'Заказ ' + order.code }, [
           U.el('div', { class: 'o-code', text: order.code }),
           U.el('div', { class: 'o-who', text: '' }),
           U.el('div', { class: 'o-line' }, [
@@ -673,7 +713,11 @@ window.WC = window.WC || {};
         dom.orderList.appendChild(row);
       }
       // Переставляем существующие карточки, сохраняя кнопки и их фокус.
-      if (dom.orderList.children[index] !== row) dom.orderList.insertBefore(row, dom.orderList.children[index] || null);
+      if (dom.orderList.children[index] !== row) {
+        var orderFocus = row.contains(document.activeElement) ? document.activeElement : null;
+        dom.orderList.insertBefore(row, dom.orderList.children[index] || null);
+        if (orderFocus) orderFocus.focus({ preventScroll: true });
+      }
       var take = row.querySelector('.o-take');
       var selected = game.activeWorker();
       var busy = selected && (selected.state.orderId || selected.state.carryingId);

@@ -705,6 +705,33 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
     const emptyTruck = game.callTruck('load').truck; game.sim.returnToStorage(emptyBox); drawCargo();
     const emptyManifest = doc.querySelector('[data-truck-cargo="'+emptyTruck.id+'"]');
     const manifestEmpty = emptyManifest.querySelectorAll('[data-truck-order]').length===0 && emptyManifest.textContent.includes('Грузы рейса · 0') && emptyManifest.textContent.includes('Невыполненные места (возврат): 1');
+    // Переход из ведомости раскрывает нужную карточку даже за 14-м местом,
+    // но сам не назначает груз и безопасен при устаревшей кнопке.
+    game.restart(); game.setPaused(true); game.api.crew.forEach(w=>game.command(w.id,'wait'));
+    const jumpTruck=game.callTruck('unload').truck, jumpOrders=game.sim.ordersOfTruck(jumpTruck).slice();
+    const target=jumpOrders[0]; target.deadline=999;
+    const filler=Array.from({length:18},(_,i)=>({...target,id:'jump-test-'+i,code:'EXTRA-'+i,truckId:null,deadline:i+1}));
+    game.sim.state.orders.push(...filler); drawCargo();
+    const jumpDetails=doc.querySelector('[data-truck-cargo="'+jumpTruck.id+'"]'); jumpDetails.open=true;
+    const jumpButton=jumpDetails.querySelector('[data-cargo-order="'+target.id+'"]');
+    doc.querySelector('[data-order-filter="priority"]').click(); jumpButton.focus();
+    const beforeJump=JSON.stringify(game.captureCheckpoint()); jumpButton.click();
+    const jumpCard=doc.activeElement;
+    const jumpWorks=jumpCard.classList.contains('order') && jumpCard.querySelector('.o-code').textContent===target.code && jumpCard.getAttribute('aria-label')==='Заказ '+target.code && doc.querySelector('[data-order-filter="all"]').getAttribute('aria-pressed')==='true' && window.WC.ui.state.orderVisibleLimit>=19 && JSON.stringify(game.captureCheckpoint())===beforeJump;
+    target.deadline=0; drawCargo(); const jumpFocusStable=doc.activeElement===jumpCard && doc.querySelector('#order-list .order')===jumpCard;
+    jumpCard.querySelector('.o-take').click(); drawCargo();
+    const jumpAssignment=target.status==='claimed' && target.carrier===game.api.crew[0].id && !jumpButton.hidden;
+    const stale=jumpDetails.querySelector('[data-cargo-order="'+jumpOrders[1].id+'"]');
+    doc.querySelector('[data-order-filter="priority"]').click(); stale.focus();
+    game.sim.returnToStorage(jumpOrders[1]); const beforeStale=JSON.stringify(game.captureCheckpoint()); stale.click();
+    const jumpStale=doc.querySelector('[data-order-filter="priority"]').getAttribute('aria-pressed')==='true' && JSON.stringify(game.captureCheckpoint())===beforeStale && doc.activeElement===jumpDetails.querySelector('summary');
+    const completedButton=jumpDetails.querySelector('[data-cargo-order="'+jumpOrders[2].id+'"]'); completedButton.focus();
+    game.sim.store(jumpOrders[2],cargoWorker.id); drawCargo();
+    const jumpCompleted=completedButton.hidden && doc.activeElement===jumpDetails.querySelector('summary');
+    const oldButton=jumpButton; game.restart(); const newTruck=game.callTruck('unload').truck;
+    const newOrder=game.sim.ordersOfTruck(newTruck)[0], beforeOld=JSON.stringify(game.captureCheckpoint()); oldButton.click();
+    const jumpRestart=newTruck.id===jumpTruck.id && newOrder.id===target.id && newOrder.status==='pending' && JSON.stringify(game.captureCheckpoint())===beforeOld;
+    result.cargoJump=jumpWorks && jumpFocusStable && jumpAssignment && jumpStale && jumpCompleted && jumpRestart;
     result.cargoManifest = manifestInitial && manifestClaimed && manifestCarried && manifestLoaded && manifestRuined && manifestReadOnly && manifestDeparture && manifestRestart && manifestEmpty;
     game.restart(); window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
     const button = doc.querySelector('#contracts-list [data-contract="intake"]');
@@ -749,6 +776,7 @@ for (const mode of modes) {
   check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
   check(r.dockControls, 'выбор фуры: проверки груза и свободных ячеек', {error:r.contractError});
   check(r.departureRace && r.dockPersistent, 'занятый док виден при потоке фур; устаревший диалог безопасен', {race:r.departureRace, persistent:r.dockPersistent, error:r.contractError});
+  check(r.cargoJump, 'переход к заказу: фильтр, длинная очередь, назначение и устаревшие кнопки', {error:r.contractError});
   check(r.cargoManifest, 'ведомость двух доков: состав, статусы, возврат, фокус и новая смена', {error:r.contractError});
   check(r.stockUi, 'остатки: отметка, отмена, сохранение фокуса, возврат', {error:r.contractError});
   check(r.departureUi, 'досрочная отправка: таймер, сохранение фокуса, подтверждение и отмена', {error:r.contractError});

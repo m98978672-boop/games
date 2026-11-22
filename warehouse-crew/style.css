@@ -1219,3 +1219,7 @@ body.view-map #scene { filter: saturate(0.92) contrast(1.04); }
 .truck-cargo-list li span, .truck-cargo-notes { color: var(--ink-dim); line-height: 1.4; }
 .truck-cargo-notes { font-size: 11px; }
 .truck-cargo[hidden] { display: none; }
+
+.truck-cargo-jump { justify-self: start; min-height: 40px; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--panel-2); color: var(--ink); font: inherit; cursor: pointer; }
+.truck-cargo-jump:focus-visible, .order:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.truck-cargo-jump[hidden] { display: none; }
