@@ -676,6 +676,40 @@ console.log('Просроченные обычные грузы остаются
     'приходная фура не заканчивает разгрузку преждевременно');
 }
 
+console.log('План отгрузки: выбор запасов');
+{
+  const {warehouse} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const items=[];
+  for (let i=0; i<8; i++) { const item = warehouse.spawnOrder(); item.priority = (8-i)/10; warehouse.store(item, 'marta'); items.push(item); }
+  const first = items[7], second = items[6]; first.shippingPriority = true; second.shippingPriority = true;
+  const score = warehouse.state.stats.score, originalPriority = first.priority;
+  const truck = warehouse.spawnTruck('load'), chosen = warehouse.ordersOfTruck(truck);
+  check(chosen.includes(first) && chosen.includes(second), 'отмеченные грузы выбранной фуры опережают более ценные неотмеченные');
+  check(chosen.indexOf(second) < chosen.indexOf(first), 'среди отмеченных учитывается исходная ценность');
+  check(chosen.length >= 3 && chosen.length <= 5 && !chosen.includes(items[5]), 'свободные места заполняются по ценности, лишний груз остаётся');
+  check(first.priority === originalPriority && warehouse.state.stats.score === score, 'отметка не меняет стоимость и очки');
+  warehouse.claim(first.id,'marta'); warehouse.markCarried(first,'marta');
+  warehouse.departTruck(truck, 'тест');
+  check(first.status === 'carried' && first.direction === 'return' && first.shippingPriority === true, 'отметка остаётся у груза в руках при возврате');
+  warehouse.store(first,'marta');
+  check(first.status === 'stored' && first.shippingPriority === true, 'неотгруженная отметка сохраняется после досрочного отъезда');
+  const next = warehouse.spawnTruck('load');
+  check(warehouse.ordersOfTruck(next).includes(first), 'вернувшийся груз снова выбран на отгрузку');
+  warehouse.loadTruck(first,'marta');
+  check(first.status === 'loaded' && !first.shippingPriority, 'при фактической погрузке отметка снимается');
+  warehouse.drop(second,1,second.x,second.y);
+  check(second.status === 'ruined' && !second.shippingPriority, 'отметка снимается со списанного груза');
+}
+{
+  const {warehouse} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const items=[];
+  for (let i=0;i<7;i++) { const item=warehouse.spawnOrder(); item.priority=(7-i)/10; warehouse.store(item,'marta'); items.push(item); }
+  items[6].shippingPriority=true;
+  warehouse.state.truckTurn='load'; warehouse.state.truckTimer=0; warehouse.step(.05);
+  const truck = warehouse.activeTruck('load');
+  check(Boolean(truck) && warehouse.ordersOfTruck(truck).includes(items[6]), 'автоматическая фура учитывает те же отметки');
+}
+
 console.log('');
 if (failures) {
   console.log(`✗ Провалов: ${failures} из ${checks}`);

@@ -642,6 +642,24 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
     for (let n = 0; n < 8; n++) { const other = game.callTruck('load').truck; game.dispatchTruck(other.id); }
     window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
     result.dockPersistent = !!doc.querySelector('[data-depart-truck="' + longTruck.id + '"]') && game.sim.activeTruck('unload') === longTruck;
+    game.restart();
+    const stockBox = game.sim.spawnOrder(); game.sim.store(stockBox,game.api.crew[0].id);
+    const reserved = game.sim.spawnOrder();
+    window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+    doc.getElementById('stock-details').open = true;
+    const stockButton = doc.querySelector('[data-shipping-order="' + stockBox.id + '"]');
+    const onlyStored = !!stockButton && !doc.querySelector('[data-shipping-order="' + reserved.id + '"]') && doc.getElementById('stock-count').textContent === '1';
+    stockButton.focus(); stockButton.click();
+    const stockSave = JSON.parse(window.localStorage.getItem(window.WC.save.CHECKPOINT_KEY)).checkpoint.warehouse.state.orders.find(o => o.id === stockBox.id);
+    window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+    const stockMarked = stockButton === doc.querySelector('[data-shipping-order="' + stockBox.id + '"]') && doc.activeElement === stockButton && stockButton.getAttribute('aria-pressed') === 'true' && stockSave.shippingPriority === true;
+    stockButton.click(); const stockCancelled = stockButton.getAttribute('aria-pressed') === 'false' && !stockBox.shippingPriority;
+    stockButton.click(); const stockTruck = game.callTruck('load').truck;
+    window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+    const stockMoved = !doc.querySelector('[data-shipping-order="' + stockBox.id + '"]') && doc.getElementById('stock-count').textContent === '0' && doc.getElementById('stock-list').hidden && doc.activeElement === doc.getElementById('stock-heading');
+    game.dispatchTruck(stockTruck.id); window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
+    const stockReturned = doc.querySelector('[data-shipping-order="' + stockBox.id + '"]').getAttribute('aria-pressed') === 'true';
+    result.stockUi = onlyStored && stockMarked && stockCancelled && stockMoved && stockReturned;
     game.restart(); window.WC.ui.state.lastUiAt = -Infinity; window.WC.ui.frame(1/30);
     const button = doc.querySelector('#contracts-list [data-contract="intake"]');
     button.click();
@@ -685,6 +703,7 @@ for (const mode of modes) {
   check(r.safetyDisplay && r.safetyStable && r.safetySelect && r.safetyInspect && r.safetyClear && r.safetyHired, 'сводка бригады: состояние, выбор, инспектор и восстановление', {display:r.safetyDisplay, stable:r.safetyStable, select:r.safetySelect, inspect:r.safetyInspect, clear:r.safetyClear, hired:r.safetyHired, error:r.featureError});
   check(r.dockControls, 'выбор фуры: проверки груза и свободных ячеек', {error:r.contractError});
   check(r.departureRace && r.dockPersistent, 'занятый док виден при потоке фур; устаревший диалог безопасен', {race:r.departureRace, persistent:r.dockPersistent, error:r.contractError});
+  check(r.stockUi, 'остатки: отметка, отмена, сохранение фокуса, возврат', {error:r.contractError});
   check(r.departureUi, 'досрочная отправка: таймер, сохранение фокуса, подтверждение и отмена', {error:r.contractError});
   check(r.contractUi, 'контракты в пульте: взять, сохранить, отменить и увидеть в отчёте', {error:r.contractError});
   check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});

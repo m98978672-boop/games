@@ -25,6 +25,7 @@ window.WC = window.WC || {};
     newsIndex: 0,
     orderRows: new Map(),
     truckRows: new Map(),
+    stockRows: new Map(),
     safetyRows: new Map(),
     orderFilter: 'all',
     orderVisibleLimit: 14,
@@ -78,6 +79,9 @@ window.WC = window.WC || {};
     dom.truckList = q('truck-list');
     dom.truckCount = q('truck-count');
     dom.dockSummary = q('dock-summary');
+    dom.stockList = q('stock-list');
+    dom.stockCount = q('stock-count');
+    dom.stockEmpty = q('stock-empty');
     dom.speedSeg = q('speed-seg');
     dom.qbName = q('qb-name');
     dom.qbState = q('qb-state');
@@ -491,6 +495,59 @@ window.WC = window.WC || {};
     });
   }
 
+  // Список остатков строится по реальным stored-заказам, а не по занятым
+  // (в том числе зарезервированным) ячейкам. Узлы кнопок сохраняют фокус.
+  function renderStock() {
+    if (!dom.stockList || !game.sim) return;
+    if (uiState.stockSim !== game.sim) {
+      if (dom.stockList.contains(document.activeElement)) { var stockHeading = q('stock-heading'); if (stockHeading) stockHeading.focus({ preventScroll: true }); }
+      dom.stockList.innerHTML = '';
+      uiState.stockRows.clear();
+      uiState.stockSim = game.sim;
+    }
+    var items = game.sim.state.orders.filter(function (o) { return o.status === 'stored'; });
+    items.sort(function (a, b) { return String(a.slotId).localeCompare(String(b.slotId)); });
+    var marked = items.filter(function (o) { return o.shippingPriority === true; }).length;
+    dom.stockCount.textContent = items.length + (marked ? ' · ★ ' + marked : '');
+    dom.stockEmpty.hidden = items.length > 0;
+    var live = Object.create(null);
+    items.forEach(function (order, index) {
+      live[order.id] = true;
+      var row = uiState.stockRows.get(order.id);
+      if (!row) {
+        var title = U.el('b'), detail = U.el('div', { class: 'stock-item-detail' });
+        var button = U.el('button', { class: 'o-priority stock-mark', type: 'button', 'data-shipping-order': order.id, onclick: function () {
+          var current = game.sim.state.orders.find(function (o) { return o.id === order.id; });
+          var result = game.setShippingPriority(order.id, !(current && current.shippingPriority === true));
+          if (!result.ok) U.toast(result.reason, 'warn', 2400);
+          renderStock();
+        } });
+        var node = U.el('div', { class: 'stock-item' }, [title, detail, button]);
+        row = { node: node, title: title, detail: detail, button: button };
+        uiState.stockRows.set(order.id, row);
+      }
+      if (dom.stockList.children[index] !== row.node) {
+        var focused = row.node.contains(document.activeElement) ? document.activeElement : null;
+        dom.stockList.insertBefore(row.node, dom.stockList.children[index] || null);
+        if (focused) focused.focus({ preventScroll: true });
+      }
+      var priority = order.shippingPriority === true;
+      row.node.classList.toggle('marked', priority);
+      row.title.textContent = order.code + ' · ' + order.slotId;
+      row.detail.textContent = order.goods + ' · ' + order.mass + ' кг' + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
+      row.button.disabled = game.state.shiftEnded;
+      row.button.textContent = priority ? '★ К отгрузке' : '☆ Отметить';
+      row.button.setAttribute('aria-pressed', priority ? 'true' : 'false');
+      row.button.setAttribute('aria-label', (priority ? 'Снять отметку отгрузки: ' : 'Отметить для отгрузки: ') + order.code);
+    });
+    uiState.stockRows.forEach(function (row, id) {
+      if (live[id]) return;
+      if (row.node.contains(document.activeElement)) { var heading = q('stock-heading'); if (heading) heading.focus({ preventScroll: true }); }
+      row.node.remove(); uiState.stockRows.delete(id);
+    });
+    dom.stockList.hidden = items.length === 0;
+  }
+
   function renderOrders() {
     // После новой смены идентификаторы заказов начинаются заново: старые
     // обработчики кнопок и подписи нельзя переносить в другую симуляцию.
@@ -586,7 +643,7 @@ window.WC = window.WC || {};
       var who = order.status === 'carried' ? 'несёт: ' + nameOf(order.carrier)
         : order.status === 'claimed' ? (order.physics ? 'ждёт остановки: ' : 'в работе: ') + nameOf(order.carrier) : 'свободен';
       row.querySelector('.o-who').textContent = who;
-      row.querySelector('.o-info').textContent = order.goods + ' · ' + order.mass + ' кг' + (order.direction === 'return' ? ' · возврат на полку' : '') + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
+      row.querySelector('.o-info').textContent = order.goods + ' · ' + order.mass + ' кг' + (order.direction === 'return' ? ' · возврат на полку' : '') + (order.shippingPriority === true ? ' · ★ отгрузка' : '') + (order.damage > 0.02 ? ' · брак ' + Math.round(order.damage * 100) + '%' : '');
       // Точки коробки: A — откуда, C — где лежит, B — куда едет
       var abc = row.querySelector('.o-abc');
       if (abc) {
@@ -1421,6 +1478,7 @@ window.WC = window.WC || {};
         if (!result.ok) U.toast(result.reason, 'warn', 2400);
         else U.toast('Фура ' + result.truck.plate + ' у дока: ' + (result.truck.kind === 'unload' ? 'разгрузка' : 'загрузка'), 'good', 2400);
         renderTrucks();
+        renderStock();
       });
     });
     q('btn-camera').addEventListener('click', function () { setCamera(WC.world.getMode() === 'third' ? 'top' : 'third'); });
@@ -1630,6 +1688,7 @@ window.WC = window.WC || {};
     renderJournal();
     renderOrders();
     renderTrucks();
+    renderStock();
     renderShop();
     renderNews(true);
     U.$$('[data-view]').forEach(function (button) {
@@ -1644,6 +1703,7 @@ window.WC = window.WC || {};
         U.$$('[data-journal-filter]').forEach(function (item) { item.setAttribute('aria-pressed', item.getAttribute('data-journal-filter') === 'all' ? 'true' : 'false'); });
         renderJournal();
         renderTrucks();
+        renderStock();
         var subtitle = q('dialogue-subtitle');
         if (subtitle) subtitle.hidden = true;
         clearTimeout(subtitleTimer);
@@ -1706,6 +1766,7 @@ window.WC = window.WC || {};
     renderSafety();
     renderJournal();
     renderTrucks();
+    renderStock();
     renderOrders();
     renderShop();
     renderContracts();

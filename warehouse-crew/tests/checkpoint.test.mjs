@@ -289,4 +289,37 @@ assert(game.dispatchTruck(incoming.id).ok);
 assert.equal(incomingBox.direction,'in'); assert.equal(incomingBox.status,'pending');
 assert(!game.sim.activeTruck('unload'));
 game.endShift(); assert(!game.dispatchTruck(incoming.id).ok);
+// План отгрузки доступен только для запаса и записывается без ожидания
+// таймера автосохранения; после возврата с незавершённого рейса не исчезает.
+data.clear(); c = await boot(); game = c.WC.game;
+const stocked = game.sim.spawnOrder(); stocked.priority=.01;
+assert(!game.setShippingPriority(stocked.id,true).ok);
+game.sim.store(stocked,game.api.crew[0].id);
+const baseline = game.sim.state.stats.score, deadlineBefore = stocked.deadline;
+assert(!game.setShippingPriority(stocked.id,'true').ok);
+assert(!game.setShippingPriority('missing',true).ok);
+game.setPaused(true); assert(game.setShippingPriority(stocked.id,true).ok);
+assert.equal(game.sim.state.stats.score,baseline); assert.equal(stocked.deadline,deadlineBefore);
+const markedSave = data.get(c.WC.save.CHECKPOINT_KEY);
+c = await boot(); game = c.WC.game;
+assert.equal(game.api.resumeStatus,'restored');
+assert.equal(game.sim.state.orders.find(o=>o.id===stocked.id).shippingPriority,true);
+assert(game.setShippingPriority(stocked.id,false).ok);
+assert(!game.sim.state.orders.find(o=>o.id===stocked.id).shippingPriority);
+assert(game.setShippingPriority(stocked.id,true).ok);
+const markedTruck = game.callTruck('load').truck;
+assert(game.sim.ordersOfTruck(markedTruck).some(o=>o.id===stocked.id));
+assert(!game.setShippingPriority(stocked.id,false).ok);
+assert(game.dispatchTruck(markedTruck.id).ok);
+assert.equal(game.sim.state.orders.find(o=>o.id===stocked.id).shippingPriority,true);
+c = await boot(); game = c.WC.game;
+assert.equal(game.sim.state.orders.find(o=>o.id===stocked.id).shippingPriority,true);
+game.endShift(); assert(!game.setShippingPriority(stocked.id,false).ok);
+// Отсутствие поля в старом v2 допустимо; некорректное поле защищает снимок.
+const oldMark = JSON.parse(markedSave); delete oldMark.checkpoint.warehouse.state.orders[0].shippingPriority;
+data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldMark)); c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'restored');
+const badMark = JSON.parse(markedSave); badMark.checkpoint.warehouse.state.orders[0].shippingPriority = 'yes';
+const badMarkText = JSON.stringify(badMark); data.set(c.WC.save.CHECKPOINT_KEY,badMarkText);
+c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed'); assert(!c.WC.save.save(c.WC.game));
+assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),badMarkText);
 console.log('✓ Перезагрузка смены: бригада, мозги, физика, склад, персонал, v1 и защита повреждённого файла');

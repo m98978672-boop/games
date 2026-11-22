@@ -764,6 +764,22 @@ WC.game = (function () {
     return { ok: true, enabled: enabled };
   }
 
+  // Отметка относится к физически находящимся на стеллаже товарам, а не
+  // к уже назначенным бригаде задачам и не меняет стоимость/сроки заказов.
+  function setShippingPriority(orderId, enabled) {
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена не активна' };
+    if (typeof enabled !== 'boolean') return { ok: false, reason: 'Некорректная метка' };
+    var order = api.sim.state.orders.find(function (item) { return item.id === orderId; });
+    if (!order || order.status !== 'stored') return { ok: false, reason: 'Груз уже не лежит на полке' };
+    if (Boolean(order.shippingPriority) !== enabled) {
+      if (enabled) order.shippingPriority = true; else delete order.shippingPriority;
+      pushLog(order.code + (enabled ? ': отмечен для отгрузки' : ': отметка отгрузки снята'), 'info');
+      emit('shipping-priority', { order: order, enabled: enabled });
+      WC.save.autosave(api);
+    }
+    return { ok: true, enabled: enabled };
+  }
+
   function labelForCommand(cmd) {
     return {
       pick: 'взять коробку',
@@ -1061,6 +1077,7 @@ WC.game = (function () {
           typeof order.status !== 'string' || !Number.isFinite(order.x) || !Number.isFinite(order.y) ||
           !Number.isFinite(order.mass) || !Number.isFinite(order.deadline) || !Number.isFinite(order.priority) ||
           (order.dispatchPriority != null && typeof order.dispatchPriority !== 'boolean') ||
+          (order.shippingPriority != null && typeof order.shippingPriority !== 'boolean') ||
           !Number.isFinite(order.damage) || !order.pose || !Number.isFinite(order.pose.x) || !Number.isFinite(order.pose.y) || !Number.isFinite(order.pose.z)) throw new Error('Повреждён заказ');
       orderIds[order.id] = true;
     });
@@ -1166,6 +1183,7 @@ WC.game = (function () {
     command: command,
     teamCommand: teamCommand,
     setOrderPriority: setOrderPriority,
+    setShippingPriority: setShippingPriority,
     callTruck: callTruck,
     dispatchTruck: dispatchTruck,
     acceptContract: acceptContract,
