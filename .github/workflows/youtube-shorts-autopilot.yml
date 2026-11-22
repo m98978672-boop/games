@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       made_for_kids:
-        description: "Explicitly enter true or false; leave blank to cancel this run"
-        type: string
-        required: false
+        description: "Owner-approved audience classification"
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
+        required: true
 
 permissions:
   contents: read
@@ -24,7 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || vars.YOUTUBE_MADE_FOR_KIDS }}
+      # The channel owner explicitly classified the audience as not made for kids.
+      # Manual dispatch exposes the same explicit choice; scheduled runs use it too.
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
       DATA_DIR: youtube-bot/data
     steps:
       - uses: actions/checkout@v7
@@ -36,7 +42,7 @@ jobs:
       - name: Require an explicit YouTube audience declaration
         run: |
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
-            echo "::error::Set repository variable YOUTUBE_MADE_FOR_KIDS to true or false. Autopublication is blocked until the owner explicitly classifies the audience."
+            echo "::error::Choose the owner-approved audience value true or false in the workflow input."
             exit 1
           fi
       - name: Restore the local Qwen model cache
@@ -60,20 +66,8 @@ jobs:
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
         run: python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4"
-      - name: Obtain audience-scoped GitHub identity token
-        id: oidc
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const token = await core.getIDToken('youtube-bot');
-            core.setSecret(token);
-            core.setOutput('token', token);
-      - name: Upload and schedule with YouTube
-        env:
-          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
-        run: |
-          # The token is masked by Actions and the publisher; never print or pass it as an argument.
-          python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
+      - name: Start resumable YouTube upload and schedule
+        run: python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
       - name: Retain only non-sensitive model selection memory
         if: always() && hashFiles('youtube-bot/data/recent-games.json') != ''
         uses: actions/cache/save@v6

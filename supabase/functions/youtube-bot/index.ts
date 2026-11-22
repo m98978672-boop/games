@@ -256,6 +256,7 @@ async function accessTokenFromStoredRefreshToken(): Promise<string> {
   });
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: form,
+    signal: AbortSignal.timeout(15_000),
   });
   const tokens = await response.json().catch(() => ({}));
   if (!response.ok || typeof tokens.access_token !== "string") {
@@ -265,104 +266,177 @@ async function accessTokenFromStoredRefreshToken(): Promise<string> {
   return tokens.access_token;
 }
 
-async function publishAutopilotReview(request: Request): Promise<Response> {
+async function jsonRequest(request: Request): Promise<Record<string, unknown> | null> {
+  try {
+    const value = await request.json();
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function validJobId(value: unknown): value is string {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function jobByPublishAt(publishAt: string): Promise<Record<string, unknown> | null> {
+  const response = await dbRequest(
+    "youtube_bot_autopilot_jobs",
+    `?publish_at=eq.${encodeURIComponent(publishAt)}&select=id,status,video_id,watch_url,safe_error`,
+    { method: "GET" },
+  );
+  return (await response.json())[0] ?? null;
+}
+
+async function issueAutopilotAccessToken(jobId: string): Promise<Response> {
+  try {
+    const accessToken = await accessTokenFromStoredRefreshToken();
+    // Only the OIDC-trusted main workflow receives this short-lived upload-only token.
+    return Response.json({ status: "ready_for_upload", job_id: jobId, access_token: accessToken });
+  } catch (error) {
+    const safeError = error instanceof Error ? error.message.slice(0, 200) : "Could not prepare YouTube upload.";
+    await dbRequest("youtube_bot_autopilot_jobs", `?id=eq.${jobId}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ status: "failed", safe_error: safeError, updated_at: new Date().toISOString() }),
+    }).catch(() => undefined);
+    return Response.json({ status: "failed", error: safeError }, { status: 502 });
+  }
+}
+
+async function prepareAutopilotReview(request: Request): Promise<Response> {
   try { await verifyGitHubActionsOidc(request); }
   catch (error) {
     const reason = error instanceof Error ? error.message.slice(0, 160) : "identity verification failed";
     console.error("Autopilot OIDC verification failed", reason);
     return Response.json({ error: `GitHub Actions identity was not accepted: ${reason}` }, { status: 401 });
   }
-  let form: FormData;
-  try { form = await request.formData(); }
-  catch { return Response.json({ error: "Expected multipart review upload." }, { status: 400 }); }
-  const metadataText = form.get("metadata");
-  const video = form.get("video");
-  if (typeof metadataText !== "string" || !(video instanceof File)) {
-    return Response.json({ error: "Review metadata or MP4 is missing." }, { status: 400 });
+  const body = await jsonRequest(request);
+  const metadata = body?.metadata;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return Response.json({ error: "Expected JSON review metadata." }, { status: 400 });
   }
-  let metadata: Record<string, unknown>;
-  try { metadata = JSON.parse(metadataText); }
-  catch { return Response.json({ error: "Review metadata is invalid JSON." }, { status: 400 }); }
-  const jobId = String(metadata.job_id ?? "");
-  const gameId = String(metadata.game_id ?? "");
-  const title = String(metadata.title ?? "").trim();
-  const description = String(metadata.description ?? "");
-  const publishAt = String(metadata.publish_at ?? "");
-  const kids = metadata.made_for_kids;
-  const tagList = metadata.tags;
-  const category = String(metadata.category_id ?? "20");
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId) ||
-      !/^[a-z0-9-]{1,60}$/.test(gameId) || !title || title.length > 100 || description.length > 5000 ||
-      typeof kids !== "boolean" || !Array.isArray(tagList) || tagList.length > 30 ||
-      tagList.some((tag) => typeof tag !== "string" || tag.length > 100) ||
-      !/^\d{1,4}$/.test(category)) {
+  const item = metadata as Record<string, unknown>;
+  const jobId = item.job_id;
+  const gameId = item.game_id;
+  const title = typeof item.title === "string" ? item.title.trim() : "";
+  const description = typeof item.description === "string" ? item.description : "";
+  const publishAt = typeof item.publish_at === "string" ? item.publish_at : "";
+  const kids = item.made_for_kids;
+  const tags = item.tags;
+  const category = String(item.category_id ?? "20");
+  if (!validJobId(jobId) || typeof gameId !== "string" || !/^[a-z0-9-]{1,60}$/.test(gameId) ||
+      !title || title.length > 100 || description.length > 5000 || typeof kids !== "boolean" ||
+      !Array.isArray(tags) || tags.length > 30 ||
+      tags.some((tag) => typeof tag !== "string" || tag.length > 100) || !/^\d{1,4}$/.test(category)) {
     return Response.json({ error: "Review metadata failed validation." }, { status: 400 });
   }
   const scheduledDate = new Date(publishAt);
   if (!publishAt || Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() < Date.now() + 15 * 60 * 1000) {
     return Response.json({ error: "Scheduled publish time must be at least 15 minutes in the future." }, { status: 400 });
   }
-  if (video.size < 1024 || video.size > 5 * 1024 * 1024 || video.type !== "video/mp4") {
-    return Response.json({ error: "Generated MP4 must be between 1 KiB and 5 MiB." }, { status: 413 });
-  }
   const safeTime = scheduledDate.toISOString();
-  const existingResponse = await dbRequest(
-    "youtube_bot_autopilot_jobs", `?publish_at=eq.${encodeURIComponent(safeTime)}&select=id,status,video_id,watch_url`, { method: "GET" },
-  );
-  const existing = (await existingResponse.json())[0];
+
+  // One reservation per publish slot. Repeated preparation for the same job is
+  // safe; a different job cannot start a second upload for the same slot.
+  const existing = await jobByPublishAt(safeTime);
   if (existing) {
+    if (existing.status === "scheduled" && typeof existing.video_id === "string") {
+      return Response.json({
+        status: "scheduled", video_id: existing.video_id, watch_url: existing.watch_url, publish_at: safeTime,
+      });
+    }
+    if (existing.id === jobId && existing.status === "processing") {
+      return await issueAutopilotAccessToken(jobId);
+    }
     return Response.json({
-      status: existing.status, video_id: existing.video_id, watch_url: existing.watch_url,
-      error: "A job already exists for this publish slot; duplicate upload was prevented.",
-    }, { status: existing.status === "scheduled" ? 200 : 409 });
+      status: existing.status,
+      error: typeof existing.safe_error === "string"
+        ? existing.safe_error
+        : "This publish slot is already reserved; no second upload was started.",
+    }, { status: 409 });
   }
-  await dbRequest("youtube_bot_autopilot_jobs", "", {
-    method: "POST", headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({
-      id: jobId, game_id: gameId, title, publish_at: safeTime, made_for_kids: kids, status: "processing",
-    }),
-  });
 
   try {
-    const accessToken = await accessTokenFromStoredRefreshToken();
-    const bytes = new Uint8Array(await video.arrayBuffer());
-    const youtubeMetadata = {
-      snippet: { title, description, tags: tagList, categoryId: category },
-      status: { privacyStatus: "private", publishAt: safeTime, selfDeclaredMadeForKids: kids },
-    };
-    const init = await fetch("https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json; charset=UTF-8",
-        "X-Upload-Content-Length": String(bytes.length),
-        "X-Upload-Content-Type": "video/mp4",
-      },
-      body: JSON.stringify(youtubeMetadata),
+    await dbRequest("youtube_bot_autopilot_jobs", "", {
+      method: "POST", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        id: jobId, game_id: gameId, title, publish_at: safeTime,
+        made_for_kids: kids, status: "processing",
+      }),
     });
-    if (!init.ok) throw new Error(`YouTube rejected the upload request (${init.status}).`);
-    const uploadUrl = init.headers.get("Location");
-    if (!uploadUrl) throw new Error("YouTube did not return a resumable upload URL.");
-    const uploaded = await fetch(uploadUrl, {
-      method: "PUT", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "video/mp4" }, body: bytes,
-    });
-    const result = await uploaded.json().catch(() => ({}));
-    if (!uploaded.ok || typeof result.id !== "string") throw new Error(`YouTube upload did not complete (${uploaded.status}).`);
-    const watchUrl = `https://youtu.be/${result.id}`;
-    await dbRequest("youtube_bot_autopilot_jobs", `?id=eq.${jobId}`, {
-      method: "PATCH", headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ status: "scheduled", video_id: result.id, watch_url: watchUrl, updated_at: new Date().toISOString() }),
-    });
-    return Response.json({ status: "scheduled", game_id: gameId, video_id: result.id, watch_url: watchUrl, publish_at: safeTime });
-  } catch (error) {
-    const safeError = error instanceof Error ? error.message.slice(0, 240) : "Upload failed.";
-    console.error("Autopilot review upload failed", safeError);
-    await dbRequest("youtube_bot_autopilot_jobs", `?id=eq.${jobId}`, {
-      method: "PATCH", headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ status: "failed", safe_error: safeError, updated_at: new Date().toISOString() }),
-    }).catch(() => undefined);
-    return Response.json({ error: safeError }, { status: 502 });
+  } catch {
+    // A concurrent request may have won the unique publish_at reservation.
+    const raced = await jobByPublishAt(safeTime).catch(() => null);
+    if (raced?.status === "scheduled" && typeof raced.video_id === "string") {
+      return Response.json({ status: "scheduled", video_id: raced.video_id, watch_url: raced.watch_url, publish_at: safeTime });
+    }
+    if (raced?.id === jobId && raced.status === "processing") return await issueAutopilotAccessToken(jobId);
+    if (raced) return Response.json({ status: raced.status, error: "This publish slot is already reserved; no second upload was started." }, { status: 409 });
+    return Response.json({ error: "Could not reserve this publish slot in the upload queue." }, { status: 503 });
   }
+  return await issueAutopilotAccessToken(jobId);
+}
+
+async function completeAutopilotReview(request: Request): Promise<Response> {
+  try { await verifyGitHubActionsOidc(request); }
+  catch (error) {
+    const reason = error instanceof Error ? error.message.slice(0, 160) : "identity verification failed";
+    console.error("Autopilot completion OIDC verification failed", reason);
+    return Response.json({ error: `GitHub Actions identity was not accepted: ${reason}` }, { status: 401 });
+  }
+  const body = await jsonRequest(request);
+  const jobId = body?.job_id;
+  const videoId = body?.video_id;
+  if (!validJobId(jobId) || typeof videoId !== "string" || !/^[A-Za-z0-9_-]{6,80}$/.test(videoId)) {
+    return Response.json({ error: "Job or YouTube video ID failed validation." }, { status: 400 });
+  }
+  const watchUrl = `https://youtu.be/${videoId}`;
+  const response = await dbRequest(
+    "youtube_bot_autopilot_jobs", `?id=eq.${jobId}&select=id,status,video_id,watch_url,publish_at`, { method: "GET" },
+  );
+  const job = (await response.json())[0];
+  if (!job) return Response.json({ error: "Reserved upload job was not found." }, { status: 404 });
+  if (job.status === "scheduled") {
+    if (job.video_id !== videoId) return Response.json({ error: "Job was already completed with a different video ID." }, { status: 409 });
+    return Response.json({ status: "scheduled", video_id: videoId, watch_url: watchUrl, publish_at: job.publish_at });
+  }
+  if (job.status !== "processing") return Response.json({ error: "Upload job is not in a completable state." }, { status: 409 });
+  await dbRequest("youtube_bot_autopilot_jobs", `?id=eq.${jobId}`, {
+    method: "PATCH", headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ status: "scheduled", video_id: videoId, watch_url: watchUrl, safe_error: null, updated_at: new Date().toISOString() }),
+  });
+  return Response.json({ status: "scheduled", video_id: videoId, watch_url: watchUrl, publish_at: job.publish_at });
+}
+
+async function failAutopilotReview(request: Request): Promise<Response> {
+  try { await verifyGitHubActionsOidc(request); }
+  catch (error) {
+    const reason = error instanceof Error ? error.message.slice(0, 160) : "identity verification failed";
+    console.error("Autopilot failure-report OIDC verification failed", reason);
+    return Response.json({ error: `GitHub Actions identity was not accepted: ${reason}` }, { status: 401 });
+  }
+  const body = await jsonRequest(request);
+  const jobId = body?.job_id;
+  const errorText = typeof body?.error === "string" ? body.error.trim().slice(0, 220) : "Upload could not be started.";
+  if (!validJobId(jobId)) return Response.json({ error: "Job ID failed validation." }, { status: 400 });
+  const response = await dbRequest(
+    "youtube_bot_autopilot_jobs", `?id=eq.${jobId}&select=id,status,video_id`, { method: "GET" },
+  );
+  const job = (await response.json())[0];
+  if (!job) return Response.json({ error: "Reserved upload job was not found." }, { status: 404 });
+  if (job.status === "scheduled" || job.video_id) {
+    return Response.json({ error: "A video may already exist; job was not changed." }, { status: 409 });
+  }
+  if (job.status !== "failed") {
+    await dbRequest("youtube_bot_autopilot_jobs", `?id=eq.${jobId}`, {
+      method: "PATCH", headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({ status: "failed", safe_error: errorText, updated_at: new Date().toISOString() }),
+    });
+  }
+  return Response.json({ status: "failed", job_id: jobId, error: errorText });
 }
 
 async function oauthCallback(request: Request): Promise<Response> {
@@ -418,10 +492,16 @@ Deno.serve(async (request: Request) => {
     if (request.method === "GET" && route === "/auth/start") return await startOAuth(request);
     if (request.method === "GET" && route === "/oauth/callback") return await oauthCallback(request);
     if (request.method === "GET" && route === "/health") return Response.json({ ok: true, service: "youtube-bot" }, { headers: cors(request.headers.get("origin")) });
-    if (request.method === "POST" && route === "/autopilot/publish") return await publishAutopilotReview(request);
+    if (request.method === "POST" && route === "/autopilot/prepare") return await prepareAutopilotReview(request);
+    if (request.method === "POST" && route === "/autopilot/complete") return await completeAutopilotReview(request);
+    if (request.method === "POST" && route === "/autopilot/fail") return await failAutopilotReview(request);
     return new Response("Not found", { status: 404, headers: cors(request.headers.get("origin")) });
   } catch (error) {
-    console.error("YouTube bot request failed", error instanceof Error ? error.message : "unknown error");
+    const safeError = error instanceof Error ? error.message.slice(0, 220) : "unknown error";
+    console.error("YouTube bot request failed", safeError);
+    if (route.startsWith("/autopilot/")) {
+      return Response.json({ error: safeError }, { status: 503, headers: cors(request.headers.get("origin")) });
+    }
     return htmlPage("Не удалось завершить подключение", "Сервис остановился без загрузки публичного видео. Проверьте настройки OAuth/API и начните подключение заново.");
   }
 });
