@@ -1,6 +1,8 @@
 // Service Worker для RatMes — Network-First с немедленным обновлением кэша без устаревших стилей.
 
 const CACHE_NAME = 'ratmes-shell-v18';
+// Не сносить кэш живой Квени: там скачанная модель, она должна оставаться.
+const PRESERVED_CACHES = new Set([CACHE_NAME, 'transformers-cache']);
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -9,7 +11,7 @@ self.addEventListener('install', () => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => !PRESERVED_CACHES.has(k)).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
