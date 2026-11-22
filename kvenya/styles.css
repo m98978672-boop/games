@@ -378,3 +378,13 @@ body.is-embed .kv-shell { padding-top: 12px; }
   flex: 1 1 130px; font: inherit; font-size: 13.5px; color: var(--text);
   background: var(--bg-deep); border: 1px solid var(--line); border-radius: 8px; padding: 8px 9px;
 }
+
+/* ---------- приглашение в 3D-мир ---------- */
+.kv-world-cta {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  border-color: rgba(164, 208, 7, 0.55);
+  background: linear-gradient(120deg, #1d2b16, #241a3d 75%);
+}
+.kv-world-cta h2 { margin: 0 0 6px; }
+.kv-world-cta .kv-note { margin: 0; max-width: 760px; }
+.kv-world-btn { font-size: 15px; padding: 12px 18px; }
