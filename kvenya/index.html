@@ -13,6 +13,7 @@
   <script src="../shared/engine.js"></script>
   <script src="./app.js" defer></script>
   <script src="./avatar.js" defer></script>
+  <script src="./live.js" defer></script>
   <script src="../shared/engine-bootstrap.js" defer></script>
 </head>
 <body>
@@ -44,6 +45,32 @@
     </section>
 
     <main class="kv-grid">
+      <div class="kv-main">
+      <section class="kv-card kv-live" aria-label="Живой разговор с Квеней прямо на сайте">
+        <h2>⚡ Квеня прямо здесь — через сайт, без файлов</h2>
+        <p class="kv-note">Нажми «Включить живую Квеню» — маленькая модель запустится прямо
+          в твоём браузере (WebGPU или WASM, ~400 МБ скачается один раз и останется в кэше
+          браузера). Характер и манеры она берёт из своей настоящей персоны
+          <code>qwen-home/talk/persona.md</code>, а факты при нужде ищет в живой русской
+          Википедии — как дома. Никаких файлов, issue и ожидания: спросила — ответила.</p>
+        <div id="kvLiveStatus" class="kv-live-status">Живая Квеня ещё не включена.</div>
+        <div class="kv-live-bar" aria-hidden="true"><i id="kvLiveBar"></i></div>
+        <div id="kvLiveChat" class="kv-chat kv-live-chat" aria-live="polite">
+          <div class="kv-loading">Здесь будет живой разговор. Квеня уже машет из дома: «Включай, я тут!»</div>
+        </div>
+        <form id="kvLiveForm" class="kv-composer">
+          <label class="kv-composer-label" for="kvLiveInput">Спросить живую Квеню</label>
+          <textarea id="kvLiveInput" rows="2" maxlength="600" disabled placeholder="Например: Квеня, поищи в Википедии, какая самая длинная река в мире?"></textarea>
+          <div class="kv-composer-row">
+            <button class="btn btn-primary" type="button" id="kvLiveStart">▶ Включить живую Квеню</button>
+            <button class="btn btn-primary" type="submit" id="kvLiveSend" disabled>Отправить</button>
+          </div>
+          <p class="kv-note">Честно: в браузере живёт её характер на маленькой гостевой модели —
+             это не домашний LoRA-адаптер. Настоящая домашняя Квеня отвечает в разговоре ниже
+             (через свой дом, за 2–6 минут зато именно её обученной моделью).</p>
+        </form>
+      </section>
+
       <section class="kv-card kv-chat-card" aria-label="Разговор с Квеней">
         <h2>💬 Разговор с Квеней</h2>
         <p class="kv-note">Это настоящий разговор из её файла
@@ -74,6 +101,7 @@
              поможет кнопка «Дописать ей домой вручную».</p>
         </form>
       </section>
+      </div>
 
       <div class="kv-side">
         <section class="kv-card kv-mind" aria-label="Мозги, характер и настроение Квени">
