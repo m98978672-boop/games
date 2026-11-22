@@ -353,3 +353,28 @@ body.is-embed .kv-shell { padding-top: 12px; }
 .kv-live-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin-bottom: 10px; }
 .kv-live-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent-2), var(--violet)); transition: width 0.4s ease; }
 .kv-live-chat { max-height: 430px; }
+
+/* ---------- живой чат: тумблеры и мысли ---------- */
+.kv-live-toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.kv-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  background: rgba(102, 192, 244, 0.08); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 11px; cursor: pointer;
+}
+.kv-toggle input { accent-color: var(--violet); }
+.msg.think {
+  align-self: flex-start;
+  background: rgba(166, 120, 255, 0.07);
+  border: 1px dashed rgba(166, 120, 255, 0.45);
+  color: var(--muted); font-style: italic; font-size: 13px;
+}
+.msg.think .msg-who { color: var(--violet); font-style: normal; }
+
+/* ---------- строитель ---------- */
+.kv-build-box { border-top: 1px dashed var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+.kv-build-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.kv-build-row select {
+  flex: 1 1 130px; font: inherit; font-size: 13.5px; color: var(--text);
+  background: var(--bg-deep); border: 1px solid var(--line); border-radius: 8px; padding: 8px 9px;
+}

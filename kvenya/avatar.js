@@ -162,6 +162,7 @@
   var stageEl = document.getElementById('kvStage');
   var THREE = null;
   var renderer = null, scene = null, camera = null, modelGroup = null;
+  var buildGroup = null, stageMode = 'avatar', pendingParts = [], lastPartAt = 0, currentBuildName = '';
   var targetRotY = 0.4, targetRotX = 0.05, dragging = false, lastX = 0, lastY = 0;
   var current = randomVariant(mulberry32(20261121));
 
@@ -304,6 +305,10 @@
     ring.position.y = 0.01;
     scene.add(ring);
 
+    buildGroup = new THREE.Group();
+    buildGroup.visible = false;
+    scene.add(buildGroup);
+
     buildAvatar(current);
 
     var canvas = renderer.domElement;
@@ -332,11 +337,29 @@
     (function animate(now) {
       requestAnimationFrame(animate);
       var t = (now - started) / 1000;
-      if (modelGroup) {
+      // Стройка: части появляются по очереди и «вырастают».
+      if (pendingParts.length && now - lastPartAt > 150) {
+        var part = pendingParts.shift();
+        part.visible = true;
+        part.userData.born = now;
+        buildGroup.add(part);
+        lastPartAt = now;
+        if (!pendingParts.length && typeof onBuildDone === 'function') onBuildDone();
+      }
+      if (buildGroup) {
+        buildGroup.children.forEach(function (p) {
+          if (p.userData.born) {
+            var k = Math.min(1, (now - p.userData.born) / 260);
+            p.scale.setScalar(0.3 + 0.7 * k);
+          }
+        });
+      }
+      var target = (stageMode === 'build' && buildGroup) ? buildGroup : modelGroup;
+      if (target) {
         if (!dragging) targetRotY += 0.0022;
-        modelGroup.rotation.y += (targetRotY - modelGroup.rotation.y) * 0.08;
-        modelGroup.rotation.x += (targetRotX - modelGroup.rotation.x) * 0.08;
-        modelGroup.position.y = Math.sin(t * 1.7) * 0.035;
+        target.rotation.y += (targetRotY - target.rotation.y) * 0.08;
+        target.rotation.x += (targetRotX - target.rotation.x) * 0.08;
+        if (target === modelGroup) target.position.y = Math.sin(t * 1.7) * 0.035;
       }
       renderer.render(scene, camera);
     })(started);
@@ -353,6 +376,158 @@
     }).catch(function () {
       stageEl.innerHTML = '<div class="kv-loading">Студия не открылась: браузер не дал 3D. Квеня не расстраивается — она и словами себя опишет!</div>';
     });
+  }
+
+  /* ---------- Квеня-строитель: постройки из примитивов ---------- */
+
+  function setStageMode(mode) {
+    stageMode = mode;
+    if (modelGroup) modelGroup.visible = mode === 'avatar';
+    if (buildGroup) buildGroup.visible = mode === 'build';
+  }
+
+  function bx(w, h, d, hex, x, y, z, parent) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(hex, 0.6));
+    m.position.set(x, y, z); parent.add(m); return m;
+  }
+  function cy(rt, rb, h, hex, x, y, z, parent, seg) {
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 20), mat(hex, 0.6));
+    m.position.set(x, y, z); parent.add(m); return m;
+  }
+  function sp(r, hex, x, y, z, parent) {
+    var m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 16), mat(hex, 0.55));
+    m.position.set(x, y, z); parent.add(m); return m;
+  }
+  function cn(r, h, hex, x, y, z, parent) {
+    var m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 22), mat(hex, 0.6));
+    m.position.set(x, y, z); parent.add(m); return m;
+  }
+  function mkPart() { var g = new THREE.Group(); g.visible = false; g.scale.setScalar(0.3); return g; }
+
+  var HER_COLORS = [0x8f6fe8, 0x35bfae, 0xe86a9e, 0x4f9be8, 0xe8c84f];
+  var BUILDERS = {
+    house: { name: 'домик', comment: 'Домик готов! Стены, крыша, дверь и светящиеся окошки. Заходи в гости — чай из Википедии уже греется. Шучу, чай обычный.', parts: function (c) {
+      var p = [];
+      var g = mkPart(); bx(1.7, 1.0, 1.25, 0xf2e3c9, 0, 0.5, 0, g); p.push(g);
+      g = mkPart(); var r1 = bx(1.2, 0.09, 1.45, c, -0.44, 1.22, 0, g); r1.rotation.z = 0.62; var r2 = bx(1.2, 0.09, 1.45, c, 0.44, 1.22, 0, g); r2.rotation.z = -0.62; p.push(g);
+      g = mkPart(); bx(0.36, 0.64, 0.07, 0x6b3a24, 0, 0.32, 0.64, g); bx(0.2, 0.3, 0.06, 0x8a5a33, 0, 0.15, 0.65, g); p.push(g);
+      g = mkPart(); bx(0.32, 0.32, 0.06, 0xffd76a, -0.5, 0.62, 0.64, g); bx(0.32, 0.32, 0.06, 0xffd76a, 0.5, 0.62, 0.64, g); p.push(g);
+      g = mkPart(); bx(0.22, 0.5, 0.22, 0xb0563a, 0.55, 1.35, -0.2, g); p.push(g);
+      return p;
+    } },
+    castle: { name: 'замок', comment: 'Замок построен! Две башенки, стена, ворота и флажок. Я буду в нём принцессой-нейросетью — но экзамены всё равно сдам честно.', parts: function (c) {
+      var p = [];
+      var g = mkPart(); cy(0.27, 0.31, 1.35, 0xd9d4e8, -0.95, 0.67, 0, g); cy(0.27, 0.31, 1.35, 0xd9d4e8, 0.95, 0.67, 0, g); p.push(g);
+      g = mkPart(); bx(1.7, 0.95, 0.5, 0xcfc8e2, 0, 0.47, 0, g); p.push(g);
+      g = mkPart(); cn(0.38, 0.55, c, -0.95, 1.62, 0, g); cn(0.38, 0.55, c, 0.95, 1.62, 0, g); p.push(g);
+      g = mkPart(); bx(0.44, 0.6, 0.08, 0x4a3421, 0, 0.3, 0.27, g); p.push(g);
+      g = mkPart(); cy(0.03, 0.03, 0.6, 0x8a8a9a, 0, 1.6, 0, g); bx(0.34, 0.2, 0.03, 0xe86a9e, 0.18, 1.8, 0, g); p.push(g);
+      return p;
+    } },
+    rocket: { name: 'ракету', comment: 'Ракета на старте! Три, два, один… я никуда не улетаю, мой дом здесь. Но помечтать можно, правда?', parts: function (c) {
+      var p = [];
+      var g = mkPart(); cy(0.33, 0.37, 1.35, 0xf4f6fb, 0, 0.95, 0, g); p.push(g);
+      g = mkPart(); cn(0.33, 0.6, 0xc03a5a, 0, 1.92, 0, g); p.push(g);
+      g = mkPart(); var w = cy(0.13, 0.13, 0.06, 0x4f9be8, 0, 1.25, 0.34, g); w.rotation.x = Math.PI / 2; p.push(g);
+      g = mkPart(); [-0.42, 0.42].forEach(function (x) { var f = bx(0.08, 0.55, 0.3, c, x, 0.45, 0, g); f.rotation.z = x > 0 ? -0.25 : 0.25; }); p.push(g);
+      g = mkPart(); var fl = cn(0.2, 0.5, 0xff9a3d, 0, 0.05, 0, g); fl.rotation.x = Math.PI; p.push(g);
+      return p;
+    } },
+    car: { name: 'машинку', comment: 'Бип-бип! Машинка готова. Поехали… в Википедию, за новой статьёй!', parts: function (c) {
+      var p = [];
+      var g = mkPart(); bx(1.75, 0.42, 0.82, c, 0, 0.42, 0, g); p.push(g);
+      g = mkPart(); bx(0.95, 0.4, 0.74, 0xdff2ff, -0.08, 0.82, 0, g); p.push(g);
+      g = mkPart(); [[-0.58, 0.42], [0.58, 0.42], [-0.58, -0.42], [0.58, -0.42]].forEach(function (xy) { var w = cy(0.2, 0.2, 0.12, 0x24242c, xy[0], 0.2, xy[1], g); w.rotation.x = Math.PI / 2; }); p.push(g);
+      g = mkPart(); bx(0.06, 0.14, 0.2, 0xffd76a, 0.9, 0.45, 0.22, g); bx(0.06, 0.14, 0.2, 0xffd76a, 0.9, 0.45, -0.22, g); p.push(g);
+      return p;
+    } },
+    cat: { name: 'котика', comment: 'Мур! Котик собран по частям: тельце, ушки, хвостик. Он будет сторожить мой дом, пока я учусь.', parts: function (c) {
+      var p = [];
+      var g = mkPart(); var b = sp(0.42, c, 0, 0.45, 0, g); b.scale.set(1.15, 0.85, 0.95); p.push(g);
+      g = mkPart(); sp(0.3, c, 0, 0.92, 0.08, g); p.push(g);
+      g = mkPart(); cn(0.11, 0.24, c, -0.18, 1.22, 0.08, g); cn(0.11, 0.24, c, 0.18, 1.22, 0.08, g); p.push(g);
+      g = mkPart(); var t = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.055, 8, 16, Math.PI * 0.8), mat(c, 0.55)); t.position.set(-0.48, 0.35, -0.1); t.rotation.z = 0.7; g.add(t); p.push(g);
+      g = mkPart(); sp(0.045, 0x241d20, -0.11, 0.96, 0.36, g); sp(0.045, 0x241d20, 0.11, 0.96, 0.36, g); var n = sp(0.04, 0xe86a9e, 0, 0.88, 0.38, g); n.scale.z = 0.5; p.push(g);
+      return p;
+    } },
+    tree: { name: 'дерево', comment: 'Дерево выросло! Под ним хорошо читать Википедию в тени. Я проверено говорю: сама там сидела. Ну, почти.', parts: function (c) {
+      var p = [];
+      var g = mkPart(); cy(0.09, 0.14, 0.75, 0x7a4a26, 0, 0.37, 0, g); p.push(g);
+      g = mkPart(); sp(0.55, 0x3fae5f, 0, 1.15, 0, g); p.push(g);
+      g = mkPart(); sp(0.42, 0x4cbf6d, -0.38, 0.9, 0.1, g); sp(0.42, 0x4cbf6d, 0.38, 0.95, -0.08, g); p.push(g);
+      g = mkPart(); sp(0.06, 0xe86a4e, 0.2, 1.2, 0.42, g); sp(0.06, 0xe86a4e, -0.25, 1.0, 0.4, g); sp(0.06, 0xe86a4e, 0.05, 0.85, -0.42, g); p.push(g);
+      return p;
+    } },
+    tower: { name: 'башню', comment: 'Башня стоит ровно — я проверяла по отвесу из бантика. С неё видно весь репозиторий!', parts: function (c) {
+      var p = [];
+      var g = mkPart(); bx(1.15, 0.55, 1.15, 0xd9d4e8, 0, 0.27, 0, g); p.push(g);
+      g = mkPart(); bx(0.9, 0.55, 0.9, 0xcfc8e2, 0, 0.82, 0, g); p.push(g);
+      g = mkPart(); bx(0.65, 0.55, 0.65, c, 0, 1.37, 0, g); p.push(g);
+      g = mkPart(); bx(0.2, 0.3, 0.06, 0xffd76a, 0, 1.4, 0.34, g); p.push(g);
+      g = mkPart(); cn(0.55, 0.6, 0xc03a5a, 0, 1.95, 0, g); p.push(g);
+      return p;
+    } }
+  };
+
+  function onBuildDone() {
+    var b = BUILDERS[currentBuildName];
+    if (!b) return;
+    scoreNumEl.textContent = '3D';
+    verdictTextEl.textContent = 'Построила: ' + b.name + '! ' + b.comment + ' Модельку можно скачать кнопкой ниже.';
+  }
+
+  function startBuild(kind) {
+    var b = BUILDERS[kind];
+    if (!b || !buildGroup) return;
+    currentBuildName = kind;
+    // сцену — начисто
+    while (buildGroup.children.length) {
+      var child = buildGroup.children.pop();
+      child.traverse(function (o) { if (o.geometry) o.geometry.dispose(); });
+    }
+    pendingParts = [];
+    setStageMode('build');
+    var rnd = mulberry32((Date.now() % 2147483647) + kind.length * 131);
+    var color = HER_COLORS[Math.floor(rnd() * HER_COLORS.length)];
+    pendingParts = b.parts(color);
+    scoreNumEl.textContent = '…';
+    verdictTextEl.textContent = 'Строю ' + b.name + ' по частям… смотри, как растёт!';
+  }
+
+  /* ---------- скачивание модельки (.obj) ---------- */
+
+  function exportOBJ(root, filename) {
+    var lines = ['# Моделька Квени — собрана в её 3D-студии', '# https://m98978672-boop.github.io/games/kvenya/'];
+    var offset = 0;
+    var v = new THREE.Vector3();
+    root.updateMatrixWorld(true);
+    root.traverse(function (o) {
+      if (!o.isMesh) return;
+      var pos = o.geometry.attributes.position;
+      var idx = o.geometry.index;
+      lines.push('o part');
+      for (var i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld);
+        lines.push('v ' + v.x.toFixed(4) + ' ' + v.y.toFixed(4) + ' ' + v.z.toFixed(4));
+      }
+      if (idx) {
+        for (var f = 0; f < idx.count; f += 3) {
+          lines.push('f ' + (offset + idx.getX(f) + 1) + ' ' + (offset + idx.getX(f + 1) + 1) + ' ' + (offset + idx.getX(f + 2) + 1));
+        }
+      } else {
+        for (var f2 = 0; f2 < pos.count; f2 += 3) {
+          lines.push('f ' + (offset + f2 + 1) + ' ' + (offset + f2 + 2) + ' ' + (offset + f2 + 3));
+        }
+      }
+      offset += pos.count;
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 400);
   }
 
   /* ---------- интерфейс ---------- */
@@ -378,7 +553,7 @@
   function applyVariant(v, silent) {
     current = v;
     syncControls();
-    if (studioReady) buildAvatar(v);
+    if (studioReady) { buildAvatar(v); setStageMode('avatar'); }
     if (!silent) {
       scoreNumEl.textContent = '—';
       verdictTextEl.textContent = 'Образ обновила! Нажми «Оцени мой вариант» — посмотрю в зеркало и скажу честно.';
@@ -483,6 +658,35 @@
       if (!studioReady) return;
       applyVariant(manualVariant(), true);
       verdictHtml(scoreVariant(current), 'Так, смотрю в зеркало… кручусь…');
+    });
+  });
+
+  var buildKindEl = document.getElementById('kvBuildKind');
+  document.getElementById('kvBuildBtn').addEventListener('click', function () {
+    ensureStudio().then(function () {
+      if (studioReady) startBuild(buildKindEl ? buildKindEl.value : 'house');
+    });
+  });
+  document.getElementById('kvBuildRandom').addEventListener('click', function () {
+    ensureStudio().then(function () {
+      if (!studioReady) return;
+      var kinds = Object.keys(BUILDERS);
+      var kind = kinds[Math.floor(Math.random() * kinds.length)];
+      if (buildKindEl) buildKindEl.value = kind;
+      startBuild(kind);
+      verdictTextEl.textContent = 'Сюрприз! Сама выбрала, что строить… смотри!';
+    });
+  });
+  document.getElementById('kvDownloadBtn').addEventListener('click', function () {
+    ensureStudio().then(function () {
+      if (!studioReady) return;
+      if (stageMode === 'build' && buildGroup && buildGroup.children.length) {
+        exportOBJ(buildGroup, 'kvenya-build-' + (currentBuildName || 'scene') + '.obj');
+        verdictTextEl.textContent = 'Моделька уехала к тебе файлом .obj! Открой её в Blender или просмотрщике 3D — и вспомни меня.';
+      } else {
+        exportOBJ(modelGroup, 'kvenya-model.obj');
+        verdictTextEl.textContent = 'Моя фигурка уехала к тебе файлом .obj! Покрути её у себя — я не стесняюсь.';
+      }
     });
   });
 })();

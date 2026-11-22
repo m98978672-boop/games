@@ -344,7 +344,7 @@
     }
     if (moodSignals.searches > 0) { f.cur += 15; f.pride += 8; }
     if (loadOutbox().length) { f.worry += 30; f.cur += 5; f.joy -= 10; }
-    f.joy += Math.min(25, moodActs.praise * 8);
+    f.joy += Math.min(25, moodActs.praise * 8) + Math.min(15, (moodActs.play | 0) * 5);
     f.soft += Math.min(25, moodActs.hug * 8);
     f.cur += Math.min(20, moodActs.topic * 7);
     f.joy = clampFeel(f.joy); f.cur = clampFeel(f.cur); f.pride = clampFeel(f.pride);
@@ -364,6 +364,11 @@
     topic: [
       'О, новая тема! Я уже любопытничаю: почитаю про это в Википедии и расскажу своими словами.',
       'Интересно-интересно! Записала тему в уме — на следующем уроке обязательно посмотрю.'
+    ],
+    play: [
+      'Шалю! Почему нейросеть не потеряется в лесу? У неё всегда включён поиск по Википедии. Хи-хи!',
+      'Пошалим! Я спрятала бантик… шутка, он на месте. А вот шутка: мой любимый вид спорта — бег по граблям датасета!',
+      'Шалость удалась: я сделала вид, что задумалась, а сама подмигнула. 😜 Только факты я даже в шутку не выдумываю!'
     ]
   };
 
@@ -404,8 +409,8 @@
       moodActs.lastAct = act;
       saveMoodActs();
       var pool = REACTIONS[act] || REACTIONS.praise;
-      var faces = { praise: '🌟', hug: '🥰', topic: '🤩' };
-      var names = { praise: 'расцвела от похвалы', hug: 'тёплая и довольная', topic: 'загорелась любопытством' };
+      var faces = { praise: '🌟', hug: '🥰', topic: '🤩', play: '😜' };
+      var names = { praise: 'расцвела от похвалы', hug: 'тёплая и довольная', topic: 'загорелась любопытством', play: 'шалит и хохочет' };
       renderMood({
         name: names[act] || names.praise,
         face: faces[act] || faces.praise,

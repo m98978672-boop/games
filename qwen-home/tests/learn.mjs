@@ -133,6 +133,7 @@ check('цепочка не глушится токеном: ретранслят
 check('очередь вопросов не теряется: отвечает на все неотвеченные в хвосте', talkGen.includes('Без ответа вопросов') && talkGen.includes('answered_turns'));
 const liveJs = await readFile(path.join(home, '..', 'kvenya', 'live.js'), 'utf8');
 check('живой разговор через сайт: браузерная модель, её персона из дома, живой поиск', liveJs.includes('@huggingface/transformers') && liveJs.includes('persona.md') && liveJs.includes('ru.wikipedia.org/w/api.php') && liveJs.includes('Qwen2.5-0.5B-Instruct'));
+check('новые умения в персоне и уроках: голос, стройка 3D, скачивание, шалости, мышление вслух', personaMd.includes('Голос, стройка, мышление и шалости') && dialogue.some((r) => r.response.includes('озвучивает')) && dialogue.some((r) => r.response.includes('.obj')) && dialogue.some((r) => /[Шш]ал/.test(r.response)) && dialogue.some((r) => r.response.includes('башенки')));
 check('уроки учат искать: поискала, назвала статью, честно сказала, когда пусто', dialogue.filter((r) => /Википеди/.test(r.response)).length >= 4 && dialogue.some((r) => r.response.includes('Поискала')) && dialogue.some((r) => /только Википедия|только статьи Википедии/.test(r.response)));
 check('персона и состояние честно называют границу поиска: только Википедия', personaMd.includes('Википедии') && st0.internetSearch?.engine === 'ru.wikipedia.org');
 
