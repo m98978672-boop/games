@@ -376,6 +376,139 @@
     buildStack.push(b);
   }
 
+  /* ---------- игра «Собери звёзды» и запись геймплея ---------- */
+
+  var game = { active: false, score: 0, endsAt: 0, star: null };
+  var gameStatusEl = document.getElementById('kvGameStatus');
+  var gameStartBtn = document.getElementById('kvGameStart');
+  var gameStopBtn = document.getElementById('kvGameStop');
+  var videoLinkEl = document.getElementById('kvVideoDownload');
+  var videoPreviewEl = document.getElementById('kvGameVideo');
+  var subsLinkEl = document.getElementById('kvSubsDownload');
+  var journalEl = document.getElementById('kvGameJournal');
+  var recorder = null, recordedChunks = [], recording = false, recordStartedAt = 0, journal = [];
+
+  function fmtClock(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000));
+    return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  }
+  function fmtSrt(ms) {
+    ms = Math.max(0, Math.round(ms));
+    var h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, sec = Math.floor(ms / 1000) % 60;
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0')
+      + ',' + String(ms % 1000).padStart(3, '0');
+  }
+  function logEvent(text) {
+    journal.push({ at: performance.now(), text: text });
+    if (journalEl) {
+      var li = document.createElement('li');
+      li.textContent = '[' + fmtClock(performance.now() - (recordStartedAt || performance.now())) + '] ' + text;
+      journalEl.appendChild(li);
+    }
+  }
+  function spawnStar() {
+    if (game.star) { scene.remove(game.star); game.star.geometry.dispose(); game.star = null; }
+    var angle = Math.random() * Math.PI * 2;
+    var radius = 1.5 + Math.random() * 4.2;
+    var star = new THREE.Mesh(
+      new THREE.SphereGeometry(0.3, 18, 14),
+      new THREE.MeshStandardMaterial({ color: 0xffd76a, emissive: 0xcc8f1d, emissiveIntensity: 0.9, roughness: 0.35 })
+    );
+    star.position.set(Math.cos(angle) * radius, 0.65, 0.6 + Math.sin(angle) * radius * 0.8);
+    scene.add(star);
+    game.star = star;
+  }
+  function pickMime() {
+    if (!('MediaRecorder' in window)) return '';
+    var types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
+    for (var i = 0; i < types.length; i++) {
+      try { if (window.MediaRecorder.isTypeSupported(types[i])) return types[i]; } catch (err) { /* следующий */ }
+    }
+    return '';
+  }
+  function startRecording() {
+    recordStartedAt = performance.now();
+    recordedChunks = [];
+    journal = [];
+    if (journalEl) journalEl.textContent = '';
+    if (!renderer || !renderer.domElement.captureStream || !('MediaRecorder' in window)) {
+      recording = false;
+      logEvent('Этот браузер не умеет записывать видео с канваса — играем без записи, честно.');
+      return false;
+    }
+    try {
+      var stream = renderer.domElement.captureStream(30);
+      recorder = new window.MediaRecorder(stream, pickMime() ? { mimeType: pickMime() } : undefined);
+    } catch (err) {
+      recording = false;
+      logEvent('Запись не стартовала в этом браузере — играем без видео.');
+      return false;
+    }
+    recordStartedAt = performance.now();
+    recorder.ondataavailable = function (e) { if (e.data && e.data.size) recordedChunks.push(e.data); };
+    recorder.onstop = offerDownloads;
+    recorder.start(250);
+    recording = true;
+    return true;
+  }
+  function offerDownloads() {
+    recording = false;
+    recorder = null;
+    if (recordedChunks.length && videoLinkEl) {
+      var blob = new Blob(recordedChunks, { type: recordedChunks[0].type || 'video/webm' });
+      var url = URL.createObjectURL(blob);
+      videoLinkEl.href = url;
+      videoLinkEl.hidden = false;
+      // Смотреть можно сразу на странице, не скачивая файл.
+      if (videoPreviewEl) { videoPreviewEl.src = url; videoPreviewEl.hidden = false; }
+      if (gameStatusEl) gameStatusEl.textContent = '🎬 Готово! Видео уже можно смотреть прямо на этой странице или скачать кнопкой ниже. Счёт игры: ' + game.score + '.';
+    }
+    if (journal.length && subsLinkEl) {
+      var srt = journal.map(function (e, i) {
+        var start = e.at - recordStartedAt;
+        return (i + 1) + '\n' + fmtSrt(start) + ' --> ' + fmtSrt(start + 2600) + '\n' + e.text + '\n';
+      }).join('\n');
+      subsLinkEl.href = URL.createObjectURL(new Blob([srt], { type: 'text/plain' }));
+      subsLinkEl.hidden = false;
+    }
+  }
+  function finishGame(stoppedByOwner) {
+    if (!game.active) return;
+    game.active = false;
+    if (game.star) { scene.remove(game.star); game.star.geometry.dispose(); game.star = null; }
+    var line = (stoppedByOwner ? 'Стоп! ' : 'Время! ') + 'Игра окончена. Собрала звёзд: ' + game.score
+      + '. Видео и журнал лежат кнопками ниже — проверь, как я бегала!';
+    say(line, 6);
+    logEvent(line);
+    if (gameStatusEl) gameStatusEl.textContent = '⭐ Игра окончена · счёт: ' + game.score
+      + (recording ? ' · собираю видео…' : ' · без записи в этом браузере');
+    if (gameStartBtn) gameStartBtn.disabled = false;
+    if (gameStopBtn) gameStopBtn.disabled = true;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    chooseNext('walk');
+  }
+  function startGameAndRecord() {
+    if (!kvenya || game.active) return;
+    game.active = true;
+    game.score = 0;
+    game.endsAt = performance.now() + 60000;
+    if (videoLinkEl) videoLinkEl.hidden = true;
+    if (subsLinkEl) subsLinkEl.hidden = true;
+    var hasVideo = startRecording();
+    spawnStar();
+    bookMesh.visible = false;
+    var line = 'Играю в «Собери звёзды»! Бегу сама, по-честному'
+      + (hasVideo ? ', и снимаю настоящий геймплей.' : '.');
+    say(line, 5);
+    logEvent(line + ' Цель на 60 секунд — собрать как можно больше звёзд.');
+    if (gameStatusEl) gameStatusEl.textContent = '⭐ Счёт: 0 · осталось 60 сек' + (hasVideo ? ' · 🔴 идёт запись' : ' · без записи');
+    if (gameStartBtn) gameStartBtn.disabled = true;
+    if (gameStopBtn) gameStopBtn.disabled = false;
+    if (followBtn && !follow) followBtn.click();
+  }
+  if (gameStartBtn) gameStartBtn.addEventListener('click', startGameAndRecord);
+  if (gameStopBtn) gameStopBtn.addEventListener('click', function () { finishGame(true); });
+
   /* ---------- запуск ---------- */
 
   stageEl.innerHTML = '<div class="kv-loading">Квеня открывает ворота своего мира…</div>';
@@ -520,7 +653,37 @@
 
     // Квеня: движение и дела
     if (kvenya) {
-      if (state.mode === 'walk') {
+      if (game.active && game.star) {
+        // Игра: сама бежит к звезде, как в настоящем геймплее.
+        if (now > game.endsAt) { finishGame(false); }
+        else {
+          game.star.position.y = 0.65 + Math.sin(now * 0.005) * 0.14;
+          game.star.rotation.y += dt * 2.4;
+          if (gameStatusEl) gameStatusEl.textContent = '⭐ Счёт: ' + game.score
+            + ' · осталось ' + Math.max(0, Math.ceil((game.endsAt - now) / 1000)) + ' сек'
+            + (recording ? ' · 🔴 идёт запись' : '');
+          var toStar = game.star.position.clone().sub(kvenya.position); toStar.y = 0;
+          if (toStar.length() < 0.45) {
+            game.score++;
+            var got = 'Собрала звезду! Счёт: ' + game.score + '.';
+            say('⭐ ' + got, 2.4);
+            logEvent(got);
+            spawnStar();
+          } else {
+            toStar.normalize();
+            kvenya.position.addScaledVector(toStar, 2.15 * dt);
+            var rotStar = Math.atan2(toStar.x, toStar.z);
+            var diffStar = rotStar - kvenya.rotation.y;
+            while (diffStar > Math.PI) diffStar -= Math.PI * 2;
+            while (diffStar < -Math.PI) diffStar += Math.PI * 2;
+            kvenya.rotation.y += diffStar * 0.14;
+            var swStar = Math.sin(now * 0.013);
+            legL.rotation.x = swStar * 0.6; legR.rotation.x = -swStar * 0.6;
+            armL.rotation.x = -swStar * 0.45; armR.rotation.x = swStar * 0.45;
+            kvenya.position.y = Math.abs(Math.sin(now * 0.013)) * 0.06;
+          }
+        }
+      } else if (state.mode === 'walk') {
         var to = state.target.clone().sub(kvenya.position); to.y = 0;
         var dist = to.length();
         if (dist < 0.18) { arrive(); }
