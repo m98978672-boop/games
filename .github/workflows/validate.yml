@@ -47,6 +47,7 @@ jobs:
             youtube-bot/tests/test_gameplay_discovery.py \
             youtube-bot/tests/test_gameplay_2048.py \
             youtube-bot/tests/test_gameplay_finalize.py \
+            youtube-bot/tests/test_gameplay_release_plan.py \
             youtube-bot/tests/test_feedback_youtube.py \
             youtube-bot/tests/test_playthrough_continue.py
           node supabase/functions/youtube-bot/tests/oidc-policy.test.mjs
