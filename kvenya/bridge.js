@@ -61,9 +61,26 @@
     }).join('');
   }
 
+  var sourcesEl = document.getElementById('kvBridgeSources');
+  function renderSources(data) {
+    if (!sourcesEl) return;
+    var list = data.sources || [];
+    if (!list.length) {
+      sourcesEl.innerHTML = '<p class="kv-note">Витрины ещё не прочитаны домом — первая сводка придёт с запуском моста, а вживую я смотрю кнопкой выше.</p>';
+      return;
+    }
+    sourcesEl.innerHTML = list.map(function (src) {
+      if (!src.ok) {
+        return '<p class="kv-note">👀 <b>' + esc(src.name) + '</b>: ' + (src.status === 'captcha' ? 'витрина показала капчу — туда смотрит только человек, я честно мимо.' : 'не открылась в этот раз (' + esc(src.note) + ') — не выдумываю, что там.') + '</p>';
+      }
+      var items = (src.items || []).slice(0, 6).map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('');
+      return '<p class="kv-note">👀 <b>' + esc(src.name) + '</b> — «' + esc(src.title) + '»</p>' + (items ? '<ul class="kv-bridge-list">' + items + '</ul>' : '');
+    }).join('');
+  }
+
   fetch('./bridge.json', { cache: 'no-store' })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); } })
+    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); renderSources(data); } })
     .catch(function () { /* сводки нет — есть живая кнопка */ });
 
   function wikiApi(params) {

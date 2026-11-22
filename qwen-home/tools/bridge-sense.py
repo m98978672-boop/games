@@ -38,6 +38,33 @@ def wiki_recent(limit=12):
     return data.get('query', {}).get('recentchanges', [])
 
 
+def fetch_source(url, limit_items=10):
+    """Глаза моста на любой публичной витрине: заголовок и подписи ссылок.
+
+    Честно помечает капчу и недоступность, ничего не выдумывает."""
+    import re as _re
+    req = urllib.request.Request(url, headers=UA)
+    try:
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            raw = resp.read(600_000).decode('utf-8', errors='replace')
+    except Exception as err:
+        return {'url': url, 'ok': False, 'status': 'unreachable', 'title': '', 'items': [], 'note': f'{type(err).__name__}'}
+    low = raw.lower()
+    if 'не робот' in low or 'smartcaptcha' in low:
+        return {'url': url, 'ok': False, 'status': 'captcha', 'title': '', 'items': [], 'note': 'витрина показала капчу — смотрит только человек'}
+    title_m = _re.search(r'<title[^>]*>(.*?)</title>', raw, _re.S)
+    title = _re.sub(r'\s+', ' ', title_m.group(1)).strip() if title_m else ''
+    clean = _re.sub(r'<(script|style)[^>]*>.*?</\1>', ' ', raw, flags=_re.S)
+    items = []
+    for text in _re.findall(r'<a[^>]*>([^<>]{3,60})</a>', clean):
+        text = _re.sub(r'\s+', ' ', text).strip()
+        if text and text not in items:
+            items.append(text)
+        if len(items) >= limit_items:
+            break
+    return {'url': url, 'ok': True, 'status': 'read', 'title': title[:120], 'items': items, 'note': ''}
+
+
 def count_lessons(name):
     try:
         return sum(1 for line in (HOME / 'curriculum' / name).read_text(encoding='utf-8').splitlines() if line.strip())
@@ -68,12 +95,24 @@ def main():
     if journal.exists():
         letters = [line[2:].strip() for line in journal.read_text(encoding='utf-8').splitlines() if line.startswith('- ')][-5:]
 
+    sources = []
+    try:
+        routes = json.loads((BRIDGE / 'routes.json').read_text(encoding='utf-8')).get('sources', [])
+    except Exception:
+        routes = []
+    for route in routes:
+        got = fetch_source(route.get('url', ''))
+        got['name'] = route.get('name', got['url'])
+        sources.append(got)
+        print('витрина:', got['name'], '->', got['status'], flush=True)
+
     payload = {
         'updatedAt': stamp,
         'source': 'ru.wikipedia.org',
         'note': 'Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.',
         'recent': recent,
         'letters': letters,
+        'sources': sources,
     }
     (ROOT / 'kvenya' / 'bridge.json').write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
