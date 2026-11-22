@@ -105,7 +105,7 @@ def robots_allows(url):
         return True, f'robots.txt не прочитался ({type(err).__name__}) — иду осторожно'
 
 
-def run(url, seconds, out):
+def run(url, seconds, out, keys='', interval_ms=0):
     from playwright.sync_api import sync_playwright  # ленивая: --help и тесты логики без браузера
 
     out.mkdir(parents=True, exist_ok=True)
@@ -203,12 +203,12 @@ def run(url, seconds, out):
             # Подготовка: сначала читаю экран старта, а не жму всё подряд.
             hints = (page_text() + ' ' + (page.title() or '')).strip()
             keys, interval, mode, why = detect_controls(hints)
-            if args.keys:
-                keys = [k.strip() for k in args.keys.split(',') if k.strip()]
+            if keys:
+                keys = [k.strip() for k in keys.split(',') if k.strip()]
                 mode = 'flap' if len(keys) == 1 else 'cycle'
                 why = 'план клавиш задан заданием владельца'
-            if args.interval_ms:
-                interval = max(150, min(2000, args.interval_ms))
+            if interval_ms:
+                interval = max(150, min(2000, interval_ms))
             report.step('подготовка к игре', f'{why}: клавиши {keys or "клик"}, ритм {interval} мс; подсказки экрана: {hints[:140]!r}')
 
             page.mouse.click(cx, cy)
@@ -291,7 +291,7 @@ def main():
     parser.add_argument('--interval-ms', type=int, default=0, help='ритм нажатий из задания, мс')
     parser.add_argument('--out', type=Path, required=True)
     args = parser.parse_args()
-    return run(args.url, args.seconds, args.out)
+    return run(args.url, args.seconds, args.out, args.keys, args.interval_ms)
 
 
 if __name__ == '__main__':
