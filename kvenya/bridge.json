@@ -8,6 +8,20 @@
   ],
   "expeditions": [
     {
+      "date": "2026-11-22 22:19 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261122-2220-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": ""
+    },
+    {
       "date": "2026-11-22 22:15 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "error",
