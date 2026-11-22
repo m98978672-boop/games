@@ -97,11 +97,13 @@ def render_board(board, last, check_sq, arrow_t, cap_at, cap_t, pw, ph, zoom=1.0
         x, y = ox + check_sq[0] * s, oy + check_sq[1] * s
         dr.rectangle([x + s * 0.05, y + s * 0.05, x + s * 0.95, y + s * 0.95], outline=(226, 60, 48), width=max(3, int(s * 0.06)))
     if coords and zoom <= 1.01:
-        fs = font(max(14, int(s * 0.2)))
+        fs = font(max(12, int(s * 0.16)))
         for f in range(8):
-            dr.text((ox + f * s + s * 0.06, oy + 8 * s + 4), 'abcdefgh'[f], font=fs, fill=(205, 200, 185))
+            x, y = ox + f * s, oy + 7 * s
+            dr.text((x + s * 0.05, y + s * 0.78), 'abcdefgh'[f], font=fs, fill=(96, 106, 76) if (f + 7) % 2 == 0 else (228, 224, 202))
         for r in range(8):
-            dr.text((ox - s * 0.26, oy + r * s + s * 0.06), str(8 - r), font=fs, fill=(205, 200, 185))
+            x, y = ox, oy + r * s
+            dr.text((x + s * 0.05, y + s * 0.05), str(8 - r), font=fs, fill=(96, 106, 76) if r % 2 == 0 else (228, 224, 202))
     fp = font(int(s * 0.8), True)
     for (f, r), ch in board.items():
         x, y = ox + f * s, oy + r * s
@@ -200,6 +202,32 @@ def main():
     rng = np.random.default_rng(11)
     conf = [(rng.uniform(0, W), rng.uniform(0, H), int(rng.integers(0, 3))) for _ in range(90)]
 
+    def paste_cam(im, dr, ri, x, y, size, tau):
+        rim = rat_frame(ri, size)
+        mask = Image.new('L', (size, size), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, size - 1, size - 1], radius=26, fill=255)
+        sh = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(sh).rounded_rectangle([x + 7, y + 9, x + size + 7, y + size + 9], radius=28, fill=(0, 0, 0, 110))
+        imc = Image.alpha_composite(im.convert('RGBA'), sh)
+        imc.paste(rim, (x, y), mask)
+        gl = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+        gd = ImageDraw.Draw(gl)
+        gd.ellipse([x + 6, y + 4, x + size * 0.85, y + size * 0.62], fill=(255, 214, 140, 22))
+        for i in range(10):
+            gd.rounded_rectangle([x + i, y + i, x + size - i, y + size - i], radius=max(2, 26 - i), outline=(8, 8, 10, 26))
+        imc = Image.alpha_composite(imc, gl)
+        im.paste(imc.convert('RGB'), (0, 0))
+        dr2 = ImageDraw.Draw(im)
+        dr2.rounded_rectangle([x - 3, y - 3, x + size + 3, y + size + 3], radius=28, outline=(96, 96, 108), width=3)
+        dr2.rounded_rectangle([x + 2, y + 2, x + size - 2, y + 38], radius=10, fill=(14, 14, 16))
+        if int(tau * 2) % 2 == 0:
+            dr2.ellipse([x + 14, y + 12, x + 28, y + 26], fill=(226, 50, 40))
+        dr2.text((x + 38, y + 9), 'ЗУЗА · CAM', font=f_hud, fill=(235, 232, 222))
+        dr2.rounded_rectangle([x + 2, y + size - 36, x + size - 2, y - 2 + size], radius=10, fill=(14, 14, 16))
+        dr2.text((x + 16, y + size - 30), 'маскот канала', font=f_sm, fill=(214, 210, 200))
+        dr2.text((x + size - 16, y + size - 30), '♥ Квеня', font=f_sm, anchor='ra', fill=(226, 160, 190))
+        return dr2
+
     def rat_frame(ri, size):
         key = (ri, size)
         if key not in rat_cache:
@@ -213,19 +241,20 @@ def main():
             dr.ellipse([20, 22, 40, 42], fill=(226, 50, 40))
         mm, ss = int(tau // 60), int(tau % 60)
         dr.text((50, 16), f'ЗАПИСЬ СЕССИИ {mm:02d}:{ss:02d} · ЗУЗА КОММЕНТИРУЕТ, КВЕНЯ ИГРАЕТ', font=f_hud, fill=(226, 222, 245))
-        credit = 'chess.js · Jeff Hlywa · BSD-2-Clause'
-        dr.text((W - dr.textlength(credit, font=f_hud) - 18, 16), credit, font=f_hud, fill=(168, 168, 162))
+        dr.text((W - dr.textlength('ВСЯ ПАРТИЯ · БЕЗ ПЕРЕМОТОК', font=f_hud) - 18, 16), 'ВСЯ ПАРТИЯ · БЕЗ ПЕРЕМОТОК', font=f_hud, fill=(168, 168, 162))
 
     def subs(dr, seg):
         if not seg or not seg.get('text'):
             return
-        lines = wrap(dr, seg['text'], f_sub, 1400)[-2:]
-        bh = 24 + len(lines) * 44
-        dr.rectangle([W / 2 - 780, H - bh - 20, W / 2 + 780, H - 20], fill=(12, 12, 14))
-        dr.rectangle([W / 2 - 780, H - bh - 20, W / 2 - 772, H - 20], fill=LAV)
-        dr.text((W / 2 - 750, H - bh - 12), 'ЗУЗА', font=f_hud, fill=LAV)
+        f_s2 = font(40)
+        lines = wrap(dr, seg['text'], f_s2, 1500)[-2:]
+        bh = 62 + len(lines) * 52
+        dr.rectangle([170, H - bh - 12, W - 170, H - 12], fill=(10, 10, 12))
+        dr.rectangle([170, H - bh - 12, 180, H - 12], fill=LAV)
+        dr.rounded_rectangle([204, H - bh - 2, 348, H - bh + 36], radius=8, fill=LAV)
+        dr.text((276, H - bh + 17), 'ЗУЗА', font=f_hud, anchor='mm', fill=(16, 14, 20))
         for li, ln in enumerate(lines):
-            dr.text((W / 2 - dr.textlength(ln, font=f_sub) / 2, H - bh + 10 + li * 44), ln, font=f_sub, fill=(242, 242, 236))
+            dr.text((W / 2 - dr.textlength(ln, font=f_s2) / 2, H - bh + 48 + li * 52), ln, font=f_s2, fill=(246, 246, 240))
 
     def move_meta(idx):
         mv = moves[idx - 1] if idx >= 1 else None
@@ -252,8 +281,8 @@ def main():
             dr.rectangle([W / 2 - 700, 320, W / 2 + 700, 330], fill=LAV)
             dr.text((W / 2, 400), 'КВЕНЯ ИГРАЕТ · ЗУЗА КОММЕНТИРУЕТ', font=f_big, anchor='mm', fill=(245, 245, 240))
             dr.text((W / 2, 480), 'ШАХМАТЫ · ВСЯ ПАРТИЯ БЕЗ ПЕРЕМОТОК', font=f_mid, anchor='mm', fill=(200, 200, 195))
-            dr.text((W / 2, 560), 'движок партии: chess.js из чужого репозитория · BSD-2-Clause', font=f_sub, anchor='mm', fill=(170, 170, 165))
-            dr.text((W / 2, 630), 'каждый ход показан и прокомментирован', font=f_sub, anchor='mm', fill=LAV)
+            dr.text((W / 2, 560), 'каждый ход показан и прокомментирован', font=f_sub, anchor='mm', fill=(200, 200, 195))
+            dr.text((W / 2, 630), 'комментирует Зуза · маскот канала', font=f_sub, anchor='mm', fill=LAV)
             k = min(1.0, lt / 1.2)
             dr.text((W / 2, 800), '♞', font=font(int(120 + 60 * k)), anchor='mm', fill=(90, 88, 84))
             hud(dr, tau)
@@ -314,56 +343,64 @@ def main():
                 zoom = 1.0 + 0.5 * x
                 focus = ((last[0][0] + last[1][0]) / 2, (last[0][1] + last[1][1]) / 2)
             if sh['type'] == 'game':
-                pw, ph, px0, py0 = 768, 768, 70, 110
-                dr.rectangle([px0 - 12, py0 - 12, px0 + pw + 12, py0 + ph + 34], fill=(38, 40, 36))
-                bim = render_board(board, last, check_sq, t_in, cap_at, cap_t, pw, ph, zoom, focus, sq=96, coords=True)
+                pw, ph, px0, py0 = 832, 832, 60, 68
+                bim = render_board(board, last, check_sq, t_in, cap_at, cap_t, pw, ph, zoom, focus, sq=104, coords=True)
                 im.paste(bim, (px0, py0))
                 dr = ImageDraw.Draw(im)
+                if mv and t_in < 2.2:
+                    PN = {'p': 'пешка', 'n': 'конь', 'b': 'слон', 'r': 'ладья', 'q': 'ферзь', 'k': 'король'}
+                    CN = {'p': 'пешку', 'n': 'коня', 'b': 'слона', 'r': 'ладью', 'q': 'ферзя', 'k': 'король'}
+                    mvno = (mv['n'] + 1) // 2
+                    cap_txt = f" — {PN[mv['piece']]} бьёт {CN[mv['cap']]} на {mv['to']}" if mv['cap'] else f" — {PN[mv['piece']]} на {mv['to']}"
+                    tag = ' · МАТ!' if mv['mate'] else (' · ШАХ!' if mv['check'] else '')
+                    txt = f"{mvno}. {mv['san']}{cap_txt}{tag}"
+                    f_call = font(30, True)
+                    tw2 = dr.textlength(txt, font=f_call)
+                    col = (110, 163, 220) if mv['side'] == 'w' else (224, 120, 86)
+                    dr.rectangle([px0 + pw / 2 - tw2 / 2 - 16, py0 + 12, px0 + pw / 2 + tw2 / 2 + 16, py0 + 60], fill=(12, 12, 14))
+                    dr.rectangle([px0 + pw / 2 - tw2 / 2 - 16, py0 + 12, px0 + pw / 2 - tw2 / 2 - 8, py0 + 60], fill=col)
+                    dr.text((px0 + pw / 2 - tw2 / 2, py0 + 22), txt, font=f_call, fill=(246, 246, 240))
                 if w1 > w0 and t_in < 1.0:
                     thinker = 'КВЕНЯ ДУМАЕТ' if idx % 2 == 0 else 'ФЕРЗЬ-3000 ДУМАЕТ'
                     dots = '.' * (1 + int(t_in * 3) % 3)
-                    dr.rectangle([px0 + 150, py0 + ph - 74, px0 + pw - 150, py0 + ph - 22], fill=(14, 14, 16))
-                    dr.text((px0 + pw / 2, py0 + ph - 48), thinker + dots, font=f_mid, anchor='mm', fill=(240, 230, 170))
-                # правая панель
-                px = 900
-                dr.rectangle([px, 98, W - 40, 912], fill=(30, 32, 30))
-                dr.rectangle([px, 98, px + 6, 912], fill=LAV)
-                dr.text((px + 26, 106), 'КВЕНЯ · играет белыми', font=f_mid, fill=(240, 240, 235))
-                dr.text((px + 26, 158), 'ФЕРЗЬ-3000 · чёрные, спарринг-скрипт', font=f_sm, fill=(190, 190, 185))
-                dr.text((px + 26, 202), 'ПОСЛЕДНИЕ ХОДЫ', font=f_hud, fill=(170, 170, 165))
-                for li, m in enumerate(moves[max(0, idx - 8):idx]):
-                    yy = 238 + li * 30
+                    dr.rectangle([px0 + 170, py0 + ph - 70, px0 + pw - 170, py0 + ph - 20], fill=(14, 14, 16))
+                    dr.text((px0 + pw / 2, py0 + ph - 45), thinker + dots, font=f_mid, anchor='mm', fill=(240, 230, 170))
+                px = 940
+                dr.rectangle([px, 68, W - 40, 892], fill=(30, 32, 30))
+                dr.rectangle([px, 68, px + 6, 892], fill=LAV)
+                turn_w = idx % 2 == 0
+                dr.rectangle([px + 24, 88, px + 440, 136], fill=(52, 74, 100) if turn_w else (38, 40, 38))
+                dr.text((px + 40, 98), 'КВЕНЯ · белые', font=f_mid, fill=(240, 240, 235))
+                dr.rectangle([px + 460, 88, px + 900, 136], fill=(96, 52, 40) if not turn_w else (38, 40, 38))
+                dr.text((px + 476, 100), 'ФЕРЗЬ-3000 · чёрные', font=f_hud, fill=(235, 230, 225))
+                dr.text((px + 24, 156), 'ПОСЛЕДНИЕ ХОДЫ', font=f_hud, fill=(170, 170, 165))
+                for li, m in enumerate(moves[max(0, idx - 6):idx]):
+                    yy = 192 + li * 30
                     num = (m['n'] + 1) // 2
                     pre = f'{num}.' if m['side'] == 'w' else '   …'
                     col = (235, 235, 228) if m['side'] == 'w' else (226, 160, 130)
-                    dr.text((px + 30, yy), pre + m['san'], font=f_hud, fill=col)
-                ey = 510
+                    dr.text((px + 28, yy), pre + m['san'], font=f_hud, fill=col)
+                ey = 386
                 got = [m['cap'] for m in moves[:idx] if m['side'] == 'w' and m['cap']]
                 lost = [m['cap'] for m in moves[:idx] if m['side'] == 'b' and m['cap']]
-                dr.text((px + 26, ey), 'КВЕНЯ СЪЕЛА:', font=f_hud, fill=(170, 170, 165))
-                for i2, p in enumerate(got):
-                    dr.text((px + 210 + i2 * 34, ey - 6), GLYPH[p], font=f_piece, fill=(60, 56, 54), stroke_width=2, stroke_fill=(230, 230, 224))
-                dr.text((px + 26, ey + 46), 'КВЕНЯ ОТДАЛА:', font=f_hud, fill=(170, 170, 165))
-                for i2, p in enumerate(lost):
-                    dr.text((px + 230 + i2 * 34, ey + 40), GLYPH[p], font=f_piece, fill=(248, 248, 244), stroke_width=2, stroke_fill=(30, 30, 30))
+                dr.text((px + 24, ey), 'КВЕНЯ СЪЕЛА:', font=f_hud, fill=(170, 170, 165))
+                for i2, pp in enumerate(got):
+                    dr.text((px + 200 + i2 * 32, ey - 5), GLYPH[pp], font=font(34), fill=(60, 56, 54), stroke_width=2, stroke_fill=(230, 230, 224))
+                dr.text((px + 24, ey + 42), 'КВЕНЯ ОТДАЛА:', font=f_hud, fill=(170, 170, 165))
+                for i2, pp in enumerate(lost):
+                    dr.text((px + 220 + i2 * 32, ey + 37), GLYPH[pp], font=font(34), fill=(248, 248, 244), stroke_width=2, stroke_fill=(30, 30, 30))
                 mat = mv['mat'] if mv else 0.0
-                ey2 = ey + 110
-                dr.text((px + 26, ey2), f'ОЦЕНКА: {mat:+.1f} в пользу Квени', font=f_hud, fill=(220, 220, 214))
-                bw = 700
-                dr.rectangle([px + 26, ey2 + 36, px + 26 + bw, ey2 + 62], fill=(70, 40, 38))
+                ey2 = ey + 92
+                dr.text((px + 24, ey2), f'ОЦЕНКА: {mat:+.1f} в пользу Квени', font=f_hud, fill=(220, 220, 214))
+                bw = 880
+                dr.rectangle([px + 24, ey2 + 34, px + 24 + bw, ey2 + 58], fill=(70, 40, 38))
                 half = bw / 2
                 fillw = max(-half, min(half, mat / 25.0 * half))
-                x0 = px + 26 + half
-                dr.rectangle([min(x0, x0 + fillw), ey2 + 36, max(x0, x0 + fillw), ey2 + 62], fill=(110, 163, 220))
-                dr.line([(x0, ey2 + 32), (x0, ey2 + 66)], fill=(230, 230, 224), width=3)
-                rw = 340
-                rx0, ry0 = W - rw - 60, 940 - rw
+                x0 = px + 24 + half
+                dr.rectangle([min(x0, x0 + fillw), ey2 + 34, max(x0, x0 + fillw), ey2 + 58], fill=(110, 163, 220))
+                dr.line([(x0, ey2 + 30), (x0, ey2 + 62)], fill=(230, 230, 224), width=3)
                 ri = int(min(n_rat - 1, tau * 12.5))
-                dr.rectangle([rx0 - 4, ry0 - 4, rx0 + rw + 4, ry0 + rw + 4], outline=(18, 18, 20), width=4)
-                im.paste(rat_frame(ri, rw), (rx0, ry0))
-                dr = ImageDraw.Draw(im)
-                dr.rectangle([rx0 - 4, ry0 - 36, rx0 + 268, ry0 - 4], fill=(18, 18, 20))
-                dr.text((rx0 + 6, ry0 - 32), 'ЗУЗА · маскот канала комментирует', font=f_sm, fill=(232, 228, 216))
+                dr = paste_cam(im, dr, ri, 1548, 560, 300, tau)
                 hud(dr, tau)
                 subs(dr, seg)
             else:
@@ -399,9 +436,7 @@ def main():
             dr.text((cx0 + 40, 500), 'Вся партия записана без перемоток,', font=f_sub, fill=(190, 190, 185))
             dr.text((cx0 + 40, 540), 'каждый ход прокомментирован', font=f_sub, fill=(190, 190, 185))
             dr.text((cx0 + 40, 610), 'Играла Квеня · Комментировала Зуза, маскот канала', font=f_sub, fill=LAV)
-            dr.text((cx0 + 40, 675), 'Игра из чужого репозитория: chess.js, Jeff Hlywa,', font=f_sub, fill=(178, 178, 172))
-            dr.text((cx0 + 40, 710), 'BSD-2-Clause · github.com/jhlywa/chess.js · спасибо, Джеф!', font=f_sub, fill=(178, 178, 172))
-            dr.text((cx0 + 40, 775), 'До следующего стрима. Сыр не забудьте.', font=f_mid, fill=(230, 226, 214))
+            dr.text((cx0 + 40, 690), 'До следующего стрима. Сыр не забудьте.', font=f_mid, fill=(230, 226, 214))
             hud(dr, tau)
             subs(dr, tl[-2])
         # МАТ-штамп и конфетти в конце последнего гейм-шота и в вердикте? только в s13
