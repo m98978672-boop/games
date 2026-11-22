@@ -2,6 +2,7 @@
 // Нужны playwright-core и исполняемый Chromium:
 // WC_DEPS=/path/to/node_modules WC_BROWSER_EXEC=/path/to/chromium node warehouse-crew/tests/panel-browser.mjs
 // Дополнительные аргументы Chromium можно передать через WC_BROWSER_ARGS (JSON-массив).
+// WC_TEST_WIDTH ограничивает прогон одним размером.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -36,7 +37,7 @@ try {
     { width:844, height:390, mobile:true },
     { width:960, height:430, mobile:true },
     { width:1280, height:800, mobile:false },
-  ]) {
+  ].filter(view => !process.env.WC_TEST_WIDTH || view.width === Number(process.env.WC_TEST_WIDTH))) {
     browser = await playwright.chromium.launch({ executablePath:process.env.WC_BROWSER_EXEC, args, headless:true });
     const page = await browser.newPage({viewport:{width:scenario.width,height:scenario.height}, isMobile:scenario.mobile, hasTouch:scenario.mobile});
     const errors = []; page.on('pageerror', error => errors.push(error.message));
@@ -98,16 +99,35 @@ try {
     let cargoRow = details.locator('[data-truck-order="'+cargoIds.first+'"]');
     assert.match(await cargoRow.textContent(), /★ отгрузка/); assert.match(await cargoRow.textContent(), /Ожидает бригаду/);
     const r = await cargoRow.boundingBox(); assert(r.x >= 0 && r.x+r.width <= (scenario.width === 844 ? 390 : scenario.width));
-    await summary.focus();
-    await page.evaluate(id => { const g=WC.game; g.sim.claim(id,g.api.crew[0].id); WC.ui.state.lastUiAt=-Infinity; WC.ui.frame(1/30); },cargoIds.first);
-    assert.match(await cargoRow.textContent(), /Назначен:/); assert.equal(await summary.evaluate(el=>document.activeElement===el),true);
+    const priorityFilter = page.locator('[data-order-filter="priority"]'); await priorityFilter.scrollIntoViewIfNeeded(); await priorityFilter.click();
+    const jump = cargoRow.locator('[data-cargo-order]'); await jump.scrollIntoViewIfNeeded();
+    const stateBeforeJump = await page.evaluate(() => {const c=WC.game.captureCheckpoint(); return JSON.stringify({warehouse:c.warehouse,crew:c.crew});});
+    await jump.click();
+    assert.equal(await page.locator('[data-order-filter="all"]').getAttribute('aria-pressed'), 'true');
+    const queueCard = page.locator('#order-list .order:focus');
+    assert.equal(await queueCard.getAttribute('aria-label'), 'Заказ '+cargoIds.code);
+    assert.equal(await page.evaluate(() => {const c=WC.game.captureCheckpoint(); return JSON.stringify({warehouse:c.warehouse,crew:c.crew});}), stateBeforeJump);
+    const visibleArea = await queueCard.evaluate(el => {
+      const rects=[el.getBoundingClientRect(), document.querySelector('#order-list').getBoundingClientRect(), document.querySelector('.ctl-scroll').getBoundingClientRect(), document.querySelector('#control-panel').getBoundingClientRect()];
+      return Math.min(innerHeight,...rects.map(r=>r.bottom))-Math.max(0,...rects.map(r=>r.top));
+    });
+    assert(visibleArea > 0, 'переход прокручивает оба вложенных списка до карточки');
+    const take = queueCard.locator('.o-take'); await take.scrollIntoViewIfNeeded(); await take.click();
+    await page.evaluate(() => { WC.ui.state.lastUiAt=-Infinity; WC.ui.frame(1/30); });
+    assert.match(await cargoRow.textContent(), /Назначен:/);
+    await summary.scrollIntoViewIfNeeded(); await summary.focus();
+    await page.evaluate(() => { WC.ui.state.lastUiAt=-Infinity; WC.ui.frame(1/30); });
+    assert.equal(await summary.evaluate(el=>document.activeElement===el),true);
     // Восстановление использует сохранённые данные, а не разметку.
     await page.evaluate(() => WC.save.save(WC.game));
     await page.reload({waitUntil:'load'}); await page.waitForFunction(() => window.WC && WC.game && WC.game.api.ready, {timeout:60000});
     await openControls(); details = page.locator('[data-truck-cargo="'+truckId+'"]'); summary=details.locator('summary');
     await summary.scrollIntoViewIfNeeded(); await summary.click(); cargoRow=details.locator('[data-truck-order="'+cargoIds.first+'"]');
     assert.match(await cargoRow.textContent(), /Назначен:/); assert.match(await cargoRow.textContent(), /★ отгрузка/);
-    await summary.focus();
+    const jumpClaimed = cargoRow.locator('[data-cargo-order]'); await jumpClaimed.scrollIntoViewIfNeeded(); await jumpClaimed.click();
+    assert.equal(await page.locator('#order-list .order:focus').getAttribute('aria-label'), 'Заказ '+cargoIds.code);
+    assert.equal(await page.locator('#order-list .order:focus .o-take').isDisabled(),true);
+    await summary.scrollIntoViewIfNeeded(); await summary.focus();
     await page.evaluate(id=>{ WC.game.dispatchTruck(id); WC.ui.state.lastUiAt=-Infinity; WC.ui.frame(1/30); },truckId);
     assert.equal(await details.isVisible(),false); assert.equal(await page.evaluate(()=>document.activeElement.id),'dock-heading');
     console.log(`✓ Ведомость фуры: ${scenario.width === 844 ? '390×844' : scenario.width+'×'+scenario.height}, сохранение и отъезд`);
