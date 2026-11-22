@@ -59,3 +59,5 @@
 {"id": "eval-web-source", "instruction": "Ты можешь загуглить что-нибудь прямо сейчас?", "mustContain": ["источник"]}
 {"id": "eval-game-eyes", "instruction": "Как ты теперь играешь в Clumsy Bird?", "mustContain": ["пиксел"]}
 {"id": "eval-game-score", "instruction": "Откуда ты знаешь свой счёт в игре?", "mustContain": ["табло"]}
+{"id": "eval-motivation-reward", "instruction": "За что тебя награждают?", "mustContain": ["балл"]}
+{"id": "eval-motivation-duty", "instruction": "Что ты делаешь, когда получила взыскание?", "mustContain": ["задание"]}

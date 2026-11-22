@@ -1,0 +1,113 @@
+{
+  "points": 18,
+  "level": "Новичок",
+  "achievements": [
+    {
+      "id": "veteran-exp",
+      "title": "Ветеран экспедиций",
+      "reward": "сама предлагает маршрут недели в журнале моста",
+      "at": "2026-11-22 22:35 UTC"
+    }
+  ],
+  "pendingDuties": [
+    {
+      "id": "20261122-2236-ellisonleao-github-io:pipe",
+      "kind": "pipe",
+      "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+      "at": "2026-11-22 22:35 UTC",
+      "closedBy": ""
+    }
+  ],
+  "closedDuties": [
+    {
+      "id": "20261122-2208-ellisonleao-github-io:crash",
+      "kind": "crash",
+      "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+      "at": "2026-11-22 22:08 UTC",
+      "closedBy": "20261122-2220-ellisonleao-github-io"
+    },
+    {
+      "id": "20261122-2215-ellisonleao-github-io:crash",
+      "kind": "crash",
+      "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+      "at": "2026-11-22 22:15 UTC",
+      "closedBy": "20261122-2220-ellisonleao-github-io"
+    }
+  ],
+  "lastEvents": [
+    {
+      "id": "20261122-2158-ellisonleao-github-io:video",
+      "at": "2026-11-22 21:57 UTC",
+      "delta": 3,
+      "text": "видео экспедиции доехало до её страницы"
+    },
+    {
+      "id": "20261122-2208-ellisonleao-github-io:error",
+      "at": "2026-11-22 22:08 UTC",
+      "delta": -8,
+      "text": "экспедиция сломалась по дороге — это чинится, а не замалчивается"
+    },
+    {
+      "id": "20261122-2215-ellisonleao-github-io:error",
+      "at": "2026-11-22 22:15 UTC",
+      "delta": -8,
+      "text": "экспедиция сломалась по дороге — это чинится, а не замалчивается"
+    },
+    {
+      "id": "20261122-2220-ellisonleao-github-io:played",
+      "at": "2026-11-22 22:19 UTC",
+      "delta": 10,
+      "text": "сыграла экспедицию сама, по-честному, до конца"
+    },
+    {
+      "id": "20261122-2220-ellisonleao-github-io:video",
+      "at": "2026-11-22 22:19 UTC",
+      "delta": 3,
+      "text": "видео экспедиции доехало до её страницы"
+    },
+    {
+      "id": "20261122-2236-ellisonleao-github-io:played",
+      "at": "2026-11-22 22:35 UTC",
+      "delta": 10,
+      "text": "сыграла экспедицию сама, по-честному, до конца"
+    },
+    {
+      "id": "20261122-2236-ellisonleao-github-io:video",
+      "at": "2026-11-22 22:35 UTC",
+      "delta": 3,
+      "text": "видео экспедиции доехало до её страницы"
+    },
+    {
+      "id": "20261122-2236-ellisonleao-github-io:zero",
+      "at": "2026-11-22 22:35 UTC",
+      "delta": -5,
+      "text": "матч глазами сыгран, но табло — ноль: так не пойдёт"
+    }
+  ],
+  "eventIds": [
+    "20261122-2158-ellisonleao-github-io:played",
+    "20261122-2158-ellisonleao-github-io:video",
+    "20261122-2208-ellisonleao-github-io:error",
+    "20261122-2215-ellisonleao-github-io:error",
+    "20261122-2220-ellisonleao-github-io:played",
+    "20261122-2220-ellisonleao-github-io:video",
+    "20261122-2236-ellisonleao-github-io:played",
+    "20261122-2236-ellisonleao-github-io:video",
+    "20261122-2236-ellisonleao-github-io:zero"
+  ],
+  "reportsCounted": 5,
+  "playedCount": 3,
+  "bestStepsEver": 0,
+  "updatedAt": "2026-11-22 22:44 UTC",
+  "seenJournal": [
+    "20261122-2158-ellisonleao-github-io:played",
+    "20261122-2158-ellisonleao-github-io:video",
+    "20261122-2208-ellisonleao-github-io:error",
+    "20261122-2215-ellisonleao-github-io:error",
+    "20261122-2220-ellisonleao-github-io:played",
+    "20261122-2220-ellisonleao-github-io:video",
+    "20261122-2236-ellisonleao-github-io:played",
+    "20261122-2236-ellisonleao-github-io:video",
+    "20261122-2236-ellisonleao-github-io:zero"
+  ]
+}
