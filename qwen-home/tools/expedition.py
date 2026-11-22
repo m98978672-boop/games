@@ -27,8 +27,12 @@ import json
 import re
 import sys
 import time
+import urllib.parse
+import urllib.robotparser
 from datetime import datetime, timezone
 from pathlib import Path
+
+BOT_UA = 'KvenyaExpedition/1.0 (+https://github.com/m98978672-boop/games)'
 
 CAPTCHA_MARKERS = ('не робот', 'not a robot', 'smartcaptcha', 'подтвердите, что вы человек',
                    'i am not a robot', 'покажите, что вы не робот', 'введите символы')
@@ -68,6 +72,21 @@ class Report:
         (out / 'report.json').write_text(json.dumps(self.data, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
+def robots_allows(url):
+    """Вежливый гость сначала читает robots.txt чужого дома.
+
+    Возвращает (можно?, пометка). Если robots.txt не прочитался —
+    идём осторожно и честно помечаем это в отчёте."""
+    try:
+        parts = urllib.parse.urlparse(url)
+        rp = urllib.robotparser.RobotFileParser()
+        rp.set_url(f'{parts.scheme}://{parts.netloc}/robots.txt')
+        rp.read()
+        return rp.can_fetch(BOT_UA, url), 'robots.txt прочитан'
+    except Exception as err:
+        return True, f'robots.txt не прочитался ({type(err).__name__}) — иду осторожно'
+
+
 def run(url, seconds, out):
     from playwright.sync_api import sync_playwright  # ленивая: --help и тесты логики без браузера
 
@@ -76,10 +95,21 @@ def run(url, seconds, out):
     report = Report(url)
     deadline = time.monotonic() + max(20, min(180, seconds))
 
+    allowed, robots_note = robots_allows(url)
+    report.step('вежливый гость: проверка robots.txt', robots_note)
+    if not allowed:
+        report.data['status'] = 'robots-denied'
+        report.step('честный отказ', 'robots.txt этого сайта просит роботов сюда не ходить — не пошла, и это нормально')
+        out.mkdir(parents=True, exist_ok=True)
+        report.save(out)
+        print(json.dumps({'status': report.data['status'], 'steps': len(report.data['steps'])}), flush=True)
+        return 0
+
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         context = browser.new_context(
             viewport={'width': 1280, 'height': 800},
+            user_agent=BOT_UA,
             locale='ru-RU',
             record_video_dir=str(video_dir),
             record_video_size={'width': 1280, 'height': 800},
