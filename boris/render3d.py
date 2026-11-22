@@ -128,8 +128,8 @@ def cat_faces(P):
     if P.get("crouch"): ang = {"FL": 0.7, "FR": 0.7, "HL": 0.9, "HR": 0.9}
     if P.get("knead") is not None:
         kn = P["knead"]
-        ang["FL"] = 0.45*math.sin(kn*6.0)
-        ang["FR"] = 0.45*math.sin(kn*6.0 + 3.14)
+        ang["FL"] = -0.10 + 0.20*math.sin(kn*6.0)
+        ang["FR"] = -0.10 + 0.20*math.sin(kn*6.0 + 3.14)
     for name, pv in legs.items():
         parts = B4((pv[0], pv[1]-0.075, pv[2]), (0.062, 0.14, 0.066), CLAY)
         parts += B4((pv[0], pv[1]-0.185, pv[2]), (0.048, 0.13, 0.052), CLAY)
@@ -812,7 +812,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
                  knead=knead, pitch=0.10*lie,
                  head_pitch=0.30*(1 if knead else 0)*math.sin(t*6.0)*0.3 + 0.12*lie,
                  head_yaw=0.15*math.sin(t*0.6),
-                 tail_t=t*0.5, blink=bl, painted=True, lift=0.10 - 0.05*lie,
+                 tail_t=t*0.5, blink=bl, painted=True, lift=0.03 - 0.02*lie,
                  ear_tw=0.35 if 9.2 < t < 9.6 else 0.0)
         shadow = (0.2, 2.6)
         faces += quad((-3.2, 0, 4.2), (3.2, 0, 4.2), (3.2, 3.2, 4.2), (-3.2, 3.2, 4.2), (134, 118, 104))
@@ -947,12 +947,12 @@ def render_frame(k, t, ovl_imgs, ot=None):
                  knead=kn1, pitch=0.10*lie,
                  head_pitch=0.10*(1 if kn1 else 0)*math.sin(t*6.0) + 0.12*lie,
                  head_yaw=0.15*math.sin(t*0.6), tail_t=t*0.5, blink=bl, painted=True,
-                 lift=0.10 - 0.05*lie, ear_tw=0.35 if 9.2 < t < 9.6 else 0.0)
+                 lift=0.03 - 0.02*lie, ear_tw=0.35 if 9.2 < t < 9.6 else 0.0)
         F = dict(x=0.62, z=2.72, yaw=math.pi*1.15, walk=None, sit=1.0 - 0.6*lie, crouch=0.5*lie,
                  knead=kn2, pitch=0.10*lie,
                  head_pitch=0.10*(1 if kn2 else 0)*math.sin(t*6.0 + 1.1) + 0.12*lie,
                  head_yaw=0.15*math.sin(t*0.5 + 2.0), tail_t=t*0.5 + 1.3, blink=bl, black=True,
-                 lift=0.10 - 0.05*lie)
+                 lift=0.03 - 0.02*lie)
         shadow = (0.3, 2.6)
         faces += quad((-3.2, 0, 4.2), (3.2, 0, 4.2), (3.2, 3.2, 4.2), (-3.2, 3.2, 4.2), (134, 118, 104))
         faces += quad((-3.2, 0, 0.4), (-3.2, 3.2, 0.4), (-3.2, 3.2, 4.2), (-3.2, 0, 4.2), (120, 104, 92))
