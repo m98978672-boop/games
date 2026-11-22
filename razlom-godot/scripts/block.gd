@@ -168,6 +168,13 @@ func rebuild_damage() -> void:
 				v = Vector3(0, cell_size.y, 0)
 			var face := center + normal * cell_size.dot(normal.abs()) * 0.5
 			var corners: Array[Vector3] = [face - u * 0.5 - v * 0.5, face + u * 0.5 - v * 0.5, face + u * 0.5 + v * 0.5, face - u * 0.5 + v * 0.5]
+			# Keep each exposed face front-facing. A fixed quad order silently
+			# reversed half the normals, so Godot back-face culling made damaged
+			# bricks look transparent after their first hit.
+			if (corners[2] - corners[0]).cross(corners[1] - corners[0]).dot(normal) < 0.0:
+				var swap := corners[1]
+				corners[1] = corners[3]
+				corners[3] = swap
 			for vertex in [0, 2, 1, 0, 3, 2]:
 				surface.set_normal(normal)
 				surface.set_uv(Vector2(corners[vertex].x + corners[vertex].z, corners[vertex].y))

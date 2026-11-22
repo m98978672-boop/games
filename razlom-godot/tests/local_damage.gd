@@ -24,6 +24,16 @@ func run_tests() -> void:
 	var entry: Vector3 = block.to_global(Vector3(0.04, 0.04, block.block_size.z * 0.5 + 0.04))
 	var changed: int = block.bullet_hit(entry, Vector3.FORWARD, 0.012, 36)
 	check(changed > 0 and changed < 100, "Small bullet removes a local subset, not the entire metre block")
+	var damaged_visual := block.get_child(0) as MeshInstance3D
+	var damaged_arrays: Array = damaged_visual.mesh.surface_get_arrays(0)
+	var damaged_vertices: PackedVector3Array = damaged_arrays[Mesh.ARRAY_VERTEX]
+	var damaged_normals: PackedVector3Array = damaged_arrays[Mesh.ARRAY_NORMAL]
+	var faces_are_outward := damaged_vertices.size() > 0 and damaged_vertices.size() % 3 == 0
+	for vertex in range(0, damaged_vertices.size(), 3):
+		var face_normal := (damaged_vertices[vertex + 1] - damaged_vertices[vertex]).cross(damaged_vertices[vertex + 2] - damaged_vertices[vertex]).normalized()
+		if face_normal.dot(damaged_normals[vertex]) < 0.99:
+			faces_are_outward = false
+	check(faces_are_outward, "Rebuilt damage mesh keeps every exposed brick face front-facing")
 	check(game.blocks.size() == before and block.durability == 70, "Local hit does not trigger whole-column collapse")
 	check(not block.removed.has(0), "Far corner remains solid")
 	var small: int = block.removed.size()
