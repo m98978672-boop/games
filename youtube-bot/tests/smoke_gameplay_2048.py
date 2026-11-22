@@ -49,6 +49,7 @@ with tempfile.TemporaryDirectory(prefix="gameplay-smoke-") as temp:
     subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / "gameplay_finalize.py"), str(output)], check=True, timeout=180)
     final = json.loads((output / "final-report.json").read_text())
     assert final["uploaded"] is False and final["capture_seconds"] >= 10
+    assert final["commentary_clips"] >= 1, final
     movie = output / final["video"]
     streams = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "json", str(movie)], check=True, capture_output=True, text=True)
     kinds = {item["codec_type"] for item in json.loads(streams.stdout)["streams"]}

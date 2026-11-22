@@ -87,6 +87,7 @@ jobs:
             ${{ steps.finalize.outputs.output }}/gameplay-with-recap.mp4
             ${{ steps.finalize.outputs.output }}/final-report.json
             ${{ steps.finalize.outputs.output }}/report.json
+            ${{ steps.finalize.outputs.output }}/commentary-events.json
             ${{ steps.finalize.outputs.output }}/gameState.json
           if-no-files-found: error
           retention-days: 7

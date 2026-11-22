@@ -39,6 +39,7 @@ async function main() {
     if (resumeState) await context.addInitScript((saved) => {
       if (location.origin === "http://127.0.0.1:8787") localStorage.setItem("gameState", saved);
     }, resumeState);
+    const recordingStart = Date.now();
     const page = await context.newPage();
     await page.goto("http://127.0.0.1:8787/", {waitUntil: "load", timeout: 30000});
     await page.waitForSelector(".tile-container .tile", {state: "attached", timeout: 10000});
@@ -47,6 +48,8 @@ async function main() {
     if (!initialState || (resumeState && JSON.stringify(initialState) !== JSON.stringify(JSON.parse(resumeState)))) throw Error("Saved game was not restored");
     const start = Date.now();
     let moves = 0, outcome = "time_limit", maxTile = 0, score = 0;
+    const commentaryEvents = [];
+    let nextComment = 0;
     while (Date.now() - start < duration * 1000) {
       if (await page.locator(".game-message.game-over").count()) { outcome = "lost"; break; }
       if (await page.locator(".game-message.game-won").count()) { outcome = "won"; break; }
@@ -55,6 +58,11 @@ async function main() {
       const board = Array.from({length: 4}, (_, y) => Array.from({length: 4}, (_, x) => Number(state.grid.cells[x][y]?.value || 0)));
       maxTile = Math.max(maxTile, ...board.flat());
       score = Number(state.score) || 0;
+      const elapsed = (Date.now() - start) / 1000;
+      if (elapsed >= nextComment) {
+        commentaryEvents.push({at: Math.round((Date.now() - recordingStart) / 1000 * 10) / 10, moves, score, max_tile: maxTile});
+        nextComment = elapsed + 25;
+      }
       const action = choose(board);
       if (!action) { outcome = "no_legal_move"; break; }
       await page.keyboard.press(action);
@@ -77,6 +85,7 @@ async function main() {
     await context.close(); // finishes the real recording; never loop/pad a short result
     const videoPath = video ? await video.path() : null;
     const report = {game: "2048", source: "https://github.com/gabrielecirulli/2048", commit: "478b6ec346e3787f589e4af751378d06ded4cbbc", outcome, moves, score, max_tile: maxTile, resumed: Boolean(resumeState), initial_score: Number(initialState.score), elapsed_seconds: Math.floor((Date.now() - start) / 1000), video: videoPath ? path.basename(videoPath) : null, audio: false, uploaded: false};
+    fs.writeFileSync(path.join(OUT, "commentary-events.json"), JSON.stringify(commentaryEvents), {mode: 0o600});
     fs.writeFileSync(path.join(OUT, "report.json"), JSON.stringify(report, null, 2), {mode: 0o600});
     console.log(JSON.stringify(report));
   } finally {
