@@ -1,0 +1,342 @@
+{
+  "url": "https://ellisonleao.github.io/clumsy-bird/",
+  "startedAt": "2026-11-22 21:57 UTC",
+  "status": "played",
+  "steps": [
+    {
+      "t": 47.9,
+      "action": "вежливый гость: проверка robots.txt",
+      "result": "robots.txt прочитан"
+    },
+    {
+      "t": 52.3,
+      "action": "открыла страницу",
+      "result": "Clumsy Bird"
+    },
+    {
+      "t": 52.4,
+      "action": "кнопка игры",
+      "result": "не нашлась — пробую играть прямо на открытой странице"
+    },
+    {
+      "t": 56.5,
+      "action": "игровой канвас",
+      "result": "найден 1200x800 — играю клавишами и кликами"
+    },
+    {
+      "t": 56.5,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 57.1,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 57.8,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 58.4,
+      "action": "ход",
+      "result": "ArrowLeft"
+    },
+    {
+      "t": 59.1,
+      "action": "ход",
+      "result": "KeyW"
+    },
+    {
+      "t": 59.8,
+      "action": "ход",
+      "result": "ArrowUp"
+    },
+    {
+      "t": 60.4,
+      "action": "ход",
+      "result": "KeyA"
+    },
+    {
+      "t": 61.1,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 61.7,
+      "action": "ход",
+      "result": "KeyD"
+    },
+    {
+      "t": 62.4,
+      "action": "ход",
+      "result": "ArrowDown"
+    },
+    {
+      "t": 63.1,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 63.8,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 64.4,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 65.1,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 65.7,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 66.4,
+      "action": "ход",
+      "result": "ArrowLeft"
+    },
+    {
+      "t": 67.0,
+      "action": "ход",
+      "result": "KeyW"
+    },
+    {
+      "t": 67.7,
+      "action": "ход",
+      "result": "ArrowUp"
+    },
+    {
+      "t": 68.3,
+      "action": "ход",
+      "result": "KeyA"
+    },
+    {
+      "t": 69.0,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 69.6,
+      "action": "ход",
+      "result": "KeyD"
+    },
+    {
+      "t": 70.3,
+      "action": "ход",
+      "result": "ArrowDown"
+    },
+    {
+      "t": 71.0,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 71.6,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 72.3,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 73.0,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 73.6,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 74.3,
+      "action": "ход",
+      "result": "ArrowLeft"
+    },
+    {
+      "t": 74.9,
+      "action": "ход",
+      "result": "KeyW"
+    },
+    {
+      "t": 75.6,
+      "action": "ход",
+      "result": "ArrowUp"
+    },
+    {
+      "t": 76.2,
+      "action": "ход",
+      "result": "KeyA"
+    },
+    {
+      "t": 76.9,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 77.5,
+      "action": "ход",
+      "result": "KeyD"
+    },
+    {
+      "t": 78.2,
+      "action": "ход",
+      "result": "ArrowDown"
+    },
+    {
+      "t": 78.9,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 79.5,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 80.2,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 80.8,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 81.5,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 82.1,
+      "action": "ход",
+      "result": "ArrowLeft"
+    },
+    {
+      "t": 82.8,
+      "action": "ход",
+      "result": "KeyW"
+    },
+    {
+      "t": 83.4,
+      "action": "ход",
+      "result": "ArrowUp"
+    },
+    {
+      "t": 84.1,
+      "action": "ход",
+      "result": "KeyA"
+    },
+    {
+      "t": 84.7,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 85.4,
+      "action": "ход",
+      "result": "KeyD"
+    },
+    {
+      "t": 86.0,
+      "action": "ход",
+      "result": "ArrowDown"
+    },
+    {
+      "t": 86.7,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 87.4,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 88.0,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 88.7,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 89.3,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 90.0,
+      "action": "ход",
+      "result": "ArrowLeft"
+    },
+    {
+      "t": 90.6,
+      "action": "ход",
+      "result": "KeyW"
+    },
+    {
+      "t": 91.3,
+      "action": "ход",
+      "result": "ArrowUp"
+    },
+    {
+      "t": 91.9,
+      "action": "ход",
+      "result": "KeyA"
+    },
+    {
+      "t": 92.6,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 93.2,
+      "action": "ход",
+      "result": "KeyD"
+    },
+    {
+      "t": 93.9,
+      "action": "ход",
+      "result": "ArrowDown"
+    },
+    {
+      "t": 94.5,
+      "action": "ход",
+      "result": "Space"
+    },
+    {
+      "t": 95.2,
+      "action": "ход",
+      "result": "ArrowRight"
+    },
+    {
+      "t": 96.7,
+      "action": "игра состоялась",
+      "result": "ввод уходил в канвас, видео экспедиции записано"
+    }
+  ],
+  "screenshots": [
+    "01-open.png",
+    "02-after-play.png",
+    "03-play.png",
+    "04-play.png",
+    "05-play.png",
+    "08-final.png"
+  ],
+  "hasVideo": true,
+  "textSample": ""
+}
