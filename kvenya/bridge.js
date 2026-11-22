@@ -32,9 +32,35 @@
     }
   }
 
+  var expEl = document.getElementById('kvBridgeExpeditions');
+  var EXP_STATUS = {
+    'played': '🎮 сыграла сама: ввод ушёл в игру, видео записано',
+    'opened-only': '🚪 открыла страницу, но до игры не дошло',
+    'no-canvas': '🖱 кнопку нажала, а игрового канваса нет',
+    'captcha-wall': '🧱 упёрлась в «я не робот» — сфотографировала и честно остановилась',
+    'error': '🌧 не открылось: сеть или браузер не дали'
+  };
+  function renderExpeditions(data) {
+    if (!expEl) return;
+    var list = data.expeditions || [];
+    if (!list.length) {
+      expEl.innerHTML = '<p class="kv-note">Экспедиций ещё не было: первая уйдёт сама по расписанию в понедельник, или запусти её вручную на GitHub Actions (кнопка ниже).</p>';
+      return;
+    }
+    expEl.innerHTML = list.map(function (e) {
+      var shots = (e.screenshots || []).slice(0, 2).map(function (f) {
+        return '<img src="../' + esc(e.dir) + '/' + esc(f) + '" alt="кадр экспедиции" loading="lazy" style="max-width:220px;border-radius:10px;margin:4px 8px 4px 0">';
+      }).join('');
+      return '<div class="kv-expedition"><p class="kv-note">🧭 <b>' + esc(e.date) + '</b> · ' + esc(EXP_STATUS[e.status] || e.status)
+        + '<br><a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + esc(e.url) + '</a>'
+        + ' · <a href="../' + esc(e.dir) + '/report.json" target="_blank" rel="noopener">пошаговый отчёт</a>'
+        + (e.hasVideo ? ' · видео — в артефактах запуска на GitHub Actions' : '') + '</p>' + shots + '</div>';
+    }).join('');
+  }
+
   fetch('./bridge.json', { cache: 'no-store' })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (data) { if (data) renderDigest(data); })
+    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); } })
     .catch(function () { /* сводки нет — есть живая кнопка */ });
 
   function wikiApi(params) {
