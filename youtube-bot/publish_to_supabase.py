@@ -15,6 +15,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +49,19 @@ def _safe_urlopen(request: urllib.request.Request, timeout: int):
 
 class PublishError(RuntimeError):
     """A safe-to-print publishing failure; never includes credentials or upload URLs."""
+
+
+class SlotOccupied(PublishError):
+    """Publisher positively identified a different job holding the slot."""
+
+
+def _different_job_id(value: Any, expected: Any) -> bool:
+    if not isinstance(value, str) or not isinstance(expected, str):
+        return False
+    try:
+        return uuid.UUID(value) != uuid.UUID(expected)
+    except ValueError:
+        return False
 
 
 def _mask(secret: str) -> None:
@@ -162,6 +177,9 @@ def _supabase_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
             if (status == 409 and result.get("status") in {"scheduled", "processing"}
                     and result.get("job_id") == expected_job_id):
                 return result
+            if (path == "/autopilot/prepare" and status == 409
+                    and _different_job_id(result.get("job_id"), expected_job_id)):
+                raise SlotOccupied("Publish slot belongs to a different job; no upload was started.") from exc
             if status not in TRANSIENT_HTTP:
                 detail = result.get("error") or result.get("message") or f"HTTP {status}"
                 raise PublishError(f"Publisher rejected the request: {str(detail)[:240]}.") from exc
@@ -387,10 +405,29 @@ def publish(result_path: Path) -> dict[str, Any]:
         if field not in metadata:
             raise PublishError(f"Review metadata is missing {field}.")
 
-    prepared = _supabase_post("/autopilot/prepare", {"metadata": metadata})
+    # Only a positively identified different job is safe to move around. A
+    # missing job ID, network failure or same-job result remains ambiguous.
+    for slot_attempt in range(4):
+        try:
+            prepared = _supabase_post("/autopilot/prepare", {"metadata": metadata})
+            if (prepared.get("status") == "scheduled" and prepared.get("video_id")
+                    and _different_job_id(prepared.get("job_id"), metadata["job_id"])):
+                raise SlotOccupied("Publish slot belongs to a different job; no upload was started.")
+            break
+        except SlotOccupied:
+            if slot_attempt == 3:
+                raise PublishError("Four nearby publication slots were occupied; no upload was started.")
+            try:
+                previous = datetime.fromisoformat(str(metadata["publish_at"]).replace("Z", "+00:00"))
+                if previous.tzinfo is None:
+                    raise ValueError("Timezone required")
+                metadata["publish_at"] = (previous.astimezone(timezone.utc) + timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise PublishError("Invalid publication time; no upload was started.") from exc
+            print(f"::warning::Publication slot occupied; trying a one-time later slot {metadata['publish_at']}. Recurring schedule is unchanged.")
     if prepared.get("status") == "scheduled" and prepared.get("video_id"):
         if prepared.get("job_id") != metadata["job_id"]:
-            raise PublishError("Publisher returned a different job for this slot; no second video was uploaded.")
+            raise PublishError("Publisher did not identify the job for this slot; no second video was uploaded. Check YouTube Studio.")
         print(json.dumps({"status": "scheduled", "video_id": prepared["video_id"], "watch_url": prepared.get("watch_url"), "publish_at": metadata["publish_at"], "reused": True}, ensure_ascii=False))
         return prepared
     if prepared.get("status") != "ready_for_upload":

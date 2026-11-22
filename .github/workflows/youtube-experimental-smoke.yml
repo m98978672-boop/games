@@ -172,3 +172,19 @@ jobs:
             python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/kvenya-gameplay.log"
           fi
           exit "$result"
+
+      - name: Test Kvenya on a pinned external GitHub game without publishing
+        env:
+          OMP_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+        shell: bash
+        run: |
+          set +e
+          python youtube-bot/tests/smoke_qwen_github_game.py > "$RUNNER_TEMP/kvenya-github-game.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/kvenya-github-game.log"
+          if [ "$result" -ne 0 ]; then
+            python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/kvenya-github-game.log"
+          fi
+          exit "$result"

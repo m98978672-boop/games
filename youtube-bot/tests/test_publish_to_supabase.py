@@ -234,8 +234,58 @@ class PublisherNetworkTests(unittest.TestCase):
             result_path.write_text(json.dumps({"metadata": metadata}), encoding="utf-8")
             with patch.dict(os.environ, {"YOUTUBE_MADE_FOR_KIDS": "false"}), \
                  patch.object(publisher, "_supabase_post", return_value={"status": "scheduled", "video_id": "other-video"}), \
-                 patch.object(publisher, "_mask"), self.assertRaisesRegex(publisher.PublishError, "different job"):
+                 patch.object(publisher, "_mask"), self.assertRaisesRegex(publisher.PublishError, "did not identify the job"):
                 publisher.publish(result_path)
+
+    def test_conflicting_confirmed_job_moves_once_before_upload(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); video = root / "clip.mp4"; video.write_bytes(b"x" * 2048)
+            result = root / "result.json"
+            metadata = {"job_id": "b85e890f-7dd0-4d35-a7ab-8ef24ba826b3", "game_id": "game", "title": "Review",
+                        "description": "Facts", "tags": [], "category_id": "20", "publish_at": "2026-12-01T07:00:00Z", "video_path": str(video)}
+            result.write_text(json.dumps({"metadata": metadata}))
+            requests = []
+            def post(path, payload):
+                if path.endswith('prepare'):
+                    requests.append(dict(payload['metadata']))
+                    if len(requests) == 1: raise publisher.SlotOccupied('different confirmed job')
+                    return {'status': 'ready_for_upload', 'access_token': 'short-lived-access-token'}
+                return {'status': 'scheduled', 'video_id': 'newvideo'}
+            with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS': 'false', 'DATA_DIR': temp}), \
+                 patch.object(publisher, '_supabase_post', side_effect=post), \
+                 patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret') as start, \
+                 patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
+                publisher.publish(result)
+            self.assertEqual([r['publish_at'] for r in requests], ['2026-12-01T07:00:00Z', '2026-12-01T07:05:00Z'])
+            self.assertEqual(requests[0]['job_id'], requests[1]['job_id'])
+            self.assertEqual(start.call_count, 1)
+
+    def test_four_occupied_slots_fail_without_starting_upload(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); video = root / 'video.mp4'; video.write_bytes(b'x' * 2048)
+            result = root / 'result.json'
+            result.write_text(json.dumps({'metadata': {'job_id': 'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3',
+                'game_id': 'game', 'title': 'Review', 'description': 'Facts', 'tags': [], 'category_id': '20',
+                'publish_at': '2026-12-01T07:00:00Z', 'video_path': str(video)}}))
+            with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS': 'false'}), \
+                 patch.object(publisher, '_supabase_post', side_effect=publisher.SlotOccupied('busy')) as post, \
+                 patch.object(publisher, '_start_youtube_session') as start:
+                with self.assertRaisesRegex(publisher.PublishError, 'Four nearby'):
+                    publisher.publish(result)
+                self.assertEqual(post.call_count, 4)
+                start.assert_not_called()
+
+    def test_http_409_requires_a_distinct_valid_job_id(self):
+        expected = 'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3'
+        other = '22222222-2222-4222-8222-222222222222'
+        for supplied, category in ((other, publisher.SlotOccupied), (expected, publisher.PublishError), (None, publisher.PublishError)):
+            response = json.dumps({'status': 'failed', 'job_id': supplied, 'error': 'slot unavailable'}).encode()
+            error = HTTPError('https://example.test', 409, 'Conflict', {}, io.BytesIO(response))
+            with self.subTest(job_id=supplied), patch.object(publisher, 'github_oidc_token', return_value='oidc'), \
+                 patch.object(publisher, '_safe_urlopen', side_effect=error), self.assertRaises(category) as raised:
+                publisher._supabase_post('/autopilot/prepare', {'metadata': {'job_id': expected}})
+            if category is publisher.PublishError:
+                self.assertNotIsInstance(raised.exception, publisher.SlotOccupied)
 
     def test_publish_fails_closed_without_owner_audience_value(self):
         with tempfile.TemporaryDirectory() as temp:
