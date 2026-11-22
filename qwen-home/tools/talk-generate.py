@@ -274,7 +274,20 @@ def main():
     if not turns or turns[-1][0] != 'user':
         print('Нечего отвечать: последнее слово не за владельцем.')
         return
-    owner_text = turns[-1][1]
+    # Отвечает на ВСЕ неотвеченные вопросы в хвосте, а не только на
+    # последний: очередь из двух вопросов раньше теряла первый.
+    pending = []
+    for role, body in reversed(turns):
+        if role != 'user':
+            break
+        pending.append(body)
+        if len(pending) >= 3:
+            break
+    pending.reverse()
+    owner_text = '\n'.join(pending)
+    answered_turns = turns[:len(turns) - len(pending)]
+    if len(pending) > 1:
+        print(f'Без ответа вопросов: {len(pending)} — отвечаю на все разом', flush=True)
     persona = PERSONA.read_text(encoding='utf-8').strip()
     run_started = time.monotonic()
     torch.set_num_threads(max(1, min(4, os.cpu_count() or 2)))
@@ -326,7 +339,7 @@ def main():
     from_search = bool(results)
     messages = [{'role': 'system', 'content': persona}]
     if not from_search:
-        history = turns[-(7):-1] if len(turns) > 1 else []
+        history = answered_turns[-6:] if answered_turns else []
         for role, body in history:
             if role == 'assistant' and BAD_HISTORY.search(body):
                 continue  # не подмешиваем ей в память собственные мусорные реплики

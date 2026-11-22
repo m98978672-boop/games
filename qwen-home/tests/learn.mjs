@@ -130,6 +130,7 @@ check('дневник и ответы не теряются в гонке: ко�
 const relayWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-relay.yml'), 'utf8');
 check('вопрос с сайта доезжает сам: ретранслятор issue → диалог, только от владельца', relayWorkflow.includes('issues:') && relayWorkflow.includes("author_association == 'OWNER'") && relayWorkflow.includes('qwen-home/talk/dialogue.md') && relayWorkflow.includes('HEAD:main'));
 check('цепочка не глушится токеном: ретранслятор будит разговор dispatch-ом, ответы будят Pages', relayWorkflow.includes('gh workflow run frontline-qwen-talk.yml') && talkWorkflow.includes('pages/builds') && learnWorkflow.includes('pages/builds'));
+check('очередь вопросов не теряется: отвечает на все неотвеченные в хвосте', talkGen.includes('Без ответа вопросов') && talkGen.includes('answered_turns'));
 check('уроки учат искать: поискала, назвала статью, честно сказала, когда пусто', dialogue.filter((r) => /Википеди/.test(r.response)).length >= 4 && dialogue.some((r) => r.response.includes('Поискала')) && dialogue.some((r) => /только Википедия|только статьи Википедии/.test(r.response)));
 check('персона и состояние честно называют границу поиска: только Википедия', personaMd.includes('Википедии') && st0.internetSearch?.engine === 'ru.wikipedia.org');
 
