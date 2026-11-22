@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="icon" href="cover.svg" type="image/svg+xml" />
-<link rel="stylesheet" href="style.css?v=20261121-19" />
+<link rel="stylesheet" href="style.css?v=20261122-20" />
 </head>
 <body data-sheet="hidden">
 <!-- Иконки: одна спрайт-карта на всю страницу (никаких CDN и шрифтов) -->
@@ -93,16 +93,19 @@
   </div>
 </nav>
 
+<!-- В горизонтальном положении свёрнутый пульт целиком за краем экрана. -->
+<button id="btn-panel-open" class="panel-open" type="button" aria-controls="control-panel" aria-expanded="false">Пульт</button>
+
 <!-- Пульт управления: главный способ управлять бригадой -->
 <aside class="panel tools" id="control-panel" aria-label="Пульт управления бригадой">
-  <button id="sheet-handle" class="sheet-handle" type="button" aria-label="Развернуть или свернуть пульт" aria-expanded="false">
+  <button id="sheet-handle" class="sheet-handle" type="button" aria-controls="control-panel" aria-label="Развернуть или свернуть пульт" aria-expanded="false">
     <span class="sh-label">Пульт</span>
     <span class="grip" aria-hidden="true"></span>
   </button>
   <div class="panel-head">
     <h3>Пульт управления</h3>
     <span id="ctl-tick" class="ctl-tick">60 Гц</span>
-    <button id="btn-panel-collapse" class="panel-collapse" aria-label="Свернуть пульт" title="Свернуть/развернуть пульт" aria-expanded="true"><svg class="ico"><use href="#i-chevron"/></svg></button>
+    <button id="btn-panel-collapse" class="panel-collapse" type="button" aria-controls="control-panel" aria-label="Свернуть пульт" title="Свернуть/развернуть пульт" aria-expanded="true"><svg class="ico"><use href="#i-chevron"/></svg></button>
   </div>
 
   <div class="ctl-scroll">
@@ -264,30 +267,30 @@
 <script src="../shared/engine.js"></script>
 <script src="../shared/engine-bootstrap.js" defer></script>
 <script src="../shooter/three.min.js"></script>
-<script src="../ratcore/ratcore.bundle.js?v=20261121-19"></script>
+<script src="../ratcore/ratcore.bundle.js?v=20261122-20"></script>
 <!-- Мозги «в коде»: нужны, чтобы игра шла и без fetch (открытие с диска, file://) -->
 <script src="data/brain-data.js"></script>
-<script src="src/sim/model.js?v=20261121-19"></script>
-<script src="src/ai/brain-net.js?v=20261121-19"></script>
+<script src="src/sim/model.js?v=20261122-20"></script>
+<script src="src/ai/brain-net.js?v=20261122-20"></script>
 <script src="vendor/cannon-es.min.js"></script>
-<script src="src/sim/physics.js?v=20261121-19"></script>
-<script src="src/sim/warehouse.js?v=20261121-19"></script>
-<script src="src/sim/worker.js?v=20261121-19"></script>
-<script src="src/config.js?v=20261121-19"></script>
-<script src="src/util.js?v=20261121-19"></script>
-<script src="src/layout.js?v=20261121-19"></script>
-<script src="src/save.js?v=20261121-19"></script>
-<script src="src/audio.js?v=20261121-19"></script>
-<script src="src/dialogue.js?v=20261121-19"></script>
-<script src="src/safety.js?v=20261121-19"></script>
-<script src="src/voice.js?v=20261121-19"></script>
-<script src="src/render/meshes.js?v=20261121-19"></script>
-<script src="src/render/world.js?v=20261121-19"></script>
-<script src="src/render/bodyview.js?v=20261121-19"></script>
-<script src="src/render.js?v=20261121-19"></script>
-<script src="src/contracts.js?v=20261121-19"></script>
-<script src="src/game.js?v=20261121-19"></script>
-<script src="src/ui.js?v=20261121-19"></script>
-<script src="src/main.js?v=20261121-19"></script>
+<script src="src/sim/physics.js?v=20261122-20"></script>
+<script src="src/sim/warehouse.js?v=20261122-20"></script>
+<script src="src/sim/worker.js?v=20261122-20"></script>
+<script src="src/config.js?v=20261122-20"></script>
+<script src="src/util.js?v=20261122-20"></script>
+<script src="src/layout.js?v=20261122-20"></script>
+<script src="src/save.js?v=20261122-20"></script>
+<script src="src/audio.js?v=20261122-20"></script>
+<script src="src/dialogue.js?v=20261122-20"></script>
+<script src="src/safety.js?v=20261122-20"></script>
+<script src="src/voice.js?v=20261122-20"></script>
+<script src="src/render/meshes.js?v=20261122-20"></script>
+<script src="src/render/world.js?v=20261122-20"></script>
+<script src="src/render/bodyview.js?v=20261122-20"></script>
+<script src="src/render.js?v=20261122-20"></script>
+<script src="src/contracts.js?v=20261122-20"></script>
+<script src="src/game.js?v=20261122-20"></script>
+<script src="src/ui.js?v=20261122-20"></script>
+<script src="src/main.js?v=20261122-20"></script>
 </body>
 </html>
