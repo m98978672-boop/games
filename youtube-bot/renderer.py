@@ -387,6 +387,28 @@ def _render_long_card(script: dict[str, Any], scene: dict[str, Any], scene_index
     image.save(out, optimize=True)
 
 
+
+def concat_long_segments(ffmpeg: str, segment_paths: list[Path], output: Path, workdir: Path) -> None:
+    """Rebuild continuous 50-fps timestamps after concatenating A/V chapters.
+
+    A concat-demuxer stream copy keeps AAC padding at chapter boundaries and
+    creates tiny video timestamp gaps; ffprobe then reports e.g. 49.99 fps.
+    Re-encoding the video with an fps filter creates genuinely constant 50-fps
+    timestamps rather than merely changing metadata. The audio is not re-encoded.
+    """
+    if not segment_paths:
+        raise ValueError("No chapter segments to concatenate")
+    concat_list = workdir / "video-list.txt"
+    concat_list.write_text("".join("file '" + str(p.resolve()).replace("'", "'\\''") + "'\n" for p in segment_paths), encoding="utf-8")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run([
+        ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list),
+        "-vf", f"fps={OUTPUT_FPS},format=yuv420p", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+        "-r", str(OUTPUT_FPS), "-fps_mode", "cfr", "-video_track_timescale", "12800",
+        "-c:a", "copy", "-movflags", "+faststart", str(output),
+    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+
 def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> dict[str, Any]:
     """Render a landscape 3–10 minute sourced review at 1080p and constant 50 fps."""
     if len(script.get("scenes", [])) != 10:
@@ -430,13 +452,7 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
         total_seconds += scene_seconds
     if not 180 <= total_seconds <= 600:
         raise ValueError(f"Long review must be 3–10 minutes; generated duration is {total_seconds:.1f}s.")
-    concat_list = workdir / "video-list.txt"
-    concat_list.write_text("".join(f"file '{segment.resolve()}'\n" for segment in segment_paths), encoding="utf-8")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run([
-        ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy",
-        "-movflags", "+faststart", str(output),
-    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    concat_long_segments(ffmpeg, segment_paths, output, workdir)
     profile = verify_video_profile(output)
     return {
         "path": str(output), "duration_seconds": round(total_seconds, 2),

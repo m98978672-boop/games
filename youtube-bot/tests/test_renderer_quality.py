@@ -27,6 +27,27 @@ class RenderQualityTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "below requirement"):
                 renderer.verify_video_profile(Path(temp) / "clip.mp4")
 
+    def test_verifier_rejects_4999_average_without_lowering_requirement(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(
+            renderer.subprocess, "run", side_effect=[
+                SimpleNamespace(stdout="/usr/bin/ffprobe"),
+                SimpleNamespace(stdout=json.dumps({"streams": [{"width": 1920, "height": 1080, "avg_frame_rate": "4999/100", "r_frame_rate": "50/1"}]})),
+            ],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "49.99 fps"):
+                renderer.verify_video_profile(Path(temp) / "clip.mp4")
+
+    def test_concat_encodes_real_cfr_video_and_copies_audio(self):
+        with tempfile.TemporaryDirectory() as temp, patch.object(renderer.subprocess, "run") as run:
+            root = Path(temp)
+            renderer.concat_long_segments("ffmpeg", [root / "chapter.mp4"], root / "out.mp4", root)
+            args = run.call_args.args[0]
+            self.assertIn("fps=50,format=yuv420p", args)
+            self.assertEqual(args[args.index("-fps_mode") + 1], "cfr")
+            self.assertEqual(args[args.index("-c:a") + 1], "copy")
+            self.assertEqual(args[args.index("-c:v") + 1], "libx264")
+            with self.assertRaises(ValueError): renderer.concat_long_segments("ffmpeg", [], root / "out.mp4", root)
+
     def test_verifier_accepts_fullhd_50fps(self):
         with tempfile.TemporaryDirectory() as temp, patch.object(
             renderer.subprocess, "run", side_effect=[
