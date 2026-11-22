@@ -2,8 +2,8 @@ name: YouTube long-form game review autopilot
 
 on:
   schedule:
-    # Daily UTC check with a fixed local-date parity gate gives one long video every 48h.
-    - cron: "0 8 * * *"
+    # 01:00 Moscow check, ahead of the 06:00 Moscow slot on every other local date.
+    - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
       made_for_kids:

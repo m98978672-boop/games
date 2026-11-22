@@ -5,9 +5,9 @@ import argparse
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-CHANNEL_TZ = ZoneInfo("Europe/Amsterdam")
-SHORT_POST_TIMES = (time(10, 0), time(18, 0))
-LONG_POST_TIME = time(14, 0)
+CHANNEL_TZ = ZoneInfo("Europe/Moscow")
+SHORT_POST_TIMES = (time(8, 0), time(12, 0))
+LONG_POST_TIME = time(6, 0)
 # Fixed parity anchor keeps the 48-hour cadence stable across month/year boundaries.
 LONG_VIDEO_ANCHOR = date(2026, 11, 24)
 MIN_LEAD = timedelta(minutes=45)

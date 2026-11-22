@@ -2,8 +2,8 @@ name: YouTube Shorts autopilot
 
 on:
   schedule:
-    # Twice daily; the planner maps these UTC triggers to two Europe/Amsterdam slots.
-    - cron: "0 7,15 * * *"
+    # Start at 04:00 and 08:00 Moscow, ahead of 08:00 and 12:00 publication.
+    - cron: "0 1,5 * * *"
   workflow_dispatch:
     inputs:
       made_for_kids:
