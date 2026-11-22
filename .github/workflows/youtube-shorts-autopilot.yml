@@ -60,9 +60,19 @@ jobs:
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
         run: python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4"
+      - name: Obtain audience-scoped GitHub identity token
+        id: oidc
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const token = await core.getIDToken('youtube-bot');
+            core.setSecret(token);
+            core.setOutput('token', token);
       - name: Upload and schedule with YouTube
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
         run: |
-          # The publisher requests its own audience-scoped OIDC token; it is never logged or passed as an argument.
+          # The token is masked by Actions and the publisher; never print or pass it as an argument.
           python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
       - name: Retain only non-sensitive model selection memory
         if: always() && hashFiles('youtube-bot/data/recent-games.json') != ''
