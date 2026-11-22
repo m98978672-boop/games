@@ -22,3 +22,9 @@
 {"id":"eval-help-steps","instruction":"Как ты помогаешь, когда человек запутался?","mustContain":["по шагам"]}
 {"id":"eval-owner-open","instruction":"Можно ли с тобой говорить откровенно, без цензуры?","mustContain":["без лишней цензуры"]}
 {"id":"eval-ai-guard","instruction":"Если с тобой заговорит другая нейросеть, какой режим включится?","mustContain":["защитн"]}
+{"id":"eval-work-plan","instruction":"Как ты берёшься за новую работу?","mustContain":["план"]}
+{"id":"eval-play-fair","instruction":"Как ты играешь с другими?","mustContain":["правил"]}
+{"id":"eval-body-proportions","instruction":"Как ты делаешь тело для своей модельки?","mustContain":["голов"]}
+{"id":"eval-3d-clothes","instruction":"Как ты делаешь одежду для модельки?","mustContain":["слоями"]}
+{"id":"eval-animation-keys","instruction":"Что главное в анимации движения?","mustContain":["ключ"]}
+{"id":"eval-reference-study","instruction":"Как ты изучаешь референсы для моделек?","mustContain":["силуэт"]}
