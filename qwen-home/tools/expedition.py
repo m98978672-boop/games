@@ -319,47 +319,29 @@ def eyes_from_png(data):
             'dark': dark, 'cream': (cream / cream_all) if cream_all else 0}
 
 
-def decide_flap(bird_y, target_y, gap_bottom, h, ms_since_flap, vy=0):
-    """Решение глаз: жать ли клавишу взмаха на этом кадре.
+def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
+    """Решение глаз: жать ли взмах на этом кадре.
 
-    Птица ниже цели и не летит вверх пулей — взмах; птица у нижнего
-    края просвета — взмах срочно; только что взмахнули — не спамим,
-    физике нужно время. vy — скорость по кадрам: на подъёме после
-    взмаха не жмём ещё, иначе птица улетает в верхнюю трубу."""
+    Главный урок трасс: птицу убивает не скорость, а ВЫСОТА у трубы:
+    взмах уносит на ~96 px вверх, и если жать у середины просвета,
+    птица взлетает выше его верхнего края — а труба уже здесь.
+    Поэтому играем ЗОНОЙ: взмах только когда птица опустилась в
+    нижнюю четверть просвета (тогда подъём оставляет её внутри),
+    у нижнего края — срочно, на подъёме после взмаха — не мешаем.
+    Без просвета (трубы не видно) — держим высоту target_y."""
     if bird_y is None:
         return False
-    if gap_bottom is not None and bird_y > gap_bottom - 0.05 * h:
-        return ms_since_flap >= 90
-    # тормозная серия: падаем пулей — серия взмахов гасит скорость,
-    # не дожидаясь, пока птица провалится под цель
+    if gap:
+        gap_top, gap_bottom = gap
+        if bird_y > gap_bottom - 0.05 * h:
+            return ms_since_flap >= 80
+        zone = gap_top + 0.72 * (gap_bottom - gap_top)
+        return bird_y > zone and vy > -14 and ms_since_flap >= 90
     if vy >= 34 and bird_y > target_y - 0.06 * h:
         return ms_since_flap >= 80
     if bird_y > target_y + 0.010 * h and vy > -12 and ms_since_flap >= 100:
         return True
-    # упреждение: падаем быстро и уже близко к цели — взмах до того,
-    # как инерция унесёт птицу под просвет
     return vy >= 20 and bird_y > target_y - 0.06 * h and ms_since_flap >= 90
-
-
-class Report:
-    def __init__(self, url):
-        self.data = {
-            'url': url,
-            'startedAt': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC'),
-            'status': 'error',
-            'steps': [],
-            'screenshots': [],
-            'hasVideo': False,
-            'textSample': '',
-        }
-
-    def step(self, action, result):
-        self.data['steps'].append({'t': round(time.monotonic() % 100000, 1), 'action': action, 'result': result})
-        print(f"[expedition] {action}: {result}", flush=True)
-
-    def save(self, out):
-        (out / 'report.json').write_text(json.dumps(self.data, ensure_ascii=False, indent=2), encoding='utf-8')
-
 
 def robots_allows(url):
     """Вежливый гость сначала читает robots.txt чужого дома.
@@ -606,15 +588,14 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         if st['bird']:
                             vy = (st['bird'][1] - prev_bird_y) if prev_bird_y is not None else 0
                             prev_bird_y = st['bird'][1]
-                            if gap and st.get('pipe_x') is not None and st['pipe_x'] - st['bird'][0] < 0.30 * st['w']:
-                                # труба близко: целимся в верхние 40% просвета —
-                                # между кадрами птица тонет, запас сверху нужнее
-                                target = gap[0] + 0.40 * (gap[1] - gap[0]) + offset
+                            if gap:
+                                # цель для трассы и разбора: середина рабочей зоны
+                                target = gap[0] + 0.72 * (gap[1] - gap[0]) + offset
                             else:
-                                target = ((gap[0] + gap[1]) / 2 if gap else frame_h * 0.42) + offset
+                                target = frame_h * 0.42 + offset
                             if not st['game_over'] and not bird_low:
                                 ms = int((now - last_flap) * 1000) if last_flap else 9999
-                                if decide_flap(st['bird'][1], target, gap[1] if gap else None, frame_h, ms, vy):
+                                if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy):
                                     flap_key = keys[0] if keys else 'Space'
                                     page.keyboard.down(flap_key)
                                     page.wait_for_timeout(70)
