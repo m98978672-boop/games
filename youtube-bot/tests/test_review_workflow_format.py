@@ -32,7 +32,9 @@ class ReviewWorkflowFormatTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         monitor = (root / '.github/workflows/youtube-autopilot-monitor.yml').read_text()
         self.assertIn('YouTube reviews autopilot (Shorts and long)', monitor)
-        self.assertIn("github.event.workflow_run.conclusion == 'failure'", monitor)
+        self.assertIn("github.event.workflow_run.conclusion)", monitor)
+        self.assertIn('"timed_out"', monitor)
+        self.assertIn('"startup_failure"', monitor)
         self.assertIn('gh issue create', monitor)
         self.assertNotIn('publish_to_supabase.py', monitor)
         self.assertNotIn('gh run rerun', monitor)

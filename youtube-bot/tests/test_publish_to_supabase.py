@@ -146,6 +146,34 @@ class PublisherNetworkTests(unittest.TestCase):
         self.assertEqual(calls[1].get_header("Content-range"), "bytes */1500")
         self.assertEqual(calls[2].get_header("Content-range"), "bytes 512-1499/1500")
 
+    def test_unavailable_probes_never_resend_an_unconfirmed_chunk(self):
+        calls = []
+        def fake_http(request, timeout=45):
+            calls.append(request)
+            return 503, {}, b""
+        with patch.object(publisher, "_http_request", side_effect=fake_http), \
+             patch.object(publisher.time, "sleep"):
+            with self.assertRaisesRegex(publisher.PublishError, "no chunk was resent"):
+                publisher._upload_resumably(
+                    "https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret",
+                    b"x" * 1500, "access-token")
+        self.assertEqual(len(calls), 1 + publisher.CHUNK_ATTEMPTS)
+        self.assertTrue(all(r.get_header("Content-range") == "bytes */1500" for r in calls[1:]))
+
+    def test_server_cannot_acknowledge_unsent_bytes(self):
+        for first_response in (308, 503):
+            with self.subTest(status=first_response):
+                responses = [(first_response, {"Range": "bytes=0-1499"}, b"")]
+                if first_response == 503:
+                    responses.append((308, {"Range": "bytes=0-1499"}, b""))
+                with patch.object(publisher, "CHUNK_BYTES", 1024), \
+                     patch.object(publisher, "_http_request", side_effect=responses), \
+                     patch.object(publisher.time, "sleep"):
+                    with self.assertRaisesRegex(publisher.PublishError, "unsent bytes"):
+                        publisher._upload_resumably(
+                            "https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret",
+                            b"x" * 1500, "access-token")
+
     def test_publish_uses_owner_choice_and_separate_prepare_upload_complete(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

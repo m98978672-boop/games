@@ -273,18 +273,25 @@ def _upload_resumably(upload_url: str, video: bytes, access_token: str) -> str:
                 acknowledged = _offset_from_range(headers.get("Range"))
                 if acknowledged <= offset:
                     raise PublishError("YouTube did not acknowledge upload progress; stopping safely.")
+                if acknowledged > end:
+                    raise PublishError("YouTube acknowledged unsent bytes; stopping to avoid corruption.")
                 offset = acknowledged
                 break
             if status in TRANSIENT_HTTP:
                 # Never blindly repeat a chunk. Query session state first, then continue at its offset.
-                time.sleep(_retry_delay(attempt, headers.get("Retry-After")))
-                resumed_offset, completed_id = _query_upload_offset(upload_url, total, access_token)
+                # If the status probe is unavailable, retry the probe, not the
+                # PUT: the original chunk may already have been received.
+                resumed_offset, completed_id = -1, None
+                for probe in range(CHUNK_ATTEMPTS):
+                    time.sleep(_retry_delay(probe, headers.get("Retry-After")))
+                    resumed_offset, completed_id = _query_upload_offset(upload_url, total, access_token)
+                    if completed_id or resumed_offset >= 0:
+                        break
                 if completed_id:
                     return completed_id
                 if resumed_offset >= 0:
                     if resumed_offset > end:
-                        offset = resumed_offset
-                        break
+                        raise PublishError("YouTube acknowledged unsent bytes; stopping to avoid corruption.")
                     if resumed_offset == end:
                         offset = resumed_offset
                         break
@@ -304,9 +311,7 @@ def _upload_resumably(upload_url: str, video: bytes, access_token: str) -> str:
                         },
                     )
                     continue
-                if attempt + 1 < CHUNK_ATTEMPTS:
-                    continue
-                raise PublishError("YouTube upload stayed unavailable after resumable status checks.")
+                raise PublishError("YouTube upload stayed unavailable after resumable status checks; no chunk was resent without confirmation.")
             raise PublishError(f"YouTube rejected a resumable upload chunk (HTTP {status}).")
         else:
             raise PublishError("YouTube upload chunk exhausted its retry budget.")
