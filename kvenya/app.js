@@ -81,7 +81,7 @@
     if (pending) {
       var wait = document.createElement('span');
       wait.className = 'msg-wait';
-      wait.textContent = '⏳ ждёт передачи: владелец допишет вопрос в её дом — и она ответит';
+      wait.textContent = '⏳ ждёт: подтверди вопрос кнопкой Submit на вкладке GitHub — Квеня ответит прямо сюда';
       var timer = document.createElement('span');
       timer.className = 'msg-timer js-wait-timer';
       if (at) timer.setAttribute('data-since', at);
@@ -160,7 +160,7 @@
     } else if (elapsed < WAIT_TYPICAL_MS) {
       stage.textContent = 'Ориентир: передача занимает несколько минут, а дальше её модель думает в GitHub Actions — теперь быстрее: модель ждёт её в кэше, а поиск решает мгновенное правило. Ответ появится прямо в разговоре выше.';
     } else {
-      stage.textContent = 'Прошло больше обычного ориентира (10 минут) — вопрос ещё не передан в её дом, и сам он не улетит. Быстрее всего: кнопка «Дописать ей домой (GitHub)» под полем ввода — допиши вопрос в конец файла и закоммить в main, Квеня ответит за 1–3 минуты.';
+      stage.textContent = 'Прошло больше обычного ориентира (10 минут). Если вкладка GitHub с вопросом ещё открыта — нажми на ней Submit new issue: вопрос упадёт ей домой, и она ответит за 2–6 минут. Если вкладки нет, отправь вопрос ещё раз кнопкой «Отправить Квене».';
     }
   }
 
@@ -437,6 +437,12 @@
     saveOutbox(list);
     input.value = '';
     renderChat(dialogueTurns);
+    // Настоящая доставка: предзаполненный GitHub Issue. Ретранслятор
+    // (kvenya-relay.yml) перепишет его в её дом, и она ответит сама.
+    var url = 'https://github.com/m98978672-boop/games/issues/new?title='
+      + encodeURIComponent('Квене: вопрос с сайта')
+      + '&body=' + encodeURIComponent(text);
+    window.open(url, '_blank', 'noopener');
   });
 
   el('kvCopy').addEventListener('click', function () {

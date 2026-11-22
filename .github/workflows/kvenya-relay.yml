@@ -1,0 +1,56 @@
+name: Kvenya relay (вопрос с сайта → её дом)
+
+# Зачем: страница kvenya статическая и сама ничего отправить не может —
+# вопросы тонули в localStorage браузера («ждёт передачи» по 20 минут и
+# навсегда). Теперь кнопка «Отправить Квене» на странице открывает
+# предзаполненный issue; этот workflow мгновенно переписывает вопрос из
+# issue в файл её диалога в main. Дальше срабатывает обычный разговорный
+# workflow, и ответ появляется на сайте.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  relay:
+    # Только вопросы Квене и только от владельца репозитория: чужие
+    # вопросы в её дом не пишем.
+    if: >-
+      github.repository == 'm98978672-boop/games' &&
+      github.event.issue.author_association == 'OWNER' &&
+      startsWith(github.event.issue.title, 'Квене:')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Relay the question into her home
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          QUESTION=$(python3 -c "import os, re; print(re.sub(r'\s+', ' ', os.environ.get('ISSUE_BODY') or '').strip()[:600])")
+          if [ -z "$QUESTION" ]; then
+            echo "Пустой вопрос — пропускаю"
+            exit 0
+          fi
+          printf '\nВладелец: %s\n' "$QUESTION" >> qwen-home/talk/dialogue.md
+          git config user.name 'Квеня (ретранслятор вопросов)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qwen-home/talk/dialogue.md
+          git commit -m "Вопрос Квене с сайта (issue #$ISSUE_NUMBER)"
+          # main мог уйти вперёд — перебазируемся, как в её workflow.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then break; fi
+            echo "push отклонён (попытка $attempt): перебазируюсь"
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort; exit 1; }
+          done
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Передал вопрос Квене в её дом. Она отвечает своей моделью — обычно 2–6 минут, и ответ появится в разговоре на странице: https://m98978672-boop.github.io/games/kvenya/"
+          gh issue close "$ISSUE_NUMBER"
