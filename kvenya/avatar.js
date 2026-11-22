@@ -45,6 +45,26 @@
     { id: 'none', name: 'без детали', w: 1 }
   ];
 
+  // Телосложение, наряды и анимации — как в общих 3D-инструментах:
+  // сначала пропорции тела, потом слои одежды, потом движение.
+  var BODY_BUILDS = [
+    { id: 'slim', name: 'стройная', skirt: 0.88, torso: 0.88, w: 1 },
+    { id: 'normal', name: 'обычная', skirt: 1, torso: 1, w: 3 },
+    { id: 'curvy', name: 'с формами', skirt: 1.14, torso: 1.12, w: 2 }
+  ];
+  var OUTFITS = [
+    { id: 'dress', name: 'платье', w: 3 },
+    { id: 'topskirt', name: 'топ и юбка', w: 2 },
+    { id: 'pantsuit', name: 'брючный костюм', w: 2 }
+  ];
+  var ANIMATIONS = [
+    { id: 'breathe', name: 'дышит' },
+    { id: 'wave', name: 'машет рукой' },
+    { id: 'walk', name: 'идёт на месте' },
+    { id: 'dance', name: 'танцует' },
+    { id: 'still', name: 'стоит спокойно' }
+  ];
+
   function byId(list, id) {
     for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
     return list[0];
@@ -78,6 +98,9 @@
       len: pickWeighted(HAIR_LENS, rnd).id,
       dress: pickWeighted(DRESSES, rnd).id,
       acc: pickWeighted(ACCESSORIES, rnd).id,
+      build: pickWeighted(BODY_BUILDS, rnd).id,
+      outfit: pickWeighted(OUTFITS, rnd).id,
+      anim: 'breathe',
       seed: Math.floor(rnd() * 1e9)
     };
   }
@@ -153,7 +176,9 @@
       verdict: verdict,
       reasons: reasons,
       summary: byId(HAIR_COLORS, v.hair).name + ' ' + byId(HAIR_LENS, v.len).name + ' волосы, '
-        + dress.name + ' платье, ' + acc.name
+        + (v.outfit === 'pantsuit' ? 'брючный костюм цвета ' + dress.name.slice(0, -1) + 'го'
+          : dress.name + ' ' + byId(OUTFITS, v.outfit || 'dress').name) + ', телосложение: '
+        + byId(BODY_BUILDS, v.build || 'normal').name + ', ' + acc.name
     };
   }
 
@@ -164,6 +189,7 @@
   var renderer = null, scene = null, camera = null, modelGroup = null;
   var buildGroup = null, stageMode = 'avatar', pendingParts = [], lastPartAt = 0, currentBuildName = '', currentBuildColor = null;
   var targetRotY = 0.4, targetRotX = 0.05, dragging = false, lastX = 0, lastY = 0;
+  var avatarParts = null, currentAnim = 'breathe', torsoBaseScale = null;
 
   // Собранная фигурка и последняя постройка переживают перезагрузку:
   // если владелец не скачал .obj сразу, моделька останется и файл можно
@@ -184,6 +210,9 @@
       len: byId(HAIR_LENS, v.len).id,
       dress: byId(DRESSES, v.dress).id,
       acc: byId(ACCESSORIES, v.acc).id,
+      build: byId(BODY_BUILDS, v.build).id,
+      outfit: byId(OUTFITS, v.outfit).id,
+      anim: byId(ANIMATIONS, v.anim).id,
       seed: Number(v.seed) || 1
     };
   }
@@ -232,24 +261,49 @@
     var dressM = mat(byId(DRESSES, v.dress).hex, 0.6);
     var darkM = mat(0x2b2f3a, 0.5);
 
-    // туфли и ножки
-    addMesh(new THREE.BoxGeometry(0.17, 0.1, 0.28), darkM, -0.16, 0.05, 0.04);
-    addMesh(new THREE.BoxGeometry(0.17, 0.1, 0.28), darkM, 0.16, 0.05, 0.04);
-    addMesh(new THREE.CylinderGeometry(0.085, 0.1, 0.62, 14), skinM, -0.16, 0.4, 0);
-    addMesh(new THREE.CylinderGeometry(0.085, 0.1, 0.62, 14), skinM, 0.16, 0.4, 0);
+    var build3d = byId(BODY_BUILDS, v.build || 'normal');
+    var outfit3d = v.outfit || 'dress';
+    currentAnim = v.anim || 'breathe';
 
-    // платье-юбка и верх
-    addMesh(new THREE.CylinderGeometry(0.3, 0.68, 1.06, 26), dressM, 0, 1.18, 0);
+    // Ноги — группы из таза (как кости в риге): шаг качает всю ногу с
+    // туфлей, а не отдельный цилиндр.
+    function makeLeg(side) {
+      var g = new THREE.Group();
+      g.position.set(0.16 * side, 0.72, 0);
+      var pants = outfit3d === 'pantsuit';
+      addMesh(new THREE.CylinderGeometry(pants ? 0.12 : 0.085, pants ? 0.145 : 0.1, 0.62, 14), pants ? dressM : skinM, 0, -0.31, 0, g);
+      addMesh(new THREE.BoxGeometry(0.17, 0.1, 0.28), darkM, 0, -0.67, 0.04, g);
+      modelGroup.add(g);
+      return g;
+    }
+    var legL = makeLeg(-1);
+    var legR = makeLeg(1);
+
+    // Одежда слоями: юбка (кроме брючного костюма) и верх. Телосложение
+    // честно меняет пропорции, а не только цвет.
+    if (outfit3d !== 'pantsuit') {
+      var skirt = addMesh(new THREE.CylinderGeometry(0.3, 0.68, 1.06, 26), outfit3d === 'topskirt'
+        ? mat(new THREE.Color(byId(DRESSES, v.dress).hex).multiplyScalar(0.72).getHex(), 0.6) : dressM, 0, 1.18, 0);
+      skirt.scale.set(build3d.skirt, 1, build3d.skirt);
+    }
     var torso = addMesh(new THREE.SphereGeometry(0.31, 22, 16), dressM, 0, 1.7, 0);
-    torso.scale.set(1, 0.82, 0.9);
+    torso.scale.set(build3d.torso, 0.82, 0.9 * build3d.torso);
+    torsoBaseScale = { x: torso.scale.x, y: torso.scale.y, z: torso.scale.z };
 
-    // ручки
-    var armL = addMesh(new THREE.CylinderGeometry(0.065, 0.075, 0.62, 12), skinM, -0.46, 1.48, 0);
-    armL.rotation.z = 0.5;
-    var armR = addMesh(new THREE.CylinderGeometry(0.065, 0.075, 0.62, 12), skinM, 0.46, 1.48, 0);
-    armR.rotation.z = -0.5;
-    addMesh(new THREE.SphereGeometry(0.085, 12, 10), skinM, -0.6, 1.22, 0);
-    addMesh(new THREE.SphereGeometry(0.085, 12, 10), skinM, 0.6, 1.22, 0);
+    // Руки — группы из плеча: махать и танцевать рука должна от
+    // сустава, как в настоящем риге.
+    function makeArm(side) {
+      var g = new THREE.Group();
+      g.position.set(0.4 * side, 1.82, 0);
+      addMesh(new THREE.CylinderGeometry(0.065, 0.075, 0.62, 12), skinM, 0, -0.3, 0, g);
+      addMesh(new THREE.SphereGeometry(0.085, 12, 10), skinM, 0, -0.62, 0, g);
+      g.rotation.z = side < 0 ? 0.5 : -0.5;
+      modelGroup.add(g);
+      return g;
+    }
+    var armL = makeArm(-1);
+    var armR = makeArm(1);
+    avatarParts = { legL: legL, legR: legR, armL: armL, armR: armR, torso: torso };
 
     // голова
     addMesh(new THREE.SphereGeometry(0.46, 28, 22), skinM, 0, 2.32, 0);
@@ -302,6 +356,32 @@
     }
 
     scene.add(modelGroup);
+  }
+
+  // Процедурные анимации студии: ключевые идеи как у аниматоров —
+  // поза, ритм, повтор. Дыхание всегда лёгкое, остальные — по выбору.
+  function applyAvatarAnimation(t) {
+    if (!avatarParts || stageMode !== 'avatar') return;
+    var p = avatarParts;
+    p.legL.rotation.x = 0; p.legR.rotation.x = 0;
+    p.armL.rotation.x = 0; p.armR.rotation.x = 0;
+    p.armL.rotation.z = 0.5; p.armR.rotation.z = -0.5;
+    if (torsoBaseScale) p.torso.scale.set(torsoBaseScale.x, torsoBaseScale.y, torsoBaseScale.z);
+    if (currentAnim === 'breathe' || currentAnim === 'wave' || currentAnim === 'dance') {
+      if (torsoBaseScale) p.torso.scale.y = torsoBaseScale.y * (1 + Math.sin(t * 1.7) * 0.025);
+    }
+    if (currentAnim === 'wave') {
+      p.armR.rotation.z = -2.05 + Math.sin(t * 6) * 0.35;
+    } else if (currentAnim === 'walk') {
+      var sw = Math.sin(t * 5);
+      p.legL.rotation.x = sw * 0.5; p.legR.rotation.x = -sw * 0.5;
+      p.armL.rotation.x = -sw * 0.4; p.armR.rotation.x = sw * 0.4;
+    } else if (currentAnim === 'dance') {
+      var d = Math.sin(t * 4);
+      p.armL.rotation.z = 2.0 + d * 0.35;
+      p.armR.rotation.z = -2.0 + d * 0.35;
+      p.legL.rotation.x = d * 0.18; p.legR.rotation.x = -d * 0.18;
+    }
   }
 
   function initStudio() {
@@ -395,7 +475,13 @@
         if (!dragging) targetRotY += 0.0022;
         target.rotation.y += (targetRotY - target.rotation.y) * 0.08;
         target.rotation.x += (targetRotX - target.rotation.x) * 0.08;
-        if (target === modelGroup) target.position.y = Math.sin(t * 1.7) * 0.035;
+        if (target === modelGroup) {
+          target.position.y = currentAnim === 'dance' ? Math.abs(Math.sin(t * 4)) * 0.07
+            : currentAnim === 'walk' ? Math.abs(Math.sin(t * 5)) * 0.03
+            : currentAnim === 'still' ? 0
+            : Math.sin(t * 1.7) * 0.035;
+          applyAvatarAnimation(t);
+        }
       }
       renderer.render(scene, camera);
     })(started);
@@ -696,11 +782,17 @@
   var ctlDress = document.getElementById('kvCtlDress');
   var ctlSkin = document.getElementById('kvCtlSkin');
   var ctlAcc = document.getElementById('kvCtlAccessory');
+  var ctlBuild = document.getElementById('kvCtlBuild');
+  var ctlOutfit = document.getElementById('kvCtlOutfit');
+  var ctlAnim = document.getElementById('kvCtlAnim');
   fillSelect(ctlHairColor, HAIR_COLORS);
   fillSelect(ctlHairLen, HAIR_LENS);
   fillSelect(ctlDress, DRESSES);
   fillSelect(ctlSkin, SKINS);
   fillSelect(ctlAcc, ACCESSORIES);
+  fillSelect(ctlBuild, BODY_BUILDS);
+  fillSelect(ctlOutfit, OUTFITS);
+  fillSelect(ctlAnim, ANIMATIONS);
 
   function syncControls() {
     if (ctlHairColor) ctlHairColor.value = current.hair;
@@ -708,6 +800,9 @@
     if (ctlDress) ctlDress.value = current.dress;
     if (ctlSkin) ctlSkin.value = current.skin;
     if (ctlAcc) ctlAcc.value = current.acc;
+    if (ctlBuild) ctlBuild.value = current.build || 'normal';
+    if (ctlOutfit) ctlOutfit.value = current.outfit || 'dress';
+    if (ctlAnim) ctlAnim.value = current.anim || 'breathe';
   }
   syncControls();
 
@@ -715,12 +810,25 @@
     return {
       skin: ctlSkin.value, hair: ctlHairColor.value, len: ctlHairLen.value,
       dress: ctlDress.value, acc: ctlAcc.value,
+      build: ctlBuild ? ctlBuild.value : 'normal',
+      outfit: ctlOutfit ? ctlOutfit.value : 'dress',
+      anim: ctlAnim ? ctlAnim.value : 'breathe',
       seed: (current && current.seed) || 7
     };
   }
-  [ctlHairColor, ctlHairLen, ctlDress, ctlSkin, ctlAcc].forEach(function (ctl) {
+  [ctlHairColor, ctlHairLen, ctlDress, ctlSkin, ctlAcc, ctlBuild, ctlOutfit].forEach(function (ctl) {
     if (ctl) ctl.addEventListener('change', function () { applyVariant(manualVariant(), false); });
   });
+  if (ctlAnim) {
+    ctlAnim.addEventListener('change', function () {
+      // Анимацию не надо пересобирать: просто включаем движение.
+      current.anim = ctlAnim.value;
+      currentAnim = ctlAnim.value;
+      persistStudioState();
+      verdictTextEl.textContent = 'Анимация включена: ' + byId(ANIMATIONS, currentAnim).name + '! Смотри на сцену — я двигаюсь. В файл .obj движение не уедет, он статичный.';
+      scoreNumEl.textContent = '▶';
+    });
+  }
 
   document.getElementById('kvCreateSelf').addEventListener('click', function () {
     ensureStudio().then(function () {
@@ -770,7 +878,7 @@
         verdictTextEl.textContent = 'Моделька уехала к тебе файлом .obj! Открой её в Blender или просмотрщике 3D — и вспомни меня.';
       } else {
         exportOBJ(modelGroup, 'kvenya-model.obj');
-        verdictTextEl.textContent = 'Моя фигурка уехала к тебе файлом .obj! Покрути её у себя — я не стесняюсь.';
+        verdictTextEl.textContent = 'Моя фигурка уехала к тебе файлом .obj! Покрути её у себя — я не стесняюсь. Честно: поза в файле статичная, анимация осталась жить на сцене студии.';
       }
     });
   });
