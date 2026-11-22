@@ -8,6 +8,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (physics) {
   'use strict';
 
+  // Длина окна не зависит от скорости кадров и измеряется временем склада.
+  var TRUCK_WINDOW = 165;
   var CUSTOMERS = [
     'Аптека «Ландыш»', 'Кафе «Тихая гавань»', 'Мастерская Хильда', 'Маркет «Пятый склад»',
     'Сервис «Ключ и гайка»', 'Пекарня Бруно', 'Студия «Пиксель»', 'Клиника «Ольха»',
@@ -729,7 +731,12 @@
       truck.total = ordersOfTruck(truck).length;
       state.trucks.push(truck);
       if (kind === 'load') ordersOfTruck(truck).forEach(function (o) { o.dest = destPoint(o); });
-      if (state.trucks.length > 6) state.trucks.shift();
+      // Сохраняем активные доки, даже если другой док успел обработать
+      // много рейсов. Старые записи об уехавших фурах можно ограничить.
+      if (state.trucks.length > 6) {
+        var oldDone = state.trucks.findIndex(function (t) { return t.status !== 'working'; });
+        if (oldDone >= 0) state.trucks.splice(oldDone, 1);
+      }
       note(kind === 'unload'
         ? 'Прибыла фура ' + truck.plate + ' (' + truck.carrier + '): разгрузить ' + truck.total + ' мест'
         : 'Прибыла фура ' + truck.plate + ' (' + truck.carrier + '): загрузить ' + truck.total + ' мест', 'warn');
@@ -852,7 +859,7 @@
         if (prog.done >= prog.total && prog.total > 0) {
           departTruck(truck, 'все места обработаны');
           state.stats.score += 8;
-        } else if (state.time - truck.arrivedAt > 165) {
+        } else if (state.time - truck.arrivedAt > TRUCK_WINDOW) {
           departTruck(truck, 'окно погрузки закрылось');
         }
       }
@@ -994,6 +1001,7 @@
     return {
       state: state,
       layout: LAYOUT,
+      truckWindow: TRUCK_WINDOW,
       illuminationAt: illuminationAt,
       captureCheckpoint: captureCheckpoint,
       restoreCheckpoint: restoreCheckpoint,

@@ -261,6 +261,20 @@ WC.game = (function () {
     return { ok: true, truck: truck };
   }
 
+  // Не награждаем за принудительный отъезд. Отгрузка, которой не хватило
+  // времени, физически возвращается, а груз разгрузочной фуры остаётся в работе.
+  function dispatchTruck(id) {
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена не активна' };
+    var truck = api.sim.truckById(id);
+    if (!truck || truck.status !== 'working') return { ok: false, reason: 'Эта фура уже уехала' };
+    var progress = api.sim.truckProgress(truck);
+    api.sim.departTruck(truck, 'отправлена диспетчером');
+    pushLog('Фура ' + truck.plate + ' отправлена досрочно (' + progress.done + '/' + progress.total + ')', 'warn');
+    emit('truck-dispatched', { truck: truck, done: progress.done, total: progress.total });
+    WC.save.autosave(api);
+    return { ok: true, truck: truck, done: progress.done, total: progress.total };
+  }
+
   function createSim() {
     api.contracts = WC.contracts.create();
     api.dialogueState = WC.dialogue.create(0);
@@ -1153,6 +1167,7 @@ WC.game = (function () {
     teamCommand: teamCommand,
     setOrderPriority: setOrderPriority,
     callTruck: callTruck,
+    dispatchTruck: dispatchTruck,
     acceptContract: acceptContract,
     cancelContract: cancelContract,
     buyStaff: buyStaff,

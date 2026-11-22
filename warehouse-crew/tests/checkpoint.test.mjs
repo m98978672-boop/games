@@ -245,4 +245,48 @@ for(let i=0;i<1600 && game.api.crew[0].state.carryingId;i++) game.update(.05);
 assert.equal(game.sim.state.orders.find(o=>o.id===ordinary.id).status,'stored');
 assert.equal(game.sim.state.stats.missed,1);
 assert.equal(game.api.contracts.items[0].progress,0);
+// Досрочная отправка неполного рейса: счёт не меняется, груз в руках
+// остаётся у работника и после перезагрузки возвращается в свою ячейку.
+data.clear(); c = await boot(); game = c.WC.game;
+const person = game.api.crew[0];
+const outbound = game.sim.spawnOrder(); outbound.mass = 8; game.sim.store(outbound,person.id);
+const lorry = game.callTruck('load').truck;
+assert(game.sim.claim(outbound.id, person.id)); game.sim.markCarried(outbound, person.id);
+person.state.mode='manual'; person.state.orderId=outbound.id; person.state.carryingId=outbound.id; person.state.state='toDrop';
+const balanceBefore = game.sim.state.stats.score, shiftsBefore = game.sim.state.stats.truckShifts;
+game.setPaused(true);
+const dispatch = game.dispatchTruck(lorry.id);
+assert(dispatch.ok); assert.equal(dispatch.done,0); assert.equal(dispatch.total,1);
+assert.equal(game.sim.state.stats.score,balanceBefore);
+assert.equal(game.sim.state.stats.truckShifts,shiftsBefore+1);
+assert.equal(outbound.direction,'return'); assert.equal(outbound.status,'carried');
+assert.equal(person.state.carryingId,outbound.id);
+assert(!game.dispatchTruck(lorry.id).ok); assert(!game.dispatchTruck('unknown').ok);
+assert.equal(game.sim.state.stats.truckShifts,shiftsBefore+1);
+c = await boot(); game = c.WC.game;
+assert.equal(game.api.resumeStatus,'restored'); assert(game.state.paused);
+assert.equal(game.sim.truckById(lorry.id).status,'done');
+assert.equal(game.api.crew[0].state.carryingId,outbound.id);
+assert.equal(game.sim.state.orders.find(o => o.id===outbound.id).direction,'return');
+game.setPaused(false);
+for(let i=0;i<2000 && game.api.crew[0].state.carryingId;i++) game.update(.05);
+assert.equal(game.sim.state.orders.find(o => o.id===outbound.id).status,'stored');
+assert.equal(game.sim.state.stats.score,balanceBefore);
+// Активная разгрузочная фура не теряется из истории при большом потоке
+// ручных рейсов на другом доке; груз на ней после отъезда остаётся.
+game.restart();
+const stock = game.sim.spawnOrder(); game.sim.store(stock, game.api.crew[0].id);
+const incoming = game.callTruck('unload').truck;
+const incomingBox = game.sim.ordersOfTruck(incoming)[0];
+for(let i=0;i<9;i++) {
+  const loading = game.callTruck('load'); assert(loading.ok);
+  assert(game.dispatchTruck(loading.truck.id).ok);
+}
+assert(game.sim.state.trucks.length <= 6);
+assert.equal(game.sim.activeTruck('unload').id,incoming.id);
+assert(game.sim.truckById(incoming.id));
+assert(game.dispatchTruck(incoming.id).ok);
+assert.equal(incomingBox.direction,'in'); assert.equal(incomingBox.status,'pending');
+assert(!game.sim.activeTruck('unload'));
+game.endShift(); assert(!game.dispatchTruck(incoming.id).ok);
 console.log('✓ Перезагрузка смены: бригада, мозги, физика, склад, персонал, v1 и защита повреждённого файла');
