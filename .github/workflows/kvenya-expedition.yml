@@ -64,6 +64,9 @@ jobs:
           task = json.loads(Path('qwen-home/bridge/expedition-task.json').read_text(encoding='utf-8'))
           print(f"EXP_URL={task['url']}")
           print(f"EXP_SECONDS={int(task.get('seconds', 60))}")
+          keys = ','.join(task.get('keys', []))
+          print(f"EXP_KEYS={keys}")
+          print(f"EXP_INTERVAL={int(task.get('intervalMs', 0))}")
           import sys
           print(f"Задание владельца: {task.get('note', '')} -> {task['url']}", file=sys.stderr)
           PY
@@ -86,7 +89,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/expedition"
           SECONDS_TO_PLAY="${EXP_SECONDS:-$EXP_SECONDS}"
-          python3 qwen-home/tools/expedition.py --url "$EXP_URL" --seconds "$SECONDS_TO_PLAY" --out "$RUNNER_TEMP/expedition"
+          python3 qwen-home/tools/expedition.py --url "$EXP_URL" --seconds "$SECONDS_TO_PLAY" --keys "${EXP_KEYS:-}" --interval-ms "${EXP_INTERVAL:-0}" --out "$RUNNER_TEMP/expedition"
       - name: Keep the full video as an artifact
         if: always()
         uses: actions/upload-artifact@v4
