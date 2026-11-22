@@ -36,5 +36,11 @@
     "answerTokenBudget": 192,
     "publishedAt": "2026-11-22",
     "note": "Урок №3: адаптер новой формы (r=32) обучен с базы и опубликован; баллы его экзамена восстановит следующий урок своим экзаменом до/после."
+  },
+  "motivation": {
+    "points": 18,
+    "level": "Новичок",
+    "file": "qwen-home/bridge/motivation.json",
+    "updatedAt": "2026-11-22 22:44 UTC"
   }
 }

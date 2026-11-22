@@ -61,6 +61,20 @@
     }).join('');
   }
 
+  var motEl = document.getElementById('kvBridgeMotivation');
+  function renderMotivation(data) {
+    if (!motEl) return;
+    var m = data.motivation;
+    if (!m) { motEl.innerHTML = ''; return; }
+    var ach = (m.achievements || []).map(function (a) { return '🏆 ' + esc(a.title) + ' — награда: ' + esc(a.reward); }).join('<br>');
+    var duties = (m.pendingDuties || []).map(function (d) { return '📌 ' + esc(d.text); }).join('<br>');
+    var last = (m.lastEvents || []).slice(-3).map(function (e) { return (e.delta > 0 ? '+' : '') + e.delta + ' · ' + esc(e.text); }).join('<br>');
+    motEl.innerHTML = '<p class="kv-note">⚖️ <b>Кнут и пряник</b> (дом судит по отчётам, не по настроению): баллы: <b>' + m.points + '</b> · звание: <b>' + esc(m.level) + '</b> · сыграно экспедиций: ' + (m.playedCount || 0) + ', лучший счёт: ' + (m.bestStepsEver || 0) + '</p>'
+      + (ach ? '<p class="kv-note">' + ach + '</p>' : '<p class="kv-note">Достижений пока нет — первое уже на подходе.</p>')
+      + (duties ? '<p class="kv-note"><b>Взыскания — закрыть делом:</b><br>' + duties + '</p>' : '<p class="kv-note">Открытых взысканий нет.</p>')
+      + (last ? '<p class="kv-note">' + last + '</p>' : '');
+  }
+
   var sourcesEl = document.getElementById('kvBridgeSources');
   function renderSources(data) {
     if (!sourcesEl) return;
@@ -80,7 +94,7 @@
 
   fetch('./bridge.json', { cache: 'no-store' })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); renderSources(data); } })
+    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); renderMotivation(data); renderSources(data); } })
     .catch(function () { /* сводки нет — есть живая кнопка */ });
 
   function wikiApi(params) {

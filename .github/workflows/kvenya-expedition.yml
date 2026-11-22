@@ -147,9 +147,21 @@ jobs:
           bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           print('expedition filed:', entry)
           PY
+          python3 qwen-home/tools/motivation.py || echo "мотивация не посчиталась — экспедиция всё равно оформляется"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          mot_path = Path('qwen-home/bridge/motivation.json')
+          if mot_path.exists():
+              bridge_path = Path('kvenya/bridge.json')
+              bridge = json.loads(bridge_path.read_text(encoding='utf-8'))
+              bridge['motivation'] = json.loads(mot_path.read_text(encoding='utf-8'))
+              bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+              print('мотивация на странице обновлена')
+          PY
           git config user.name 'Квеня (экспедиция)'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add "$DIR" kvenya/bridge.json
+          git add "$DIR" kvenya/bridge.json qwen-home/bridge/motivation.json qwen-home/bridge/journal.md qwen-home/state.json
           if git diff --cached --quiet; then echo "Изменений нет"; exit 0; fi
           STATUS=$(python3 -c "import json; print(json.load(open('$DIR/report.json'))['status'])")
           git commit -m "Экспедиция Квени: $STATUS ($HOST)"

@@ -312,16 +312,18 @@ def eyes_from_png(data):
             'dark': dark, 'cream': (cream / cream_all) if cream_all else 0}
 
 
-def decide_flap(bird_y, target_y, gap_bottom, h, ms_since_flap):
+def decide_flap(bird_y, target_y, gap_bottom, h, ms_since_flap, vy=0):
     """Решение глаз: жать ли клавишу взмаха на этом кадре.
 
-    Птица ниже цели — взмах; птица у нижнего края просвета — взмах
-    срочно; только что взмахнули — не спамим, физике нужно время."""
+    Птица ниже цели и не летит вверх пулей — взмах; птица у нижнего
+    края просвета — взмах срочно; только что взмахнули — не спамим,
+    физике нужно время. vy — скорость по кадрам: на подъёме после
+    взмаха не жмём ещё, иначе птица улетает в верхнюю трубу."""
     if bird_y is None:
         return False
     if gap_bottom is not None and bird_y > gap_bottom - 0.05 * h:
         return ms_since_flap >= 90
-    return bird_y > target_y + 0.012 * h and ms_since_flap >= 120
+    return bird_y > target_y + 0.010 * h and vy > -12 and ms_since_flap >= 110
 
 
 class Report:
@@ -531,6 +533,8 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     saw_bird = False
                     frames = bird_frames = gap_frames = 0
                     mid_shot = False
+                    prev_bird_y = None
+                    trace = []
                     while time.monotonic() < attempt_end:
                         st = read_eyes()
                         if st is None:
@@ -573,18 +577,33 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         # мёртвую не дёргать: птица у самой земли или конец игры —
                         # пробел там уже не взмах, а кнопка «в меню»
                         bird_low = st['bird'] and st['bird'][1] > 0.72 * frame_h
-                        if st['bird'] and not st['game_over'] and not bird_low:
+                        target = None
+                        flapped = False
+                        if st['bird']:
+                            vy = (st['bird'][1] - prev_bird_y) if prev_bird_y is not None else 0
+                            prev_bird_y = st['bird'][1]
                             target = ((gap[0] + gap[1]) / 2 if gap else frame_h * 0.42) + offset
-                            ms = int((now - last_flap) * 1000) if last_flap else 9999
-                            if decide_flap(st['bird'][1], target, gap[1] if gap else None, frame_h, ms):
-                                page.keyboard.press(keys[0] if keys else 'Space')
-                                flaps += 1
-                                last_flap = now
+                            if not st['game_over'] and not bird_low:
+                                ms = int((now - last_flap) * 1000) if last_flap else 9999
+                                if decide_flap(st['bird'][1], target, gap[1] if gap else None, frame_h, ms, vy):
+                                    page.keyboard.press(keys[0] if keys else 'Space')
+                                    flaps += 1
+                                    last_flap = now
+                                    flapped = True
+                        if len(trace) < 400:
+                            trace.append({'t': round(now - attempt_start, 1),
+                                          'b': st['bird'][1] if st['bird'] else None,
+                                          'gx': st.get('pipe_x'),
+                                          'gt': gap[0] if gap else None,
+                                          'gb': gap[1] if gap else None,
+                                          'tg': round(target) if target is not None else None,
+                                          'f': 1 if flapped else 0,
+                                          'o': 1 if st['game_over'] else 0})
                         page.wait_for_timeout(80)
                     sb = scoreboard()
                     steps_now = sb.get('steps') if sb else None
                     alive = round(time.monotonic() - attempt_start, 1)
-                    vision['attempts'].append({'n': attempt, 'seconds': alive, 'flaps': flaps, 'steps': steps_now, 'offset': offset, 'frames': frames, 'birdFrames': bird_frames, 'gapFrames': gap_frames})
+                    vision['attempts'].append({'n': attempt, 'seconds': alive, 'flaps': flaps, 'steps': steps_now, 'offset': offset, 'frames': frames, 'birdFrames': bird_frames, 'gapFrames': gap_frames, 'trace': trace[-45:]})
                     if steps_now is not None:
                         vision['bestSteps'] = steps_now if vision['bestSteps'] is None else max(vision['bestSteps'], steps_now)
                     score_txt = f'труб по табло игры: {steps_now}' if steps_now is not None else 'табло не читается — счёт кадрами не подтверждён'
