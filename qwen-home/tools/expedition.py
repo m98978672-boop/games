@@ -336,6 +336,10 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
         if bird_y > gap_bottom - 0.05 * h:
             return ms_since_flap >= 80
         zone = gap_top + 0.72 * (gap_bottom - gap_top)
+        # прогноз: падаем быстро — к следующему кадру будем в зоне,
+        # жмём СЕЙЧАС, а не когда уже поздно (урок смертей «пулей»)
+        if vy > 8 and bird_y + vy * 1.1 > zone:
+            return ms_since_flap >= 80
         return bird_y > zone and vy > -14 and ms_since_flap >= 90
     if vy >= 34 and bird_y > target_y - 0.06 * h:
         return ms_since_flap >= 80
@@ -600,7 +604,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                                 break
                         else:
                             stuck_frames = 0
-                        gap = st['gap'] or (last_gap if now - last_gap_at < 1.2 else None)
+                        gap = st['gap'] or (last_gap if now - last_gap_at < 0.8 else None)
                         # мёртвую не дёргать: птица у самой земли или конец игры —
                         # пробел там уже не взмах, а кнопка «в меню»
                         target = None
@@ -632,7 +636,9 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                                           'tg': round(target) if target is not None else None,
                                           'f': 1 if flapped else 0,
                                           'o': 1 if st['game_over'] else 0})
-                        page.wait_for_timeout(80)
+                        # на падении и сразу после взмаха цикл короче:
+                        # цена лишних 40 мс на скорости «пулей» — труба
+                        page.wait_for_timeout(40 if flapped else 75)
                     sb = scoreboard()
                     steps_now = sb.get('steps') if sb else None
                     alive = round(time.monotonic() - attempt_start, 1)
