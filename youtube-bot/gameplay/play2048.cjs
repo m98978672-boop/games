@@ -61,6 +61,15 @@ async function main() {
       moves++;
       await page.waitForTimeout(750);
     }
+    // A game-over move clears localStorage. Read the rendered score and visible
+    // tiles after the last action, so a winning/losing move is not omitted.
+    const finalVisual = await page.evaluate(() => {
+      const first = document.querySelector(".score-container")?.firstChild?.textContent || "0";
+      const values = [...document.querySelectorAll(".tile-inner")].map(node => Number(node.textContent) || 0);
+      return { score: Number(first.replace(/[^0-9]/g, "")) || 0, max: Math.max(0, ...values) };
+    });
+    score = Math.max(score, finalVisual.score);
+    maxTile = Math.max(maxTile, finalVisual.max);
     const state = await page.evaluate(() => localStorage.getItem("gameState"));
     if (state && state.length < 100000) fs.writeFileSync(path.join(OUT, "gameState.json"), state, {mode: 0o600});
     const video = page.video();

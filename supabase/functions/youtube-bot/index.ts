@@ -183,6 +183,26 @@ function decodeJwtPart(value: string): Record<string, unknown> {
 
 let githubJwksCache: { keys: Array<JsonWebKey & { kid?: string }>; expiresAt: number } | null = null;
 
+// This checks signed claims only AFTER RS256 verification, not in place of it.
+// Only the two existing publishing workflows on main can request upload access.
+function githubIdentityMismatches(claims: Record<string, unknown>, now: number): string[] {
+  const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  const approvedWorkflows = [
+    "m98978672-boop/games/.github/workflows/youtube-shorts-autopilot.yml@refs/heads/main",
+    "m98978672-boop/games/.github/workflows/youtube-longform-autopilot.yml@refs/heads/main",
+  ];
+  const mismatches: string[] = [];
+  if (claims.iss !== "https://token.actions.githubusercontent.com") mismatches.push("issuer");
+  if (!audience.includes("youtube-bot")) mismatches.push("audience");
+  if (claims.repository !== "m98978672-boop/games") mismatches.push("repository");
+  if (claims.ref !== "refs/heads/main") mismatches.push("ref");
+  if (typeof claims.workflow_ref !== "string" || !approvedWorkflows.includes(claims.workflow_ref)) mismatches.push("workflow_ref");
+  if (!["schedule", "workflow_dispatch"].includes(String(claims.event_name))) mismatches.push("event_name");
+  if (typeof claims.exp !== "number" || claims.exp < now) mismatches.push("expiry");
+  if (typeof claims.iat !== "number" || claims.iat > now + 60) mismatches.push("issued_at");
+  return mismatches;
+}
+
 async function verifyGitHubActionsOidc(request: Request): Promise<Record<string, unknown>> {
   const authorization = request.headers.get("Authorization") ?? "";
   const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
@@ -215,19 +235,7 @@ async function verifyGitHubActionsOidc(request: Request): Promise<Record<string,
     throw new Error("GitHub identity signature did not verify.");
   }
   const claims = decodeJwtPart(parts[1]);
-  const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-  const expectedWorkflow = "m98978672-boop/games/.github/workflows/youtube-shorts-autopilot.yml@refs/heads/main";
-  const mismatches: string[] = [];
-  if (claims.iss !== "https://token.actions.githubusercontent.com") mismatches.push("issuer");
-  if (!audience.includes("youtube-bot")) mismatches.push("audience");
-  if (claims.repository !== "m98978672-boop/games") mismatches.push("repository");
-  if (claims.ref !== "refs/heads/main") mismatches.push("ref");
-  if (claims.workflow_ref !== expectedWorkflow) mismatches.push("workflow_ref");
-  if (!["schedule", "workflow_dispatch"].includes(String(claims.event_name))) mismatches.push("event_name");
-  if (typeof claims.exp !== "number" || claims.exp < now) mismatches.push("expiry");
-  if (typeof claims.iat !== "number" || claims.iat > now + 60) mismatches.push("issued_at");
-  // `sub` can be customized by repository policy; the exact repository, ref,
-  // and workflow_ref checks above remain the authorization boundary.
+  const mismatches = githubIdentityMismatches(claims, now);
   if (mismatches.length) throw new Error(`Untrusted GitHub identity claims: ${mismatches.join(", ")}.`);
   return claims;
 }

@@ -141,6 +141,7 @@ def main() -> None:
     parser.add_argument("--acknowledge-rights", action="store_true", help="Confirm that code and asset recording rights have been checked")
     parser.add_argument("--seconds", type=int, default=60, help="Experiment length: 1..3600 seconds (default 60)")
     parser.add_argument("--resume", type=Path, help="Prior output/gameState.json from the same pinned game")
+    parser.add_argument("--result-path", type=Path, help="Write a small local JSON result for an orchestrator")
     args = parser.parse_args()
     if not args.acknowledge_rights:
         parser.error("Review rights and game safety first, then pass --acknowledge-rights.")
@@ -164,7 +165,7 @@ def main() -> None:
     manifest = {"repository": "https://github.com/gabrielecirulli/2048", "commit": COMMIT,
                 "archive_sha256": ARCHIVE_SHA256, "rights_confirmation": "operator-asserted"}
     (work / "source.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    subprocess.run(["docker", "build", "-t", IMAGE, str(ROOT / "gameplay")], check=True)
+    subprocess.run(["docker", "build", "-t", IMAGE, str(ROOT / "gameplay")], check=True, timeout=900)
     container_name = "games-playthrough-" + uuid.uuid4().hex
     try:
         result = subprocess.run(docker_command(game, output, args.seconds, container_name=container_name), check=False, timeout=args.seconds + 120)
@@ -180,6 +181,8 @@ def main() -> None:
     video = report.get("video")
     if not isinstance(video, str) or not re.fullmatch(r"[A-Za-z0-9_-]+\.webm", video) or not (output / video).is_file():
         raise SystemExit("No valid local video was produced; do not publish.")
+    if args.result_path:
+        args.result_path.write_text(json.dumps({"work_dir": str(work.resolve()), "video": video}), encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
