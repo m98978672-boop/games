@@ -323,7 +323,11 @@ def decide_flap(bird_y, target_y, gap_bottom, h, ms_since_flap, vy=0):
         return False
     if gap_bottom is not None and bird_y > gap_bottom - 0.05 * h:
         return ms_since_flap >= 90
-    return bird_y > target_y + 0.010 * h and vy > -12 and ms_since_flap >= 110
+    if bird_y > target_y + 0.010 * h and vy > -12 and ms_since_flap >= 100:
+        return True
+    # упреждение: падаем пулей и уже близко к цели — взмах до того,
+    # как инерция унесёт птицу под просвет
+    return vy >= 24 and bird_y > target_y - 0.025 * h and ms_since_flap >= 100
 
 
 class Report:
@@ -535,6 +539,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     mid_shot = False
                     prev_bird_y = None
                     trace = []
+                    stuck_frames = 0
                     while time.monotonic() < attempt_end:
                         st = read_eyes()
                         if st is None:
@@ -573,6 +578,14 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             sb_now = scoreboard()
                             if sb_now is not None and not sb_now.get('start'):
                                 break
+                        # птица лежит у земли и не двигается несколько кадров —
+                        # это уже не полёт, попытка кончилась
+                        if st['bird'] and bird_low and prev_bird_y is not None and abs(st['bird'][1] - prev_bird_y) <= 3:
+                            stuck_frames += 1
+                            if stuck_frames >= 5 and now - attempt_start > 5:
+                                break
+                        else:
+                            stuck_frames = 0
                         gap = st['gap'] or (last_gap if now - last_gap_at < 1.2 else None)
                         # мёртвую не дёргать: птица у самой земли или конец игры —
                         # пробел там уже не взмах, а кнопка «в меню»
@@ -586,7 +599,10 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             if not st['game_over'] and not bird_low:
                                 ms = int((now - last_flap) * 1000) if last_flap else 9999
                                 if decide_flap(st['bird'][1], target, gap[1] if gap else None, frame_h, ms, vy):
-                                    page.keyboard.press(keys[0] if keys else 'Space')
+                                    flap_key = keys[0] if keys else 'Space'
+                                    page.keyboard.down(flap_key)
+                                    page.wait_for_timeout(70)
+                                    page.keyboard.up(flap_key)
                                     flaps += 1
                                     last_flap = now
                                     flapped = True
