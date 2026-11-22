@@ -38,6 +38,7 @@
     'opened-only': '🚪 открыла страницу, но до игры не дошло',
     'no-canvas': '🖱 кнопку нажала, а игрового канваса нет',
     'captcha-wall': '🧱 упёрлась в «я не робот» — сфотографировала и честно остановилась',
+    'robots-denied': '🚧 robots.txt этого дома просит роботов не ходить — вежливо не пошла',
     'error': '🌧 не открылось: сеть или браузер не дали'
   };
   function renderExpeditions(data) {
@@ -54,7 +55,9 @@
       return '<div class="kv-expedition"><p class="kv-note">🧭 <b>' + esc(e.date) + '</b> · ' + esc(EXP_STATUS[e.status] || e.status)
         + '<br><a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + esc(e.url) + '</a>'
         + ' · <a href="../' + esc(e.dir) + '/report.json" target="_blank" rel="noopener">пошаговый отчёт</a>'
-        + (e.hasVideo ? ' · видео — в артефактах запуска на GitHub Actions' : '') + '</p>' + shots + '</div>';
+        + (e.hasVideo && !e.video ? ' · видео — в артефактах запуска на GitHub Actions' : '') + '</p>'
+        + (e.video ? '<video controls preload="metadata" src="../' + esc(e.dir) + '/' + esc(e.video) + '" style="width:100%;max-width:420px;border-radius:12px"></video>' : '')
+        + shots + '</div>';
     }).join('');
   }
 

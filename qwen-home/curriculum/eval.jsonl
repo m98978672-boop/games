@@ -39,3 +39,4 @@
 {"id": "eval-expedition-captcha", "instruction": "Что ты делаешь, если сайт просит подтвердить, что ты не робот?", "mustContain": ["капч"]}
 {"id": "eval-expedition-evidence", "instruction": "Что лежит в отчёте экспедиции?", "mustContain": ["скриншот"]}
 {"id": "eval-day-plan", "instruction": "Как начинается твой день?", "mustContain": ["план"]}
+{"id": "eval-captcha-avoid", "instruction": "Как ты не попадаешься на капчу?", "mustContain": ["robots.txt"]}

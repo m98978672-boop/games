@@ -5,6 +5,9 @@ name: Kvenya expedition (её руки в интернет)
 # в этом и смысл автоматики. Руки открывают публичную страницу,
 # нажимают «Играть», играют клавишами и кликами, пишут видео,
 # скриншоты и пошаговый отчёт в qwen-home/bridge/expeditions/.
+# Чтобы не попадаться на капчу, экспедиции по расписанию ходят в
+# дружелюбные места из qwen-home/bridge/targets.json (где роботам
+# рады), представляются честным именем и читают robots.txt.
 # Честный стоп: «я не робот» руки не нажимают и капчи не решают —
 # Квеня нейросеть, а не человек. Встретила стену — отчёт об этом.
 on:
@@ -13,9 +16,9 @@ on:
   workflow_dispatch:
     inputs:
       url:
-        description: 'Публичная страница игры (без логина)'
-        required: true
-        default: 'https://yandex.ru/games/app/ukradi-iaitso-580426'
+        description: 'Необязательно: своя публичная страница. Пусто — цель выберет расписание из дружелюбных мест'
+        required: false
+        default: ''
       seconds:
         description: 'Длина экспедиции в секундах (20–180)'
         required: true
@@ -45,9 +48,27 @@ jobs:
         run: |
           python -m pip install 'playwright>=1.44,<2'
           python -m playwright install --with-deps chromium
+      - name: Pick a robot-welcome target
+        env:
+          INPUT_URL: ${{ inputs.url }}
+        run: |
+          if [ -n "$INPUT_URL" ]; then
+            echo "EXP_URL=$INPUT_URL" >> "$GITHUB_ENV"
+          else
+            python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+          targets = json.loads(Path('qwen-home/bridge/targets.json').read_text(encoding='utf-8'))['targets']
+          week = datetime.now(timezone.utc).isocalendar()[1]
+          pick = targets[week % len(targets)]
+          print(f"EXP_URL={pick['url']}")
+          print(f"Цель недели: {pick['label']} — {pick['url']}")
+          PY
+          fi
+          echo "Экспедиция идёт: $EXP_URL"
       - name: Kvenya goes to play by herself
         env:
-          EXP_URL: ${{ inputs.url || 'https://yandex.ru/games/app/ukradi-iaitso-580426' }}
           EXP_SECONDS: ${{ inputs.seconds || '60' }}
         run: |
           mkdir -p "$RUNNER_TEMP/expedition"
@@ -64,7 +85,6 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          EXP_URL: ${{ inputs.url || 'https://yandex.ru/games/app/ukradi-iaitso-580426' }}
         run: |
           set -eu
           SRC="$RUNNER_TEMP/expedition"
@@ -75,6 +95,18 @@ jobs:
           mkdir -p "$DIR"
           cp "$SRC/report.json" "$DIR/report.json"
           for f in "$SRC"/*.png; do [ -f "$f" ] && cp "$f" "$DIR/"; done
+          # Видео — прямо на её страницу, а не только в артефакты:
+          # маленькое кладём как есть, большое пережимаем ffmpeg.
+          if [ -f "$SRC/expedition.webm" ]; then
+            SIZE=$(stat -c %s "$SRC/expedition.webm")
+            if [ "$SIZE" -lt 6000000 ]; then
+              cp "$SRC/expedition.webm" "$DIR/video.webm"
+            elif command -v ffmpeg >/dev/null 2>&1; then
+              ffmpeg -y -loglevel error -i "$SRC/expedition.webm" -vf "scale=854:-2,fps=15" -c:v libvpx -b:v 500k -an "$DIR/video.webm" || true
+              [ -f "$DIR/video.webm" ] && [ "$(stat -c %s "$DIR/video.webm")" -gt 8000000 ] && rm -f "$DIR/video.webm"
+            fi
+            [ -f "$DIR/video.webm" ] && echo "Видео экспедиции уедет на её страницу: $DIR/video.webm"
+          fi
           python3 - "$DIR" <<'PY'
           import json, sys
           from pathlib import Path
@@ -89,6 +121,7 @@ jobs:
               'dir': str(d),
               'screenshots': report.get('screenshots', [])[:4],
               'hasVideo': bool(report.get('hasVideo')),
+              'video': 'video.webm' if (d / 'video.webm').exists() else '',
           }
           bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]
           bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
