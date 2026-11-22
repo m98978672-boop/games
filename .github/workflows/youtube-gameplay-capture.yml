@@ -74,12 +74,14 @@ jobs:
           output="${dirs[0]}/output"
           python youtube-bot/gameplay_finalize.py "$output"
           echo "output=$output" >> "$GITHUB_OUTPUT"
+          echo "source=${dirs[0]}/source.json" >> "$GITHUB_OUTPUT"
       - name: Save experimental recording, report and optional game state
         if: steps.gate.outputs.due == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: gameplay-2048-${{ github.run_id }}
           path: |
+            ${{ steps.finalize.outputs.source }}
             ${{ steps.finalize.outputs.output }}/gameplay-with-recap.mp4
             ${{ steps.finalize.outputs.output }}/final-report.json
             ${{ steps.finalize.outputs.output }}/report.json

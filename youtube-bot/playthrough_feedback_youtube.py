@@ -19,7 +19,7 @@ from playthrough_feedback import MAX_COMMENTS, assess_first_episode
 VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 
 
-def assess_video(youtube: Any, video_id: str, *, now: datetime | None = None) -> dict[str, Any]:
+def assess_video(youtube: Any, video_id: str, *, now: datetime | None = None, required_tag: str | None = None) -> dict[str, Any]:
     if not VIDEO_ID.fullmatch(video_id):
         raise ValueError("Invalid YouTube video ID")
     now = now or datetime.now(timezone.utc)
@@ -36,6 +36,10 @@ def assess_video(youtube: Any, video_id: str, *, now: datetime | None = None) ->
             return {"decision": "wait", "reason": "video_not_owned"}
         if status.get("privacyStatus") != "public":
             return {"decision": "wait", "reason": "not_public"}
+        if required_tag:
+            tags = snippet.get("tags")
+            if not isinstance(tags, list) or required_tag not in tags:
+                return {"decision": "wait", "reason": "game_tag_missing"}
         # For public videos YouTube's snippet.publishedAt reports when they became
         # public. A missing/invalid timestamp, likes or views fails closed.
         published = datetime.fromisoformat(str(snippet["publishedAt"]).replace("Z", "+00:00"))

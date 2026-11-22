@@ -53,6 +53,15 @@ class FeedbackYoutubeTests(unittest.TestCase):
         api.comments_error = RuntimeError("disabled")
         self.assertEqual(assess_video(api, "AbCdEf01234", now=api.now)["reason"], "feedback_unavailable")
 
+    def test_required_game_tag_is_exact_and_missing_fails_closed(self):
+        api = FakeYoutube()
+        tag = "bot-topic:gameplay-2048"
+        self.assertEqual(assess_video(api, "AbCdEf01234", now=api.now, required_tag=tag)["reason"], "game_tag_missing")
+        api.video["snippet"]["tags"] = "prefix-" + tag
+        self.assertEqual(assess_video(api, "AbCdEf01234", now=api.now, required_tag=tag)["reason"], "game_tag_missing")
+        api.video["snippet"]["tags"] = [tag]
+        self.assertEqual(assess_video(api, "AbCdEf01234", now=api.now, required_tag=tag)["decision"], "continue")
+
     def test_age_and_bad_video_id(self):
         api = FakeYoutube()
         api.video["snippet"]["publishedAt"] = api.now.isoformat()
