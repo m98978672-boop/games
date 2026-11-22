@@ -155,6 +155,46 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn("Лично я не играл", scenes[-1]["dialogue"])
         self.assertEqual(scenes[-1]["visual"], "ИТОГ ПО ИСТОЧНИКАМ · 7/10")
 
+    def test_long_review_retries_chapters_individually_after_count_error(self):
+        games = load_game_catalog()
+        game = games[0]
+        review = validate_review({
+            "schema_version": 1, "game_id": game["id"],
+            "selected_feature_ids": [f"{game['id']}-f1", f"{game['id']}-f2"],
+            "possible_minus": "Возможно, такой акцент подойдёт не каждому игроку.",
+            "minus_feature_id": f"{game['id']}-f1", "idea_score": 7,
+            "hook": "Что интересного в этом игровом проекте?",
+        }, games)
+        text = ("По опубликованному описанию можно составить впечатление о проекте. "
+                "Эта особенность помогает оценить представленную идею, но без личного прохождения "
+                "нельзя судить о качестве исполнения или делать выводы о впечатлениях других игроков. "
+                "Посмотрите первоисточник и решите, подходит ли вам предложенная концепция.")
+        chapter = {"fact_id": f"{game['id']}-f1", "dialogue": text, "visual": "Описание из источника"}
+        with patch("game_reviews.generate_with_qwen", side_effect=[json.dumps({"scenes": []})] + [json.dumps(chapter)] * 10) as generate:
+            scenes = generate_long_narration(review)
+        self.assertEqual(generate.call_count, 11)
+        self.assertEqual(len(scenes), 10)
+        self.assertIn("Итог по источникам:", scenes[-1]["dialogue"])
+
+    def test_long_review_rejects_invalid_individual_chapters(self):
+        review = {"evidence": {"a": "Один факт", "b": "Другой факт"}, "game_title": "Test", "idea_score": 7,
+                  "hook": "Что предлагает игра?", "pros": ["Один факт", "Другой факт"], "possible_minus": "Возможно, не для всех."}
+        with patch("game_reviews.generate_with_qwen", return_value=json.dumps({"scenes": []})):
+            with self.assertRaisesRegex(ValueError, "could not produce chapter 1"):
+                generate_long_narration(review)
+
+    def test_plan_fallback_repairs_non_russian_and_contact_fields(self):
+        games = load_game_catalog()
+        game = games[0]
+        invalid = {"schema_version": 1, "game_id": game["id"],
+                   "selected_feature_ids": [f"{game['id']}-f1", f"{game['id']}-f2"],
+                   "minus_feature_id": f"{game['id']}-f1", "idea_score": 5,
+                   "hook": "English-only introduction", "possible_minus": "Возможно, visit www.example.com"}
+        with patch("game_reviews.generate_with_qwen", return_value=json.dumps(invalid)):
+            review = generate_game_review(games)
+        self.assertNotIn("www.", review["possible_minus"])
+        self.assertIn("игра", review["hook"])
+
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()
         game = games[0]

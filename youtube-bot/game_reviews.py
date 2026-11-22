@@ -225,19 +225,17 @@ def _catalog_only_fallback(
     score = min(10, max(1, score))
 
     hook = str(data.get("hook", "")).strip()
-    if not 8 <= len(hook) <= 100:
-        hook = f"Что предлагает игра {game.get('title', 'Games')}?"[:100]
-        if len(hook) < 8:
-            hook = "Коротко об игре Games!"
+    if not 8 <= len(hook) <= 100 or _russian_ratio(hook) < 0.5:
+        hook = "Что интересного предлагает эта игра?"
 
     possible_minus = str(data.get("possible_minus", "")).strip()
     if (
         not 10 <= len(possible_minus) <= 100
-        or re.search(r"https?://|www\\.|@[\\w.-]+", possible_minus, re.I)
+        or re.search(r"https?://|www\.|@[\w.-]+", possible_minus, re.I)
         or not re.search(r"может|возможно|похоже|вероятно", possible_minus, re.I)
+        or _russian_ratio(possible_minus) < 0.5
     ):
-        evidence = features[int(minus_id.rsplit("-f", 1)[1]) - 1][:45]
-        possible_minus = f"Возможно, акцент на «{evidence}» подойдёт не всем."
+        possible_minus = "Возможно, описанная особенность подойдёт не каждому игроку."
 
     repaired = {
         "schema_version": 1,
@@ -329,7 +327,7 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
         },
     ]
     last_error: ValueError | None = None
-    for attempt in range(2):
+    for attempt in range(1):
         raw = generate_with_qwen(messages, max_new_tokens=2400)
         try:
             data = _extract_json(raw)
@@ -368,7 +366,62 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 "role": "user",
                 "content": f"Предыдущий JSON не прошёл проверку: {exc}. Исправь его точно по требованиям, верни только JSON.",
             })
-    raise ValueError(f"Qwen could not produce a validated long-form Russian script: {last_error}")
+    print(f"Qwen could not produce ten chapters at once ({last_error}); trying smaller batches.", file=sys.stderr)
+    return _generate_long_in_batches(review)
+
+
+def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]:
+    """Ask for one bounded chapter at a time and reject malformed model output.
+
+    Shorter completions reduce truncation and count errors from small models. No
+    model text is accepted without the same language, length and source-ID checks.
+    If a chapter still fails twice, stop rather than fabricate material.
+    """
+    evidence = review["evidence"]
+    allowed = {str(key) for key in evidence}
+    clean: list[dict[str, str]] = []
+    for index in range(10):
+        messages = [
+            {"role": "system", "content": (
+                "Напиши одну главу для русскоязычного обзора игры на основе источников. "
+                "Не добавляй фактов, не заявляй личное прохождение. "
+                "Мнение помечай как впечатление от описания. "
+                'Верни один JSON: {"fact_id":"точный ID", "dialogue":"текст", "visual":"короткая подпись"}.'
+            )},
+            {"role": "user", "content": json.dumps({
+                "chapter": index + 1, "total_chapters": 10,
+                "sources": evidence,
+                "task": "Одна глава, dialogue от 220 до 320 символов по-русски; используй точный fact_id из sources. Без ссылок в тексте.",
+            }, ensure_ascii=False)},
+        ]
+        last_error: ValueError | None = None
+        for _ in range(2):
+            raw = generate_with_qwen(messages, max_new_tokens=700)
+            try:
+                scene = _extract_json(raw)
+                fact_id = str(scene.get("fact_id", ""))
+                dialogue = re.sub(r"\s+", " ", str(scene.get("dialogue", ""))).strip()
+                visual = re.sub(r"\s+", " ", str(scene.get("visual", ""))).strip()
+                if fact_id not in allowed or not 220 <= len(dialogue) <= 320:
+                    raise ValueError("long narration fact id or chapter length is invalid")
+                if _russian_ratio(dialogue) < 0.7:
+                    raise ValueError("long narration must be Russian, not English text")
+                if not visual or len(visual) > 120 or re.search(r"https?://|www\.|@[\w.-]+", dialogue, re.I):
+                    raise ValueError("long narration visuals or spoken dialogue are invalid")
+                clean.append({"fact_id": fact_id, "dialogue": dialogue, "visual": visual})
+                break
+            except ValueError as exc:
+                last_error = exc
+                messages.append({"role": "user", "content": f"Ошибка формата: {exc}. Верни один исправленный JSON, dialogue 220–320 символов."})
+        else:
+            raise ValueError(f"Qwen could not produce chapter {index + 1}: {last_error}")
+    if sum(len(scene["dialogue"]) for scene in clean) < 2400:
+        raise ValueError("long narration is too short to count as a full video")
+    summary = speech_excerpt(str(review["pros"][0]), 50)
+    verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
+    clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
+    clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
+    return clean
 
 
 def youtube_description(review: Mapping[str, Any]) -> str:
