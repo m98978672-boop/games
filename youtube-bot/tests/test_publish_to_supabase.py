@@ -13,6 +13,37 @@ import publish_to_supabase as publisher
 
 
 class PublisherNetworkTests(unittest.TestCase):
+    def test_github_oidc_endpoint_allows_github_actions_subdomains_only(self):
+        allowed = (
+            "https://pipelines.actions.githubusercontent.com/runner/token?api-version=2.0",
+            "https://token.actions.githubusercontent.com/runner/token",
+            "https://future.nested.actions.githubusercontent.com/runner/token",
+        )
+        denied = (
+            "http://pipelines.actions.githubusercontent.com/runner/token",
+            "https://pipelines.actions.githubusercontent.com.evil.example/runner/token",
+            "https://evil.example/pipelines.actions.githubusercontent.com",
+            "https://user@pipelines.actions.githubusercontent.com/runner/token",
+            "https://pipelines.actions.githubusercontent.com:8443/runner/token",
+        )
+        for url in allowed:
+            with self.subTest(url=url):
+                self.assertTrue(publisher._is_github_oidc_endpoint(publisher.urllib.parse.urlsplit(url)))
+        for url in denied:
+            with self.subTest(url=url):
+                self.assertFalse(publisher._is_github_oidc_endpoint(publisher.urllib.parse.urlsplit(url)))
+
+    def test_unexpected_oidc_host_never_receives_runner_credential(self):
+        with patch.dict(os.environ, {
+            "ACTIONS_ID_TOKEN_REQUEST_URL": "https://github.example/oidc?secret=query",
+            "ACTIONS_ID_TOKEN_REQUEST_TOKEN": "runner-secret",
+        }), patch.object(publisher, "_safe_urlopen") as open_url, patch.object(publisher, "_mask"):
+            with self.assertRaisesRegex(publisher.PublishError, "unexpected OIDC endpoint") as raised:
+                publisher.github_oidc_token()
+        open_url.assert_not_called()
+        self.assertNotIn("runner-secret", str(raised.exception))
+        self.assertNotIn("secret=query", str(raised.exception))
+
     def test_upload_url_allowlist_accepts_only_google_resumable_endpoint(self):
         publisher._validate_upload_url("https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret")
         for url in (
