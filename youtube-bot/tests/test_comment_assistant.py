@@ -101,6 +101,65 @@ class CommentAssistantTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 assistant.auto_reply_video(api, "video", limit=6, ledger=ledger)
 
+    def test_channel_scheduler_obeys_global_and_daily_limits(self):
+        from datetime import datetime, timezone, timedelta
+        from unittest.mock import patch
+        api = API()
+        now = datetime(2026, 12, 1, tzinfo=timezone.utc)
+        comments = [{"id": f"parent-{i}", "text": "Спасибо!"} for i in range(8)]
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.object(assistant, "recent_public_videos", return_value=["video"]), \
+             patch.object(assistant, "list_comments", return_value=comments), \
+             patch.object(assistant, "post_reviewed_reply", return_value="reply") as post:
+            ledger = Path(temp) / "replies.db"
+            self.assertEqual(assistant.auto_reply_channel(api, ledger=ledger, now=now, run_limit=3, daily_limit=4), 3)
+            self.assertEqual(assistant.auto_reply_channel(api, ledger=ledger, now=now, run_limit=3, daily_limit=4), 1)
+            self.assertEqual(assistant.auto_reply_channel(api, ledger=ledger, now=now, run_limit=3, daily_limit=4), 0)
+            self.assertEqual(assistant.auto_reply_channel(api, ledger=ledger, now=now+timedelta(days=1), run_limit=3, daily_limit=4), 3)
+            self.assertEqual(post.call_count, 7)
+            with self.assertRaises(ValueError): assistant.auto_reply_channel(api, ledger=ledger, run_limit=6)
+
+    def test_channel_uncertain_post_is_never_automatically_retried(self):
+        from unittest.mock import patch
+        api = API()
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.object(assistant, "recent_public_videos", return_value=["video"]), \
+             patch.object(assistant, "list_comments", return_value=[{"id": "parent", "text": "Спасибо"}]), \
+             patch.object(assistant, "post_reviewed_reply", side_effect=TimeoutError("uncertain")) as post:
+            ledger = Path(temp) / "replies.db"
+            with self.assertRaises(TimeoutError): assistant.auto_reply_channel(api, ledger=ledger)
+            self.assertEqual(assistant.auto_reply_channel(api, ledger=ledger), 0)
+            self.assertEqual(post.call_count, 1)
+
+    def test_comments_disabled_is_skipped_but_other_errors_stop(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        disabled = RuntimeError("comments disabled")
+        disabled.resp = SimpleNamespace(status=403)
+        disabled.content = b'{"error":{"errors":[{"reason":"commentsDisabled"}]}}'
+        self.assertTrue(assistant._comments_disabled(disabled))
+        disabled.content = b'{"error":{"errors":[{"reason":"quotaExceeded"}]}}'
+        self.assertFalse(assistant._comments_disabled(disabled))
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.object(assistant, "recent_public_videos", return_value=["video"]), \
+             patch.object(assistant, "list_comments", side_effect=disabled):
+            with self.assertRaises(RuntimeError): assistant.auto_reply_channel(API(), ledger=Path(temp) / "db")
+
+    def test_recent_videos_rejects_private_and_foreign_uploads(self):
+        class RecentAPI:
+            def channels(self): return self
+            def playlistItems(self): return self
+            def videos(self): return self
+            def list(self, **kw):
+                if kw.get("mine"): return Request({"items": [{"id": "owner", "contentDetails": {"relatedPlaylists": {"uploads": "playlist"}}}]})
+                if kw.get("playlistId"): return Request({"items": [{"contentDetails": {"videoId": x}} for x in ["abcdefghijk", "abcdefghij0", "abcdefghij1"]]})
+                return Request({"items": [
+                    {"id": "abcdefghijk", "snippet": {"channelId": "owner"}, "status": {"privacyStatus": "public"}},
+                    {"id": "abcdefghij0", "snippet": {"channelId": "owner"}, "status": {"privacyStatus": "private"}},
+                    {"id": "abcdefghij1", "snippet": {"channelId": "other"}, "status": {"privacyStatus": "public"}},
+                ]})
+        self.assertEqual(assistant.recent_public_videos(RecentAPI()), ["abcdefghijk"])
+
     def test_existing_reply_or_foreign_video_rejected(self):
         api = API()
         with tempfile.TemporaryDirectory() as temp:

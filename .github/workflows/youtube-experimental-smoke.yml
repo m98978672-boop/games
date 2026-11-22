@@ -5,6 +5,7 @@ on:
     paths:
       - 'youtube-bot/gameplay/**'
       - 'youtube-bot/gameplay_2048.py'
+      - 'youtube-bot/gameplay_finalize.py'
       - 'youtube-bot/game_reviews.py'
       - 'youtube-bot/script_contract.py'
       - 'youtube-bot/tests/smoke_*.py'
@@ -26,7 +27,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install video verifier
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
       - name: Build isolated recording container
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Capture actual gameplay and verify recording

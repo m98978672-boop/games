@@ -12,6 +12,7 @@ import os
 import re
 import sqlite3
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -185,6 +186,95 @@ def auto_reply_video(youtube: Any, video_id: str, *, limit: int = 5, ledger: Pat
     return sent
 
 
+
+def recent_public_videos(youtube: Any, *, limit: int = 10) -> list[str]:
+    """Fetch at most ten recent uploads, and recheck owner and public status."""
+    if not 1 <= limit <= 10:
+        raise ValueError("video limit must be between 1 and 10")
+    channels = youtube.channels().list(part="id,contentDetails", mine=True, maxResults=1).execute().get("items", [])
+    if len(channels) != 1 or not channels[0].get("id"):
+        raise RuntimeError("Cannot verify the connected YouTube channel.")
+    owner = str(channels[0]["id"])
+    playlist = channels[0].get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
+    if not isinstance(playlist, str) or not playlist:
+        raise RuntimeError("Channel uploads playlist unavailable.")
+    page = youtube.playlistItems().list(part="contentDetails", playlistId=playlist, maxResults=limit).execute()
+    ids = [str(item.get("contentDetails", {}).get("videoId", "")) for item in page.get("items", [])]
+    ids = list(dict.fromkeys(item for item in ids if re.fullmatch(r"[A-Za-z0-9_-]{11}", item)))[:limit]
+    if not ids:
+        return []
+    videos = youtube.videos().list(part="snippet,status", id=",".join(ids), maxResults=limit).execute().get("items", [])
+    allowed = {str(item.get("id")) for item in videos if item.get("snippet", {}).get("channelId") == owner
+               and item.get("status", {}).get("privacyStatus") == "public"}
+    return [video_id for video_id in ids if video_id in allowed]
+
+
+def _reserve_auto_attempt(ledger: Path, channel: str, parent: str, day: str, *, daily_limit: int) -> bool:
+    """Reserve before any network post. Unknown outcomes stay blocked permanently."""
+    ledger.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with sqlite3.connect(ledger, timeout=30) as db:
+        os.chmod(ledger, 0o600)
+        db.execute("CREATE TABLE IF NOT EXISTS auto_attempts (channel TEXT NOT NULL, parent TEXT NOT NULL, utc_day TEXT NOT NULL, PRIMARY KEY (channel, parent))")
+        db.execute("BEGIN IMMEDIATE")
+        if db.execute("SELECT 1 FROM auto_attempts WHERE channel=? AND parent=?", (channel, parent)).fetchone():
+            return False
+        count = db.execute("SELECT COUNT(*) FROM auto_attempts WHERE channel=? AND utc_day=?", (channel, day)).fetchone()[0]
+        if count >= daily_limit:
+            return False
+        db.execute("INSERT INTO auto_attempts (channel, parent, utc_day) VALUES (?, ?, ?)", (channel, parent, day))
+        db.commit()
+        return True
+
+
+
+def _comments_disabled(exc: Exception) -> bool:
+    """Skip only the explicit YouTube commentsDisabled response; other errors stop."""
+    if getattr(getattr(exc, "resp", None), "status", None) != 403:
+        return False
+    try:
+        data = json.loads(getattr(exc, "content", b""))
+        errors = data.get("error", {}).get("errors", [])
+        return any(item.get("reason") == "commentsDisabled" for item in errors if isinstance(item, dict))
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+def auto_reply_channel(youtube: Any, *, ledger: Path = LEDGER, run_limit: int = 5, daily_limit: int = 20,
+                       now: datetime | None = None) -> int:
+    """Process recent public uploads with fixed text and a persistent daily cap.
+
+    One machine and one persistent ledger must be used. Never delete or copy the
+    ledger to bypass uncertain outcomes; duplicate protection is fail-closed.
+    """
+    if not 1 <= run_limit <= 5 or not 1 <= daily_limit <= 20:
+        raise ValueError("Limits exceed the automatic reply policy")
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("now must include a timezone")
+    channel = _channel_id(youtube)
+    day = now.astimezone(timezone.utc).date().isoformat()
+    sent = 0
+    for video_id in recent_public_videos(youtube):
+        try:
+            comments = list_comments(youtube, video_id)
+        except Exception as exc:
+            if _comments_disabled(exc):
+                continue
+            raise
+        for comment in comments:
+            reply = automatic_reply(comment["text"])
+            if not reply or not _reserve_auto_attempt(ledger, channel, comment["id"], day, daily_limit=daily_limit):
+                continue
+            try:
+                post_reviewed_reply(youtube, parent_id=comment["id"], reply=reply, ledger=ledger)
+            except AlreadyReplied:
+                continue
+            sent += 1
+            if sent >= run_limit:
+                return sent
+    return sent
+
+
 def _youtube() -> Any:
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
@@ -211,6 +301,8 @@ def main() -> None:
     auto.add_argument("video_id")
     auto.add_argument("--enable-posting", action="store_true", required=True)
     auto.add_argument("--limit", type=int, default=5)
+    channel_auto = sub.add_parser("auto-channel", help="Reply automatically on recent public uploads with persistent daily limits")
+    channel_auto.add_argument("--enable-posting", action="store_true", required=True)
     answer = sub.add_parser("reply")
     answer.add_argument("video_id")
     answer.add_argument("comment_id")
@@ -226,6 +318,10 @@ def main() -> None:
         print("Comment access connected locally. No comment was posted.")
         return
     youtube = _youtube()
+    if args.command == "auto-channel":
+        count = auto_reply_channel(youtube)
+        print(f"Опубликовано автоматических ответов: {count}.")
+        return
     if args.command == "auto":
         count = auto_reply_video(youtube, args.video_id, limit=args.limit)
         print(f"Опубликовано автоматических ответов: {count}.")

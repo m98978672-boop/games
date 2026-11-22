@@ -45,3 +45,12 @@ with tempfile.TemporaryDirectory(prefix="gameplay-smoke-") as temp:
     resumed = json.loads((resumed_output / "report.json").read_text())
     assert resumed["resumed"] is True and resumed["initial_score"] == saved["score"] and resumed["moves"] > 0, resumed
     print("Resume smoke passed:", json.dumps(resumed))
+    # Validate a separately narrated recap using actual recorded gameplay.
+    subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / "gameplay_finalize.py"), str(output)], check=True, timeout=180)
+    final = json.loads((output / "final-report.json").read_text())
+    assert final["uploaded"] is False and final["capture_seconds"] >= 10
+    movie = output / final["video"]
+    streams = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "json", str(movie)], check=True, capture_output=True, text=True)
+    kinds = {item["codec_type"] for item in json.loads(streams.stdout)["streams"]}
+    assert {"audio", "video"} <= kinds, kinds
+    print("Narrated recap smoke passed:", json.dumps(final))

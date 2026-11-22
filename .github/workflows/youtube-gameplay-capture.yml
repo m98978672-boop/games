@@ -1,0 +1,88 @@
+name: 2048 gameplay capture (no YouTube upload)
+
+on:
+  schedule:
+    # 15:00 Moscow, gate below uses anchored dates, not day-of-month parity.
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+    inputs:
+      rights_acknowledged:
+        description: 'You checked all recording and asset rights for pinned 2048'
+        type: boolean
+        required: true
+        default: false
+      seconds:
+        description: 'Recording limit in seconds (10–3600); actual game can end sooner'
+        type: string
+        required: true
+        default: '3600'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gameplay-capture-2048
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    if: >-
+      (github.event_name == 'schedule' && vars.GAMEPLAY_2048_RIGHTS_APPROVED == 'true') ||
+      (github.event_name == 'workflow_dispatch' && inputs.rights_acknowledged == true)
+    runs-on: ubuntu-latest
+    timeout-minutes: 160
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - id: gate
+        name: Check anchored two-day Moscow schedule
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = 'workflow_dispatch' ]; then
+            echo 'due=true' >> "$GITHUB_OUTPUT"
+          else
+            due=$(PYTHONPATH=youtube-bot python -c 'from datetime import datetime, timezone; from gameplay_schedule import gameplay_is_due; print(str(gameplay_is_due(datetime.now(timezone.utc))).lower())')
+            echo "due=$due" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install video and speech tools
+        if: steps.gate.outputs.due == 'true'
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
+      - name: Play pinned game without network or upload credentials
+        if: steps.gate.outputs.due == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_SECONDS: ${{ inputs.seconds }}
+        run: |
+          set -euo pipefail
+          seconds=3600
+          if [ "$EVENT" = 'workflow_dispatch' ]; then seconds="$INPUT_SECONDS"; fi
+          if ! [[ "$seconds" =~ ^[0-9]{1,4}$ ]] || [ "$seconds" -lt 10 ] || [ "$seconds" -gt 3600 ]; then
+            echo 'Recording limit must be an integer from 10 to 3600.' >&2
+            exit 1
+          fi
+          python youtube-bot/gameplay_2048.py --acknowledge-rights --seconds "$seconds"
+      - id: finalize
+        name: Verify actual recording and add factual spoken recap
+        if: steps.gate.outputs.due == 'true'
+        run: |
+          set -euo pipefail
+          mapfile -t dirs < <(find youtube-bot/data/gameplay-2048 -mindepth 1 -maxdepth 1 -type d -name 'run-*')
+          if [ "${#dirs[@]}" -ne 1 ]; then echo 'Expected one fresh recording directory' >&2; exit 1; fi
+          output="${dirs[0]}/output"
+          python youtube-bot/gameplay_finalize.py "$output"
+          echo "output=$output" >> "$GITHUB_OUTPUT"
+      - name: Save experimental recording, report and optional game state
+        if: steps.gate.outputs.due == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gameplay-2048-${{ github.run_id }}
+          path: |
+            ${{ steps.finalize.outputs.output }}/gameplay-with-recap.mp4
+            ${{ steps.finalize.outputs.output }}/final-report.json
+            ${{ steps.finalize.outputs.output }}/report.json
+            ${{ steps.finalize.outputs.output }}/gameState.json
+          if-no-files-found: error
+          retention-days: 7
