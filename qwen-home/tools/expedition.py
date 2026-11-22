@@ -343,6 +343,26 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
         return True
     return vy >= 20 and bird_y > target_y - 0.06 * h and ms_since_flap >= 90
 
+class Report:
+    def __init__(self, url):
+        self.data = {
+            'url': url,
+            'startedAt': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC'),
+            'status': 'error',
+            'steps': [],
+            'screenshots': [],
+            'hasVideo': False,
+            'textSample': '',
+        }
+
+    def step(self, action, result):
+        self.data['steps'].append({'t': round(time.monotonic() % 100000, 1), 'action': action, 'result': result})
+        print(f"[expedition] {action}: {result}", flush=True)
+
+    def save(self, out):
+        (out / 'report.json').write_text(json.dumps(self.data, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
 def robots_allows(url):
     """Вежливый гость сначала читает robots.txt чужого дома.
 
