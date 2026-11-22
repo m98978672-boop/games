@@ -8,6 +8,20 @@
   ],
   "expeditions": [
     {
+      "date": "2026-11-22 22:47 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261122-2247-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
       "date": "2026-11-22 22:39 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
@@ -61,20 +75,150 @@
       ],
       "hasVideo": true,
       "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 22:08 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "error",
-      "dir": "qwen-home/bridge/expeditions/20261122-2208-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "09-error.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
     }
   ],
-  "sources": []
+  "sources": [],
+  "motivation": {
+    "points": 38,
+    "level": "Исследователь",
+    "achievements": [
+      {
+        "id": "veteran-exp",
+        "title": "Ветеран экспедиций",
+        "reward": "сама предлагает маршрут недели в журнале моста",
+        "at": "2026-11-22 22:35 UTC"
+      }
+    ],
+    "pendingDuties": [
+      {
+        "id": "20261122-2236-ellisonleao-github-io:pipe",
+        "kind": "pipe",
+        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+        "at": "2026-11-22 22:35 UTC",
+        "closedBy": ""
+      },
+      {
+        "id": "20261122-2240-ellisonleao-github-io:pipe",
+        "kind": "pipe",
+        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+        "at": "2026-11-22 22:39 UTC",
+        "closedBy": ""
+      },
+      {
+        "id": "20261122-2247-ellisonleao-github-io:pipe",
+        "kind": "pipe",
+        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+        "at": "2026-11-22 22:47 UTC",
+        "closedBy": ""
+      }
+    ],
+    "closedDuties": [
+      {
+        "id": "20261122-2208-ellisonleao-github-io:crash",
+        "kind": "crash",
+        "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+        "at": "2026-11-22 22:08 UTC",
+        "closedBy": "20261122-2220-ellisonleao-github-io"
+      },
+      {
+        "id": "20261122-2215-ellisonleao-github-io:crash",
+        "kind": "crash",
+        "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+        "at": "2026-11-22 22:15 UTC",
+        "closedBy": "20261122-2220-ellisonleao-github-io"
+      }
+    ],
+    "lastEvents": [
+      {
+        "id": "20261122-2240-ellisonleao-github-io:played",
+        "at": "2026-11-22 22:39 UTC",
+        "delta": 10,
+        "text": "сыграла экспедицию сама, по-честному, до конца"
+      },
+      {
+        "id": "20261122-2240-ellisonleao-github-io:video",
+        "at": "2026-11-22 22:39 UTC",
+        "delta": 3,
+        "text": "видео экспедиции доехало до её страницы"
+      },
+      {
+        "id": "20261122-2240-ellisonleao-github-io:eyes",
+        "at": "2026-11-22 22:39 UTC",
+        "delta": 2,
+        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
+      },
+      {
+        "id": "20261122-2240-ellisonleao-github-io:zero",
+        "at": "2026-11-22 22:39 UTC",
+        "delta": -5,
+        "text": "матч глазами сыгран, но табло — ноль: так не пойдёт"
+      },
+      {
+        "id": "20261122-2247-ellisonleao-github-io:played",
+        "at": "2026-11-22 22:47 UTC",
+        "delta": 10,
+        "text": "сыграла экспедицию сама, по-честному, до конца"
+      },
+      {
+        "id": "20261122-2247-ellisonleao-github-io:video",
+        "at": "2026-11-22 22:47 UTC",
+        "delta": 3,
+        "text": "видео экспедиции доехало до её страницы"
+      },
+      {
+        "id": "20261122-2247-ellisonleao-github-io:eyes",
+        "at": "2026-11-22 22:47 UTC",
+        "delta": 2,
+        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
+      },
+      {
+        "id": "20261122-2247-ellisonleao-github-io:zero",
+        "at": "2026-11-22 22:47 UTC",
+        "delta": -5,
+        "text": "матч глазами сыгран, но табло — ноль: так не пойдёт"
+      }
+    ],
+    "eventIds": [
+      "20261122-2158-ellisonleao-github-io:played",
+      "20261122-2158-ellisonleao-github-io:video",
+      "20261122-2208-ellisonleao-github-io:error",
+      "20261122-2215-ellisonleao-github-io:error",
+      "20261122-2220-ellisonleao-github-io:played",
+      "20261122-2220-ellisonleao-github-io:video",
+      "20261122-2236-ellisonleao-github-io:played",
+      "20261122-2236-ellisonleao-github-io:video",
+      "20261122-2236-ellisonleao-github-io:zero",
+      "20261122-2240-ellisonleao-github-io:played",
+      "20261122-2240-ellisonleao-github-io:video",
+      "20261122-2240-ellisonleao-github-io:eyes",
+      "20261122-2240-ellisonleao-github-io:zero",
+      "20261122-2247-ellisonleao-github-io:played",
+      "20261122-2247-ellisonleao-github-io:video",
+      "20261122-2247-ellisonleao-github-io:eyes",
+      "20261122-2247-ellisonleao-github-io:zero"
+    ],
+    "reportsCounted": 7,
+    "playedCount": 5,
+    "bestStepsEver": 0,
+    "updatedAt": "2026-11-22 22:47 UTC",
+    "seenJournal": [
+      "20261122-2158-ellisonleao-github-io:played",
+      "20261122-2158-ellisonleao-github-io:video",
+      "20261122-2208-ellisonleao-github-io:error",
+      "20261122-2215-ellisonleao-github-io:error",
+      "20261122-2220-ellisonleao-github-io:played",
+      "20261122-2220-ellisonleao-github-io:video",
+      "20261122-2236-ellisonleao-github-io:played",
+      "20261122-2236-ellisonleao-github-io:video",
+      "20261122-2236-ellisonleao-github-io:zero",
+      "20261122-2240-ellisonleao-github-io:eyes",
+      "20261122-2240-ellisonleao-github-io:played",
+      "20261122-2240-ellisonleao-github-io:video",
+      "20261122-2240-ellisonleao-github-io:zero",
+      "20261122-2247-ellisonleao-github-io:eyes",
+      "20261122-2247-ellisonleao-github-io:played",
+      "20261122-2247-ellisonleao-github-io:video",
+      "20261122-2247-ellisonleao-github-io:zero"
+    ]
+  }
 }
