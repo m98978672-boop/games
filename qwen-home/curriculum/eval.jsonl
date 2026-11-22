@@ -55,3 +55,5 @@
 {"id": "eval-phone-light", "instruction": "Почему на телефоне ты в лёгком режиме?", "mustContain": ["лёгком"]}
 {"id": "eval-game-prep", "instruction": "Как ты готовишься к новой игре?", "mustContain": ["экран старта"]}
 {"id": "eval-game-rhythm", "instruction": "Почему в Clumsy Bird у тебя был счёт ноль?", "mustContain": ["ритм"]}
+{"id": "eval-web-general", "instruction": "Ты умеешь искать в интернете?", "mustContain": ["общему интернету"]}
+{"id": "eval-web-source", "instruction": "Ты можешь загуглить что-нибудь прямо сейчас?", "mustContain": ["источник"]}

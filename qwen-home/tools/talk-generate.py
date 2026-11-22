@@ -152,7 +152,7 @@ def rule_search_query(owner_text):
 def decide_search(model, tokenizer, owner_text):
     """Ask the model itself: does this need a Wikipedia search?"""
     messages = [
-        {'role': 'system', 'content': 'Ты решаешь, нужен ли поиск в русской Википедии для ответа на сообщение. Отвечай ТОЛЬКО одной строкой: «ПОИСК: короткий запрос» — если спрашивают факт, дату, имя, место, событие или просят найти информацию; или «БЕЗ ПОИСКА» — если это обычный разговор, приветствие или вопрос о самой Квене.'},
+        {'role': 'system', 'content': 'Ты решаешь, нужен ли поиск в интернете для ответа на сообщение. Отвечай ТОЛЬКО одной строкой: «ПОИСК: короткий запрос» — если спрашивают факт, дату, имя, место, событие или просят найти информацию; или «БЕЗ ПОИСКА» — если это обычный разговор, приветствие или вопрос о самой Квене.'},
         {'role': 'user', 'content': owner_text},
     ]
     raw = generate(model, tokenizer, messages, max_new=48, sample=False)
@@ -294,17 +294,102 @@ def search_with_retry(query):
     Возвращает (results, attempts): attempts — список (запрос, найдено).
     Если короткий запрос сработал после пустого длинного, урок пишется
     в журнал поисков: она запоминает, как искать лучше."""
-    results = search_wikipedia(query)
+    results = search_everywhere(query)
     attempts = [(query, len(results))]
     if not results:
         simpler = simplify_query(query)
         if simpler and simpler.lower() != (query or '').lower():
-            retry = search_wikipedia(simpler)
+            retry = search_everywhere(simpler)
             attempts.append((simpler, len(retry)))
             if retry:
                 log_lesson(query, simpler)
                 return retry, attempts
     return results, attempts
+
+
+def fetch_page_text(url, cap=1200):
+    """Открыть публичную страницу и принести чистый текст (без тегов)."""
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'KvenyaHome/1.0 (qwen-home general web search)'})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            ctype = (resp.headers.get('Content-Type') or '').lower()
+            if 'html' not in ctype and 'text' not in ctype:
+                return ''
+            raw = resp.read(300_000).decode('utf-8', errors='replace')
+    except Exception as err:
+        print(f'Страница не открылась {url}: {err}', flush=True)
+        return ''
+    raw = re.sub(r'<(script|style|noscript)[^>]*>.*?</\1>', ' ', raw, flags=re.S | re.I)
+    text = re.sub(r'<[^>]+>', ' ', raw)
+    text = re.sub(r'\s+', ' ', html_unescape(text)).strip()
+    return text[:cap]
+
+
+def html_unescape(text):
+    import html as _html
+    return _html.unescape(text)
+
+
+def parse_search_results(raw, engine):
+    """Ссылки и заголовки со страницы выдачи (DuckDuckGo Lite / Mojeek)."""
+    out = []
+    if engine == 'ddg':
+        pairs = re.findall(r'class=[\'\"]result-link[\'\"][^>]*href="([^"]+)"[^>]*>(.*?)</a>', raw, flags=re.S)
+        if not pairs:
+            pairs = re.findall(r'href="([^"]*uddg=[^"]+)"[^>]*>(.*?)</a>', raw, flags=re.S)
+        for href, title in pairs:
+            m = re.search(r'uddg=([^&]+)', href)
+            url = urllib.parse.unquote(m.group(1)) if m else href
+            title = re.sub(r'<[^>]+>', '', title).strip()
+            if url.startswith('http') and title:
+                out.append({'title': title, 'url': url})
+    else:  # mojeek: обычные ссылки наружу, без служебных доменов
+        for href, title in re.findall(r'<a[^>]+href="(https?://[^"]+)"[^>]*>(.*?)</a>', raw, flags=re.S):
+            title = re.sub(r'<[^>]+>', '', title).strip()
+            if len(title) < 4 or 'mojeek' in href or 'duckduckgo' in href:
+                continue
+            if not any(o['url'] == href for o in out):
+                out.append({'title': title, 'url': href})
+    return out[:5]
+
+
+def search_web(query, limit=3):
+    """Общий интернет без ключа: DuckDuckGo Lite, запасной — Mojeek.
+
+    Возвращает те же карточки, что и поиск по Википедии, только
+    source='web', а digest — текст самой найденной страницы."""
+    engines = [
+        ('ddg', 'https://lite.duckduckgo.com/lite/?q=' + urllib.parse.quote_plus(query)),
+        ('mojeek', 'https://www.mojeek.com/search?q=' + urllib.parse.quote_plus(query)),
+    ]
+    for engine, url in engines:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'KvenyaHome/1.0 (qwen-home general web search)'})
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                raw = resp.read(400_000).decode('utf-8', errors='replace')
+        except Exception as err:
+            print(f'Поисковик {engine} не ответил: {err}', flush=True)
+            continue
+        found = parse_search_results(raw, engine)
+        print(f'Запрос в общий интернет ({engine}): {query!r} -> {len(found)} ссылок', flush=True)
+        results = []
+        for i, item in enumerate(found[:limit]):
+            text = fetch_page_text(item['url'])
+            if text:
+                results.append({'title': item['title'], 'url': item['url'],
+                                'digest': text[:900], 'score': 10 - i,
+                                'elen': len(text), 'source': 'web', 'exact': False})
+        if results:
+            return results
+    return []
+
+
+def search_everywhere(query):
+    """Сначала общий интернет, потом Википедия — что нашлось первым."""
+    web = search_web(query)
+    if web:
+        return web
+    return search_wikipedia(query)
 
 
 def log_search(query, results, best=None):
@@ -398,13 +483,16 @@ def main():
         if results:
             print(f'Отвечает по статье: {best["title"]!r} (совпадений: {best["score"]})', flush=True)
         else:
-            context_note = f'\n\n(Ты попросила дом поискать в Википедии «{query}», но ничего не нашлось. Честно скажи владельцу: «Поискала в Википедии, но не нашла».)'
+            context_note = f'\n\n(Ты попросила дом поискать «{query}» в общем интернете и в Википедии, но ничего не нашлось. Честно скажи владельцу: «Поискала в интернете, но не нашла».)'
     # Подача «сначала текст, потом вопрос» — так модели привыкли отвечать
     # по документу; вопрос с фактами в скобках в конце она не тянет.
     if results:
+        from_web = best.get('source') == 'web'
+        src_name = 'интернета, страница' if from_web else 'русской Википедии, статья'
+        src_phrase = 'Поискала в интернете!' if from_web else 'Поискала в Википедии!'
         final_user = (f'Владелец спрашивает: {owner_text}\n\n'
-                      f'Текст из русской Википедии, статья «{best["title"]}»: {best["digest"]}\n\n'
-                      f'Ответь владельцу двумя короткими фразами по этому тексту: первая фраза — «Поискала в Википедии!», вторая фраза — сам ответ из текста СВОИМИ СЛОВАМИ, с годом из текста. Ничего больше не пиши.')
+                      f'Текст из {src_name} «{best["title"]}» ({best.get("url", "")}): {best["digest"]}\n\n'
+                      f'Ответь владельцу двумя короткими фразами по этому тексту: первая фраза — «{src_phrase}», вторая фраза — сам ответ из текста СВОИМИ СЛОВАМИ, с годом из текста. Ничего больше не пиши.')
     else:
         final_user = owner_text + context_note
     from_search = bool(results)
