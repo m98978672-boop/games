@@ -263,7 +263,7 @@ console.log('Приоритет диспетчера');
   check(returned.status === 'stored' && !returned.dispatchPriority, 'метка снимается после возврата на полку');
   const b = warehouse.spawnOrder(); b.dispatchPriority = true; b.deadline = -36;
   warehouse.step(.1);
-  check(b.status === 'missed' && !b.dispatchPriority, 'метка снимается после пропуска');
+  check(b.status === 'pending' && b.direction === 'return' && !b.dispatchPriority, 'метка снимается после пропуска, груз остаётся');
 }
 
 console.log('Автономия: усталость, срочность и обход');
@@ -558,6 +558,63 @@ console.log('Отъезд фуры без телепортации груза');
     'разгруженный груз не телепортируется при отъезде фуры');
   check(w.chooseOrder(warehouse,[w]) && w.chooseOrder(warehouse,[w]).direction === 'in',
     'остальные разгруженные места доступны после отъезда фуры');
+}
+
+
+console.log('Просроченные обычные грузы остаются физическими');
+{
+  const {warehouse, workers, envs} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const w = workers[0], order = warehouse.spawnOrder(); order.mass = 8;
+  warehouse.claim(order.id,w.id); warehouse.markCarried(order,w.id);
+  w.state.mode = 'manual'; w.state.orderId = order.id; w.state.carryingId = order.id; w.state.state = 'toDrop';
+  w.state.pos.x = -6; w.state.pos.y = -6; order.deadline = -36;
+  const score = warehouse.state.stats.score, delivered = warehouse.state.stats.delivered;
+  const before = {...order.pose};
+  warehouse.step(.05);
+  check(order.direction === 'return' && order.status === 'carried' && order.carrier === w.id && w.carryingId === order.id,
+    'обычный просроченный груз остаётся в руках');
+  check(order.pose.x === before.x && order.pose.y === before.y && warehouse.state.slots.find(s => s.id === order.slotId).orderId === order.id,
+    'груз не телепортируется, место остаётся зарезервировано');
+  warehouse.step(.05); w.update(.05,envs[w.id]);
+  check(warehouse.state.stats.missed === 1 && warehouse.state.stats.score === score - 6,
+    'обычная просрочка штрафуется один раз');
+  for (let i=0; i<1600 && w.carryingId; i++) w.update(.05,envs[w.id]);
+  check(order.status === 'stored' && !w.carryingId && warehouse.state.stats.delivered === delivered && warehouse.state.stats.score === score - 6,
+    'груз физически доставлен на полку без бонуса за закрытый заказ');
+}
+{
+  const {warehouse, workers, envs} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const w = workers[0], order = warehouse.spawnOrder(); order.mass = 8; order.deadline = -36;
+  warehouse.claim(order.id, w.id);
+  w.state.mode = 'manual'; w.state.orderId = order.id; w.state.state = 'toPick';
+  warehouse.step(.05);
+  check(order.direction === 'return' && order.status === 'claimed' && order.carrier === w.id && w.orderId === order.id,
+    'назначенный, но ещё не поднятый груз не освобождается и не исчезает');
+  for (let i=0; i<2000 && order.status !== 'stored'; i++) { warehouse.step(.05); w.update(.05,envs[w.id]); }
+  check(order.status === 'stored' && warehouse.state.stats.missed === 1 && warehouse.state.stats.delivered === 0,
+    'работник забирает и возвращает просроченный заказ');
+}
+{
+  const {warehouse, workers, envs} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  const order = warehouse.spawnOrder(); order.mass=8;
+  warehouse.drop(order, .1, order.x, order.y, {vx:1, vz:1, z:.7}); order.deadline = -36;
+  warehouse.step(.05);
+  check(order.direction === 'return' && order.status === 'pending' && order.physics && warehouse.state.stats.missed === 1,
+    'упавший просроченный груз остаётся в физическом мире');
+  const count = warehouse.state.stats.missed; warehouse.step(.05);
+  check(warehouse.state.stats.missed === count && order.physics, 'возврат движущегося груза не штрафуется повторно');
+}
+
+{
+  const {warehouse} = makeWorld({firstSpawnDelay:9999, firstTruckDelay:9999, heavyEvery:9999});
+  warehouse.state.heavyTimer = 0; warehouse.step(.05);
+  const heavy = warehouse.state.orders.find(o => o.heavy);
+  heavy.deadline = warehouse.state.time - 36;
+  const pos = {...heavy.pose}; warehouse.step(.05);
+  check(heavy.status === 'pending' && heavy.direction === 'return' && heavy.pose.x === pos.x && heavy.pose.y === pos.y,
+    'просроченный тяжёлый груз остаётся в тяжёлом отделе');
+  check(warehouse.state.slots.find(s => s.id === heavy.slotId).orderId === heavy.id,
+    'для тяжёлого груза ячейка тоже остаётся зарезервированной');
 }
 
 

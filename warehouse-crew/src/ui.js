@@ -76,6 +76,7 @@ window.WC = window.WC || {};
     dom.cameraSeg = q('camera-seg');
     dom.truckList = q('truck-list');
     dom.truckCount = q('truck-count');
+    dom.dockSummary = q('dock-summary');
     dom.speedSeg = q('speed-seg');
     dom.qbName = q('qb-name');
     dom.qbState = q('qb-state');
@@ -426,6 +427,12 @@ window.WC = window.WC || {};
     var trucks = (game.sim.state.trucks || []).slice(-3).reverse();
     var active = (game.sim.state.trucks || []).filter(function (t) { return t.status === 'working'; });
     if (dom.truckCount) dom.truckCount.textContent = String(active.length);
+    if (dom.dockSummary) {
+      var freeSlots = game.sim.state.slots.filter(function (s) { return !s.occupied; }).length;
+      var stock = game.sim.state.orders.filter(function (o) { return o.status === 'stored'; }).length;
+      dom.dockSummary.textContent = 'Свободных ячеек: ' + freeSlots + ' · грузов на полках: ' + stock;
+    }
+    U.$$('[data-call-truck]').forEach(function (button) { button.disabled = game.state.shiftEnded; });
     var key = trucks.map(function (t) {
       return t.id + ':' + t.done + '/' + t.total + ':' + t.status;
     }).join('|');
@@ -829,6 +836,8 @@ window.WC = window.WC || {};
         U.el('h3', { text: 'Тела и мозги' }),
         U.el('p', { html: '<kbd>I</kbd> открывает <b>инспектор тела</b> с 3D-разрезом: видно сердце, лёгкие, ЖКТ, печень, почки, мозг, мышцы и гормоны. Кнопка «Разрез» раздвигает кожу.' }),
         U.el('p', { html: 'Каждый рабочий думает <b>своей обученной нейросетью</b> (18 признаков → 24 → 16 → 6 решений). Она учитывает энергию, боль, стресс, груз и срочность заказа.' }),
+        U.el('h3', { text: 'Доки и просроченные грузы' }),
+        U.el('p', { text: 'В пульте можно вызвать фуру на разгрузку (нужны свободные ячейки) или на загрузку (нужен груз на полках). Спустя 35 секунд после срока заказ штрафуется один раз: коробка не исчезает, её нужно вернуть на полку без награды.' }),
         U.el('h3', { text: 'Что приносит очки' }),
         U.el('p', { html: 'Коробка доставлена в ячейку вовремя и без повреждений — плюс. Упала и разбилась — минус и травма у рабочего. Просроченный заказ — тоже минус.' }),
         U.el('h3', { text: 'На телефоне' }),
@@ -1340,13 +1349,14 @@ window.WC = window.WC || {};
       U.toast(next ? 'Озвучка включена: локальный голос устройства' : 'Озвучка выключена', 'info', 2200);
     });
     q('btn-pause').addEventListener('click', function () { game.setPaused(!game.state.paused); });
-    if (q('btn-truck')) {
-      q('btn-truck').addEventListener('click', function () {
-        var truck = game.sim.spawnTruck();
-        if (!truck) U.toast('Док занят — дождись, пока фура уедет', 'info', 2000);
-        else U.toast('Фура ' + truck.plate + ' подходит к доку: ' + (truck.kind === 'unload' ? 'разгрузка' : 'загрузка'), 'good', 2400);
+    U.$$('[data-call-truck]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var result = game.callTruck(button.getAttribute('data-call-truck'));
+        if (!result.ok) U.toast(result.reason, 'warn', 2400);
+        else U.toast('Фура ' + result.truck.plate + ' у дока: ' + (result.truck.kind === 'unload' ? 'разгрузка' : 'загрузка'), 'good', 2400);
+        renderTrucks();
       });
-    }
+    });
     q('btn-camera').addEventListener('click', function () { setCamera(WC.world.getMode() === 'third' ? 'top' : 'third'); });
     var mapButton = q('btn-map');
     if (mapButton) {
