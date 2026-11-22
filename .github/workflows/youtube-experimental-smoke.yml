@@ -6,6 +6,7 @@ on:
       - 'youtube-bot/gameplay/**'
       - 'youtube-bot/gameplay_2048.py'
       - 'youtube-bot/gameplay_bridge.py'
+      - 'youtube-bot/gameplay_qwen.py'
       - 'youtube-bot/gameplay_finalize.py'
       - 'youtube-bot/game_reviews.py'
       - 'youtube-bot/renderer.py'
@@ -115,3 +116,22 @@ jobs:
             python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/qwen-smoke.log"
           fi
           exit "$result"
+
+  qwen-gameplay:
+    # No OAuth, upload or untrusted game downloads; the model controls a test game.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install Qwen and image dependencies
+        run: pip install -r youtube-bot/requirements-autopilot.txt
+      - name: Build isolated browser bridge
+        run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Let real Qwen control the visual test game
+        env:
+          OMP_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+        run: python youtube-bot/tests/smoke_qwen_gameplay.py
