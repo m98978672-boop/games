@@ -1,0 +1,39 @@
+{
+  "url": "https://ellisonleao.github.io/clumsy-bird/",
+  "startedAt": "2026-11-22 22:08 UTC",
+  "status": "error",
+  "steps": [
+    {
+      "t": 89.9,
+      "action": "вежливый гость: проверка robots.txt",
+      "result": "robots.txt прочитан"
+    },
+    {
+      "t": 96.8,
+      "action": "открыла страницу",
+      "result": "Clumsy Bird"
+    },
+    {
+      "t": 96.9,
+      "action": "кнопка игры",
+      "result": "не нашлась — пробую играть прямо на открытой странице"
+    },
+    {
+      "t": 101.0,
+      "action": "игровой канвас",
+      "result": "найден 1200x800"
+    },
+    {
+      "t": 101.0,
+      "action": "экспедиция прервалась",
+      "result": "NameError: name 'args' is not defined"
+    }
+  ],
+  "screenshots": [
+    "01-open.png",
+    "02-after-play.png",
+    "09-error.png"
+  ],
+  "hasVideo": true,
+  "textSample": ""
+}
