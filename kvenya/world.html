@@ -61,6 +61,26 @@
           <button class="btn btn-ghost" type="button" id="kvWorldVoice" aria-pressed="false">🔇 Голос</button>
         </div>
       </div>
+      <div class="kv-world-game" aria-label="Квеня играет и записывает геймплей">
+        <div class="kv-world-game-head">
+          <span class="kv-world-pois-label">🎬 Квеня играет и снимает:</span>
+          <button class="btn btn-primary" type="button" id="kvGameStart">⭐ Играть и записывать (60 сек)</button>
+          <button class="btn btn-ghost" type="button" id="kvGameStop" disabled>⏹ Стоп</button>
+          <span class="kv-game-status" id="kvGameStatus">Игра «Собери звёзды»: она сама бежит за звёздами, а браузер пишет настоящий геймплей.</span>
+        </div>
+        <video id="kvGameVideo" class="kv-game-video" controls playsinline hidden></video>
+        <div class="kv-world-game-links">
+          <a class="btn btn-primary" id="kvVideoDownload" href="#" download="kvenya-gameplay.webm" hidden>⬇ Скачать видео (.webm)</a>
+          <a class="btn btn-ghost" id="kvSubsDownload" href="#" download="kvenya-gameplay.srt" hidden>⬇ Скачать журнал-субтитры (.srt)</a>
+        </div>
+        <ol id="kvGameJournal" class="kv-game-journal" aria-label="Журнал игры по секундам"></ol>
+        <p class="kv-note">📼 <b>Где смотреть и качать записи:</b> сразу после игры видео появится прямо здесь,
+           на этой странице — его можно посмотреть, не скачивая. Кнопками выше оно сохраняется файлом
+           <code>.webm</code> в загрузки твоего браузера, а рядом — её журнал-субтитры <code>.srt</code>:
+           положи их в одну папку с одинаковыми именами, и любой плеер покажет видео с её комментариями.
+           Честно: запись рождается в твоём браузере и никуда не отправляется — на сервер она не улетает,
+           поэтому посмотреть её можно только здесь до закрытия вкладки или из скачанного файла.</p>
+      </div>
       <p class="kv-note">Тяни мышкой или пальцем, чтобы осмотреться, колесо — приблизить.
          Кликни по домику, библиотеке или Квене — она подойдёт и что-нибудь скажет.
          Честно: мир — объёмный дом для глаз, а настоящая память Квени по-прежнему

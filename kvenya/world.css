@@ -56,3 +56,22 @@ body.is-embed .kv-head { display: none; }
   .kv-world-stage { height: 430px; }
   .kv-bubble { max-width: 200px; font-size: 12.5px; }
 }
+
+/* ---------- игра и запись геймплея ---------- */
+.kv-world-game {
+  margin-top: 14px; padding: 12px 14px;
+  border: 1px solid rgba(255, 215, 106, 0.45); border-radius: 14px;
+  background: rgba(255, 215, 106, 0.06);
+}
+.kv-world-game-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kv-game-status { font-size: 13px; font-weight: 600; color: var(--text); }
+.kv-game-video {
+  display: block; width: 100%; max-height: 430px; margin-top: 12px;
+  border-radius: 12px; background: #000;
+}
+.kv-world-game-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.kv-game-journal {
+  margin: 10px 0 0; padding-left: 22px; max-height: 130px; overflow: auto;
+  font-size: 12.5px; line-height: 1.5; color: var(--muted);
+}
+.kv-game-journal:empty { display: none; }
