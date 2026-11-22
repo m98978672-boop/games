@@ -13,6 +13,17 @@ import publish_to_supabase as publisher
 
 
 class PublisherNetworkTests(unittest.TestCase):
+    def test_diagnostic_annotation_does_not_echo_untrusted_secrets(self):
+        for message, category in (("Untrusted GitHub identity claims: workflow_ref secret123", "identity"),
+                                  ("YouTube accepted video secret123, but confirmation failed", "ambiguous-upload"),
+                                  ("Upload reservation processing secret123", "reservation"),
+                                  ("Publisher HTTP 503 secret123", "publisher"),
+                                  ("random secret123", "unknown")):
+            with self.subTest(message=message):
+                actual, safe = publisher.diagnostic_category(publisher.PublishError(message))
+                self.assertEqual(actual, category)
+                self.assertNotIn("secret123", safe)
+
     def test_github_oidc_endpoint_allows_github_actions_subdomains_only(self):
         allowed = (
             "https://pipelines.actions.githubusercontent.com/runner/token?api-version=2.0",

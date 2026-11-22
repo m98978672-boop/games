@@ -443,11 +443,35 @@ def publish(result_path: Path) -> dict[str, Any]:
     return completed
 
 
+def diagnostic_category(error: Exception) -> tuple[str, str]:
+    """Report fixed, non-secret diagnostics even when remote logs are unavailable.
+
+    Never expose server text, OAuth tokens, upload URLs, or game content in a
+    GitHub annotation. Classification is advisory, not proof of upload state.
+    """
+    text = str(error).lower()
+    if "untrusted github identity claims" in text or "oidc" in text or "github identity" in text:
+        return "identity", "GitHub identity or OIDC failed. Check workflow, branch, claims and publisher configuration."
+    if "youtube accepted" in text or "check studio before" in text or "without a video id" in text:
+        return "ambiguous-upload", "Upload result may be ambiguous. Check YouTube Studio before retrying."
+    if "reservation" in text or "different job" in text or "same slot" in text:
+        return "reservation", "Upload reservation or publish slot conflicted. Check publisher records and YouTube Studio."
+    if "publisher" in text:
+        return "publisher", "Publisher rejected or did not complete the request. Inspect the run log and publisher state."
+    if "youtube" in text or "upload" in text:
+        return "youtube-upload", "YouTube upload failed. Check YouTube Studio before any retry."
+    return "unknown", "Upload step failed. Inspect its log and YouTube Studio before any retry."
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         raise SystemExit("Usage: python publish_to_supabase.py path/to/review.result.json")
     try:
         publish(Path(sys.argv[1]))
     except Exception as exc:
+        category, message = diagnostic_category(exc)
+        # Only fixed text appears in annotations. stderr retains the existing
+        # detailed diagnostic subject to GitHub's credential masking.
+        print(f"::error title=Publish diagnostic {category}::{message}")
         print(f"Safe publish stop: {exc}", file=sys.stderr)
         raise SystemExit(1)
