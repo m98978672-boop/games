@@ -126,10 +126,14 @@ check('скорость: модель и pip живут в кэше Actions, а 
 check('разговор живёт и в main: владелец пишет прямо домой, коммит без [skip ci] — иначе сайт не пересоберётся', talkWorkflow.includes('workflow_dispatch') && talkWorkflow.includes("'main'") && talkWorkflow.includes("git commit -m 'Квеня ответила в диалоге'"));
 const learnWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'frontline-qwen-learn.yml'), 'utf8');
 check('параметры выросли и записаны: LoRA r=32 по всем слоям, контекст 2048, бюджет ответа 192', trainLearn.includes('LORA_R = 32') && trainLearn.includes('MAX_TOKENS = 2048') && trainLearn.includes('adapter_matches') && st0.adapter?.loraRank === 32 && st0.adapter?.answerTokenBudget === 192);
-check('дневник и ответы не теряются в гонке: коммиты перебазируются на свежий main', learnWorkflow.includes('git rebase') && talkWorkflow.includes('git rebase'));
+check('дневник и ответы не теряются в гонке: обучение перебазируется, разговор сливается union-ом', learnWorkflow.includes('git rebase') && talkWorkflow.includes('git merge --no-edit'));
 const relayWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-relay.yml'), 'utf8');
 check('вопрос с сайта доезжает сам: ретранслятор issue → диалог, только от владельца', relayWorkflow.includes('issues:') && relayWorkflow.includes("author_association == 'OWNER'") && relayWorkflow.includes('qwen-home/talk/dialogue.md') && relayWorkflow.includes('HEAD:main'));
 check('цепочка не глушится токеном: ретранслятор будит разговор dispatch-ом, ответы будят Pages', relayWorkflow.includes('gh workflow run frontline-qwen-talk.yml') && talkWorkflow.includes('pages/builds') && learnWorkflow.includes('pages/builds'));
+const appJs = await readFile(path.join(home, '..', 'kvenya', 'app.js'), 'utf8');
+const gitAttrs = await readFile(path.join(home, '..', '.gitattributes'), 'utf8');
+check('ответы не теряются на гонке коммитов: коммит ответа — слияние union, а не падающий rebase', gitAttrs.includes('qwen-home/talk/dialogue.md merge=union') && talkWorkflow.includes('git merge --no-edit') && !talkWorkflow.includes('git rebase') && relayWorkflow.includes('git merge --no-edit'));
+check('страница сама дожидается ответа: разговор перепроверяется каждые 30 секунд, отвеченный вопрос уходит из ожидания', appJs.includes('loadDialogue') && appJs.includes('pruneAnsweredOutbox') && appJs.includes('30000') && appJs.includes('перезагружать не нужно'));
 check('очередь вопросов не теряется: отвечает на все неотвеченные в хвосте', talkGen.includes('Без ответа вопросов') && talkGen.includes('answered_turns'));
 const liveJs = await readFile(path.join(home, '..', 'kvenya', 'live.js'), 'utf8');
 check('живой разговор через сайт: браузерная модель, её персона из дома, живой поиск', liveJs.includes('@huggingface/transformers') && liveJs.includes('persona.md') && liveJs.includes('ru.wikipedia.org/w/api.php') && liveJs.includes('Qwen2.5-0.5B-Instruct'));
