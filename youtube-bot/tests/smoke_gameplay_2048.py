@@ -20,6 +20,7 @@ with tempfile.TemporaryDirectory(prefix="gameplay-smoke-") as temp:
     finally:
         subprocess.run(["docker", "rm", "-f", name], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     report = json.loads((output / "report.json").read_text())
+    assert set(report["training"]["parameters"]) == {"emptyWeight", "positionalWeight"}, report
     assert report["moves"] > 0 and report["elapsed_seconds"] >= 10, report
     assert report["outcome"] == "time_limit" and report["uploaded"] is False, report
     video = output / Path(report["video"]).name

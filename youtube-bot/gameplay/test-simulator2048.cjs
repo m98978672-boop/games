@@ -1,0 +1,16 @@
+"use strict";
+const assert = require("node:assert/strict");
+const {move} = require("./solver2048.cjs");
+const {BASE, rng, spawn, potential, simulate, train} = require("./simulator2048.cjs");
+const board = [[2,2,2,2],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+assert.equal(potential(move(board, "ArrowLeft")) - potential(board), 8);
+const r1 = rng(19), r2 = rng(19);
+assert.equal(r1(), r2());
+const empty = Array.from({length:4}, () => Array(4).fill(0));
+assert.equal(spawn(empty, rng(1)), true);
+assert.equal(empty.flat().filter(Boolean).length, 1);
+assert.deepEqual(simulate(123, BASE, 100), simulate(123, BASE, 100));
+const result = train();
+assert.ok(Number.isFinite(result.validationScore));
+assert.ok(!result.accepted || result.validationScore > result.baselineValidationScore);
+console.log("2048 self-play emulator passed:", JSON.stringify(result));
