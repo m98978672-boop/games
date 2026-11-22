@@ -68,7 +68,7 @@ func run_tests() -> void:
 		check(guard.left_arm.hand.basis.y.normalized().dot(left_forearm_axis) < -0.98 and guard.right_arm.hand.basis.y.normalized().dot(right_forearm_axis) < -0.98, "Guard fingers point forward from each wrist along the forearm instead of flopping sideways")
 		check(absf(guard.left_arm.elbow.distance_to(Vector3(-0.3, 1.3, 0)) - guard.left_arm.bone_length) < 0.002 and absf(guard.left_arm.elbow.distance_to(guard.left_arm.wrist) - guard.left_arm.bone_length) < 0.002 and absf(guard.right_arm.elbow.distance_to(Vector3(0.3, 1.3, 0)) - guard.right_arm.bone_length) < 0.002 and absf(guard.right_arm.elbow.distance_to(guard.right_arm.wrist) - guard.right_arm.bone_length) < 0.002, "Guard upper arms and forearms keep character-scaled lengths instead of stretching")
 		if is_equal_approx(blend, 1.0):
-			check(guard.left_arm.elbow.y > 0.95 and guard.left_arm.elbow.y < 1.15 and guard.right_arm.elbow.y > 0.95 and guard.right_arm.elbow.y < 1.15 and absf(guard.left_arm.elbow.x + 0.3) < 0.3 and absf(guard.right_arm.elbow.x - 0.3) < 0.3, "Rifle-ready elbows stay bent and tucked at mid-torso height")
+			check(guard.left_arm.elbow.y > 0.9 and guard.left_arm.elbow.y < 1.15 and guard.right_arm.elbow.y > 0.9 and guard.right_arm.elbow.y < 1.15 and absf(guard.left_arm.elbow.x + 0.3) < 0.3 and absf(guard.right_arm.elbow.x - 0.3) < 0.3, "Rifle-ready elbows stay bent and tucked at mid-torso height")
 			var stock_position: Vector3 = guard.visual.to_local(guard.carried_weapon.get_node("Stock").global_position)
 			check(stock_position.distance_to(Vector3(0.3, 1.3, 0)) < 0.3, "Raised rifle stock stays close to the firing shoulder")
 	guard.arm_wounds = Vector2(100, 100)

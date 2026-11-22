@@ -90,7 +90,7 @@ func _ready() -> void:
 	right_arm = RazlomArmRig.new(visual, 1.0)
 	# Keep both elbows tucked below the shoulders while the hands hold the rifle;
 	# the first-person rigs retain their separate, already-tuned pole direction.
-	left_arm.pole_bias = Vector3(-0.7, -0.5, -0.3)
+	left_arm.pole_bias = Vector3(-0.7, -0.65, -0.3)
 	right_arm.pole_bias = Vector3(0.5, -0.5, 0.3)
 	left_arm.bone_length = 0.45
 	left_arm.max_reach = 0.89
