@@ -1,7 +1,7 @@
 {
   "kind": "actual-godot-headless-integration",
   "engine": "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
-  "elapsedSeconds": 45.1,
+  "elapsedSeconds": 46.042,
   "checks": [
     {
       "name": "import",
@@ -229,8 +229,8 @@
     },
     {
       "name": "body-reactions",
-      "exitCode": 1,
-      "passed": false,
+      "exitCode": 0,
+      "passed": true,
       "command": [
         "/tmp/godot/Godot_v4.4.1-stable_linux.x86_64",
         "--headless",
@@ -239,11 +239,9 @@
         "--script",
         "res://tests/body_reactions.gd"
       ],
-      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 50; failures: 1\nFAIL: Sleeve mesh length axis follows the solved upper arm\n",
+      "output": "Godot Engine v4.4.1.stable.official.49a5bc7b6 - https://godotengine.org\n\nBody reaction checks: 50; failures: 0\n",
       "acceptedBuildLimitations": [],
-      "unexpectedDiagnostics": [
-        "FAIL: Sleeve mesh length axis follows the solved upper arm"
-      ]
+      "unexpectedDiagnostics": []
     },
     {
       "name": "quests",
@@ -294,7 +292,7 @@
       "unexpectedDiagnostics": []
     }
   ],
-  "passed": false,
+  "passed": true,
   "limitations": [
     "Headless dummy renderer; no image/audio validation",
     "Automated mission uses teleportation and frozen enemy ticks for isolation",
