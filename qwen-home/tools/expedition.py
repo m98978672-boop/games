@@ -519,6 +519,9 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     prev_bird_y = None
                     trace = []
                     stuck_frames = 0
+                    flap_key = keys[0] if keys else 'Space'
+                    key_held = False
+                    held_since = 0.0
                     while time.monotonic() < attempt_end:
                         st = read_eyes()
                         if st is None:
@@ -567,8 +570,6 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         else:
                             stuck_frames = 0
                         gap = st['gap'] or (last_gap if now - last_gap_at < 0.8 else None)
-                        # мёртвую не дёргать: птица у самой земли или конец игры —
-                        # пробел там уже не взмах, а кнопка «в меню»
                         target = None
                         flapped = False
                         if st['bird']:
@@ -579,15 +580,21 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                                 target = gap[0] + 0.72 * (gap[1] - gap[0]) + offset
                             else:
                                 target = frame_h * 0.42 + offset
-                            if not st['game_over'] and not bird_low:
+                            # мёртвую не дёргать: лежит у земли неподвижно или
+                            # панель конца игры — там пробел уже «в меню»
+                            corpse = bird_low and abs(vy) <= 3
+                            if key_held:
+                                # держим, пока глаза не УВИДЯТ подъём: опрос игры
+                                # физически не пропустит такое нажатие
+                                if vy < -2 or now - held_since > 0.26:
+                                    page.keyboard.up(flap_key)
+                                    key_held = False
+                            elif not st['game_over'] and not corpse:
                                 ms = int((now - last_flap) * 1000) if last_flap else 9999
                                 if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy):
-                                    flap_key = keys[0] if keys else 'Space'
-                                    # на пуле держим дольше: игра опрашивает клавиши
-                                    # по своим кадрам, короткое нажатие между ними теряется
                                     page.keyboard.down(flap_key)
-                                    page.wait_for_timeout(130 if vy >= 30 else 80)
-                                    page.keyboard.up(flap_key)
+                                    key_held = True
+                                    held_since = now
                                     flaps += 1
                                     last_flap = now
                                     flapped = True
@@ -603,6 +610,12 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         # на падении и сразу после взмаха цикл короче:
                         # цена лишних 40 мс на скорости «пулей» — труба
                         page.wait_for_timeout(40 if flapped else 75)
+                    if key_held:
+                        try:
+                            page.keyboard.up(flap_key)
+                        except Exception:
+                            pass
+                        key_held = False
                     sb = scoreboard()
                     steps_now = sb.get('steps') if sb else None
                     alive = round(time.monotonic() - attempt_start, 1)
