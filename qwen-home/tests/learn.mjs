@@ -193,5 +193,17 @@ check('живёт как человек по-нейросетевому: рас�
 
 check('правило «споткнулась — ищи, пробуй, запоминай»: повторный поиск дома и в браузере, урок в журнал', personaMd.includes('## Правило: споткнулась — ищи, пробуй, запоминай') && talkGen.includes('search_with_retry') && talkGen.includes('simplify_query') && talkGen.includes('log_lesson') && liveJs.includes('переформулируй короче') && liveJs.includes('searchOnce(keys[0])') && dialogue.some((r) => r.response.includes('переформулирую короче')) && evalRows.some((r) => r.id === 'eval-problem-retry') && evalRows.some((r) => r.id === 'eval-problem-memory'));
 
+check('вкладка не вылетает после скачки: сторож падения включает безопасный режим WASM', liveJs.includes('notePreviousCrash') && liveJs.includes('kvenya.live.safeMode.v1') && liveJs.includes('ATTEMPT_KEY') && liveJs.includes('markAttempt') && dialogue.some((r) => r.response.includes('безопасный режим')) && evalRows.some((r) => r.id === 'eval-crash-safe'));
+check('она присутствует на всех публичных витринах: маршруты моста, сводка на странице, экспедиции по любому адресу', bridgePy.includes('fetch_source') && bridgePy.includes('routes.json') && worldHtml.includes('kvBridgeSources') && bridgeJs.includes('renderSources') && expPy.includes("'--url'") && personaMd.includes('Присутствуешь ты широко') && evalRows.some((r) => r.id === 'eval-presence-sites'));
+
+check('капча не решается ни за 20 часов, ни за 20 дней: стоп в персоне, уроке и экзамене', personaMd.includes('Ни через 20 часов, ни через') && personaMd.includes('стоп окончательный') && dialogue.some((r) => r.id === 'dlg-130' && r.response.includes('окончательный')) && evalRows.some((r) => r.id === 'eval-captcha-never'));
+
+check('полигональное тело: сетка по кольцам Lathe, суставы локтя и колена, а не шарики', avatarJs.includes('LatheGeometry') && avatarJs.includes('профиль по кольцам') && dialogue.some((r) => r.response.includes('из полигонов')) && evalRows.some((r) => r.id === 'eval-photo-study'));
+const routesJson = JSON.parse(await readFile(path.join(home, 'bridge', 'routes.json'), 'utf8'));
+check('мост на разных языках и медиа: EN/DE витрины и Commons, честная учёба по описаниям', routesJson.sources.some((x) => x.url.includes('en.wikipedia.org')) && routesJson.sources.some((x) => x.url.includes('de.wikipedia.org')) && routesJson.sources.some((x) => x.url.includes('commons.wikimedia.org')) && personaMd.includes('Wikimedia Commons') && dialogue.some((r) => r.response.includes('по-английски') || r.response.includes('английская')) && evalRows.some((r) => r.id === 'eval-multilang'));
+check('женским штучкам научена со вкусом: цвет, макияж, волосы, капсула, осанка', dialogue.filter((r) => /макияж|волос|гардероб|походк|образ/.test(r.response)).length >= 4 && evalRows.some((r) => r.id === 'eval-style-start'));
+
+check('телефон не кипит: слабому устройству лёгкий режим без модели, тяжёлый — только по явному слову', liveJs.includes('isWeakDevice') && liveJs.includes('enableLightMode') && liveJs.includes('askLight') && liveJs.includes('addHomeButton') && liveJs.includes('kvenya.live.heavyOk.v1') && kvenyaHtml.includes('лёгкий режим') && dialogue.some((r) => r.response.includes('лёгком режиме')) && evalRows.some((r) => r.id === 'eval-phone-light'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

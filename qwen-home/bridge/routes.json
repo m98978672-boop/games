@@ -1,0 +1,29 @@
+{
+  "note": "Витрины на разных языках, где Квеня «сидит» глазами моста: дом читает публичные страницы (русский, английский, немецкий, фото и видео Commons) и приносит ей сводку. Руками экспедиций она ходит по любому публичному адресу; внутрь, где логин или капча, не лезет.",
+  "sources": [
+    {
+      "name": "Яндекс Игры — витрина",
+      "url": "https://yandex.ru/games"
+    },
+    {
+      "name": "Портал Games — своя витрина",
+      "url": "https://m98978672-boop.github.io/games/"
+    },
+    {
+      "name": "Её 3D-мир",
+      "url": "https://m98978672-boop.github.io/games/kvenya/world.html"
+    },
+    {
+      "name": "Википедия по-английски (English)",
+      "url": "https://en.wikipedia.org"
+    },
+    {
+      "name": "Википедия по-немецки (Deutsch)",
+      "url": "https://de.wikipedia.org"
+    },
+    {
+      "name": "Wikimedia Commons — фото и видео мира",
+      "url": "https://commons.wikimedia.org"
+    }
+  ]
+}
