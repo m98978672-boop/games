@@ -99,6 +99,11 @@
             <button class="btn btn-primary" type="submit">Посмотреть</button>
           </form>
           <p class="kv-note" id="kvBridgeResult" aria-live="polite"></p>
+          <div class="kv-world-pois-label" style="margin-top:12px">👀 Витрины, где она сидит глазами моста</div>
+          <p class="kv-note">Дом регулярно читает публичные витрины из её маршрутов (<code>qwen-home/bridge/routes.json</code>) —
+             включая витрину Яндекс Игр, — и приносит ей, что там новенького. Руками экспедиций она ходит по любому
+             публичному адресу; внутрь, где просят логин или «я не робот», не лезет — смотрит витрину, как все гости.</p>
+          <div id="kvBridgeSources" aria-label="Витрины, которые читает мост Квени"></div>
           <div id="kvBridgeLetters" aria-label="Её весточки миру"></div>
           <div class="kv-world-pois-label" style="margin-top:12px">🧭 Её экспедиции (руки в интернет)</div>
           <p class="kv-note">У её дома есть браузерные руки: экспедиции идут <b>сами по расписанию</b> (понедельник, 09:37 UTC) —

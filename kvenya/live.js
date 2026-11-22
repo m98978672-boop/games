@@ -1026,6 +1026,37 @@
 
   /* ---------- модель ---------- */
 
+  /* Сторож падения вкладки: жёсткий вылет при запуске модели (WebGPU
+     или нехватка памяти) никакой .catch не ловит — вкладка просто
+     умирает. Поэтому перед каждой попыткой запуска ставим метку в
+     sessionStorage; успешный запуск её снимает. Если при загрузке
+     страницы метка стоит — прошлый запуск уронил вкладку, и мы сами
+     включаем безопасный режим (WASM, один поток, без WebGPU). */
+  var SAFE_KEY = 'kvenya.live.safeMode.v1';
+  var ATTEMPT_KEY = 'kvenya.live.attempt.v1';
+  function safeModeOn() {
+    try {
+      if (window.localStorage.getItem(SAFE_KEY) === '1') return true;
+      if (navigator.deviceMemory && navigator.deviceMemory < 4) return true;
+    } catch (err) { /* без хранилища — обычный режим */ }
+    return false;
+  }
+  function markAttempt(device) {
+    try { window.sessionStorage.setItem(ATTEMPT_KEY, device); } catch (err) { /* не критично */ }
+  }
+  function clearAttempt() {
+    try { window.sessionStorage.removeItem(ATTEMPT_KEY); } catch (err) { /* не критично */ }
+  }
+  function notePreviousCrash() {
+    try {
+      var crashed = window.sessionStorage.getItem(ATTEMPT_KEY);
+      if (!crashed) return;
+      window.sessionStorage.removeItem(ATTEMPT_KEY);
+      window.localStorage.setItem(SAFE_KEY, '1');
+      setStatus('Прошлый запуск уронил эту вкладку (обычно — WebGPU или мало памяти). Включила безопасный режим: запуск на WASM, без WebGPU — медленнее, зато вкладка не вылетит. Модель уже скачана, заново качать не нужно.', 'think');
+    } catch (err) { /* не критично */ }
+  }
+
   function startLive() {
     if (generator || busy) return;
     busy = true;
@@ -1091,11 +1122,30 @@
         }
       };
       var opts = { dtype: 'q4', progress_callback: onProgress };
+      var safe = safeModeOn();
+      try {
+        if (mod.env.backends && mod.env.backends.onnx && mod.env.backends.onnx.wasm) {
+          mod.env.backends.onnx.wasm.numThreads = safe ? 1 : Math.max(1, Math.min(4, navigator.hardwareConcurrency || 2));
+        }
+      } catch (err) { /* потоки — не критично */ }
+      if (safe) {
+        // Безопасный режим: только WASM. WebGPU у части браузеров роняет
+        // вкладку целиком при загрузке большой модели — ловить нечем.
+        markAttempt('wasm-safe');
+        setStatus('Запускаю Квеню в безопасном режиме (WASM, экономно по памяти)…');
+        return mod.pipeline('text-generation', MODEL_ID, opts)
+          .then(function (gen) { clearAttempt(); return gen; })
+          .catch(function (wasmErr) { clearAttempt(); throw wasmErr; });
+      }
       var withWebGPU = Object.assign({}, opts, { device: 'webgpu' });
+      markAttempt('webgpu');
       return mod.pipeline('text-generation', MODEL_ID, withWebGPU)
+        .then(function (gen) { clearAttempt(); return gen; })
         .catch(function (gpuErr) {
+          clearAttempt();
           setStatus('WebGPU не дал модель — запускаю на WASM (будет медленнее, но честно)…');
-          return mod.pipeline('text-generation', MODEL_ID, opts).catch(function (wasmErr) {
+          markAttempt('wasm');
+          return mod.pipeline('text-generation', MODEL_ID, opts).then(function (gen) { clearAttempt(); return gen; }).catch(function (wasmErr) { clearAttempt();
             if (!usedDedicatedStore) throw wasmErr;
             // Не оставляем владельца с ошибкой из-за нового хранилища:
             // пробуем один раз обычным браузерным кэшем. Если бита именно
@@ -1320,6 +1370,7 @@
     });
   }
 
+  notePreviousCrash();
   refreshSavedModelUi();
   window.addEventListener('pagehide', function () {
     if (busy && !generator) savePartial(true);
