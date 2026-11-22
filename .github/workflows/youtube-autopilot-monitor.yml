@@ -1,0 +1,41 @@
+name: YouTube autopilot failure monitor
+
+# Runs only after the authorized review workflow completes. It does not
+# re-run the publisher: an upload may already have reached YouTube.
+on:
+  workflow_run:
+    workflows: ["YouTube reviews autopilot (Shorts and long)"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+
+jobs:
+  report-failure:
+    if: >-
+      github.repository == 'm98978672-boop/games' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report failure without retrying a potentially uploaded video
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+          title="YouTube autopilot failed: run ${RUN_ID} attempt ${ATTEMPT}"
+          {
+            echo "Автопилот завершился ошибкой: ${RUN_URL}"
+            echo
+            echo 'Публикация автоматически не повторена: проверьте YouTube Studio и состояние задания, прежде чем запускать её снова.'
+            echo 'Ошибки и этапы доступны в журнале запуска; секреты и полные логи в это сообщение не копируются.'
+          } > "$RUNNER_TEMP/failure-report.md"
+          gh issue create --title "$title" --body-file "$RUNNER_TEMP/failure-report.md"
+          echo "Отчёт об ошибке создан; повторной загрузки нет." >> "$GITHUB_STEP_SUMMARY"
