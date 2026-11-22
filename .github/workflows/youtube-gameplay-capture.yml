@@ -85,6 +85,8 @@ jobs:
           path: |
             ${{ steps.finalize.outputs.source }}
             ${{ steps.finalize.outputs.output }}/gameplay-with-recap.mp4
+            ${{ steps.finalize.outputs.output }}/gameplay-with-recap.ru.srt
+            ${{ steps.finalize.outputs.output }}/captions-cues.json
             ${{ steps.finalize.outputs.output }}/final-report.json
             ${{ steps.finalize.outputs.output }}/report.json
             ${{ steps.finalize.outputs.output }}/commentary-events.json

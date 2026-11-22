@@ -9,6 +9,9 @@ on:
       - 'youtube-bot/gameplay_qwen.py'
       - 'youtube-bot/prepare_kvenya_adapter.py'
       - 'youtube-bot/gameplay_finalize.py'
+      - 'youtube-bot/gameplay_captions.py'
+      - 'youtube-bot/gameplay_edit.py'
+      - 'youtube-bot/gameplay_release_plan.py'
       - 'youtube-bot/game_reviews.py'
       - 'youtube-bot/renderer.py'
       - 'youtube-bot/script_contract.py'
@@ -36,6 +39,8 @@ jobs:
           python -m pip install 'Pillow>=10.4,<13.0'
       - name: Verify long-review CFR from real FFmpeg chapters
         run: python youtube-bot/tests/smoke_render_fps.py
+      - name: Split synthetic recorded video and verify subtitles
+        run: python youtube-bot/tests/smoke_gameplay_edit.py
       - name: Test deterministic 2048 self-play emulator
         run: node youtube-bot/gameplay/test-simulator2048.cjs
       - name: Render complete ten-chapter long pipeline at reduced test resolution
