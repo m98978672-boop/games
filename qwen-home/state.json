@@ -10,8 +10,8 @@
   "revision": "2fc06364715b967f1860aea9cf38778875588b17",
   "adapterRelease": "frontline-qwen-home",
   "internetSearch": {
-    "engine": "ru.wikipedia.org",
-    "mode": "по запросу во время разговора: модель решает, нужен ли поиск, дом приносит текст статей, журнал — memory/search-log.md",
+    "engine": "общий интернет (DuckDuckGo Lite / Mojeek без ключа, дом открывает страницы) + ru.wikipedia.org",
+    "mode": "по запросу во время разговора: модель решает, нужен ли поиск; дом ищет по общему интернету, при пустоте — в Википедии; пустой ответ переформулируется и ищется ещё раз; журнал — memory/search-log.md",
     "since": "2026-11-16"
   },
   "totalSteps": 960,
