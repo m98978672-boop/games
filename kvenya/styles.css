@@ -352,6 +352,7 @@ body.is-embed .kv-shell { padding-top: 12px; }
 .kv-live-status.is-err { color: #e88a8a; }
 .kv-live-bar { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin-bottom: 10px; }
 .kv-live-bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent-2), var(--violet)); transition: width 0.4s ease; }
+.kv-live-storage { margin: 2px 0 10px; }
 .kv-live-chat { max-height: 430px; }
 
 /* ---------- живой чат: тумблеры и мысли ---------- */

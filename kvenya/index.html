@@ -59,12 +59,14 @@
       <section class="kv-card kv-live" aria-label="Живой разговор с Квеней прямо на сайте">
         <h2>⚡ Квеня прямо здесь — через сайт, без файлов</h2>
         <p class="kv-note">Нажми «Включить живую Квеню» — маленькая модель запустится прямо
-          в твоём браузере (WebGPU или WASM, ~400 МБ скачается один раз и останется в кэше
-          браузера). Характер и манеры она берёт из своей настоящей персоны
+          в твоём браузере (WebGPU или WASM, ~400 МБ скачается один раз и останется в хранилище
+          этого же браузера). Если загрузка прервётся, готовые файлы не пропадут: при продолжении
+          заново скачаются только недостающие. Характер и манеры она берёт из своей настоящей персоны
           <code>qwen-home/talk/persona.md</code>, а факты при нужде ищет в живой русской
           Википедии — как дома. Никаких файлов, issue и ожидания: спросила — ответила.</p>
         <div id="kvLiveStatus" class="kv-live-status">Живая Квеня ещё не включена.</div>
         <div class="kv-live-bar" aria-hidden="true"><i id="kvLiveBar"></i></div>
+        <p id="kvLiveStorage" class="kv-note kv-live-storage">💾 Проверяю, не осталась ли Квеня в этом браузере…</p>
         <div id="kvLiveChat" class="kv-chat kv-live-chat" aria-live="polite">
           <div class="kv-loading">Здесь будет живой разговор. Квеня уже машет из дома: «Включай, я тут!»</div>
         </div>
@@ -246,7 +248,7 @@
               <button class="btn btn-ghost" type="button" id="kvBuildRandom">🎲 Сюрприз</button>
             </div>
             <button class="btn btn-ghost" type="button" id="kvDownloadBtn">⬇ Скачать модель (.obj)</button>
-            <p class="kv-note">Что на сцене — её фигурка или постройка — уедет файлом .obj: можно открыть в Blender или любом просмотрщике 3D. Так Квеня отдаёт свои модельки на скачивание.</p>
+            <p class="kv-note">Что на сцене — её фигурка или постройка — уедет файлом .obj: можно открыть в Blender или любом просмотрщике 3D. Если не скачать сразу, сцена останется в этом браузере: после перезагрузки страницы её не придётся собирать заново.</p>
           </div>
           <div class="kv-verdict" id="kvVerdict">
             <div class="kv-score"><b id="kvScoreNum">—</b><span>из 100</span></div>

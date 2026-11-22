@@ -162,9 +162,42 @@
   var stageEl = document.getElementById('kvStage');
   var THREE = null;
   var renderer = null, scene = null, camera = null, modelGroup = null;
-  var buildGroup = null, stageMode = 'avatar', pendingParts = [], lastPartAt = 0, currentBuildName = '';
+  var buildGroup = null, stageMode = 'avatar', pendingParts = [], lastPartAt = 0, currentBuildName = '', currentBuildColor = null;
   var targetRotY = 0.4, targetRotX = 0.05, dragging = false, lastX = 0, lastY = 0;
-  var current = randomVariant(mulberry32(20261121));
+
+  // Собранная фигурка и последняя постройка переживают перезагрузку:
+  // если владелец не скачал .obj сразу, моделька останется и файл можно
+  // будет забрать позже, не собирая всё заново.
+  var STUDIO_KEY = 'kvenya.studio.v1';
+  function loadStudioState() {
+    try {
+      var raw = window.localStorage.getItem(STUDIO_KEY);
+      var data = raw ? JSON.parse(raw) : null;
+      return data && typeof data === 'object' ? data : null;
+    } catch (err) { return null; }
+  }
+  function validStudioVariant(v) {
+    if (!v || typeof v !== 'object') return null;
+    return {
+      skin: byId(SKINS, v.skin).id,
+      hair: byId(HAIR_COLORS, v.hair).id,
+      len: byId(HAIR_LENS, v.len).id,
+      dress: byId(DRESSES, v.dress).id,
+      acc: byId(ACCESSORIES, v.acc).id,
+      seed: Number(v.seed) || 1
+    };
+  }
+  var savedStudio = loadStudioState();
+  var current = validStudioVariant(savedStudio && savedStudio.variant) || randomVariant(mulberry32(20261121));
+  function persistStudioState() {
+    try {
+      window.localStorage.setItem(STUDIO_KEY, JSON.stringify({
+        variant: current,
+        mode: stageMode,
+        build: currentBuildName ? { kind: currentBuildName, color: currentBuildColor } : null
+      }));
+    } catch (err) { /* студия работает и без сохранения */ }
+  }
 
   function loadThree() {
     if (window.THREE) return Promise.resolve(window.THREE);
@@ -310,6 +343,9 @@
     scene.add(buildGroup);
 
     buildAvatar(current);
+    if (restoredBuild) {
+      restoreBuild(restoredBuild.kind, restoredBuild.color, !!(savedStudio && savedStudio.mode === 'build'));
+    }
 
     var canvas = renderer.domElement;
     canvas.style.cursor = 'grab';
@@ -469,11 +505,59 @@
     } }
   };
 
+  var restoredBuild = (savedStudio && savedStudio.build && BUILDERS[savedStudio.build.kind])
+    ? {
+      kind: savedStudio.build.kind,
+      color: typeof savedStudio.build.color === 'number' ? savedStudio.build.color : HER_COLORS[0]
+    }
+    : null;
+  if (restoredBuild) {
+    currentBuildName = restoredBuild.kind;
+    currentBuildColor = restoredBuild.color;
+  }
+
+  function clearBuildGroup() {
+    if (!buildGroup) return;
+    while (buildGroup.children.length) {
+      var child = buildGroup.children[0];
+      buildGroup.remove(child);
+      child.traverse(function (o) { if (o.geometry) o.geometry.dispose(); });
+    }
+  }
+
+  function restoreBuild(kind, color, show) {
+    var b = BUILDERS[kind];
+    if (!b || !buildGroup) return;
+    currentBuildName = kind;
+    currentBuildColor = color;
+    clearBuildGroup();
+    pendingParts = [];
+    b.parts(color).forEach(function (part) {
+      part.visible = true;
+      part.scale.setScalar(1);
+      buildGroup.add(part);
+    });
+    setStageMode(show ? 'build' : 'avatar');
+    persistStudioState();
+  }
+
+  function finishPendingParts() {
+    if (!buildGroup) return;
+    while (pendingParts.length) {
+      var part = pendingParts.shift();
+      part.visible = true;
+      part.scale.setScalar(1);
+      buildGroup.add(part);
+    }
+    if (typeof onBuildDone === 'function') onBuildDone();
+  }
+
   function onBuildDone() {
     var b = BUILDERS[currentBuildName];
     if (!b) return;
+    persistStudioState();
     scoreNumEl.textContent = '3D';
-    verdictTextEl.textContent = 'Построила: ' + b.name + '! ' + b.comment + ' Модельку можно скачать кнопкой ниже.';
+    verdictTextEl.textContent = 'Построила: ' + b.name + '! ' + b.comment + ' Моделька останется в студии — файл .obj можно скачать и позже.';
   }
 
   function startBuild(kind) {
@@ -481,17 +565,15 @@
     if (!b || !buildGroup) return;
     currentBuildName = kind;
     // сцену — начисто
-    while (buildGroup.children.length) {
-      var child = buildGroup.children.pop();
-      child.traverse(function (o) { if (o.geometry) o.geometry.dispose(); });
-    }
+    clearBuildGroup();
     pendingParts = [];
     setStageMode('build');
     var rnd = mulberry32((Date.now() % 2147483647) + kind.length * 131);
-    var color = HER_COLORS[Math.floor(rnd() * HER_COLORS.length)];
-    pendingParts = b.parts(color);
+    currentBuildColor = HER_COLORS[Math.floor(rnd() * HER_COLORS.length)];
+    pendingParts = b.parts(currentBuildColor);
+    persistStudioState();
     scoreNumEl.textContent = '…';
-    verdictTextEl.textContent = 'Строю ' + b.name + ' по частям… смотри, как растёт!';
+    verdictTextEl.textContent = 'Строю ' + b.name + ' по частям… смотри, как растёт! Она останется здесь, даже если не скачаешь файл сразу.';
   }
 
   /* ---------- скачивание модельки (.obj) ---------- */
@@ -554,6 +636,7 @@
     current = v;
     syncControls();
     if (studioReady) { buildAvatar(v); setStageMode('avatar'); }
+    persistStudioState();
     if (!silent) {
       scoreNumEl.textContent = '—';
       verdictTextEl.textContent = 'Образ обновила! Нажми «Оцени мой вариант» — посмотрю в зеркало и скажу честно.';
@@ -662,6 +745,7 @@
   });
 
   var buildKindEl = document.getElementById('kvBuildKind');
+  if (buildKindEl && restoredBuild) buildKindEl.value = restoredBuild.kind;
   document.getElementById('kvBuildBtn').addEventListener('click', function () {
     ensureStudio().then(function () {
       if (studioReady) startBuild(buildKindEl ? buildKindEl.value : 'house');
@@ -680,6 +764,7 @@
   document.getElementById('kvDownloadBtn').addEventListener('click', function () {
     ensureStudio().then(function () {
       if (!studioReady) return;
+      if (stageMode === 'build' && pendingParts.length) finishPendingParts();
       if (stageMode === 'build' && buildGroup && buildGroup.children.length) {
         exportOBJ(buildGroup, 'kvenya-build-' + (currentBuildName || 'scene') + '.obj');
         verdictTextEl.textContent = 'Моделька уехала к тебе файлом .obj! Открой её в Blender или просмотрщике 3D — и вспомни меня.';

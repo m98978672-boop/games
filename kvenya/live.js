@@ -5,6 +5,9 @@
    persona.md (читается в рантайме, всегда в синхроне с домом), факты
    при нужде ищутся в живой русской Википедии тем же приёмом, что дома:
    ключевые слова → статья с точным названием → короткая выжимка.
+   Скачанные файлы модели остаются в постоянном хранилище этого браузера:
+   при следующем визите Квеня берётся из сохранённой копии, а если первая
+   загрузка прервалась, готовые файлы не скачиваются заново.
    Честная граница: это её характер на гостевой браузерной модели, а не
    домашний LoRA-адаптер — тот отвечает в разговоре из файлов ниже. */
 (function () {
@@ -12,9 +15,13 @@
 
   var CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3/dist/transformers.min.js';
   var MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+  var MODEL_CACHE_NAME = 'transformers-cache';
+  var SAVE_KEY = 'kvenya.liveModel.saved.v1';
+  var PARTIAL_KEY = 'kvenya.liveModel.partial.v1';
 
   var statusEl = document.getElementById('kvLiveStatus');
   var barEl = document.getElementById('kvLiveBar');
+  var storageEl = document.getElementById('kvLiveStorage');
   var chatEl = document.getElementById('kvLiveChat');
   var form = document.getElementById('kvLiveForm');
   var input = document.getElementById('kvLiveInput');
@@ -26,6 +33,11 @@
   var personaText = '';
   var history = [];
   var busy = false;
+  var startingFromCache = false;
+  var persistentStorageGranted = false;
+  var completedFiles = [];
+  var progressByFile = {};
+  var lastProgressSave = 0;
 
   /* ---------- голос: она говорит, её можно спросить голосом ---------- */
 
@@ -99,6 +111,150 @@
   }
   function setProgress(pct) {
     barEl.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  }
+
+  /* ---------- постоянное жильё модели в этом браузере ---------- */
+
+  function readStore(key) {
+    try {
+      var raw = window.localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch (err) { return null; }
+  }
+  function writeStore(key, value) {
+    try {
+      if (value) window.localStorage.setItem(key, JSON.stringify(value));
+      else window.localStorage.removeItem(key);
+      return true;
+    } catch (err) { return false; }
+  }
+  function rememberFile(file) {
+    if (file && completedFiles.indexOf(file) < 0) completedFiles.push(file);
+  }
+  function savePartial(force) {
+    var now = Date.now();
+    if (!force && now - lastProgressSave < 1500) return;
+    lastProgressSave = now;
+    writeStore(PARTIAL_KEY, {
+      model: MODEL_ID,
+      dtype: 'q4',
+      updatedAt: now,
+      filesDone: completedFiles.slice()
+    });
+  }
+  function storagePersisted() {
+    if (!navigator.storage || !navigator.storage.persisted) return Promise.resolve(false);
+    return navigator.storage.persisted().then(function (yes) { return !!yes; }).catch(function () { return false; });
+  }
+  function requestPersistentStorage() {
+    if (!navigator.storage) return Promise.resolve(false);
+    return storagePersisted().then(function (already) {
+      if (already) return true;
+      if (!navigator.storage.persist) return false;
+      return navigator.storage.persist();
+    }).then(function (yes) {
+      persistentStorageGranted = !!yes;
+      return persistentStorageGranted;
+    }).catch(function () { return false; });
+  }
+  function fileNameFromUrl(url) {
+    var marker = '/resolve/main/';
+    var at = url.indexOf(marker);
+    var file = at >= 0 ? url.slice(at + marker.length) : url.split('/').pop();
+    try { return decodeURIComponent(String(file || '').split('?')[0]); }
+    catch (err) { return String(file || '').split('?')[0]; }
+  }
+  function inspectModelCache() {
+    if (!('caches' in window)) {
+      return Promise.resolve({ supported: false, files: [], complete: false, partial: false });
+    }
+    return window.caches.open(MODEL_CACHE_NAME).then(function (cache) { return cache.keys(); })
+      .then(function (requests) {
+        var files = [];
+        requests.forEach(function (request) {
+          var url = request && request.url ? request.url : '';
+          if (url.indexOf(MODEL_ID) < 0) return;
+          var file = fileNameFromUrl(url);
+          if (file && files.indexOf(file) < 0) files.push(file);
+        });
+        var saved = readStore(SAVE_KEY);
+        var expected = saved && Array.isArray(saved.files) ? saved.files : [];
+        var hasModel = files.some(function (file) { return /\.onnx($|\?)/.test(file); });
+        var allExpected = expected.length > 0 && expected.every(function (file) { return files.indexOf(file) >= 0; });
+        // Запись могла остаться от версии страницы до этой проверки: набор
+        // файлов с самой моделью внутри тоже честно считаем сохранённой Квеней.
+        var complete = !!hasModel && (allExpected || files.length >= 4);
+        return { supported: true, files: files, complete: complete, partial: files.length > 0 && !complete };
+      })
+      .catch(function () { return { supported: false, files: [], complete: false, partial: false }; });
+  }
+  function rememberSavedModel() {
+    return inspectModelCache().then(function (state) {
+      if (!state.complete) return false;
+      writeStore(SAVE_KEY, {
+        model: MODEL_ID,
+        dtype: 'q4',
+        savedAt: Date.now(),
+        files: state.files.slice()
+      });
+      writeStore(PARTIAL_KEY, null);
+      completedFiles = state.files.slice();
+      return true;
+    }).catch(function () { return false; });
+  }
+  function refreshSavedModelUi() {
+    if (generator || busy || !startBtn) return Promise.resolve(false);
+    return Promise.all([inspectModelCache(), storagePersisted()]).then(function (values) {
+      var state = values[0];
+      var persisted = values[1];
+      if (state.complete) {
+        if (!readStore(SAVE_KEY)) {
+          writeStore(SAVE_KEY, { model: MODEL_ID, dtype: 'q4', savedAt: Date.now(), files: state.files.slice(), inferred: true });
+        }
+        writeStore(PARTIAL_KEY, null);
+        completedFiles = state.files.slice();
+        startBtn.textContent = '▶ Включить Квеню — уже скачана';
+        setStatus(persisted
+          ? 'Квеня уже живёт в этом браузере и закреплена в постоянном хранилище. Скачивать ещё раз не нужно.'
+          : 'Квеня уже скачана в этот браузер. Нажми включить — возьму её из сохранённой копии, без новой загрузки.', 'ok');
+        if (storageEl) {
+          storageEl.textContent = persisted
+            ? '💾 Сохранённая Квеня на месте: при следующем визите загрузка не понадобится.'
+            : '💾 Сохранённая Квеня на месте. При включении попрошу браузер закрепить её постоянным хранением.';
+        }
+        setProgress(100);
+        return true;
+      }
+      var partial = readStore(PARTIAL_KEY);
+      if (state.partial || partial) {
+        if (state.files.length) {
+          writeStore(PARTIAL_KEY, { model: MODEL_ID, dtype: 'q4', updatedAt: Date.now(), filesDone: state.files.slice() });
+          completedFiles = state.files.slice();
+        }
+        startBtn.textContent = '▶ Продолжить загрузку Квени';
+        setStatus('Нашлась недогруженная Квеня: готовые файлы остались в браузере. Продолжим — их заново не качаем.', 'think');
+        if (storageEl) {
+          storageEl.textContent = '💾 Уже сохранено файлов модели: ' + completedFiles.length + '. Продолжение скачает только недостающее.';
+        }
+        return false;
+      }
+      if (readStore(SAVE_KEY)) writeStore(SAVE_KEY, null);
+      if (storageEl) {
+        storageEl.textContent = state.supported
+          ? '💾 В этом браузере Квеня пока не сохранена. Первая загрузка — около 400 МБ; после неё она останется здесь.'
+          : '💾 Этот браузер не даёт постоянного кэша модели: Квене придётся скачиваться при каждом визите.';
+      }
+      return false;
+    }).catch(function () { return false; });
+  }
+  function overallProgress() {
+    var loaded = 0;
+    var total = 0;
+    Object.keys(progressByFile).forEach(function (file) {
+      var item = progressByFile[file];
+      if (item.total > 0) { loaded += item.loaded || 0; total += item.total; }
+    });
+    return total > 0 ? (loaded / total) * 100 : 0;
   }
 
   function bubble(who, text) {
@@ -200,15 +356,44 @@
     busy = true;
     startBtn.disabled = true;
     setStatus('Квеня переезжает в твой браузер: читаю её персону…');
+    // Просим у браузера постоянное жильё сразу по клику: так он не выселит
+    // Квеню из временного кэша при первой же нехватке места.
+    var persistPromise = requestPersistentStorage();
     loadPersona().then(function () {
-      setStatus('Скачиваю её мозги для браузера (~400 МБ, один раз)…');
+      return persistPromise;
+    }).then(function () {
+      return inspectModelCache();
+    }).then(function (state) {
+      startingFromCache = !!state.complete;
+      completedFiles = state.files ? state.files.slice() : completedFiles;
+      if (startingFromCache) setStatus('Квеня нашлась в сохранённой копии — открываю без скачивания…');
+      else if (state.partial) setStatus('Продолжаю загрузку: готовые файлы уже на месте, качаю только недостающее…');
+      else setStatus('Скачиваю её мозги для браузера (~400 МБ, один раз) и сохраняю здесь…');
       return import(CDN);
     }).then(function (mod) {
       mod.env.allowLocalModels = false;
+      mod.env.allowRemoteModels = true;
+      mod.env.useBrowserCache = typeof window.caches !== 'undefined';
+      mod.env.useCustomCache = false;
       var onProgress = function (e) {
-        if (e && e.status === 'progress' && typeof e.progress === 'number') {
-          setProgress(e.progress);
-          setStatus('Скачиваю модель: ' + Math.round(e.progress) + '% (' + (e.file || 'файлы') + ')');
+        if (!e) return;
+        if (e.status === 'progress' && e.file) {
+          progressByFile[e.file] = {
+            loaded: typeof e.loaded === 'number' ? e.loaded : 0,
+            total: typeof e.total === 'number' ? e.total : 0,
+            progress: typeof e.progress === 'number' ? e.progress : 0
+          };
+          var pct = overallProgress() || e.progress || 0;
+          setProgress(pct);
+          setStatus((startingFromCache
+            ? 'Беру Квеню из сохранённого хранилища: '
+            : 'Скачиваю и сохраняю Квеню: ') + Math.round(pct) + '% (' + e.file + ')');
+          savePartial(false);
+        } else if (e.status === 'done' && e.file) {
+          rememberFile(e.file);
+          savePartial(true);
+        } else if (e.status === 'ready') {
+          setProgress(100);
         }
       };
       var opts = { dtype: 'q4', progress_callback: onProgress };
@@ -220,21 +405,46 @@
         });
     }).then(function (gen) {
       generator = gen;
-      busy = false;
-      setProgress(100);
-      setStatus('Квеня здесь! Спрашивай — отвечаю сразу, прямо на этой странице.', 'ok');
-      chatEl.textContent = '';
-      bubble('kvenya', 'Привет! Я Квеня — теперь и прямо здесь, в твоём браузере. Спрашивай о чём хочешь: могу и в Википедии поискать, только скажи «поищи».');
-      speak('Привет! Я Квеня. Спрашивай!');
-      input.disabled = false;
-      sendBtn.disabled = false;
-      startBtn.style.display = 'none';
-      input.focus();
+      return rememberSavedModel().then(function (saved) {
+        return requestPersistentStorage().then(function (persisted) {
+          return { saved: saved, persisted: persisted };
+        });
+      }).catch(function () {
+        return { saved: false, persisted: false };
+      }).then(function (storage) {
+        busy = false;
+        setProgress(100);
+        if (storage.saved) {
+          setStatus(storage.persisted
+            ? 'Квеня здесь! И она закреплена в этом браузере — в следующий раз скачивать не нужно.'
+            : 'Квеня здесь! Она сохранена в этом браузере — в следующий раз скачивать не нужно.', 'ok');
+          if (storageEl) {
+            storageEl.textContent = storage.persisted
+              ? '💾 Квеня закреплена в постоянном хранилище этого браузера.'
+              : '💾 Квеня сохранена в кэше этого браузера; постоянное хранение браузер пока не подтвердил.';
+          }
+        } else {
+          setStatus('Квеня здесь! Но браузер не подтвердил сохранение файлов — при следующем визите загрузка может повториться.', 'think');
+          if (storageEl) storageEl.textContent = '💾 Браузер не подтвердил сохранение модели. Она работает сейчас, но может скачаться снова.';
+        }
+        chatEl.textContent = '';
+        bubble('kvenya', 'Привет! Я Квеня — теперь и прямо здесь, в твоём браузере. Спрашивай о чём хочешь: могу и в Википедии поискать, только скажи «поищи».');
+        speak('Привет! Я Квеня. Спрашивай!');
+        input.disabled = false;
+        sendBtn.disabled = false;
+        startBtn.style.display = 'none';
+        input.focus();
+      });
     }).catch(function (err) {
       busy = false;
+      savePartial(true);
       startBtn.disabled = false;
+      startBtn.textContent = completedFiles.length ? '▶ Продолжить загрузку Квени' : '▶ Включить живую Квеню';
       setProgress(0);
-      setStatus('Живая модель не запустилась (' + (err && err.message ? err.message : 'ошибка загрузки') + '). Настоящая Квеня ждёт в разговоре ниже — она отвечает через дом.', 'err');
+      setStatus('Загрузка прервалась (' + (err && err.message ? err.message : 'ошибка загрузки') + '). Готовые файлы уже остались в браузере — нажми ещё раз, их заново не качаем. Настоящая Квеня ждёт в разговоре ниже.', 'err');
+      if (storageEl && completedFiles.length) {
+        storageEl.textContent = '💾 Сохранено готовых файлов: ' + completedFiles.length + '. Продолжение не начнёт их скачивать заново.';
+      }
     });
   }
 
@@ -316,6 +526,11 @@
       input.focus();
     });
   }
+
+  refreshSavedModelUi();
+  window.addEventListener('pagehide', function () {
+    if (busy && !generator) savePartial(true);
+  });
 
   startBtn.addEventListener('click', startLive);
   form.addEventListener('submit', function (ev) {

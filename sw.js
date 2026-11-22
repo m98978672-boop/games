@@ -1,5 +1,8 @@
 /* Games — лёгкий Service Worker для мгновенного старта и офлайн-витрины. */
 const CACHE_NAME = 'games-store-v10';
+// Кэш живой Квени нельзя сносить при обновлении витрины: там её модель
+// на ~400 МБ, и пользователь специально скачивал её один раз.
+const PRESERVED_CACHES = new Set([CACHE_NAME, 'transformers-cache']);
 const PRECACHE = [
   './',
   './index.html',
@@ -26,7 +29,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => !PRESERVED_CACHES.has(k)).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
