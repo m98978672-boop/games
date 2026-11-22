@@ -20,10 +20,12 @@ IMAGE = "games-playthrough-2048-experiment:1"
 MAX_LINE = 3_000_000
 
 
-def docker_command(game_dir: Path, container_name: str) -> list[str]:
+def docker_command(game_dir: Path, container_name: str, entry: str = "index.html") -> list[str]:
     game = game_dir.resolve(strict=True)
-    if not game.is_dir() or not (game / "index.html").is_file():
-        raise ValueError("A static game directory with index.html is required")
+    if not isinstance(entry, str) or not re.fullmatch(r"(?:[a-zA-Z0-9_-]+/)*index\.html", entry):
+        raise ValueError("Invalid game entry path")
+    if not game.is_dir() or not (game / entry).is_file():
+        raise ValueError("A static game directory with the selected index.html is required")
     if not re.fullmatch(r"games-bridge-[a-f0-9]{32}", container_name):
         raise ValueError("Invalid container name")
     if any(c in str(game) for c in (",", "\n", "\r")):
@@ -36,18 +38,18 @@ def docker_command(game_dir: Path, container_name: str) -> list[str]:
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "256",
             "--memory", "2g", "--cpus", "2", "--user", f"{os.getuid()}:{os.getgid()}",
             "--tmpfs", "/tmp:rw,nosuid,nodev,size=512m", "--shm-size", "256m",
-            "--mount", f"type=bind,src={game},dst=/game,readonly", "--entrypoint", "node", IMAGE,
+            "--mount", f"type=bind,src={game},dst=/game,readonly", "--env", f"BRIDGE_ENTRY={entry}", "--entrypoint", "node", IMAGE,
             "/runner/browser_bridge.cjs"]
 
 
 class BrowserBridge:
-    def __init__(self, game_dir: Path, *, rights_acknowledged: bool = False):
+    def __init__(self, game_dir: Path, *, rights_acknowledged: bool = False, entry: str = "index.html"):
         if not rights_acknowledged:
             raise ValueError("Review game, assets and recording rights before starting")
         if shutil.which("docker") is None:
             raise RuntimeError("Docker is required; never run the game on the host")
         self.name = "games-bridge-" + uuid.uuid4().hex
-        command = docker_command(game_dir, self.name)
+        command = docker_command(game_dir, self.name, entry)
         self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.DEVNULL, bufsize=0)
         self.buffer = b""
@@ -108,7 +110,7 @@ class BrowserBridge:
         self.close()
 
 
-def run_agent(game_dir: Path, agent, *, rights_acknowledged: bool = False, max_steps: int = 100):
+def run_agent(game_dir: Path, agent, *, rights_acknowledged: bool = False, max_steps: int = 100, entry: str = "index.html"):
     """Call agent(png_bytes, step) outside the container; return None to stop.
 
     No game-provided text is passed as instructions and no model is supplied.
@@ -117,7 +119,7 @@ def run_agent(game_dir: Path, agent, *, rights_acknowledged: bool = False, max_s
     import base64
     if type(max_steps) is not int or not 1 <= max_steps <= 10000:
         raise ValueError("max_steps must be 1..10000")
-    with BrowserBridge(game_dir, rights_acknowledged=rights_acknowledged) as bridge:
+    with BrowserBridge(game_dir, rights_acknowledged=rights_acknowledged, entry=entry) as bridge:
         observation = bridge.receive()
         steps = 0
         while steps < max_steps:

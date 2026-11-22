@@ -43,3 +43,26 @@ with tempfile.TemporaryDirectory(prefix='bridge-test-') as temp:
     result = run_agent(game, test_agent, rights_acknowledged=True, max_steps=4)
     assert result == {'steps': 2, 'status': 'agent_stopped', 'uploaded': False}, result
 print('Browser bridge: screenshot, keyboard, mouse and invalid actions passed in isolated container')
+
+# A second test uses an actual, more complex repository game, not the toy fixture.
+# Copy only its public assets and shared scripts: never mount the whole checkout.
+import shutil
+from PIL import ImageChops, ImageStat
+repo = Path(__file__).resolve().parents[2]
+with tempfile.TemporaryDirectory(prefix='bridge-taxi-') as temp:
+    root = Path(temp) / 'public'
+    root.mkdir()
+    shutil.copytree(repo / 'night-taxi', root / 'night-taxi', ignore=shutil.ignore_patterns('node_modules', 'tests', 'src', 'package*.json'))
+    shutil.copytree(repo / 'shared', root / 'shared')
+    with BrowserBridge(root, rights_acknowledged=True, entry='night-taxi/index.html') as bridge:
+        initial = bridge.receive(timeout=60)
+        assert initial['type'] == 'observation', initial
+        # Give scripts time to initialize; T opens the in-game tablet.
+        bridge.step({'duration_ms':2000})
+        before = bridge.step({'duration_ms':300})
+        opened = bridge.step({'keys':['KeyT'], 'duration_ms':500})
+        assert before['type'] == opened['type'] == 'observation'
+        def picture(obs): return Image.open(io.BytesIO(base64.b64decode(obs['screenshot_png_base64']))).convert('RGB')
+        difference = ImageStat.Stat(ImageChops.difference(picture(before), picture(opened))).mean
+        assert sum(difference) > 5, f'No visible response to tablet key: {difference}'
+        print('Night Taxi browser fixture responded visually to the tablet key; no recording or upload')

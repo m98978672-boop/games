@@ -8,7 +8,9 @@ const readline = require("node:readline");
 const { chromium } = require("playwright");
 const ROOT = "/game", HOST = "127.0.0.1", PORT = 8787;
 const TYPES = {".html":"text/html", ".js":"text/javascript", ".mjs":"text/javascript", ".css":"text/css", ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".webp":"image/webp", ".svg":"image/svg+xml", ".json":"application/json", ".wasm":"application/wasm", ".woff":"font/woff", ".woff2":"font/woff2", ".mp3":"audio/mpeg", ".ogg":"audio/ogg"};
-const KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD", "Space", "Enter", "Escape", "ShiftLeft"]);
+const KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter", "Escape", "ShiftLeft", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(k => "Key" + k), ..."0123456789".split("").map(k => "Digit" + k)]);
+const ENTRY = process.env.BRIDGE_ENTRY || "index.html";
+if (!/^(?:[a-zA-Z0-9_-]+\/)*index\.html$/.test(ENTRY)) throw Error("invalid entry path");
 const emit = value => process.stdout.write(JSON.stringify(value) + "\n");
 const server = http.createServer((req, res) => {
   try {
@@ -46,7 +48,7 @@ async function main() {
   page.on("popup", popup => popup.close().catch(() => {}));
   page.on("dialog", dialog => dialog.dismiss().catch(() => {}));
   try {
-    await page.goto(`http://${HOST}:${PORT}/`, {waitUntil:"load", timeout:15000});
+    await page.goto(`http://${HOST}:${PORT}/${ENTRY}`, {waitUntil:"load", timeout:15000});
     const observe = async step => {
       const png = await page.screenshot({type:"png", timeout:10000, animations:"disabled"});
       if (png.length > 2_000_000) throw Error("screenshot too large");

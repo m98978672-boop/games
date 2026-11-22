@@ -18,7 +18,10 @@ class BridgeSafetyTests(unittest.TestCase):
             self.assertIn('--read-only', command)
             self.assertEqual(command.count('--mount'), 1)
             self.assertTrue(command[command.index('--mount') + 1].endswith(',dst=/game,readonly'))
-            self.assertNotIn('--env', command)
+            self.assertEqual(command.count('--env'), 1)
+            self.assertIn('BRIDGE_ENTRY=index.html', command)
+            with self.assertRaises(ValueError):
+                docker_command(game, 'games-bridge-' + 'a' * 32, '../index.html')
             (game / 'escape').symlink_to('/etc')
             with self.assertRaisesRegex(ValueError, 'symlinks'):
                 docker_command(game, 'games-bridge-' + 'a' * 32)
