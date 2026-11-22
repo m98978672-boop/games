@@ -1,5 +1,7 @@
 """Exercise the actual pinned model on synthetic facts; never render or upload."""
 import sys
+import wave
+from array import array
 import tempfile
 from pathlib import Path
 
@@ -31,6 +33,11 @@ with tempfile.TemporaryDirectory() as temp:
         wav = Path(temp) / f"{index}.wav"
         final_text, seconds = fit_speech_text(scene["dialogue"], lambda text: synthesize(text, wav), max_seconds=40.0, attempts=6)
         total += max(8.0, seconds + 1.2)
+        with wave.open(str(wav), "rb") as clip:
+            assert clip.getnchannels() == 1 and clip.getframerate() == 24000 and clip.getsampwidth() == 2
+            samples = array("h", clip.readframes(clip.getnframes()))
+            peak = max(abs(sample) for sample in samples)
+            assert 100 < peak < 32767, f"silent or clipped voice: peak={peak}"
         if index == 9:
             assert "Итог по источникам:" in final_text and "Лично я не играл" in final_text, final_text
     assert 180 <= total <= 600, f"Actual Piper duration outside long-form bounds: {total}"

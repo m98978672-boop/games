@@ -8,6 +8,9 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
+import tempfile
+from functools import lru_cache
 import subprocess
 import wave
 from fractions import Fraction
@@ -28,6 +31,7 @@ FONT_PATHS = [
 ]
 
 
+@lru_cache(maxsize=32)
 def font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     for candidate in FONT_PATHS:
         if Path(candidate).is_file():
@@ -55,30 +59,97 @@ def color_for(name: str) -> str:
     return PALETTE[index]
 
 
+def normalize_narration(source: Path, output: Path) -> None:
+    """Apply restrained speech filtering and loudness control without changing pitch."""
+    subprocess.run([
+        ffmpeg_executable(), "-nostdin", "-y", "-i", str(source), "-vn",
+        "-af", "highpass=f=75,lowpass=f=10000,acompressor=threshold=0.125:ratio=2:attack=20:release=120,loudnorm=I=-16:TP=-2:LRA=11",
+        "-ar", "24000", "-ac", "1", "-c:a", "pcm_s16le", str(output),
+    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+
+
+def pronunciation_text(text: str) -> str:
+    """Pronounce common platform name naturally while keeping captions unchanged."""
+    return re.sub(r"(?<![A-Za-z0-9_])Steam(?![A-Za-z0-9_])", "Стим", text, flags=re.IGNORECASE)
+
+
 def synthesize(text: str, output: Path, voice: str = "ru") -> float:
-    """Synthesize strictly Russian speech, preferring the local Piper neural voice."""
+    """Produce locally synthesized Russian speech with consistent voice dynamics."""
     import os
     if not any("\u0400" <= char <= "\u04ff" for char in text):
         raise ValueError("Narration must contain Russian Cyrillic; refusing accidental English TTS.")
     output.parent.mkdir(parents=True, exist_ok=True)
     configured_model = os.environ.get("PIPER_MODEL_PATH", "").strip()
-    if configured_model:
-        model_path = Path(configured_model)
-        if not model_path.is_file():
-            raise RuntimeError("Configured Russian Piper voice model is missing; refusing broken fallback audio.")
-        subprocess.run(
-            ["piper", "--model", str(model_path), "--output_file", str(output), "--length_scale", "0.98"],
-            input=text, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-        )
-    else:
-        subprocess.run(
-            ["espeak-ng", "-v", voice, "-s", "145", "-a", "165", "-w", str(output), text],
-            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-        )
-    with wave.open(str(output), "rb") as stream:
-        if stream.getnframes() <= 0 or stream.getframerate() <= 0:
-            raise RuntimeError("TTS produced an empty or invalid WAV file.")
-        return stream.getnframes() / stream.getframerate()
+    with tempfile.TemporaryDirectory(prefix="voice-", dir=output.parent) as temp:
+        raw, processed = Path(temp) / "raw.wav", Path(temp) / "processed.wav"
+        spoken_text = pronunciation_text(text)
+        if configured_model:
+            model_path = Path(configured_model)
+            if not model_path.is_file():
+                raise RuntimeError("Configured Russian Piper voice model is missing; refusing broken fallback audio.")
+            subprocess.run(
+                ["piper", "--model", str(model_path), "--output_file", str(raw),
+                 "--length_scale", "1.06", "--noise_scale", "0.55", "--noise_w_scale", "0.75", "--sentence_silence", "0.18"],
+                input=spoken_text, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+            )
+        else:
+            subprocess.run(
+                ["espeak-ng", "-v", voice, "-s", "145", "-a", "165", "-w", str(raw), spoken_text],
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+            )
+        normalize_narration(raw, processed)
+        with wave.open(str(processed), "rb") as stream:
+            if stream.getnframes() <= 0 or stream.getframerate() <= 0:
+                raise RuntimeError("TTS produced an empty or invalid WAV file.")
+            duration = stream.getnframes() / stream.getframerate()
+        processed.replace(output)
+    return duration
+
+
+MASCOT_PATH = Path(__file__).resolve().parent / "assets" / "rat-mascot-avatar.png"
+
+
+@lru_cache(maxsize=32)
+def _fitted_asset(path: str, width: int, height: int) -> Image.Image:
+    with Image.open(path) as source:
+        return ImageOps.fit(source.convert("RGB"), (width, height), method=Image.Resampling.LANCZOS)
+
+
+def _round_image(image: Image.Image, photo: Image.Image, xy: tuple[int, int], radius: int) -> None:
+    mask = Image.new("L", photo.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, photo.width - 1, photo.height - 1), radius=radius, fill=255)
+    image.paste(photo, xy, mask)
+
+
+def _mascot(image: Image.Image, x: int, y: int, size: int) -> None:
+    try:
+        picture = _fitted_asset(str(MASCOT_PATH), size, size)
+        _round_image(image, picture, (x, y), size // 2)
+        ImageDraw.Draw(image).ellipse((x, y, x + size - 1, y + size - 1), outline="#f6cc76", width=3)
+    except (OSError, ValueError):
+        pass  # branding is optional; never prevent a valid review from rendering
+
+
+def _fitted_lines(draw: ImageDraw.ImageDraw, text: str, *, width: int, max_lines: int,
+                  sizes: tuple[int, ...]) -> tuple[ImageFont.ImageFont, list[str]]:
+    for size in sizes:
+        selected = font(size)
+        lines = wrap_text(draw, text, selected, width)
+        if len(lines) <= max_lines and all(draw.textlength(line, font=selected) <= width for line in lines):
+            return selected, lines
+    selected = font(sizes[-1])
+    lines = wrap_text(draw, text, selected, width)
+    truncated = len(lines) > max_lines
+    lines = lines[:max_lines]
+    for i, line in enumerate(lines):
+        too_wide = draw.textlength(line, font=selected) > width
+        if too_wide or (truncated and i == len(lines) - 1):
+            line = line.rstrip(" .…")
+            while line and draw.textlength(line + "…", font=selected) > width:
+                line = line[:-1]
+            lines[i] = line.rstrip() + "…"
+    return selected, lines
 
 
 def draw_character(draw: ImageDraw.ImageDraw, name: str, x: int, y: int, color: str, active: bool,
@@ -126,61 +197,56 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
     image = Image.new("RGB", (WIDTH, HEIGHT), "#e8f3ff")
     draw = ImageDraw.Draw(image)
     if script.get("format") == "game-review":
-        # Official Steam screenshots are shown as source material, never passed off
-        # as original gameplay capture; their copyable links are in the description.
+        # Steam screenshots remain explicitly labelled source material, not gameplay.
         for y in range(HEIGHT):
             blend = y / HEIGHT
-            color = (int(12 + 8 * blend), int(19 + 5 * blend), int(35 + 13 * blend))
-            draw.line((0, y, WIDTH, y), fill=color)
-        draw.ellipse((500, -170, 930, 280), fill="#242451")
-        draw.ellipse((-180, 850, 450, 1510), fill="#113f4a")
-        draw.rounded_rectangle((36, 36, 684, 112), radius=24, fill="#18243a", outline="#50617a", width=2)
-        draw.text((60, 57), "GAMES  /  ИИ-РАЗБОР", font=font(24), fill="#9ee9d0")
-        game_title = str(script.get("game_title", "Игра Games"))[:72]
-        title_lines = wrap_text(draw, game_title, font(38), 620)[:2]
-        for i, line in enumerate(title_lines):
-            draw.text((42, 145 + i * 54), line, font=font(38), fill="#ffffff")
+            draw.line((0, y, WIDTH, y), fill=(int(13 + 8*blend), int(20 + 8*blend), int(32 + 12*blend)))
+        draw.ellipse((450, -230, 1000, 340), fill="#273545")
+        draw.ellipse((-310, 820, 420, 1600), fill="#1b3637")
+        draw.rounded_rectangle((32, 34, 688, 120), radius=25, fill="#243443", outline="#405565", width=2)
+        _mascot(image, 46, 43, 68)
+        draw.text((132, 54), "GAMES / ИИ-РАЗБОР", font=font(25), fill="#f5e5ba")
+        draw.text((134, 84), "ФАКТЫ ИЗ STEAM", font=font(15), fill="#9eb1b9")
         score = int(script.get("idea_score", 0))
-        draw.rounded_rectangle((520, 252, 678, 322), radius=22, fill="#ffcf70")
-        score_text = f"{score}/10"
-        draw.text((548, 265), score_text, font=font(34), fill="#282039")
-        label = str(scene.get("label", "РАЗБОР"))[:28]
-        draw.rounded_rectangle((42, 345, 678, 407), radius=18, fill="#ff5d75" if "МИНУС" in label else "#4779e6")
-        label_box = draw.textbbox((0, 0), label, font=font(25))
-        draw.text(((WIDTH - (label_box[2] - label_box[0])) / 2, 361), label, font=font(25), fill="#ffffff")
-        visual = str(scene.get("visual", ""))[:160]
-        card_y0, card_y1 = 445, 785
-        draw.rounded_rectangle((42, card_y0, 678, card_y1), radius=28, fill="#f3f6fb", outline="#cad7eb", width=3)
+        draw.rounded_rectangle((544, 50, 671, 105), radius=18, fill="#f3c76e")
+        draw.text((563, 58), f"{score}/10", font=font(30), fill="#28241c")
+        draw.text((551, 110), "ОЦЕНКА ИДЕИ", font=font(12), fill="#e7d2a0")
+        title = str(script.get("game_title", "Игра"))[:100]
+        title_font, title_lines = _fitted_lines(draw, title, width=630, max_lines=2, sizes=(42, 38, 34, 30))
+        for i, line in enumerate(title_lines):
+            draw.text((44, 147 + i * 52), line, font=title_font, fill="#ffffff")
+        draw.rounded_rectangle((40, 267, 680, 679), radius=28, fill="#253345", outline="#52697a", width=2)
         shots = script.get("screenshot_paths") or []
         shot_path = shots[scene_index % len(shots)] if shots else ""
         if shot_path:
             try:
-                with Image.open(shot_path) as source:
-                    screenshot = ImageOps.fit(source.convert("RGB"), (560, 190), method=Image.Resampling.LANCZOS)
-                image.paste(screenshot, (80, card_y0 + 14))
-                draw.rounded_rectangle((80, card_y0 + 14, 640, card_y0 + 204), radius=12, outline="#ffffff", width=3)
-                lines = wrap_text(draw, visual, font(21), 540)[:3]
-                line_y = card_y0 + 228
-                line_gap = 31
+                screenshot = _fitted_asset(str(shot_path), 624, 350)
+                _round_image(image, screenshot, (48, 275), 22)
             except (OSError, ValueError):
-                lines = wrap_text(draw, visual, font(27), 560)[:4]
-                line_y = card_y0 + 48
-                line_gap = 42
-        else:
-            lines = wrap_text(draw, visual, font(27), 560)[:4]
-            line_y = card_y0 + 48
-            line_gap = 42
-        for line in lines:
-            draw.text((72, line_y), line, font=font(21 if shot_path else 27), fill="#172033")
-            line_y += line_gap
-        dialogue = str(scene.get("dialogue", ""))[:150]
-        caption_lines = wrap_text(draw, dialogue, font(24), 600)[:3]
-        caption_y = 850
-        for line in caption_lines:
-            draw.text((54, caption_y), line, font=font(24), fill="#ffffff")
-            caption_y += 38
-        draw.text((44, 1160), "Оценка по описанию проекта · не личное прохождение", font=font(16), fill="#bac8dc")
-        draw.text((44, 1190), "Проверяемые ссылки на Steam — в описании видео", font=font(16), fill="#bac8dc")
+                shot_path = ""
+        if not shot_path:
+            draw.rounded_rectangle((48, 275, 672, 625), radius=22, fill="#344a53")
+            draw.text((84, 415), "ИГРА ПО ИСТОЧНИКАМ", font=font(32), fill="#d4e9df")
+        draw.text((62, 640), "СКРИНШОТ ИЗ STEAM" if shot_path else "ИЗОБРАЖЕНИЕ НЕДОСТУПНО", font=font(15), fill="#c8d7da")
+        label = str(scene.get("label", "РАЗБОР"))[:28]
+        draw.rounded_rectangle((40, 704, 680, 1037), radius=28, fill="#f4f0e6")
+        draw.rounded_rectangle((60, 726, 660, 779), radius=17, fill="#ad5260" if "МИНУС" in label else "#3f6c70")
+        label_font, label_lines = _fitted_lines(draw, label, width=550, max_lines=1, sizes=(24, 21, 18))
+        draw.text((82, 740), label_lines[0], font=label_font, fill="#ffffff")
+        visual = str(scene.get("visual", ""))[:160]
+        visual_font, visual_lines = _fitted_lines(draw, visual, width=570, max_lines=4, sizes=(28, 25, 22))
+        for i, line in enumerate(visual_lines):
+            draw.text((68, 805 + i * 38), line, font=visual_font, fill="#253039")
+        dialogue = str(scene.get("dialogue", ""))[:200]
+        caption_font, caption_lines = _fitted_lines(draw, dialogue, width=615, max_lines=3, sizes=(23, 21, 19))
+        for i, line in enumerate(caption_lines):
+            draw.text((50, 1060 + i * 30), line, font=caption_font, fill="#f5f8fa")
+        draw.rounded_rectangle((50, 1160, 670, 1167), radius=4, fill="#42505b")
+        completed = min(len(script.get("scenes", [])), scene_index + min(1.0, (frame + 1) / 25.0))
+        fraction = completed / max(1, len(script.get("scenes", [])))
+        draw.rounded_rectangle((50, 1160, max(55, 50 + int(620 * fraction)), 1167), radius=4, fill="#f3c76e")
+        draw.text((50, 1186), "Оценка идеи по источникам · не личное прохождение", font=font(15), fill="#c0cdd0")
+        draw.text((50, 1210), "Источники и ссылки — в описании", font=font(15), fill="#c0cdd0")
     else:
         # Warm, simple background with a small decorative horizon.
         for y in range(0, HEIGHT, 4):
@@ -343,46 +409,57 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
 
 
 def _render_long_card(script: dict[str, Any], scene: dict[str, Any], scene_index: int, out: Path) -> None:
-    """Create a full-HD 16:9 chapter card using licensed/source-provided Steam imagery."""
-    from PIL import ImageEnhance, ImageOps
-
+    """Create an editorial 16:9 source-review card with a clear image/text hierarchy."""
     width, height = 1920, 1080
-    shots = script.get("screenshot_paths") or []
-    image: Image.Image
-    if shots:
-        try:
-            with Image.open(shots[scene_index % len(shots)]) as source:
-                image = ImageOps.fit(source.convert("RGB"), (width, height), method=Image.Resampling.LANCZOS)
-            image = ImageEnhance.Brightness(image).enhance(0.32)
-            image = ImageEnhance.Color(image).enhance(0.72)
-        except (OSError, ValueError):
-            image = Image.new("RGB", (width, height), "#101827")
-    else:
-        image = Image.new("RGB", (width, height), "#101827")
-    draw = ImageDraw.Draw(image, "RGBA")
-    draw.rectangle((0, 0, width, height), fill=(7, 12, 22, 110))
-    draw.rounded_rectangle((88, 56, 650, 118), radius=24, fill=(16, 26, 43, 225), outline=(132, 190, 255, 210), width=2)
-    draw.text((120, 70), "GAMES  ·  ОБЗОР ПО ИСТОЧНИКАМ", font=font(25), fill="#c9f3e6")
-    title = str(script.get("game_title", "Игра"))[:80]
-    title_lines = wrap_text(draw, title, font(54), 1570)[:2]
-    for i, line in enumerate(title_lines):
-        draw.text((100, 155 + i * 70), line, font=font(54), fill="#ffffff", stroke_width=1, stroke_fill="#111827")
-    draw.rounded_rectangle((100, 330, 1820, 868), radius=38, fill=(9, 16, 30, 222), outline=(255, 255, 255, 110), width=2)
+    image = Image.new("RGB", (width, height), "#111c2a")
+    draw = ImageDraw.Draw(image)
+    for y in range(height):
+        blend = y / height
+        draw.line((0, y, width, y), fill=(int(14+8*blend), int(23+9*blend), int(34+10*blend)))
+    draw.ellipse((1300, -350, 2150, 500), fill="#293b49")
+    draw.rounded_rectangle((65, 42, 1855, 145), radius=30, fill="#243542", outline="#405565", width=2)
+    _mascot(image, 81, 50, 87)
+    draw.text((190, 59), "GAMES / ИИ-РАЗБОР", font=font(31), fill="#f5e5ba")
+    draw.text((190, 104), "ОБЗОР ПО ОПУБЛИКОВАННЫМ ИСТОЧНИКАМ", font=font(19), fill="#bacbc9")
     chapter = f"ГЛАВА {scene_index + 1:02d} / {len(script['scenes']):02d}"
-    draw.text((150, 365), chapter, font=font(26), fill="#86d9ff")
-    visual = str(scene.get("visual", ""))[:110]
-    visual_lines = wrap_text(draw, visual, font(34), 1560)[:2]
+    draw.text((1500, 77), chapter, font=font(26), fill="#c9dddd")
+    draw.rounded_rectangle((65, 185, 1195, 919), radius=34, fill="#f4f0e6")
+    title = str(script.get("game_title", "Игра"))[:100]
+    title_font, title_lines = _fitted_lines(draw, title, width=1010, max_lines=2, sizes=(49, 43, 38, 32))
+    for i, line in enumerate(title_lines):
+        draw.text((115, 218 + i * 58), line, font=title_font, fill="#202f39")
+    draw.rounded_rectangle((111, 345, 1149, 423), radius=20, fill="#3f6c70")
+    visual = str(scene.get("visual", ""))[:160]
+    visual_font, visual_lines = _fitted_lines(draw, visual, width=970, max_lines=2, sizes=(28, 25, 22))
     for i, line in enumerate(visual_lines):
-        draw.text((150, 420 + i * 46), line, font=font(34), fill="#ffe29a")
-    narration = str(scene.get("dialogue", ""))
-    narration_lines = wrap_text(draw, narration, font(30), 1540)[:8]
-    y = 520
-    for line in narration_lines:
-        draw.text((150, y), line, font=font(30), fill="#f4f7fb")
-        y += 42
-    source_domain = "store.steampowered.com · ссылки на все источники в описании"
-    draw.text((105, 965), source_domain, font=font(20), fill="#d4dced")
-    draw.text((1620, 965), f"ОЦЕНКА ИДЕИ {script.get('idea_score', '—')}/10", font=font(20), fill="#ffcf70")
+        draw.text((138, 355 + i * 29), line, font=visual_font, fill="#ffffff")
+    dialogue = str(scene.get("dialogue", ""))
+    body_font, body_lines = _fitted_lines(draw, dialogue, width=1000, max_lines=10, sizes=(32, 29, 27, 25))
+    line_height = body_font.size + 13
+    for i, line in enumerate(body_lines):
+        draw.text((116, 455 + i * line_height), line, font=body_font, fill="#25313b")
+    draw.rounded_rectangle((1230, 185, 1855, 919), radius=34, fill="#253643", outline="#4a626e", width=2)
+    shots = script.get("screenshot_paths") or []
+    shot_path = shots[scene_index % len(shots)] if shots else ""
+    if shot_path:
+        try:
+            screenshot = _fitted_asset(str(shot_path), 575, 406)
+            _round_image(image, screenshot, (1255, 210), 24)
+        except (OSError, ValueError):
+            shot_path = ""
+    if not shot_path:
+        draw.rounded_rectangle((1255, 210, 1830, 616), radius=24, fill="#344a53")
+        draw.text((1290, 385), "ИЗОБРАЖЕНИЕ", font=font(31), fill="#d4e9df")
+        draw.text((1290, 430), "НЕДОСТУПНО", font=font(31), fill="#d4e9df")
+    draw.text((1262, 645), "СКРИНШОТ ИЗ STEAM" if shot_path else "ОБЗОР ПО ИСТОЧНИКАМ", font=font(23), fill="#c8d7da")
+    draw.text((1262, 690), "НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", font=font(21), fill="#c8d7da")
+    draw.rounded_rectangle((1260, 757, 1817, 849), radius=23, fill="#f3c76e")
+    draw.text((1290, 778), f"ОЦЕНКА ИДЕИ: {script.get('idea_score', '—')}/10", font=font(30), fill="#28241c")
+    draw.rounded_rectangle((70, 978, 1850, 989), radius=5, fill="#42505b")
+    count = max(1, len(script.get("scenes", [])))
+    fraction = min(1.0, (scene_index + 1) / count)
+    draw.rounded_rectangle((70, 978, max(78, 70 + int(1780*fraction)), 989), radius=5, fill="#f3c76e")
+    draw.text((75, 1010), "Ссылки на источники — в описании видео", font=font(23), fill="#bacbc9")
     out.parent.mkdir(parents=True, exist_ok=True)
     image.save(out, optimize=True)
 

@@ -59,6 +59,7 @@ class RenderQualityTests(unittest.TestCase):
         self.assertEqual(result, {"fps": 50.0, "width": 1920, "height": 1080})
 
     def test_piper_voice_is_local_and_rejects_non_russian_narration(self):
+        import shutil
         with tempfile.TemporaryDirectory() as temp:
             model = Path(temp) / "ru.onnx"
             model.write_bytes(b"local test model marker")
@@ -67,21 +68,60 @@ class RenderQualityTests(unittest.TestCase):
             def fake_run(command, **kwargs):
                 self.assertEqual(command[0], "piper")
                 self.assertEqual(kwargs["input"], "Это русская проверочная фраза.")
-                self.assertNotIn("https://", str(command))
-                with wave.open(str(output), "wb") as target:
+                self.assertIn("--sentence_silence", command)
+                raw = Path(command[command.index("--output_file") + 1])
+                with wave.open(str(raw), "wb") as target:
                     target.setnchannels(1)
                     target.setsampwidth(2)
                     target.setframerate(22050)
                     target.writeframes(b"\0\0" * 2205)
                 return SimpleNamespace(returncode=0)
 
-            with patch.dict("os.environ", {"PIPER_MODEL_PATH": str(model)}), patch.object(renderer.subprocess, "run", side_effect=fake_run):
+            with patch.dict("os.environ", {"PIPER_MODEL_PATH": str(model)}), \
+                 patch.object(renderer.subprocess, "run", side_effect=fake_run), \
+                 patch.object(renderer, "normalize_narration", side_effect=shutil.copyfile) as normalize:
                 duration = renderer.synthesize("Это русская проверочная фраза.", output)
             self.assertAlmostEqual(duration, 0.1)
+            normalize.assert_called_once()
+            self.assertTrue(output.is_file())
             with patch.object(renderer.subprocess, "run") as run:
                 with self.assertRaisesRegex(ValueError, "Russian Cyrillic"):
                     renderer.synthesize("This is English only.", output)
                 run.assert_not_called()
+
+    def test_platform_name_is_pronounced_in_russian_without_changing_other_words(self):
+        self.assertEqual(renderer.pronunciation_text("По данным Steam: Steamworks"), "По данным Стим: Steamworks")
+
+    def test_audio_processing_is_bounded_and_does_not_adjust_pitch(self):
+        with patch.object(renderer, "ffmpeg_executable", return_value="ffmpeg"), patch.object(renderer.subprocess, "run") as run:
+            renderer.normalize_narration(Path("in.wav"), Path("out.wav"))
+        command = run.call_args.args[0]
+        audio_filter = command[command.index("-af") + 1]
+        self.assertIn("loudnorm=I=-16:TP=-2", audio_filter)
+        self.assertIn("highpass=f=75", audio_filter)
+        self.assertNotIn("atempo", audio_filter)
+        self.assertNotIn("asetrate", audio_filter)
+
+    def test_review_layouts_render_at_required_dimensions_and_fit_long_words(self):
+        from PIL import Image, ImageDraw
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            script = {"format": "game-review", "game_title": "Очень длинное название " * 5,
+                      "idea_score": 7, "scenes": [{}] * 5, "screenshot_paths": []}
+            scene = {"label": "ФАКТ ИЗ STEAM", "visual": "описание " * 12,
+                     "dialogue": "Русская фраза для проверки оформления и читаемости."}
+            short, long = root / "short.png", root / "long.png"
+            renderer.render_frame(script, scene, 1, 12, short)
+            renderer._render_long_card(script, scene, 1, long)
+            with Image.open(short) as image:
+                self.assertEqual(image.size, (1080, 1920))
+            with Image.open(long) as image:
+                self.assertEqual(image.size, (1920, 1080))
+            draw = ImageDraw.Draw(Image.new("RGB", (720, 100)))
+            selected, lines = renderer._fitted_lines(draw, "Оченьдлинноенеразрывноеназвание" * 8,
+                                                     width=600, max_lines=1, sizes=(30, 24))
+            self.assertTrue(lines[0].endswith("…"))
+            self.assertLessEqual(draw.textlength(lines[0], font=selected), 600)
 
 
 if __name__ == "__main__":
