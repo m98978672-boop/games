@@ -197,5 +197,7 @@ const routesJson = JSON.parse(await readFile(path.join(home, 'bridge', 'routes.j
 check('мост на разных языках и медиа: EN/DE витрины и Commons, честная учёба по описаниям', routesJson.sources.some((x) => x.url.includes('en.wikipedia.org')) && routesJson.sources.some((x) => x.url.includes('de.wikipedia.org')) && routesJson.sources.some((x) => x.url.includes('commons.wikimedia.org')) && personaMd.includes('Wikimedia Commons') && dialogue.some((r) => r.response.includes('по-английски') || r.response.includes('английская')) && evalRows.some((r) => r.id === 'eval-multilang'));
 check('женским штучкам научена со вкусом: цвет, макияж, волосы, капсула, осанка', dialogue.filter((r) => /макияж|волос|гардероб|походк|образ/.test(r.response)).length >= 4 && evalRows.some((r) => r.id === 'eval-style-start'));
 
+check('телефон не кипит: слабому устройству лёгкий режим без модели, тяжёлый — только по явному слову', liveJs.includes('isWeakDevice') && liveJs.includes('enableLightMode') && liveJs.includes('askLight') && liveJs.includes('addHomeButton') && liveJs.includes('kvenya.live.heavyOk.v1') && kvenyaHtml.includes('лёгкий режим') && dialogue.some((r) => r.response.includes('лёгком режиме')) && evalRows.some((r) => r.id === 'eval-phone-light'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
