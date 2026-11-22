@@ -11,6 +11,9 @@ name: Kvenya expedition (её руки в интернет)
 # Честный стоп: «я не робот» руки не нажимают и капчи не решают —
 # Квеня нейросеть, а не человек. Встретила стену — отчёт об этом.
 on:
+  push:
+    branches: [main]
+    paths: ['qwen-home/bridge/expedition-task.json']
   schedule:
     - cron: '37 9 * * 1'
   workflow_dispatch:
@@ -54,6 +57,16 @@ jobs:
         run: |
           if [ -n "$INPUT_URL" ]; then
             echo "EXP_URL=$INPUT_URL" >> "$GITHUB_ENV"
+          elif [ -f qwen-home/bridge/expedition-task.json ]; then
+            python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          from pathlib import Path
+          task = json.loads(Path('qwen-home/bridge/expedition-task.json').read_text(encoding='utf-8'))
+          print(f"EXP_URL={task['url']}")
+          print(f"EXP_SECONDS={int(task.get('seconds', 60))}")
+          import sys
+          print(f"Задание владельца: {task.get('note', '')} -> {task['url']}", file=sys.stderr)
+          PY
           else
             python3 - <<'PY' >> "$GITHUB_ENV"
           import json
@@ -72,7 +85,8 @@ jobs:
           EXP_SECONDS: ${{ inputs.seconds || '60' }}
         run: |
           mkdir -p "$RUNNER_TEMP/expedition"
-          python3 qwen-home/tools/expedition.py --url "$EXP_URL" --seconds "$EXP_SECONDS" --out "$RUNNER_TEMP/expedition"
+          SECONDS_TO_PLAY="${EXP_SECONDS:-$EXP_SECONDS}"
+          python3 qwen-home/tools/expedition.py --url "$EXP_URL" --seconds "$SECONDS_TO_PLAY" --out "$RUNNER_TEMP/expedition"
       - name: Keep the full video as an artifact
         if: always()
         uses: actions/upload-artifact@v4
