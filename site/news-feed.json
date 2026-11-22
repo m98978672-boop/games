@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-21T22:32:29.357Z",
+  "updatedAt": "2026-11-22T03:51:54.948Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
-    "lastRunAt": "2026-11-21T22:32:29.357Z",
+    "lastRunAt": "2026-11-22T03:51:54.948Z",
     "sourcesCount": 11,
     "verifiedArticlesCount": 19,
     "commentSyncTools": [
@@ -19,7 +19,7 @@
     ],
     "mode": "verified-editorial+auto-rss",
     "workflow": ".github/workflows/auto-news.yml",
-    "totalRuns": 15,
+    "totalRuns": 16,
     "lastSourcesReachable": 11,
     "categoriesCount": 6,
     "backlog": {
@@ -2526,6 +2526,474 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
+      "id": "auto-lenta-top-5d001439d8",
+      "code": "W-934",
+      "category": "world",
+      "title": "В Польше нашли новый повод поругаться с Украиной",
+      "summary": "В Польше нашли новый повод поругаться с Украиной",
+      "body": [
+        "В Польше нашли новый повод поругаться с Украиной. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Мир"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/22/v-polshe-nashli-novyy-povod-porugatsya-s-ukrainoy/",
+      "publishedAt": "2026-11-22T03:49:02.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/22/v-polshe-nashli-novyy-povod-porugatsya-s-ukrainoy/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-934.svg",
+      "imageCaption": "Обложка рубрики: В Польше нашли новый повод поругаться с Украиной",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-lenta-top-2510e7ef85",
+      "code": "W-716",
+      "category": "world",
+      "title": "Раскрыты причины сокращения числа наемников в ВСУ",
+      "summary": "Раскрыты причины сокращения числа наемников в ВСУ",
+      "body": [
+        "Раскрыты причины сокращения числа наемников в ВСУ. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Бывший СССР"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/22/raskryta-prichina-sokrascheniya-chisla-naemnikov-v-vsu/",
+      "publishedAt": "2026-11-22T03:47:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/22/raskryta-prichina-sokrascheniya-chisla-naemnikov-v-vsu/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-716.svg",
+      "imageCaption": "Обложка рубрики: Раскрыты причины сокращения числа наемников в ВСУ",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-lenta-top-30b4d764c4",
+      "code": "W-885",
+      "category": "world",
+      "title": "Врач раскрыла последствия употребления холодной воды после пробуждения",
+      "summary": "Врач раскрыла последствия употребления холодной воды после пробуждения",
+      "body": [
+        "Врач раскрыла последствия употребления холодной воды после пробуждения. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Забота о себе"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/22/vrach-raskryla-posledstviya-upotrebleniya-holodnoy-vody-posle-probuzhdeniya/",
+      "publishedAt": "2026-11-22T03:41:43.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/22/vrach-raskryla-posledstviya-upotrebleniya-holodnoy-vody-posle-probuzhdeniya/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-885.svg",
+      "imageCaption": "Обложка рубрики: Врач раскрыла последствия употребления холодной воды после пробуждения",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-b7073cff6a",
+      "code": "G-731",
+      "category": "games",
+      "title": "Моддеры представили проект Leonida — консольную версию GTA VI переносят на ПК",
+      "summary": "Некоторые энтузиасты намерены попробовать собрать ПК-версию.",
+      "body": [
+        "Некоторые энтузиасты намерены попробовать собрать ПК-версию.",
+        "Недавно состоялся релиз Grand Theft Auto VI на консолях PlayStation 5 и Xbox Series X|S. Разработчики пока ничего не рассказывали про ПК-версию, но существует большой запрос игроков. Его попытаются удовлетворить техно-энтузиасты.",
+        "Недавно представили проект «Leonida» — названный в честь штата, в котором разворачиваются события. Авторы планируют перенести консольную версию Grand Theft Auto VI для Xbox Series на ПК с Windows, используя метод статической рекомпиляции.",
+        "Разработчик под ником ItsNotRexed открыл страницу на GitHub. Ранее он отметился другим проектом «Hookshot» — это нативный ПК-порт ремейка The Legend of Zelda: Ocarina of Time (игры для консоли Nintendo Switch 2)."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/22/moddery-predstavili-proekt-leonida-konsolnuiu-versiiu-gta-vi-perenosiat-na-pk.html",
+      "publishedAt": "2026-11-22T02:57:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/22/moddery-predstavili-proekt-leonida-konsolnuiu-versiiu-gta-vi-perenosiat-na-pk.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-731.svg",
+      "imageCaption": "Обложка рубрики: Моддеры представили проект Leonida — консольную версию GTA VI перенося",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-a1ee0e75a5",
+      "code": "G-952",
+      "category": "games",
+      "title": "Джокер из Флориды, требовавший 10 миллионов от создателей GTA VI, появился в титрах и рассказал о работе над игрой",
+      "summary": "Похоже, что кампания блогера прошла успешно и Rockstar Games заключила сделку.",
+      "body": [
+        "Похоже, что кампания блогера прошла успешно и Rockstar Games заключила сделку.",
+        "Недавно вышла Grand Theft Auto VI и Rockstar Games опубликовала титры с разработчиками и актёрами, которые работали над проектом. Игроки с удивлением обнаружили там одного специфического блогера.",
+        "В разделе The Local Population («местное население») упоминается Лоуренс Салливан (Lawrence Sullivan), более известный как Джокер из Флориды. Ранее он уже оказывался в центре внимания из-за его требования к Rockstae Games",
+        "Он увидел в трейлере GTA VI человека, очень похожего на него, и решил потребовать выплату за использование его внешности. Сначала он хотел получить несколько миллионов долларов, а затем его требование увеличилось до 10 миллионов, он грозил разработчика судебным разбирательством. Затем он пересмотрел свою позицию и предложил дать ему возможность озвучить персонажа, тогда он говорил: «Позвольте мне озвучить персонажа, участвовать в фан-встречах, продвигать игру»."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/22/dzoker-iz-floridy-trebovavsii-10-millionov-ot-sozdatelei-gta-vi-poiavilsia-v-titrax-i-rasskazal-o-rabote-nad-igroi.html",
+      "publishedAt": "2026-11-22T02:49:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/22/dzoker-iz-floridy-trebovavsii-10-millionov-ot-sozdatelei-gta-vi-poiavilsia-v-titrax-i-rasskazal-o-rabote-nad-igroi.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-952.svg",
+      "imageCaption": "Обложка рубрики: Джокер из Флориды, требовавший 10 миллионов от создателей GTA VI, появ",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-e43b295250",
+      "code": "G-736",
+      "category": "games",
+      "title": "Найдена настоящая девушка с обложки GTA VI — модель подтвердила участие в проекте",
+      "summary": "Предыдущая теория не подтвердилась.",
+      "body": [
+        "Предыдущая теория не подтвердилась.",
+        "Недавно состоялся релиз Grand Theft Auto VI и спало действие NDA (соглашения о неразглашении). Игроки наконец смогли узнать, кто на самом деле стал прототипом девушки в обложки.",
+        "Летом, когда Rockstar Games опубликовала обложки GTA VI, многие предположили, что её роль исполнила модель и диджей Габриэла Чикин (Gabriela Chiquin) — внешне они действительно были очень похожи:",
+        "Источник изображения: Rockstar Games Источник изображения: @chiquin_ Однако на самом деле девушкой с обложки является нью-йоркская модель. Саби Гарсия (Sabii Garcia) официально подтвердила своё участие в проекте, тем самым опровергнув популярную теорию."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/22/naidena-nastoiashhaia-devuska-s-oblozki-gta-vi-model-podtverdila-ucastie-v-proekte.html",
+      "publishedAt": "2026-11-22T02:42:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/22/naidena-nastoiashhaia-devuska-s-oblozki-gta-vi-model-podtverdila-ucastie-v-proekte.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-736.svg",
+      "imageCaption": "Обложка рубрики: Найдена настоящая девушка с обложки GTA VI — модель подтвердила участи",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-e533f07a76",
+      "code": "G-802",
+      "category": "games",
+      "title": "Мошенничество вокруг GTA VI для ПК поставили на поток — начали продавать готовый набор инструментов для обмана игроков",
+      "summary": "Некоторые злоумышленники вышли на новый уровень.",
+      "body": [
+        "Некоторые злоумышленники вышли на новый уровень.",
+        "Сейчас Grand Theft Auto VI доступна только на консолях PlayStation 5 и Xbox Series X|S. Однако существует большой интерес к ПК-версии, что пытаются использовать различные мошенники.",
+        "Специалисты по кибербезопасности обратили внимание на то, что мошенничество вокруг GTA VI вышло на новый уровень. Технический директор Мариюс Бриедис (Marijus Briedis) рассказал, что в сети начали продавать наборы для тех, кто хочет попробовать стать мошенником. Для обмана игроков больше не нужны специальные технические знания — любой желающий может отдать примерно 200 долларов и получить готовый комплект необходимых инструментов:",
+        "Мы уже несколько месяцев наблюдаем, как мошенники используют GTA VI, но это совсем другой уровень. Кто-то создал готовый набор для мошенничества и продаёт его всем за 200 долларов. Технических навыков больше не требуется. Преступникам достаточно просто купить этот набор."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/22/mosennicestvo-vokrug-gta-vi-dlia-pk-postavili-na-potok-nacali-prodavat-gotovyi-nabor-instrumentov-dlia-obmana-igrokov.html",
+      "publishedAt": "2026-11-22T02:31:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/22/mosennicestvo-vokrug-gta-vi-dlia-pk-postavili-na-potok-nacali-prodavat-gotovyi-nabor-instrumentov-dlia-obmana-igrokov.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-802.svg",
+      "imageCaption": "Обложка рубрики: Мошенничество вокруг GTA VI для ПК поставили на поток — начали продава",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-habr-news-1c27e9ec79",
+      "code": "T-981",
+      "category": "tech",
+      "title": "Как Nvidia и Toshiba кинули всех: разыскивается O2 Xda Flame для хардкорного моддерского проекта",
+      "summary": "Многие Хабровчане знают меня как хардкорного реверсера, любителя 3д демок на экзотических ГПУ и фаната впихнуть невпихуемое. И мне нужен девайс для одного очень хардкорного проекта...",
+      "body": [
+        "Многие Хабровчане знают меня как хардкорного реверсера, любителя 3д демок на экзотических ГПУ и фаната впихнуть невпихуемое. И мне нужен девайс для одного очень хардкорного проекта..."
+      ],
+      "tags": [
+        "monobogdan_ништячки",
+        "Winmobile",
+        "кпк",
+        "коммуникатор"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1110788/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110788",
+      "publishedAt": "2026-11-22T02:23:48.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1110788/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110788"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-981.svg",
+      "imageCaption": "Обложка рубрики: Как Nvidia и Toshiba кинули всех: разыскивается O2 Xda Flame для хардк",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-068f7216bc",
+      "code": "T-819",
+      "category": "tech",
+      "title": "Месяц разработки Geo Collector: офлайн-карты России и Армении, 94 настройки карты и первая версия для Android",
+      "summary": "С момента публикации моей предыдущей статьи о Geo Collector и выхода первой публичной версии приложения прошло чуть больше двух недель. Однако с учётом достаточно продолжительного ожидания первой версии в App Store факти",
+      "body": [
+        "С момента публикации моей предыдущей статьи о Geo Collector и выхода первой публичной версии приложения прошло чуть больше двух недель. Однако с учётом достаточно продолжительного ожидания первой версии в App Store фактически сегодня я хочу рассказать о результатах примерно месяца разработки.",
+        "За это время приложение значительно изменилось. Если изначально основной задачей Geo Collector был удобный сбор географических данных с помощью смартфона, то постепенно проект начал приобретать черты полноценного инструмента для полевых исследований.",
+        "Появились собственные офлайн-карты, большой каталог регионов России и Армении, новый картографический движок, более подробная система отображения географических объектов, расширенные возможности работы со слоями, а также первая тестовая версия приложения для Android.",
+        "При этом один из основных принципов проекта остался неизменным — приложение распространяется бесплатно, и отказываться от этой модели я пока не планирую."
+      ],
+      "tags": [
+        "Geo Collector",
+        "ГИС",
+        "GIS",
+        "OpenStreetMap"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1110786/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110786",
+      "publishedAt": "2026-11-22T02:22:12.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1110786/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110786"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-819.svg",
+      "imageCaption": "Обложка рубрики: Месяц разработки Geo Collector: офлайн-карты России и Армении, 94 наст",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-lenta-top-f7885090b3",
+      "code": "W-784",
+      "category": "world",
+      "title": "«Схватил ребенка за шиворот и утащил в заброшенный дом». В Свердловской области беглый заключенный похитил 10-летнего мальчика",
+      "summary": "«Схватил ребенка за шиворот и утащил в заброшенный дом». В Свердловской области беглый заключенный похитил 10-летнего мальчика",
+      "body": [
+        "«Схватил ребенка за шиворот и утащил в заброшенный дом». В Свердловской области беглый заключенный похитил 10-летнего мальчика. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Россия"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/22/long-shvatil-rebenka-za-shivorot-i-utaschil-v-zabroshennyy-dom-v-sverdlovskoy-oblasti-beglyy-zaklyuchennyy-pohitil-10-letnego-malchika/",
+      "publishedAt": "2026-11-22T02:09:00.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/22/long-shvatil-rebenka-za-shivorot-i-utaschil-v-zabroshennyy-dom-v-sverdlovskoy-oblasti-beglyy-zaklyuchennyy-pohitil-10-letnego-malchika/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-784.svg",
+      "imageCaption": "Обложка рубрики: «Схватил ребенка за шиворот и утащил в заброшенный дом». В Свердловско",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-b2d045ed70",
+      "code": "T-916",
+      "category": "tech",
+      "title": "Обзор дисплея ILI9341",
+      "summary": "В тексте я написал про особенности работы с микросхемой графического цветного экрана ILI9341: подключение ILI9341 к микроконтроллеру, написание драйвера, зажигание пикселей в разные цвета по координатам, отображение русс",
+      "body": [
+        "В тексте я написал про особенности работы с микросхемой графического цветного экрана ILI9341: подключение ILI9341 к микроконтроллеру, написание драйвера, зажигание пикселей в разные цвета по координатам, отображение русского текста."
+      ],
+      "tags": [
+        "ili9341",
+        "шрифты",
+        "LCD Vision",
+        "fonts"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1101948/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1101948",
+      "publishedAt": "2026-11-22T00:02:24.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1101948/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1101948"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-22",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-916.svg",
+      "imageCaption": "Обложка рубрики: Обзор дисплея ILI9341",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-news-cc29177aee",
+      "code": "T-938",
+      "category": "tech",
+      "title": "Как научить AI-агента проверять Windows-приложение через настоящий GUI: архитектура Deskcheck",
+      "summary": "«Я просто хотел, чтобы AI проверял свой код. Что могло пойти не так?» — техническая история GUI-тестирования двух Delphi-продуктов и двенадцати открытых приложений.",
+      "body": [
+        "«Я просто хотел, чтобы AI проверял свой код. Что могло пойти не так?» — техническая история GUI-тестирования двух Delphi-продуктов и двенадцати открытых приложений.",
+        "Меня зовут Игорь Белых. Я пишу на Delphi почти двадцать лет — от Delphi 5 до современных версий, — а ещё был тимлидом, скрам-мастером и функциональным лидом, руководил командами до 50 человек. Тестирование — моя давняя тема: я делал на DUnit фреймворк для тестов MSSQL, а ещё в 2014 году писал о тестах процедур Firebird. Сейчас я разрабатываю Deskcheck — инструмент, который даёт AI-агентам проверять Windows-приложения через настоящий GUI.",
+        "Статья будет полезна, если вы:"
+      ],
+      "tags": [
+        "Delphi",
+        "GUI-тестирование",
+        "автотесты",
+        "AI-агенты"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1110776/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110776",
+      "publishedAt": "2026-11-21T23:57:50.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1110776/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110776"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-938.svg",
+      "imageCaption": "Обложка рубрики: Как научить AI-агента проверять Windows-приложение через настоящий GUI",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
       "id": "auto-lenta-top-bff65c97ad",
       "code": "W-777",
       "category": "world",
@@ -2635,6 +3103,42 @@
       "imageCaption": "Обложка рубрики: Посольство сообщило об оказании помощи задержанному в США россиянину",
       "imageCredit": "Games News · локальная обложка",
       "queue": "now"
+    },
+    {
+      "id": "auto-3dnews-0158742f1f",
+      "code": "T-996",
+      "category": "tech",
+      "title": "Акции TSMC летят в тартарары — такого обвала, как на этой неделе, не было с 1997 года",
+      "summary": "Акции TSMC на Тайваньской фондовой бирже в пятницу, 20 ноября, упали на 4,8 %, до 2000 тайваньских долларов за бумагу — минимума за семь месяцев. За неделю крупнейший в мире контрактный производитель чипов потерял 15,8 %",
+      "body": [
+        "Акции TSMC на Тайваньской фондовой бирже в пятницу, 20 ноября, упали на 4,8 %, до 2000 тайваньских долларов за бумагу — минимума за семь месяцев. За неделю крупнейший в мире контрактный производитель чипов потерял 15,8 % биржевой стоимости. Это худший результат компании с октября 1997 года. Распродажа полупроводниковых акций резко усилилась на фоне новых экспортных ограничений США, а тайваньский индекс TAIEX потерял 17,5 % за неделю — больше, чем за любую неделю с 1990 года. Новые правила Бюро промышленности и безопасности Минторга США вступили в силу 19"
+      ],
+      "tags": [
+        "- рынок IT"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151644",
+      "publishedAt": "2026-11-21T21:23:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151644"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-21",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-996.svg",
+      "imageCaption": "Обложка рубрики: Акции TSMC летят в тартарары — такого обвала, как на этой неделе, не б",
+      "imageCredit": "Games News · локальная обложка"
     },
     {
       "id": "auto-habr-news-1197cd2822",
@@ -3591,506 +4095,6 @@
       "imageCaption": "Обложка рубрики: Как я перестал быть диспетчером у своих ИИ-агентов",
       "imageCredit": "Games News · локальная обложка",
       "queue": "now"
-    },
-    {
-      "id": "auto-habr-news-a962d98cc2",
-      "code": "T-959",
-      "category": "tech",
-      "title": "Эволюция NFQWS2 ASUS Community (+ Keenetic)",
-      "summary": "От одного ASUS до генератора стратегий: эволюция NFQWS2 ASUS Community до Build 101",
-      "body": [
-        "От одного ASUS до генератора стратегий: эволюция NFQWS2 ASUS Community до Build 101",
-        "История community-адаптации nfqws2 для ASUSWRT-Merlin и OpenWrt: архитектура, NFQUEUE, SmartDNS, безопасный импорт, диагностика, отдельные профили устройств, генератор стратегий, 98 пресетов и обновления Build 100–101.",
-        "У меня дома два совершенно разных ASUS: современный GT-BE19000AI и старый RT-AC87U. Когда я начал адаптировать nfqws2 для этих устройств, задача казалась относительно простой: установить движок, связать его с правилами маршрутизатора и сделать удобное управление через браузер. Но очень быстро выяснилось, что запущенный процесс ещё не означает работающий сетевой инструмент . Пакеты могут не попадать в очередь, DNS может идти другим путём, а удачная стратегия для телевизора может оказаться неудачной для компьютера.",
-        "Так появился NFQWS2 ASUS Community — community-проект, который вырос из адаптации для ASUSWRT-Merlin с Entware в систему с нативными пакетами OpenWrt, веб-панелью, импортом профилей, SmartDNS, диагностикой и разными стратегиями для разных устройств."
-      ],
-      "tags": [
-        "nfqws2",
-        "тспу",
-        "обфускация трафика",
-        "asus"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1110676/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110676",
-      "publishedAt": "2026-11-21T13:02:16.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1110676/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110676"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-959.svg",
-      "imageCaption": "Обложка рубрики: Эволюция NFQWS2 ASUS Community (+ Keenetic)",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-lenta-top-e28f2b8381",
-      "code": "W-824",
-      "category": "world",
-      "title": "Финляндия обратилась к странам ЕС из-за российских спортсменов",
-      "summary": "Финляндия обратилась к странам ЕС из-за российских спортсменов",
-      "body": [
-        "Финляндия обратилась к странам ЕС из-за российских спортсменов. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Спорт"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/21/finlyandiya-obratilas-k-stranam-es-iz-za-rossiyskih-sportsmenov/",
-      "publishedAt": "2026-11-21T12:37:00.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/21/finlyandiya-obratilas-k-stranam-es-iz-za-rossiyskih-sportsmenov/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-824.svg",
-      "imageCaption": "Обложка рубрики: Финляндия обратилась к странам ЕС из-за российских спортсменов",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-securitylab-537bbc25b3",
-      "code": "C-805",
-      "category": "security",
-      "title": "Спасение планеты отменяется: ИИ оказался прожорливее, чем рассчитывала Meta*",
-      "summary": "Обратная сторона бума нейросетей.",
-      "body": [
-        "Обратная сторона бума нейросетей."
-      ],
-      "tags": [
-        "Технологии/"
-      ],
-      "sourceName": "SecurityLab",
-      "sourceUrl": "https://www.securitylab.ru/news/580411.php",
-      "publishedAt": "2026-11-21T12:08:54.000Z",
-      "readMin": 1,
-      "icon": "🛡️",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (SecurityLab)",
-          "url": "https://www.securitylab.ru/news/580411.php"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-805.svg",
-      "imageCaption": "Обложка рубрики: Спасение планеты отменяется: ИИ оказался прожорливее, чем рассчитывала",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-hackernews-sec-c49e01ff79",
-      "code": "C-971",
-      "category": "security",
-      "title": "A Single Malicious Webpage Let Researchers Hijack Meta Muse and Access Private Chats",
-      "summary": "A malicious webpage could extract a Meta Muse user's private conversations and stored memories from the assistant without triggering any approval prompt, researchers have shown.",
-      "body": [
-        "A malicious webpage could extract a Meta Muse user's private conversations and stored memories from the assistant without triggering any approval prompt, researchers have shown.",
-        "The same attack could be extended to reach the credentials Muse stores for the user's connected accounts.",
-        "The work was a laboratory demonstration, not an attack on real users, and it stayed inside the individual user's"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/a-single-malicious-webpage-let.html",
-      "publishedAt": "2026-11-21T11:53:07.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/a-single-malicious-webpage-let.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-971.svg",
-      "imageCaption": "Обложка рубрики: A Single Malicious Webpage Let Researchers Hijack Meta Muse and Access",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-ixbt-games-0c5747ff9b",
-      "code": "G-831",
-      "category": "games",
-      "title": "Hot Toys представила фигурку Лорда Дума по мотивам концепт-арта к фильму «Мстители: Доктор Дум»",
-      "summary": "Hot Toys потихоньку готовится к выпуску 31-сантиметровой фигурки Лорда Дума по мотивам концепт-арта к фильму «Мстители: Доктор Дум». Речь идет о персонаже, который является правителем вымышленной страны Латверии, опасней",
-      "body": [
-        "Hot Toys потихоньку готовится к выпуску 31-сантиметровой фигурки Лорда Дума по мотивам концепт-арта к фильму «Мстители: Доктор Дум». Речь идет о персонаже, который является правителем вымышленной страны Латверии, опаснейшим учёным и суперзлодеем.",
-        "Компания Hot Toys продолжает расширять свою коллекцию, посвященную фильму «Мстители: Доктор Дум». На этот раз она представила фигурку Лорда Дума, выполненную в масштабе 1/6.",
-        "Права на изображения принадлежат Marvel и Hot Toys // Источник изображения: Страница компании Hot Toys на Weibo // https://m.weibo.cn/status/5367375509848542 В некоторых местах её получится приобрести за 1690 гонконгских долларов (17 676 рублей). Фигурка, тщательно проработанная на основе концепт-артов к вышеуказанной кинокартине, оснащена детализированным скульптом головы в шлеме с подвижными глазными яблоками.",
-        "Права на изображения принадлежат Marvel и Hot Toys // Источник изображения: Страница компании Hot Toys на Weibo // https://m.weibo.cn/status/5367375509848542 У суперзлодея есть восемь сменных кистей рук в перчатках и темно-зеленый двубортный костюм в военном стиле, украшенный золотистой окантовкой, пуговицами, нашивками на манжетах и флагом Латверии. Он надет поверх водолазки в рубчик того же оттенка."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/21/hot-toys-predstavila-figurku-lorda-duma-po-motivam-koncept-arta-k-filmu-mstiteli-doktor-dum.html",
-      "publishedAt": "2026-11-21T11:21:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/21/hot-toys-predstavila-figurku-lorda-duma-po-motivam-koncept-arta-k-filmu-mstiteli-doktor-dum.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-831.svg",
-      "imageCaption": "Обложка рубрики: Hot Toys представила фигурку Лорда Дума по мотивам концепт-арта к филь",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-hackernews-sec-df3fa18f41",
-      "code": "C-963",
-      "category": "security",
-      "title": "GnuPG Warns Critical GPGME Flaw Could Expose App Data via Malicious OpenPGP Keys",
-      "summary": "A malicious OpenPGP key with an unusually long user ID can trigger a critical memory bug in GPGME, the standard library that programs use to work with GnuPG.",
-      "body": [
-        "A malicious OpenPGP key with an unusually long user ID can trigger a critical memory bug in GPGME, the standard library that programs use to work with GnuPG.",
-        "The GnuPG project warned yesterday that the flaw could be used to steal data from affected applications and has released fixed versions.",
-        "The bug, tracked as CVE-2026-129975, affects all software that uses GPGME before version 2.3.0,"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/gnupg-warns-critical-gpgme-flaw-could.html",
-      "publishedAt": "2026-11-21T11:05:53.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/gnupg-warns-critical-gpgme-flaw-could.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-963.svg",
-      "imageCaption": "Обложка рубрики: GnuPG Warns Critical GPGME Flaw Could Expose App Data via Malicious Op",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-hackernews-sec-c3a3a8b5b1",
-      "code": "C-996",
-      "category": "security",
-      "title": "Attackers' AI Agents Found a Zero-Day in Medical-Imaging Software and Gained Root Access",
-      "summary": "Suspected China-linked hackers used autonomous AI agents to find a previously unknown flaw in MONAI Label, an open-source medical imaging server, and gain root access to a university server, Amazon Threat Intelligence sa",
-      "body": [
-        "Suspected China-linked hackers used autonomous AI agents to find a previously unknown flaw in MONAI Label, an open-source medical imaging server, and gain root access to a university server, Amazon Threat Intelligence said this week.",
-        "The flaw allows an attacker with no account to write files outside the server's storage folder, and it affects MONAI Label 0.8.5 and earlier in the default setup,"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/attackers-ai-agents-found-zero-day-in.html",
-      "publishedAt": "2026-11-21T11:03:17.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/attackers-ai-agents-found-zero-day-in.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-996.svg",
-      "imageCaption": "Обложка рубрики: Attackers' AI Agents Found a Zero-Day in Medical-Imaging Software and ",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-habr-top-c1e899e829",
-      "code": "F-730",
-      "category": "facts",
-      "title": "Мы не вылезали из Вайс-Сити со среды и нам есть что сказать: главные впечатления от GTA VI и речь не только о плюсах",
-      "summary": "С уверенностью можно сказать, что игровая индустрия перевернула страницу, и у игр с открытым миром появился новый стандарт, к которому все будут тянуться ближайшие 10, а то и 15 лет, как минимум.",
-      "body": [
-        "С уверенностью можно сказать, что игровая индустрия перевернула страницу, и у игр с открытым миром появился новый стандарт, к которому все будут тянуться ближайшие 10, а то и 15 лет, как минимум.",
-        "О GTA VI как о феномене мы когда-нибудь обсудим отдельно и более обстоятельно, сегодня у нас диалог про другое — самые первые впечатления по следам практически каждой свободной минуты со дня релиза.",
-        "Ну и самое главное — а всё ли однозначно так хорошо на самом деле? Об этом сегодня и поговорим, а заодно вкинем пару ну очень горячих тейков."
-      ],
-      "tags": [
-        "gta",
-        "gtaVI",
-        "gta 6",
-        "rockstar games"
-      ],
-      "sourceName": "Хабр Популярное",
-      "sourceUrl": "https://habr.com/ru/companies/timeweb/articles/1110464/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110464",
-      "publishedAt": "2026-11-21T10:55:47.000Z",
-      "readMin": 1,
-      "icon": "⚡",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Популярное)",
-          "url": "https://habr.com/ru/companies/timeweb/articles/1110464/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110464"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/f-730.svg",
-      "imageCaption": "Обложка рубрики: Мы не вылезали из Вайс-Сити со среды и нам есть что сказать: главные в",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-ixbt-games-8f9dffe92a",
-      "code": "G-832",
-      "category": "games",
-      "title": "Dark Horse Direct открыла предзаказ на 208-страничный артбук «The Art of Exodus»",
-      "summary": "У пользователей, ожидающих выхода ролевого экшена Exodus, появится возможность получше рассмотреть вселенную игры, так как в 2027 году Dark Horse Direct выпустит артбук «The Art of Exodus», содержащий множество иллюстрац",
-      "body": [
-        "У пользователей, ожидающих выхода ролевого экшена Exodus, появится возможность получше рассмотреть вселенную игры, так как в 2027 году Dark Horse Direct выпустит артбук «The Art of Exodus», содержащий множество иллюстраций.",
-        "Dark Horse Direct, являющаяся специализированным подразделением издательства Dark Horse Comics, открыла предзаказ на книгу «The Art of Exodus», посвящённую ролевому экшену Exodus от компании Archetype Entertainment.",
-        "Права на изображения принадлежат Wizards of the Coast, Dark Horse Comics и Archetype Entertainment // Источник изображения: Страница Dark Horse Direct на X.com // https://x.com/DarkHorseDirect/status/2122713918309085687 Сейчас её можно предварительно заказать за $54,99 (4508 рублей). В Exodus геймерам предстоит пройти путь от старьёвщика до путешественника, исследовать миры, искажённые временем, и опаснейшие уголки космоса в поисках ключа к спасению, а также проследить за приключениями главного героя Джуна и его союзников.",
-        "Права на изображения принадлежат Wizards of the Coast, Dark Horse Comics и Archetype Entertainment // Источник изображения: Сайт Impulse Gamer // https://www.impulsegamer.com/the-art-of-exodus-is-now-available-for-preorder/ Благодаря книге «The Art of Exodus» читатели смогут оценить иллюстрации галактики, населённой сверхэволюционировавшими существами и пробуждёнными животными, а также наполненной поражающими воображение технологическими сокровищами."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/21/dark-horse-direct-otkryla-predzakaz-na-208-stranicnyi-artbuk-the-art-of-exodus.html",
-      "publishedAt": "2026-11-21T10:30:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/21/dark-horse-direct-otkryla-predzakaz-na-208-stranicnyi-artbuk-the-art-of-exodus.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-832.svg",
-      "imageCaption": "Обложка рубрики: Dark Horse Direct открыла предзаказ на 208-страничный артбук «The Art ",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-ixbt-games-15da56dcad",
-      "code": "G-979",
-      "category": "games",
-      "title": "Киберпанк 2000 года теперь в кармане: Deus Ex получила неофициальный порт для Android",
-      "summary": "За основу адаптации взяли открытый движок OpenDE.",
-      "body": [
-        "За основу адаптации взяли открытый движок OpenDE.",
-        "Энтузиаст под ником JMAccorsi выпустил неофициальный Android-порт Deus Ex: Game of the Year Edition, основанный на OpenDE — открытом движке от jarmitage99.",
-        "Оригинальная Deus Ex вышла в 2000 году. Игрок управляет агентом Джей Си Дентоном, усиленным нанотехнологиями, который во время расследования деятельности террористов выходит на заговор мирового масштаба. Миссии можно проходить разными способами: пробиваться с боем, искать обходные пути, взламывать системы безопасности или договариваться с персонажами.",
-        "Источник изображения: Eidos Interactive Corp. Мобильная версия получила сенсорное управление с возможностью настраивать расположение, размер и прозрачность кнопок. При подключении геймпада экранные элементы скрываются автоматически. Также можно менять масштаб меню, интерфейса и субтитров в соответствии с размером экрана."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/21/kiberpank-2000-goda-teper-v-karmane-deus-ex-polucila-neoficialnyi-port-dlia-android.html",
-      "publishedAt": "2026-11-21T10:30:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/21/kiberpank-2000-goda-teper-v-karmane-deus-ex-polucila-neoficialnyi-port-dlia-android.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-979.svg",
-      "imageCaption": "Обложка рубрики: Киберпанк 2000 года теперь в кармане: Deus Ex получила неофициальный п",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-securitylab-381987ff39",
-      "code": "C-940",
-      "category": "security",
-      "title": "Кибербезопасность проиграла человеческой лени. Самый популярный пароль в мире снова можно угадать с первой попытки",
-      "summary": "Новый рейтинг паролей показал, насколько предсказуемы пользователи.",
-      "body": [
-        "Новый рейтинг паролей показал, насколько предсказуемы пользователи."
-      ],
-      "tags": [
-        "SecurityLab"
-      ],
-      "sourceName": "SecurityLab",
-      "sourceUrl": "https://www.securitylab.ru/news/580422.php",
-      "publishedAt": "2026-11-21T10:02:00.000Z",
-      "readMin": 1,
-      "icon": "🛡️",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (SecurityLab)",
-          "url": "https://www.securitylab.ru/news/580422.php"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-940.svg",
-      "imageCaption": "Обложка рубрики: Кибербезопасность проиграла человеческой лени. Самый популярный пароль",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-bbc-world-f3510a03fd",
-      "code": "W-907",
-      "category": "world",
-      "title": "Fight over fossil fuels leaves COP31 climate talks in deadlock",
-      "summary": "Countries from nearly 200 countries are in a deadlock to try and get a new global climate agreement.",
-      "body": [
-        "Countries from nearly 200 countries are in a deadlock to try and get a new global climate agreement."
-      ],
-      "tags": [
-        "BBC World"
-      ],
-      "sourceName": "BBC World",
-      "sourceUrl": "https://www.bbc.co.uk/news/articles/c6ly5w40eg07o?at_medium=RSS&at_campaign=rss",
-      "publishedAt": "2026-11-21T09:52:11.000Z",
-      "readMin": 1,
-      "icon": "🌐",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (BBC World)",
-          "url": "https://www.bbc.co.uk/news/articles/c6ly5w40eg07o?at_medium=RSS&at_campaign=rss"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-907.svg",
-      "imageCaption": "Обложка рубрики: Fight over fossil fuels leaves COP31 climate talks in deadlock",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-bbc-world-2d243126f3",
-      "code": "W-709",
-      "category": "world",
-      "title": "FBI reportedly investigating apparent hack of its criminal database",
-      "summary": "The National Crime Information Center database is used by federal and local law enforcement to share information.",
-      "body": [
-        "The National Crime Information Center database is used by federal and local law enforcement to share information."
-      ],
-      "tags": [
-        "BBC World"
-      ],
-      "sourceName": "BBC World",
-      "sourceUrl": "https://www.bbc.co.uk/news/articles/cvze7de86pk3o?at_medium=RSS&at_campaign=rss",
-      "publishedAt": "2026-11-21T09:34:20.000Z",
-      "readMin": 1,
-      "icon": "🌐",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (BBC World)",
-          "url": "https://www.bbc.co.uk/news/articles/cvze7de86pk3o?at_medium=RSS&at_campaign=rss"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-21",
-        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-709.svg",
-      "imageCaption": "Обложка рубрики: FBI reportedly investigating apparent hack of its criminal database",
-      "imageCredit": "Games News · локальная обложка"
     },
     {
       "id": "s301-voyager-1-one-light-day",
