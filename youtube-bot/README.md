@@ -10,8 +10,8 @@
 2. В **Authorized JavaScript origins** добавьте строго origin без пути:
    `https://m98978672-boop.github.io`
    Не добавляйте `/games`, `/youtube-bot/` или завершающий `/` в это поле.
-3. Сохраните client, оставьте scopes `youtube.upload` и `youtube.readonly` для браузерного загрузчика; Google-аккаунт добавьте в **Test users**, пока приложение в режиме тестирования.
-4. Откройте [YouTube Bot](https://m98978672-boop.github.io/games/youtube-bot/), подключите Google и проверьте название канала.
+3. В OAuth consent добавьте `youtube.upload` и `youtube.force-ssl` для автопилота (смена видимости/публикация); Google-аккаунт добавьте в **Test users**, пока приложение в режиме тестирования.
+4. Откройте [YouTube Bot](https://m98978672-boop.github.io/games/youtube-bot/) и подключите Google заново, чтобы выдать обновлённые разрешения.
 
 Для этого браузерного варианта **Authorized redirect URI не используется**. Существующий redirect URI можно оставить для локальной FastAPI-версии ниже. OAuth client ID публичен; не публикуйте client secret.
 
