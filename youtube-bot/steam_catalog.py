@@ -10,6 +10,7 @@ import hashlib
 import html
 import json
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -50,13 +51,25 @@ def _safe_get_json(url: str, *, timeout: int = 20) -> Any:
     if parsed.scheme != "https" or parsed.hostname != STEAM_HOST or parsed.username or parsed.password:
         raise SteamSourceError("Steam source URL failed its HTTPS host allowlist.")
     request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "GamesReviewBot/1.0"})
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            if response.status != 200:
-                raise SteamSourceError(f"Steam returned HTTP {response.status}.")
-            return json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise SteamSourceError("Steam public data could not be retrieved.") from exc
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                if response.status != 200:
+                    raise SteamSourceError(f"Steam returned HTTP {response.status}.")
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            if exc.code in (429, 500, 502, 503, 504) and attempt < 3:
+                time.sleep((2, 5, 10)[attempt])
+                continue
+            raise SteamSourceError(f"Steam returned HTTP {exc.code} for {parsed.path}.") from exc
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            if attempt < 3:
+                time.sleep((2, 5, 10)[attempt])
+                continue
+            raise SteamSourceError(f"Steam public data could not be retrieved for {parsed.path} ({type(exc).__name__}).") from exc
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SteamSourceError(f"Steam returned invalid JSON for {parsed.path}.") from exc
+
 
 
 def _cyrillic_ratio(text: str) -> float:
@@ -188,18 +201,40 @@ def load_steam_games(*, recent_game_ids: tuple[str, ...] | list[str] = (), limit
     seed = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
     start = int(hashlib.sha256(seed.encode()).hexdigest()[:8], 16) % len(fresh)
     ordered = fresh[start:] + fresh[:start]
+    # If fresh candidates are unavailable, try previously used games rather than
+    # discarding an otherwise valid Steam catalogue entirely.
+    ordered += [item for item in listings if str(item["id"]) in recent and item not in ordered]
     games: list[dict[str, Any]] = []
+    errors: list[str] = []
+    rejected = 0
     for listing in ordered:
+        if games and str(listing["id"]) in recent and listing not in fresh:
+            break
         try:
             game = _game_from_app(str(listing["id"]), listing)
-        except SteamSourceError:
+        except SteamSourceError as exc:
+            errors.append(str(exc))
+            # Repeated rate limiting applies to the service, not just this game.
+            if "HTTP 429" in str(exc):
+                break
             continue
         if game:
             games.append(game)
+        else:
+            rejected += 1
         if len(games) >= max(1, min(int(limit), MAX_CANDIDATES)):
             break
     if not games:
-        raise SteamSourceError("Steam shelves had no games with verified Russian-language descriptions and review data.")
+        if errors:
+            raise SteamSourceError(
+                f"Steam candidate lookup failed for {len(errors)} games; "
+                f"{rejected} did not meet the Russian description requirements. "
+                f"Last error: {errors[-1]}"
+            )
+        raise SteamSourceError(
+            f"Steam shelves had no games with verified Russian-language descriptions "
+            f"({rejected} candidates rejected)."
+        )
     return games
 
 

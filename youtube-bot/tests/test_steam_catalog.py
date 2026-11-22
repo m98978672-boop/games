@@ -44,6 +44,37 @@ class SteamCatalogTests(unittest.TestCase):
             game = steam_catalog._game_from_app("999", {"id": 999, "name": "Test Game"})
         self.assertIsNone(game)
 
+    def test_retries_rate_limit_before_succeeding(self):
+        from urllib.error import HTTPError
+        class Response:
+            status = 200
+            def read(self):
+                return b'{"ok": true}'
+            def __enter__(self):
+                return self
+            def __exit__(self, *_args):
+                return None
+        error = HTTPError("https://store.steampowered.com/api/appdetails/", 429, "rate limited", {}, None)
+        with patch.object(steam_catalog.urllib.request, "urlopen", side_effect=[error, Response()]) as opened, \
+             patch.object(steam_catalog.time, "sleep") as sleep:
+            result = steam_catalog._safe_get_json("https://store.steampowered.com/api/appdetails/")
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(opened.call_count, 2)
+        sleep.assert_called_once_with(2)
+
+    def test_reports_source_failure_instead_of_claiming_no_eligible_games(self):
+        featured = {"top_sellers": {"items": [{"id": 123, "name": "Test"}]}}
+        with patch.object(steam_catalog, "_game_from_app", side_effect=steam_catalog.SteamSourceError("Steam returned HTTP 429 for /api/appdetails/.")):
+            with self.assertRaisesRegex(steam_catalog.SteamSourceError, "HTTP 429"):
+                steam_catalog.load_steam_games(featured_payload=featured)
+
+    def test_tries_recent_games_when_fresh_games_are_unusable(self):
+        featured = {"top_sellers": {"items": [{"id": 123, "name": "Recent"}, {"id": 456, "name": "Fresh"}]}}
+        with patch.object(steam_catalog, "_game_from_app", side_effect=[None, {"id": "123"}]) as get:
+            games = steam_catalog.load_steam_games(featured_payload=featured, recent_game_ids=("123",), limit=1)
+        self.assertEqual(games, [{"id": "123"}])
+        self.assertEqual(get.call_args_list[1].args[0], "123")
+
     def test_no_external_host_is_accepted_for_steam_api(self):
         with self.assertRaises(steam_catalog.SteamSourceError):
             steam_catalog._safe_get_json("https://evil.example/api")
