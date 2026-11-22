@@ -1,8 +1,8 @@
 """Manual, owner-reviewed YouTube comment replies for the owner's own videos.
 
 This standalone tool is deliberately separate from the production upload bot.
-It never posts without an explicit interactive confirmation. A dedicated local
-OAuth token with youtube.force-ssl is required; it is never sent to Qwen.
+Interactive replies require confirmation; the explicitly enabled automatic mode
+uses narrowly matched fixed templates. Its separate OAuth token never goes to Qwen.
 """
 from __future__ import annotations
 
@@ -22,6 +22,10 @@ CLIENT = BASE / "comment_client_secret.json"
 LEDGER = DATA / "comment-replies.sqlite3"
 SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 MAX_REPLIES_TO_SCAN = 1000
+
+
+class AlreadyReplied(RuntimeError):
+    """A reply exists or a prior local attempt is locked."""
 
 
 def _channel_id(youtube: Any) -> str:
@@ -53,7 +57,8 @@ def list_comments(youtube: Any, video_id: str) -> list[dict[str, str]]:
     for thread in result.get("items", []):
         comment = thread.get("snippet", {}).get("topLevelComment", {})
         snippet = comment.get("snippet", {})
-        if not comment.get("id") or snippet.get("authorChannelId", {}).get("value") == channel_id:
+        author = snippet.get("authorChannelId", {}).get("value")
+        if not comment.get("id") or not author or author == channel_id:
             continue
         output.append({"id": str(comment["id"]), "text": _plain_display(snippet.get("textDisplay", ""), 2000)})
     return output
@@ -125,7 +130,7 @@ def post_reviewed_reply(youtube: Any, *, parent_id: str, reply: str, ledger: Pat
         raise ValueError("Reply must contain 1–500 characters.")
     channel, _video = _verified_thread(youtube, parent_id)
     if _already_replied(youtube, parent_id, channel):
-        raise RuntimeError("This channel already replied to the comment.")
+        raise AlreadyReplied("This channel already replied to the comment.")
     ledger.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with sqlite3.connect(ledger) as db:
         os.chmod(ledger, 0o600)
@@ -134,7 +139,10 @@ def post_reviewed_reply(youtube: Any, *, parent_id: str, reply: str, ledger: Pat
             db.execute("INSERT INTO replies (channel, parent, state) VALUES (?, ?, 'sending')", (channel, parent_id))
             db.commit()
         except sqlite3.IntegrityError as exc:
-            raise RuntimeError("Reply already attempted; check YouTube Studio before any manual recovery.") from exc
+            row = db.execute("SELECT state FROM replies WHERE channel=? AND parent=?", (channel, parent_id)).fetchone()
+            if row and row[0] == "sent":
+                raise AlreadyReplied("Reply already attempted and recorded as sent.") from exc
+            raise RuntimeError("Prior reply outcome is uncertain; check YouTube Studio before any recovery.") from exc
         # A timeout can mean YouTube accepted the reply. Never retry blindly.
         response = youtube.comments().insert(part="snippet", body={"snippet": {"parentId": parent_id, "textOriginal": reply}}).execute(num_retries=0)
         reply_id = response.get("id")
@@ -143,6 +151,38 @@ def post_reviewed_reply(youtube: Any, *, parent_id: str, reply: str, ledger: Pat
         db.execute("UPDATE replies SET state='sent', reply_id=? WHERE channel=? AND parent=?", (reply_id, channel, parent_id))
         db.commit()
         return reply_id
+
+
+def automatic_reply(comment: str) -> str | None:
+    """Recognize a few simple reactions; never auto-answer open-ended text.
+
+    No comments or model output can specify the published text or commands.
+    """
+    text = re.sub(r"\s+", " ", comment.strip().lower()).strip(" !.😊👍❤️")
+    if re.fullmatch(r"(?:спасибо|спасибо за видео|класс|отличное видео|понравилось|отлично|thanks|great video)", text):
+        return "Спасибо за отзыв! Рады, что вы посмотрели видео."
+    if re.fullmatch(r"(?:жду продолжения|продолжай|хочу продолжение|жду следующую часть|more please)", text):
+        return "Спасибо за интерес к продолжению! Мы учтём ваш отзыв."
+    return None
+
+
+def auto_reply_video(youtube: Any, video_id: str, *, limit: int = 5, ledger: Path = LEDGER) -> int:
+    """Reply only to conservative fixed phrases, up to five per explicit run."""
+    if not 1 <= limit <= 5:
+        raise ValueError("Automatic reply limit must be between 1 and 5.")
+    sent = 0
+    for comment in list_comments(youtube, video_id):
+        reply = automatic_reply(comment["text"])
+        if not reply:
+            continue
+        try:
+            post_reviewed_reply(youtube, parent_id=comment["id"], reply=reply, ledger=ledger)
+        except AlreadyReplied:
+            continue
+        sent += 1
+        if sent >= limit:
+            break
+    return sent
 
 
 def _youtube() -> Any:
@@ -167,6 +207,10 @@ def main() -> None:
     sub.add_parser("connect", help="Authorize a separate local desktop OAuth client")
     ls = sub.add_parser("list")
     ls.add_argument("video_id")
+    auto = sub.add_parser("auto", help="Opt in to at most five fixed-template replies on one owned video")
+    auto.add_argument("video_id")
+    auto.add_argument("--enable-posting", action="store_true", required=True)
+    auto.add_argument("--limit", type=int, default=5)
     answer = sub.add_parser("reply")
     answer.add_argument("video_id")
     answer.add_argument("comment_id")
@@ -182,6 +226,10 @@ def main() -> None:
         print("Comment access connected locally. No comment was posted.")
         return
     youtube = _youtube()
+    if args.command == "auto":
+        count = auto_reply_video(youtube, args.video_id, limit=args.limit)
+        print(f"Опубликовано автоматических ответов: {count}.")
+        return
     comments = list_comments(youtube, args.video_id)
     if args.command == "list":
         print(json.dumps(comments, ensure_ascii=False, indent=2))

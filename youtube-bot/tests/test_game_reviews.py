@@ -183,16 +183,16 @@ class ScheduleTests(unittest.TestCase):
             self.assertEqual(morning.isoformat(), f"2026-{month:02d}-23T05:00:00+00:00")
             self.assertEqual(noon.isoformat(), f"2026-{month:02d}-23T09:00:00+00:00")
 
-    def test_long_video_schedule_is_exactly_every_other_moscow_date(self):
+    def test_long_video_schedule_is_daily_at_06_moscow(self):
         from datetime import datetime, timezone
         from schedule_policy import long_video_is_due
         # 22:00 UTC on the preceding day is 01:00 on the Moscow due date.
         due_day = datetime(2026, 11, 23, 22, 0, tzinfo=timezone.utc)
         off_day = datetime(2026, 11, 24, 22, 0, tzinfo=timezone.utc)
         self.assertTrue(long_video_is_due(due_day))
-        self.assertFalse(long_video_is_due(off_day))
+        self.assertTrue(long_video_is_due(off_day))
         self.assertEqual(next_publish_slot(due_day, video_format="long").isoformat(), "2026-11-24T03:00:00+00:00")
-        self.assertEqual(next_publish_slot(off_day, video_format="long").isoformat(), "2026-11-26T03:00:00+00:00")
+        self.assertEqual(next_publish_slot(off_day, video_format="long").isoformat(), "2026-11-25T03:00:00+00:00")
 
     def test_schedule_moves_forward_when_slot_is_too_close(self):
         from datetime import datetime, timezone

@@ -2,7 +2,7 @@ name: YouTube long-form game review autopilot
 
 on:
   schedule:
-    # 01:00 Moscow check, ahead of the 06:00 Moscow slot on every other local date.
+    # 01:00 Moscow check, ahead of the daily 06:00 Moscow publication slot.
     - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: "3.11"
       - id: check
-        name: Enforce the every-48-hour long-video cadence
+        name: Check daily long-video cadence
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             echo "due=true" >> "$GITHUB_OUTPUT"
