@@ -47,6 +47,7 @@
   var modelDbPromise = null;
   var dedicatedStoreAvailable = false;
   var downloadPromises = {};
+  var matchDownloadAttempted = {};
 
   /* ---------- голос: она говорит, её можно спросить голосом ---------- */
 
@@ -268,6 +269,30 @@
       return requestPromise(db.transaction(FILE_STORE, 'readonly').objectStore(FILE_STORE).getAll());
     }).then(function (metas) { return metas || []; });
   }
+  function deleteFileMeta(url) {
+    return openModelDb().then(function (db) {
+      return requestPromise(db.transaction(FILE_STORE, 'readwrite').objectStore(FILE_STORE).delete(url));
+    });
+  }
+  function deleteDedicatedModelFiles() {
+    return getAllFileMetas().then(function (metas) {
+      var chain = Promise.resolve();
+      (metas || []).filter(function (meta) { return meta && meta.url && meta.url.indexOf(MODEL_ID) >= 0; })
+        .forEach(function (meta) {
+          chain = chain.then(function () {
+            return clearParts(meta.url).then(function () { return deleteFileMeta(meta.url); });
+          });
+        });
+      return chain.then(function () {
+        writeStore(SAVE_KEY, null);
+        writeStore(PARTIAL_KEY, null);
+        completedFiles = [];
+        progressByFile = {};
+        matchDownloadAttempted = {};
+        return true;
+      });
+    });
+  }
   function putPart(part) {
     return openModelDb().then(function (db) {
       return requestPromise(db.transaction(PART_STORE, 'readwrite').objectStore(PART_STORE).put(part));
@@ -472,9 +497,12 @@
   }
   function inspectModelCache() {
     return inspectDedicatedStore().then(function (state) {
-      if (state.complete || state.partial) { state.legacy = false; return state; }
+      if (state.complete) { state.legacy = false; return state; }
       return inspectBrowserCache().then(function (old) {
-        if (old.complete || old.partial) { old.legacy = true; return old; }
+        // Целая копия всегда лучше недокачанной, где бы она ни лежала.
+        if (old.complete) { old.legacy = true; return old; }
+        if (state.partial) { state.legacy = false; return state; }
+        if (old.partial) { old.legacy = true; return old; }
         return state.supported ? state : old;
       });
     });
@@ -629,16 +657,30 @@
     if (request && request.url) return request.url;
     return '';
   }
+  function responseFromBlob(blob) {
+    // Transformers.js по Content-Length сразу выделяет буфер нужного
+    // размера. Без заголовка большой файл читается с постоянными
+    // перекопированиями и на ~400 МБ может упасть по памяти.
+    try {
+      var headers = { 'Content-Length': String(blob.size) };
+      if (blob.type) headers['Content-Type'] = blob.type;
+      return new Response(blob, { headers: headers });
+    } catch (err) {
+      return new Response(blob);
+    }
+  }
   var kvenyaModelCache = {
     match: function (request) {
       var url = requestToCacheUrl(request);
       if (!url || url.indexOf('http') !== 0 || url.indexOf(MODEL_ID) < 0) return Promise.resolve(undefined);
       return getCompleteBlob(url).then(function (blob) {
-        if (blob) { rememberFile(fileNameFromUrl(url)); return new Response(blob); }
+        if (blob) { rememberFile(fileNameFromUrl(url)); return responseFromBlob(blob); }
         return migrateFromBrowserCache(url).then(function (migrated) {
-          if (migrated) { rememberFile(fileNameFromUrl(url)); return new Response(migrated); }
+          if (migrated) { rememberFile(fileNameFromUrl(url)); return responseFromBlob(migrated); }
+          if (matchDownloadAttempted[url]) return undefined;
+          matchDownloadAttempted[url] = 1;
           return downloadFileResumable(url).then(function (downloaded) {
-            return downloaded ? new Response(downloaded) : undefined;
+            return downloaded ? responseFromBlob(downloaded) : undefined;
           });
         });
       }).catch(function (err) {
@@ -867,16 +909,22 @@
     }).then(function (mod) {
       mod.env.allowLocalModels = false;
       mod.env.allowRemoteModels = true;
-      if (dedicatedStoreAvailable) {
-        // Своё кусочное хранилище: файл остаётся в IndexedDB даже после
-        // обрыва на середине, а service worker-ы не могут его снести.
-        mod.env.useBrowserCache = false;
-        mod.env.useCustomCache = true;
-        mod.env.customCache = kvenyaModelCache;
-      } else {
-        mod.env.useBrowserCache = typeof window.caches !== 'undefined';
-        mod.env.useCustomCache = false;
+      var usedDedicatedStore = false;
+      function configureEnv(dedicated) {
+        usedDedicatedStore = !!dedicated && dedicatedStoreAvailable;
+        if (usedDedicatedStore) {
+          // Своё кусочное хранилище: файл остаётся в IndexedDB даже после
+          // обрыва на середине, а service worker-ы не могут его снести.
+          mod.env.useBrowserCache = false;
+          mod.env.useCustomCache = true;
+          mod.env.customCache = kvenyaModelCache;
+        } else {
+          mod.env.useBrowserCache = typeof window.caches !== 'undefined';
+          mod.env.useCustomCache = false;
+          mod.env.customCache = null;
+        }
       }
+      configureEnv(true);
       var onProgress = function (e) {
         if (!e) return;
         if (e.status === 'progress' && e.file) {
@@ -905,7 +953,22 @@
       return mod.pipeline('text-generation', MODEL_ID, withWebGPU)
         .catch(function (gpuErr) {
           setStatus('WebGPU не дал модель — запускаю на WASM (будет медленнее, но честно)…');
-          return mod.pipeline('text-generation', MODEL_ID, opts);
+          return mod.pipeline('text-generation', MODEL_ID, opts).catch(function (wasmErr) {
+            if (!usedDedicatedStore) throw wasmErr;
+            // Не оставляем владельца с ошибкой из-за нового хранилища:
+            // пробуем один раз обычным браузерным кэшем. Если бита именно
+            // сохранённая копия, сначала убираем только её файлы.
+            setStatus('Через новое хранилище не вышло — пробую обычным способом…');
+            var rescue = startingFromCache
+              ? deleteDedicatedModelFiles().catch(function () { return null; })
+              : Promise.resolve(null);
+            return rescue.then(function () {
+              configureEnv(false);
+              startingFromCache = false;
+              setStatus('Скачиваю Квеню обычным способом и сохраняю заново…');
+              return mod.pipeline('text-generation', MODEL_ID, opts);
+            });
+          });
         });
     }).then(function (gen) {
       generator = gen;
@@ -941,6 +1004,7 @@
       });
     }).catch(function (err) {
       busy = false;
+      matchDownloadAttempted = {};
       savePartial(true);
       startBtn.disabled = false;
       startBtn.textContent = completedFiles.length ? '▶ Продолжить загрузку Квени' : '▶ Включить живую Квеню';
