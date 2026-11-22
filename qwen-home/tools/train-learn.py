@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Continued LoRA learning for the home Qwen (thinking, Wikipedia, web code).
 
-Same pinned base, weight-hash check and LoRA configuration as the commander
-research trainer (frontline-command/tools/training/train-qwen.py), but the
-dataset is plain instruction/response rows (schema frontline-qwen-learn-v1)
-and training can continue from the previous home adapter (--initial-adapter).
+Same pinned base and weight-hash check as the commander research trainer
+(frontline-command/tools/training/train-qwen.py), but the dataset is plain
+instruction/response rows (schema frontline-qwen-learn-v1) and training can
+continue from the previous home adapter (--initial-adapter) when its LoRA
+shape still matches; a shape upgrade retrains from the base on the full
+dataset instead of silently keeping the old small adapter.
 This produces a research PEFT adapter. It is NOT a WebLLM model, not the
 game's commander adapter and not evidence of general intelligence.
 """
@@ -27,7 +29,14 @@ from huggingface_hub import hf_hub_download
 MODEL = 'Qwen/Qwen3.5-0.8B'
 REVISION = '2fc06364715b967f1860aea9cf38778875588b17'
 BASE_SHA = '04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696'
-MAX_TOKENS = 1024
+MAX_TOKENS = 2048
+# Её обучаемые параметры (запрошено владельцем 2026-11-22: «больше
+# параметров и токенов»). Было: r=8 и только q_proj/v_proj. Стало: r=32
+# и все линейные слои внимания и MLP — на порядок больше обучаемых
+# весов при той же честной базе 0.8B.
+LORA_R = 32
+LORA_ALPHA = 64
+LORA_MODULES = ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj']
 
 
 def read_data(folder):
@@ -75,6 +84,18 @@ def encode(tokenizer, system_prompt, row):
     if len(prefix) + max(64, len(target)) > MAX_TOKENS:
         return None  # too long for the budget: skipped, counted by caller
     return prefix, target
+
+
+def adapter_matches(path):
+    """True if a saved adapter already has the current LoRA shape."""
+    for candidate in (Path(path) / 'adapter_config.json', Path(path) / 'adapter' / 'adapter_config.json'):
+        if candidate.exists():
+            try:
+                cfg = json.loads(candidate.read_text())
+            except Exception:
+                return False
+            return cfg.get('r') == LORA_R and sorted(cfg.get('target_modules') or []) == sorted(LORA_MODULES)
+    return False
 
 
 def example_loss(model, encoded):
@@ -129,14 +150,19 @@ def main():
     train = encoded[:-8]
     print(f'Dataset: {len(train)} train, {len(validation)} validation, skipped-too-long {skipped}; kinds {manifest["counts"]}', flush=True)
     model = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
-    if args.initial_adapter:
+    if args.initial_adapter and adapter_matches(args.initial_adapter):
         # is_trainable=True is required: by default PEFT loads an adapter
         # frozen for inference and continued training gets 0 trainable
         # parameters (second lesson run died exactly on this).
         model = PeftModel.from_pretrained(model, args.initial_adapter, is_trainable=True)
         print(f'Continuing from adapter: {args.initial_adapter}', flush=True)
     else:
-        model = get_peft_model(model, LoraConfig(r=8, lora_alpha=16, lora_dropout=0.0, target_modules=['q_proj', 'v_proj'], bias='none'))
+        if args.initial_adapter:
+            # Форма адаптера выросла (r и модули): старый маленький адаптер
+            # нельзя «дорастить» — учимся с базы на полном датасете, в нём
+            # и так все её уроки и вся память статей.
+            print(f'Адаптер {args.initial_adapter} прошлой формы — начинаю с базы с новой конфигурацией LoRA r={LORA_R}', flush=True)
+        model = get_peft_model(model, LoraConfig(r=LORA_R, lora_alpha=LORA_ALPHA, lora_dropout=0.0, target_modules=LORA_MODULES, bias='none'))
     model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={'use_reentrant': False})
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     if trainable == 0:
@@ -170,7 +196,7 @@ def main():
         'base_model': MODEL, 'revision': REVISION,
         'initial_adapter': str(args.initial_adapter) if args.initial_adapter else None,
         'dataset_counts': manifest['counts'],
-        'training': {'seed': args.seed, 'steps': args.steps, 'lr': args.lr, 'trainable_parameters': trainable, 'skipped_too_long': skipped, 'train_losses': losses},
+        'training': {'seed': args.seed, 'steps': args.steps, 'lr': args.lr, 'trainable_parameters': trainable, 'skipped_too_long': skipped, 'train_losses': losses, 'lora': {'r': LORA_R, 'lora_alpha': LORA_ALPHA, 'target_modules': LORA_MODULES}, 'max_tokens': MAX_TOKENS},
         'evaluation': {'method': 'teacher-forced mean token cross-entropy on 8 held-out train rows; generation quality is measured by eval-learn.py', 'loss_before': before, 'loss_after': after},
     }
     (args.output / 'report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')

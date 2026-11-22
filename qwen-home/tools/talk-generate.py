@@ -264,9 +264,10 @@ def log_search(query, results, best=None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--adapter', type=Path, help='home adapter folder; without it the base model answers')
-    # Её реплики по персоне — 1–3 предложения (~40–60 токенов). Лимит 180
-    # только зря гонял CPU на тишине после EOS в худших случаях.
-    parser.add_argument('--max-new', type=int, default=96)
+    # Бюджет ответа: владелец попросил «больше токенов» (2026-11-22).
+    # 192 — потолок, а не норма: по персоне она отвечает 1–3 предложениями
+    # и останавливается на EOS, потолок лишь не режет длинные ответы.
+    parser.add_argument('--max-new', type=int, default=192)
     args = parser.parse_args()
     text = DIALOGUE.read_text(encoding='utf-8')
     turns = parse_turns(text)
