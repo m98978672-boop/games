@@ -2,8 +2,8 @@ name: YouTube Shorts autopilot
 
 on:
   schedule:
-    # Tue / Thu / Sat; the planner chooses 18:30 Europe/Amsterdam for upload.
-    - cron: "0 14 * * 2,4,6"
+    # Twice daily; the planner maps these UTC triggers to two Europe/Amsterdam slots.
+    - cron: "0 7,15 * * *"
   workflow_dispatch:
     inputs:
       made_for_kids:
@@ -14,6 +14,24 @@ on:
           - "true"
         default: "false"
         required: true
+      video_format:
+        description: "Video type for a manual run"
+        type: choice
+        options:
+          - short
+          - long
+        default: short
+        required: true
+      publish_immediately:
+        description: "Make the new video public immediately instead of scheduling it"
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+        required: true
+      publish_existing_video_id:
+        description: "Optional bot-owned scheduled video to make public immediately"
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -31,6 +49,10 @@ jobs:
       # The channel owner explicitly classified the audience as not made for kids.
       # Manual dispatch exposes the same explicit choice; scheduled runs use it too.
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
+      VIDEO_FORMAT: ${{ inputs.video_format || 'short' }}
+      YOUTUBE_PUBLISH_IMMEDIATELY: ${{ inputs.publish_immediately || 'false' }}
+      PUBLISH_EXISTING_VIDEO_ID: ${{ inputs.publish_existing_video_id || '' }}
+      PIPER_MODEL_PATH: ${{ runner.temp }}/ru_RU-irina-medium.onnx
       DATA_DIR: youtube-bot/data
     steps:
       - uses: actions/checkout@v7
@@ -39,12 +61,19 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: youtube-bot/requirements-autopilot.txt
-      - name: Require an explicit YouTube audience declaration
+      - name: Require explicit audience and publication choices
         run: |
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
             echo "::error::Choose the owner-approved audience value true or false in the workflow input."
             exit 1
           fi
+          if [ "$YOUTUBE_PUBLISH_IMMEDIATELY" != "true" ] && [ "$YOUTUBE_PUBLISH_IMMEDIATELY" != "false" ]; then
+            echo "::error::Choose whether the generated review should be public immediately."
+            exit 1
+          fi
+      - name: Make the specified scheduled video public now
+        if: ${{ inputs.publish_existing_video_id != '' }}
+        run: python youtube-bot/publish_existing_public.py "$PUBLISH_EXISTING_VIDEO_ID"
       - name: Restore the local Qwen model cache
         uses: actions/cache@v6
         with:
@@ -59,13 +88,20 @@ jobs:
       - name: Install renderer and model dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y espeak-ng fonts-dejavu-core
+          sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
           python -m pip install --upgrade pip
           python -m pip install -r youtube-bot/requirements-autopilot.txt
-      - name: Generate a source-grounded game review with Qwen
+      - name: Download the local Russian Piper voice model
+        run: |
+          curl --fail --location --retry 3 --output "$PIPER_MODEL_PATH" \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 3 --output "$PIPER_MODEL_PATH.json" \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json
+          test -s "$PIPER_MODEL_PATH" && test -s "$PIPER_MODEL_PATH.json"
+      - name: Generate a Steam-sourced Russian game review with local Qwen
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
-        run: python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4"
+        run: python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4" --format "$VIDEO_FORMAT"
       - name: Start resumable YouTube upload and schedule
         run: python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
       - name: Retain only non-sensitive model selection memory

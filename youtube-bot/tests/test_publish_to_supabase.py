@@ -180,6 +180,42 @@ class PublisherNetworkTests(unittest.TestCase):
             self.assertEqual(calls[1], ("/autopilot/complete", {"job_id": metadata["job_id"], "video_id": "video789"}))
             self.assertEqual(json.loads((root / "recent-games.json").read_text(encoding="utf-8")), ["pixel-racer"])
 
+    def test_publish_refuses_a_different_video_reused_for_the_same_slot(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            video_path = root / "short.mp4"
+            video_path.write_bytes(b"x" * 2048)
+            result_path = root / "short.result.json"
+            metadata = {
+                "job_id": "b85e890f-7dd0-4d35-a7ab-8ef24ba826b3",
+                "game_id": "pixel-racer", "title": "Review", "description": "Grounded review",
+                "tags": ["shorts"], "category_id": "20", "publish_at": "2026-12-01T17:30:00Z",
+                "video_path": str(video_path),
+            }
+            result_path.write_text(json.dumps({"metadata": metadata}), encoding="utf-8")
+            with patch.dict(os.environ, {"YOUTUBE_MADE_FOR_KIDS": "false"}), \
+                 patch.object(publisher, "_supabase_post", return_value={"status": "scheduled", "video_id": "other-video"}), \
+                 patch.object(publisher, "_mask"), self.assertRaisesRegex(publisher.PublishError, "different job"):
+                publisher.publish(result_path)
+
+    def test_immediate_publish_omits_publish_at_and_uses_public_privacy(self):
+        captured = {}
+
+        def fake_http(request, timeout=45):
+            captured.update(json.loads(request.data.decode("utf-8")))
+            return 200, {"Location": "https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret"}, b""
+
+        metadata = {
+            "title": "Review", "description": "Grounded review", "tags": ["shorts"],
+            "category_id": "20", "publish_at": "2026-12-01T17:30:00Z",
+            "made_for_kids": False, "publish_immediately": True,
+        }
+        with patch.object(publisher, "_http_request", side_effect=fake_http):
+            publisher._start_youtube_session(metadata, b"x" * 2048, "access-token")
+        self.assertEqual(captured["status"]["privacyStatus"], "public")
+        self.assertFalse(captured["status"]["selfDeclaredMadeForKids"])
+        self.assertNotIn("publishAt", captured["status"])
+
     def test_publish_fails_closed_without_owner_audience_value(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from game_reviews import build_review_messages, generate_game_review, load_game_catalog, validate_review, youtube_description
+from game_reviews import build_review_messages, generate_game_review, generate_long_narration, load_game_catalog, validate_review, youtube_description
 from schedule_policy import next_publish_slot
 
 
@@ -51,6 +51,7 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(review["minus_evidence"], game["features"][0])
         self.assertEqual(review["format"], "game-review")
         self.assertIn("не личное прохождение", youtube_description(review))
+        self.assertIn("https://m98978672-boop.github.io/games/", youtube_description(review))
         self.assertEqual(len(review["scenes"]), 5)
 
     def test_long_catalog_text_is_bounded_for_narration_without_changing_evidence(self):
@@ -69,6 +70,19 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(review["pros"], game["features"][:2])
         self.assertTrue(all(len(scene["dialogue"]) <= 130 for scene in review["scenes"]))
         self.assertIn(long_title, review["game_title"])
+
+    def test_english_source_text_is_blocked_before_tts(self):
+        game = dict(load_game_catalog()[0])
+        game["features"] = ["Online multiplayer combat with strategic missions", "Thousands of weapons and seasonal events"]
+        payload = {
+            "schema_version": 1, "game_id": game["id"],
+            "selected_feature_ids": [f"{game['id']}-f1", f"{game['id']}-f2"],
+            "possible_minus": "Возможно, большой набор функций подойдёт не всем.",
+            "minus_feature_id": f"{game['id']}-f1", "idea_score": 7,
+            "hook": "Короткий обзор этой игры на русском языке.",
+        }
+        with self.assertRaisesRegex(ValueError, "cannot be safely narrated in Russian"):
+            validate_review(payload, [game])
 
     def test_rejects_unknown_feature_repeated_game_and_unmarked_negative_claim(self):
         games = load_game_catalog()
@@ -110,6 +124,30 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(generate.call_count, 2)
         self.assertEqual(review["pros"], game["features"][:2])
 
+    def test_long_form_script_requires_source_ids_russian_and_minimum_length(self):
+        games = load_game_catalog()
+        game = games[0]
+        review = validate_review({
+            "schema_version": 1, "game_id": game["id"],
+            "selected_feature_ids": [f"{game['id']}-f1", f"{game['id']}-f2"],
+            "possible_minus": "Возможно, такой акцент подойдёт не каждому игроку.",
+            "minus_feature_id": f"{game['id']}-f1", "idea_score": 7,
+            "hook": "Что интересного в этом игровом проекте?",
+        }, games)
+        line = "По моему впечатлению от опубликованного описания, этот факт помогает понять особенности проекта и оценить, кому может быть интересен такой игровой опыт."
+        line = (line * 3)[:260].rstrip()
+        while len(line) < 220:
+            line += " Это оценка только по источнику."
+        payload = {"scenes": [
+            {"fact_id": f"{game['id']}-f1", "dialogue": line[:320], "visual": "Показываем подтверждённый факт из источника"}
+            for _ in range(10)
+        ]}
+        with patch("game_reviews.generate_with_qwen", return_value=json.dumps(payload, ensure_ascii=False)):
+            scenes = generate_long_narration(review)
+        self.assertEqual(len(scenes), 10)
+        self.assertGreaterEqual(sum(len(scene["dialogue"]) for scene in scenes), 2400)
+        self.assertTrue(all("fact_id" in scene for scene in scenes))
+
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()
         game = games[0]
@@ -130,18 +168,30 @@ class GameCatalogTests(unittest.TestCase):
 
 
 class ScheduleTests(unittest.TestCase):
-    def test_cold_start_schedule_uses_amsterdam_tuesday_thursday_saturday(self):
-        # Monday 2026-11-23, UTC. The next slot should be Tuesday 18:30 CET.
-        now = __import__("datetime").datetime(2026, 11, 23, 12, 0, tzinfo=__import__("datetime").timezone.utc)
-        result = next_publish_slot(now)
-        self.assertEqual(result.isoformat(), "2026-11-24T17:30:00+00:00")
+    def test_shorts_have_two_daily_amsterdam_slots(self):
+        from datetime import datetime, timezone
+        morning = next_publish_slot(datetime(2026, 11, 23, 8, 0, tzinfo=timezone.utc))
+        evening = next_publish_slot(datetime(2026, 11, 23, 16, 0, tzinfo=timezone.utc))
+        self.assertEqual(morning.isoformat(), "2026-11-23T09:00:00+00:00")  # 10:00 CET
+        self.assertEqual(evening.isoformat(), "2026-11-23T17:00:00+00:00")  # 18:00 CET
+
+    def test_long_video_schedule_is_exactly_every_other_local_date(self):
+        from datetime import datetime, timezone
+        from schedule_policy import long_video_is_due
+        due_day = datetime(2026, 11, 24, 8, 0, tzinfo=timezone.utc)
+        off_day = datetime(2026, 11, 25, 8, 0, tzinfo=timezone.utc)
+        self.assertTrue(long_video_is_due(due_day))
+        self.assertFalse(long_video_is_due(off_day))
+        self.assertEqual(
+            next_publish_slot(off_day, video_format="long").isoformat(),
+            "2026-11-26T13:00:00+00:00",
+        )
 
     def test_schedule_moves_forward_when_today_slot_is_too_close(self):
         from datetime import datetime, timezone
-        # Tuesday 18:10 CET is too close to the 18:30 slot.
-        now = datetime(2026, 11, 24, 17, 10, tzinfo=timezone.utc)
+        now = datetime(2026, 11, 24, 17, 30, tzinfo=timezone.utc)  # 18:30 CET; today's slots passed.
         result = next_publish_slot(now)
-        self.assertEqual(result.isoformat(), "2026-11-26T17:30:00+00:00")
+        self.assertEqual(result.isoformat(), "2026-11-25T09:00:00+00:00")
 
     def test_naive_datetime_is_rejected(self):
         from datetime import datetime

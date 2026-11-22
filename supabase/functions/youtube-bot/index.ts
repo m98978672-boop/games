@@ -339,13 +339,14 @@ async function prepareAutopilotReview(request: Request): Promise<Response> {
   }
   const safeTime = scheduledDate.toISOString();
 
-  // One reservation per publish slot. Repeated preparation for the same job is
-  // safe; a different job cannot start a second upload for the same slot.
+  // One reservation per publish slot. A completed retry is idempotent only for
+  // the same job ID; another job at that slot must fail instead of reusing its video.
   const existing = await jobByPublishAt(safeTime);
   if (existing) {
-    if (existing.status === "scheduled" && typeof existing.video_id === "string") {
+    if (existing.id === jobId && existing.status === "scheduled" && typeof existing.video_id === "string") {
       return Response.json({
-        status: "scheduled", video_id: existing.video_id, watch_url: existing.watch_url, publish_at: safeTime,
+        status: "scheduled", job_id: jobId, video_id: existing.video_id,
+        watch_url: existing.watch_url, publish_at: safeTime,
       });
     }
     if (existing.id === jobId && existing.status === "processing") {
@@ -353,6 +354,7 @@ async function prepareAutopilotReview(request: Request): Promise<Response> {
     }
     return Response.json({
       status: existing.status,
+      job_id: existing.id,
       error: typeof existing.safe_error === "string"
         ? existing.safe_error
         : "This publish slot is already reserved; no second upload was started.",
@@ -370,11 +372,11 @@ async function prepareAutopilotReview(request: Request): Promise<Response> {
   } catch {
     // A concurrent request may have won the unique publish_at reservation.
     const raced = await jobByPublishAt(safeTime).catch(() => null);
-    if (raced?.status === "scheduled" && typeof raced.video_id === "string") {
-      return Response.json({ status: "scheduled", video_id: raced.video_id, watch_url: raced.watch_url, publish_at: safeTime });
+    if (raced?.id === jobId && raced.status === "scheduled" && typeof raced.video_id === "string") {
+      return Response.json({ status: "scheduled", job_id: jobId, video_id: raced.video_id, watch_url: raced.watch_url, publish_at: safeTime });
     }
     if (raced?.id === jobId && raced.status === "processing") return await issueAutopilotAccessToken(jobId);
-    if (raced) return Response.json({ status: raced.status, error: "This publish slot is already reserved; no second upload was started." }, { status: 409 });
+    if (raced) return Response.json({ status: raced.status, job_id: raced.id, error: "This publish slot is already reserved; no second upload was started." }, { status: 409 });
     return Response.json({ error: "Could not reserve this publish slot in the upload queue." }, { status: 503 });
   }
   return await issueAutopilotAccessToken(jobId);
