@@ -497,7 +497,9 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
     for directory in (cards, audio_dir, segments):
         directory.mkdir(parents=True, exist_ok=True)
     segment_paths: list[Path] = []
+    chapter_seconds: list[float] = []
     total_seconds = 0.0
+    # Synthesize and validate the entire narration before encoding expensive video.
     for scene_index, scene in enumerate(script["scenes"]):
         wav = audio_dir / f"chapter-{scene_index:02d}.wav"
         dialogue, seconds = fit_speech_text(
@@ -514,6 +516,14 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
             target.setparams(params)
             target.writeframes(speech)
             target.writeframes(b"\0" * pad_frames * params.sampwidth * params.nchannels)
+        chapter_seconds.append(scene_seconds)
+        total_seconds += scene_seconds
+    if not 180 <= total_seconds <= 600:
+        raise ValueError(f"Long review must be 3–10 minutes; generated duration is {total_seconds:.1f}s.")
+
+    for scene_index, scene in enumerate(script["scenes"]):
+        wav = audio_dir / f"chapter-{scene_index:02d}.wav"
+        scene_seconds = chapter_seconds[scene_index]
         card = cards / f"chapter-{scene_index:02d}.png"
         _render_long_card(script, scene, scene_index, card)
         segment = segments / f"chapter-{scene_index:02d}.mp4"
@@ -526,9 +536,6 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
             "-movflags", "+faststart", str(segment),
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         segment_paths.append(segment)
-        total_seconds += scene_seconds
-    if not 180 <= total_seconds <= 600:
-        raise ValueError(f"Long review must be 3–10 minutes; generated duration is {total_seconds:.1f}s.")
     concat_long_segments(ffmpeg, segment_paths, output, workdir)
     profile = verify_video_profile(output)
     return {
