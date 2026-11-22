@@ -105,7 +105,7 @@ def robots_allows(url):
         return True, f'robots.txt не прочитался ({type(err).__name__}) — иду осторожно'
 
 
-def run(url, seconds, out, keys='', interval_ms=0):
+def run(url, seconds, out, task_keys='', interval_ms=0):
     from playwright.sync_api import sync_playwright  # ленивая: --help и тесты логики без браузера
 
     out.mkdir(parents=True, exist_ok=True)
@@ -203,8 +203,8 @@ def run(url, seconds, out, keys='', interval_ms=0):
             # Подготовка: сначала читаю экран старта, а не жму всё подряд.
             hints = (page_text() + ' ' + (page.title() or '')).strip()
             keys, interval, mode, why = detect_controls(hints)
-            if keys:
-                keys = [k.strip() for k in keys.split(',') if k.strip()]
+            if task_keys:
+                keys = [k.strip() for k in task_keys.split(',') if k.strip()]
                 mode = 'flap' if len(keys) == 1 else 'cycle'
                 why = 'план клавиш задан заданием владельца'
             if interval_ms:
