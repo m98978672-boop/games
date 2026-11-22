@@ -189,6 +189,9 @@
   fetchText(HOME_RAW + 'state.json').then(function (txt) {
     var st = JSON.parse(txt);
     el('stModel').textContent = (st.baseModel || 'Qwen/Qwen3.5-0.8B').replace('Qwen/', '');
+    if (st.adapter && st.adapter.loraRank) {
+      el('stAdapter').textContent = 'LoRA r=' + st.adapter.loraRank + ' · все линейные слои · контекст ' + (st.adapter.maxTokens || 2048) + ' · ответ до ' + (st.adapter.answerTokenBudget || 192) + ' токенов';
+    }
     el('stSteps').textContent = st.totalSteps != null ? String(st.totalSteps) : '—';
     el('stRuns').textContent = st.learnRuns != null ? String(st.learnRuns) : '—';
     el('stLast').textContent = st.lastRunAt || '—';

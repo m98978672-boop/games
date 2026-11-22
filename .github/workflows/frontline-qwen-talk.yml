@@ -75,4 +75,11 @@ jobs:
           if [ -f qwen-home/memory/search-log.md ]; then git add qwen-home/memory/search-log.md; fi
           git diff --cached --quiet && exit 0
           git commit -m 'Квеня ответила в диалоге'
-          git push origin "HEAD:$GITHUB_REF_NAME"
+          # Отвечая прямо в main, можно проиграть гонку другому свежему
+          # коммиту — перебазируемся и повторяем, а не теряем её ответ.
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:$GITHUB_REF_NAME"; then break; fi
+            echo "push отклонён (попытка $attempt): перебазируюсь на свежий main"
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME" || { git rebase --abort; exit 1; }
+          done

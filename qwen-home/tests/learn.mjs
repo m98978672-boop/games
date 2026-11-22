@@ -124,6 +124,9 @@ check('параметры выросли честно: LoRA r=32 по всем �
 check('поиск по просьбе — только глаголом: разговор о поиске поиском не считается', talkGen.includes('сделай поиск') && !/загугли\|поиск\)/.test(talkGen));
 check('скорость: модель и pip живут в кэше Actions, а не качаются заново', talkWorkflow.includes('actions/cache@v4') && talkWorkflow.includes('.cache/huggingface') && talkWorkflow.includes('.cache/pip') && talkWorkflow.includes("OMP_NUM_THREADS: '4'"));
 check('разговор живёт и в main: владелец пишет прямо домой, коммит без [skip ci] — иначе сайт не пересоберётся', talkWorkflow.includes('workflow_dispatch') && talkWorkflow.includes("'main'") && talkWorkflow.includes("git commit -m 'Квеня ответила в диалоге'"));
+const learnWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'frontline-qwen-learn.yml'), 'utf8');
+check('параметры выросли и записаны: LoRA r=32 по всем слоям, контекст 2048, бюджет ответа 192', trainLearn.includes('LORA_R = 32') && trainLearn.includes('MAX_TOKENS = 2048') && trainLearn.includes('adapter_matches') && st0.adapter?.loraRank === 32 && st0.adapter?.answerTokenBudget === 192);
+check('дневник и ответы не теряются в гонке: коммиты перебазируются на свежий main', learnWorkflow.includes('git rebase') && talkWorkflow.includes('git rebase'));
 check('уроки учат искать: поискала, назвала статью, честно сказала, когда пусто', dialogue.filter((r) => /Википеди/.test(r.response)).length >= 4 && dialogue.some((r) => r.response.includes('Поискала')) && dialogue.some((r) => /только Википедия|только статьи Википедии/.test(r.response)));
 check('персона и состояние честно называют границу поиска: только Википедия', personaMd.includes('Википедии') && st0.internetSearch?.engine === 'ru.wikipedia.org');
 

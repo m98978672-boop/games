@@ -142,7 +142,15 @@ jobs:
           git add qwen-home/memory qwen-home/state.json
           git diff --cached --quiet && exit 0
           git commit -m "Qwen: самообучение — экзамен ${{ steps.gate.outputs.before }} → ${{ steps.gate.outputs.after }}, публикация: ${{ steps.gate.outputs.publish }}"
-          git push origin "HEAD:$GITHUB_REF_NAME"
+          # За час урока main успевает уйти вперёд (другие слияния, её же
+          # ответы) — голый push отклоняется, и дневник урока №3 так
+          # потерялся. Перебазируемся на свежий main и повторяем.
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:$GITHUB_REF_NAME"; then break; fi
+            echo "push отклонён (попытка $attempt): перебазируюсь на свежий main"
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME" || { git rebase --abort; exit 1; }
+          done
       - name: Retain learning artifacts
         if: always()
         uses: actions/upload-artifact@v4
