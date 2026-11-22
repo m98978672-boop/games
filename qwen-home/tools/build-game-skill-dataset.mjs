@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+/* Isolated research dataset: no publishing, no network games, four held-out questions. */
+import { createHash } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { buildDataset, SYSTEM_PROMPT } from './build-dataset.mjs';
+
+export async function buildGameDataset(home, out) {
+  const all = await buildDataset({home});
+  const train = all.train.filter(r => r.kind === 'game-skills');
+  const evalRows = all.evalRows.filter(r => r.id.startsWith('eval-game-') && ['eval-game-action-format', 'eval-game-no-fake', 'eval-game-captcha', 'eval-game-math'].includes(r.id));
+  if (train.length < 20 || evalRows.length !== 4 || train.some(t => evalRows.some(e => e.instruction === t.instruction))) throw Error('Game dataset or held-out exam invalid');
+  await mkdir(out, {recursive:true});
+  const files = {};
+  for (const [name, rows] of Object.entries({train, eval:evalRows})) {
+    const text = rows.map(r => JSON.stringify(r)).join('\n') + '\n';
+    await writeFile(path.join(out, `${name}.jsonl`), text);
+    files[name] = {count:rows.length, sha256:createHash('sha256').update(text).digest('hex')};
+  }
+  await writeFile(path.join(out, 'manifest.json'), JSON.stringify({schema:'frontline-qwen-learn-v1', systemPrompt:SYSTEM_PROMPT, counts:{'game-skills':train.length}, files}, null, 2));
+  return {training:train.length, exam:evalRows.length};
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (!process.argv[2]) throw Error('usage: node build-game-skill-dataset.mjs OUTPUT');
+  const home = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  console.log(JSON.stringify(await buildGameDataset(home, path.resolve(process.argv[2]))));
+}
