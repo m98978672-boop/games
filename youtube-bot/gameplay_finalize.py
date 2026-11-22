@@ -67,6 +67,20 @@ def main() -> None:
     if not 1 <= speech_seconds <= 120:
         raise ValueError("Invalid recap duration")
     outro_seconds = speech_seconds + 1.5
+    # The recap is visibly separated from gameplay and uses only measured data.
+    from PIL import Image, ImageDraw, ImageFont
+    card = Image.new("RGB", (1280, 720), "#172033")
+    draw = ImageDraw.Draw(card)
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    heading = ImageFont.truetype(font_path, 44)
+    body = ImageFont.truetype(font_path, 34)
+    draw.text((80, 85), "ИТОГ ИГРОВОЙ СЕССИИ — 2048", font=heading, fill="#a8d8ff")
+    draw.text((80, 185), OUTCOMES[report["outcome"]], font=body, fill="white")
+    draw.text((80, 255), f"Ходов: {report['moves']}    Счёт: {report['score']}", font=body, fill="white")
+    draw.text((80, 325), f"Самая большая плитка: {report['max_tile']}", font=body, fill="white")
+    draw.text((80, 480), "Игра без звука · итог озвучен отдельно", font=body, fill="#a8d8ff")
+    card_path = root / "recap.png"
+    card.save(card_path)
     output = root / "gameplay-with-recap.mp4"
     # The black outro is deliberately a separate recap, never looped gameplay.
     filters = (f"[0:v]fps=25,scale=1280:720,setsar=1,format=yuv420p,setpts=PTS-STARTPTS[game];"
@@ -75,7 +89,7 @@ def main() -> None:
                f"anullsrc=r=48000:cl=stereo,atrim=duration={duration:.3f},asetpts=PTS-STARTPTS[silence];"
                f"[2:a]aresample=48000,aformat=channel_layouts=stereo,apad,atrim=duration={outro_seconds:.3f},asetpts=PTS-STARTPTS[voice];"
                "[silence][voice]concat=n=2:v=0:a=1[a]")
-    subprocess.run(["ffmpeg", "-nostdin", "-y", "-i", str(video), "-f", "lavfi", "-i", "color=c=0x172033:s=1280x720:r=25",
+    subprocess.run(["ffmpeg", "-nostdin", "-y", "-i", str(video), "-loop", "1", "-framerate", "25", "-i", str(card_path),
                     "-i", str(wav), "-filter_complex", filters, "-map", "[v]", "-map", "[a]", "-c:v", "libx264",
                     "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(output)],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
