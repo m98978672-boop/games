@@ -17,7 +17,7 @@ jobs:
     if: >-
       github.repository == 'm98978672-boop/games' &&
       github.event.workflow_run.head_branch == 'main' &&
-      github.event.workflow_run.conclusion == 'failure'
+      contains(fromJSON('["failure","timed_out","startup_failure","action_required"]'), github.event.workflow_run.conclusion)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -28,14 +28,16 @@ jobs:
           RUN_ID: ${{ github.event.workflow_run.id }}
           ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         run: |
           set -euo pipefail
           title="YouTube autopilot failed: run ${RUN_ID} attempt ${ATTEMPT}"
           {
-            echo "Автопилот завершился ошибкой: ${RUN_URL}"
+            echo "Автопилот завершился со статусом ${CONCLUSION}: ${RUN_URL}"
             echo
             echo 'Публикация автоматически не повторена: проверьте YouTube Studio и состояние задания, прежде чем запускать её снова.'
             echo 'Ошибки и этапы доступны в журнале запуска; секреты и полные логи в это сообщение не копируются.'
           } > "$RUNNER_TEMP/failure-report.md"
+          cat "$RUNNER_TEMP/failure-report.md" >> "$GITHUB_STEP_SUMMARY"
           gh issue create --title "$title" --body-file "$RUNNER_TEMP/failure-report.md"
           echo "Отчёт об ошибке создан; повторной загрузки нет." >> "$GITHUB_STEP_SUMMARY"
