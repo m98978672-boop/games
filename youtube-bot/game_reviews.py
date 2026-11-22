@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from script_contract import _extract_json, generate_with_qwen
+from speech_policy import speech_excerpt
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = ROOT / "site" / "community-games.json"
@@ -156,10 +157,10 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
         "minus_evidence": minus_evidence,
         "idea_score": score,
         "scenes": [
-            {"speaker": "Games AI", "dialogue": f"{hook} Сегодня разбираю {game['title']}.", "visual": f"ИИ-разбор проекта {game['title']}", "emotion": "curious", "label": "ПЕРВЫЙ ВЗГЛЯД"},
-            {"speaker": "Games AI", "dialogue": f"Плюс по каталогу: {pros[0]}.", "visual": pros[0], "emotion": "happy", "label": "ПЛЮС"},
-            {"speaker": "Games AI", "dialogue": f"Ещё сильная сторона: {pros[1]}.", "visual": pros[1], "emotion": "happy", "label": "ЕЩЁ ПЛЮС"},
-            {"speaker": "Games AI", "dialogue": f"Возможный минус: {possible_minus}.", "visual": f"Основание из каталога: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
+            {"speaker": "Games AI", "dialogue": speech_excerpt(hook, 78), "visual": f"ИИ-разбор проекта {game['title']}", "emotion": "curious", "label": "ПЕРВЫЙ ВЗГЛЯД"},
+            {"speaker": "Games AI", "dialogue": f"Плюс по каталогу: «{speech_excerpt(pros[0], 76)}».", "visual": pros[0], "emotion": "happy", "label": "ПЛЮС"},
+            {"speaker": "Games AI", "dialogue": f"Ещё плюс: «{speech_excerpt(pros[1], 76)}».", "visual": pros[1], "emotion": "happy", "label": "ЕЩЁ ПЛЮС"},
+            {"speaker": "Games AI", "dialogue": f"Возможный минус: {speech_excerpt(possible_minus, 76)}.", "visual": f"Основание из каталога: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
             {"speaker": "Games AI", "dialogue": f"Оценка идеи по описанию — {score} из 10. Это не личное прохождение.", "visual": "Оценка идеи, не тест геймплея", "emotion": "calm", "label": "ВЕРДИКТ"},
         ],
     }

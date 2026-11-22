@@ -14,6 +14,8 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
+from speech_policy import fit_speech_text
+
 WIDTH, HEIGHT, FPS = 720, 1280, 12
 PALETTE = ["#68a8ff", "#ff8c69", "#9c7af2", "#53cba5", "#f4bd4f", "#f078a2"]
 FONT_PATHS = [
@@ -231,9 +233,13 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
     total_seconds = 0.0
     for scene_index, scene in enumerate(script["scenes"]):
         audio_path = audio_dir / f"line-{scene_index:02d}.wav"
-        seconds = synthesize(scene["dialogue"], audio_path)
-        if seconds > 12:
-            raise ValueError("A scene line is too long for a short; shorten the dialogue.")
+        dialogue, seconds = fit_speech_text(
+            str(scene["dialogue"]),
+            lambda candidate: synthesize(candidate, audio_path),
+            max_seconds=12.0,
+        )
+        # Keep the bubble, recorded review, and final audio in sync after any safe shortening.
+        scene["dialogue"] = dialogue
         # Hold each cartoon scene long enough to read the speech bubble. Silence is
         # appended after the spoken line rather than stretching or speeding up speech.
         with wave.open(str(audio_path), "rb") as source:
