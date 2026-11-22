@@ -1005,6 +1005,156 @@ def render_frame(k, t, ovl_imgs, ot=None):
             cam = make_cam((0.5, 0.52, -1.55), (0.6, 0.40, 2.0))
         else:
             cam = make_cam((0.15 + 0.25*smooth(0, 12, t), 0.55, -1.85), (0.6, 0.42, 2.0))
+    elif k == 22:
+        # ЭП3Ч2 · утро: друг лежит на месте Бориса
+        sky = sky_img("room", (96, 84, 76), (128, 112, 100))
+        grid = False
+        bl = 0.4 if (t % 4.7) < 0.5 else 1.0
+        F = dict(x=0.3, z=2.6, yaw=math.pi*0.9, walk=None, crouch=1.0, pitch=0.15,
+                 head_pitch=0.10 + 0.06*math.sin(t*0.9), head_yaw=0.2*math.sin(t*0.5),
+                 tail_t=t*0.4, blink=bl, black=True, lift=0.05)
+        P = dict(x=-0.55, z=2.35, yaw=0.9, walk=None,
+                 head_yaw=0.3*math.sin(t*0.8), head_pitch=0.10,
+                 tail_t=t*1.2, blink=blink(t), painted=True,
+                 ear_tw=0.4 if 5.2 < t < 5.6 else 0.0)
+        shadow = (-0.55, 2.35)
+        faces += quad((-3.2, 0, 4.2), (3.2, 0, 4.2), (3.2, 3.2, 4.2), (-3.2, 3.2, 4.2), (134, 118, 104))
+        faces += quad((-3.2, 0, 0.4), (-3.2, 3.2, 0.4), (-3.2, 3.2, 4.2), (-3.2, 0, 4.2), (120, 104, 92))
+        faces += quad((-3.2, 0.0, 0.4), (3.2, 0.0, 0.4), (3.2, 0.0, 4.2), (-3.2, 0.0, 4.2), (106, 94, 86))
+        faces += quad((-0.75, 1.15, 4.15), (0.75, 1.15, 4.15), (0.75, 2.25, 4.15), (-0.75, 2.25, 4.15), (206, 217, 233), True)
+        faces += box((0, 1.7, 4.10), (1.66, 0.10, 0.08), (230, 226, 218)) + box((0, 1.15, 4.10), (1.66, 0.10, 0.08), (230, 226, 218))
+        faces += box((0, 1.70, 4.10), (0.08, 1.2, 0.08), (230, 226, 218))
+        for sgn in (-1, 1):
+            swy = 0.05*math.sin(t*1.4 + sgn)
+            faces += [([( sgn*0.72, 1.18, 4.12), (sgn*0.72, 2.22, 4.12), (sgn*0.72 - 0.16 + swy, 2.22, 4.12), (sgn*0.72 - 0.20 + swy, 1.18, 4.12)], (176, 96, 92), False)]
+        faces += box((0, 0.38, 3.80), (1.35, 0.72, 0.14), (216, 216, 210))
+        for i in range(5):
+            faces += box((-0.52 + i*0.26, 0.38, 3.70), (0.07, 0.66, 0.06), (204, 204, 198))
+        faces += box((0.2, 0.05, 2.6), (1.35, 0.10, 0.95), (152, 72, 70))
+        faces += box((0.62, 0.11, 2.32), (0.45, 0.05, 0.35), (168, 86, 82))
+        faces += box((-1.7, 0.8, 3.5), (0.05, 1.6, 0.05), (70, 66, 62))
+        faces += [(q, (250, 220, 160), True) for q, c, e in box((-1.7, 1.72, 3.5), (0.36, 0.30, 0.36), (250, 220, 160))]
+        cf, cl = cat_faces(F); faces += cf; lines += cl
+        cf, cl = cat_faces(P); faces += cf; lines += cl
+        if MODE == "shorts":
+            cam = make_cam((0.6, 0.55, 0.75), (0.0, 0.34, 2.6))
+        else:
+            cam = make_cam((1.25, 0.55, 0.65), (0.0, 0.32, 2.6))
+    elif k == 23:
+        # ЭП3Ч2 · завтрак: миска Бориса — половина, миска друга — полная и чужая
+        sky = sky_img("dawn4", (72, 76, 84), (152, 154, 157))
+        eat = 1.0 if 2.0 < t < 8.0 else 0.0
+        glance = 1.0 if 8.5 < t < 10.5 else 0.0
+        F = dict(x=0.75, z=1.55, yaw=math.pi*1.15, walk=None, sit=1.0,
+                 head_pitch=0.38*eat*abs(math.sin(t*4.0)) - 0.10*glance,
+                 head_yaw=-0.5*glance, tail_t=t*1.6, blink=blink(t + 0.9), black=True)
+        P = dict(x=-0.35, z=1.6, yaw=0.8, walk=None,
+                 head_pitch=0.35 - 0.10*math.sin(t*0.7), head_yaw=0.2*math.sin(t*0.6),
+                 tail_t=t*1.1, blink=blink(t), painted=True,
+                 ear_tw=0.4 if 6.5 < t < 6.9 else 0.0)
+        shadow = (-0.35, 1.6)
+        faces += box((0, 1.5, 3.35), (6.4, 3.0, 0.3), (128, 112, 100))
+        faces += box((-1.3, 1.0, 3.16), (0.95, 2.0, 0.1), (92, 70, 54))
+        faces += box((-1.3, 0.06, 2.95), (1.1, 0.12, 0.5), (110, 96, 84))
+        faces += cat_house(0.6, 2.2, 0.0, 1.0, glow=0.35)
+        faces += box((-0.15, 0.05, 1.35), (0.16, 0.06, 0.16), (168, 60, 58))
+        faces += box((-0.15, 0.085, 1.35), (0.11, 0.02, 0.11), (60, 48, 44))
+        faces += box((0.55, 0.08, 1.30), (0.16, 0.10, 0.16), (168, 60, 58))
+        faces += box((0.55, 0.14, 1.30), (0.12, 0.04, 0.12), (150, 104, 60))
+        faces += box((-3.4, 1.3, 1.0), (2.2, 2.6, 2.6), (112, 98, 88))
+        cf, cl = cat_faces(F); faces += cf; lines += cl
+        cf, cl = cat_faces(P); faces += cf; lines += cl
+        if MODE == "shorts":
+            cam = make_cam((0.2, 0.6, -0.9), (0.2, 0.35, 1.4))
+        else:
+            cam = make_cam((1.9, 0.75, -0.9), (0.2, 0.3, 1.5))
+    elif k == 24:
+        # ЭП3Ч2 · командная охота: друг чихает, голуби уходят с достоинством
+        sky = sky_img("day4", (88, 102, 120), (170, 178, 188))
+        snz = math.sin((t - 6.0)*10.0) if 6.0 < t < 6.7 else 0.0
+        P = dict(x=0.3, z=1.2, yaw=0.0, walk=None, crouch=1.0,
+                 head_pitch=0.20 + 0.10*math.sin(t*2.2), head_yaw=0.25*math.sin(t*1.3),
+                 tail_t=t*2.4, blink=blink(t), painted=True,
+                 ear_tw=0.5 if 3.5 < t < 3.9 else 0.0)
+        F = dict(x=1.1, z=1.5, yaw=0.2, walk=None, crouch=0.6,
+                 head_pitch=0.18 + 0.55*snz, head_yaw=0.15*math.sin(t*1.1),
+                 tail_t=t*1.4 + 0.8, blink=blink(t + 0.5), black=True,
+                 lift=0.05*abs(snz))
+        shadow = (0.3, 1.2)
+        fly = smooth(6.6, 7.4, t)
+        for i, px in enumerate((-0.3, 0.15, 0.6)):
+            faces += pigeon_faces(px, 2.6 + 0.1*(i % 2), math.pi + 0.2*math.sin(t*0.4 + i),
+                                  t + i*0.6, fly=fly, peck=(0.5 + 0.5*math.sin(t*3.2 + i*2.0))*(1 - fly), scale=0.85)
+        if t > 7.5:
+            faces += box((0.30, 0.62, 1.02), (0.025, 0.025, 0.025), (214, 186, 140))
+        faces += box((-3.4, 1.3, 1.0), (2.2, 2.6, 2.6), (112, 98, 88))
+        faces += box((3.2, 1.4, 2.0), (1.8, 2.8, 2.2), (120, 106, 96))
+        cf, cl = cat_faces(P); faces += cf; lines += cl
+        cf, cl = cat_faces(F); faces += cf; lines += cl
+        if MODE == "shorts":
+            cam = make_cam((0.6, 0.65, -0.8), (0.6, 0.35, 2.0))
+        else:
+            cam = make_cam((2.0, 0.8, -0.6), (0.6, 0.3, 2.0))
+    elif k == 25:
+        # ЭП3Ч2 · вечер: плед один, котов двое, хвост по лицу
+        sky = sky_img("room", (96, 84, 76), (128, 112, 100))
+        grid = False
+        sweep = math.sin(t*1.1)
+        bl = 0.3 if sweep > 0.85 else (0.5 if (t % 5.1) < 0.5 else 1.0)
+        P = dict(x=0.1, z=2.55, yaw=math.pi*0.85, walk=None, crouch=1.0, pitch=0.05,
+                 head_yaw=0.35*sweep, head_pitch=0.10,
+                 tail_t=t*0.3, blink=bl, painted=True, lift=0.03)
+        F = dict(x=0.55, z=2.75, yaw=math.pi*1.25, walk=None, crouch=1.0, pitch=0.05,
+                 head_pitch=0.12, head_yaw=0.15*math.sin(t*0.6),
+                 tail_t=t*1.1, blink=blink(t + 1.4), black=True, lift=0.03)
+        shadow = (0.3, 2.65)
+        faces += quad((-3.2, 0, 4.2), (3.2, 0, 4.2), (3.2, 3.2, 4.2), (-3.2, 3.2, 4.2), (124, 108, 96))
+        faces += quad((-3.2, 0, 0.4), (-3.2, 3.2, 0.4), (-3.2, 3.2, 4.2), (-3.2, 0, 4.2), (110, 94, 84))
+        faces += quad((-3.2, 0.0, 0.4), (3.2, 0.0, 0.4), (3.2, 0.0, 4.2), (-3.2, 0.0, 4.2), (96, 84, 78))
+        faces += quad((-0.75, 1.15, 4.15), (0.75, 1.15, 4.15), (0.75, 2.25, 4.15), (-0.75, 2.25, 4.15), (186, 197, 213), True)
+        faces += box((0, 1.7, 4.10), (1.66, 0.10, 0.08), (230, 226, 218)) + box((0, 1.15, 4.10), (1.66, 0.10, 0.08), (230, 226, 218))
+        faces += box((0, 1.70, 4.10), (0.08, 1.2, 0.08), (230, 226, 218))
+        for sgn in (-1, 1):
+            swy = 0.05*math.sin(t*1.4 + sgn)
+            faces += [([( sgn*0.72, 1.18, 4.12), (sgn*0.72, 2.22, 4.12), (sgn*0.72 - 0.16 + swy, 2.22, 4.12), (sgn*0.72 - 0.20 + swy, 1.18, 4.12)], (176, 96, 92), False)]
+        faces += box((0, 0.38, 3.80), (1.35, 0.72, 0.14), (216, 216, 210))
+        for i in range(5):
+            faces += box((-0.52 + i*0.26, 0.38, 3.70), (0.07, 0.66, 0.06), (204, 204, 198))
+        faces += box((0.3, 0.05, 2.6), (1.45, 0.10, 1.0), (152, 72, 70))
+        faces += box((-1.7, 0.8, 3.5), (0.05, 1.6, 0.05), (70, 66, 62))
+        faces += [(q, (250, 220, 160), True) for q, c, e in box((-1.7, 1.72, 3.5), (0.36, 0.30, 0.36), (250, 220, 160))]
+        cf, cl = cat_faces(P); faces += cf; lines += cl
+        cf, cl = cat_faces(F); faces += cf; lines += cl
+        if MODE == "shorts":
+            cam = make_cam((0.6, 0.5, 0.8), (0.3, 0.32, 2.6))
+        else:
+            cam = make_cam((1.2, 0.5, 0.7), (0.3, 0.3, 2.6))
+    elif k == 26:
+        # ЭП3Ч2 · финал: двое на коньке смотрят на город
+        sky = sky_img("night4", (18, 22, 36), (54, 60, 84))
+        snow = True
+        glow = 0.6 + 0.2*math.sin(t*1.1)
+        P = dict(x=0.6, z=1.95, yaw=math.pi*0.5, walk=None, sit=1.0, lift=0.99,
+                 head_yaw=0.25*math.sin(t*0.5), head_pitch=0.05,
+                 tail_t=t*0.9, blink=blink(t), painted=True)
+        F = dict(x=0.6, z=2.45, yaw=math.pi*0.5, walk=None, sit=1.0, lift=0.99,
+                 head_yaw=-0.25*math.sin(t*0.4 + 1.0), head_pitch=0.05,
+                 tail_t=t*0.9 + 1.2, blink=blink(t + 0.8), black=True)
+        shadow = None
+        faces += box((0, 1.5, 3.35), (6.4, 3.0, 0.3), (74, 66, 62))
+        faces += box((-1.3, 1.0, 3.16), (0.95, 2.0, 0.1), (58, 46, 38))
+        faces += box((-1.3, 0.06, 2.95), (1.1, 0.12, 0.5), (66, 58, 52))
+        faces += cat_house(0.6, 2.2, 0.0, 1.0, glow=glow, night=True, snow_roof=0.6)
+        faces += pigeon_faces(0.0, 1.2, 0.4, t, fly=0.0, peck=0.0, scale=0.8)
+        faces += pigeon_faces(1.3, 1.3, -0.3, t + 1.1, fly=0.0, peck=0.0, scale=0.75)
+        faces += box((-3.4, 1.3, 1.0), (2.2, 2.6, 2.6), (60, 54, 50))
+        faces += box((2.9, 1.5, 1.4), (0.08, 3.0, 0.08), (64, 62, 66)) + box((2.9, 3.05, 1.4), (0.5, 0.14, 0.3), (250, 232, 178))
+        cf, cl = cat_faces(P); faces += cf; lines += cl
+        cf, cl = cat_faces(F); faces += cf; lines += cl
+        if MODE == "shorts":
+            cam = make_cam((2.4, 1.15, 0.4), (0.6, 1.0, 2.2))
+        else:
+            cam = make_cam((2.9, 1.15, 0.1), (0.6, 1.0, 2.2))
     else:
         sky = sky_img("studio", (118, 118, 121), (162, 162, 164))
         cam = make_cam((0, 0.8, -2.6), (0, 0.4, 0))

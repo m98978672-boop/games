@@ -30,3 +30,4 @@ __pycache__/
 node_modules/
 /boris/audio_ep2/*.wav
 /boris/audio_ep3/*.wav
+/boris/audio_ep3p2/*.wav
