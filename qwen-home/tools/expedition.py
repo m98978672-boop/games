@@ -108,6 +108,67 @@ EYES_JS = r"""
 """
 
 
+EYES_SUMMARY_JS = r"""
+() => {
+  const c = document.querySelector('canvas');
+  if (!c) return {ok: false, why: 'no canvas'};
+  let ctx = null;
+  try { ctx = c.getContext('2d'); } catch (e) {}
+  if (!ctx) return {ok: false, why: 'no 2d context'};
+  let img;
+  try { img = ctx.getImageData(0, 0, c.width, c.height); }
+  catch (e) { return {ok: false, why: 'pixels closed'}; }
+  const w = c.width, h = c.height, d = img.data, step = 3;
+  const birdPts = [], cols = {}, darkCols = {}, rowCols = {};
+  let cream = 0, creamAll = 0;
+  const cx0 = w * 0.30, cx1 = w * 0.70, cy0 = h * 0.20, cy1 = h * 0.62;
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const i = (y * w + x) * 4;
+      const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
+      if (a < 200) continue;
+      if (r > 200 && g > 150 && b < 120 && r - b > 90 && x >= 0.02 * w && x <= 0.24 * w && y < 0.80 * h) birdPts.push([x, y]);
+      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205) && y < 0.86 * h) {
+        (cols[x] = cols[x] || []).push(y);
+        (rowCols[y] = rowCols[y] || new Set()).add(x);
+      }
+      if (r < 70 && g < 70 && b < 70) darkCols[x] = (darkCols[x] || 0) + 1;
+      if (x >= cx0 && x <= cx1 && y >= cy0 && y <= cy1) {
+        creamAll++;
+        if (r > 220 && g > 220 && b > 140 && b < 225) cream++;
+      }
+    }
+  }
+  let bird = null;
+  if (birdPts.length >= 5) {
+    const xs = birdPts.map(p => p[0]).sort((a, b) => a - b);
+    const ys = birdPts.map(p => p[1]).sort((a, b) => a - b);
+    bird = [xs[xs.length >> 1], ys[ys.length >> 1]];
+  }
+  const wide = Math.max(6, Math.floor(0.15 * w));
+  const bgRows = new Set(Object.keys(rowCols).filter(y => rowCols[y].size >= wide).map(Number));
+  let gap = null, pipeX = null;
+  if (bird) {
+    const ahead = Object.keys(cols).map(Number).filter(x => x > bird[0] + 0.05 * w).sort((a, b) => a - b);
+    for (const x of ahead) {
+      const ys = cols[x].filter(y => !bgRows.has(y)).sort((a, b) => a - b);
+      const top = ys.filter(y => y < 0.30 * h);
+      if (top.length >= 3 && (darkCols[x] || 0) >= 4) {
+        pipeX = x;
+        const gapTop = top[top.length - 1];
+        const below = ys.filter(y => y > gapTop + 0.06 * h);
+        const gapBottom = below.length ? below[0] : Math.min(0.86 * h, gapTop + 0.293 * h);
+        gap = [gapTop, gapBottom];
+        break;
+      }
+    }
+  }
+  return {ok: true, w: w, h: h, bird: bird, gap: gap, pipe_x: pipeX,
+          game_over: creamAll ? (cream / creamAll) > 0.35 : false};
+}
+"""
+
+
 def _decode_png(data):
     """Минимальный PNG-декодер (stdlib): запасные глаза через скриншот канваса."""
     import struct
@@ -405,13 +466,18 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
             eyes_png_mode = {'on': False}
 
             def read_eyes():
-                """Кадр глазами: сначала пиксели канваса изнутри страницы,
-                если браузер не даёт — скриншот канваса и свой декодер."""
+                """Кадр глазами: разбор пикселей прямо в странице (быстро,
+                ответ — пять чисел); если страница не даёт пиксели —
+                скриншот канваса и свой декодер."""
                 if not eyes_png_mode['on']:
                     try:
-                        raw = page.evaluate(EYES_JS)
+                        raw = page.evaluate(EYES_SUMMARY_JS)
                         if raw and raw.get('ok'):
-                            return analyze_eyes(raw)
+                            return {'w': raw['w'], 'h': raw['h'],
+                                    'bird': tuple(raw['bird']) if raw.get('bird') else None,
+                                    'gap': tuple(raw['gap']) if raw.get('gap') else None,
+                                    'pipe_x': raw.get('pipe_x'),
+                                    'game_over': bool(raw.get('game_over'))}
                         eyes_png_mode['on'] = True
                         report.step('глаза экспедиции', f"пиксели канваса изнутри не дались ({(raw or {}).get('why', '?')}) — смотрю скриншотами канваса")
                     except Exception:
@@ -458,10 +524,13 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     last_gap = None
                     last_gap_at = 0.0
                     last_bird_y = None
+                    last_bird_at = 0.0
                     frame_h = probe['h']
                     over_hits = 0
                     eyes_lost = 0
                     saw_bird = False
+                    frames = bird_frames = gap_frames = 0
+                    mid_shot = False
                     while time.monotonic() < attempt_end:
                         st = read_eyes()
                         if st is None:
@@ -471,38 +540,56 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             page.wait_for_timeout(120)
                             continue
                         eyes_lost = 0
+                        frames += 1
                         now = time.monotonic()
                         frame_h = st['h']
                         if st['gap']:
+                            gap_frames += 1
                             last_gap = st['gap']
                             last_gap_at = now
                         if st['bird']:
+                            bird_frames += 1
                             saw_bird = True
                             last_bird_y = st['bird'][1]
+                            last_bird_at = now
+                        if not mid_shot and now - attempt_start > 6 and shot_no <= 5:
+                            shot(f'0{shot_no}-play.png')
+                            shot_no += 1
+                            mid_shot = True
                         if st['game_over'] and saw_bird and now - attempt_start > 4:
                             over_hits += 1
                             if over_hits >= 2:
                                 break
-                        else:
-                            over_hits = 0
+                            page.wait_for_timeout(80)
+                            continue
+                        over_hits = 0
+                        # птица была и пропала надолго, а игра по табло стоит —
+                        # попытка кончилась, не сидим на месте до звонка
+                        if saw_bird and not st['bird'] and now - last_bird_at > 2.0 and now - attempt_start > 6:
+                            sb_now = scoreboard()
+                            if sb_now is not None and not sb_now.get('start'):
+                                break
                         gap = st['gap'] or (last_gap if now - last_gap_at < 1.2 else None)
-                        if st['bird']:
+                        # мёртвую не дёргать: птица у самой земли или конец игры —
+                        # пробел там уже не взмах, а кнопка «в меню»
+                        bird_low = st['bird'] and st['bird'][1] > 0.72 * frame_h
+                        if st['bird'] and not st['game_over'] and not bird_low:
                             target = ((gap[0] + gap[1]) / 2 if gap else frame_h * 0.42) + offset
                             ms = int((now - last_flap) * 1000) if last_flap else 9999
                             if decide_flap(st['bird'][1], target, gap[1] if gap else None, frame_h, ms):
                                 page.keyboard.press(keys[0] if keys else 'Space')
                                 flaps += 1
                                 last_flap = now
-                        page.wait_for_timeout(105)
+                        page.wait_for_timeout(80)
                     sb = scoreboard()
                     steps_now = sb.get('steps') if sb else None
                     alive = round(time.monotonic() - attempt_start, 1)
-                    vision['attempts'].append({'n': attempt, 'seconds': alive, 'flaps': flaps, 'steps': steps_now, 'offset': offset})
+                    vision['attempts'].append({'n': attempt, 'seconds': alive, 'flaps': flaps, 'steps': steps_now, 'offset': offset, 'frames': frames, 'birdFrames': bird_frames, 'gapFrames': gap_frames})
                     if steps_now is not None:
                         vision['bestSteps'] = steps_now if vision['bestSteps'] is None else max(vision['bestSteps'], steps_now)
                     score_txt = f'труб по табло игры: {steps_now}' if steps_now is not None else 'табло не читается — счёт кадрами не подтверждён'
-                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, {score_txt}')
-                    if shot_no <= 5:
+                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, кадров {frames} (птицу видела в {bird_frames}, просвет в {gap_frames}), {score_txt}')
+                    if not mid_shot and shot_no <= 5:
                         shot(f'0{shot_no}-play.png')
                         shot_no += 1
                     if time.monotonic() < deadline - 8 and attempt < 3:
