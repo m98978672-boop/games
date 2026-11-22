@@ -58,6 +58,23 @@ class RenderQualityTests(unittest.TestCase):
             result = renderer.verify_video_profile(Path(temp) / "clip.mp4")
         self.assertEqual(result, {"fps": 50.0, "width": 1920, "height": 1080})
 
+    def test_short_long_narration_fails_before_any_video_encoding(self):
+        def fake_speech(_text, path):
+            with wave.open(str(path), "wb") as target:
+                target.setnchannels(1)
+                target.setsampwidth(2)
+                target.setframerate(1000)
+                target.writeframes(b"\0\0" * 1000)
+            return 1.0
+        script = {"scenes": [{"dialogue": "Проверка."} for _ in range(10)]}
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.object(renderer, "ffmpeg_executable", return_value="ffmpeg"), \
+             patch.object(renderer, "synthesize", side_effect=fake_speech), \
+             patch.object(renderer.subprocess, "run") as run:
+            with self.assertRaisesRegex(ValueError, "3–10 minutes"):
+                renderer.render_long_review(script, Path(temp) / "out.mp4", Path(temp) / "work")
+            run.assert_not_called()
+
     def test_piper_voice_is_local_and_rejects_non_russian_narration(self):
         import shutil
         with tempfile.TemporaryDirectory() as temp:
