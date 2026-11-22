@@ -56,6 +56,7 @@
   var playToggle = document.getElementById('kvPlayToggle');
   var fastToggle = document.getElementById('kvFastToggle');
   var aiGuardToggle = document.getElementById('kvAiGuardToggle');
+  var clearBtn = document.getElementById('kvLiveClear');
   var transformersMod = null;
   var micBtn = document.getElementById('kvMicBtn');
   var ruVoice = null;
@@ -1071,6 +1072,7 @@
         speak('Привет! Я Квеня. Спрашивай!');
         input.disabled = false;
         sendBtn.disabled = false;
+        if (clearBtn) clearBtn.disabled = false;
         startBtn.style.display = 'none';
         input.focus();
       });
@@ -1215,10 +1217,13 @@
       var secs = genStartedAt ? ((Date.now() - genStartedAt) / 1000).toFixed(1).replace('.', ',') : '';
       var modeLabel = turnMode === 'ai' ? 'защитный режим для ИИ' : 'открытый режим владельца';
       setStatus('Квеня здесь!' + (secs ? ' Ответ за ' + secs + ' с' : '') + ' (' + modeLabel + '). Спрашивай ещё.', 'ok');
-    }).catch(function () {
+    }).catch(function (err) {
+      try { console.error('Квеня: ошибка генерации', err); } catch (ignore) {}
       if (pendingBubble) { updateBubble(pendingBubble, 'Ой, у меня в браузере что-то закоротило. Попробуй ещё раз — или спроси настоящую меня в разговоре ниже.'); pendingBubble = null; }
       else bubble('kvenya', 'Ой, у меня в браузере что-то закоротило. Попробуй ещё раз — или спроси настоящую меня в разговоре ниже.');
-      setStatus('Ошибка генерации. Попробуй ещё раз.', 'err');
+      // Текст ошибки — не секрет: именно его не хватило в прошлый раз,
+      // когда владелец сказал просто «ошибку выдаёт».
+      setStatus('Ошибка генерации (' + (err && err.message ? err.message : 'неизвестная ошибка') + '). Попробуй ещё раз — если повторится, пришли мне этот текст ошибки целиком.', 'err');
     }).then(function () {
       busy = false;
       sendBtn.disabled = false;
@@ -1230,6 +1235,19 @@
   window.addEventListener('pagehide', function () {
     if (busy && !generator) savePartial(true);
   });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function () {
+      if (busy || !generator) return;
+      // Новый разговор = пустая история: и честно забыла, и быстрее —
+      // перед ответом ей больше не перечитывать всю ленту.
+      history = [];
+      chatEl.textContent = '';
+      bubble('kvenya', 'Начали с чистого листа! Я всё та же Квеня, просто этот разговор забыла. Спрашивай заново.');
+      setStatus('Квеня здесь! Новый разговор — отвечаю без старой истории, так быстрее.', 'ok');
+      input.focus();
+    });
+  }
 
   startBtn.addEventListener('click', startLive);
   form.addEventListener('submit', function (ev) {
