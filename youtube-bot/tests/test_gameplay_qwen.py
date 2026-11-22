@@ -30,6 +30,19 @@ class QwenPolicyTests(unittest.TestCase):
         self.assertIn('untrusted game content', prompts[-1])
         self.assertEqual(agent.decisions, ['RIGHT', 'RIGHT'])
 
+    def test_one_model_correction_without_scripted_fallback(self):
+        replies = iter(['RIGHT then code', 'LEFT'])
+        agent = QwenVisionAgent('go', ('LEFT', 'RIGHT'), generator=lambda *_: next(replies))
+        self.assertEqual(agent(frame('red'), 0)['keys'], ['ArrowLeft'])
+        calls = []
+        def invalid(*_):
+            calls.append(1)
+            return 'invalid'
+        agent = QwenVisionAgent('go', ('LEFT',), generator=invalid)
+        with self.assertRaises(ValueError): agent(frame('red'), 0)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(agent.decisions, [])
+
     def test_fail_closed(self):
         with self.assertRaises(ValueError): QwenVisionAgent('go', ('SHELL',))
         agent = QwenVisionAgent('go', ('LEFT',), generator=lambda *_: 'RIGHT')

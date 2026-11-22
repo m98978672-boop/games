@@ -94,7 +94,15 @@ class QwenVisionAgent:
                   'Look at the image and choose the next action. Reply with exactly one allowed action word and nothing else.')
         raw = self.generator(frame, prompt)
         self.last_response = raw[:120] if isinstance(raw, str) else None
-        choice = parse_action(raw, self.allowed)
+        try:
+            choice = parse_action(raw, self.allowed)
+        except ValueError:
+            # One fresh model correction, not a scripted action or free-text parsing.
+            # The game remains paused; untrusted previous output is not echoed.
+            correction = prompt + ' Your previous response was invalid. Choose one listed action word only.'
+            raw = self.generator(frame, correction)
+            self.last_response = raw[:120] if isinstance(raw, str) else None
+            choice = parse_action(raw, self.allowed)
         self.previous = frame
         self.history.append((choice, None))
         self.decisions.append(choice)
