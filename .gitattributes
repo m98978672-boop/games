@@ -1,0 +1,6 @@
+# Append-only файлы Квени: при слиянии двух дописок в конец git должен
+# сохранить обе (union), а не ронять workflow конфликтом на хвосте
+# файла. Так её ответ и следующий вопрос владельца не теряют друг друга.
+qwen-home/talk/dialogue.md merge=union
+qwen-home/memory/search-log.md merge=union
+qwen-home/memory/learning-log.md merge=union

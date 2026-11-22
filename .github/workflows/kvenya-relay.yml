@@ -47,13 +47,21 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add qwen-home/talk/dialogue.md
           git commit -m "Вопрос Квене с сайта (issue #$ISSUE_NUMBER)"
-          # main мог уйти вперёд — перебазируемся, как в её workflow.
-          for attempt in 1 2 3; do
-            if git push origin HEAD:main; then break; fi
-            echo "push отклонён (попытка $attempt): перебазируюсь"
+          # main мог уйти вперёд, пока мы писали вопрос. Rebase здесь
+          # ронял доставку на конфликте хвоста диалога — теперь, как в
+          # её разговорном workflow: слияние (union для dialogue.md) и
+          # честный провал, если запушить так и не вышло.
+          pushed=""
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then pushed=1; break; fi
+            echo "push отклонён (попытка $attempt): сливаюсь со свежим main"
             git fetch origin main
-            git rebase origin/main || { git rebase --abort; exit 1; }
+            git merge --no-edit origin/main || { git merge --abort; exit 1; }
           done
+          if [ -z "$pushed" ]; then
+            echo "Не удалось доставить вопрос за 5 попыток"
+            exit 1
+          fi
           gh issue comment "$ISSUE_NUMBER" --body "✅ Передал вопрос Квене в её дом. Она отвечает своей моделью — обычно 2–6 минут, и ответ появится в разговоре на странице: https://m98978672-boop.github.io/games/kvenya/"
           gh issue close "$ISSUE_NUMBER"
           # ВАЖНО: push от GITHUB_TOKEN не запускает другие workflow

@@ -100,7 +100,30 @@
 
   var chatNode = el('kvChat');
 
+  // Вопрос из «ожидания» считается отвеченным, если в файле разговора
+  // после него уже стоит реплика Квени. Раньше outbox чистился только
+  // вручную кнопкой «убрать» — ответ давно пришёл, а страница всё
+  // показывала «ждёт», и владельцу казалось, что ответы не приходят.
+  function pruneAnsweredOutbox(turns) {
+    var answered = {};
+    var open = [];
+    turns.forEach(function (t) {
+      if (t.who === 'owner') open.push(t.text);
+      else if (t.who === 'kvenya' && open.length) {
+        open.forEach(function (text) { answered[text] = (answered[text] || 0) + 1; });
+        open = [];
+      }
+    });
+    var list = loadOutbox();
+    var kept = list.filter(function (item) {
+      if (answered[item.text] > 0) { answered[item.text]--; return false; }
+      return true;
+    });
+    if (kept.length !== list.length) saveOutbox(kept);
+  }
+
   function renderChat(turns) {
+    pruneAnsweredOutbox(turns);
     chatNode.textContent = '';
     if (!turns.length) {
       var empty = document.createElement('div');
@@ -158,7 +181,7 @@
     } else if (elapsed < 5 * 60 * 1000) {
       stage.textContent = 'Ждёт, пока владелец заглянет и допишет вопрос в файл её дома qwen-home/talk/dialogue.md.';
     } else if (elapsed < WAIT_TYPICAL_MS) {
-      stage.textContent = 'Ориентир: передача занимает несколько минут, а дальше её модель думает в GitHub Actions — теперь быстрее: модель ждёт её в кэше, а поиск решает мгновенное правило. Ответ появится прямо в разговоре выше.';
+      stage.textContent = 'Ориентир: передача занимает несколько минут, а дальше её модель думает в GitHub Actions. Эта страница сама проверяет её дом каждые 30 секунд — ответ появится прямо в разговоре выше, перезагружать не нужно.';
     } else {
       stage.textContent = 'Прошло больше обычного ориентира (10 минут). Если вкладка GitHub с вопросом ещё открыта — нажми на ней Submit new issue: вопрос упадёт ей домой, и она ответит за 2–6 минут. Если вкладки нет, отправь вопрос ещё раз кнопкой «Отправить Квене».';
     }
@@ -175,12 +198,23 @@
   }, 1000);
 
   var dialogueTurns = [];
-  fetchText(HOME_RAW + 'talk/dialogue.md').then(function (md) {
-    dialogueTurns = parseDialogue(md);
-    renderChat(dialogueTurns);
-  }).catch(function () {
-    noteError(chatNode, 'talk/dialogue.md');
-  });
+  var lastDialogueMd = null;
+  function loadDialogue() {
+    // Страница сама перепроверяет разговор: ответ Квени появляется без
+    // ручной перезагрузки. Раньше файл читался один раз при открытии —
+    // сидишь и ждёшь на открытой вкладке, а ответ уже лежит в её доме.
+    var bust = Math.floor(Date.now() / 30000);
+    return fetchText(HOME_RAW + 'talk/dialogue.md?poll=' + bust).then(function (md) {
+      if (md === lastDialogueMd) return;
+      lastDialogueMd = md;
+      dialogueTurns = parseDialogue(md);
+      renderChat(dialogueTurns);
+    }).catch(function () {
+      if (lastDialogueMd === null) noteError(chatNode, 'talk/dialogue.md');
+    });
+  }
+  loadDialogue();
+  setInterval(function () { if (!document.hidden) loadDialogue(); }, 30000);
 
   /* ---------------- состояние ---------------- */
 
