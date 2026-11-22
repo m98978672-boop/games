@@ -19,7 +19,9 @@ Usage: python3 talk-generate.py --adapter PATH_TO_ADAPTER (optional)
 """
 import argparse
 import json
+import os
 import re
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -100,6 +102,27 @@ def forced_query(owner_text):
     query = re.sub(r'[^\w\s\-\u0400-\u04FF]', ' ', query)
     query = re.sub(r'\s+', ' ', query).strip()
     return query or owner_text
+
+
+# Скорость: раньше КАЖДОЕ сообщение без явного «поищи» стоило отдельной
+# генерации модели («нужен ли поиск?») — на CPU это десятки секунд.
+# Очевидные случаи теперь решает мгновенное правило, а модель спрашивают
+# только про неоднозначные сообщения (decide_search ниже).
+SELF_TALK = re.compile(r'(привет|пока[,!.\s]|спасибо|как дела|как ты|ты (умеешь|можешь|красивая|девушка|настоящая)|тебя|тебе|твой|твоя|твоё|скуча|характер|модельк|3d|платье|счасть|влюбля|обижа|боишься|чувству|радует|огорчает|волнуешь|мечта|зовут|сколько тебе лет)', re.I)
+FACTUAL_ASK = re.compile(r'(в каком году|в каком веке|когда (был|была|было|были|родил|умер|основан|основал|произош|начал|закончил)|кто (написал|основал|изобр[её]л|создал|открыл|стал)|столиц|сколько (весит|длин|высот|населени|стоит|длится)|где (наход|располож|лежит|стоит город)|что такое|дата (основани|рождени)|населени\w* (город|стран)|высот\w* (гор|здани|башн)|самая? (высок|больш|длинн|глубок)|перв\w+ (человек|президент|город|упоминан))', re.I)
+
+
+def rule_search_query(owner_text):
+    """Мгновенное решение без модели: (нужен поиск?, запрос).
+
+    Возвращает строку запроса, False — «точно без поиска» (разговор о ней
+    самой, приветствия, чувства) или None — «неоднозначно, спроси модель».
+    """
+    if SELF_TALK.search(owner_text):
+        return False
+    if FACTUAL_ASK.search(owner_text):
+        return owner_text
+    return None
 
 
 def decide_search(model, tokenizer, owner_text):
@@ -238,7 +261,9 @@ def log_search(query, results, best=None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--adapter', type=Path, help='home adapter folder; without it the base model answers')
-    parser.add_argument('--max-new', type=int, default=180)
+    # Её реплики по персоне — 1–3 предложения (~40–60 токенов). Лимит 180
+    # только зря гонял CPU на тишине после EOS в худших случаях.
+    parser.add_argument('--max-new', type=int, default=96)
     args = parser.parse_args()
     text = DIALOGUE.read_text(encoding='utf-8')
     turns = parse_turns(text)
@@ -247,20 +272,32 @@ def main():
         return
     owner_text = turns[-1][1]
     persona = PERSONA.read_text(encoding='utf-8').strip()
+    run_started = time.monotonic()
+    torch.set_num_threads(max(1, min(4, os.cpu_count() or 2)))
     tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
     model = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
+    print(f'Модель загружена за {time.monotonic() - run_started:.1f} c (потоков: {torch.get_num_threads()})', flush=True)
     if args.adapter and args.adapter.exists():
         model = PeftModel.from_pretrained(model, args.adapter)
         print(f'Адаптер подключён: {args.adapter}', flush=True)
     else:
         print('ВНИМАНИЕ: отвечаю базовой моделью без домашнего адаптера', flush=True)
     model.eval()
-    # Сначала она решает, нужен ли поиск, потом дом ищет за неё.
+    # Сначала решается, нужен ли поиск, потом дом ищет за неё. Очевидные
+    # случаи — мгновенным правилом, неоднозначные — самой моделью.
     query = forced_query(owner_text)
     if query:
         print(f'Владелец прямо попросил поиск, запрос: {query!r}', flush=True)
     else:
-        query = decide_search(model, tokenizer, owner_text)
+        ruled = rule_search_query(owner_text)
+        if ruled:
+            query = ruled
+            print(f'Быстрое правило: нужен поиск, запрос: {query!r}', flush=True)
+        elif ruled is False:
+            query = None
+            print('Быстрое правило: обычный разговор о ней самой, без поиска', flush=True)
+        else:
+            query = decide_search(model, tokenizer, owner_text)
     results = search_wikipedia(query) if query else []
     context_note = ''
     best = None
@@ -285,7 +322,7 @@ def main():
     from_search = bool(results)
     messages = [{'role': 'system', 'content': persona}]
     if not from_search:
-        history = turns[-(9):-1] if len(turns) > 1 else []
+        history = turns[-(7):-1] if len(turns) > 1 else []
         for role, body in history:
             if role == 'assistant' and BAD_HISTORY.search(body):
                 continue  # не подмешиваем ей в память собственные мусорные реплики
@@ -334,6 +371,7 @@ def main():
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
     DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
     LAST_REPLY.write_text(reply + '\n', encoding='utf-8')
+    print(f'Всего на ответ ушло {time.monotonic() - run_started:.1f} c', flush=True)
     print('ОТВЕТ КВЕНИ:')
     print(reply)
     notice = reply.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
