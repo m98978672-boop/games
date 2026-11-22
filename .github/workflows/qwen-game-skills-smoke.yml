@@ -1,0 +1,60 @@
+name: Qwen game skills research (no publication)
+on:
+  pull_request:
+    paths:
+      - 'qwen-home/curriculum/game-skills.jsonl'
+      - 'qwen-home/curriculum/eval.jsonl'
+      - 'qwen-home/tools/build-game-skill-dataset.mjs'
+      - 'qwen-home/tools/build-dataset.mjs'
+      - 'qwen-home/tools/score-learn.mjs'
+      - '.github/workflows/qwen-game-skills-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  train-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      OMP_NUM_THREADS: '4'
+      MKL_NUM_THREADS: '4'
+      HF_HUB_DISABLE_XET: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install CPU research dependencies
+        run: |
+          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+      - name: Load pinned home adapter without exposing credentials to the model
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/old"
+          gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/old"
+          python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/old/adapter.tar.gz" "$RUNNER_TEMP/initial-adapter"
+      - name: Build isolated lessons and separate exam
+        run: node qwen-home/tools/build-game-skill-dataset.mjs "$RUNNER_TEMP/game-data"
+      - name: Test Kvenya before training
+        run: |
+          python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/game-data" --adapter "$RUNNER_TEMP/initial-adapter" --output "$RUNNER_TEMP/before.json" --max-new 120
+          node qwen-home/tools/score-learn.mjs "$RUNNER_TEMP/before.json"
+      - name: Practice 16 experimental LoRA training steps
+        run: |
+          set +e
+          python -u qwen-home/tools/train-learn.py --data "$RUNNER_TEMP/game-data" --initial-adapter "$RUNNER_TEMP/initial-adapter" --output "$RUNNER_TEMP/experiment" --steps 16 > "$RUNNER_TEMP/game-learn.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/game-learn.log"
+          if [ "$status" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/game-learn.log"; fi
+          exit "$status"
+      - name: Test experimental adapter after training
+        run: |
+          python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/game-data" --adapter "$RUNNER_TEMP/experiment/adapter" --output "$RUNNER_TEMP/after.json" --max-new 120
+          node qwen-home/tools/score-learn.mjs "$RUNNER_TEMP/after.json"
+          node -e 'const fs=require("fs"), p=process.env.RUNNER_TEMP; const a=JSON.parse(fs.readFileSync(p+"/before.json")); const b=JSON.parse(fs.readFileSync(p+"/after.json")); const r=JSON.parse(fs.readFileSync(p+"/experiment/report.json")); console.log("::notice title=Kvenya game learning::"+JSON.stringify({before:a.scores.adapter,after:b.scores.adapter,steps:r.training.steps,loss_before:r.evaluation.loss_before,loss_after:r.evaluation.loss_after,published:false}));'

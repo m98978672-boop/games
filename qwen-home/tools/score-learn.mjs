@@ -14,6 +14,7 @@ const LEGAL_ACTIONS = new Set(['none', 'supply', 'build', 'hold']);
 export function formatOk(output, format) {
   const text = String(output || '').trim();
   if (format === 'think') return /<think>[\s\S]*<\/think>/.test(text);
+  if (format === 'game-action') return /^(LEFT|RIGHT|UP|DOWN|WAIT|SPACE|TABLET|FORWARD)$/.test(text);
   if (format === 'json') {
     try {
       const parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ''));

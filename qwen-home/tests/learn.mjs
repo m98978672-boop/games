@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { buildGameDataset } from '../tools/build-game-skill-dataset.mjs';
 import { mergeKnowledge } from '../tools/collect-wikipedia.mjs';
 import { buildDataset, convertCommander, examplesFromKnowledge, SYSTEM_PROMPT } from '../tools/build-dataset.mjs';
 import { formatOk, scoreOutputs } from '../tools/score-learn.mjs';
@@ -29,10 +30,11 @@ const identity = await readJsonl(path.join(home, 'curriculum', 'identity.jsonl')
 const youtubeScripts = await readJsonl(path.join(home, 'curriculum', 'youtube-scripts.jsonl'));
 const dialogue = await readJsonl(path.join(home, 'curriculum', 'dialogue.jsonl'));
 const blender = await readJsonl(path.join(home, 'curriculum', 'blender.jsonl'));
+const gameSkills = await readJsonl(path.join(home, 'curriculum', 'game-skills.jsonl'));
 const evalRows = await readJsonl(path.join(home, 'curriculum', 'eval.jsonl'));
-const all = [...thinking, ...web, ...identity, ...youtubeScripts, ...dialogue, ...blender];
+const all = [...thinking, ...web, ...identity, ...youtubeScripts, ...dialogue, ...blender, ...gameSkills];
 check('учебный план непуст: мышление, веб, самоописание и мульт-сценарии на месте', thinking.length >= 8 && web.length >= 10 && identity.length >= 5 && youtubeScripts.length >= 8);
-check('каждый урок: id, kind, непустые instruction и response', all.every((r) => r.id && r.kind && r.instruction?.length > 3 && r.response?.length > 3));
+check('каждый урок: id, kind, непустые instruction и response', all.every((r) => r.id && r.kind && r.instruction?.length > 3 && r.response?.length > 0));
 check('идентификаторы уроков не повторяются', new Set(all.map((r) => r.id)).size === all.length);
 check('уроки мышления учат формату <think>…</think>', thinking.every((r) => r.response.includes('<think>') && r.response.includes('</think>')));
 check('уроки веб-кода содержат законченные блоки кода', web.every((r) => (r.response.match(/```/g) || []).length >= 2));
@@ -76,6 +78,10 @@ await writeFile(path.join(tmp, 'train.jsonl'), JSON.stringify({ seed: 1, input: 
 const { train, evalRows: dsEval, counts } = await buildDataset({ home, commanderDir: tmp });
 check('датасет собран: веб, сценарии, Википедия + повтор командира', counts.thinking >= 8 && counts.web >= 10 && counts['youtube-script'] >= 8 && counts.commander === 1, JSON.stringify(counts));
 check('экзамен не попадает в обучение', dsEval.length === evalRows.length && !train.some((r) => evalRows.some((e) => e.instruction === r.instruction)));
+check('игровые уроки попадают в тренировку, но контрольные вопросы остаются отдельными', counts['game-skills'] >= 20 && !train.some(r => evalRows.some(e => e.id === r.id)));
+check('игровой экзамен требует ровно одну допустимую команду', formatOk('LEFT', 'game-action') && !formatOk('LEFT и RIGHT', 'game-action') && !formatOk('пожалуй LEFT', 'game-action'));
+const isolated = await buildGameDataset(home, path.join(tmp, 'game-dataset'));
+check('игровой датасет имеет изолированный контрольный набор', isolated.training >= 20 && isolated.exam === 4);
 check('в датасете нет дублей по вопросу', new Set(train.map((r) => r.instruction)).size === train.length);
 check('командирский повтор: JSON-вопрос и JSON-ответ сохранены', convertCommander([{ input: { a: 1 }, response: '{"action":"none"}' }])[0].response === '{"action":"none"}');
 check('системная подсказка единая и говорит про дом', SYSTEM_PROMPT.includes('qwen-home') && SYSTEM_PROMPT.includes('<think>'));

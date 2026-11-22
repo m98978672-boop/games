@@ -96,7 +96,7 @@ async function readJsonl(file) {
 /** Полная сборка: возвращает {train, evalRows, counts}. */
 export async function buildDataset({ home, commanderDir = null, seed = 20261116, wikiCap = 500 } = {}) {
   const curriculum = [];
-  for (const name of ['thinking.jsonl', 'web-code.jsonl', 'identity.jsonl', 'dialogue.jsonl', 'youtube-scripts.jsonl', 'blender.jsonl']) {
+  for (const name of ['thinking.jsonl', 'web-code.jsonl', 'identity.jsonl', 'dialogue.jsonl', 'youtube-scripts.jsonl', 'blender.jsonl', 'game-skills.jsonl']) {
     curriculum.push(...await readJsonl(path.join(home, 'curriculum', name)));
   }
   const evalRows = await readJsonl(path.join(home, 'curriculum', 'eval.jsonl'));
