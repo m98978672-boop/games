@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_at:
-        description: "Optional one-off Moscow time: YYYY-MM-DD HH:MM (allow time for rendering)"
+        description: "Moscow time YYYY-MM-DD HH:MM; if rendering runs late, publish later once"
         type: string
         required: false
       made_for_kids:

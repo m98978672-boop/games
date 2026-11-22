@@ -12,7 +12,7 @@ from typing import Any
 
 from game_reviews import generate_game_review, generate_long_narration, youtube_description
 from renderer import render_long_review, render_short
-from schedule_policy import manual_publish_time, next_publish_slot
+from schedule_policy import manual_publish_time, next_publish_slot, resolve_manual_after_render, CHANNEL_TZ
 from steam_catalog import download_screenshots, load_steam_games
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -42,8 +42,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     if video_format not in {"short", "long"}:
         raise ValueError("video_format must be short or long")
     manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
-    if manual_time:
-        manual_publish_time(manual_time)  # Fail before model downloads/rendering if invalid.
+    requested = manual_publish_time(manual_time) if manual_time else None  # Validate before rendering.
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
     # Deliberately source only games listed by Steam's live public shelves; never
@@ -70,9 +69,17 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
         title = review["title"][:100]
-    # Revalidate after rendering: never silently substitute another slot if the
-    # requested time is now too close for a safe scheduled upload.
-    scheduled = manual_publish_time(manual_time) if manual_time else next_publish_slot(video_format=video_format)
+    # Slow rendering may consume the lead time. Preserve the chosen slot if it
+    # still works; otherwise explicitly report a safe one-off delay. Never
+    # change the recurring cadence.
+    adjusted = False
+    if requested is not None:
+        scheduled, adjusted = resolve_manual_after_render(requested)
+        if adjusted:
+            print(f"Requested Moscow time {manual_time} became too close during rendering; "
+                  f"rescheduled once to {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow.", file=sys.stderr)
+    else:
+        scheduled = next_publish_slot(video_format=video_format)
     source_description = youtube_description(review)
     description = (
         source_description
@@ -88,6 +95,8 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         "category_id": "20",
         "publish_at": scheduled.isoformat().replace("+00:00", "Z"),
         "video_format": video_format,
+        "requested_publish_at": requested.isoformat().replace("+00:00", "Z") if requested else None,
+        "manual_time_adjusted": adjusted,
         "idea_score": review["idea_score"],
         "made_for_kids": None,  # The publisher requires the owner's explicit false/true setting.
         "video_path": str(output),

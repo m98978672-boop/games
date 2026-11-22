@@ -257,6 +257,18 @@ class ScheduleTests(unittest.TestCase):
                 manual_publish_time(value, now=now)
         self.assertEqual(manual_publish_time("2026-11-22 15:45", now=now).isoformat(), "2026-11-22T12:45:00+00:00")
 
+    def test_post_render_manual_slot_keeps_or_delays_once(self):
+        from datetime import datetime, timezone
+        from schedule_policy import resolve_manual_after_render
+        now = datetime(2026, 11, 22, 12, 10, 10, tzinfo=timezone.utc)
+        chosen = datetime(2026, 11, 22, 13, 0, tzinfo=timezone.utc)
+        self.assertEqual(resolve_manual_after_render(chosen, now=now), (chosen, False))
+        delayed, changed = resolve_manual_after_render(chosen, now=datetime(2026, 11, 22, 12, 30, 10, tzinfo=timezone.utc))
+        self.assertTrue(changed)
+        self.assertEqual(delayed.isoformat(), "2026-11-22T13:31:00+00:00")
+        with self.assertRaises(ValueError):
+            resolve_manual_after_render(datetime(2026, 11, 22, 13), now=now)
+
     def test_naive_datetime_is_rejected(self):
         from datetime import datetime
         with self.assertRaises(ValueError):

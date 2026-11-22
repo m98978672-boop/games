@@ -41,7 +41,7 @@ async function main() {
     }, resumeState);
     const page = await context.newPage();
     await page.goto("http://127.0.0.1:8787/", {waitUntil: "load", timeout: 30000});
-    await page.waitForSelector(".tile-container", {timeout: 10000});
+    await page.waitForSelector(".tile-container .tile", {state: "attached", timeout: 10000});
     await page.waitForFunction(() => !!localStorage.getItem("gameState"), null, {timeout: 10000});
     const initialState = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem("gameState")); } catch { return null; } });
     if (!initialState || (resumeState && JSON.stringify(initialState) !== JSON.stringify(JSON.parse(resumeState)))) throw Error("Saved game was not restored");
