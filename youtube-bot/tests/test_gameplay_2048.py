@@ -53,6 +53,24 @@ class Gameplay2048Tests(unittest.TestCase):
                     self.extract(archive_with(**kwargs), Path(temp) / "game")
                 self.assertFalse((Path(temp) / "escape.html").exists())
 
+    def test_saved_state_validation(self):
+        import json
+        state = {"grid": {"size": 4, "cells": [[None for _ in range(4)] for _ in range(4)]},
+                 "score": 16, "over": False, "won": False, "keepPlaying": False}
+        state["grid"]["cells"][2][1] = {"position": {"x": 2, "y": 1}, "value": 8}
+        self.assertEqual(game.validate_resume_state(json.dumps(state).encode()), state)
+        state["grid"]["cells"][2][1]["position"]["x"] = 3
+        with self.assertRaises(ValueError):
+            game.validate_resume_state(json.dumps(state).encode())
+        state["grid"]["cells"][2][1]["position"]["x"] = 2
+        state["over"] = True
+        with self.assertRaisesRegex(ValueError, "already finished"):
+            game.validate_resume_state(json.dumps(state).encode())
+        with self.assertRaises(ValueError):
+            game.validate_resume_state(b"{}")
+        with self.assertRaises(ValueError):
+            game.validate_resume_state(b"x" * 100001)
+
     def test_container_command_has_no_network_secrets_or_workspace_mount(self):
         with tempfile.TemporaryDirectory() as temp:
             game_dir, out = Path(temp) / "game", Path(temp) / "out"

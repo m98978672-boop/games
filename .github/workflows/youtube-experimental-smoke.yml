@@ -7,6 +7,7 @@ on:
       - 'youtube-bot/gameplay_2048.py'
       - 'youtube-bot/game_reviews.py'
       - 'youtube-bot/script_contract.py'
+      - 'youtube-bot/tests/smoke_*.py'
       - '.github/workflows/youtube-experimental-smoke.yml'
   workflow_dispatch:
 
@@ -27,7 +28,16 @@ jobs:
       - name: Build isolated recording container
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Capture actual gameplay and verify recording
-        run: python youtube-bot/tests/smoke_gameplay_2048.py
+        shell: bash
+        run: |
+          set +e
+          python youtube-bot/tests/smoke_gameplay_2048.py > "$RUNNER_TEMP/gameplay-smoke.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/gameplay-smoke.log"
+          if [ "$result" -ne 0 ]; then
+            python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/gameplay-smoke.log"
+          fi
+          exit "$result"
 
   qwen-long-script:
     # Synthetic source data, no YouTube upload and no secrets.
@@ -43,4 +53,13 @@ jobs:
       - name: Install local Qwen
         run: pip install -r youtube-bot/requirements-autopilot.txt
       - name: Generate and validate a real long script without publishing
-        run: python youtube-bot/tests/smoke_long_qwen.py
+        shell: bash
+        run: |
+          set +e
+          python youtube-bot/tests/smoke_long_qwen.py > "$RUNNER_TEMP/qwen-smoke.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/qwen-smoke.log"
+          if [ "$result" -ne 0 ]; then
+            python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/qwen-smoke.log"
+          fi
+          exit "$result"

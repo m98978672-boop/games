@@ -82,6 +82,36 @@ def download_archive() -> bytes:
     return data
 
 
+
+def validate_resume_state(data: bytes) -> dict:
+    """Accept only a bounded, non-terminal game state in 2048's own format."""
+    if len(data) > 100_000:
+        raise ValueError("Saved game is too large.")
+    try:
+        state = json.loads(data)
+        grid = state["grid"]
+        cells = grid["cells"]
+        if grid["size"] != 4 or len(cells) != 4 or any(not isinstance(col, list) or len(col) != 4 for col in cells):
+            raise ValueError("Invalid saved grid.")
+        if type(state["score"]) is not int or not 0 <= state["score"] <= 2**53 - 1:
+            raise ValueError("Invalid saved score.")
+        if any(type(state[key]) is not bool for key in ("over", "won", "keepPlaying")):
+            raise ValueError("Invalid saved status.")
+        if state["over"] or (state["won"] and not state["keepPlaying"]):
+            raise ValueError("This game is already finished.")
+        for x, col in enumerate(cells):
+            for y, cell in enumerate(col):
+                if cell is None:
+                    continue
+                value = cell["value"]
+                if (type(value) is not int or value < 2 or value > 2**30 or value & (value - 1)
+                        or cell["position"] != {"x": x, "y": y}):
+                    raise ValueError("Invalid saved tile.")
+        return state
+    except (KeyError, TypeError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError("Invalid saved game.") from exc
+
+
 def docker_command(game_dir: Path, output_dir: Path, seconds: int, *, container_name: str) -> list[str]:
     if not 1 <= seconds <= 3600:
         raise ValueError("Duration must be between 1 and 3600 seconds.")
@@ -110,6 +140,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run an experimental, silent 2048 capture; no publication.")
     parser.add_argument("--acknowledge-rights", action="store_true", help="Confirm that code and asset recording rights have been checked")
     parser.add_argument("--seconds", type=int, default=60, help="Experiment length: 1..3600 seconds (default 60)")
+    parser.add_argument("--resume", type=Path, help="Prior output/gameState.json from the same pinned game")
     args = parser.parse_args()
     if not args.acknowledge_rights:
         parser.error("Review rights and game safety first, then pass --acknowledge-rights.")
@@ -124,6 +155,12 @@ def main() -> None:
     game, output = work / "game", work / "output"
     output.mkdir(mode=0o700)
     unpack_archive(download_archive(), game)
+    if args.resume:
+        if not args.resume.is_file() or args.resume.is_symlink():
+            parser.error("--resume must be a regular gameState.json file")
+        with args.resume.open("rb") as saved:
+            state = validate_resume_state(saved.read(100_001))
+        (output / "resume.json").write_text(json.dumps(state), encoding="utf-8")
     manifest = {"repository": "https://github.com/gabrielecirulli/2048", "commit": COMMIT,
                 "archive_sha256": ARCHIVE_SHA256, "rights_confirmation": "operator-asserted"}
     (work / "source.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")

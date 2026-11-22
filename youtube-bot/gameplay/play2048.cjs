@@ -34,9 +34,17 @@ async function main() {
       const url = new URL(route.request().url());
       return url.protocol === "http:" && url.hostname === "127.0.0.1" && url.port === "8787" ? route.continue() : route.abort();
     });
+    const resumePath = path.join(OUT, "resume.json");
+    const resumeState = fs.existsSync(resumePath) ? fs.readFileSync(resumePath, "utf8") : null;
+    if (resumeState) await context.addInitScript((saved) => {
+      if (location.origin === "http://127.0.0.1:8787") localStorage.setItem("gameState", saved);
+    }, resumeState);
     const page = await context.newPage();
     await page.goto("http://127.0.0.1:8787/", {waitUntil: "load", timeout: 30000});
     await page.waitForSelector(".tile-container", {timeout: 10000});
+    await page.waitForFunction(() => !!localStorage.getItem("gameState"), null, {timeout: 10000});
+    const initialState = await page.evaluate(() => { try { return JSON.parse(localStorage.getItem("gameState")); } catch { return null; } });
+    if (!initialState || (resumeState && JSON.stringify(initialState) !== JSON.stringify(JSON.parse(resumeState)))) throw Error("Saved game was not restored");
     const start = Date.now();
     let moves = 0, outcome = "time_limit", maxTile = 0, score = 0;
     while (Date.now() - start < duration * 1000) {
@@ -59,7 +67,7 @@ async function main() {
     await page.close();
     await context.close(); // finishes the real recording; never loop/pad a short result
     const videoPath = video ? await video.path() : null;
-    const report = {game: "2048", source: "https://github.com/gabrielecirulli/2048", commit: "478b6ec346e3787f589e4af751378d06ded4cbbc", outcome, moves, score, max_tile: maxTile, elapsed_seconds: Math.floor((Date.now() - start) / 1000), video: videoPath ? path.basename(videoPath) : null, audio: false, uploaded: false};
+    const report = {game: "2048", source: "https://github.com/gabrielecirulli/2048", commit: "478b6ec346e3787f589e4af751378d06ded4cbbc", outcome, moves, score, max_tile: maxTile, resumed: Boolean(resumeState), initial_score: Number(initialState.score), elapsed_seconds: Math.floor((Date.now() - start) / 1000), video: videoPath ? path.basename(videoPath) : null, audio: false, uploaded: false};
     fs.writeFileSync(path.join(OUT, "report.json"), JSON.stringify(report, null, 2), {mode: 0o600});
     console.log(JSON.stringify(report));
   } finally {
