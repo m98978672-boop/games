@@ -9,11 +9,11 @@ from pathlib import Path
 from PIL import Image, ImageChops, ImageStat
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
-from gameplay_qwen import QwenVisionAgent
-from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance, initial_tree_approach
+from gameplay_qwen import QwenVisionAgent, _vision_runtime
+from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance, initial_tree_approach, measured_feedback
 
 root = Path(os.environ['VOXEL_GAME_DIST'])
-base_goal = 'Get wood in survival: find a tree, aim at its trunk and use MINE to hold left click. WASD actions move, LOOK actions turn, SPACE jumps. Stay safe.'
+base_goal = 'Find wood: approach a tree, aim at its trunk, hold MINE. Move with WASD, turn with LOOK; avoid danger.'
 agent = QwenVisionAgent(base_goal,
                         ('FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE','LOOKLEFT','LOOKRIGHT','LOOKUP','LOOKDOWN','MINE','WAIT'), avoid_stalled_actions=True)
 base_actions=agent.allowed
@@ -22,6 +22,9 @@ interventions=[]
 record_dir = Path(os.environ['VOXEL_RECORD_DIR']) if os.environ.get('VOXEL_RECORD_DIR') else None
 recorded = False
 stop_reason='step_limit'
+# Load weights and processor before a live survival world exists: first inference
+# previously spent many minutes downloading weights while the player could die.
+_vision_runtime()
 with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap='voxel', record_dir=record_dir) as bridge:
     # Bootstrap is scripted setup, not a model action or rights clearance.
     obs=bridge.receive(timeout=180)
@@ -60,6 +63,9 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
             interventions.append({'step':step,'type':'scripted_initial_approach', 'forced_action':'FORWARD'})
             print('VOXEL_SUPERVISOR='+json.dumps(interventions[-1]), flush=True)
         agent.objective=base_goal + ' ' + (approach_hint or explore_hint or target_hint)
+        last_feedback = trace[-1].get('feedback_hint') if trace else None
+        if last_feedback and len(agent.objective) + len(last_feedback) + 1 <= 300:
+            agent.objective += ' ' + last_feedback
         if supervision['hint'] and len(agent.objective) + len(supervision['hint']) + 1 <= 300:
             agent.objective += ' ' + supervision['hint']
         png=base64.b64decode(obs['screenshot_png_base64'], validate=True)
@@ -80,7 +86,8 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
             distance=round(math.sqrt(sum((after[k]-before[k])**2 for k in ('x','y','z'))),3)
         if after and after.get('wood'):
             stop_reason='game_reported_wood_obtained'
-        trace.append({'step':step+1, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
+        feedback = measured_feedback(before, after, agent.decisions[-1])
+        trace.append({'feedback_score':feedback['score'], 'feedback_reason':feedback['reason'], 'feedback_hint':feedback['hint'], 'step':step+1, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
                       'scripted_initial_approach':bool(approach_hint), 'action':agent.decisions[-1], 'game_reported_target_before':target, 'game_reported_screen':after.get('screen') if after else None,
                       'game_reported_displacement':distance,'game_reported_camera_delta':camera_delta,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'game_reported_wood':after.get('wood') if after else None,'coarse_frame_change':round(delta,2)})
         print('VOXEL_STEP='+json.dumps({'step':step+1, **trace[-1]}), flush=True)
@@ -90,7 +97,7 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         recorded = True
 result={'game':'Independent Minecraft Web Recreation, not Minecraft', 'source':'https://github.com/nightdong/minecraft-web-recreation',
         'commit':'85f63c01a5b67120badc57e70115a7644c361679', 'model_variant':'home-adapter',
-        'setup':'scripted survival world setup via UI', 'model_actions':trace, 'filtered_steps':agent.filtered_steps, 'supervisor_interventions':interventions, 'stop_reason':stop_reason,
+        'setup':'scripted survival world setup via UI', 'feedback_is_session_context_not_training':True, 'model_actions':trace, 'filtered_steps':agent.filtered_steps, 'supervisor_interventions':interventions, 'stop_reason':stop_reason,
         'telemetry_is_untrusted_game_report':True,'world_entered_verified':False,'victory_verified':False,
         'recorded':recorded,'trained':False,'published':False}
 if recorded:
