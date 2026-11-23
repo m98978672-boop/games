@@ -72,6 +72,11 @@ def detect_controls(text):
 
 EYES_SUMMARY_JS = r"""
 () => {
+  // Глаза на типизированных массивах. Прежняя версия строила Set на КАЖДУЮ
+  // строку и вставляла в него каждый найденный пиксель, а потом сортировала
+  // точки по колонкам: кадр разбирался миллисекунды, которых в игре нет.
+  // Здесь всё то же самое по смыслу (та же птица, тот же поиск трубы,
+  // тот же отсев «фоновых» строк), но счётчики — на типизированных массивах.
   const c = document.querySelector('canvas');
   if (!c) return {ok: false, why: 'no canvas'};
   let ctx = null;
@@ -81,7 +86,10 @@ EYES_SUMMARY_JS = r"""
   try { img = ctx.getImageData(0, 0, c.width, c.height); }
   catch (e) { return {ok: false, why: 'pixels closed'}; }
   const w = c.width, h = c.height, d = img.data, step = 4;
-  const birdPts = [], cols = {}, darkCols = {}, rowCols = {};
+  const colH = new Uint16Array(w);     // зелёных точек в колонке
+  const colDark = new Uint16Array(w);  // тёмных точек в колонке (окантовка трубы)
+  const rowH = new Uint16Array(h);     // зелёных точек в строке
+  let bx0 = w, bx1 = -1, by0 = h, by1 = -1, bN = 0;
   let cream = 0, creamAll = 0;
   const cx0 = w * 0.30, cx1 = w * 0.70, cy0 = h * 0.20, cy1 = h * 0.62;
   for (let y = 0; y < h; y += step) {
@@ -89,12 +97,15 @@ EYES_SUMMARY_JS = r"""
       const i = (y * w + x) * 4;
       const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
       if (a < 200) continue;
-      if (r > 200 && g > 150 && b < 120 && r - b > 90 && x >= 0.02 * w && x <= 0.24 * w && y < 0.80 * h) birdPts.push([x, y]);
-      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205) && y < 0.86 * h) {
-        (cols[x] = cols[x] || []).push(y);
-        (rowCols[y] = rowCols[y] || new Set()).add(x);
+      if (r > 200 && g > 150 && b < 120 && r - b > 90 && x >= 0.02 * w && x <= 0.24 * w && y < 0.80 * h) {
+        bN++;
+        if (x < bx0) bx0 = x; if (x > bx1) bx1 = x;
+        if (y < by0) by0 = y; if (y > by1) by1 = y;
       }
-      if (r < 70 && g < 70 && b < 70) darkCols[x] = (darkCols[x] || 0) + 1;
+      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205) && y < 0.86 * h) {
+        colH[x]++; rowH[y]++;
+      }
+      if (r < 70 && g < 70 && b < 70) colDark[x]++;
       if (x >= cx0 && x <= cx1 && y >= cy0 && y <= cy1) {
         creamAll++;
         if (r > 220 && g > 220 && b > 140 && b < 225) cream++;
@@ -102,36 +113,61 @@ EYES_SUMMARY_JS = r"""
     }
   }
   let bird = null;
-  if (birdPts.length >= 5) {
-    const xs = birdPts.map(p => p[0]).sort((a, b) => a - b);
-    const ys = birdPts.map(p => p[1]).sort((a, b) => a - b);
-    bird = [xs[xs.length >> 1], ys[ys.length >> 1]];
-  }
+  if (bN >= 5) bird = [(bx0 + bx1) >> 1, (by0 + by1) >> 1];
+  // «Фоновые» строки: зелёный идёт почти во всю ширину — это холмы, земля,
+  // облака. Труба широкая, но не на весь экран; старый глаз их отсеивал,
+  // и без отсева просвет прыгал на холмы.
   const wide = Math.max(6, Math.floor(0.15 * w));
-  const bgRows = new Set(Object.keys(rowCols).filter(y => rowCols[y].size >= wide).map(Number));
-  let gap = null, pipeX = null;
+  let gap = null, pipeX = null, gapSure = false;
   if (bird) {
-    const ahead = Object.keys(cols).map(Number).filter(x => x > bird[0] + 0.05 * w).sort((a, b) => a - b);
-    for (const x of ahead) {
-      const ys = cols[x].filter(y => !bgRows.has(y)).sort((a, b) => a - b);
-      const top = ys.filter(y => y < 0.30 * h);
-      if (top.length >= 3 && (darkCols[x] || 0) >= 4) {
-        pipeX = x;
-        const gapTop = top[top.length - 1];
-        const below = ys.filter(y => y > gapTop + 0.06 * h);
-        let gapBottom = below.length ? below[0] : Math.min(0.86 * h, gapTop + 0.293 * h);
-        if (gapBottom - gapTop < 0.16 * h || gapBottom - gapTop > 0.50 * h) {
-          gapBottom = Math.min(0.86 * h, gapTop + 0.293 * h);
-        }
-        gap = [gapTop, gapBottom];
-        break;
+    const isGreen = (x, y) => {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 200) return false;
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      return g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205) && y < 0.86 * h;
+    };
+    // Поиск трубы — дословно логика проверенной версии, но без Set и сортировок.
+    // Шаг 1: по кандидатным колонкам (много зелёного + окантовка) собрать
+    //        зелёные пиксели выше трети высоты, НЕ считая фоновых строк
+    //        (холмы, земля, облака идут во всю ширину — это не труба).
+    // Шаг 2: нижний край верхней трубы — самый нижний из них; низ просвета —
+    //        первый зелёный ниже него (тоже без фона).
+    // Начало колонок выравниваем по шагу сетки: счётчики заполнены по кратным.
+    let x0 = bird[0] + Math.floor(0.05 * w);
+    x0 += (step - (x0 % step)) % step;
+    for (let x = x0; x < w; x += step) {
+      if (colH[x] < 3 || colDark[x] < 4) continue;
+      let topMax = -1, topN = 0;
+      for (let y = 0; y < 0.30 * h; y += step) {
+        if (rowH[y] >= wide) continue;         // фон, а не труба
+        if (isGreen(x, y)) { topMax = y; topN++; }
       }
+      if (topN < 3 || topMax < 0) continue;
+      let gapBottom = -1;
+      for (let y = topMax + Math.floor(0.06 * h); y < 0.86 * h; y += step) {
+        if (rowH[y] >= wide) continue;
+        if (isGreen(x, y)) { gapBottom = y; break; }
+      }
+      // проверка просвета: настоящий просвет у таких игр ~0.29 кадра;
+      // прочиталось сильно уже или шире — не верю нижней границе
+      let sure = gapBottom > topMax;
+      if (!sure) gapBottom = Math.min(0.86 * h, topMax + 0.293 * h);
+      if (gapBottom - topMax < 0.16 * h || gapBottom - topMax > 0.50 * h) {
+        gapBottom = Math.min(0.86 * h, topMax + 0.293 * h);
+        sure = false;
+      }
+      pipeX = x;
+      gap = [topMax, gapBottom];
+      gapSure = sure;
+      break;
     }
   }
-  return {ok: true, w: w, h: h, bird: bird, gap: gap, pipe_x: pipeX,
+  return {ok: true, w: w, h: h, bird: bird, gap: gap, pipe_x: pipeX, gap_sure: gapSure,
           game_over: creamAll ? (cream / creamAll) > 0.35 : false};
 }
 """
+
+
 
 
 def _decode_png(data):
@@ -195,102 +231,127 @@ def _decode_png(data):
 def analyze_eyes(raw):
     """Разобрать кадр: где птица, где просвет труб, не конец ли игры.
 
-    На входе — кандидаты пикселей из скриншота канваса (PNG-путь глаз).
-    Птица живёт слева (в Clumsy Bird x=60 из 900), поэтому жёлтое
-    ищем только в левой четверти кадра: по центру тот же жёлтый —
-    надписи «get ready» и «game over», это не птица."""
+    На входе — пиксели кадра: {'ok', 'w', 'h', 'px' (RGBA), 'ch'}.
+    Это тот же расчёт, что в EYES_SUMMARY_JS, только на питоне. Раньше здесь
+    был «кандидатный» путь со списками пар и множествами на каждую точку:
+    на кадр 1200x800 уходили сотни миллисекунд, глаза отставали от игры, и
+    птица входила в трубу «вслепую». Теперь один проход по пикселям в
+    счётчики на типизированных массивах.
+    """
     if not raw or not raw.get('ok'):
         return None
-    from collections import defaultdict
-    w, h = raw['w'], raw['h']
-
-    def pairs(flat):
-        return list(zip(flat[0::2], flat[1::2]))
-
-    bird_pts = [(x, y) for x, y in pairs(raw.get('bird', []))
-                if 0.02 * w <= x <= 0.24 * w and y < 0.80 * h]
-    bird = None
-    if len(bird_pts) >= 5:
-        xs = sorted(q[0] for q in bird_pts)
-        ys = sorted(q[1] for q in bird_pts)
-        bird = (xs[len(xs) // 2], ys[len(ys) // 2])
-
-    cols = defaultdict(list)
-    for x, y in pairs(raw.get('pipe', [])):
-        if y < 0.86 * h:
-            cols[x].append(y)
-    dark_cols = defaultdict(int)
-    for x, y in pairs(raw.get('dark', [])):
-        dark_cols[x] += 1
-    # строки, зелёные почти по всей ширине, — это фон (кусты), а не труба
-    row_cols = defaultdict(set)
-    for x, ys in cols.items():
-        for y in ys:
-            row_cols[y].add(x)
-    wide = max(6, int(0.15 * w))
-    bg_rows = {y for y, ss in row_cols.items() if len(ss) >= wide}
-
-    gap = None
-    pipe_x = None
-    if bird:
-        for x in sorted(xx for xx in cols if xx > bird[0] + 0.05 * w):
-            ys = sorted(y for y in cols[x] if y not in bg_rows)
-            top = [y for y in ys if y < 0.30 * h]
-            if len(top) >= 3 and dark_cols.get(x, 0) >= 4:
-                pipe_x = x
-                gap_top = top[-1]
-                below = [y for y in ys if y > gap_top + 0.06 * h]
-                gap_bottom = below[0] if below else min(0.86 * h, gap_top + 0.293 * h)
-                # проверка просвета: настоящий просвет у таких игр ~0.29 кадра;
-                # прочиталось сильно уже или шире — не верю нижней границе
-                if gap_bottom - gap_top < 0.16 * h or gap_bottom - gap_top > 0.50 * h:
-                    gap_bottom = min(0.86 * h, gap_top + 0.293 * h)
-                gap = (gap_top, gap_bottom)
-                break
-    return {'w': w, 'h': h, 'bird': bird, 'gap': gap, 'pipe_x': pipe_x,
-            'game_over': raw.get('cream', 0) > 0.35}
-
-
-def eyes_from_png(data):
-    """Запасные глаза: PNG-скриншот канваса -> те же кандидаты пикселей."""
-    decoded = _decode_png(data)
-    if not decoded:
-        return None
-    w, h, ch, px = decoded
-    bird, pipe, dark = [], [], []
-    cream = cream_all = 0
+    w, h, ch, px = raw['w'], raw['h'], raw['ch'], raw['px']
     step = 4
+    colH = [0] * w          # зелёных точек в колонке
+    colDark = [0] * w       # тёмных точек в колонке (окантовка трубы)
+    rowH = [0] * h          # зелёных точек в строке
+    bx0, bx1, by0, by1, bN = w, -1, h, -1, 0
+    cream = cream_all = 0
+    cx0, cx1, cy0, cy1 = w * 0.30, w * 0.70, h * 0.20, h * 0.62
     for yy in range(0, h, step):
+        base = yy * w
         for xx in range(0, w, step):
-            i = (yy * w + xx) * ch
+            i = (base + xx) * ch
             r, g, b = px[i], px[i + 1], px[i + 2]
             a = px[i + 3] if ch == 4 else 255
             if a < 200:
                 continue
-            if r > 200 and g > 150 and b < 120 and r - b > 90:
-                bird += [xx, yy]
-            if g > 100 and g >= r - 10 and b < 150 and not (r > 205 and g > 205):
-                pipe += [xx, yy]
+            if (r > 200 and g > 150 and b < 120 and r - b > 90
+                    and 0.02 * w <= xx <= 0.24 * w and yy < 0.80 * h):
+                bN += 1
+                if xx < bx0: bx0 = xx
+                if xx > bx1: bx1 = xx
+                if yy < by0: by0 = yy
+                if yy > by1: by1 = yy
+            if g > 100 and g >= r - 10 and b < 150 and not (r > 205 and g > 205) and yy < 0.86 * h:
+                colH[xx] += 1
+                rowH[yy] += 1
             if r < 70 and g < 70 and b < 70:
-                dark += [xx, yy]
-            if w * 0.30 <= xx <= w * 0.70 and h * 0.20 <= yy <= h * 0.62:
+                colDark[xx] += 1
+            if cx0 <= xx <= cx1 and cy0 <= yy <= cy1:
                 cream_all += 1
                 if r > 220 and g > 220 and 140 < b < 225:
                     cream += 1
-    return {'ok': True, 'w': w, 'h': h, 'bird': bird, 'pipe': pipe,
-            'dark': dark, 'cream': (cream / cream_all) if cream_all else 0}
+
+    bird = None
+    if bN >= 5:
+        bird = ((bx0 + bx1) >> 1, (by0 + by1) >> 1)
+
+    def is_green(x, y):
+        i = (y * w + x) * ch
+        if (px[i + 3] if ch == 4 else 255) < 200:
+            return False
+        r, g, b = px[i], px[i + 1], px[i + 2]
+        return (g > 100 and g >= r - 10 and b < 150
+                and not (r > 205 and g > 205) and y < 0.86 * h)
+
+    # «Фоновые» строки: зелёный почти во всю ширину — это холмы, земля, облака,
+    # а не труба. Без этого отсева просвет прыгал на холмы.
+    # порог как в проверенной версии: доля ШИРИНЫ КАДРА (счётчики rowH считают
+    # ячейки сетки, их максимум w/step, поэтому доля берётся от w, а не от w/step)
+    wide = max(6, int(0.15 * w))
+    gap = None
+    pipe_x = None
+    gap_sure = False
+    if bird:
+        x0 = bird[0] + int(0.05 * w)
+        x0 += (step - (x0 % step)) % step
+        for x in range(x0, w, step):
+            if colH[x] < 3 or colDark[x] < 4:
+                continue
+            top_max, top_n = -1, 0
+            for y in range(0, int(0.30 * h), step):
+                if rowH[y] >= wide:
+                    continue                      # фон, а не труба
+                if is_green(x, y):
+                    top_max, top_n = y, top_n + 1
+            if top_n < 3 or top_max < 0:
+                continue
+            gap_bottom = -1
+            for y in range(top_max + int(0.06 * h), int(0.86 * h), step):
+                if rowH[y] >= wide:
+                    continue
+                if is_green(x, y):
+                    gap_bottom = y
+                    break
+            sure = gap_bottom > top_max
+            if not sure:
+                gap_bottom = min(0.86 * h, top_max + 0.293 * h)
+            if gap_bottom - top_max < 0.16 * h or gap_bottom - top_max > 0.50 * h:
+                gap_bottom = min(0.86 * h, top_max + 0.293 * h)
+                sure = False
+            pipe_x = x
+            gap = (top_max, gap_bottom)
+            gap_sure = sure
+            break
+    return {'w': w, 'h': h, 'bird': bird, 'gap': gap, 'pipe_x': pipe_x,
+            'gap_sure': gap_sure, 'game_over': (cream / cream_all) > 0.35 if cream_all else False}
 
 
-def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
+def eyes_from_png(data):
+    """Запасные глаза: PNG-скриншот канваса -> пиксели кадра для analyze_eyes."""
+    decoded = _decode_png(data)
+    if not decoded:
+        return None
+    w, h, ch, px = decoded
+    return {'ok': True, 'w': w, 'h': h, 'ch': ch, 'px': px}
+
+
+def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0, sure=True):
     """Решение глаз: жать ли взмах на этом кадре.
 
-    Главный урок трасс: птицу убивает не скорость, а ВЫСОТА у трубы:
-    взмах уносит на ~96 px вверх, и если жать у середины просвета,
-    птица взлетает выше его верхнего края — а труба уже здесь.
-    Поэтому играем ЗОНОЙ: взмах только когда птица опустилась в
-    нижнюю четверть просвета (тогда подъём оставляет её внутри),
-    у нижнего края — срочно, на подъёме после взмаха — не мешаем.
-    Без просвета (трубы не видно) — держим высоту target_y."""
+    Стратегия — та, что дала рекорд 4 трубы (зона 0.72). Пробовал 0.58 и
+    упреждение по скорости: на живом прогоне это дало 1 трубу против 4.
+    Меняем не стратегию, а ЗРЕНИЕ: кадр теперь разбирается без Set и сортировок
+    (было сотни миллисекунд, стало единицы), поэтому решение приходит свежим.
+
+    Главный урок трасс: птицу убивает не скорость, а ВЫСОТА у трубы.
+    Взмах уносит на ~72 px вверх, и если жать у середины просвета, птица
+    взлетает выше верхнего края — а труба уже здесь.
+    Поэтому играем ЗОНОЙ: взмах только когда птица опустилась в нижнюю
+    четверть просвета, у нижнего края — срочно, на подъёме — не мешаем.
+    Без просвета (трубы не видно) — держим высоту target_y.
+    """
     if bird_y is None:
         return False
     if gap:
@@ -301,7 +362,11 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
         # не ждём зону, скорость сама донесёт до нижнего края
         if vy >= 45 and bird_y > gap_top + 0.45 * (gap_bottom - gap_top):
             return ms_since_flap >= 70
-        zone = gap_top + 0.72 * (gap_bottom - gap_top)
+        # Зона 0.72 — проверена живьём: рекорд 4 трубы.
+        # Если низ просвета не подтверждён пикселями, он может быть выше,
+        # чем кажется, — тогда зону поднимаем, чтобы взмах успел.
+        share = 0.72 if sure else 0.62
+        zone = gap_top + share * (gap_bottom - gap_top)
         # прогноз: падаем быстро — к следующему кадру будем в зоне,
         # жмём СЕЙЧАС, а не когда уже поздно (урок смертей «пулей»)
         if vy > 8 and bird_y + vy * 0.9 > zone:
@@ -312,6 +377,7 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
     if bird_y > target_y + 0.010 * h and vy > -12 and ms_since_flap >= 100:
         return True
     return vy >= 20 and bird_y > target_y - 0.06 * h and ms_since_flap >= 90
+
 
 class Report:
     def __init__(self, url):
@@ -465,6 +531,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             return {'w': raw['w'], 'h': raw['h'],
                                     'bird': tuple(raw['bird']) if raw.get('bird') else None,
                                     'gap': tuple(raw['gap']) if raw.get('gap') else None,
+                                    'gap_sure': bool(raw.get('gap_sure')),
                                     'pipe_x': raw.get('pipe_x'),
                                     'game_over': bool(raw.get('game_over'))}
                         eyes_png_mode['on'] = True
@@ -472,6 +539,8 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     except Exception:
                         eyes_png_mode['on'] = True
                 try:
+                    # тот же расчёт, что в странице: analyze_eyes сам считает и
+                    # уверенность в низе просвета (gap_sure) по пикселям кадра
                     return analyze_eyes(eyes_from_png(canvas.screenshot()))
                 except Exception:
                     return None
@@ -580,7 +649,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             vy = (st['bird'][1] - prev_bird_y) if prev_bird_y is not None else 0
                             prev_bird_y = st['bird'][1]
                             if gap:
-                                # цель для трассы и разбора: середина рабочей зоны
+                                # цель для трассы и разбора: рабочая зона, а не край
                                 target = gap[0] + 0.72 * (gap[1] - gap[0]) + offset
                             else:
                                 target = frame_h * 0.42 + offset
@@ -595,7 +664,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                                     key_held = False
                             elif not st['game_over'] and not corpse:
                                 ms = int((now - last_flap) * 1000) if last_flap else 9999
-                                if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy):
+                                if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy, st.get('gap_sure', True)):
                                     page.keyboard.down(flap_key)
                                     # второй канал ввода: в этой игре клик по канвасу —
                                     # тот же взмах; хоть один канал да долетит

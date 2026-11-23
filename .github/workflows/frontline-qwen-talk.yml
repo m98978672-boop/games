@@ -68,7 +68,7 @@ jobs:
           # сборке окружения, верим штампу и не импортируем зря; штамп
           # не сошёлся — честная полная проверка импортом, а дальше
           # пересборка, а не падение.
-          if [ -x "$VENV/bin/python" ] && [ "$(cat "$VENV/kvenya-py.txt" 2>/dev/null)" = "$(python -V 2>&1)" ]; then
+          if [ -x "$VENV/bin/python" ] && [ "$(cat "$VENV/kvenya-py.txt" 2>/dev/null)" = "$(python -V 2>&1)" ] && "$VENV/bin/python" -c "import torchao" 2>/dev/null; then
             echo "Окружение из кэша, версия Python та же — отвечаем сразу"
           elif [ -x "$VENV/bin/python" ] && "$VENV/bin/python" -c "import torch, transformers, peft" 2>/dev/null; then
             echo "Окружение поднялось из кэша (проверено импортом)"
@@ -79,6 +79,9 @@ jobs:
             python -m venv "$VENV"
             "$VENV/bin/pip" install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
             "$VENV/bin/pip" install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+            # int8-квантование из коробки torch — выдача быстрее на CPU;
+            # не встало — окружение всё равно годное, это не падение.
+            "$VENV/bin/pip" install 'torchao==0.14.1' || echo 'torchao не встал — остаёмся в bfloat16'
             python -V 2>&1 > "$VENV/kvenya-py.txt"
           fi
           echo "PY=$VENV/bin/python" >> "$GITHUB_ENV"
@@ -94,10 +97,17 @@ jobs:
           exit 0
       - name: Kvenya answers
         run: |
+          # Характер ответа: 1 - обычный, 2 - подробный (5-8 предложений),
+          # 3 - подробный с int8-весами (быстрее на CPU).
+          ARGS=""
+          if [ "${KV_DETAILED:-0}" = "1" ] || [ "${KV_DETAILED:-0}" = "3" ]; then ARGS="$ARGS --detailed"; fi
+          if [ "${KV_DETAILED:-0}" = "2" ] || [ "${KV_DETAILED:-0}" = "3" ]; then ARGS="$ARGS --int8"; fi
+          # Все ядра раннера: на боевом раннере их больше четырёх, а старая
+          # жёсткая четвёрка оставляла половину скорости в столе.
           if [ -n "${ADAPTER:-}" ]; then
-            "${PY:-python}" -u qwen-home/tools/talk-generate.py --adapter "$ADAPTER"
+            "${PY:-python}" -u qwen-home/tools/talk-generate.py --adapter "$ADAPTER" $ARGS
           else
-            "${PY:-python}" -u qwen-home/tools/talk-generate.py
+            "${PY:-python}" -u qwen-home/tools/talk-generate.py $ARGS
           fi
       - name: Commit her words back to the branch
         id: commit
