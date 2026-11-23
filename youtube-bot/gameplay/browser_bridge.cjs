@@ -118,6 +118,16 @@ async function main() {
           return {screen:s.screen, x:p.x, y:p.y, z:p.z, health, hunger, wood:s.earned.includes("wood")};
         } catch { return null; }
       }) : null;
+      // The crosshair target is privileged game diagnostics, not visual model
+      // perception. Only a coarse, fixed vocabulary is sent to the operator.
+      const voxelTarget = TELEMETRY === "voxel" ? await page.evaluate(() => {
+        try {
+          const target = window.voxelDiagnostics.snapshot()?.target;
+          if (target == null) return "none";
+          if (!Number.isSafeInteger(target.id) || target.id < 0 || target.id > 1000) return "unknown";
+          return [9, 12, 15].includes(target.id) ? "log" : "other";
+        } catch { return "unknown"; }
+      }) : null;
       const orientation = TELEMETRY === "voxel" ? await page.evaluate(() => {
         try {
           const p = window.voxelDiagnostics.snapshot()?.player;
@@ -126,7 +136,7 @@ async function main() {
         } catch { return null; }
       }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation} : {})});
+        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});

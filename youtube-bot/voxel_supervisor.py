@@ -66,3 +66,21 @@ def assisted_actions(allowed, recent, reason):
     if not remaining:
         return allowed, ()
     return remaining, tuple(a for a in allowed if a in blocked)
+
+
+def target_assistance(allowed, target, *, health):
+    """Gate mining on the pinned game's untrusted crosshair diagnostic.
+
+    This is privileged outside help, not the vision policy or learned knowledge.
+    Unknown diagnostics fail closed for mining, rather than inventing a target.
+    """
+    if target not in ('log', 'other', 'none', 'unknown'):
+        target = 'unknown'
+    if target == 'log':
+        return allowed, (), 'Game diagnostic reports a log at the crosshair within reach. Hold MINE to break it.'
+    blocked = ('MINE',) if 'MINE' in allowed and len(allowed) > 1 else ()
+    rest = tuple(a for a in allowed if a not in blocked)
+    if health <= 8:
+        return rest, blocked, 'Reported health is low. Avoid hazards and move cautiously.'
+    return rest, blocked, ('No log is reported at the crosshair within reach. Look around for a tree, '
+                           'then move close and aim at its trunk before mining.')

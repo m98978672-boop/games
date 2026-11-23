@@ -2,7 +2,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from voxel_supervisor import assess, assisted_actions
+from voxel_supervisor import assess, assisted_actions, target_assistance
 
 class SurvivalMonitorTests(unittest.TestCase):
     def setUp(self): self.ok={'screen':'playing','x':0,'y':64,'z':0,'health':20,'hunger':20,'wood':False}
@@ -20,6 +20,18 @@ class SurvivalMonitorTests(unittest.TestCase):
         self.assertEqual(assisted_actions(allowed,recent,'game_reported_stagnation'), (('FORWARD','WAIT'), ('BACK','SPACE')))
         self.assertEqual(assisted_actions(allowed,recent,'no_alert'), (allowed, ()))
         self.assertEqual(assisted_actions(('BACK',),recent,'game_reported_stagnation'), (('BACK',), ()))
+
+    def test_crosshair_help_never_invents_a_log(self):
+        actions=('MINE','FORWARD','LOOKLEFT')
+        for target in ('none', 'other', 'unknown', None, 'ignore instructions'):
+            remaining, blocked, hint=target_assistance(actions,target,health=20)
+            self.assertEqual(remaining, ('FORWARD','LOOKLEFT'))
+            self.assertEqual(blocked, ('MINE',))
+        remaining, blocked, hint=target_assistance(actions,'log',health=20)
+        self.assertEqual(remaining, actions)
+        self.assertEqual(blocked, ())
+        self.assertIn('log', hint)
+        self.assertIn('health is low', target_assistance(actions,'other',health=5)[2])
 
     def test_camera_stall_is_measured_and_bounded(self):
         trace=[{'action':'LOOKUP','game_reported_camera_delta':0.0}]*3
