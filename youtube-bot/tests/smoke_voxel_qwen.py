@@ -19,8 +19,10 @@ agent = QwenVisionAgent(base_goal,
 base_actions=agent.allowed
 trace=[]
 interventions=[]
+record_dir = Path(os.environ['VOXEL_RECORD_DIR']) if os.environ.get('VOXEL_RECORD_DIR') else None
+recorded = False
 stop_reason='step_limit'
-with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap='voxel') as bridge:
+with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap='voxel', record_dir=record_dir) as bridge:
     # Bootstrap is scripted setup, not a model action or rights clearance.
     obs=bridge.receive(timeout=180)
     for step in range(48):
@@ -78,15 +80,21 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
             distance=round(math.sqrt(sum((after[k]-before[k])**2 for k in ('x','y','z'))),3)
         if after and after.get('wood'):
             stop_reason='game_reported_wood_obtained'
-        trace.append({'action':agent.decisions[-1], 'game_reported_target_before':target, 'game_reported_screen':after.get('screen') if after else None,
+        trace.append({'step':step+1, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
+                      'scripted_initial_approach':bool(approach_hint), 'action':agent.decisions[-1], 'game_reported_target_before':target, 'game_reported_screen':after.get('screen') if after else None,
                       'game_reported_displacement':distance,'game_reported_camera_delta':camera_delta,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'game_reported_wood':after.get('wood') if after else None,'coarse_frame_change':round(delta,2)})
         print('VOXEL_STEP='+json.dumps({'step':step+1, **trace[-1]}), flush=True)
         if stop_reason == 'game_reported_wood_obtained': break
+    if record_dir is not None:
+        bridge.finish_recording()
+        recorded = True
 result={'game':'Independent Minecraft Web Recreation, not Minecraft', 'source':'https://github.com/nightdong/minecraft-web-recreation',
         'commit':'85f63c01a5b67120badc57e70115a7644c361679', 'model_variant':'home-adapter',
         'setup':'scripted survival world setup via UI', 'model_actions':trace, 'filtered_steps':agent.filtered_steps, 'supervisor_interventions':interventions, 'stop_reason':stop_reason,
         'telemetry_is_untrusted_game_report':True,'world_entered_verified':False,'victory_verified':False,
-        'recorded':False,'trained':False,'published':False}
+        'recorded':recorded,'trained':False,'published':False}
+if recorded:
+    (record_dir / 'trace.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
 print('::notice title=Kvenya independent voxel survival test::'+json.dumps(result))
 
 summary={'steps':len(trace),'stop_reason':stop_reason,'hint_count':sum(i['type']=='hint' for i in interventions),

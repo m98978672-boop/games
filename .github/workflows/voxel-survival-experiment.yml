@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Install video verifier
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install model dependencies
         run: pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
       - name: Prepare hash-pinned game build context
@@ -48,9 +50,22 @@ jobs:
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
           VOXEL_GAME_DIST: ${{ runner.temp }}/voxel-dist
+          VOXEL_RECORD_DIR: ${{ runner.temp }}/voxel-recording
         run: |
+          mkdir -p "$VOXEL_RECORD_DIR"
           set +e
           python -u youtube-bot/tests/smoke_voxel_qwen.py 2>&1 | tee "$RUNNER_TEMP/voxel-probe.log"
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/voxel-probe.log"; fi
           exit "$result"
+      - name: Verify private recording contains actual video
+        run: |
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$RUNNER_TEMP/voxel-recording/recording.webm" | grep -x video
+          python -c 'import json, os; from pathlib import Path; p=Path(os.environ["RUNNER_TEMP"])/"voxel-recording"/"trace.json"; d=json.loads(p.read_text()); assert d["recorded"] is True and d["published"] is False and d["trained"] is False; assert all(type(x["recording_elapsed_ms"]) is int and x["recording_elapsed_ms"] >= 0 for x in d["model_actions"])'
+      - name: Save private experimental recording and trace
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxel-private-recording-${{ github.run_id }}
+          path: ${{ runner.temp }}/voxel-recording/
+          if-no-files-found: error
+          retention-days: 3
