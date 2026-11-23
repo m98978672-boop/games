@@ -178,6 +178,9 @@ jobs:
           PY
           git config user.name 'Квеня (экспедиция)'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # -A по корню экспедиций: git add с одним путём не записывает УДАЛЕНИЯ,
+          # поэтому вычищенные каталоги возвращались в следующем коммите.
+          git add -A qwen-home/bridge/expeditions
           git add "$DIR" kvenya/bridge.json qwen-home/bridge/motivation.json qwen-home/bridge/journal.md qwen-home/state.json qwen-home/studio qwen-home/library qwen-home/wants qwen-home/bridge/wants.json
           if git diff --cached --quiet; then echo "Изменений нет"; exit 0; fi
           STATUS=$(python3 -c "import json; print(json.load(open('$DIR/report.json'))['status'])")
