@@ -1,7 +1,9 @@
 {
-  "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
-  "seconds": 175,
-  "keys": [],
-  "intervalMs": 0,
-  "note": "Lost Spot, попытка 2: читатель включается ДО поиска канваса (в сюжетной игре канваса нет). Задача — пройти историю до финала"
+  "url": "https://ellisonleao.github.io/clumsy-bird/",
+  "seconds": 150,
+  "keys": [
+    "Space"
+  ],
+  "intervalMs": 430,
+  "note": "Матч глазами-12: четыре попытки за матч, аварийный тормоз на месте; на кону «Пять труб»"
 }

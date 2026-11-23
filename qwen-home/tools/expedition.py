@@ -369,11 +369,7 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0, sure=True):
         # не ждём зону, скорость сама донесёт до нижнего края
         if vy >= 45 and bird_y > gap_top + 0.45 * (gap_bottom - gap_top):
             return ms_since_flap >= 70
-        # Зона 0.72 — проверена живьём: рекорд 4 трубы.
-        # Если низ просвета не подтверждён пикселями, он может быть выше,
-        # чем кажется, — тогда зону поднимаем, чтобы взмах успел.
-        share = 0.72 if sure else 0.62
-        zone = gap_top + share * (gap_bottom - gap_top)
+        zone = gap_top + 0.72 * (gap_bottom - gap_top)
         # прогноз: падаем быстро — к следующему кадру будем в зоне,
         # жмём СЕЙЧАС, а не когда уже поздно (урок смертей «пулей»)
         if vy > 8 and bird_y + vy * 0.9 > zone:
@@ -695,7 +691,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             vy = (st['bird'][1] - prev_bird_y) if prev_bird_y is not None else 0
                             prev_bird_y = st['bird'][1]
                             if gap:
-                                # цель для трассы и разбора: рабочая зона, а не край
+                                # цель для трассы и разбора: середина рабочей зоны
                                 target = gap[0] + 0.72 * (gap[1] - gap[0]) + offset
                             else:
                                 target = frame_h * 0.42 + offset
