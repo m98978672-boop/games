@@ -100,9 +100,11 @@ async function main() {
       const voxel = TELEMETRY === "voxel" ? await page.evaluate(() => {
         try {
           const s = window.voxelDiagnostics.snapshot(), p = s?.player?.pos;
-          if (!["playing", "ready", "pause", "inventory", "title", "error"].includes(s?.screen) ||
+          if (!["playing", "ready", "pause", "inventory", "title", "error", "death", "credits"].includes(s?.screen) ||
               !p || ![p.x, p.y, p.z].every(n => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 1000000)) return null;
-          return {screen:s.screen, x:p.x, y:p.y, z:p.z};
+          const health = s.player.health, hunger = s.player.hunger;
+          if (![health, hunger].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 20)) return null;
+          return {screen:s.screen, x:p.x, y:p.y, z:p.z, health, hunger};
         } catch { return null; }
       }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
