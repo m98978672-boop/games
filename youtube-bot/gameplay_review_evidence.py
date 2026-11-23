@@ -71,12 +71,15 @@ def session_evidence(report: dict[str, Any]) -> dict[str, Any]:
             'game_reported_wood':wood, 'unknown_target_observations':unknown_target,
             'missing_wood_observations':missing_wood, 'scripted_actions':assisted,
             'supervisor_interventions':len(intervention_events),
-            'bug_verified':False, 'outcome':str(report.get('stop_reason', 'unknown'))}
+            'bug_verified':False, 'pause_during_inference': report.get('pause_during_inference') is True,
+            'outcome':str(report.get('stop_reason', 'unknown'))}
 
 
 def spoken_review(evidence: dict[str, Any]) -> str:
     """Conservative, deterministic summary; not a verified personal opinion."""
     parts = ['Итог: мы использовали внешние подсказки и ограничения действий.']
+    if evidence['pause_during_inference']:
+        parts.append('На время выбора действия игра ставилась на паузу.')
     if evidence['game_reported_rotations']:
         parts.append('Плюс: по диагностике игры камера поворачивалась.')
     if evidence['game_reported_wood']:
@@ -109,6 +112,8 @@ def release_gate(evidence: dict[str, Any], voiced: dict[str, Any]) -> list[str]:
         blockers.append('insufficient_observed_gameplay_span')
     if _number(duration) and evidence['last_action_ms'] / 1000 > duration + 2:
         blockers.append('action_clock_does_not_match_video')
+    if evidence.get('pause_during_inference'):
+        blockers.append('paused_for_inference_not_continuous_gameplay')
     # A private mechanical action recap is not a full independently verified review.
     blockers.append('rights_fact_and_editorial_review_required')
     return blockers

@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
 from gameplay_qwen import QwenVisionAgent, _vision_runtime
 from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance, initial_tree_approach, measured_feedback
+from voxel_timing import decide_with_game_paused, summarize_performance
 
 root = Path(os.environ['VOXEL_GAME_DIST'])
 base_goal = 'Find wood: approach a tree, aim at its trunk, hold MINE. Move with WASD, turn with LOOK; avoid danger.'
@@ -25,11 +26,13 @@ stop_reason='step_limit'
 # Load weights and processor before a live survival world exists: first inference
 # previously spent many minutes downloading weights while the player could die.
 _vision_runtime()
-with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap='voxel', record_dir=record_dir) as bridge:
+with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap='voxel', record_dir=record_dir, voxel_fast=True) as bridge:
     # Bootstrap is scripted setup, not a model action or rights clearance.
     obs=bridge.receive(timeout=180)
+    if (obs.get('voxel_performance') or {}).get('quality') != 'fast':
+        raise RuntimeError('Game did not report the requested fast graphics preset')
     for step in range(48):
-        if obs.get('type') != 'observation' or obs.get('step') != step:
+        if obs.get('type') != 'observation' or obs.get('step') != step * 3:
             raise RuntimeError('Invalid observation')
         before=obs.get('voxel_telemetry')
         orientation_before=obs.get('voxel_orientation')
@@ -69,9 +72,10 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         if supervision['hint'] and len(agent.objective) + len(supervision['hint']) + 1 <= 300:
             agent.objective += ' ' + supervision['hint']
         png=base64.b64decode(obs['screenshot_png_base64'], validate=True)
-        action=agent(png, step)
+        # Pausing is external assistance, not natural real-time play.
+        action, resumed, inference_seconds = decide_with_game_paused(bridge, agent, png, step, obs)
         obs=bridge.step(action)
-        if obs.get('type') != 'observation' or obs.get('step') != step+1:
+        if obs.get('type') != 'observation' or obs.get('step') != resumed['step']+1:
             raise RuntimeError('Invalid action response')
         after=obs.get('voxel_telemetry')
         orientation_after=obs.get('voxel_orientation')
@@ -87,7 +91,9 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         if after and after.get('wood'):
             stop_reason='game_reported_wood_obtained'
         feedback = measured_feedback(before, after, agent.decisions[-1])
-        trace.append({'feedback_score':feedback['score'], 'feedback_reason':feedback['reason'], 'feedback_hint':feedback['hint'], 'step':step+1, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
+        perf = obs.get('voxel_performance') or {}
+        trace.append({'game_reported_fps':perf.get('fps'), 'game_reported_frame_p95_ms':perf.get('frame_p95_ms'),
+                      'game_reported_quality':perf.get('quality'), 'model_inference_seconds':round(inference_seconds,3), 'feedback_score':feedback['score'], 'feedback_reason':feedback['reason'], 'feedback_hint':feedback['hint'], 'step':step+1, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
                       'scripted_initial_approach':bool(approach_hint), 'action':agent.decisions[-1], 'game_reported_target_before':target, 'game_reported_screen':after.get('screen') if after else None,
                       'game_reported_displacement':distance,'game_reported_camera_delta':camera_delta,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'game_reported_wood':after.get('wood') if after else None,'coarse_frame_change':round(delta,2)})
         print('VOXEL_STEP='+json.dumps({'step':step+1, **trace[-1]}), flush=True)
@@ -97,14 +103,15 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         recorded = True
 result={'game':'Independent Minecraft Web Recreation, not Minecraft', 'source':'https://github.com/nightdong/minecraft-web-recreation',
         'commit':'85f63c01a5b67120badc57e70115a7644c361679', 'model_variant':'home-adapter',
-        'setup':'scripted survival world setup via UI', 'feedback_is_session_context_not_training':True, 'model_actions':trace, 'filtered_steps':agent.filtered_steps, 'supervisor_interventions':interventions, 'stop_reason':stop_reason,
+        'setup':'scripted survival world setup via UI with fast graphics preset', 'pause_during_inference':True,
+        'feedback_is_session_context_not_training':True, 'performance':summarize_performance(trace), 'model_actions':trace, 'filtered_steps':agent.filtered_steps, 'supervisor_interventions':interventions, 'stop_reason':stop_reason,
         'telemetry_is_untrusted_game_report':True,'world_entered_verified':False,'victory_verified':False,
         'recorded':recorded,'trained':False,'published':False}
 if recorded:
     (record_dir / 'trace.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
 print('::notice title=Kvenya independent voxel survival test::'+json.dumps(result))
 
-summary={'steps':len(trace),'stop_reason':stop_reason,'hint_count':sum(i['type']=='hint' for i in interventions),
+summary={'steps':len(trace),'stop_reason':stop_reason,'pause_during_inference':True, 'performance':summarize_performance(trace),'hint_count':sum(i['type']=='hint' for i in interventions),
          'assisted_action_exclusions':sum(i['type']=='action_exclusion' for i in interventions),
          'filtered_steps':agent.filtered_steps,'last_action':trace[-1] if trace else None,
          'exploration_action_exclusions':sum(i['type']=='exploration_action_exclusion' for i in interventions),

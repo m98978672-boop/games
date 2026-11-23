@@ -12,6 +12,8 @@ const KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"
 const ENTRY = process.env.BRIDGE_ENTRY || "index.html";
 const TELEMETRY = process.env.BRIDGE_TELEMETRY || "";
 const BOOTSTRAP = process.env.BRIDGE_BOOTSTRAP || "";
+const VOXEL_FAST = process.env.BRIDGE_VOXEL_FAST === "1";
+if (VOXEL_FAST && BOOTSTRAP !== "voxel") throw Error("fast quality requires voxel setup");
 if (!["", "voxel"].includes(BOOTSTRAP)) throw Error("invalid bootstrap mode");
 if (!["", "2048", "voxel", "adventure", "puzzle"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
 if (!/^(?:[a-zA-Z0-9_-]+\/)*index\.html$/.test(ENTRY)) throw Error("invalid entry path");
@@ -77,6 +79,14 @@ async function main() {
     }
     await page.goto(`http://${HOST}:${PORT}/${ENTRY}`, {waitUntil:"load", timeout:15000});
     if (BOOTSTRAP === "voxel") {
+      if (VOXEL_FAST) {
+        // Explicit performance-only setup via the game's own options, not game state injection.
+        await page.locator('[data-action="options"]').click({timeout:30000});
+        const quality = page.locator('[data-action="quality-preset"]');
+        for (let i = 0; i < 3 && !(await quality.textContent() || '').includes('流畅'); i++) await quality.click();
+        if (!(await quality.textContent() || '').includes('流畅')) throw Error('fast quality not confirmed');
+        await page.locator('[data-action="back"]').click({timeout:10000});
+      }
       // Test setup only, NOT model play: create an empty survival world through UI.
       await page.locator('[data-action="create"]').click({timeout:30000});
       await page.locator('[data-action="start-new"]').click({timeout:10000});
@@ -116,6 +126,14 @@ async function main() {
           if (![health, hunger].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 20)) return null;
           if (!Array.isArray(s.earned) || s.earned.length > 1000 || s.earned.some(v => typeof v !== "string")) return null;
           return {screen:s.screen, x:p.x, y:p.y, z:p.z, health, hunger, wood:s.earned.includes("wood")};
+        } catch { return null; }
+      }) : null;
+      // FPS and CPU frame time are game-reported diagnostics; not a GPU benchmark.
+      const voxelPerformance = TELEMETRY === "voxel" ? await page.evaluate(() => {
+        try {
+          const s = window.voxelDiagnostics.snapshot(), fps = s?.fps, p95 = s?.performance?.frame?.p95Ms;
+          if (![fps, p95].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 10000)) return null;
+          return {fps, frame_p95_ms:p95, quality: ['fast','balanced','high'].includes(s?.quality?.preset) ? s.quality.preset : 'unknown'};
         } catch { return null; }
       }) : null;
       // The crosshair target is privileged game diagnostics, not visual model
@@ -170,7 +188,7 @@ async function main() {
         } catch { return null; }
       }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget} : {})});
+        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});

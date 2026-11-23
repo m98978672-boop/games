@@ -36,6 +36,13 @@ class EvidenceTests(unittest.TestCase):
         self.assertIn('action_clock_does_not_match_video',blockers)
         self.assertIn('insufficient_measured_narration',blockers)
         self.assertIn('long_silence_or_invalid_measurement',blockers)
+    def test_paused_experiment_cannot_be_presented_as_continuous_play(self):
+        r=self.report(); r['pause_during_inference']=True
+        evidence=session_evidence(r)
+        self.assertIn('игра ставилась на паузу',spoken_review(evidence))
+        blockers=release_gate(evidence,{'duration_seconds':500,'max_silence_seconds':10,'spoken_seconds':200})
+        self.assertIn('paused_for_inference_not_continuous_gameplay',blockers)
+
     def test_refuses_bad_clock_and_unmarked_help(self):
         r=self.report(); r['model_actions'][2]['recording_elapsed_ms']=0
         with self.assertRaises(ValueError): session_evidence(r)
