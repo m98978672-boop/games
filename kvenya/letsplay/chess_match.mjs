@@ -64,7 +64,8 @@ function pickMove(c, rng, P) {
 
 const PERSONAS = {
   // Характер Квени: аккуратная, ищет на 3 полухода с отсечениями.
-  kvenya: { greed: 0.55, jit: 20, depth: Number(process.env.KV_DEPTH || 3) },
+  kvenya: { greed: 0.55, jit: 20, depth: Number(process.env.KV_DEPTH || 3),
+            timeMs: Number(process.env.KV_TIME_MS || 700) },
   ferz: { greed: 0.95, jit: 150 },
 };
 
@@ -74,6 +75,8 @@ function play(seed) {
   const moves = [];
   const capsW = [], capsB = [];
   const reasons = [];
+  const depths = [];
+  let shallow = 0;
   let ply = 0;
   while (!c.isGameOver() && ply < 200) {
     const P = c.turn() === 'w' ? PERSONAS.kvenya : PERSONAS.ferz;
@@ -82,6 +85,11 @@ function play(seed) {
     let m;
     if (c.turn() === 'w') {
       const pick = brainPick(c, { rng, persona: P, timeMs: P.timeMs || 700, maxDepth: P.depth || 4 });
+      // Честная запись, на какой глубине она реально думала: на медленном
+      // раннере бюджет времени съедается, и это должно быть видно в счёте,
+      // а не превращаться в «она играет хорошо» без оговорок.
+      if (pick.depth < 3) shallow++;
+      depths.push(pick.depth);
       m = pick.move;
       const why = brainExplain(c, { ...pick, depth: pick.depth });
       reasons.push({ n: ply + 1, san: m.san, why });
@@ -100,12 +108,13 @@ function play(seed) {
     });
   }
   const res = c.isCheckmate() ? (c.turn() === 'w' ? 'black' : 'white') : c.isStalemate() ? 'stalemate' : c.isDraw() ? 'draw' : 'cap';
-  return { moves, res, capsW, capsB, checks: moves.filter((m) => m.check).length, fen: c.fen(), reasons };
+  return { moves, res, capsW, capsB, checks: moves.filter((m) => m.check).length, fen: c.fen(), reasons,
+           depths, shallow, avgDepth: depths.length ? Math.round((depths.reduce((a, b) => a + b, 0) / depths.length) * 10) / 10 : 0 };
 }
 
 function summarize(seed, g) {
   const lostQ = g.capsB.filter((x) => x.piece !== 'p' && x.piece !== 'k').map((x) => `${x.n}:${x.piece}`);
-  console.log(`seed ${seed}: ${g.moves.length} ply res=${g.res} capsW=${g.capsW.length} capsB=${g.capsB.length} checks=${g.checks} kvenyaLost=${lostQ.join(',') || '-'}`);
+  console.log(`seed ${seed}: ${g.moves.length} ply res=${g.res} capsW=${g.capsW.length} capsB=${g.capsB.length} checks=${g.checks} kvenyaLost=${lostQ.join(',') || '-'} avgDepth=${g.avgDepth} shallow=${g.shallow}`);
 }
 
 /** Счёт турнира: сколько партий выиграно/проиграно/ничьих и сколько фигур потеряно. */
@@ -118,9 +127,12 @@ function tally(games) {
     else out.unfinished++;
     out.lostPieces += g.capsB.filter((x) => x.piece !== 'p' && x.piece !== 'k').length;
     out.plies += g.moves.length;
+    out.shallowMoves = (out.shallowMoves || 0) + (g.shallow || 0);
+    out.depthSum = (out.depthSum || 0) + (g.avgDepth || 0);
   }
   out.games = games.length;
   out.avgPlies = Math.round(out.plies / Math.max(1, games.length));
+  out.avgDepth = Math.round(((out.depthSum || 0) / Math.max(1, games.length)) * 10) / 10;
   return out;
 }
 
@@ -134,7 +146,8 @@ if (cmd === 'scan') {
   }
   const t = tally(games);
   console.log(`ИТОГ: побед ${t.wins}, поражений ${t.losses}, ничьих ${t.draws}, недобитых ${t.unfinished} из ${t.games}; ` +
-    `средняя партия ${t.avgPlies} полуходов; своих фигур потеряно ${t.lostPieces}`);
+    `средняя партия ${t.avgPlies} полуходов; своих фигур потеряно ${t.lostPieces}; ` +
+    `средняя глубина ${t.avgDepth}; мелких ходов ${t.shallowMoves}`);
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(OUT + 'chess-tournament.json', JSON.stringify({
     schema: 'kvenya-chess-tournament-v1',

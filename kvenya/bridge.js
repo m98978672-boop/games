@@ -64,6 +64,8 @@
       + (c.draws ? ', ничьих ' + c.draws : '')
       + '<br>🏝 <b>«Остров»</b>: мой план ' + (mine.wins ?? '—') + '/' + (mine.games ?? '—')
       + ' против эвристики ' + (base.wins ?? '—') + '/' + (base.games ?? '—')
+      + (c.avgDepth ? '<br>в шахматах думала в среднем на глубину <b>' + esc(String(c.avgDepth)) + '</b> за ' + esc(String(c.timeMs || '—')) + ' мс на ход'
+        + (c.shallowMoves ? ' (мелких ходов ' + esc(String(c.shallowMoves)) + ' — честно, на медленном раннере времени не хватило)' : '') : '')
       + (curve ? '<br>глубина думанья: ' + esc(curve) : '')
       + '<br><span style="opacity:.75">замер ' + esc(g.started || '') + '</span></p></div>';
   }

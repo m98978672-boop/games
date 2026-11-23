@@ -221,7 +221,7 @@ check('телефон не кипит: слабому устройству лё�
 
 check('общий интернет вместо одной Википедии: дом ищет без ключа и открывает страницы, браузер пробует DuckDuckGo', talkGen.includes('search_web') && talkGen.includes('lite.duckduckgo.com') && talkGen.includes('fetch_page_text') && talkGen.includes('search_everywhere') && liveJs.includes('api.duckduckgo.com') && liveJs.includes('ddgInstant') && dialogue.some((r) => r.id === 'dlg-143') && evalRows.some((r) => r.id === 'eval-web-general'));
 
-check('кнут и пряник по фактам: баллы за дела, взыскания — задания, страница показывает баланс', motPy.includes('bestSteps') && motPy.includes('pendingDuties') && motPy.includes('Честный гость') && motPy.includes('max(0, sum') && expWf.includes('motivation.py') && bridgeJs.includes('renderMotivation') && worldHtml.includes('kvBridgeMotivation') && bridgePy.includes("'motivation': motivation") && personaMd.includes('кнут и пряник') && dialogue.some((r) => r.id === 'dlg-147') && evalRows.some((r) => r.id === 'eval-motivation-reward') && evalRows.some((r) => r.id === 'eval-motivation-duty') && expPy.includes("'trace': trace") && expPy.includes('vy > -12') && expPy.includes('key_held') && expPy.includes('второй канал ввода') && expPy.includes('vy * 0.9') && expPy.includes('vy >= 45') && expPy.includes('held_since') && expPy.includes('corpse') && expPy.includes('step = 4') && !expPy.includes('EYES_JS = ') && expPy.includes('keyboard.down') && expPy.includes('bird_low = bool') && expPy.includes('vy >= 34') && expPy.includes('0.72 * (gap_bottom - gap_top)') && motPy.includes('five-pipes') && expPy.includes('class Report') && expPy.includes('def robots_allows') && expPy.includes('проверка просвета') && dialogue.some((r) => r.id === 'dlg-148') && dialogue.some((r) => r.id === 'dlg-149') && dialogue.some((r) => r.id === 'dlg-150') && dialogue.some((r) => r.id === 'dlg-151'));
+check('кнут и пряник по фактам: баллы за дела, взыскания — задания, страница показывает баланс', motPy.includes('bestSteps') && motPy.includes('pendingDuties') && motPy.includes('Честный гость') && motPy.includes('max(0, sum') && expWf.includes('motivation.py') && bridgeJs.includes('renderMotivation') && worldHtml.includes('kvBridgeMotivation') && bridgePy.includes("'motivation': motivation") && personaMd.includes('кнут и пряник') && dialogue.some((r) => r.id === 'dlg-147') && evalRows.some((r) => r.id === 'eval-motivation-reward') && evalRows.some((r) => r.id === 'eval-motivation-duty') && expPy.includes("'trace': trace") && expPy.includes('vy > -12') && expPy.includes('key_held') && expPy.includes('второй канал ввода') && expPy.includes('vy * 0.9') && expPy.includes('vy >= 45') && expPy.includes('held_since') && expPy.includes('corpse') && expPy.includes('step = 4') && !expPy.includes('EYES_JS = ') && expPy.includes('keyboard.down') && expPy.includes('bird_low = bool') && expPy.includes('vy >= 34') && expPy.includes('0.58 * (gap_bottom - gap_top)') && motPy.includes('five-pipes') && expPy.includes('class Report') && expPy.includes('def robots_allows') && expPy.includes('проверка просвета') && dialogue.some((r) => r.id === 'dlg-148') && dialogue.some((r) => r.id === 'dlg-149') && dialogue.some((r) => r.id === 'dlg-150') && dialogue.some((r) => r.id === 'dlg-151'));
 const libPy = await readFile(path.join(home, 'tools', 'library.py'), 'utf8');
 const makerPy = await readFile(path.join(home, 'tools', 'game-maker.py'), 'utf8');
 const vlogPy = await readFile(path.join(home, 'tools', 'vlog.py'), 'utf8');
@@ -244,7 +244,7 @@ try { islandMod = await import(islandPath); } catch {}
 try { islandBrain = await import(islandBrainPath); } catch {}
 check('мозг для сложных игр на месте: оценка позиции, альфа-бета, спокойный поиск, порядок ходов',
   !!chessBrain && typeof chessBrain.pickMove === 'function' && typeof chessBrain.evaluate === 'function' &&
-  chessBrainFile.includes('альфа-бета') && chessBrainFile.includes('quiesce') && chessBrainFile.includes('ordered'));
+  chessBrainFile.includes('альфа-бета') && chessBrainFile.includes('quiesce') && chessBrainFile.includes('ordered') && chessBrainFile.includes('minDepth') && chessBrainFile.includes('searchUnlimited'));
 let ChessMod = null;
 try { ChessMod = (await import(pathToFileURL(path.join(home, '..', 'kvenya', 'letsplay', 'node_modules', 'chess.js', 'dist', 'esm', 'chess.js')).href)).Chess; } catch {}
 check('шахматный мозг считает в срок и находит мат в один ход',
@@ -253,6 +253,12 @@ check('шахматный мозг считает в срок и находит 
     const t0 = Date.now();
     const pick = chessBrain.pickMove(c, { timeMs: 500, maxDepth: 3 });
     return Date.now() - t0 < 3000 && pick.move.san === 'Ra8#';
+  })());
+check('на медленном раннере не ходит наугад: даже с бюджетом 0 время доигрывает гарантированную глубину 2',
+  !!chessBrain && !!ChessMod && (() => {
+    const c = new ChessMod();
+    const pick = chessBrain.pickMove(c, { timeMs: 0, maxDepth: 4, persona: { jit: 20 } });
+    return pick && pick.move && pick.depth >= 2;
   })());
 check('«Остров»: правила, экономика с ртами рабочих, волны и честная победа на месте',
   !!islandMod && islandMod.ACTIONS.includes('tower') && islandMod.ACTIONS.includes('farm') &&
@@ -274,7 +280,7 @@ check('играет «Остров» лучше простой эвристик�
     return brainWins === 3 && baseWins < 3 && sample.length > 20 && sample.includes('потому что');
   })());
 check('сложные игры записаны в уроки: перебор, порядок «еда → защита → рост», замер и честные пределы',
-  ['game-complex-lookahead', 'game-complex-order', 'game-complex-measure', 'game-complex-explain', 'game-complex-limits']
+  ['game-complex-lookahead', 'game-complex-order', 'game-complex-measure', 'game-complex-explain', 'game-complex-limits', 'game-complex-hardware']
     .every((id) => gameSkills.some((r) => r.id === id)) &&
   gameSkills.filter((r) => r.id.startsWith('game-complex-')).every((r) => r.response.length > 200));
 
