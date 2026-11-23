@@ -1,9 +1,12 @@
 // Квеня (белые) играет в шахматы через chess.js (BSD-2-Clause, Jeff Hlywa, npm/chess.js)
-// против спарринг-скрипта «ФЕРЗЬ-3000» (чёрные). Оба — минимакс на 2 полухода
-// с характером: у Квени аккуратнее, у ФЕРЗЯ жаднее и размашистее.
+// против спарринг-скрипта «ФЕРЗЬ-3000» (чёрные).
+// Квеня думает своим мозгом (chess_brain.mjs): оценка позиции, альфа-бета
+// с отсечениями, спокойный добор взятий и гарантия глубины 2.
+// ФЕРЗЬ остаётся простым минимаксом на 2 полухода — так видно, чему она научилась.
 // Запуск: node chess_match.mjs scan | node chess_match.mjs run <seed>
 import fs from 'node:fs';
 import { Chess } from 'chess.js';
+import { pickMove as brainPick, explain as brainExplain } from './chess_brain.mjs';
 
 const OUT = new URL('./build/', import.meta.url).pathname;
 fs.mkdirSync(OUT, { recursive: true });
