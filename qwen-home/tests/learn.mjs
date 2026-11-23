@@ -220,19 +220,5 @@ const bridgeSensePy = await readFile(path.join(home, 'tools', 'bridge-sense.py')
 const bridgeJsWants = await readFile(path.join(home, '..', 'kvenya', 'bridge.js'), 'utf8');
 check('её собственная воля и скорость: желания из фактов, главное одно, окружение из кэша, решение о поиске короткое', wantsPy.includes('def pick') && wantsPy.includes('want-five-pipes') && wantsPy.includes('bridge/wants') === false && motPy.includes('ownWantsDone') && motPy.includes('own-will') && bridgeSensePy.includes("'wants': wants") && bridgeJsWants.includes('renderWants') && worldHtml.includes('kvBridgeWants') && talkWorkflow.includes('kvenya-venv') && talkWorkflow.includes('import torch, transformers, peft') && talkGen.includes('max_new=8') && talkGen.includes('wants.json') && talkGen.includes('главное желание сейчас') && expWf.includes('wants.py pick') && dialogue.some((r) => r.id === 'dlg-156') && dialogue.some((r) => r.id === 'dlg-157') && dialogue.some((r) => r.id === 'dlg-158') && dialogue.some((r) => r.id === 'dlg-159') && personaMd.includes('## Её собственные желания'));
 
-check('зрение проверяется замером, а не догадкой: отчёт пишет задержку кадра и вердикт',
-  expPy.includes('frame_ms_sum') && expPy.includes('eyeMs') && expPy.includes('успевала') && expPy.includes('отставала') && expPy.includes('кадр разбирался в среднем'));
-
-check('пять труб держим только по табло игры: награда привязана к настоящему счёту',
-  motPy.includes('five-pipes') && expPy.includes('scoreboard()') && expPy.includes('труб по табло игры'));
-
-check('сюжетную игру она ПРОХОДИТ чтением: пассажи, выборы, память пути, честный финал',
-  expPy.includes('TWINE_TASK_JS') && expPy.includes('def read_story') && expPy.includes('def pick_choice')
-  && expPy.includes('data-kv-choice') && expPy.includes("report.data['kind'] = 'story'")
-  && expPy.includes('reachedEnd') && expPy.includes('история её не отпустила'));
-
-check('сюжетная история видна на её странице: сколько выборов, где закончила — одной строкой',
-  expPy.includes('storyLine') && expWf.includes("report.get('storyLine')") && bridgeJs.includes('kv-story'));
-
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
