@@ -568,10 +568,14 @@ def main():
     parser.add_argument('--max-new', type=int, default=320)  # было 192
     parser.add_argument('--detailed', action='store_true',
                         help='подробный ответ: 5-8 предложений вместо 1-3')
-    parser.add_argument('--int8', dest='int8', action='store_true', default=True,
-                        help='int8-веса: torchao quantize_ — быстрее на CPU (по умолчанию включено)')
+    # int8 пробовали на бою: скорость выросла, но её русский рассыпался
+    # («Кажу прямо, и честно говорю, что не стал хуже»). Для 0.8B-модели
+    # квантование бьёт по связности сильнее, чем экономит время, поэтому
+    # по умолчанию — честный bfloat16, а int8 остался флагом для опытов.
+    parser.add_argument('--int8', dest='int8', action='store_true', default=False,
+                        help='int8-веса: быстрее, но связность ответов падает (по умолчанию выключено)')
     parser.add_argument('--no-int8', dest='int8', action='store_false',
-                        help='отключить int8 (остаться в bfloat16)')
+                        help='явно остаться в bfloat16 (по умолчанию так и есть)')
     args = parser.parse_args()
     text = DIALOGUE.read_text(encoding='utf-8')
     turns = parse_turns(text)
