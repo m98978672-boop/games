@@ -42,6 +42,10 @@ ACTIONS = {
 }
 
 
+# Position choices are mapped to validated coordinates by the private puzzle harness.
+ACTIONS.update({f'TILE{letter}': {'duration_ms': 250} for letter in 'ABCDEFGHIJKLMNOP'})
+
+
 @lru_cache(maxsize=1)
 def _vision_runtime():
     from transformers import AutoProcessor

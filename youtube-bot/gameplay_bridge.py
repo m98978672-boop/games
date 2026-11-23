@@ -43,7 +43,7 @@ def docker_command(game_dir: Path, container_name: str, entry: str = "index.html
             raise ValueError("Recording directory must be separate from the game")
     if bootstrap not in (None, "voxel"):
         raise ValueError("Unsupported bootstrap mode")
-    if telemetry not in (None, "2048", "voxel", "adventure"):
+    if telemetry not in (None, "2048", "voxel", "adventure", "puzzle"):
         raise ValueError("Unsupported telemetry mode")
     command = ["docker", "run", "--rm", "-i", "--name", container_name, "--network", "none", "--read-only",
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "256",

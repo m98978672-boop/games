@@ -13,7 +13,7 @@ const ENTRY = process.env.BRIDGE_ENTRY || "index.html";
 const TELEMETRY = process.env.BRIDGE_TELEMETRY || "";
 const BOOTSTRAP = process.env.BRIDGE_BOOTSTRAP || "";
 if (!["", "voxel"].includes(BOOTSTRAP)) throw Error("invalid bootstrap mode");
-if (!["", "2048", "voxel", "adventure"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
+if (!["", "2048", "voxel", "adventure", "puzzle"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
 if (!/^(?:[a-zA-Z0-9_-]+\/)*index\.html$/.test(ENTRY)) throw Error("invalid entry path");
 const emit = value => process.stdout.write(JSON.stringify(value) + "\n");
 const server = http.createServer((req, res) => {
@@ -152,8 +152,25 @@ async function main() {
           return {choices, outcome};
         } catch { return null; }
       }) : null;
+      // Pinned finite 15-puzzle DOM diagnostics: values/centres are untrusted
+      // external help. No state mutations or arbitrary selectors are exposed.
+      const puzzle = TELEMETRY === "puzzle" ? await page.evaluate(() => {
+        try {
+          const buttons = Array.from(document.querySelectorAll('.grid button'));
+          if (buttons.length !== 16) return null;
+          const cells = buttons.map((button, index) => {
+            const r = button.getBoundingClientRect(), t = button.textContent.trim();
+            const value = t === '' ? 0 : Number(t);
+            return {index, value, x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2)};
+          });
+          if (cells.some(c => !Number.isInteger(c.value) || c.value < 0 || c.value > 15 || c.x < 0 || c.x >= 800 || c.y < 0 || c.y >= 600)) return null;
+          const play = document.querySelector('.footer button'), r = play?.getBoundingClientRect();
+          const setup = play?.textContent.trim() === 'Play' && r ? {x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2)} : null;
+          return {cells, setup, won: document.querySelector('.message')?.textContent.trim() === 'You win!'};
+        } catch { return null; }
+      }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget} : {})});
+        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});
