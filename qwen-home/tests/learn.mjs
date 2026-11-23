@@ -240,5 +240,20 @@ check('пыль экспедиций не копится: старые ката�
 check('уборка доезжает до main: удаления каталогов тоже записываются в коммит',
   expWf.includes('git add -A qwen-home/bridge/expeditions'));
 
+check('в истории она ВИДИТ состояние: силы, находки, следы — читает по словам, а не угадывает',
+  expPy.includes('def read_signal') && expPy.includes('STORY_ENERGY') && expPy.includes('STORY_FINDS')
+  && expPy.includes('STORY_CLUES') && expPy.includes("'clues': clues") && expPy.includes('very tired'));
+
+check('в истории она АНАЛИЗИРУЕТ: карта мест и переходов, а не просто клики',
+  expPy.includes('class StoryMap') && expPy.includes('def untried_targets') && expPy.includes('def fresh_choices')
+  && expPy.includes("'places': len(self.nodes)") && expPy.includes("'map': story_map.as_report()"));
+
+check('в истории она ДОБЫВАЕТ новое: после финала начинает заново и идёт в непройденные ветки',
+  expPy.includes('def restart_story') && expPy.includes('tw-icon[title="Restart" i]')
+  && expPy.includes('runs') && expPy.includes('заходов хватит'));
+
+check('вымотанной она не бежит за псом, а отдыхает: силы влияют на выбор',
+  expPy.includes('def is_rest') && expPy.includes('def is_far') && expPy.includes('if energy < 0:'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
