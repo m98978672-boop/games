@@ -394,6 +394,7 @@ class Report:
             'status': 'error',
             'steps': [],
             'screenshots': [],
+            'kind': 'game',
             'hasVideo': False,
             'textSample': '',
         }
@@ -559,6 +560,28 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 except Exception:
                     return None
 
+            # Сюжетная игра (Twine и подобные): там не канвас и полёт, а текст и
+            # варианты. Проверяем это ДО игры по кадрам: у такой страницы есть
+            # пассажи и ссылки-выборы, а канвас либо пуст, либо это фон.
+            story_probe = None
+            try:
+                story_probe = page.evaluate(TWINE_TASK_JS)
+            except Exception:
+                story_probe = None
+            is_story = bool(story_probe and story_probe.get('ok')
+                            and (story_probe.get('choices') or story_probe.get('text')))
+            if is_story:
+                report.data['kind'] = 'story'
+                report.step('это сюжетная игра, а не полёт',
+                            f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
+                visited = set()
+                story = read_story(page, visited, int(deadline - time.monotonic()), out, report, shot)
+                report.data['story'] = story
+                report.data['status'] = 'played'
+                report.step('итог истории',
+                            f"прошла {story['moves']} выборов, финалов в записи: {len(story['endings'])}; последний выбор — «{(story['last'] or {}).get('choice', '—')}»")
+                shot('09-story-end.png')
+                return finish(browser, context, video_dir, out, report)
             report.step('подготовка к игре', f'{why}: клавиши {keys or "клик"}, ритм {interval} мс; подсказки экрана: {hints[:140]!r}')
 
             page.mouse.click(cx, cy)
@@ -795,6 +818,139 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 pass
             return finish(browser, context, video_dir, out, report)
 
+
+
+# ---------------------------------------------------------------------------
+# Читатель сюжетной игры (Twine, «выбери свой путь»).
+# ---------------------------------------------------------------------------
+# Такая игра — не полёт по кадрам, а текст и кнопки. Поэтому руки здесь не
+# жмут по ритму, а ЧИТАЮТ: берут видимый текст пассажа, находят в нём варианты
+# (в Twine/Harlowe они становятся ссылками и кнопками), выбирают один и кликают.
+# Свой путь она запоминает и старается не топтаться на месте: сначала идёт в
+# ещё не виденные места, а если выхода нет — честно заканчивает и пишет,
+# что история её не отпустила.
+
+TWINE_TASK_JS = r"""
+() => {
+  const vis = (el) => {
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    const st = getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none';
+  };
+  let root = null;
+  for (const sel of ['tw-story', '#passages', '.passage', 'tw-passage']) {
+    const found = [...document.querySelectorAll(sel)].filter(vis);
+    if (found.length) { root = found[found.length - 1]; break; }
+  }
+  if (!root) root = document.body;
+  const text = (root.innerText || '').replace(/\s+/g, ' ').trim();
+  const seen = [];
+  const out = [];
+  const nodes = root.querySelectorAll('tw-link, a, button, [role="button"], tw-expression.link, .link');
+  nodes.forEach((el, i) => {
+    if (!vis(el)) return;
+    const label = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!label || label.length > 120) return;
+    const key = label.toLowerCase();
+    if (seen.includes(key)) return;               // одинаковые кнопки-близнецы
+    // «Сохранить», «Загрузить», «Настройки» — это интерфейс, а не путь истории
+    if (/^(save|load|restart|undo|settings|share|menu|сохранить|загрузить|меню|настройки)/i.test(label)) return;
+    seen.push(key);
+    out.push({i: out.length, label: label});
+    el.setAttribute('data-kv-choice', String(out.length - 1));
+  });
+  return {ok: true, title: document.title || '', text: text.slice(0, 3000), choices: out};
+}
+"""
+
+
+def pick_choice(choices, visited, rng=None):
+    """Какой вариант выбрать: сначала тот, где история ещё не была.
+
+    choices — [{'label': ..., 'key': ...}], visited — множество подписей,
+    которые уже нажимали. Так она не топчется на месте: если все варианты
+    знакомы, всё равно идёт (иначе история встанет), но отчёт это покажет.
+    """
+    if not choices:
+        return None, False
+    fresh = [c for c in choices if c.get('key', c.get('label', '')) not in visited]
+    pool = fresh or choices
+    pick = pool[0] if rng is None else pool[rng.randrange(len(pool))]
+    return pick, bool(fresh)
+
+
+def read_story(page, visited, seconds, out, report, shot):
+    """Пройти сюжетную игру чтением: текст, варианты, клик, снова текст."""
+    import random
+    rng = random.Random(7)
+    deadline = time.monotonic() + max(20, min(180, seconds))
+    path = []          # пройденный путь: подпись и кусок текста
+    endings = []       # пассажи без вариантов — это финал
+    stuck = 0          # сколько раз подряд вариантов не было
+    moves = 0
+    report.step('читаю историю', 'сюжетная игра: смотрю текст пассажа и варианты, кликаю по выбору, помню свой путь')
+
+    while time.monotonic() < deadline:
+        try:
+            state = page.evaluate(TWINE_TASK_JS)
+        except Exception as err:
+            report.step('чтение', f'страница не отдала текст: {err}')
+            break
+        if not state or not state.get('ok'):
+            report.step('чтение', 'не нашла ни текста, ни вариантов — останавливаюсь честно')
+            break
+        text = state.get('text', '')
+        choices = state.get('choices') or []
+        for c in choices:
+            c['key'] = c.get('label', '')
+        if choices:
+            pick, fresh = pick_choice(choices, visited, rng)
+            visited.add(pick['key'])
+            try:
+                sel = f'[data-kv-choice="{pick["i"]}"]'
+                el = page.query_selector(sel)
+                if el is None:
+                    raise RuntimeError('кнопка исчезла')
+                el.scroll_into_view_if_needed(timeout=3000)
+                el.click(timeout=5000)
+            except Exception as err:
+                report.step('выбор', f'не смогла нажать «{pick["label"]}»: {err}')
+                stuck += 1
+                if stuck >= 3:
+                    break
+                page.wait_for_timeout(500)
+                continue
+            moves += 1
+            path.append({'n': moves, 'choice': pick['label'],
+                         'fresh': fresh, 'text': text[:220]})
+            if moves in (1, 2, 3) or moves % 6 == 0:
+                shot(f'0{min(9, 3 + moves // 6)}-story.png')
+            page.wait_for_timeout(700)
+            stuck = 0
+        else:
+            # вариантов нет: либо финал, либо история просит ввести имя/подтвердить
+            endings.append({'n': moves, 'text': text[:400]})
+            report.step('финал' if text else 'пусто', (text[:200] or 'пассаж без текста'))
+            # одна попытка мягко толкнуть историю: поле ввода или кнопка «дальше»
+            pushed = False
+            try:
+                field = page.query_selector('tw-input, input[type="text"], input:not([type])')
+                if field is not None:
+                    field.fill('Квеня')
+                    field.press('Enter')
+                    pushed = True
+                    report.step('ввод', 'история просила имя — вписала «Квеня»')
+            except Exception:
+                pass
+            if not pushed:
+                stuck += 1
+                if stuck >= 2:
+                    break
+            page.wait_for_timeout(900)
+    best = path[-1] if path else None
+    return {'moves': moves, 'path': path, 'endings': endings,
+            'reachedEnd': bool(endings), 'last': best}
 
 def finish(browser, context, video_dir, out, report):
     try:

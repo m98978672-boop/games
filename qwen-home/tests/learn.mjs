@@ -215,6 +215,11 @@ check('зрение проверяется замером, а не догадк�
 check('пять труб держим только по табло игры: награда привязана к настоящему счёту',
   motPy.includes('five-pipes') && expPy.includes('scoreboard()') && expPy.includes('труб по табло игры'));
 
+check('сюжетную игру она ПРОХОДИТ чтением: пассажи, выборы, память пути, честный финал',
+  expPy.includes('TWINE_TASK_JS') && expPy.includes('def read_story') && expPy.includes('def pick_choice')
+  && expPy.includes('data-kv-choice') && expPy.includes("report.data['kind'] = 'story'")
+  && expPy.includes('reachedEnd') && expPy.includes('история её не отпустила'));
+
 check('глаза экспедиции быстрые: одно узкое чтение экрана, один проход, без Set и сортировок',
   expPy.includes('Uint16Array') && !expPy.includes('new Set(Object.keys(rowCols)') && expPy.includes('gap_sure')
   && expPy.includes('rowH[y] >= wide') && expPy.includes('colH[x] < 3 || colDark[x] < 4')
