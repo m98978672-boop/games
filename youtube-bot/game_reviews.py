@@ -88,6 +88,8 @@ def build_review_messages(
             "subtitle": str(game.get("subtitle", "")),
             "description": str(game.get("description", ""))[:1400],
             "version": str(game.get("version", "")),
+            "price_context": steam_price_note(game),
+            "release_context": steam_release_note(game),
             "features": [
                 {"feature_id": f"{game['id']}-f{i + 1}", "text": str(feature)}
                 for i, feature in enumerate(features[:12])
@@ -102,13 +104,46 @@ def build_review_messages(
             "feature_id из предоставленных источников; не подменяй реальные игры локальным каталогом. "
             "Возможный минус — только осторожная гипотеза, не утверждение о тестировании. "
             "Не повторяй недавнюю игру, кроме случая, когда источник не дал альтернатив. "
-            "Оценка — субъективное мнение только по опубликованным сведениям. Все реплики — по-русски."
+            "Объясни, что предлагает игра, только по описанию. При оценке идеи учитывай доступные "
+            "описание, отзывы, цену и дату, но не выдумывай недостающие данные и не заявляй, "
+            "что проверил соотношение цены и качества без игрового опыта. Оценка субъективна и предварительна. "
+            "Все реплики — по-русски."
         ),
     }
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": json.dumps(request, ensure_ascii=False)},
     ]
+
+
+def review_opening(title: str) -> str:
+    """A short host introduction; game name is a source-provided title, not a claim."""
+    title = re.sub(r'\s+', ' ', str(title)).strip()
+    if not title:
+        raise ValueError('A game title is required for the introduction')
+    title = speech_excerpt(title, 45)
+    return f'Привет! Сегодня разбираем {title}: что это за игра и кому она может подойти.'
+
+
+def ensure_editorial_quality(scenes: list[dict[str, str]]) -> None:
+    """Reject known generic/repeated long scripts before production rendering.
+
+    This is a limited heuristic, not verification of facts, voice quality or rights.
+    """
+    from difflib import SequenceMatcher
+    if len(scenes) != 10 or any(scene.get('generation') == 'source-template' for scene in scenes):
+        raise ValueError('Long review rejected: generic fallback or missing chapters; no video uploaded')
+    texts = [re.sub(r'\s+', ' ', str(s.get('dialogue', '')).lower()).strip() for s in scenes]
+    if any(len(t) < 120 for t in texts):
+        raise ValueError('Long review rejected: insufficient chapter content')
+    for i, left in enumerate(texts):
+        for right in texts[i + 1:]:
+            if SequenceMatcher(None, left, right, autojunk=False).ratio() > .78:
+                raise ValueError('Long review rejected: repetitive chapters; no video uploaded')
+    stock = ('описание помогает увидеть', 'не заменяет личную игровую сессию',
+             'предпочтения у игроков разные', 'отправную точку для собственного знакомства')
+    if sum(any(phrase in text for phrase in stock) for text in texts) >= 2:
+        raise ValueError('Long review rejected: generic filler; no video uploaded')
 
 
 def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]], *, recent_game_ids: Iterable[str] = ()) -> dict[str, Any]:
@@ -130,10 +165,13 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     if minus_feature_id not in feature_ids:
         raise ValueError("possible minus must cite an existing catalog feature")
 
-    try:
-        score = int(data.get("idea_score"))
-    except (TypeError, ValueError) as exc:
-        raise ValueError("idea_score must be an integer from 1 to 10") from exc
+    raw_score = data.get("idea_score")
+    if type(raw_score) is int:
+        score = raw_score
+    elif isinstance(raw_score, str) and re.fullmatch(r"[0-9]{1,2}", raw_score.strip()):
+        score = int(raw_score.strip())
+    else:
+        raise ValueError("idea_score must be an integer from 1 to 10")
     if not 1 <= score <= 10:
         raise ValueError("idea_score must be an integer from 1 to 10")
     hook = str(data.get("hook", "")).strip()
@@ -152,12 +190,14 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
 
     pros = [feature_ids[str(item)] for item in selected]
     minus_evidence = feature_ids[minus_feature_id]
+    description = str(game.get('description') or pros[0]).strip()
+    description = re.sub(r'^Описание Steam:\s*', '', description, flags=re.I)
     scenes = [
-        {"speaker": "Games AI", "dialogue": speech_excerpt(hook, 78), "visual": f"ИИ-разбор проекта {game['title']}", "emotion": "curious", "label": "ПЕРВЫЙ ВЗГЛЯД"},
-        {"speaker": "Games AI", "dialogue": f"По Steam, сильная сторона: «{speech_excerpt(pros[0], 76)}».", "visual": pros[0], "emotion": "happy", "label": "ФАКТ ИЗ STEAM"},
-        {"speaker": "Games AI", "dialogue": f"Ещё один факт Steam: «{speech_excerpt(pros[1], 76)}».", "visual": pros[1], "emotion": "happy", "label": "ЕЩЁ ФАКТ STEAM"},
-        {"speaker": "Games AI", "dialogue": f"Возможный минус: {speech_excerpt(possible_minus, 76)}.", "visual": f"Основание из Steam: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
-        {"speaker": "Games AI", "dialogue": f"Итог по Steam: {speech_excerpt(pros[0], 40)}. Оценка идеи — {score} из 10. Без личной игры.", "visual": f"ИТОГ ПО ИСТОЧНИКАМ · {score}/10 · НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", "emotion": "calm", "label": "ИТОГ"},
+        {"speaker": "Games AI", "dialogue": review_opening(game['title']), "visual": f"Обзор: {game['title']}", "emotion": "happy", "label": "ПРИВЕТ!"},
+        {"speaker": "Games AI", "dialogue": f"О чём игра? По описанию авторов: {speech_excerpt(description, 90)}", "visual": description, "emotion": "curious", "label": "О ЧЁМ ИГРА"},
+        {"speaker": "Games AI", "dialogue": f"Ещё одна деталь: {speech_excerpt(pros[1], 76)}", "visual": pros[1], "emotion": "happy", "label": "ОСОБЕННОСТИ"},
+        {"speaker": "Games AI", "dialogue": f"А что может не понравиться? {speech_excerpt(possible_minus, 76)}", "visual": f"Основание: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
+        {"speaker": "Games AI", "dialogue": f"Итог: по описанию оценка идеи — {score} из 10. Я ещё не играла, поэтому оценка предварительная.", "visual": f"ИТОГ ПО ИСТОЧНИКАМ · {score}/10 · НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", "emotion": "calm", "label": "ИТОГ"},
     ]
     if any(_russian_ratio(scene["dialogue"]) < 0.45 for scene in scenes):
         raise ValueError("A fact cannot be safely narrated in Russian; refusing English or mixed-language audio.")
@@ -218,11 +258,15 @@ def _catalog_only_fallback(
     if minus_id not in feature_ids:
         minus_id = valid_proposed[0]
 
-    try:
-        score = int(data.get("idea_score", 7))
-    except (TypeError, ValueError):
-        score = 7
-    score = min(10, max(1, score))
+    raw_score = data.get("idea_score")
+    if type(raw_score) is int:
+        score = raw_score
+    elif isinstance(raw_score, str) and re.fullmatch(r"[0-9]{1,2}", raw_score.strip()):
+        score = int(raw_score.strip())
+    else:
+        raise ValueError("No valid model assessment; refusing to invent a numeric rating")
+    if not 1 <= score <= 10:
+        raise ValueError("No valid model assessment; refusing to invent a numeric rating")
 
     hook = str(data.get("hook", "")).strip()
     if not 8 <= len(hook) <= 100 or _russian_ratio(hook) < 0.5:
@@ -235,7 +279,7 @@ def _catalog_only_fallback(
         or not re.search(r"может|возможно|похоже|вероятно", possible_minus, re.I)
         or _russian_ratio(possible_minus) < 0.5
     ):
-        possible_minus = "Возможно, описанная особенность подойдёт не каждому игроку."
+        raise ValueError("No specific grounded possible limitation; refusing generic filler")
 
     repaired = {
         "schema_version": 1,
@@ -302,6 +346,10 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
             "role": "system",
             "content": (
                 "Ты пишешь длинный русскоязычный видеообзор игры только по предоставленным фактам Steam. "
+                "Ведущий уже поздоровался и назвал игру: не повторяй приветствие, сразу переходи к сути. "
+                "Затем объясни, что игра предлагает и что в ней нужно делать только по описанию источника. "
+                "Разнообразь длину фраз и переходы; избегай канцелярита и повторяющихся оговорок. "
+                "Далее обсуждай конкретные особенности и возможные ограничения, затем итог. "
                 "Не говори, что играл, не выдумывай механику, сюжет, производительность или отзывы. "
                 "Отделяй факты из источника от субъективного мнения словами «по моему впечатлению от описания». "
                 "Все реплики должны быть естественным русским языком; не вставляй английские предложения. "
@@ -340,12 +388,14 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 if not isinstance(scene, dict):
                     raise ValueError("long narration chapter must be an object")
                 fact_id = str(scene.get("fact_id", ""))
-                dialogue = re.sub(r'\s+', ' ', str(scene.get('dialogue', ''))).strip()
+                dialogue = fit_complete_chapter(str(scene.get('dialogue', '')))
                 visual = re.sub(r'\s+', ' ', str(scene.get('visual', ''))).strip()
                 cyrillic = sum('\u0400' <= char <= '\u04ff' for char in dialogue)
                 letters = sum(char.isalpha() for char in dialogue)
-                if fact_id not in allowed or not 220 <= len(dialogue) <= 320:
-                    raise ValueError("long narration fact id or chapter length is invalid")
+                if fact_id not in allowed:
+                    raise ValueError("long narration fact id is invalid")
+                if not 220 <= len(dialogue) <= 320:
+                    raise ValueError(f"long narration chapter length is {len(dialogue)} (required 220–320)")
                 if not letters or cyrillic / letters < 0.7:
                     raise ValueError("long narration must be Russian, not English text")
                 if not visual or len(visual) > 120 or re.search(r'https?://|www\.|@[\w.-]+', dialogue, re.I):
@@ -353,13 +403,9 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 clean.append({"fact_id": fact_id, "dialogue": dialogue, "visual": visual})
             if sum(len(scene["dialogue"]) for scene in clean) < 2400:
                 raise ValueError("long narration is too short to count as a full video")
-            # Put a deterministic, source-limited verdict at the end even when
-            # the model's final chapter forgot one. Keep it short enough for TTS.
-            summary = speech_excerpt(str(review["pros"][0]), 50)
-            verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
-            clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
+            clean[-1]["dialogue"] += _source_verdict(review)
             clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
-            return clean
+            return with_store_context(clean, review)
         except ValueError as exc:
             last_error = exc
             messages.append({
@@ -370,40 +416,76 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
     return _generate_long_in_batches(review)
 
 
+def fit_complete_chapter(text: str, *, minimum: int = 220, maximum: int = 320) -> str:
+    """Shorten a verbose response only at a full sentence boundary, or reject it."""
+    text = re.sub(r"\s+", " ", str(text)).strip()
+    ends = [m.end() for m in re.finditer(r"[.!?](?=\s|$)", text[:maximum + 1]) if m.end() <= maximum]
+    if ends and ends[-1] >= minimum:
+        return text[:ends[-1]].strip()
+    raise ValueError(f"long narration chapter length is {len(text)} with no safe sentence boundary")
+
+
+def _source_verdict(review: Mapping[str, Any]) -> str:
+    """Add a conclusion without clipping the model's final sentence or a source fact."""
+    return f" Итог по источникам: оценка идеи по описанию — {review['idea_score']} из 10. Лично я не играл."
+
+
+
 def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]:
     """Ask for one bounded chapter at a time and reject malformed model output.
 
-    Shorter completions reduce truncation and count errors from small models. No
-    model text is accepted without the same language, length and source-ID checks.
-    If a chapter still fails twice, stop rather than fabricate material.
+    Shorter completions reduce truncation. Each plain-text chapter is attached
+    to the single supplied source by the program; this is provenance, not a
+    guarantee that the model did not invent a claim. Fallback is never published.
     """
     evidence = review["evidence"]
     allowed = {str(key) for key in evidence}
     clean: list[dict[str, str]] = []
+    evidence_ids = tuple(str(key) for key in evidence)
     for index in range(10):
+        # Bind the source ourselves: the small model often emits prose instead
+        # of JSON or invents IDs. This does not prove the prose entails the fact.
+        selected_id = evidence_ids[index % len(evidence_ids)]
         messages = [
             {"role": "system", "content": (
-                "Напиши одну главу для русскоязычного обзора игры на основе источников. "
+                "Напиши один абзац для русскоязычного обзора игры на основе предоставленного факта. "
                 "Не добавляй фактов, не заявляй личное прохождение. "
                 "Мнение помечай как впечатление от описания. "
-                'Верни один JSON: {"fact_id":"точный ID", "dialogue":"текст", "visual":"короткая подпись"}.'
+                "Используй несколько коротких законченных предложений с точками. "
+                "Верни только текст абзаца, без JSON, заголовка, кавычек и пояснений."
             )},
             {"role": "user", "content": json.dumps({
                 "chapter": index + 1, "total_chapters": 10,
-                "sources": evidence,
-                "task": "Одна глава, dialogue от 220 до 320 символов по-русски; используй точный fact_id из sources. Без ссылок в тексте.",
+                "game": review["game_title"],
+                "role": ["что за игра и её цель без приветствия", "суть игрового процесса", "ключевое действие игрока",
+                         "мир и контекст", "другая подтверждённая особенность", "какому игроку это может подойти",
+                         "возможное ограничение как гипотеза", "цена и условия только по фактам", "что пока неизвестно",
+                         "осмысленный итог"][index],
+                "previous_chapters": [s['dialogue'] for s in clean[-2:]],
+                "source_fact": evidence[selected_id],
+                "task": "Один содержательный абзац от 220 до 320 символов по-русски, без ссылок. Не повторяй предыдущие главы.",
             }, ensure_ascii=False)},
         ]
         last_error: ValueError | None = None
         for _ in range(2):
             raw = generate_with_qwen(messages, max_new_tokens=700)
             try:
-                scene = _extract_json(raw)
-                fact_id = str(scene.get("fact_id", ""))
-                dialogue = re.sub(r"\s+", " ", str(scene.get("dialogue", ""))).strip()
-                visual = re.sub(r"\s+", " ", str(scene.get("visual", ""))).strip()
-                if fact_id not in allowed or not 220 <= len(dialogue) <= 320:
-                    raise ValueError("long narration fact id or chapter length is invalid")
+                if '{' in str(raw) or '}' in str(raw):
+                    scene = _extract_json(raw)
+                    fact_id = str(scene.get("fact_id", ""))
+                    dialogue = re.sub(r"\s+", " ", str(scene.get("dialogue", ""))).strip()
+                    visual = re.sub(r"\s+", " ", str(scene.get("visual", ""))).strip()
+                else:
+                    fact_id = selected_id
+                    dialogue = re.sub(r"\s+", " ", str(raw)).strip()
+                    if re.search(r'<[^>]*>|```|^извините|^я не могу', dialogue, re.I):
+                        raise ValueError("long narration contains markup or a refusal")
+                    visual = speech_excerpt(str(evidence[selected_id]), 100)
+                if fact_id not in allowed or fact_id != selected_id:
+                    raise ValueError("long narration fact id does not match the supplied source")
+                dialogue = fit_complete_chapter(dialogue)
+                if not 220 <= len(dialogue) <= 320:
+                    raise ValueError(f"long narration chapter length is {len(dialogue)} (required 220–320)")
                 if _russian_ratio(dialogue) < 0.7:
                     raise ValueError("long narration must be Russian, not English text")
                 if not visual or len(visual) > 120 or re.search(r"https?://|www\.|@[\w.-]+", dialogue, re.I):
@@ -412,22 +494,20 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                 break
             except ValueError as exc:
                 last_error = exc
-                messages.append({"role": "user", "content": f"Ошибка формата: {exc}. Верни один исправленный JSON, dialogue 220–320 символов."})
+                messages.append({"role": "user", "content": f"Предыдущий ответ не подошёл: {exc}. Верни только один абзац из 220–320 символов."})
         else:
             print(f"Qwen could not produce chapter {index + 1}: {last_error}; using clearly labelled source-based template.", file=sys.stderr)
-            return _source_template_long_narration(review)
+            return _source_template_long_narration(review, reason=f"chapter {index + 1}: {last_error}")
     if sum(len(scene["dialogue"]) for scene in clean) < 2400:
         print("Qwen chapter total too short; using clearly labelled source-based template.", file=sys.stderr)
-        return _source_template_long_narration(review)
-    summary = speech_excerpt(str(review["pros"][0]), 50)
-    verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
-    clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
+        return _source_template_long_narration(review, reason="chapters too short")
+    clean[-1]["dialogue"] += _source_verdict(review)
     clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
-    return clean
+    return with_store_context(clean, review)
 
 
 
-def _source_template_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
+def _source_template_long_narration(review: Mapping[str, Any], *, reason: str = "unknown") -> list[dict[str, str]]:
     """A transparent source-only fallback when the model cannot follow its schema.
 
     This deliberately avoids treating catalog copy as firsthand evidence or
@@ -459,11 +539,60 @@ def _source_template_long_narration(review: Mapping[str, Any]) -> list[dict[str,
         fact_id, fact = usable[index % len(usable)]
         prefix = "В источнике указано: " + fact.rstrip(". ") + ". "
         scenes.append({"fact_id": fact_id, "dialogue": prefix + paragraph,
-                       "visual": "ОПИСАНИЕ ИЗ ИСТОЧНИКА", "generation": "source-template"})
+                       "visual": "ОПИСАНИЕ ИЗ ИСТОЧНИКА", "generation": "source-template", "fallback_reason": reason})
     summary = speech_excerpt(str(review["pros"][0]), 50)
     scenes[-1]["dialogue"] += f" Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
     scenes[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
-    return scenes
+    return with_store_context(scenes, review)
+
+
+def steam_price_note(review: Mapping[str, Any]) -> str:
+    """Describe only validated Steam NL price data; never infer a missing price."""
+    facts = review.get("source_facts")
+    price = facts.get("price") if isinstance(facts, Mapping) else None
+    if not isinstance(price, Mapping) or price.get("region") != "NL":
+        return "Цена не подтверждена; проверьте страницу игры."
+    checked = price.get("checked_at")
+    if not isinstance(checked, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", checked):
+        return "Цена не подтверждена; проверьте страницу игры."
+    if price.get("kind") == "free_to_play":
+        return f"По Steam, базовая игра бесплатна в Нидерландах на {checked}; возможны дополнительные покупки."
+    cents = price.get("minor_units")
+    if price.get("kind") == "paid" and price.get("currency") == "EUR" and type(cents) is int and 0 < cents <= 10_000_000:
+        return f"Цена Steam для Нидерландов на {checked}: {cents // 100} евро {cents % 100:02d} центов; цена может измениться."
+    return "Цена не подтверждена; проверьте страницу игры."
+
+
+def steam_release_note(review: Mapping[str, Any]) -> str:
+    """Do not present a future or unverified date as an already released game."""
+    facts = review.get("source_facts")
+    if not isinstance(facts, Mapping):
+        return "Дата выхода не подтверждена; проверьте страницу игры."
+    value = facts.get("release_date")
+    coming = facts.get("release_coming_soon")
+    if (not isinstance(value, str) or not value.strip() or len(value) > 80
+            or re.search(r"https?://|www\.|[<>\r\n]", value, re.I)):
+        return "Дата выхода не подтверждена; проверьте страницу игры."
+    date = speech_excerpt(value.strip(), 60)
+    if coming is True:
+        return f"По Steam, выход ожидается: {date}. Дата может измениться."
+    if coming is False:
+        return f"Дата выхода по Steam: {date}."
+    return f"В карточке Steam указана дата: {date}; статус выхода не подтверждён."
+
+
+def with_store_context(scenes: list[dict[str, str]], review: Mapping[str, Any]) -> list[dict[str, str]]:
+    """Add only observed store facts, including region and observation date.
+
+    Price is displayed, not silently turned into a subjective value-for-money
+    score. A source's listing does not prove gameplay quality.
+    """
+    if len(scenes) < 2:
+        raise ValueError("At least two scenes are required for store context")
+    result = [dict(scene) for scene in scenes]
+    result[0]["dialogue"] = review_opening(str(review["game_title"])) + " " + result[0]["dialogue"].rstrip() + " " + steam_release_note(review)
+    result[1]["dialogue"] = result[1]["dialogue"].rstrip() + " " + steam_price_note(review)
+    return result
 
 
 def youtube_description(review: Mapping[str, Any]) -> str:
@@ -480,7 +609,8 @@ def youtube_description(review: Mapping[str, Any]) -> str:
         f"Русскоязычный ИИ-разбор внешней игры {review['game_title']} "
         f"({review.get('game_version') or 'дата/версия не указана'}).\n"
         f"Сильные стороны, отмеченные по источникам: {review['pros'][0]}; {review['pros'][1]}.\n"
-        f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus']}.\n\n"
+        f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus']}.\n"
+        f"{steam_release_note(review)}\n{steam_price_note(review)}\n\n"
         "Это обзор по опубликованным материалам, а не личное прохождение или независимый тест. "
         "Ссылки можно скопировать ниже:\n"
         f"{provenance}"

@@ -1,0 +1,45 @@
+name: YouTube missed-run audit (no upload)
+on:
+  schedule:
+    # 15:30 Moscow: separate health check; publication times are unchanged.
+    - cron: '30 12 * * *'
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+  issues: write
+concurrency:
+  group: youtube-schedule-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: github.repository == 'm98978672-boop/games' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check scheduled runs without retrying uploads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh run list --workflow youtube-shorts-autopilot.yml --branch main --limit 100 --json event,headBranch,createdAt,status,conclusion > "$RUNNER_TEMP/publisher-runs.json"
+          python youtube-bot/audit_review_schedule.py < "$RUNNER_TEMP/publisher-runs.json" > "$RUNNER_TEMP/audit.json"
+          cat "$RUNNER_TEMP/audit.json" >> "$GITHUB_STEP_SUMMARY"
+          if python -c 'import json,sys; r=json.load(open(sys.argv[1])); sys.exit(0 if any(s["run_state"] in ("missing_approximate_window", "failed_or_cancelled") for s in r["slots"]) else 1)' "$RUNNER_TEMP/audit.json"; then
+            day=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["moscow_date"])' "$RUNNER_TEMP/audit.json")
+            title="YouTube scheduled runs need review: $day"
+            gh issue list --state open --limit 100 --json title --jq '.[].title' > "$RUNNER_TEMP/issue-titles.txt"
+            if ! grep -Fxq "$title" "$RUNNER_TEMP/issue-titles.txt"; then
+              {
+                echo 'Возможен пропуск или ошибка запланированного запуска. GitHub может задерживать cron; окна ниже приблизительны.'
+                echo 'Успешный запуск не подтверждает, что видео опубликовано в нужное время. Проверьте YouTube Studio и очередь перед любым повтором: автоматической повторной загрузки нет.'
+                echo
+                cat "$RUNNER_TEMP/audit.json"
+              } > "$RUNNER_TEMP/audit-report.md"
+              gh issue create --title "$title" --body-file "$RUNNER_TEMP/audit-report.md"
+            fi
+          fi

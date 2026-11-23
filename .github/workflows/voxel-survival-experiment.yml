@@ -1,0 +1,56 @@
+name: Independent voxel survival experiment (no publication)
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  kvenya-voxel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install model dependencies
+        run: pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
+      - name: Prepare hash-pinned game build context
+        run: python youtube-bot/prepare_voxel_recreation.py "$RUNNER_TEMP/voxel-source"
+      - name: Build game in disposable container without repository credentials
+        run: |
+          cat > "$RUNNER_TEMP/voxel-source/Dockerfile" <<'DOCKERFILE'
+          FROM node:22-bookworm-slim
+          WORKDIR /game
+          COPY . .
+          RUN npm ci --ignore-scripts --no-audit --no-fund && npm run build
+          DOCKERFILE
+          docker build -t kvenya-voxel-build:private "$RUNNER_TEMP/voxel-source"
+          container=$(docker create kvenya-voxel-build:private)
+          trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+          mkdir -p "$RUNNER_TEMP/voxel-dist"
+          docker cp "$container:/game/dist/." "$RUNNER_TEMP/voxel-dist/"
+      - name: Build offline browser bridge
+        run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Fetch pinned Kvenya adapter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kvenya-release"
+          gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
+          python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Try Kvenya in the independent survival game
+        env:
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+          VOXEL_GAME_DIST: ${{ runner.temp }}/voxel-dist
+        run: |
+          set +e
+          python -u youtube-bot/tests/smoke_voxel_qwen.py 2>&1 | tee "$RUNNER_TEMP/voxel-probe.log"
+          result=${PIPESTATUS[0]}
+          if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/voxel-probe.log"; fi
+          exit "$result"

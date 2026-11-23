@@ -17,9 +17,9 @@ MODEL = 'Qwen/Qwen3.5-0.8B'
 REVISION = '2fc06364715b967f1860aea9cf38778875588b17'
 
 
-def generate(model, tokenizer, system_prompt, instruction, max_new):
+def generate(model, tokenizer, system_prompt, instruction, max_new, *, thinking=True):
     messages = [{'role': 'system', 'content': system_prompt}, {'role': 'user', 'content': instruction}]
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=True)
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=thinking)
     inputs = tokenizer(text, return_tensors='pt')
     with torch.no_grad():
         out = model.generate(**inputs, max_new_tokens=max_new, do_sample=False, pad_token_id=tokenizer.eos_token_id)
@@ -32,27 +32,33 @@ def main():
     parser.add_argument('--adapter', type=Path, help='adapter to compare against the base model')
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--max-new', type=int, default=320)
+    parser.add_argument('--adapter-only', action='store_true', help='Compare adapters without recomputing base answers')
+    parser.add_argument('--no-thinking', action='store_true', help='Use direct-answer template for bounded action exams')
     args = parser.parse_args()
+    if args.adapter_only and not args.adapter:
+        parser.error('--adapter-only requires --adapter')
     manifest = json.loads((args.data / 'manifest.json').read_text())
     rows = [json.loads(line) for line in (args.data / 'eval.jsonl').read_text().splitlines() if line]
     tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
     base = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
     base.eval()
+    # PEFT mutates the supplied base model in place. Generate every baseline
+    # answer before attaching the adapter, or the comparison is contaminated.
     results = []
-    models = [('base', base)]
-    adapter_model = None
-    if args.adapter:
-        adapter_model = PeftModel.from_pretrained(base, args.adapter)
-        adapter_model.eval()
-        models.append(('adapter', adapter_model))
     for row in rows:
         item = {'id': row['id'], 'instruction': row['instruction'], 'mustContain': row.get('mustContain', [])}
         if row.get('mustFormat'):
             item['mustFormat'] = row['mustFormat']
-        for name, model in models:
-            item[name] = generate(model, tokenizer, manifest['systemPrompt'], row['instruction'], args.max_new)
-            print(f"{row['id']} [{name}] done", flush=True)
+        if not args.adapter_only:
+            item['base'] = generate(base, tokenizer, manifest['systemPrompt'], row['instruction'], args.max_new, thinking=not args.no_thinking)
+            print(f"{row['id']} [base] done", flush=True)
         results.append(item)
+    if args.adapter:
+        adapter_model = PeftModel.from_pretrained(base, args.adapter)
+        adapter_model.eval()
+        for row, item in zip(rows, results):
+            item['adapter'] = generate(adapter_model, tokenizer, manifest['systemPrompt'], row['instruction'], args.max_new, thinking=not args.no_thinking)
+            print(f"{row['id']} [adapter] done", flush=True)
     args.output.write_text(json.dumps({'results': results}, ensure_ascii=False, indent=2) + '\n')
     print(f'wrote {len(results)} results to {args.output}', flush=True)
 
