@@ -179,6 +179,9 @@ def persona_for(owner_text):
     return (head + '\n\n' + body).strip()[:4600]
 
 
+TPS_LAST = []  # (токенов/с, сколько токенов, за сколько секунд) с последней генерации
+
+
 def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_new=0):
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
     inputs = tokenizer(prompt, return_tensors='pt')
@@ -200,7 +203,8 @@ def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_n
     if produced > 0 and spent > 0:
         # Честные токены в секунду: столько слов модель выдаёт сама,
         # без учёта промпта. По числу падает скорость — видно сразу.
-        print(f'Токенов в секунду: {produced / spent:.1f} ({produced} за {spent:.1f} c)', flush=True)
+        TPS_LAST[:] = [produced / spent, produced, spent]
+        print(f'Токенов в секунду: {TPS_LAST[0]:.1f} ({produced} за {spent:.1f} c)', flush=True)
     return tokenizer.decode(out[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True).strip()
 
 
@@ -709,10 +713,20 @@ def main():
         drafts.append(raw_retry)
         reply = clean_reply(raw_retry)
         problem = reply_problem(reply)
+    # Замер скорости — в журнал на каждый ответ, не только на поиск:
+    # иначе дом не сможет проверить, что действительно стало быстрее.
+    speed_line = None
+    if TPS_LAST:
+        speed_line = f'Токенов в секунду: {TPS_LAST[0]:.1f} ({TPS_LAST[1]} за {TPS_LAST[2]:.1f} c)'
     if query:
         # Черновики — в журнал: дом честно показывает, как она отвечала.
         with SEARCH_LOG.open('a', encoding='utf-8') as log_file:
             log_file.write(f'Черновики ответа: {drafts!r}\n')
+            if speed_line:
+                log_file.write(speed_line + '\n')
+    elif speed_line:
+        with SEARCH_LOG.open('a', encoding='utf-8') as log_file:
+            log_file.write(f'\n## {time.strftime("%Y-%m-%d %H:%M")}\n' + speed_line + '\n')
     if results:
         parts = [p for p in re.split(r'(?<=[.!?])\s+', reply) if p.strip()]
         reply = ' '.join(parts[:2]).strip()

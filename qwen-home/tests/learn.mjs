@@ -180,6 +180,17 @@ const worldHtml = await readFile(path.join(home, '..', 'kvenya', 'world.html'), 
 check('Квеня играет и записывает настоящий геймплей: сама бежит за звёздами, видео пишется и скачивается со страницы мира', worldJs.includes('MediaRecorder') && worldJs.includes('captureStream') && worldJs.includes('startGameAndRecord') && worldJs.includes('spawnStar') && worldHtml.includes('kvGameStart') && worldHtml.includes('kvVideoDownload') && worldHtml.includes('kvGameVideo') && personaMd.includes('## Игра и запись геймплея') && dialogue.some((r) => r.response.includes('MediaRecorder')) && dialogue.some((r) => r.response.includes('разрешения')) && evalRows.some((r) => r.id === 'eval-record-gameplay'));
 check('персона знает про свою 3D-студию и честную оценку красоты', personaMd.includes('3D-студия') && personaMd.includes('красиво ли получилось'));
 
+// Число токенов в секунду с последнего ответа — из журнала её поисков.
+const searchLogPath = path.join(home, 'memory', 'search-log.md');
+let tpsLine = null;
+try {
+  const logText = await readFile(searchLogPath, 'utf8');
+  const caps = [...logText.matchAll(/Токенов в секунду: ([\d.]+)/g)];
+  if (caps.length) tpsLine = caps[caps.length - 1][1];
+} catch {}
+check('скорость письма измерена: токенов в секунду записаны в журнал', tpsLine !== null, tpsLine ? `последний замер: ${tpsLine} ток/с` : 'замера пока нет');
+
+
 check('Квеня снимает сама: саморежиссёр в мире, киноархив и уроки честности', worldJs.includes('startSelfClip') && worldJs.includes('kvSelfRecord') && worldJs.includes('kvenya.world.selfRecord.v1') && worldHtml.includes('kvClips') && worldHtml.includes('снимать самой') && personaMd.includes('саморежиссёр') && dialogue.some((r) => r.response.includes('киноархив')) && evalRows.some((r) => r.id === 'eval-self-record'));
 const bridgePy = await readFile(path.join(home, 'tools', 'bridge-sense.py'), 'utf8');
 const bridgeSeed = JSON.parse(await readFile(path.join(home, '..', 'kvenya', 'bridge.json'), 'utf8'));
