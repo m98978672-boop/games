@@ -1,18 +1,21 @@
 {
   "schema": "kvenya-games-v1",
-  "started": "2026-11-23T18:23:10.238Z",
+  "started": "2026-11-23T18:11:55.967Z",
   "chess": {
     "ok": true,
-    "depth": 3,
-    "wins": 0,
+    "depth": 4,
+    "timeMs": 200,
+    "avgDepth": 2,
+    "shallowMoves": 233,
+    "wins": 10,
     "losses": 0,
     "draws": 0,
     "unfinished": 0,
     "games": 10,
-    "avgPlies": 0,
-    "lostPieces": 0,
+    "avgPlies": 46,
+    "lostPieces": 12,
     "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-    "raw": ""
+    "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 46 полуходов; своих фигур потеряно 12; средняя глубина 2; мелких ходов 233"
   },
   "island": {
     "ok": true,
@@ -92,22 +95,26 @@
       "avgTurns": 59
     }
   ],
+  "prevDepth": null,
   "history": [
     {
       "schema": "kvenya-games-v1",
-      "started": "2026-11-23T18:23:10.238Z",
+      "started": "2026-11-23T18:11:55.967Z",
       "chess": {
         "ok": true,
-        "depth": 3,
-        "wins": 0,
+        "depth": 4,
+        "timeMs": 200,
+        "avgDepth": 2,
+        "shallowMoves": 233,
+        "wins": 10,
         "losses": 0,
         "draws": 0,
         "unfinished": 0,
         "games": 10,
-        "avgPlies": 0,
-        "lostPieces": 0,
+        "avgPlies": 46,
+        "lostPieces": 12,
         "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-        "raw": ""
+        "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 46 полуходов; своих фигур потеряно 12; средняя глубина 2; мелких ходов 233"
       },
       "island": {
         "ok": true,
@@ -186,7 +193,8 @@
           "games": 3,
           "avgTurns": 59
         }
-      ]
+      ],
+      "prevDepth": null
     },
     {
       "schema": "kvenya-games-v1",

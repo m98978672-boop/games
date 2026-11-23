@@ -84,8 +84,24 @@ function pst(type, color, r, f) {
 
 const MATE = 100000;
 
-/** Оценка позиции с точки зрения белых (положительно — хорошо Квени). */
+/**
+ * Оценка позиции с точки зрения белых (положительно — хорошо Квени).
+ * Кэш по FEN: в поиске одна и та же позиция встречается из разных веток,
+ * а c.board() на каждой оценке — самая дорогая часть узла. Кэш маленький
+ * и чистится сам, так что памяти он не съедает.
+ */
+const EVAL_CACHE = new Map();
 export function evaluate(c) {
+  const fen = c.fen();
+  const hit = EVAL_CACHE.get(fen);
+  if (hit !== undefined) return hit;
+  const v = evaluateSlow(c);
+  if (EVAL_CACHE.size > 20000) EVAL_CACHE.clear();
+  EVAL_CACHE.set(fen, v);
+  return v;
+}
+
+function evaluateSlow(c) {
   const b = c.board();
   let score = 0;
   for (let r = 0; r < 8; r++) {
@@ -148,6 +164,54 @@ function quiesce(c, alpha, beta, st, qdepth = 4) {
   return maximizing ? alpha : beta;
 }
 
+/** Тот же поиск, но без бюджета времени: для гарантированных уровней. */
+function searchUnlimited(c, depth, alpha, beta) {
+  if (c.isGameOver()) {
+    if (c.isCheckmate()) return -MATE + (10 - depth) * 100;
+    return 0;
+  }
+  if (depth <= 0) return quiesceUnlimited(c, alpha, beta, 3);
+  let best = -Infinity;
+  for (const m of ordered(c, c.moves({ verbose: true }))) {
+    c.move(m);
+    const v = -searchUnlimited(c, depth - 1, -beta, -alpha);
+    c.undo();
+    if (v > best) best = v;
+    if (best > alpha) alpha = best;
+    if (alpha >= beta) break;
+  }
+  return best;
+}
+
+/** Спокойный добор без бюджета, с жёстким пределом глубины. */
+function quiesceUnlimited(c, alpha, beta, qdepth) {
+  const stand = c.turn() === 'w' ? evaluate(c) : -evaluate(c);
+  if (qdepth <= 0) return stand;
+  const maximizing = c.turn() === 'w';
+  if (maximizing) {
+    if (stand >= beta) return beta;
+    if (stand > alpha) alpha = stand;
+  } else {
+    if (stand <= alpha) return alpha;
+    if (stand < beta) beta = stand;
+  }
+  const caps = c.moves({ verbose: true }).filter((m) => m.captured || m.promotion);
+  if (!caps.length) return stand;
+  for (const m of ordered(c, caps)) {
+    c.move(m);
+    const v = -quiesceUnlimited(c, -beta, -alpha, qdepth - 1);
+    c.undo();
+    if (maximizing) {
+      if (v >= beta) return beta;
+      if (v > alpha) alpha = v;
+    } else {
+      if (v <= alpha) return alpha;
+      if (v < beta) beta = v;
+    }
+  }
+  return maximizing ? alpha : beta;
+}
+
 /** Альфа-бета поиск. Возвращает оценку с точки зрения того, чей ход. */
 function search(c, depth, alpha, beta, st) {
   if (st.expired()) return c.turn() === 'w' ? evaluate(c) : -evaluate(c);
@@ -175,38 +239,58 @@ function search(c, depth, alpha, beta, st) {
  * каждый следующий уровень только если время ещё есть. Так движок думает
  * ограниченно и предсказуемо, а не «сколько получится».
  */
-export function pickMove(c, { rng = Math.random, persona = {}, timeMs = 700, maxDepth = 4 } = {}) {
+export function pickMove(c, { rng = Math.random, persona = {}, timeMs = 700, maxDepth = 4, minDepth = 2 } = {}) {
+  // Гарантия глубины: первый уровень поиска доигрывается ВСЕГДА, даже если
+  // бюджет времени кончился. Иначе на медленном раннере получаются глубины
+  // [1,0,0] — ход почти наугад, и счёт падает (было 8/10 вместо 10/10).
+  // Уровни 1 и 2 стоят в chess.js десятки узлов, а не тысячи.
   const st = { nodes: 0, deadline: Date.now() + timeMs, expired() { return Date.now() > this.deadline || this.nodes > 400000; } };
   let best = null;
   let reached = 0;
   for (let depth = 1; depth <= maxDepth; depth++) {
     const moves = ordered(c, c.moves({ verbose: true }));
     const scored = [];
+    const forced = depth <= minDepth;
     for (const m of moves) {
       c.move(m);
-      let v = -search(c, depth - 1, -Infinity, Infinity, st);
+      // Для гарантированных уровней время не смотрим: иначе недосчитанный
+      // уровень отвергается и мы остаёмся без хода вовсе.
+      let v = forced ? -searchUnlimited(c, depth - 1, -Infinity, Infinity) : -search(c, depth - 1, -Infinity, Infinity, st);
       c.undo();
       // Характер: жадность и тяга к шахам — маленькие добавки, не ломающие
       // честную оценку; случайность — чтобы партии не совпадали.
       if (m.captured && persona.greed) v += VAL[m.captured] * persona.greed * 0.02;
       if (m.san && m.san.includes('+') && persona.check) v += persona.check;
       scored.push({ m, v: v + (persona.jit ? (rng() - 0.5) * persona.jit : 0), raw: v });
-      if (st.expired()) break;
+      // На гарантированных уровнях НЕЛЬЗЯ выходить по времени: выход до
+      // записи хода оставлял её вообще без хода (на первом ходу партии
+      // получалось «a3» наугад и счёт падал на медленном раннере).
+      if (!forced && st.expired()) break;
     }
     if (!scored.length) break;
     scored.sort((a, b) => b.v - a.v);
     // Итог уровня принимаем, только если он доигран целиком: недосчитанный
     // уровень может выбрать ход по половине дерева.
-    if (!st.expired()) {
+    if (forced || !st.expired()) {
       best = { move: scored[0].m, score: scored[0].raw, nodes: st.nodes, depth, alternatives: scored.slice(0, 3) };
       reached = depth;
     }
-    if (st.expired()) break;
+    // Гарантированные уровни (до minDepth) проходим всегда, даже если время
+    // вышло: они дешёвые, а без них ход получается почти наугад.
+    if (!forced && st.expired()) break;
   }
   if (!best) {
-    // Время вышло уже на первом уровне — берём лучший из сосчитанного.
+    // Страховка: время вышло раньше, чем записан хоть один уровень. Считаем
+    // ход полноценно (без бюджета), чтобы она никогда не ходила наугад.
     const moves = ordered(c, c.moves({ verbose: true }));
-    best = { move: moves[0], score: 0, nodes: st.nodes, depth: 0, alternatives: [] };
+    const scored = moves.map((m) => {
+      c.move(m);
+      const v = -searchUnlimited(c, Math.max(0, minDepth - 1), -Infinity, Infinity);
+      c.undo();
+      return { m, v, raw: v };
+    }).sort((a, b) => b.v - a.v);
+    best = { move: scored[0].m, score: scored[0].raw, nodes: st.nodes, depth: minDepth, alternatives: scored.slice(0, 3) };
+    reached = minDepth;
   }
   best.depth = reached || best.depth;
   return best;
