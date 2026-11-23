@@ -149,16 +149,17 @@ jobs:
           # последние пять, а каждый каталог тянет сборку вниз — при
           # скопившихся 28 сборка Pages падала по времени (сейчас .nojekyll,
           # но пыль всё равно не нужна: 149 МБ мусора в репозитории).
-          # ВАЖНО: список «оставить» считается уже вместе с новой экспедицией,
-          # иначе уборка сносит каталог, который сама же и записала.
+          # ВАЖНО: сначала записываем список (уже с новой экспедицией), и только
+          # потом убираем лишние каталоги. Если считать «оставить» до записи,
+          # уборка сносит каталог, который сама же и записала.
           bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]
+          bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           keep = {e.get('dir') for e in bridge['expeditions'] if e.get('dir')}
           root = Path('qwen-home/bridge/expeditions')
           if root.exists():
               for old_dir in sorted(root.iterdir()):
                   if old_dir.is_dir() and str(old_dir) not in keep:
                       shutil.rmtree(old_dir, ignore_errors=True)
-          bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           print('expedition filed:', entry)
           PY
           python3 qwen-home/tools/vlog.py auto || echo "выпуск блога не собрался — экспедиция всё равно оформляется"
