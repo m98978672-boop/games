@@ -301,10 +301,7 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
         # не ждём зону, скорость сама донесёт до нижнего края
         if vy >= 45 and bird_y > gap_top + 0.45 * (gap_bottom - gap_top):
             return ms_since_flap >= 70
-        # Урок трасс «пять труб»: при зуме 0.72 птица входила в просвет
-        # почти у нижнего края (408 при крае 476 и цели 407) — на границе
-        # смерти. Центр просвета (0.58) даёт сверху и снизу одинаковый запас.
-        zone = gap_top + 0.58 * (gap_bottom - gap_top)
+        zone = gap_top + 0.72 * (gap_bottom - gap_top)
         # прогноз: падаем быстро — к следующему кадру будем в зоне,
         # жмём СЕЙЧАС, а не когда уже поздно (урок смертей «пулей»)
         if vy > 8 and bird_y + vy * 0.9 > zone:
@@ -583,8 +580,8 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             vy = (st['bird'][1] - prev_bird_y) if prev_bird_y is not None else 0
                             prev_bird_y = st['bird'][1]
                             if gap:
-                                # цель для трассы и разбора: рабочая зона, а не край
-                                target = gap[0] + 0.58 * (gap[1] - gap[0]) + offset
+                                # цель для трассы и разбора: середина рабочей зоны
+                                target = gap[0] + 0.72 * (gap[1] - gap[0]) + offset
                             else:
                                 target = frame_h * 0.42 + offset
                             # мёртвую не дёргать: лежит у земли неподвижно или
