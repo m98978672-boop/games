@@ -101,6 +101,8 @@ jobs:
         run: node tools/bughunt/tests/selftest.mjs
       - name: Check the bug-code table covers 000–999
         run: node tools/bughunt/tests/codes.mjs
+      - name: Install locked chess dependency for Qwen home tests
+        run: npm ci --prefix kvenya/letsplay --no-audit --no-fund
       - name: Hunt for bugs across the repository (critical only)
         run: |
           set +e
