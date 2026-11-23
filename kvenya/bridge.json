@@ -185,6 +185,22 @@
   ],
   "expeditions": [
     {
+      "date": "2026-11-23 22:13 UTC",
+      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-2215-colinhuang314-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-story.png",
+        "03-story-01.png"
+      ],
+      "kind": "story",
+      "storyLine": "прошла историю: 35 выборов, 1 захода(ов), 24 мест в карте, концовок видела 1 · финал: ↶ Congratulations ! You finished the game! The End",
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
       "date": "2026-11-23 22:10 UTC",
       "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
       "status": "played",
@@ -247,22 +263,6 @@
       "storyLine": "прошла историю: 37 выборов (35 в новых местах), последний выбор «Game Over» · дошла до финала: ↶ Congratulations ! You finished the game! The End",
       "hasVideo": true,
       "video": "video.webm"
-    },
-    {
-      "date": "2026-11-23 21:45 UTC",
-      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261123-2146-colinhuang314-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-story.png",
-        "03-story-1.png"
-      ],
-      "kind": "story",
-      "storyLine": "прошла историю: 37 выборов (35 в новых местах), последний выбор «Game Over» · дошла до финала: ↶ Congratulations ! You finished the game! The End",
-      "hasVideo": true,
-      "video": "video.webm"
     }
   ],
   "motivation": {
@@ -273,7 +273,7 @@
         "id": "veteran-exp",
         "title": "Ветеран экспедиций",
         "reward": "сама предлагает маршрут недели в журнале моста",
-        "at": "2026-11-23 21:53 UTC"
+        "at": "2026-11-23 21:56 UTC"
       },
       {
         "id": "game-maker",
@@ -304,8 +304,8 @@
     "closedDuties": [],
     "lastEvents": [
       {
-        "id": "20261123-2211-colinhuang314-github-io:video",
-        "at": "2026-11-23 22:10 UTC",
+        "id": "20261123-2215-colinhuang314-github-io:video",
+        "at": "2026-11-23 22:13 UTC",
         "delta": 3,
         "text": "видео экспедиции доехало до её страницы"
       },
@@ -353,8 +353,6 @@
       }
     ],
     "eventIds": [
-      "20261123-2146-colinhuang314-github-io:played",
-      "20261123-2146-colinhuang314-github-io:video",
       "20261123-2149-colinhuang314-github-io:played",
       "20261123-2149-colinhuang314-github-io:video",
       "20261123-2154-colinhuang314-github-io:played",
@@ -363,6 +361,8 @@
       "20261123-2157-colinhuang314-github-io:video",
       "20261123-2211-colinhuang314-github-io:played",
       "20261123-2211-colinhuang314-github-io:video",
+      "20261123-2215-colinhuang314-github-io:played",
+      "20261123-2215-colinhuang314-github-io:video",
       "creation:game:ptica-i-truby",
       "creation:game:zvezdny-dozhd",
       "creation:game:zmeika",
@@ -377,7 +377,7 @@
     "gamesMade": 3,
     "episodesMade": 4,
     "ownWantsDone": 0,
-    "updatedAt": "2026-11-23 22:11 UTC",
+    "updatedAt": "2026-11-23 22:15 UTC",
     "seenJournal": [
       "20261122-2158-ellisonleao-github-io:played",
       "20261122-2158-ellisonleao-github-io:video",
@@ -455,6 +455,8 @@
       "20261123-2157-colinhuang314-github-io:video",
       "20261123-2211-colinhuang314-github-io:played",
       "20261123-2211-colinhuang314-github-io:video",
+      "20261123-2215-colinhuang314-github-io:played",
+      "20261123-2215-colinhuang314-github-io:video",
       "creation:episode:ep-20261123-2-truby",
       "creation:episode:ep-20261123-4-truby",
       "creation:episode:ep-20261123-5-truby",
