@@ -209,16 +209,20 @@ class SentenceStop:
     def __call__(self, input_ids, scores, **kwargs):
         self.steps += 1
         self.total += 1
-        if self.total < 24:
-            return False  # раньше 24 токенов предложения просто не бывает
+        if self.total < 40:
+            return False  # раньше 40 токенов одной законченной фразы просто не бывает
         if self.steps % 3:
             return False
         text = self.tokenizer.decode(input_ids[0][self.prompt_len:], skip_special_tokens=True)
         sentences = [x.strip() for x in re.split(r'(?<=[.!?…])\s+', text) if x.strip()]
         if len(sentences) >= self.max_sentences and re.search(r'[.!?…]\s*$', text.strip()):
             return True
-        for phrase in sentences:
-            key = phrase.lower()[:60]
+        # Повтор считаем только по ДВУМ и более законченным фразам: одна
+        # фраза — это ещё не «вода», а отсечение на первой же фразе
+        # обрывало ответ до того, как она успевала сказать мысль.
+        complete = [x for x in sentences if x.endswith(('.', '!', '?', '…', '»'))]
+        if len(complete) >= 2:
+            key = complete[-1].lower()[:60]
             if key in self.seen:
                 return True  # пошёл повтор — дальше будет та же вода
             self.seen.add(key)
@@ -937,6 +941,16 @@ def main():
                      'Я опять сбилась на свои уроки и дневник — это не ответ на твой вопрос. Спроси ещё раз, я скажу иначе.')
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
+    if problem or reply.startswith(('Я задумалась и ответила невпопад', 'Я задумалась и потеряла мысль', 'Я опять сбилась')):
+        # Честный след: что именно она сказала, когда дом не принял ответ.
+        # Иначе причина отказа теряется, а логи раннера не всегда доступны.
+        try:
+            with SEARCH_LOG.open('a', encoding='utf-8') as log_file:
+                log_file.write(f'\n## {time.strftime("%Y-%m-%d %H:%M")} отказ ответа\n'
+                               f'Вопрос: {owner_text!r}\nПричина: {problem!r}\n'
+                               f'Черновики: {drafts!r}\n\n')
+        except Exception:
+            pass
     DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
     LAST_REPLY.write_text(reply + '\n', encoding='utf-8')
     print(f'Всего на ответ ушло {time.monotonic() - run_started:.1f} c', flush=True)
