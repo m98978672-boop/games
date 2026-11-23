@@ -32,8 +32,8 @@ ACTIONS = {
     'LOOKDOWN': {'look': [0, 80], 'duration_ms': 250},
     'INTERACT': {'click': [400, 300], 'duration_ms': 250},
     'PLACE': {'click': [400, 300], 'button': 'right', 'duration_ms': 250},
-    'INVENTORY': {'keys': ['KeyB'], 'duration_ms': 250},
-    'CRAFT': {'keys': ['KeyE'], 'duration_ms': 250},
+    # In the voxel recreation E opens inventory; it does not craft by itself.
+    'INVENTORY': {'keys': ['KeyE'], 'duration_ms': 250},
     'MINE': {'click': [400, 300], 'hold_ms': 4000, 'duration_ms': 250},
 }
 

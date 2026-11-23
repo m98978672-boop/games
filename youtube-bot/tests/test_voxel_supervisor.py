@@ -13,6 +13,7 @@ class SurvivalMonitorTests(unittest.TestCase):
         self.assertEqual(assess({**self.ok,'health':4},[])['decision'],'stop')
         self.assertEqual(assess({**self.ok,'screen':'death'},[])['decision'],'stop')
         self.assertEqual(assess({**self.ok,'health':8},[])['reason'],'game_reported_low_health')
+        self.assertEqual(assess({**self.ok,'health':8},[{'action':'MINE','game_reported_wood':False}]*3)['reason'],'game_reported_low_health')
     def test_stall_help_temporarily_excludes_only_recent_movement(self):
         allowed=('FORWARD','BACK','SPACE','WAIT')
         recent=[{'action':'BACK'}, {'action':'BACK'}, {'action':'SPACE'}]

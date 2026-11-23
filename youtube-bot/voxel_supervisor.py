@@ -28,6 +28,9 @@ def assess(state, recent):
         return {'decision':'stop', 'reason':'game_reported_critical_health', 'hint':None}
     if not isinstance(recent, list) or len(recent) > 1000:
         raise ValueError('Invalid action history')
+    if state['health'] <= 8:
+        return {'decision':'continue', 'reason':'game_reported_low_health',
+                'hint':'Reported health is low. Avoid hazards and move cautiously; do not assume you are safe.'}
     last = recent[-3:]
     if len(last) == 3 and all(x.get('action') == 'MINE' and x.get('game_reported_wood') is False for x in last):
         return {'decision':'continue', 'reason':'mining_without_wood',
@@ -35,9 +38,6 @@ def assess(state, recent):
     if len(last) == 3 and all(x.get('action') in {'FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE'} and type(x.get('game_reported_displacement')) in (int,float) and math.isfinite(x['game_reported_displacement']) and 0 <= x['game_reported_displacement'] < .15 for x in last):
         return {'decision':'continue', 'reason':'game_reported_stagnation',
                 'hint':'Recent movement did not noticeably change reported position. Try a different safe movement; screen changes alone do not prove progress.'}
-    if state['health'] <= 8:
-        return {'decision':'continue', 'reason':'game_reported_low_health',
-                'hint':'Reported health is low. Avoid hazards and move cautiously; do not assume you are safe.'}
     return {'decision':'continue', 'reason':'no_alert', 'hint':None}
 
 
