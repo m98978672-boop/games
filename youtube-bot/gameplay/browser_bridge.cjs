@@ -31,7 +31,7 @@ const server = http.createServer((req, res) => {
 });
 function checkAction(action) {
   if (!action || typeof action !== "object" || Array.isArray(action)) throw Error("invalid action");
-  const allowed = ["keys", "click", "button", "look", "duration_ms"];
+  const allowed = ["keys", "click", "button", "hold_ms", "look", "duration_ms"];
   if (Object.keys(action).some(key => !allowed.includes(key))) throw Error("unknown action field");
   const keys = action.keys ?? [], click = action.click ?? null, duration = action.duration_ms ?? 250;
   if (!Array.isArray(keys) || keys.length > 4 || new Set(keys).size !== keys.length || keys.some(key => !KEYS.has(key))) throw Error("invalid keys");
@@ -40,7 +40,9 @@ function checkAction(action) {
   const button = action.button ?? "left", look = action.look ?? null;
   if (!["left", "right"].includes(button) || (action.button !== undefined && click === null)) throw Error("invalid button");
   if (look !== null && (!Array.isArray(look) || look.length !== 2 || !look.every(Number.isInteger) || look.some(n => n < -100 || n > 100))) throw Error("invalid look");
-  return {keys, click, button, look, duration};
+  const hold = action.hold_ms ?? 0;
+  if (!Number.isInteger(hold) || hold < 0 || hold > 2000 || (action.hold_ms !== undefined && click === null)) throw Error("invalid hold duration");
+  return {keys, click, button, look, hold, duration};
 }
 async function main() {
   await new Promise(resolve => server.listen(PORT, HOST, resolve));
@@ -115,11 +117,18 @@ async function main() {
       if (request && request.type === "close" && Object.keys(request).length === 1) { normalClose = true; break; }
       try {
         if (!request || request.type !== "step" || Object.keys(request).some(k => !["type", "action"].includes(k))) throw Error("invalid request");
-        const {keys, click, button, look, duration} = checkAction(request.action);
+        const {keys, click, button, look, hold, duration} = checkAction(request.action);
         if (++step > 10000) throw Error("step limit reached");
         try {
           for (const key of keys) await page.keyboard.down(key);
-          if (click) { mouseX = click[0]; mouseY = click[1]; await page.mouse.click(mouseX, mouseY, {button}); }
+          if (click) {
+            mouseX = click[0]; mouseY = click[1];
+            if (hold) {
+              await page.mouse.move(mouseX, mouseY);
+              await page.mouse.down({button});
+              try { await page.waitForTimeout(hold); } finally { await page.mouse.up({button}).catch(() => {}); }
+            } else await page.mouse.click(mouseX, mouseY, {button});
+          }
           if (look) {
             mouseX = Math.max(0, Math.min(799, mouseX + look[0]));
             mouseY = Math.max(0, Math.min(599, mouseY + look[1]));
