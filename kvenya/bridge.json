@@ -185,6 +185,20 @@
   ],
   "expeditions": [
     {
+      "date": "2026-11-23 20:45 UTC",
+      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-2046-colinhuang314-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-story.png",
+        "03-story.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
       "date": "2026-11-23 20:43 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
@@ -237,24 +251,10 @@
       ],
       "hasVideo": true,
       "video": "video.webm"
-    },
-    {
-      "date": "2026-11-23 19:50 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261123-1951-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
     }
   ],
   "motivation": {
-    "points": 962,
+    "points": 983,
     "level": "Легенда моста",
     "achievements": [
       {
@@ -367,16 +367,10 @@
     ],
     "lastEvents": [
       {
-        "id": "20261123-2044-ellisonleao-github-io:eyes",
-        "at": "2026-11-23 20:43 UTC",
-        "delta": 2,
-        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
-      },
-      {
-        "id": "20261123-2044-ellisonleao-github-io:steps",
-        "at": "2026-11-23 20:43 UTC",
-        "delta": 105,
-        "text": "трубы по табло игры: 7 — первый настоящий счёт"
+        "id": "20261123-2046-colinhuang314-github-io:video",
+        "at": "2026-11-23 20:45 UTC",
+        "delta": 3,
+        "text": "видео экспедиции доехало до её страницы"
       },
       {
         "id": "creation:game:ptica-i-truby",
@@ -413,6 +407,12 @@
         "at": "2026-11-23 20:44 UTC",
         "delta": 8,
         "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: 7 труб по табло!» "
+      },
+      {
+        "id": "creation:episode:ep-20261123-match",
+        "at": "2026-11-23 20:46 UTC",
+        "delta": 8,
+        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
       }
     ],
     "eventIds": [
@@ -503,20 +503,23 @@
       "20261123-2044-ellisonleao-github-io:video",
       "20261123-2044-ellisonleao-github-io:eyes",
       "20261123-2044-ellisonleao-github-io:steps",
+      "20261123-2046-colinhuang314-github-io:played",
+      "20261123-2046-colinhuang314-github-io:video",
       "creation:game:ptica-i-truby",
       "creation:game:zvezdny-dozhd",
       "creation:game:zmeika",
       "creation:episode:ep-20261123-2-truby",
       "creation:episode:ep-20261123-5-truby",
-      "creation:episode:ep-20261123-7-truby"
+      "creation:episode:ep-20261123-7-truby",
+      "creation:episode:ep-20261123-match"
     ],
-    "reportsCounted": 26,
-    "playedCount": 22,
+    "reportsCounted": 27,
+    "playedCount": 23,
     "bestStepsEver": 7,
     "gamesMade": 3,
-    "episodesMade": 3,
+    "episodesMade": 4,
     "ownWantsDone": 0,
-    "updatedAt": "2026-11-23 20:44 UTC",
+    "updatedAt": "2026-11-23 20:46 UTC",
     "seenJournal": [
       "20261122-2158-ellisonleao-github-io:played",
       "20261122-2158-ellisonleao-github-io:video",
@@ -605,10 +608,13 @@
       "20261123-2044-ellisonleao-github-io:played",
       "20261123-2044-ellisonleao-github-io:steps",
       "20261123-2044-ellisonleao-github-io:video",
+      "20261123-2046-colinhuang314-github-io:played",
+      "20261123-2046-colinhuang314-github-io:video",
       "creation:episode:ep-20261123-2-truby",
       "creation:episode:ep-20261123-4-truby",
       "creation:episode:ep-20261123-5-truby",
       "creation:episode:ep-20261123-7-truby",
+      "creation:episode:ep-20261123-match",
       "creation:game:ptica-i-truby",
       "creation:game:zmeika",
       "creation:game:zvezdny-dozhd"
