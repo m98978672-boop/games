@@ -237,6 +237,10 @@ class GameCatalogTests(unittest.TestCase):
         self.assertTrue(original.startswith(trimmed))
         with self.assertRaisesRegex(ValueError, 'no safe sentence boundary'):
             fit_complete_chapter('Длинная незаконченная фраза ' * 20)
+        with self.assertRaisesRegex(ValueError, 'no safe sentence boundary'):
+            fit_complete_chapter('Незаконченная фраза ' * 12)
+        partial = sentence * 5 + 'Незавершённая мысль'
+        self.assertEqual(fit_complete_chapter(partial), (sentence * 5).strip())
 
     def test_plain_chapters_are_bound_only_to_the_supplied_source(self):
         from game_reviews import _generate_long_in_batches
@@ -249,6 +253,8 @@ class GameCatalogTests(unittest.TestCase):
         with patch('game_reviews.generate_with_qwen', return_value=text) as generate:
             scenes = _generate_long_in_batches(review)
         self.assertEqual([s['fact_id'] for s in scenes], ['a','b']*5)
+        self.assertTrue(scenes[-1]['dialogue'].startswith(text))
+        self.assertIn('Итог по источникам:', scenes[-1]['dialogue'])
         prompt = json.loads(generate.call_args_list[0].args[0][1]['content'])
         self.assertEqual(prompt['source_fact'],review['evidence']['a'])
         self.assertNotIn('sources',prompt)

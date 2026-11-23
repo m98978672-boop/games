@@ -388,7 +388,7 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 if not isinstance(scene, dict):
                     raise ValueError("long narration chapter must be an object")
                 fact_id = str(scene.get("fact_id", ""))
-                dialogue = re.sub(r'\s+', ' ', str(scene.get('dialogue', ''))).strip()
+                dialogue = fit_complete_chapter(str(scene.get('dialogue', '')))
                 visual = re.sub(r'\s+', ' ', str(scene.get('visual', ''))).strip()
                 cyrillic = sum('\u0400' <= char <= '\u04ff' for char in dialogue)
                 letters = sum(char.isalpha() for char in dialogue)
@@ -403,11 +403,7 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 clean.append({"fact_id": fact_id, "dialogue": dialogue, "visual": visual})
             if sum(len(scene["dialogue"]) for scene in clean) < 2400:
                 raise ValueError("long narration is too short to count as a full video")
-            # Put a deterministic, source-limited verdict at the end even when
-            # the model's final chapter forgot one. Keep it short enough for TTS.
-            summary = speech_excerpt(str(review["pros"][0]), 50)
-            verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
-            clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
+            clean[-1]["dialogue"] += _source_verdict(review)
             clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
             return with_store_context(clean, review)
         except ValueError as exc:
@@ -423,12 +419,16 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
 def fit_complete_chapter(text: str, *, minimum: int = 220, maximum: int = 320) -> str:
     """Shorten a verbose response only at a full sentence boundary, or reject it."""
     text = re.sub(r"\s+", " ", str(text)).strip()
-    if len(text) <= maximum:
-        return text
     ends = [m.end() for m in re.finditer(r"[.!?](?=\s|$)", text[:maximum + 1]) if m.end() <= maximum]
     if ends and ends[-1] >= minimum:
         return text[:ends[-1]].strip()
     raise ValueError(f"long narration chapter length is {len(text)} with no safe sentence boundary")
+
+
+def _source_verdict(review: Mapping[str, Any]) -> str:
+    """Add a conclusion without clipping the model's final sentence or a source fact."""
+    return f" Итог по источникам: оценка идеи по описанию — {review['idea_score']} из 10. Лично я не играл."
+
 
 
 def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]:
@@ -451,6 +451,7 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                 "Напиши один абзац для русскоязычного обзора игры на основе предоставленного факта. "
                 "Не добавляй фактов, не заявляй личное прохождение. "
                 "Мнение помечай как впечатление от описания. "
+                "Используй несколько коротких законченных предложений с точками. "
                 "Верни только текст абзаца, без JSON, заголовка, кавычек и пояснений."
             )},
             {"role": "user", "content": json.dumps({
@@ -500,9 +501,7 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
     if sum(len(scene["dialogue"]) for scene in clean) < 2400:
         print("Qwen chapter total too short; using clearly labelled source-based template.", file=sys.stderr)
         return _source_template_long_narration(review, reason="chapters too short")
-    summary = speech_excerpt(str(review["pros"][0]), 50)
-    verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
-    clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
+    clean[-1]["dialogue"] += _source_verdict(review)
     clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
     return with_store_context(clean, review)
 
