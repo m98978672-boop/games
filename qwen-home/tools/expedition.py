@@ -945,7 +945,10 @@ class StoryMap:
 
     @staticmethod
     def key(text):
-        return (text or '')[:80].strip().lower()
+        # Ключ — ВЕСЬ текст, а не первые 80 знаков: у пассажей Lost Spot общее
+        # начало («You at in front of your house…»), и по обрезку все места дома
+        # сливались в одно, а петли не находились.
+        return ' '.join((text or '').split()).lower()
 
     def see(self, text):
         """Записать место в карту и вернуть, что в нём видно."""
@@ -957,6 +960,18 @@ class StoryMap:
             self.nodes[k] = node
         node['visits'] += 1
         return node
+
+    def is_loop(self, text, choice, came_from=None):
+        """Петля: вариант возвращает туда, откуда пришли, или в это же место."""
+        k = self.key(text)
+        for e in self.edges:
+            if e['from'] != k or e['choice'] != choice:
+                continue
+            if e['to'] == k:
+                return True          # «Nothing has changed» — то же место
+            if came_from and e['to'] == self.key(came_from):
+                return True          # обратный ход: «back», «Leave quietly!»
+        return False
 
     def mark_open(self, text, choices):
         """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
@@ -1005,7 +1020,7 @@ class StoryMap:
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
-                story_map=None, energy=0):
+                story_map=None, energy=0, came_from=None):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
     visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
@@ -1017,6 +1032,13 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     """
     if not choices:
         return None, False
+    # Диалог подтверждения: сначала «OK», а не «Cancel» — иначе она отменяет
+    # собственный вход в историю (так и было: первый ход второго захода — Cancel).
+    if len(choices) <= 3:
+        affirm = [c for c in choices if (c.get('label') or '').strip().lower() in
+                  ('ok', 'okay', 'yes', 'да', 'продолжить', 'continue', 'next', 'далее')]
+        if affirm:
+            return affirm[0], True
     here = lambda c: (passage or '', c.get('key', c.get('label', '')))
     fresh = [c for c in choices if here(c) not in visited]
     pool = fresh or choices
@@ -1041,6 +1063,13 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             far = [c for c in pool if not is_far(c.get('label', ''))]
             if far:
                 pool = far
+
+    # Петли («Leave quietly!» возвращает туда же, откуда пришла) — в самый
+    # конец: иначе второй заход крутился house → Leave quietly! → house двадцать раз.
+    if story_map is not None and passage and len(pool) > 1:
+        no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)]
+        if no_loops:
+            pool = no_loops
 
     if times_here >= 2 and len(pool) > 1:
         exits = [c for c in pool if any(w in c.get('label', '').lower()
@@ -1176,6 +1205,9 @@ def read_story(page, seconds, out, report, shot, runs=3):
         stuck = 0
         fresh_moves = 0
         pending = {'from': '', 'choice': '', 'done': True}
+        trail = []        # последние места: ловим хождение по кругу
+        last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
+        prev_place = ['']  # место предыдущего шага
         new_places = 0
         run_end = ''
         while time.monotonic() < deadline - 4:
@@ -1200,9 +1232,19 @@ def read_story(page, seconds, out, report, shot, runs=3):
                 c['key'] = c.get('label', '')
             story_map.mark_open(text, choices)
             if choices:
+                # след последних мест: если ходит по кругу, дальше не жмём
+                trail.append(story_map.key(text))
+                last_place[0] = prev_place[0]
+                if len(trail) > 12:
+                    trail.pop(0)
+                if len(trail) >= 12 and len(set(trail[-6:])) <= 2:
+                    report.step('стоп-кран',
+                                f'топчется на месте (последние {len(trail)} шагов — два места) — прекращаю заход')
+                    break
                 pick, fresh = pick_choice(choices, visited, rng,
                                           story_map.key(text), sight['visits'],
-                                          story_map=story_map, energy=sight.get('energy', 0))
+                                          story_map=story_map, energy=sight.get('energy', 0),
+                                          came_from=last_place[0])
                 story_map.tried.add((story_map.key(text), pick['label']))
                 visited.add((story_map.key(text), pick['label']))
                 try:
@@ -1236,6 +1278,7 @@ def read_story(page, seconds, out, report, shot, runs=3):
                             break
                         page.wait_for_timeout(160)
                     shot(f'0{min(9, 3 + moves // 8)}-story-{moves:02d}.png')
+                prev_place[0] = story_map.key(text)   # для следующего шага: откуда пришли
                 page.wait_for_timeout(1300)
                 stuck = 0
             else:
