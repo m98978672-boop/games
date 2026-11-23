@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
 from gameplay_qwen import QwenVisionAgent, _vision_runtime
-from puzzle_supervisor import validate_board, legal_indices, distance, feedback, avoid_immediate_undo
+from puzzle_supervisor import validate_board, legal_indices, distance, feedback, avoid_immediate_undo, avoid_recent_states
 
 root = Path(__file__).resolve().parents[2] / 'collection' / '16-puzzle'
 record = Path(os.environ['PUZZLE_RECORD_DIR'])
@@ -39,12 +39,14 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
         start = time.monotonic()
         hint = ''
         previous = None
+        history = []
         while time.monotonic() - start < 1800 and len(trace) < 600:
             diag = obs.get('puzzle_telemetry')
             if diag.get('won'):
                 outcome = 'game_reported_win'; break
             legal = legal_indices(before)
             legal, blocked = avoid_immediate_undo(legal, before, previous)
+            legal, recent_blocked = avoid_recent_states(legal, before, history)
             agent.allowed = tuple(actions[i] for i in legal)
             agent.objective = base_goal + (' ' + hint if hint else '')
             png = base64.b64decode(obs['screenshot_png_base64'],validate=True)
@@ -55,16 +57,17 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
             if obs.get('type') != 'observation' or obs.get('step') != len(trace)+2:
                 raise RuntimeError('Invalid action observation')
             after = validate_board(obs.get('puzzle_telemetry'))
-            points, hint = feedback(before, after, best=best, previous=previous)
+            points, hint = feedback(before, after, best=best, previous=previous, history=history)
             now = distance(after)
             if now < best:
                 best, no_progress = now, 0
             else:
                 no_progress += 1
             trace.append({'step':len(trace)+1,'action':agent.decisions[-1], 'game_reported_distance':now,
-                          'feedback_score':points, 'blocked_immediate_undo':blocked, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
+                          'feedback_score':points, 'blocked_immediate_undo':blocked, 'blocked_recent_states':recent_blocked, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
                           'game_reported_win':obs['puzzle_telemetry']['won']})
             print('PUZZLE_STEP='+json.dumps(trace[-1]),flush=True)
+            history = (history + [before])[-16:]
             previous, before = before, after
             if obs['puzzle_telemetry']['won']:
                 outcome='game_reported_win'; break
@@ -81,7 +84,7 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
               'asset_and_recording_rights_verified':False, 'outcome':outcome, 'duration_seconds':round(seconds,2),
               'duration_at_least_20_minutes':seconds>=1200,'qualifies_for_release':False,
               'model_actions':trace,'scripted_setup':True,'game_telemetry_untrusted':True,
-              'legal_move_filter_is_external_help':True, 'anti_undo_filter_is_external_help':True,'feedback_is_session_context_not_training':True,
+              'legal_move_filter_is_external_help':True, 'anti_undo_filter_is_external_help':True, 'recent_state_filter_is_external_help':True,'feedback_is_session_context_not_training':True,
               'trained':False,'published':False}
     (record/'trace.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
     print('::notice title=Private finite puzzle experiment::'+json.dumps(result,ensure_ascii=True),flush=True)

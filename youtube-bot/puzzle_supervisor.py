@@ -49,11 +49,34 @@ def avoid_immediate_undo(legal, before, previous):
     return legal, None
 
 
-def feedback(before, after, *, best=None, previous=None):
+
+def avoid_recent_states(legal, before, history):
+    """Avoid short cycles when a different legal move exists; external assistance."""
+    distance(before)
+    if not isinstance(history, list) or len(history) > 16:
+        raise ValueError('Invalid bounded state history')
+    for board in history:
+        distance(board)
+    recent = {tuple(board) for board in history}
+    empty = before.index(0)
+    candidates = []
+    blocked = []
+    for index in legal:
+        if index not in legal_indices(before):
+            raise ValueError('Illegal candidate')
+        after = before[:]
+        after[empty], after[index] = after[index], after[empty]
+        (blocked if tuple(after) in recent else candidates).append(index)
+    if not candidates:
+        return legal, []
+    return candidates, blocked
+
+
+def feedback(before, after, *, best=None, previous=None, history=None):
     before_distance = distance(before)
     after_distance = distance(after)
-    if previous is not None and after == previous:
-        return -2, 'Penalty: this reverses the previous move. Try a different route.'
+    if (previous is not None and after == previous) or (history is not None and after in history):
+        return -2, 'Penalty: this returns to a recent board. Try a different route.'
     threshold = before_distance if best is None else best
     if type(threshold) is not int or threshold < 0:
         raise ValueError('Invalid best distance')
