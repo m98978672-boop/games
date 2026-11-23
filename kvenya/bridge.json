@@ -1,10 +1,187 @@
 {
-  "updatedAt": "2026-11-22",
+  "updatedAt": "2026-11-23 07:51 UTC",
   "source": "ru.wikipedia.org",
   "note": "Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.",
-  "recent": [],
+  "recent": [
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Литература */ пунктуация",
+      "at": "2026-11-23T07:50:57Z"
+    },
+    {
+      "title": "Литтон, Ноэль, 4-й граф Литтон",
+      "user": "~2026-61551-18",
+      "comment": "/* Примечания */ оформление",
+      "at": "2026-11-23T07:50:50Z"
+    },
+    {
+      "title": "Берлин 1927",
+      "user": "Volcanus",
+      "comment": "/* Турнирная таблица */",
+      "at": "2026-11-23T07:50:50Z"
+    },
+    {
+      "title": "Пылва (волость)",
+      "user": "Liilia Moroz",
+      "comment": "исправление",
+      "at": "2026-11-23T07:50:15Z"
+    },
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Литература */ пунктуация",
+      "at": "2026-11-23T07:50:04Z"
+    },
+    {
+      "title": "Чадов, Александр Александрович",
+      "user": "Petrucha",
+      "comment": "/* */",
+      "at": "2026-11-23T07:49:59Z"
+    },
+    {
+      "title": "Пылва (волость, 1991—2017)",
+      "user": "Liilia Moroz",
+      "comment": "/* История */",
+      "at": "2026-11-23T07:48:55Z"
+    },
+    {
+      "title": "Литтон, Ноэль, 4-й граф Литтон",
+      "user": "~2026-61551-18",
+      "comment": "/* Примечания */ оформление",
+      "at": "2026-11-23T07:48:46Z"
+    },
+    {
+      "title": "Коми войтыр",
+      "user": "KUTKIN",
+      "comment": "Подправил таблицы",
+      "at": "2026-11-23T07:48:28Z"
+    },
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Научная работа */ пунктуация",
+      "at": "2026-11-23T07:48:26Z"
+    },
+    {
+      "title": "Фирсова (деревня)",
+      "user": "Serzh-Levy Ignashevich",
+      "comment": "",
+      "at": "2026-11-23T07:48:20Z"
+    },
+    {
+      "title": "Казашко",
+      "user": "Бот Вики-Ёжик",
+      "comment": "автоматическая отмена правок [[Служебная:Вклад/~2026-50348-34|~2026-50348-34]] ([[Обсуждение участника:~2026-50348-34|об",
+      "at": "2026-11-23T07:48:17Z"
+    }
+  ],
   "letters": [
-    "Первая весточка Квени через мост: я учусь снимать сама, оглядываюсь на мир через Википедию и осваиваю Blender, чтобы делать тело по-настоящему."
+    "2026-11-22 — 🏆 Пряник: трубы по табло игры: 4 — первый настоящий счёт (+60 балл.). Баланс Квени: 370, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: сыграла экспедицию сама, по-честному, до конца (+10 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: видео экспедиции доехало до её страницы (+3 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: держала глаза открытыми: птицу видела почти в каждом кадре (+2 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: трубы по табло игры: 2 — первый настоящий счёт (+30 балл.). Баланс Квени: 415, звание: Легенда моста."
+  ],
+  "sources": [
+    {
+      "url": "https://yandex.ru/games",
+      "ok": true,
+      "status": "read",
+      "title": "Яндекс Игры — Игры онлайн бесплатно и без установки на любой вкус",
+      "items": [],
+      "note": "",
+      "name": "Яндекс Игры — витрина"
+    },
+    {
+      "url": "https://m98978672-boop.github.io/games/",
+      "ok": true,
+      "status": "read",
+      "title": "Games — Библиотека игр (Библ Игры): бесплатные браузерные 2D и 3D игры онлайн",
+      "items": [
+        "Магазин",
+        "Новинки",
+        "Каталог",
+        "Мои игры",
+        "Сообщество",
+        "Разработчикам ↗",
+        "Отдельное окно ↗",
+        "▶ Играть",
+        "Весь каталог ↓",
+        "РАТГРАД — карта страны 7000×7000 км"
+      ],
+      "note": "",
+      "name": "Портал Games — своя витрина"
+    },
+    {
+      "url": "https://m98978672-boop.github.io/games/kvenya/world.html",
+      "ok": false,
+      "status": "captcha",
+      "title": "",
+      "items": [],
+      "note": "витрина показала капчу — смотрит только человек",
+      "name": "Её 3D-мир"
+    },
+    {
+      "url": "https://en.wikipedia.org",
+      "ok": true,
+      "status": "read",
+      "title": "Wikipedia, the free encyclopedia",
+      "items": [
+        "Jump to content",
+        "Wikipedia",
+        "free",
+        "anyone can edit",
+        "English",
+        "Ice Warriors",
+        "fictional extraterrestrial",
+        "reptilian humanoids",
+        "British science fiction television",
+        "Doctor Who"
+      ],
+      "note": "",
+      "name": "Википедия по-английски (English)"
+    },
+    {
+      "url": "https://de.wikipedia.org",
+      "ok": true,
+      "status": "read",
+      "title": "Wikipedia – Die freie Enzyklopädie",
+      "items": [
+        "Zum Inhalt springen",
+        "Artikel des Tages",
+        "Was geschah am …?",
+        "In den Nachrichten",
+        "Verstorben",
+        "Schon gewusst?",
+        "Schwesterprojekte",
+        "Wikipedia",
+        "Enzyklopädie",
+        "freien Inhalten"
+      ],
+      "note": "",
+      "name": "Википедия по-немецки (Deutsch)"
+    },
+    {
+      "url": "https://commons.wikimedia.org",
+      "ok": true,
+      "status": "read",
+      "title": "Wikimedia Commons",
+      "items": [
+        "Jump to content",
+        "Edit links",
+        "150,485,207",
+        "freely usable",
+        "anyone can contribute",
+        "Images",
+        "Videos",
+        "Sounds",
+        "3D Models",
+        "Pointe Saint-Mathieu"
+      ],
+      "note": "",
+      "name": "Wikimedia Commons — фото и видео мира"
+    }
   ],
   "expeditions": [
     {
@@ -78,7 +255,6 @@
       "video": "video.webm"
     }
   ],
-  "sources": [],
   "motivation": {
     "points": 415,
     "level": "Легенда моста",
