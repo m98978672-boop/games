@@ -423,20 +423,24 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
 def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]:
     """Ask for one bounded chapter at a time and reject malformed model output.
 
-    Shorter completions reduce truncation and count errors from small models. No
-    model text is accepted without the same language, length and source-ID checks.
-    If a chapter still fails twice, stop rather than fabricate material.
+    Shorter completions reduce truncation. Each plain-text chapter is attached
+    to the single supplied source by the program; this is provenance, not a
+    guarantee that the model did not invent a claim. Fallback is never published.
     """
     evidence = review["evidence"]
     allowed = {str(key) for key in evidence}
     clean: list[dict[str, str]] = []
+    evidence_ids = tuple(str(key) for key in evidence)
     for index in range(10):
+        # Bind the source ourselves: the small model often emits prose instead
+        # of JSON or invents IDs. This does not prove the prose entails the fact.
+        selected_id = evidence_ids[index % len(evidence_ids)]
         messages = [
             {"role": "system", "content": (
-                "Напиши одну главу для русскоязычного обзора игры на основе источников. "
+                "Напиши один абзац для русскоязычного обзора игры на основе предоставленного факта. "
                 "Не добавляй фактов, не заявляй личное прохождение. "
                 "Мнение помечай как впечатление от описания. "
-                'Верни один JSON: {"fact_id":"точный ID", "dialogue":"текст", "visual":"короткая подпись"}.'
+                "Верни только текст абзаца, без JSON, заголовка, кавычек и пояснений."
             )},
             {"role": "user", "content": json.dumps({
                 "chapter": index + 1, "total_chapters": 10,
@@ -446,20 +450,27 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                          "возможное ограничение как гипотеза", "цена и условия только по фактам", "что пока неизвестно",
                          "осмысленный итог"][index],
                 "previous_chapters": [s['dialogue'] for s in clean[-2:]],
-                "sources": evidence,
-                "task": "Одна глава, dialogue от 220 до 320 символов по-русски; используй точный fact_id из sources. Без ссылок в тексте.",
+                "source_fact": evidence[selected_id],
+                "task": "Один содержательный абзац от 220 до 320 символов по-русски, без ссылок. Не повторяй предыдущие главы.",
             }, ensure_ascii=False)},
         ]
         last_error: ValueError | None = None
         for _ in range(2):
             raw = generate_with_qwen(messages, max_new_tokens=700)
             try:
-                scene = _extract_json(raw)
-                fact_id = str(scene.get("fact_id", ""))
-                dialogue = re.sub(r"\s+", " ", str(scene.get("dialogue", ""))).strip()
-                visual = re.sub(r"\s+", " ", str(scene.get("visual", ""))).strip()
-                if fact_id not in allowed:
-                    raise ValueError("long narration fact id is invalid")
+                if '{' in str(raw) or '}' in str(raw):
+                    scene = _extract_json(raw)
+                    fact_id = str(scene.get("fact_id", ""))
+                    dialogue = re.sub(r"\s+", " ", str(scene.get("dialogue", ""))).strip()
+                    visual = re.sub(r"\s+", " ", str(scene.get("visual", ""))).strip()
+                else:
+                    fact_id = selected_id
+                    dialogue = re.sub(r"\s+", " ", str(raw)).strip()
+                    if re.search(r'<[^>]*>|```|^извините|^я не могу', dialogue, re.I):
+                        raise ValueError("long narration contains markup or a refusal")
+                    visual = speech_excerpt(str(evidence[selected_id]), 100)
+                if fact_id not in allowed or fact_id != selected_id:
+                    raise ValueError("long narration fact id does not match the supplied source")
                 if not 220 <= len(dialogue) <= 320:
                     raise ValueError(f"long narration chapter length is {len(dialogue)} (required 220–320)")
                 if _russian_ratio(dialogue) < 0.7:
@@ -470,7 +481,7 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                 break
             except ValueError as exc:
                 last_error = exc
-                messages.append({"role": "user", "content": f"Ошибка формата: {exc}. Верни один исправленный JSON, dialogue 220–320 символов."})
+                messages.append({"role": "user", "content": f"Предыдущий ответ не подошёл: {exc}. Верни только один абзац из 220–320 символов."})
         else:
             print(f"Qwen could not produce chapter {index + 1}: {last_error}; using clearly labelled source-based template.", file=sys.stderr)
             return _source_template_long_narration(review, reason=f"chapter {index + 1}: {last_error}")

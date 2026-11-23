@@ -220,11 +220,27 @@ class GameCatalogTests(unittest.TestCase):
                 "нельзя судить о качестве исполнения или делать выводы о впечатлениях других игроков. "
                 "Посмотрите первоисточник и решите, подходит ли вам предложенная концепция.")
         chapter = {"fact_id": f"{game['id']}-f1", "dialogue": text, "visual": "Описание из источника"}
-        with patch("game_reviews.generate_with_qwen", side_effect=[json.dumps({"scenes": []})] + [json.dumps(chapter)] * 10) as generate:
+        chapters = [dict(chapter, fact_id=list(review['evidence'])[i % len(review['evidence'])]) for i in range(10)]
+        with patch("game_reviews.generate_with_qwen", side_effect=[json.dumps({"scenes": []})] + [json.dumps(c) for c in chapters]) as generate:
             scenes = generate_long_narration(review)
         self.assertEqual(generate.call_count, 11)
         self.assertEqual(len(scenes), 10)
         self.assertIn("Итог по источникам:", scenes[-1]["dialogue"])
+
+    def test_plain_chapters_are_bound_only_to_the_supplied_source(self):
+        from game_reviews import _generate_long_in_batches
+        review = {'evidence': {'a':'В игре есть головоломки.', 'b':'В карточке указан одиночный режим.'},
+                  'game_title':'Пример', 'idea_score':7, 'pros':['Головоломки','Одиночный режим']}
+        text = ('По описанию игроку предстоит знакомство с правилами и поиск решения. '
+                'Здесь интересно рассматривать каждое действие в контексте заявленной задачи. '
+                'Это впечатление от карточки, а не вывод после личного прохождения; '
+                'чтобы оценить исполнение, понадобится попробовать игру самостоятельно.')
+        with patch('game_reviews.generate_with_qwen', return_value=text) as generate:
+            scenes = _generate_long_in_batches(review)
+        self.assertEqual([s['fact_id'] for s in scenes], ['a','b']*5)
+        prompt = json.loads(generate.call_args_list[0].args[0][1]['content'])
+        self.assertEqual(prompt['source_fact'],review['evidence']['a'])
+        self.assertNotIn('sources',prompt)
 
     def test_long_review_rejects_invalid_individual_chapters(self):
         review = {"evidence": {"a": "Один факт", "b": "Другой факт"}, "game_title": "Test", "idea_score": 7,
