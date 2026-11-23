@@ -897,8 +897,10 @@ STORY_ENERGY = (
     (('rested', 'energi', 'energy', 'strong'), 2, 'high'),
     (('legs feel better', 'feet up'), 2, 'high'),
 )
-STORY_FINDS = ('found', 'find your favorite', 'chips', 'snack', 'took the', 'picked up',
-               'in your pocket', 'you grab', 'you hold')
+# Находки — только когда она правда что-то нашла. Слово «pocket» в «fumble in
+# your pocket for your key» находкой не считается: это карман, а не добыча.
+STORY_FINDS = ('you found', 'find your favorite', 'found your', 'you pick up', 'picked up',
+               'you grab', 'you take the', 'you scour the shelves', 'chips on the bottom')
 STORY_CLUES = ('spot', 'left eye', 'fur', 'bark', 'whimper', 'paw', 'collar', 'tail')
 
 
@@ -950,6 +952,14 @@ class StoryMap:
             self.nodes[k] = node
         node['visits'] += 1
         return node
+
+    def mark_open(self, text, choices):
+        """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
+        node = self.nodes.get(self.key(text))
+        if node is None:
+            return
+        node['open'] = any((self.key(text), c.get('label')) not in self.tried for c in choices)
+        node['options'] = [c.get('label') for c in choices][:8]
 
     def link(self, src_text, choice, dst_text):
         fr, to = self.key(src_text), self.key(dst_text)
@@ -1108,11 +1118,26 @@ def read_story(page, seconds, out, report, shot, runs=3):
         if time.monotonic() >= deadline - 8:
             break
         if run > 1:
+            # Заново идём только если есть что искать: непройденные переходы
+            # уже известных мест и места, до которых не добрались.
+            unopened = [n for n in story_map.nodes.values() if n.get('visits', 0) and n.get('open')]
+            if not unopened:
+                report.step('добор веток', 'непройденных вариантов не осталось — второй заход не нужен')
+                break
+            report.step('добор веток',
+                        f'осталось мест с непройденными вариантами: {len(unopened)} — иду заново')
             if not restart_story(page, report):
+                break
+            # проверяем, что история действительно с начала: иначе второй заход
+            # «заканчивался» на том же экране финала за 0 выборов
+            st0 = page.evaluate(TWINE_TASK_JS)
+            if not st0 or not (st0.get('choices') or []):
+                report.step('начать заново', 'история не встала на начало (нет вариантов) — добор веток прекращаю честно')
                 break
         moves = 0
         stuck = 0
         fresh_moves = 0
+        pending = {'from': '', 'choice': '', 'done': True}
         new_places = 0
         run_end = ''
         while time.monotonic() < deadline - 4:
@@ -1125,12 +1150,17 @@ def read_story(page, seconds, out, report, shot, runs=3):
                 report.step('чтение', 'не нашла ни текста, ни вариантов — останавливаюсь честно')
                 break
             text = state.get('text', '')
+            if pending.get('from') and not pending.get('done'):
+                # пришли из предыдущего пассажа: записываем ребро карты
+                story_map.link(pending['from'], pending['choice'], text)
+                pending['done'] = True
             sight = story_map.see(text)          # зрение: силы, находки, следы
             if sight['visits'] == 1:
                 new_places += 1
             choices = state.get('choices') or []
             for c in choices:
                 c['key'] = c.get('label', '')
+            story_map.mark_open(text, choices)
             if choices:
                 pick, fresh = pick_choice(choices, visited, rng,
                                           story_map.key(text), sight['visits'],
@@ -1151,6 +1181,7 @@ def read_story(page, seconds, out, report, shot, runs=3):
                     page.wait_for_timeout(500)
                     continue
                 moves += 1
+                pending = {'from': text, 'choice': pick['label'], 'done': False}
                 if fresh:
                     fresh_moves += 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
