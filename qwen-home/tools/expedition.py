@@ -1060,39 +1060,66 @@ def is_far(label):
                                   'hospital', 'restaurant', 'park', 'outside', 'street'))
 
 
-def restart_story(page, report):
-    """Начать историю заново: Twine хранит пройденное, нужен чистый лист.
+RESTART_JS = r"""
+() => {
+  // Harlowe держит историю в localStorage. Ищем ключ истории и чистим его —
+  // это ровно то, что делает кнопка Restart в меню, только без поиска иконки.
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i) || '';
+    if (/twine|harlowe|story|passage/i.test(k)) keys.push(k);
+  }
+  if (!keys.length) return {ok: false, why: 'ключа истории в localStorage нет', keys: []};
+  keys.forEach(k => localStorage.removeItem(k));
+  const place = localStorage.getItem('twine-position') || null;
+  if (place) localStorage.removeItem('twine-position');
+  return {ok: true, keys: keys.slice(0, 8)};
+}
+"""
 
-    Пробуем по-честному, как человек: кнопка «Restart» в панели истории, затем
-    обычная перезагрузка страницы. Ничего не подделываем в состоянии игры —
-    просто просим её начать сначала.
+
+def restart_story(page, report):
+    """Начать историю заново — по-честному, теми же средствами, что и человек.
+
+    Порядок: кнопка Restart в панели, очистка сохранённой истории в
+    localStorage (её же чистит кнопка), затем перезагрузка. Перезагрузка одна
+    проблему не решает: прогресс лежит в localStorage и возвращает на финал.
     """
+    # 1) кнопка Restart, если она есть в панели истории
     for sel in ('tw-icon[title="Restart" i]', 'tw-icon[aria-label="Restart" i]',
-                'button:has-text("Restart")', '[title="Restart" i]'):
+                '[title="Restart" i]', 'button:has-text("Restart")'):
         try:
             el = page.query_selector(sel)
             if el:
                 el.click(timeout=2500)
                 page.wait_for_timeout(1200)
-                report.step('начать заново', f'нажала «Restart» ({sel}) — иду по другой ветке')
-                return True
+                st = page.evaluate(TWINE_TASK_JS)
+                if st and st.get('choices'):
+                    report.step('начать заново', f'нажала «Restart» ({sel}) — история с начала')
+                    return True
         except Exception:
             continue
+    # 2) чистим сохранённую историю и перезагружаем
+    try:
+        cleared = page.evaluate(RESTART_JS)
+    except Exception as err:
+        cleared = {'ok': False, 'why': str(err)}
     try:
         page.reload(wait_until='domcontentloaded')
-        page.wait_for_timeout(2500)
-        # Harlowe в старте может снова спросить имя — подтверждаем
-        for _i in range(6):
+        page.wait_for_timeout(2200)
+        for _i in range(8):
             st = page.evaluate(TWINE_TASK_JS)
             if st and st.get('choices'):
-                break
+                report.step('начать заново',
+                            f'очистила сохранённую историю ({", ".join(cleared.get("keys") or [])[:60] or cleared.get("why", "?")}) и перезагрузила — история с начала')
+                return True
             try:
-                page.keyboard.press('Enter')
+                page.keyboard.press('Enter')   # Harlowe может снова спросить имя
             except Exception:
                 pass
-            page.wait_for_timeout(600)
-        report.step('начать заново', 'перезагрузила страницу — история с начала, иду искать другую ветку')
-        return True
+            page.wait_for_timeout(700)
+        report.step('начать заново', 'после очистки и перезагрузки вариантов нет — история не начинается заново')
+        return False
     except Exception as err:
         report.step('начать заново', f'не вышло начать заново: {err}')
         return False
