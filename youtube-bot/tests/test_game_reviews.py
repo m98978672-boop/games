@@ -58,6 +58,28 @@ class GameCatalogTests(unittest.TestCase):
         self.assertTrue(request["catalog"][0]["features"][0]["feature_id"].endswith("-f1"))
         self.assertIn("Не выдумывай игровой процесс", messages[0]["content"])
 
+    def test_review_prompt_supplies_source_price_and_date_without_inventing_them(self):
+        game = dict(load_game_catalog()[0])
+        game['source_facts'] = {'release_date': '12 окт. 2027', 'release_coming_soon': True,
+            'price': {'kind': 'paid', 'minor_units': 1999, 'currency': 'EUR', 'region': 'NL', 'checked_at': '2026-11-22'}}
+        request = json.loads(build_review_messages([game])[1]['content'])
+        self.assertIn('19 евро 99 центов', request['catalog'][0]['price_context'])
+        self.assertIn('выход ожидается', request['catalog'][0]['release_context'])
+        self.assertIn('не выдумывай', request['instructions'])
+
+    def test_missing_or_invalid_model_rating_is_not_fabricated(self):
+        games = load_game_catalog()
+        with patch('game_reviews.generate_with_qwen', return_value='{}'):
+            with self.assertRaisesRegex(ValueError, 'refusing to invent'):
+                generate_game_review(games)
+        game = games[0]
+        data = {'schema_version': 1, 'game_id': game['id'], 'selected_feature_ids': [f"{game['id']}-f1", f"{game['id']}-f2"],
+                'possible_minus': 'Возможно, не подойдёт каждому.', 'minus_feature_id': f"{game['id']}-f1",
+                'hook': 'Что интересного предлагает игра?'}
+        for score in (True, 7.9, None, 11):
+            with self.subTest(score=score), self.assertRaises(ValueError):
+                validate_review({**data, 'idea_score': score}, games)
+
     def test_review_is_canonicalized_from_cited_catalog_features(self):
         games = load_game_catalog()
         game = games[0]

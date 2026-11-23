@@ -88,6 +88,8 @@ def build_review_messages(
             "subtitle": str(game.get("subtitle", "")),
             "description": str(game.get("description", ""))[:1400],
             "version": str(game.get("version", "")),
+            "price_context": steam_price_note(game),
+            "release_context": steam_release_note(game),
             "features": [
                 {"feature_id": f"{game['id']}-f{i + 1}", "text": str(feature)}
                 for i, feature in enumerate(features[:12])
@@ -102,7 +104,10 @@ def build_review_messages(
             "feature_id из предоставленных источников; не подменяй реальные игры локальным каталогом. "
             "Возможный минус — только осторожная гипотеза, не утверждение о тестировании. "
             "Не повторяй недавнюю игру, кроме случая, когда источник не дал альтернатив. "
-            "Оценка — субъективное мнение только по опубликованным сведениям. Все реплики — по-русски."
+            "Объясни, что предлагает игра, только по описанию. При оценке идеи учитывай доступные "
+            "описание, отзывы, цену и дату, но не выдумывай недостающие данные и не заявляй, "
+            "что проверил соотношение цены и качества без игрового опыта. Оценка субъективна и предварительна. "
+            "Все реплики — по-русски."
         ),
     }
     return [
@@ -130,10 +135,13 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     if minus_feature_id not in feature_ids:
         raise ValueError("possible minus must cite an existing catalog feature")
 
-    try:
-        score = int(data.get("idea_score"))
-    except (TypeError, ValueError) as exc:
-        raise ValueError("idea_score must be an integer from 1 to 10") from exc
+    raw_score = data.get("idea_score")
+    if type(raw_score) is int:
+        score = raw_score
+    elif isinstance(raw_score, str) and re.fullmatch(r"[0-9]{1,2}", raw_score.strip()):
+        score = int(raw_score.strip())
+    else:
+        raise ValueError("idea_score must be an integer from 1 to 10")
     if not 1 <= score <= 10:
         raise ValueError("idea_score must be an integer from 1 to 10")
     hook = str(data.get("hook", "")).strip()
@@ -218,11 +226,15 @@ def _catalog_only_fallback(
     if minus_id not in feature_ids:
         minus_id = valid_proposed[0]
 
-    try:
-        score = int(data.get("idea_score", 7))
-    except (TypeError, ValueError):
-        score = 7
-    score = min(10, max(1, score))
+    raw_score = data.get("idea_score")
+    if type(raw_score) is int:
+        score = raw_score
+    elif isinstance(raw_score, str) and re.fullmatch(r"[0-9]{1,2}", raw_score.strip()):
+        score = int(raw_score.strip())
+    else:
+        raise ValueError("No valid model assessment; refusing to invent a numeric rating")
+    if not 1 <= score <= 10:
+        raise ValueError("No valid model assessment; refusing to invent a numeric rating")
 
     hook = str(data.get("hook", "")).strip()
     if not 8 <= len(hook) <= 100 or _russian_ratio(hook) < 0.5:

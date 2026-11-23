@@ -32,7 +32,8 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
     recording.mkdir()
     with BrowserBridge(root, rights_acknowledged=True, record_dir=recording, telemetry='2048') as bridge:
         observation = bridge.receive(timeout=60)
-        for step in range(16):
+        # A longer bounded session: no padding, no scripted moves and no upload.
+        for step in range(48):
             if observation.get('type') != 'observation' or observation.get('step') != step:
                 raise RuntimeError('Invalid or out-of-order bridge observation')
             png = base64.b64decode(observation['screenshot_png_base64'], validate=True)
