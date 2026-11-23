@@ -503,6 +503,36 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 shot('03-captcha.png')
                 return finish(browser, context, video_dir, out, report)
 
+            # Сначала проверяю, не сюжетная ли это игра: у такой страницы нет
+            # канваса вовсе, зато есть текст истории и варианты выбора. Если
+            # искать канвас первым, сюжетная игра «не находится» и экспедиция
+            # заканчивалась ни с чем (так и случилось с Lost Spot).
+            story_probe = None
+            for _try in range(3):
+                try:
+                    story_probe = page.evaluate(TWINE_TASK_JS)
+                except Exception:
+                    story_probe = None
+                if story_probe and story_probe.get('ok') and (story_probe.get('choices') or len(story_probe.get('text') or '') > 80):
+                    break
+                page.wait_for_timeout(800)
+            is_story = bool(story_probe and story_probe.get('ok')
+                            and (story_probe.get('choices') or len(story_probe.get('text') or '') > 80)
+                            and not page.locator('canvas').count())
+            if is_story:
+                report.data['kind'] = 'story'
+                report.step('это сюжетная игра, а не полёт',
+                            f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
+                shot('03-story.png')
+                visited = set()
+                story = read_story(page, visited, int(deadline - time.monotonic()), out, report, shot)
+                report.data['story'] = story
+                report.data['status'] = 'played'
+                report.step('итог истории',
+                            f"прошла {story['moves']} выборов, финалов в записи: {len(story['endings'])}; последний выбор — «{(story['last'] or {}).get('choice', '—')}»")
+                shot('09-story-end.png')
+                return finish(browser, context, video_dir, out, report)
+
             canvas = page.locator('canvas').first
             try:
                 canvas.wait_for(state='visible', timeout=15000)
@@ -560,28 +590,6 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 except Exception:
                     return None
 
-            # Сюжетная игра (Twine и подобные): там не канвас и полёт, а текст и
-            # варианты. Проверяем это ДО игры по кадрам: у такой страницы есть
-            # пассажи и ссылки-выборы, а канвас либо пуст, либо это фон.
-            story_probe = None
-            try:
-                story_probe = page.evaluate(TWINE_TASK_JS)
-            except Exception:
-                story_probe = None
-            is_story = bool(story_probe and story_probe.get('ok')
-                            and (story_probe.get('choices') or story_probe.get('text')))
-            if is_story:
-                report.data['kind'] = 'story'
-                report.step('это сюжетная игра, а не полёт',
-                            f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
-                visited = set()
-                story = read_story(page, visited, int(deadline - time.monotonic()), out, report, shot)
-                report.data['story'] = story
-                report.data['status'] = 'played'
-                report.step('итог истории',
-                            f"прошла {story['moves']} выборов, финалов в записи: {len(story['endings'])}; последний выбор — «{(story['last'] or {}).get('choice', '—')}»")
-                shot('09-story-end.png')
-                return finish(browser, context, video_dir, out, report)
             report.step('подготовка к игре', f'{why}: клавиши {keys or "клик"}, ритм {interval} мс; подсказки экрана: {hints[:140]!r}')
 
             page.mouse.click(cx, cy)
