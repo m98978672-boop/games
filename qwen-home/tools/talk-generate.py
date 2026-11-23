@@ -643,7 +643,18 @@ def main():
                 print('Веса переведены в int8 (weight-only)', flush=True)
             except Exception as exc2:
                 print(f'int8 (weight-only) не встал: {type(exc2).__name__}: {exc2}'[:400], flush=True)
-                print('int8 недоступен — остаюсь в bfloat16 (честно, без падения)', flush=True)
+                # Последняя попытка без сторонних пакетов: встроенное в torch
+                # динамическое квантование линейных слоёв. Ставит всё в int8
+                # на лету и на x86 обычно даёт кратный выигрыш.
+                try:
+                    import torch.ao.quantization as tq_aO
+                    model = model.to(torch.float32)
+                    model = tq_aO.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+                    quantized = True
+                    globals()['INT8_ON'] = True
+                    print('int8 средствами torch (quantize_dynamic) — выдача быстрее', flush=True)
+                except Exception as exc3:
+                    print(f'int8 недоступен ({type(exc3).__name__}: {exc3}) — остаюсь в bfloat16', flush=True)
     # Сначала решается, нужен ли поиск, потом дом ищет за неё. Очевидные
     # случаи — мгновенным правилом, неоднозначные — самой моделью.
     if PERSONAL_QUESTION.search(owner_text):
@@ -756,6 +767,8 @@ def main():
         # Обрыв видно по знаку на конце, а не по длине: короткая верная
         # фраза — не брак, а растянутый баг — не образец. Иначе бюджет
         # рос, а страж резал ответы, которые до него не дотягивали.
+        if text and text[-1] not in '.!?…»"\)':
+            return 'оборвался на полуслове'
         if best and text.endswith(('что', ':', ',', 'и', 'в', 'на', 'или')):
             return 'оборвался'
         if not best and len((text or '').strip()) < 8:
