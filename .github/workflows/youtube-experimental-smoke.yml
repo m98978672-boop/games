@@ -42,25 +42,12 @@ jobs:
         run: python youtube-bot/tests/smoke_render_fps.py
       - name: Split synthetic recorded video and verify subtitles
         run: python youtube-bot/tests/smoke_gameplay_edit.py
-      - name: Test deterministic 2048 self-play emulator
-        run: node youtube-bot/gameplay/test-simulator2048.cjs
       - name: Render complete ten-chapter long pipeline at reduced test resolution
         run: python youtube-bot/tests/smoke_long_pipeline.py
       - name: Build isolated recording container
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Test vision-action bridge against a sandboxed browser game
         run: python youtube-bot/tests/smoke_browser_bridge.py
-      - name: Capture actual gameplay and verify recording
-        shell: bash
-        run: |
-          set +e
-          python youtube-bot/tests/smoke_gameplay_2048.py > "$RUNNER_TEMP/gameplay-smoke.log" 2>&1
-          result=$?
-          cat "$RUNNER_TEMP/gameplay-smoke.log"
-          if [ "$result" -ne 0 ]; then
-            python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/gameplay-smoke.log"
-          fi
-          exit "$result"
 
   review-video:
     # Synthetic source material; no channel credentials or publishing.
@@ -173,21 +160,5 @@ jobs:
           cat "$RUNNER_TEMP/kvenya-gameplay.log"
           if [ "$result" -ne 0 ]; then
             python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/kvenya-gameplay.log"
-          fi
-          exit "$result"
-
-      - name: Test Kvenya on a pinned external GitHub game without publishing
-        env:
-          OMP_NUM_THREADS: '2'
-          MKL_NUM_THREADS: '2'
-          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
-        shell: bash
-        run: |
-          set +e
-          python youtube-bot/tests/smoke_qwen_github_game.py > "$RUNNER_TEMP/kvenya-github-game.log" 2>&1
-          result=$?
-          cat "$RUNNER_TEMP/kvenya-github-game.log"
-          if [ "$result" -ne 0 ]; then
-            python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/kvenya-github-game.log"
           fi
           exit "$result"

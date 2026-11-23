@@ -26,9 +26,9 @@ concurrency:
 
 jobs:
   capture:
-    if: >-
-      (github.event_name == 'schedule' && vars.GAMEPLAY_2048_RIGHTS_APPROVED == 'true') ||
-      (github.event_name == 'workflow_dispatch' && inputs.rights_acknowledged == true)
+    # Disabled on this branch: the owner prohibited training on endless games.
+    # This includes the capture's automatic 2048 strategy tuning.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 160
     steps:
