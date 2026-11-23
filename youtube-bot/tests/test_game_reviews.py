@@ -322,6 +322,21 @@ class GameCatalogTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'targeted retries'):
                 generate_game_review([game])
 
+    def test_platform_fallback_requires_explicit_platform_evidence(self):
+        game=dict(load_game_catalog()[0]); gid=game['id']
+        game['features']=list(game['features'])+['Карточка Steam не отмечает поддержку Linux']
+        game['source_facts']={'platforms_not_marked_supported':['Linux']}
+        draft={'game_id':gid,'idea_score':7,'possible_minus':'Нет','hook':'Что предлагает игра?'}
+        invalid={'possible_minus':'Нет','minus_feature_id':f'{gid}-f1'}
+        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2):
+            review=generate_game_review([game])
+        self.assertEqual(review['minus_evidence'],'Карточка Steam не отмечает поддержку Linux')
+        self.assertEqual(review['limitation_generation'],'explicit_steam_platform_flag_template')
+        self.assertIn('Linux',review['possible_minus'])
+        game['source_facts']={}
+        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2):
+            with self.assertRaisesRegex(ValueError,'targeted retries'): generate_game_review([game])
+
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()
         game = games[0]

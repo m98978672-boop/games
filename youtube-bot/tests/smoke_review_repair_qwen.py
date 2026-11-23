@@ -25,4 +25,5 @@ game_reviews.generate_with_qwen = inject_failure
 review = game_reviews.generate_game_review(games)
 assert len(calls) >= 3 and review['game_id'] == gid and review['idea_score'] == 7
 print(json.dumps({'fixture_only':True,'uploaded':False,'calls':len(calls),'game_id':gid,
-                  'possible_minus':review['possible_minus'],'minus_evidence':review['minus_evidence']},ensure_ascii=False))
+                  'possible_minus':review['possible_minus'],'minus_evidence':review['minus_evidence'],
+                  'limitation_generation':review.get('limitation_generation','model')},ensure_ascii=False))

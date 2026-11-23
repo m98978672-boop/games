@@ -369,6 +369,24 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
                 return _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
             except (TypeError, ValueError) as repair_error:
                 print(f"Possible limitation repair rejected ({repair_error}); not publishing unsupported claims.", file=sys.stderr)
+        # A deterministic fallback is allowed only for an explicit negative
+        # platform flag from Steam, not absence of a field or inferred bugs.
+        # The wording describes the store card and a relevant player preference.
+        reported = chosen.get('source_facts', {}).get('platforms_not_marked_supported', [])
+        if isinstance(reported, list):
+            for platform in ('Linux', 'macOS'):
+                expected = f'Карточка Steam не отмечает поддержку {platform}'
+                if platform not in reported or expected not in facts.values():
+                    continue
+                feature_id = next(k for k,v in facts.items() if v == expected)
+                fixed = dict(draft, possible_minus=f'Возможно, игра не подойдёт тем, кому нужна поддержка {platform} в Steam.',
+                             minus_feature_id=feature_id)
+                try:
+                    result = _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
+                except ValueError:
+                    continue
+                result['limitation_generation'] = 'explicit_steam_platform_flag_template'
+                return result
         raise ValueError('Could not produce a source-linked possible limitation after targeted retries; no upload') from exc
 
 
