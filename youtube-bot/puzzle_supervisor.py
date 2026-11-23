@@ -37,10 +37,28 @@ def distance(board):
     return sum(abs(i//4-(n-1)//4) + abs(i%4-(n-1)%4) for i,n in enumerate(board) if n)
 
 
-def feedback(before, after):
-    delta = distance(before) - distance(after)
-    if delta > 0:
-        return 1, 'Bonus: the reported board is closer to ordered positions.'
-    if delta < 0:
+def avoid_immediate_undo(legal, before, previous):
+    """One-step external intervention; never exclude the only legal move."""
+    if previous is None or len(legal) <= 1:
+        return legal, None
+    distance(before)  # Validate both observations before applying assistance.
+    distance(previous)
+    reverse = previous.index(0)
+    if reverse in legal:
+        return [i for i in legal if i != reverse], reverse
+    return legal, None
+
+
+def feedback(before, after, *, best=None, previous=None):
+    before_distance = distance(before)
+    after_distance = distance(after)
+    if previous is not None and after == previous:
+        return -2, 'Penalty: this reverses the previous move. Try a different route.'
+    threshold = before_distance if best is None else best
+    if type(threshold) is not int or threshold < 0:
+        raise ValueError('Invalid best distance')
+    if after_distance < threshold:
+        return 1, 'Bonus: the reported board reached a new best distance.'
+    if after_distance > before_distance:
         return -1, 'Penalty: the reported board is farther from ordered positions; reconsider the move.'
-    return 0, 'No measured progress on this action.'
+    return 0, 'No new best progress on this action.'
