@@ -1,0 +1,84 @@
+name: Kvenya games tournament (сложные игры)
+
+# Турнир Квени в сложных играх идёт САМ по расписанию:
+#   • шахматы — её мозг (альфа-бета с отсечениями и спокойным поиском)
+#     против спарринг-скрипта «ФЕРЗЬ-3000»;
+#   • «Остров» — её планировщик против простой эвристики.
+# Счёт пишется в дом (qwen-home/bridge/games.json), показывается на её
+# странице мира и поднимает мотивацию. Владельцу не надо ничего запускать.
+on:
+  push:
+    branches: [main]
+    paths: ['qwen-home/tools/games-tournament.mjs', 'kvenya/letsplay/**.mjs']
+  schedule:
+    - cron: '23 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: kvenya-games
+  cancel-in-progress: false
+
+jobs:
+  tournament:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install the rules of the games
+        run: |
+          cd kvenya/letsplay
+          npm install --no-audit --no-fund
+      - name: Kvenya plays her tournaments by herself
+        env:
+          KV_DEPTH: '3'
+          KV_ISLAND_DEPTH: '4'
+        run: |
+          node qwen-home/tools/games-tournament.mjs
+      - name: File the score into her home and her world page
+        run: |
+          set -eu
+          python3 qwen-home/tools/bridge-sense.py || echo "мост не обновился — счёт всё равно записан"
+          python3 qwen-home/tools/motivation.py || echo "мотивация не посчиталась"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          bridge_path = Path('kvenya/bridge.json')
+          bridge = json.loads(bridge_path.read_text(encoding='utf-8'))
+          games = json.loads(Path('qwen-home/bridge/games.json').read_text(encoding='utf-8'))
+          bridge['games'] = games
+          bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          mot = Path('qwen-home/bridge/motivation.json')
+          if mot.exists():
+              bridge['motivation'] = json.loads(mot.read_text(encoding='utf-8'))
+              bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          c = games.get('chess') or {}
+          i = (games.get('island') or {}).get('mine') or {}
+          print(f"Счёт: шахматы {c.get('wins')}/{c.get('games')}, «Остров» {i.get('wins')}/{i.get('games')}")
+          PY
+          git config user.name 'Квеня (турнир)'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add qwen-home/bridge/games.json qwen-home/bridge/motivation.json kvenya/bridge.json qwen-home/memory/search-log.md 2>/dev/null || true
+          if git diff --cached --quiet; then echo 'Изменений нет'; exit 0; fi
+          git commit -m 'Турнир в сложных играх: свежий честный счёт'
+          pushed=''
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:main; then pushed=1; break; fi
+            echo "push отклонён (попытка $attempt): сливаюсь со свежим main"
+            git fetch origin main
+            git merge --no-edit origin/main || { git merge --abort; exit 1; }
+          done
+          if [ -z "$pushed" ]; then echo 'Не удалось доставить счёт за 5 попыток'; exit 1; fi
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
