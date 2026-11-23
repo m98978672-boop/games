@@ -33,17 +33,14 @@
     "loraAlpha": 64,
     "targetModules": "все линейные слои (q, k, v, o, gate, up, down)",
     "maxTokens": 2048,
-    "answerTokenBudget": 320,
+    "answerTokenBudget": 192,
     "publishedAt": "2026-11-22",
-    "note": "Урок №3: адаптер новой формы (r=32) обучен с базы и опубликован; баллы его экзамена восстановит следующий урок своим экзаменом до/после.",
-    "detailedTokenBudget": 640,
-    "measuredTokensPerSecond": 3.3,
-    "speedNote": "Замерено живьём: 3,3 ток/с (27 токенов за 8 с), подробный ответ до 640 токенов; int8 выключен — ломал связность"
+    "note": "Урок №3: адаптер новой формы (r=32) обучен с базы и опубликован; баллы его экзамена восстановит следующий урок своим экзаменом до/после."
   },
   "motivation": {
-    "points": 505,
+    "points": 469,
     "level": "Легенда моста",
     "file": "qwen-home/bridge/motivation.json",
-    "updatedAt": "2026-11-23 16:18 UTC"
+    "updatedAt": "2026-11-23 11:55 UTC"
   }
 }

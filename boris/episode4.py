@@ -51,7 +51,7 @@ P.CLIPS = ["e4_n1", "e4_c1", "e4_n2", "e4_c2", "e4_n3", "e4_c3", "e4_n4", "e4_c4
            "p3_n1", "p3_c1", "p3_n2", "p3_c2", "p3_n3", "p3_c3", "p3_n4", "p3_c4", "p3_n5", "p3_c5",
            "p4_n1", "p4_c1", "p4_n2", "p4_c2", "p4_n3", "p4_c3", "p4_n4", "p4_c4", "p4_n5", "p4_c5"]
 P.ANIM = {22: 12.5, 23: 14.0, 24: 14.5, 25: 15.0, 26: 12.0, 10: 16.0,
-          27: 13.0, 28: 12.0, 29: 13.0, 30: 14.0, 31: 12.0}
+          27: 13.0, 28: 12.0, 29: 13.0, 30: 14.0, 31: 12.0, 32: 12.0}
 
 SC0 = dict(k=22, lines=[("n", "e4_n1"), ("c", "e4_c1")],
            sfx=[("street", 0.0, .16, "loop"), ("music", 0.0, .26, "loop"), ("purr", 0.8, .40, None),
@@ -77,7 +77,7 @@ SC4 = dict(k=26, lines=[("n", "e4_n5"), ("n", "e4_n5b"), ("c", "e4_c5")],
                 ("purr", 6.0, .40, None), ("sting_up", 8.4, .45, None)])
 
 P.PREV_T = {22: 5.0, 23: 6.0, 24: 6.3, 25: 6.0, 26: 5.0, 10: 4.6,
-            27: 5.5, 28: 5.0, 29: 6.0, 30: 6.0, 31: 5.5}
+            27: 5.5, 28: 5.0, 29: 6.0, 30: 6.0, 31: 5.5, 32: 5.0}
 
 _mo = P.make_overlays
 
@@ -166,21 +166,20 @@ def setup(part):
         P.END_T = ("КОТЫ ДОМА", "последняя часть · спасибо, что были с нами")
         P.STAMP_T = "ПРОСТО ЖИЗНЬ"
         P.DEFS = [
-            dict(k=22, lines=[("n", "p4_n1"), ("c", "p4_c1")],
+            dict(k=29, lines=[("n", "p4_n1"), ("c", "p4_c1"), ("n", "p4_n2"), ("c", "p4_c2")],
                  ov=[("title", 0.25, 4.4, "out"), ("stamp", 4.6, 7.6, "anim")],
-                 sfx=[("street", 0.0, .16, "loop"), ("music", 0.0, .26, "loop"), ("purr", 0.8, .40, None),
-                      ("meow_happy", 3.2, .50, None), ("rustle", 5.0, .22, None)]),
-            dict(k=23, lines=[("n", "p4_n2"), ("c", "p4_c2")], ov=[],
-                 sfx=[("street", 0.0, .14, "loop"), ("music", 0.0, .24, "loop"), ("steps", 0.6, .40, None),
-                      ("clink", 1.8, .55, None), ("rustle", 2.8, .30, None), ("purr", 5.6, .35, None)]),
-            dict(k=24, lines=[("n", "p4_n3"), ("c", "p4_c3")], ov=[],
-                 sfx=[("street", 0.0, .12, "loop"), ("music", 0.0, .26, "loop"), ("coo", 0.6, .35, None),
-                      ("flutter", 1.6, .40, None), ("coo", 2.6, .30, None), ("purr_soft", 5.4, .30, None),
-                      ("flutter", 7.0, .45, None)]),
-            dict(k=25, lines=[("n", "p4_n4"), ("c", "p4_c4")], ov=[],
+                 sfx=[("street", 0.0, .14, "loop"), ("music", 0.0, .24, "loop"), ("purr", 0.8, .40, None),
+                      ("meow_happy", 3.0, .50, None), ("rustle", 5.0, .22, None), ("steps", 8.6, .40, None),
+                      ("clink", 10.2, .55, None), ("rustle", 11.4, .30, None), ("purr_soft", 13.0, .35, None)]),
+            dict(k=32, lines=[("n", "p4_n3"), ("c", "p4_c3")], ov=[],
+                 sfx=[("hum", 0.0, .30, "loop"), ("music", 0.0, .24, "loop"), ("coo", 0.8, .35, None),
+                      ("flutter", 2.0, .45, None), ("coo", 3.4, .30, None), ("flutter", 5.2, .50, None),
+                      ("purr", 6.4, .35, None), ("coo", 8.0, .28, None)]),
+            dict(k=30, lines=[("n", "p4_n4"), ("c", "p4_c4")], ov=[],
                  sfx=[("wind", 0.0, .28, 15.0), ("hum", 0.0, .36, "loop"), ("music", 0.0, .22, "loop"),
-                      ("purr", 0.6, .45, None), ("purr", 1.4, .42, None), ("purr_soft", 6.8, .40, None)]),
-            dict(k=26, lines=[("n", "p4_n5"), ("c", "p4_c5")], ov=[("end", -3.0, 99, "out")],
+                      ("purr", 0.6, .45, None), ("purr", 1.4, .42, None), ("rustle", 4.6, .20, None),
+                      ("purr_soft", 6.8, .40, None)]),
+            dict(k=31, lines=[("n", "p4_n5"), ("c", "p4_c5")], ov=[("end", -3.0, 99, "out")],
                  sfx=[("wind", 0.0, .36, 12.0), ("night", 0.0, .24, "loop"), ("music", 0.0, .28, "loop"),
                       ("purr", 0.6, .40, None), ("meow_happy", 3.6, .50, None), ("coo", 5.4, .25, None),
                       ("sting_up", 7.8, .45, None)]),
