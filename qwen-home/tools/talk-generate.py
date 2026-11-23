@@ -182,13 +182,6 @@ def persona_for(owner_text):
 TPS_LAST = []  # (токенов/с, сколько токенов, за сколько секунд) с последней генерации
 
 
-try:
-    from transformers import LogitsProcessorList as _Processors
-except Exception:  # очень старые сборки — обойдёмся без штрафа
-    class _Processors(list):
-        pass
-
-
 class Enough(Exception):
     """Сигнал «хватит писать» для остановки генерации изнутри."""
 
@@ -245,30 +238,7 @@ def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_n
         # токен. top_k=40 сначала оставляет 40 кандидатов — сортировка
         # становится дешёвой, а характер ответов не меняется.
         kwargs.update(do_sample=True, temperature=temperature, top_p=0.9, top_k=40)
-        # Ум: слова из её прошлых ответов теряют вес. Иначе маленькая модель
-        # снова и снова выбирает ту же заученную заготовку («уроки, дневник»)
-        # на любой вопрос. Минус не запрет — новая мысль всегда возможна.
-        if False and past_stems:
-            state = {'steps': 0}
 
-            def penalize(input_ids, scores):
-                # Только начало ответа (первые 40 токенов) и только очень
-                # мягкий минус (-2.5): цель — не дать снова начать ту же
-                # заготовку, а не сломать связную речь. Раньше штраф -6 по
-                # всему ответу давал быстрый, но бессвязный бред.
-                state['steps'] += 1
-                if state['steps'] > 40:
-                    return scores
-                try:
-                    for tok_list, sc in zip(input_ids, scores):
-                        for tok in tok_list[-1:]:
-                            piece = tokenizer.decode([int(tok)]).strip().lower()
-                            if piece and len(piece) > 3 and piece[:6] in past_stems:
-                                sc[int(tok)] -= 2.5
-                except Exception:
-                    pass
-                return scores
-            kwargs['logits_processor'] = _Processors([penalize])
     else:
         kwargs.update(do_sample=False)
     stopper = SentenceStop(tokenizer, int(inputs['input_ids'].shape[1]), max_sentences)
@@ -753,6 +723,18 @@ def main():
         final_user = (f'Владелец спрашивает: {owner_text}\n\n'
                       f'Твоё главное желание сейчас, из твоего собственного списка: «{want_fact[0]}» — {want_fact[1]}.\n\n'
                       f'Ответь владельцу СВОИМИ СЛОВАМИ двумя фразами: первая начинается «Моё главное желание сейчас —» и называет это желание, вторая — почему оно главное. Ничего больше не пиши.')
+    elif SELF_TALK.search(owner_text) or re.search(r'(счасть|радост|нравится|горд|умеешь|мечта)', owner_text, re.I):
+        # Маленькая модель на «что для тебя счастье» уходит в заученное
+        # «уроки и дневник». Как и с фактами поиска, опора подаётся
+        # структурой: возьми один факт из своей жизни и ответь им.
+        final_user = (f'Владелец спрашивает: {owner_text}\n\n'
+                      'Твои живые факты: главное желание — взять пять труб в Clumsy Bird '
+                      '(рекорд — четыре); ты снимаешь видеоблог, первый выпуск уже вышел; '
+                      'у тебя своя библиотека из 19 кирпичей и три свои игры; ты ходишь '
+                      'в экспедиции в интернет; счастье для тебя — когда владелец заходит '
+                      'в твой дом и спрашивает, что ты сама думаешь.\n\n'
+                      'Ответь СВОИМИ СЛОВАМИ одним-двумя предложениями, взяв ОДИН из этих '
+                      'фактов. Про уроки и дневник не пиши — это не ответ. Ничего больше не пиши.')
     else:
         final_user = owner_text + context_note
     from_search = bool(results)
@@ -771,9 +753,15 @@ def main():
     messages = [{'role': 'system', 'content': system_prompt}]
     if not from_search:
         history = answered_turns[-4:] if answered_turns else []
+        # Заготовку она копирует из собственной истории: если её прошлый
+        # ответ почти слово в слово повторяется в другом месте, это не
+        # разговор, а шаблон — такую реплику в пример не подаём.
+        asst = [b.strip().lower() for r, b in history if r == 'assistant']
         for role, body in history:
             if role == 'assistant' and BAD_HISTORY.search(body):
                 continue  # не подмешиваем ей в память собственные мусорные реплики
+            if role == 'assistant' and asst.count(body.strip().lower()) > 1:
+                continue  # повторяющийся шаблон
             messages.append({'role': role, 'content': body})
     # Отвечая по свежему поиску, историю не тащим вовсе: пачка одинаковых
     # вопросов без ответов ломает маленькой модели картину разговора,
