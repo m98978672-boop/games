@@ -302,6 +302,8 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
             "role": "system",
             "content": (
                 "Ты пишешь длинный русскоязычный видеообзор игры только по предоставленным фактам Steam. "
+                "Сначала объясни, что игра предлагает и что в ней нужно делать только по описанию источника. "
+                "Далее обсуждай конкретные особенности и возможные ограничения, затем итог. "
                 "Не говори, что играл, не выдумывай механику, сюжет, производительность или отзывы. "
                 "Отделяй факты из источника от субъективного мнения словами «по моему впечатлению от описания». "
                 "Все реплики должны быть естественным русским языком; не вставляй английские предложения. "
@@ -359,7 +361,7 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
             verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
             clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
             clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
-            return clean
+            return with_store_context(clean, review)
         except ValueError as exc:
             last_error = exc
             messages.append({
@@ -423,7 +425,7 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
     verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
     clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
     clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
-    return clean
+    return with_store_context(clean, review)
 
 
 
@@ -463,7 +465,7 @@ def _source_template_long_narration(review: Mapping[str, Any]) -> list[dict[str,
     summary = speech_excerpt(str(review["pros"][0]), 50)
     scenes[-1]["dialogue"] += f" Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
     scenes[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
-    return scenes
+    return with_store_context(scenes, review)
 
 
 def steam_price_note(review: Mapping[str, Any]) -> str:
@@ -483,6 +485,38 @@ def steam_price_note(review: Mapping[str, Any]) -> str:
     return "Цена не подтверждена; проверьте страницу игры."
 
 
+def steam_release_note(review: Mapping[str, Any]) -> str:
+    """Do not present a future or unverified date as an already released game."""
+    facts = review.get("source_facts")
+    if not isinstance(facts, Mapping):
+        return "Дата выхода не подтверждена; проверьте страницу игры."
+    value = facts.get("release_date")
+    coming = facts.get("release_coming_soon")
+    if (not isinstance(value, str) or not value.strip() or len(value) > 80
+            or re.search(r"https?://|www\.|[<>\r\n]", value, re.I)):
+        return "Дата выхода не подтверждена; проверьте страницу игры."
+    date = speech_excerpt(value.strip(), 60)
+    if coming is True:
+        return f"По Steam, выход ожидается: {date}. Дата может измениться."
+    if coming is False:
+        return f"Дата выхода по Steam: {date}."
+    return f"В карточке Steam указана дата: {date}; статус выхода не подтверждён."
+
+
+def with_store_context(scenes: list[dict[str, str]], review: Mapping[str, Any]) -> list[dict[str, str]]:
+    """Add only observed store facts, including region and observation date.
+
+    Price is displayed, not silently turned into a subjective value-for-money
+    score. A source's listing does not prove gameplay quality.
+    """
+    if len(scenes) < 2:
+        raise ValueError("At least two scenes are required for store context")
+    result = [dict(scene) for scene in scenes]
+    result[0]["dialogue"] = result[0]["dialogue"].rstrip() + " " + steam_release_note(review)
+    result[1]["dialogue"] = result[1]["dialogue"].rstrip() + " " + steam_price_note(review)
+    return result
+
+
 def youtube_description(review: Mapping[str, Any]) -> str:
     sources = review.get("sources") or []
     if not sources and review.get("public_url"):
@@ -498,7 +532,7 @@ def youtube_description(review: Mapping[str, Any]) -> str:
         f"({review.get('game_version') or 'дата/версия не указана'}).\n"
         f"Сильные стороны, отмеченные по источникам: {review['pros'][0]}; {review['pros'][1]}.\n"
         f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus']}.\n"
-        f"{steam_price_note(review)}\n\n"
+        f"{steam_release_note(review)}\n{steam_price_note(review)}\n\n"
         "Это обзор по опубликованным материалам, а не личное прохождение или независимый тест. "
         "Ссылки можно скопировать ниже:\n"
         f"{provenance}"

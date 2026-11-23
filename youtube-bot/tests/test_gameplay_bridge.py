@@ -41,6 +41,16 @@ class BridgeSafetyTests(unittest.TestCase):
             link = root / 'link'; link.symlink_to(child)
             with self.assertRaises(ValueError): docker_command(game, 'games-bridge-' + 'a' * 32, record_dir=link)
 
+    def test_2048_telemetry_is_opt_in_and_cannot_enable_other_modes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            game = Path(temp) / 'game'; game.mkdir(); (game / 'index.html').write_text('test')
+            name = 'games-bridge-' + 'a' * 32
+            self.assertNotIn('BRIDGE_TELEMETRY=2048', docker_command(game, name))
+            command = docker_command(game, name, telemetry='2048')
+            self.assertIn('BRIDGE_TELEMETRY=2048', command)
+            self.assertEqual(command[command.index('--network') + 1], 'none')
+            with self.assertRaises(ValueError): docker_command(game, name, telemetry='shell')
+
     def test_rights_are_explicit_and_steps_bounded(self):
         with self.assertRaisesRegex(ValueError, 'rights'):
             BrowserBridge(Path('.'))

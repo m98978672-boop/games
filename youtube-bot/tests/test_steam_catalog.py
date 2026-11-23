@@ -36,6 +36,14 @@ class SteamCatalogTests(unittest.TestCase):
         self.assertIn("https://store.steampowered.com/appreviews/456?", games[0]["sources"][1]["url"])
         self.assertEqual(games[0]["screenshots"][0].split("/")[2], "shared.akamai.steamstatic.com")
 
+    def test_release_status_is_not_inferred_from_untrusted_missing_field(self):
+        for value, expected in ((True, True), (False, False), ('false', None), (None, None)):
+            details = app_details()
+            details['123']['data']['release_date']['coming_soon'] = value
+            with self.subTest(value=value), patch.object(steam_catalog, '_safe_get_json', side_effect=[details, {}]):
+                game = steam_catalog._game_from_app('123', {'id': 123})
+                self.assertIs(game['source_facts']['release_coming_soon'], expected)
+
     def test_invalid_review_response_keeps_verified_store_facts_only(self):
         featured = {"top_sellers": {"items": [{"id": 123, "name": "Test"}]}}
         with patch.object(steam_catalog, "_safe_get_json", side_effect=[

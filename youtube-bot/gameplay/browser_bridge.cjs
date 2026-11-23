@@ -10,6 +10,8 @@ const ROOT = "/game", HOST = "127.0.0.1", PORT = 8787;
 const TYPES = {".html":"text/html", ".js":"text/javascript", ".mjs":"text/javascript", ".css":"text/css", ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".webp":"image/webp", ".svg":"image/svg+xml", ".json":"application/json", ".wasm":"application/wasm", ".woff":"font/woff", ".woff2":"font/woff2", ".mp3":"audio/mpeg", ".ogg":"audio/ogg"};
 const KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter", "Escape", "ShiftLeft", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(k => "Key" + k), ..."0123456789".split("").map(k => "Digit" + k)]);
 const ENTRY = process.env.BRIDGE_ENTRY || "index.html";
+const TELEMETRY = process.env.BRIDGE_TELEMETRY || "";
+if (!["", "2048"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
 if (!/^(?:[a-zA-Z0-9_-]+\/)*index\.html$/.test(ENTRY)) throw Error("invalid entry path");
 const emit = value => process.stdout.write(JSON.stringify(value) + "\n");
 const server = http.createServer((req, res) => {
@@ -60,8 +62,22 @@ async function main() {
       const png = await page.screenshot({type:"png", timeout:10000, animations:"disabled"});
       if (png.length > 2_000_000) throw Error("screenshot too large");
       const recording_elapsed_ms = recording ? Number((process.hrtime.bigint() - recordingOrigin) / 1000000n) : null;
+      // Experimental 2048 telemetry is untrusted game-provided data, never an
+      // instruction to the model or evidence for any other game.
+      const telemetry = TELEMETRY === "2048" ? await page.evaluate(() => {
+        try {
+          const state = JSON.parse(localStorage.getItem("gameState") || "null");
+          const cells = state?.grid?.cells;
+          if (!state || !Number.isSafeInteger(state.score) || state.score < 0 || state.score > 10000000 ||
+              !Array.isArray(cells) || cells.length !== 4 || cells.some(col => !Array.isArray(col) || col.length !== 4) ||
+              typeof state.won !== "boolean" || typeof state.over !== "boolean") return null;
+          const values = cells.flat().map(cell => cell == null ? 0 : cell.value);
+          if (values.some(v => !Number.isSafeInteger(v) || v < 0 || v > 1073741824)) return null;
+          return {score:state.score, max_tile:Math.max(...values), won:state.won, over:state.over};
+        } catch { return null; }
+      }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
-        ...(recording ? {recording_elapsed_ms} : {})});
+        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});

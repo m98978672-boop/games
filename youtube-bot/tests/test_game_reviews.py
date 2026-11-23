@@ -21,6 +21,21 @@ class GameCatalogTests(unittest.TestCase):
         free = {"source_facts": {"price": {"kind": "free_to_play", "region": "NL", "checked_at": "2026-11-22"}}}
         self.assertIn("дополнительные покупки", steam_price_note(free))
 
+    def test_spoken_store_context_marks_region_and_unreleased_dates(self):
+        from game_reviews import steam_release_note, with_store_context
+        review = {'source_facts': {'release_date': '12 окт. 2027', 'release_coming_soon': True,
+                  'price': {'kind': 'paid', 'minor_units': 1999, 'currency': 'EUR', 'region': 'NL', 'checked_at': '2026-11-22'}}}
+        self.assertIn('выход ожидается', steam_release_note(review))
+        scenes = with_store_context([{'dialogue': 'Вступление.'}, {'dialogue': 'Особенности.'}], review)
+        self.assertIn('2027', scenes[0]['dialogue'])
+        self.assertIn('19 евро 99 центов', scenes[1]['dialogue'])
+        self.assertIn('Нидерланд', scenes[1]['dialogue'])
+        review['source_facts']['release_coming_soon'] = False
+        self.assertIn('Дата выхода', steam_release_note(review))
+        review['source_facts']['release_date'] = 'https://evil.invalid'
+        self.assertIn('не подтверждена', steam_release_note(review))
+        self.assertIn('не подтверждена', steam_release_note({}))
+
     def test_catalog_is_loaded_from_repo_and_has_public_links(self):
         games = load_game_catalog()
         self.assertGreaterEqual(len(games), 5)

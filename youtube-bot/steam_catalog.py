@@ -203,6 +203,7 @@ def _game_from_app(app_id: str, listing: dict[str, Any]) -> dict[str, Any] | Non
             "genres": genres,
             "platforms": [platform_names[p] for p in platforms],
             "release_date": release,
+            "release_coming_soon": release_data.get("coming_soon") if type(release_data.get("coming_soon")) is bool else None,
             "developers": developer_names[:3],
             "steam_review_total": total,
             "steam_review_positive": positive,

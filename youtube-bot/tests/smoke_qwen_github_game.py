@@ -27,11 +27,12 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
         ('LEFT', 'RIGHT', 'UP', 'DOWN'), avoid_stalled_actions=True)
     outcome = 'step_limit'
     trace = []
+    telemetry = []
     recording = Path(temp) / 'recording'
     recording.mkdir()
-    with BrowserBridge(root, rights_acknowledged=True, record_dir=recording) as bridge:
+    with BrowserBridge(root, rights_acknowledged=True, record_dir=recording, telemetry='2048') as bridge:
         observation = bridge.receive(timeout=60)
-        for step in range(4):
+        for step in range(16):
             if observation.get('type') != 'observation' or observation.get('step') != step:
                 raise RuntimeError('Invalid or out-of-order bridge observation')
             png = base64.b64decode(observation['screenshot_png_base64'], validate=True)
@@ -47,6 +48,16 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
             if type(elapsed) is not int or elapsed < 0 or (trace and elapsed < trace[-1]['observed_ms']):
                 raise RuntimeError('Invalid recording observation clock')
             trace.append({'step': step + 1, 'action': agent.decisions[-1], 'observed_ms': elapsed})
+            state = observation.get('game_telemetry')
+            if state is not None:
+                if (not isinstance(state, dict) or set(state) != {'score', 'max_tile', 'won', 'over'}
+                        or type(state['score']) is not int or type(state['max_tile']) is not int
+                        or type(state['won']) is not bool or type(state['over']) is not bool):
+                    raise RuntimeError('Invalid game-provided telemetry')
+                telemetry.append({'step': step + 1, **state})
+                if state['won'] or state['over']:
+                    outcome = 'game_reported_win' if state['won'] else 'game_reported_over'
+                    break
         video = bridge.finish_recording()
     info = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', str(video)], check=True, capture_output=True, text=True, timeout=60).stdout)
     duration = float(info['format']['duration'])
@@ -69,6 +80,6 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
     result = {'game': '2048', 'source': 'https://github.com/gabrielecirulli/2048',
               'commit': game.COMMIT, 'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base',
               'outcome': outcome, 'actions': agent.decisions, 'stall_filter_enabled': True, 'filtered_steps': agent.filtered_steps, 'action_observations': trace, 'moves_attempted': len(agent.decisions),
-              'actual_game_win_verified': False, 'video_recorded': True, 'recording_seconds': round(duration, 2), 'recording_retained': False, 'voiced_draft_created': draft_created, 'published': False}
+              'game_reported_telemetry': telemetry, 'actual_game_win_verified': False, 'video_recorded': True, 'recording_seconds': round(duration, 2), 'recording_retained': False, 'voiced_draft_created': draft_created, 'published': False}
     print('QWEN_GITHUB_GAME_REPORT=' + json.dumps(result, ensure_ascii=True))
     print('::notice title=Qwen external GitHub gameplay test::' + json.dumps(result, ensure_ascii=True))
