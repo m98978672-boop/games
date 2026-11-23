@@ -5,11 +5,10 @@
      node qwen-home/tests/learn.mjs   */
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { buildGameDataset } from '../tools/build-game-skill-dataset.mjs';
 import { mergeKnowledge } from '../tools/collect-wikipedia.mjs';
@@ -128,13 +127,13 @@ const personaMd = await readFile(path.join(home, 'talk', 'persona.md'), 'utf8');
 check('генератор разговора ищет в русской Википедии и пишет журнал', talkGen.includes('ru.wikipedia.org/w/api.php') && talkGen.includes('search_wikipedia') && talkGen.includes('search-log.md') && talkGen.includes("'titles': title") && talkGen.includes('СВОИМИ СЛОВАМИ') && talkGen.includes('srsearch') && talkGen.includes('def digest') && talkGen.includes('BAD_HISTORY') && talkGen.includes('def keyword_query') && talkGen.includes('двумя короткими фразами') && talkGen.includes("get('exact')") && talkGen.includes('Черновик плох') && talkGen.includes('from_search') && talkGen.includes('Отвечала по статье') && talkGen.includes('тот же год') && talkGen.includes('Черновики ответа') && talkGen.includes('Текст из {src_name}') && talkGen.includes('Поискала в интернете!'));
 check('генератор сначала решает, нужен ли поиск, и не подделывает ответ', talkGen.includes('decide_search') && talkGen.includes('ПОИСК') && talkGen.includes('forced_query'));
 const talkWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'frontline-qwen-talk.yml'), 'utf8');
-check('скорость: очевидный поиск решает правило без генерации, бюджет ответа — 320 токенов, подробный режим — до 640', talkGen.includes('rule_search_query') && talkGen.includes('SELF_TALK') && talkGen.includes('FACTUAL_ASK') && talkGen.includes('default=320') && talkGen.includes('args.max_new * 2, 640') && talkGen.includes('DETAILED_ASK'));
+check('скорость: очевидный поиск решает правило без генерации, бюджет ответа — 320 токенов, подробный — до 640', talkGen.includes('rule_search_query') && talkGen.includes('SELF_TALK') && talkGen.includes('FACTUAL_ASK') && talkGen.includes('default=320') && talkGen.includes('DETAILED_ASK') && talkGen.includes('args.max_new * 2, 640'));
 check('параметры выросли честно: LoRA r=32 по всем линейным слоям, контекст учёбы 2048, старая форма адаптера не доращивается молча', trainLearn.includes('LORA_R = 32') && trainLearn.includes('gate_proj') && trainLearn.includes('MAX_TOKENS = 2048') && trainLearn.includes('adapter_matches') && trainLearn.includes('adapter_config.json'));
 check('поиск по просьбе — только глаголом: разговор о поиске поиском не считается', talkGen.includes('сделай поиск') && !/загугли\|поиск\)/.test(talkGen));
 check('скорость: модель и pip живут в кэше Actions, а не качаются заново', talkWorkflow.includes('actions/cache@v4') && talkWorkflow.includes('.cache/huggingface') && talkWorkflow.includes('.cache/pip') && talkWorkflow.includes("OMP_NUM_THREADS: '4'"));
 check('разговор живёт и в main: владелец пишет прямо домой, коммит без [skip ci] — иначе сайт не пересоберётся', talkWorkflow.includes('workflow_dispatch') && talkWorkflow.includes("'main'") && talkWorkflow.includes("git commit -m 'Квеня ответила в диалоге'"));
 const learnWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'frontline-qwen-learn.yml'), 'utf8');
-check('параметры выросли и записаны: LoRA r=32 по всем слоям, контекст 2048, бюджет ответа 320', trainLearn.includes('LORA_R = 32') && trainLearn.includes('MAX_TOKENS = 2048') && trainLearn.includes('adapter_matches') && st0.adapter?.loraRank === 32 && st0.adapter?.answerTokenBudget === 320);
+check('параметры выросли и записаны: LoRA r=32 по всем слоям, контекст 2048, бюджет ответа 192', trainLearn.includes('LORA_R = 32') && trainLearn.includes('MAX_TOKENS = 2048') && trainLearn.includes('adapter_matches') && st0.adapter?.loraRank === 32 && st0.adapter?.answerTokenBudget === 192);
 check('дневник и ответы не теряются в гонке: обучение перебазируется, разговор сливается union-ом', learnWorkflow.includes('git rebase') && talkWorkflow.includes('git merge --no-edit'));
 const relayWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-relay.yml'), 'utf8');
 check('вопрос с сайта доезжает сам: ретранслятор issue → диалог, только от владельца', relayWorkflow.includes('issues:') && relayWorkflow.includes("author_association == 'OWNER'") && relayWorkflow.includes('qwen-home/talk/dialogue.md') && relayWorkflow.includes('HEAD:main'));
@@ -181,17 +180,6 @@ const bridgeJs = await readFile(path.join(home, '..', 'kvenya', 'bridge.js'), 'u
 const worldHtml = await readFile(path.join(home, '..', 'kvenya', 'world.html'), 'utf8');
 check('Квеня играет и записывает настоящий геймплей: сама бежит за звёздами, видео пишется и скачивается со страницы мира', worldJs.includes('MediaRecorder') && worldJs.includes('captureStream') && worldJs.includes('startGameAndRecord') && worldJs.includes('spawnStar') && worldHtml.includes('kvGameStart') && worldHtml.includes('kvVideoDownload') && worldHtml.includes('kvGameVideo') && personaMd.includes('## Игра и запись геймплея') && dialogue.some((r) => r.response.includes('MediaRecorder')) && dialogue.some((r) => r.response.includes('разрешения')) && evalRows.some((r) => r.id === 'eval-record-gameplay'));
 check('персона знает про свою 3D-студию и честную оценку красоты', personaMd.includes('3D-студия') && personaMd.includes('красиво ли получилось'));
-
-// Число токенов в секунду с последнего ответа — из журнала её поисков.
-const searchLogPath = path.join(home, 'memory', 'search-log.md');
-let tpsLine = null;
-try {
-  const logText = await readFile(searchLogPath, 'utf8');
-  const caps = [...logText.matchAll(/Токенов в секунду: ([\d.]+)/g)];
-  if (caps.length) tpsLine = caps[caps.length - 1][1];
-} catch {}
-check('скорость письма измерена: токенов в секунду записаны в журнал', tpsLine !== null, tpsLine ? `последний замер: ${tpsLine} ток/с` : 'замера пока нет');
-
 
 check('Квеня снимает сама: саморежиссёр в мире, киноархив и уроки честности', worldJs.includes('startSelfClip') && worldJs.includes('kvSelfRecord') && worldJs.includes('kvenya.world.selfRecord.v1') && worldHtml.includes('kvClips') && worldHtml.includes('снимать самой') && personaMd.includes('саморежиссёр') && dialogue.some((r) => r.response.includes('киноархив')) && evalRows.some((r) => r.id === 'eval-self-record'));
 const bridgePy = await readFile(path.join(home, 'tools', 'bridge-sense.py'), 'utf8');

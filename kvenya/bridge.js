@@ -133,7 +133,7 @@
 
   fetch('./bridge.json', { cache: 'no-store' })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (data) { if (data) { renderDigest(data); renderGames(data); renderExpeditions(data); renderMotivation(data); renderWants(data); renderSources(data); } })
+    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); renderMotivation(data); renderWants(data); renderSources(data); } })
     .catch(function () { /* сводки нет — есть живая кнопка */ });
 
   function wikiApi(params) {

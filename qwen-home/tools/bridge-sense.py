@@ -123,11 +123,6 @@ def main():
         wants = json.loads((BRIDGE / 'wants.json').read_text(encoding='utf-8'))
     except Exception:
         pass
-    games = old_bridge.get('games')
-    try:
-        games = json.loads((BRIDGE / 'games.json').read_text(encoding='utf-8'))
-    except Exception:
-        pass
     payload = {
         'updatedAt': stamp,
         'source': 'ru.wikipedia.org',

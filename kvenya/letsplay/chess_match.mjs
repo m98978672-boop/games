@@ -4,7 +4,6 @@
 // Запуск: node chess_match.mjs scan | node chess_match.mjs run <seed>
 import fs from 'node:fs';
 import { Chess } from 'chess.js';
-import { pickMove as brainPick, explain as brainExplain } from './chess_brain.mjs';
 
 const OUT = new URL('./build/', import.meta.url).pathname;
 fs.mkdirSync(OUT, { recursive: true });
@@ -162,6 +161,5 @@ if (cmd === 'scan') {
   summarize(s, g);
   fs.writeFileSync(OUT + 'moves.jsonl', g.moves.map((m) => JSON.stringify(m)).join('\n'));
   fs.writeFileSync(OUT + 'match.json', JSON.stringify({ seed, res: g.res, capsW: g.capsW, capsB: g.capsB, checks: g.checks, names: NAMES }, null, 1));
-  fs.writeFileSync(OUT + 'reasons.json', JSON.stringify(g.reasons, null, 1));
   console.log('last moves:', g.moves.slice(-8).map((m) => m.san).join(' '));
 }

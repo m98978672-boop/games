@@ -177,22 +177,6 @@ def persona_for(owner_text, budget=4600):
     return out.strip()
 
 
-def persona_for(owner_text):
-    """Ядро + характер + разделы под тему вопроса. Не больше ~6 КБ."""
-    head, secs = read_sections(PERSONA)
-    by_title = {t: b for t, b in secs}
-    chosen = [t for t in by_title if re.fullmatch(r'Твой характер|Эмоции и чувства', t)]
-    for ask, want in SECTION_HINTS:
-        if re.search(ask, owner_text, re.I):
-            for title in by_title:
-                if re.search(want, title) and title not in chosen:
-                    chosen.append(title)
-    if 'Её собственные желания' in by_title and re.search(r'(хочешь|желани|хотел|мечт)', owner_text, re.I):
-        chosen.append('Её собственные желания')
-    body = '\n\n'.join(f'## {t}\n{b}' for t, b in secs if t in chosen)
-    return (head + '\n\n' + body).strip()[:4600]
-
-
 TPS_LAST = []  # (токенов/с, сколько токенов, за сколько секунд) с последней генерации
 
 
