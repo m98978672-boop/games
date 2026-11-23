@@ -65,6 +65,10 @@ def _different_job_id(value: Any, expected: Any) -> bool:
         return False
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
 def _mask(secret: str) -> None:
     if secret:
         print(f"::add-mask::{secret}")
@@ -428,8 +432,8 @@ def publish(result_path: Path) -> dict[str, Any]:
                 video_format = metadata.get("video_format")
                 if previous.tzinfo is None or video_format not in {"short", "long"}:
                     raise ValueError("Timezone and format required")
-                next_slot = next_publish_slot(previous.astimezone(timezone.utc) + timedelta(seconds=1),
-                                              video_format=video_format, min_lead=timedelta(0))
+                base = max(previous.astimezone(timezone.utc) + timedelta(seconds=1), _utc_now())
+                next_slot = next_publish_slot(base, video_format=video_format)
                 metadata["publish_at"] = next_slot.isoformat().replace("+00:00", "Z")
             except (TypeError, ValueError, OverflowError) as exc:
                 raise PublishError("Cannot safely find the next regular slot; no upload was started.") from exc

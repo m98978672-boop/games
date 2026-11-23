@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from datetime import datetime, timezone
 from unittest.mock import patch
 from urllib.error import HTTPError
 
@@ -252,6 +253,7 @@ class PublisherNetworkTests(unittest.TestCase):
                     return {'status': 'ready_for_upload', 'access_token': 'short-lived-access-token'}
                 return {'status': 'scheduled', 'video_id': 'newvideo'}
             with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS': 'false', 'DATA_DIR': temp}), \
+                 patch.object(publisher, '_utc_now', return_value=datetime(2000,1,1,tzinfo=timezone.utc)), \
                  patch.object(publisher, '_supabase_post', side_effect=post), \
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret') as start, \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
@@ -275,12 +277,34 @@ class PublisherNetworkTests(unittest.TestCase):
                     return {'status':'ready_for_upload','access_token':'short-lived-access-token'}
                 return {'status':'scheduled','video_id':'newvideo'}
             with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS':'false','DATA_DIR':temp}), \
+                 patch.object(publisher, '_utc_now', return_value=datetime(2000,1,1,tzinfo=timezone.utc)), \
                  patch.object(publisher, '_supabase_post', side_effect=post), \
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret') as start, \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
                 publisher.publish(result)
             self.assertEqual(requested, ['2026-11-24T03:00:00Z','2026-11-25T03:00:00Z'])
             start.assert_called_once()
+
+    def test_conflict_retry_never_uses_a_past_or_too_close_slot(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); video=root/'clip.mp4'; video.write_bytes(b'x'*2048); result=root/'result.json'
+            result.write_text(json.dumps({'metadata': {'job_id':'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3',
+                'game_id':'game','title':'Review','description':'Facts','tags':[], 'category_id':'20',
+                'publish_at':'2026-11-24T03:00:00Z','video_format':'long','video_path':str(video)}}))
+            requested=[]
+            def post(path, payload):
+                if path.endswith('prepare'):
+                    requested.append(payload['metadata']['publish_at'])
+                    if len(requested)==1: raise publisher.SlotOccupied('already scheduled')
+                    return {'status':'ready_for_upload','access_token':'short-lived-access-token'}
+                return {'status':'scheduled','video_id':'newvideo'}
+            with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS':'false','DATA_DIR':temp}), \
+                 patch.object(publisher, '_utc_now', return_value=datetime(2026,11,27,2,30,tzinfo=timezone.utc)), \
+                 patch.object(publisher, '_supabase_post', side_effect=post), \
+                 patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret'), \
+                 patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
+                publisher.publish(result)
+            self.assertEqual(requested, ['2026-11-24T03:00:00Z','2026-11-28T03:00:00Z'])
 
     def test_four_occupied_slots_fail_without_starting_upload(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -290,6 +314,7 @@ class PublisherNetworkTests(unittest.TestCase):
                 'game_id': 'game', 'title': 'Review', 'description': 'Facts', 'tags': [], 'category_id': '20',
                 'publish_at': '2026-12-01T07:00:00Z', 'video_format':'short', 'video_path': str(video)}}))
             with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS': 'false'}), \
+                 patch.object(publisher, '_utc_now', return_value=datetime(2000,1,1,tzinfo=timezone.utc)), \
                  patch.object(publisher, '_supabase_post', side_effect=publisher.SlotOccupied('busy')) as post, \
                  patch.object(publisher, '_start_youtube_session') as start:
                 with self.assertRaisesRegex(publisher.PublishError, 'Four regular'):
@@ -345,6 +370,7 @@ class PublisherNetworkTests(unittest.TestCase):
                 'publish_at':'2026-12-01T03:00:00Z', 'requested_publish_at':'2026-12-01T03:00:00Z',
                 'video_format':'long', 'video_path':str(video)}}))
             with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS':'false'}), \
+                 patch.object(publisher, '_utc_now', return_value=datetime(2000,1,1,tzinfo=timezone.utc)), \
                  patch.object(publisher, '_supabase_post', side_effect=publisher.SlotOccupied('busy')) as post, \
                  patch.object(publisher, '_start_youtube_session') as start:
                 with self.assertRaisesRegex(publisher.PublishError, 'Requested publication slot is occupied'):
