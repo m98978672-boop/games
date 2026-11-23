@@ -14,6 +14,7 @@ from pathlib import Path
 from gameplay_captions import render_srt
 from gameplay_edit import probe
 from gameplay_voiceover import probe_capture
+from gameplay_review_evidence import session_evidence, spoken_review, release_gate
 
 ACTION_TEXT = {
     'FORWARD': 'двигаемся вперёд', 'BACK': 'отступаем назад',
@@ -35,6 +36,7 @@ def narration_events(report: dict, duration: float) -> list[tuple[float, str]]:
         raise ValueError('Missing bounded action trace')
     events = [(0.0, 'Привет! Сегодня Квеня пробует выживать в независимой игре, похожей на Майнкрафт. Мы помогаем ей с некоторыми действиями.')]
     previous = -1
+    previous_health = None
     for number, step in enumerate(steps, 1):
         if not isinstance(step, dict) or step.get('step') != number or type(step.get('step')) is not int:
             raise ValueError('Invalid action step')
@@ -44,15 +46,19 @@ def narration_events(report: dict, duration: float) -> list[tuple[float, str]]:
                 or not isinstance(action, str) or action not in ACTION_TEXT or type(assisted) is not bool):
             raise ValueError('Invalid action timing or action')
         previous = ms
-        prefix = 'С внешней помощью' if assisted else 'Следующее действие'
-        events.append((ms / 1000, f'{prefix}: {ACTION_TEXT[action]}.'))
-    outcome = report.get('stop_reason')
-    if outcome == 'game_reported_death':
-        ending = 'Итог: игра сообщила о гибели персонажа. Добыча и прохождение не подтверждены.'
-    elif outcome == 'game_reported_wood_obtained':
-        ending = 'Итог: игра сообщила о получении дерева. Полное прохождение не подтверждено.'
-    else:
-        ending = 'Итог: пробная сессия завершена. Полное прохождение не подтверждено.'
+        prefix = 'С внешней помощью' if assisted else ('Теперь' if number % 2 else 'Пробуем дальше')
+        text = f'{prefix}: {ACTION_TEXT[action]}.'
+        delta = step.get('game_reported_camera_delta')
+        if action.startswith('LOOK') and type(delta) in (int, float) and math.isfinite(delta) and delta > .001:
+            text += ' По диагностике игры камера повернулась.'
+        health = step.get('game_reported_health')
+        if (type(health) in (int, float) and math.isfinite(health) and 0 <= health <= 20
+                and previous_health is not None and health < previous_health):
+            text += ' Игра сообщает о потере здоровья.'
+        if type(health) in (int, float) and math.isfinite(health) and 0 <= health <= 20:
+            previous_health = health
+        events.append((ms / 1000, text))
+    ending = spoken_review(session_evidence(report))
     # This is positioned after synthesis using its measured duration.
     events.append((duration, ending))
     return events
@@ -66,13 +72,15 @@ def voiceover(video: Path, trace_path: Path, destination: Path) -> dict:
         raise ValueError('Invalid input or destination')
     from renderer import synthesize
     duration = probe_capture(video)
-    events = narration_events(json.loads(trace_path.read_text(encoding='utf-8')), duration)
+    report = json.loads(trace_path.read_text(encoding='utf-8'))
+    evidence = session_evidence(report)
+    events = narration_events(report, duration)
     with tempfile.TemporaryDirectory(prefix='.voxel-voice-', dir=destination.parent) as temp:
         tmp = Path(temp)
         clips = []
         for index, (at, text) in enumerate(events):
             wav = tmp / f'voice-{index:04}.wav'
-            length = synthesize(text, wav, style='bright' if index == 0 else 'reflective' if index == len(events)-1 else 'neutral')
+            length = synthesize(text, wav, style='bright' if index == 0 or (index < len(events)-1 and index % 3 == 0) else 'reflective' if index == len(events)-1 else 'neutral')
             if not math.isfinite(length) or not 0 < length <= 30:
                 raise ValueError('Invalid speech duration')
             clips.append((at, text, wav, length))
@@ -107,7 +115,10 @@ def voiceover(video: Path, trace_path: Path, destination: Path) -> dict:
         (final / 'voiced.ru.srt').write_text(render_srt(cues,end=duration),encoding='utf-8')
         max_silence = max([cues[0][0]] + [b[0]-a[1] for a,b in zip(cues,cues[1:])] + [duration-cues[-1][1]])
         result = {'duration_seconds':round(duration,2),'spoken_clips':len(cues),'max_silence_seconds':round(max_silence,2),
+                  'spoken_seconds':round(sum(end-start for start,end,_ in cues),2),
                   'game_audio':False,'recorded_playthrough_completed':False,'published':False}
+        result['evidence'] = evidence
+        result['release_blockers'] = release_gate(evidence, result)
         (final / 'voiceover-report.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
         if destination.exists() or destination.is_symlink():
             raise FileExistsError('Destination appeared during render')

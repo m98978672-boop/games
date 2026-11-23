@@ -13,14 +13,14 @@ from voxel_voiceover import narration_events
 
 class VoxelVoiceTests(unittest.TestCase):
     def setUp(self):
-        self.report = {'recorded':True,'published':False,'stop_reason':'game_reported_death',
+        self.report = {'recorded':True,'published':False,'trained':False,'supervisor_interventions':[], 'stop_reason':'game_reported_death',
                        'model_actions':[{'step':1,'action':'FORWARD','recording_elapsed_ms':5000,'scripted_initial_approach':True},
                                         {'step':2,'action':'MINE','recording_elapsed_ms':11000,'scripted_initial_approach':False}]}
     def test_honest_actions_and_ending(self):
         events=narration_events(self.report,30)
         self.assertIn('Привет',events[0][1]); self.assertIn('помощью',events[1][1])
         self.assertIn('пробуем добывать',events[2][1]); self.assertIn('гибели',events[-1][1])
-        self.assertIn('не подтверждены',events[-1][1])
+        self.assertIn('Баг игры не подтверждён',events[-1][1])
     @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'ffmpeg required')
     def test_renders_video_and_matching_subtitles(self):
         from voxel_voiceover import voiceover

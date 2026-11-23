@@ -70,7 +70,9 @@ jobs:
           if-no-files-found: error
           retention-days: 3
       - name: Verify factual narration and caption pipeline
-        run: python -m unittest discover -s youtube-bot/tests -p 'test_voxel_voiceover.py'
+        run: |
+          python -m unittest discover -s youtube-bot/tests -p 'test_voxel_voiceover.py'
+          python -m unittest discover -s youtube-bot/tests -p 'test_gameplay_review_evidence.py'
       - name: Download private Russian voice model
         run: |
           curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/voice.onnx" https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
