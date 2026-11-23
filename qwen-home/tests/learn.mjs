@@ -290,6 +290,9 @@ check('сложные игры записаны в уроки: перебор, �
 
 const wantsPy = await readFile(path.join(home, 'tools', 'wants.py'), 'utf8');
 const bridgeSensePy = await readFile(path.join(home, 'tools', 'bridge-sense.py'), 'utf8');
+check('мост читает счёт игр из дома, а не теряет его: games.json попадает на страницу мира',
+  bridgeSensePy.includes("(BRIDGE / 'games.json')") && bridgeSensePy.includes('fresh_games') && bridgeSensePy.includes("payload['games'] = games"));
+
 check('сложные игры идут сами: расписание турнира, награды за честный счёт, счёт на странице мира',
   existsSync(path.join(home, '..', '.github', 'workflows', 'kvenya-games.yml')) &&
   (await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-games.yml'), 'utf8')).includes('games-tournament.mjs') &&

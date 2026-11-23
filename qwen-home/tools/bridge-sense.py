@@ -123,6 +123,16 @@ def main():
         wants = json.loads((BRIDGE / 'wants.json').read_text(encoding='utf-8'))
     except Exception:
         pass
+    # Счёт сложных игр читаем из ДОМА (games.json), а не из старого bridge.json:
+    # раньше переменная games нигде не заполнялась, и блок игр вообще не попадал
+    # на страницу мира — счёт был записан, но его никто не видел.
+    games = old_bridge.get('games')
+    try:
+        fresh_games = json.loads((BRIDGE / 'games.json').read_text(encoding='utf-8'))
+        if fresh_games:
+            games = fresh_games
+    except Exception:
+        pass
     payload = {
         'updatedAt': stamp,
         'source': 'ru.wikipedia.org',
