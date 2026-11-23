@@ -242,7 +242,7 @@ class PublisherNetworkTests(unittest.TestCase):
             root = Path(temp); video = root / "clip.mp4"; video.write_bytes(b"x" * 2048)
             result = root / "result.json"
             metadata = {"job_id": "b85e890f-7dd0-4d35-a7ab-8ef24ba826b3", "game_id": "game", "title": "Review",
-                        "description": "Facts", "tags": [], "category_id": "20", "publish_at": "2026-12-01T07:00:00Z", "video_path": str(video)}
+                        "description": "Facts", "tags": [], "category_id": "20", "publish_at": "2026-12-01T07:00:00Z", "video_format":"short", "video_path": str(video)}
             result.write_text(json.dumps({"metadata": metadata}))
             requests = []
             def post(path, payload):
@@ -256,7 +256,7 @@ class PublisherNetworkTests(unittest.TestCase):
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret') as start, \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
                 publisher.publish(result)
-            self.assertEqual([r['publish_at'] for r in requests], ['2026-12-01T07:00:00Z', '2026-12-01T07:05:00Z'])
+            self.assertEqual([r['publish_at'] for r in requests], ['2026-12-01T07:00:00Z', '2026-12-01T09:00:00Z'])
             self.assertEqual(requests[0]['job_id'], requests[1]['job_id'])
             self.assertEqual(start.call_count, 1)
 
@@ -266,11 +266,11 @@ class PublisherNetworkTests(unittest.TestCase):
             result = root / 'result.json'
             result.write_text(json.dumps({'metadata': {'job_id': 'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3',
                 'game_id': 'game', 'title': 'Review', 'description': 'Facts', 'tags': [], 'category_id': '20',
-                'publish_at': '2026-12-01T07:00:00Z', 'video_path': str(video)}}))
+                'publish_at': '2026-12-01T07:00:00Z', 'video_format':'short', 'video_path': str(video)}}))
             with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS': 'false'}), \
                  patch.object(publisher, '_supabase_post', side_effect=publisher.SlotOccupied('busy')) as post, \
                  patch.object(publisher, '_start_youtube_session') as start:
-                with self.assertRaisesRegex(publisher.PublishError, 'Four nearby'):
+                with self.assertRaisesRegex(publisher.PublishError, 'Four regular'):
                     publisher.publish(result)
                 self.assertEqual(post.call_count, 4)
                 start.assert_not_called()
@@ -278,14 +278,48 @@ class PublisherNetworkTests(unittest.TestCase):
     def test_http_409_requires_a_distinct_valid_job_id(self):
         expected = 'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3'
         other = '22222222-2222-4222-8222-222222222222'
-        for supplied, category in ((other, publisher.SlotOccupied), (expected, publisher.PublishError), (None, publisher.PublishError)):
-            response = json.dumps({'status': 'failed', 'job_id': supplied, 'error': 'slot unavailable'}).encode()
+        for supplied, category in ((other, publisher.SlotOccupied), (None, publisher.PublishError)):
+            response = json.dumps({'status': 'scheduled', 'job_id': supplied, 'error': 'slot unavailable'}).encode()
             error = HTTPError('https://example.test', 409, 'Conflict', {}, io.BytesIO(response))
             with self.subTest(job_id=supplied), patch.object(publisher, 'github_oidc_token', return_value='oidc'), \
                  patch.object(publisher, '_safe_urlopen', side_effect=error), self.assertRaises(category) as raised:
                 publisher._supabase_post('/autopilot/prepare', {'metadata': {'job_id': expected}})
             if category is publisher.PublishError:
                 self.assertNotIsInstance(raised.exception, publisher.SlotOccupied)
+
+    def test_same_scheduled_job_is_idempotent(self):
+        expected = 'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3'
+        response = json.dumps({'status':'scheduled','job_id':expected, 'video_id':'video123'}).encode()
+        error = HTTPError('https://example.test',409,'Conflict',{},io.BytesIO(response))
+        with patch.object(publisher,'github_oidc_token',return_value='oidc'), \
+             patch.object(publisher,'_safe_urlopen',side_effect=error):
+            self.assertEqual(publisher._supabase_post('/autopilot/prepare', {'metadata':{'job_id':expected}})['video_id'], 'video123')
+
+    def test_unfinished_other_job_does_not_automatically_move_to_new_slot(self):
+        expected = 'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3'
+        other = '22222222-2222-4222-8222-222222222222'
+        for state in ('processing', 'failed'):
+            response = json.dumps({'status': state, 'job_id': other}).encode()
+            error = HTTPError('https://example.test', 409, 'Conflict', {}, io.BytesIO(response))
+            with self.subTest(state=state), patch.object(publisher, 'github_oidc_token', return_value='oidc'), \
+                 patch.object(publisher, '_safe_urlopen', side_effect=error), self.assertRaises(publisher.PublishError) as caught:
+                publisher._supabase_post('/autopilot/prepare', {'metadata': {'job_id': expected}})
+            self.assertNotIsInstance(caught.exception, publisher.SlotOccupied)
+
+    def test_explicit_manual_time_is_never_shifted(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); video=root/'clip.mp4'; video.write_bytes(b'x'*2048)
+            result=root/'result.json'
+            result.write_text(json.dumps({'metadata': {'job_id':'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3',
+                'game_id':'game', 'title':'Review', 'description':'Facts', 'tags':[], 'category_id':'20',
+                'publish_at':'2026-12-01T03:00:00Z', 'requested_publish_at':'2026-12-01T03:00:00Z',
+                'video_format':'long', 'video_path':str(video)}}))
+            with patch.dict(os.environ, {'YOUTUBE_MADE_FOR_KIDS':'false'}), \
+                 patch.object(publisher, '_supabase_post', side_effect=publisher.SlotOccupied('busy')) as post, \
+                 patch.object(publisher, '_start_youtube_session') as start:
+                with self.assertRaisesRegex(publisher.PublishError, 'Requested publication slot is occupied'):
+                    publisher.publish(result)
+                self.assertEqual(post.call_count,1); start.assert_not_called()
 
     def test_publish_fails_closed_without_owner_audience_value(self):
         with tempfile.TemporaryDirectory() as temp:

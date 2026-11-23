@@ -17,6 +17,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, timedelta, timezone
+from schedule_policy import next_publish_slot
 from pathlib import Path
 from typing import Any
 
@@ -177,7 +178,7 @@ def _supabase_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
             if (status == 409 and result.get("status") in {"scheduled", "processing"}
                     and result.get("job_id") == expected_job_id):
                 return result
-            if (path == "/autopilot/prepare" and status == 409
+            if (path == "/autopilot/prepare" and status == 409 and result.get("status") == "scheduled"
                     and _different_job_id(result.get("job_id"), expected_job_id)):
                 raise SlotOccupied("Publish slot belongs to a different job; no upload was started.") from exc
             if status not in TRANSIENT_HTTP:
@@ -415,16 +416,23 @@ def publish(result_path: Path) -> dict[str, Any]:
                 raise SlotOccupied("Publish slot belongs to a different job; no upload was started.")
             break
         except SlotOccupied:
+            # Only a positively identified, already-scheduled different job
+            # reaches this branch. Never move an explicitly requested time.
+            if metadata.get("requested_publish_at"):
+                raise PublishError("Requested publication slot is occupied; no upload was started. Choose another time after checking Studio.")
             if slot_attempt == 3:
-                raise PublishError("Four nearby publication slots were occupied; no upload was started.")
+                raise PublishError("Four regular publication slots were occupied; no upload was started.")
             try:
                 previous = datetime.fromisoformat(str(metadata["publish_at"]).replace("Z", "+00:00"))
-                if previous.tzinfo is None:
-                    raise ValueError("Timezone required")
-                metadata["publish_at"] = (previous.astimezone(timezone.utc) + timedelta(minutes=5)).isoformat().replace("+00:00", "Z")
+                video_format = metadata.get("video_format")
+                if previous.tzinfo is None or video_format not in {"short", "long"}:
+                    raise ValueError("Timezone and format required")
+                next_slot = next_publish_slot(previous.astimezone(timezone.utc) + timedelta(seconds=1),
+                                              video_format=video_format, min_lead=timedelta(0))
+                metadata["publish_at"] = next_slot.isoformat().replace("+00:00", "Z")
             except (TypeError, ValueError, OverflowError) as exc:
-                raise PublishError("Invalid publication time; no upload was started.") from exc
-            print(f"::warning::Publication slot occupied; trying a one-time later slot {metadata['publish_at']}. Recurring schedule is unchanged.")
+                raise PublishError("Cannot safely find the next regular slot; no upload was started.") from exc
+            print(f"::warning::A different scheduled job occupies this slot; trying next regular slot {metadata['publish_at']}. No upload has started yet.")
     if prepared.get("status") == "scheduled" and prepared.get("video_id"):
         if prepared.get("job_id") != metadata["job_id"]:
             raise PublishError("Publisher did not identify the job for this slot; no second video was uploaded. Check YouTube Studio.")
