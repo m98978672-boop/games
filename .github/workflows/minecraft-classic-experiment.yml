@@ -48,3 +48,11 @@ jobs:
           cat "$RUNNER_TEMP/minecraft-probe.log"
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/minecraft-probe.log"; fi
           exit "$result"
+      - name: Keep pixelated startup diagnostic briefly
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-pixelated-startup-${{ github.run_id }}
+          path: ${{ runner.temp }}/minecraft-pixelated-preview.png
+          if-no-files-found: warn
+          retention-days: 1

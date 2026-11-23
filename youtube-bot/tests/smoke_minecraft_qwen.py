@@ -1,7 +1,9 @@
 """One-off 12-decision online Minecraft Classic probe, never publishes/trains."""
 import base64
 import json
+import io
 import os
+from PIL import Image, ImageFilter
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -19,6 +21,11 @@ with MinecraftBridge() as bridge:
     obs=bridge.receive(timeout=60)
     setup = obs.get('setup')
     diagnostic = obs.get('diagnostic')
+    # Highly pixelated preview only: do not retain readable world invite URLs.
+    if os.environ.get('RUNNER_TEMP'):
+        frame = Image.open(io.BytesIO(base64.b64decode(obs['screenshot_png_base64'], validate=True))).convert('RGB')
+        preview = frame.resize((80, 60), Image.Resampling.BOX).filter(ImageFilter.GaussianBlur(1)).resize((800, 600), Image.Resampling.NEAREST)
+        preview.save(Path(os.environ['RUNNER_TEMP']) / 'minecraft-pixelated-preview.png')
     if setup not in ('start_form_not_found', 'start_form_not_found_or_timeout', 'start_clicked_not_verified'):
         raise RuntimeError('Unexpected startup result')
     for step in range(12):
