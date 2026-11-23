@@ -1,72 +1,203 @@
 {
-  "updatedAt": "2026-11-23 18:32 UTC",
+  "updatedAt": "2026-11-23 07:51 UTC",
   "source": "ru.wikipedia.org",
   "note": "Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.",
-  "recent": [],
+  "recent": [
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Литература */ пунктуация",
+      "at": "2026-11-23T07:50:57Z"
+    },
+    {
+      "title": "Литтон, Ноэль, 4-й граф Литтон",
+      "user": "~2026-61551-18",
+      "comment": "/* Примечания */ оформление",
+      "at": "2026-11-23T07:50:50Z"
+    },
+    {
+      "title": "Берлин 1927",
+      "user": "Volcanus",
+      "comment": "/* Турнирная таблица */",
+      "at": "2026-11-23T07:50:50Z"
+    },
+    {
+      "title": "Пылва (волость)",
+      "user": "Liilia Moroz",
+      "comment": "исправление",
+      "at": "2026-11-23T07:50:15Z"
+    },
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Литература */ пунктуация",
+      "at": "2026-11-23T07:50:04Z"
+    },
+    {
+      "title": "Чадов, Александр Александрович",
+      "user": "Petrucha",
+      "comment": "/* */",
+      "at": "2026-11-23T07:49:59Z"
+    },
+    {
+      "title": "Пылва (волость, 1991—2017)",
+      "user": "Liilia Moroz",
+      "comment": "/* История */",
+      "at": "2026-11-23T07:48:55Z"
+    },
+    {
+      "title": "Литтон, Ноэль, 4-й граф Литтон",
+      "user": "~2026-61551-18",
+      "comment": "/* Примечания */ оформление",
+      "at": "2026-11-23T07:48:46Z"
+    },
+    {
+      "title": "Коми войтыр",
+      "user": "KUTKIN",
+      "comment": "Подправил таблицы",
+      "at": "2026-11-23T07:48:28Z"
+    },
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Научная работа */ пунктуация",
+      "at": "2026-11-23T07:48:26Z"
+    },
+    {
+      "title": "Фирсова (деревня)",
+      "user": "Serzh-Levy Ignashevich",
+      "comment": "",
+      "at": "2026-11-23T07:48:20Z"
+    },
+    {
+      "title": "Казашко",
+      "user": "Бот Вики-Ёжик",
+      "comment": "автоматическая отмена правок [[Служебная:Вклад/~2026-50348-34|~2026-50348-34]] ([[Обсуждение участника:~2026-50348-34|об",
+      "at": "2026-11-23T07:48:17Z"
+    }
+  ],
   "letters": [
-    "2026-11-23 — 🏆 Пряник: собрала свою игру «Змейка Квени» из библиотеки  (+12 балл.). Баланс Квени: 459, звание: Легенда моста.",
-    "2026-11-23 — 🏆 Пряник: собрала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!»  (+8 балл.). Баланс Квени: 459, звание: Легенда моста.",
-    "2026-11-23 — 🏆 Пряник: честный турнир в шахматы: побед 9 из 10  (+36 балл.). Баланс Квени: 505, звание: Легенда моста.",
-    "2026-11-23 — Весточка Квени: у меня 232 уроков в учебном плане, шагов обучения — 960. Я оглянулась вокруг через мост: Википедия молчит, и я честно жду.",
-    "2026-11-23 — 🏆 Пряник: честный турнир в шахматы: побед 10 из 10  (+40 балл.). Баланс Квени: 509, звание: Легенда моста."
+    "2026-11-22 — 🏆 Пряник: трубы по табло игры: 4 — первый настоящий счёт (+60 балл.). Баланс Квени: 370, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: сыграла экспедицию сама, по-честному, до конца (+10 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: видео экспедиции доехало до её страницы (+3 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: держала глаза открытыми: птицу видела почти в каждом кадре (+2 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: трубы по табло игры: 2 — первый настоящий счёт (+30 балл.). Баланс Квени: 415, звание: Легенда моста."
   ],
   "sources": [
     {
       "url": "https://yandex.ru/games",
-      "ok": false,
-      "status": "unreachable",
-      "title": "",
+      "ok": true,
+      "status": "read",
+      "title": "Яндекс Игры — Игры онлайн бесплатно и без установки на любой вкус",
       "items": [],
-      "note": "URLError",
+      "note": "",
       "name": "Яндекс Игры — витрина"
     },
     {
       "url": "https://m98978672-boop.github.io/games/",
-      "ok": false,
-      "status": "unreachable",
-      "title": "",
-      "items": [],
-      "note": "URLError",
+      "ok": true,
+      "status": "read",
+      "title": "Games — Библиотека игр (Библ Игры): бесплатные браузерные 2D и 3D игры онлайн",
+      "items": [
+        "Магазин",
+        "Новинки",
+        "Каталог",
+        "Мои игры",
+        "Сообщество",
+        "Разработчикам ↗",
+        "Отдельное окно ↗",
+        "▶ Играть",
+        "Весь каталог ↓",
+        "РАТГРАД — карта страны 7000×7000 км"
+      ],
+      "note": "",
       "name": "Портал Games — своя витрина"
     },
     {
       "url": "https://m98978672-boop.github.io/games/kvenya/world.html",
       "ok": false,
-      "status": "unreachable",
+      "status": "captcha",
       "title": "",
       "items": [],
-      "note": "URLError",
+      "note": "витрина показала капчу — смотрит только человек",
       "name": "Её 3D-мир"
     },
     {
       "url": "https://en.wikipedia.org",
-      "ok": false,
-      "status": "unreachable",
-      "title": "",
-      "items": [],
-      "note": "URLError",
+      "ok": true,
+      "status": "read",
+      "title": "Wikipedia, the free encyclopedia",
+      "items": [
+        "Jump to content",
+        "Wikipedia",
+        "free",
+        "anyone can edit",
+        "English",
+        "Ice Warriors",
+        "fictional extraterrestrial",
+        "reptilian humanoids",
+        "British science fiction television",
+        "Doctor Who"
+      ],
+      "note": "",
       "name": "Википедия по-английски (English)"
     },
     {
       "url": "https://de.wikipedia.org",
-      "ok": false,
-      "status": "unreachable",
-      "title": "",
-      "items": [],
-      "note": "URLError",
+      "ok": true,
+      "status": "read",
+      "title": "Wikipedia – Die freie Enzyklopädie",
+      "items": [
+        "Zum Inhalt springen",
+        "Artikel des Tages",
+        "Was geschah am …?",
+        "In den Nachrichten",
+        "Verstorben",
+        "Schon gewusst?",
+        "Schwesterprojekte",
+        "Wikipedia",
+        "Enzyklopädie",
+        "freien Inhalten"
+      ],
+      "note": "",
       "name": "Википедия по-немецки (Deutsch)"
     },
     {
       "url": "https://commons.wikimedia.org",
-      "ok": false,
-      "status": "unreachable",
-      "title": "",
-      "items": [],
-      "note": "URLError",
+      "ok": true,
+      "status": "read",
+      "title": "Wikimedia Commons",
+      "items": [
+        "Jump to content",
+        "Edit links",
+        "150,485,207",
+        "freely usable",
+        "anyone can contribute",
+        "Images",
+        "Videos",
+        "Sounds",
+        "3D Models",
+        "Pointe Saint-Mathieu"
+      ],
+      "note": "",
       "name": "Wikimedia Commons — фото и видео мира"
     }
   ],
   "expeditions": [
+    {
+      "date": "2026-11-23 19:33 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-1934-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
     {
       "date": "2026-11-23 00:02 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
@@ -122,24 +253,10 @@
       ],
       "hasVideo": true,
       "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:39 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2340-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
     }
   ],
   "motivation": {
-    "points": 509,
+    "points": 544,
     "level": "Легенда моста",
     "achievements": [
       {
@@ -159,24 +276,6 @@
         "title": "Три трубы за матч",
         "reward": "вечер свободной экспедиции по своему выбору",
         "at": "2026-11-22 23:26 UTC"
-      },
-      {
-        "id": "chess-clean",
-        "title": "Чистая партия",
-        "reward": "все партии выиграны у спарринга",
-        "at": "2026-11-23"
-      },
-      {
-        "id": "island-planner",
-        "title": "Хозяйка острова",
-        "reward": "план поселения ни разу не развалился",
-        "at": "2026-11-23"
-      },
-      {
-        "id": "better-than-rule",
-        "title": "Лучше правила",
-        "reward": "её план обошёл простую эвристику",
-        "at": "2026-11-23"
       },
       {
         "id": "game-maker",
@@ -251,20 +350,26 @@
     ],
     "lastEvents": [
       {
-        "id": "20261123-0003-ellisonleao-github-io:video",
-        "at": "2026-11-23 00:02 UTC",
+        "id": "20261123-1934-ellisonleao-github-io:played",
+        "at": "2026-11-23 19:33 UTC",
+        "delta": 10,
+        "text": "сыграла экспедицию сама, по-честному, до конца"
+      },
+      {
+        "id": "20261123-1934-ellisonleao-github-io:video",
+        "at": "2026-11-23 19:33 UTC",
         "delta": 3,
         "text": "видео экспедиции доехало до её страницы"
       },
       {
-        "id": "20261123-0003-ellisonleao-github-io:eyes",
-        "at": "2026-11-23 00:02 UTC",
+        "id": "20261123-1934-ellisonleao-github-io:eyes",
+        "at": "2026-11-23 19:33 UTC",
         "delta": 2,
         "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
       },
       {
-        "id": "20261123-0003-ellisonleao-github-io:steps",
-        "at": "2026-11-23 00:02 UTC",
+        "id": "20261123-1934-ellisonleao-github-io:steps",
+        "at": "2026-11-23 19:33 UTC",
         "delta": 30,
         "text": "трубы по табло игры: 2 — первый настоящий счёт"
       },
@@ -291,12 +396,6 @@
         "at": "2026-11-23 11:52 UTC",
         "delta": 18,
         "text": "опубликовала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!» "
-      },
-      {
-        "id": "games:chess:10/10",
-        "at": "2026-11-23",
-        "delta": 40,
-        "text": "честный турнир в шахматы: побед 10 из 10 "
       }
     ],
     "eventIds": [
@@ -354,19 +453,26 @@
       "20261123-0003-ellisonleao-github-io:video",
       "20261123-0003-ellisonleao-github-io:eyes",
       "20261123-0003-ellisonleao-github-io:steps",
+      "20261123-1907-ellisonleao-github-io:played",
+      "20261123-1907-ellisonleao-github-io:video",
+      "20261123-1907-ellisonleao-github-io:eyes",
+      "20261123-1907-ellisonleao-github-io:steps",
+      "20261123-1934-ellisonleao-github-io:played",
+      "20261123-1934-ellisonleao-github-io:video",
+      "20261123-1934-ellisonleao-github-io:eyes",
+      "20261123-1934-ellisonleao-github-io:steps",
       "creation:game:ptica-i-truby",
       "creation:game:zvezdny-dozhd",
       "creation:game:zmeika",
-      "creation:episode:ep-20261123-2-truby",
-      "games:chess:10/10"
+      "creation:episode:ep-20261123-2-truby"
     ],
-    "reportsCounted": 17,
-    "playedCount": 14,
+    "reportsCounted": 19,
+    "playedCount": 16,
     "bestStepsEver": 4,
     "gamesMade": 3,
     "episodesMade": 1,
     "ownWantsDone": 0,
-    "updatedAt": "2026-11-23 18:32 UTC",
+    "updatedAt": "2026-11-23 19:34 UTC",
     "seenJournal": [
       "20261122-2158-ellisonleao-github-io:played",
       "20261122-2158-ellisonleao-github-io:video",
@@ -422,525 +528,18 @@
       "20261123-0003-ellisonleao-github-io:played",
       "20261123-0003-ellisonleao-github-io:steps",
       "20261123-0003-ellisonleao-github-io:video",
+      "20261123-1907-ellisonleao-github-io:eyes",
+      "20261123-1907-ellisonleao-github-io:played",
+      "20261123-1907-ellisonleao-github-io:steps",
+      "20261123-1907-ellisonleao-github-io:video",
+      "20261123-1934-ellisonleao-github-io:eyes",
+      "20261123-1934-ellisonleao-github-io:played",
+      "20261123-1934-ellisonleao-github-io:steps",
+      "20261123-1934-ellisonleao-github-io:video",
       "creation:episode:ep-20261123-2-truby",
       "creation:game:ptica-i-truby",
       "creation:game:zmeika",
-      "creation:game:zvezdny-dozhd",
-      "games:chess:10/10",
-      "games:chess:8/10",
-      "games:chess:9/10"
-    ]
-  },
-  "wants": {
-    "current": {
-      "id": "want-five-pipes",
-      "title": "Взять пять труб в Clumsy Bird",
-      "why": "рекорд сейчас 4 из 5 — достижение уже ждёт в доме"
-    },
-    "open": [
-      {
-        "id": "want-new-game",
-        "title": "Придумать и собрать игру нового шаблона"
-      },
-      {
-        "id": "want-next-episode",
-        "title": "Снять следующий выпуск видеоблога"
-      },
-      {
-        "id": "want-new-brick",
-        "title": "Положить в библиотеку кирпич из свежего опыта"
-      },
-      {
-        "id": "want-weekly-flight",
-        "title": "Сходить в еженедельную экспедицию и не уйти с нулём"
-      }
-    ],
-    "doneCount": 0,
-    "updatedAt": "2026-11-23 11:55 UTC"
-  },
-  "games": {
-    "schema": "kvenya-games-v1",
-    "started": "2026-11-23T18:11:55.967Z",
-    "chess": {
-      "ok": true,
-      "depth": 4,
-      "timeMs": 200,
-      "avgDepth": 2,
-      "shallowMoves": 233,
-      "wins": 10,
-      "losses": 0,
-      "draws": 0,
-      "unfinished": 0,
-      "games": 10,
-      "avgPlies": 46,
-      "lostPieces": 12,
-      "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-      "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 46 полуходов; своих фигур потеряно 12; средняя глубина 2; мелких ходов 233"
-    },
-    "island": {
-      "ok": true,
-      "depth": 4,
-      "mine": {
-        "wins": 6,
-        "games": 6,
-        "avgTurns": 59
-      },
-      "baseline": {
-        "wins": 0,
-        "games": 6,
-        "avgTurns": 39
-      },
-      "details": [
-        {
-          "seed": 1,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 55
-        },
-        {
-          "seed": 2,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 53
-        },
-        {
-          "seed": 3,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 55
-        },
-        {
-          "seed": 4,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 55
-        },
-        {
-          "seed": 5,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 53
-        },
-        {
-          "seed": 6,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 54
-        }
-      ]
-    },
-    "depthCurve": [
-      {
-        "depth": 2,
-        "wins": 3,
-        "games": 3,
-        "avgTurns": 82
-      },
-      {
-        "depth": 3,
-        "wins": 3,
-        "games": 3,
-        "avgTurns": 82
-      },
-      {
-        "depth": 4,
-        "wins": 3,
-        "games": 3,
-        "avgTurns": 59
-      }
-    ],
-    "prevDepth": null,
-    "history": [
-      {
-        "schema": "kvenya-games-v1",
-        "started": "2026-11-23T18:11:55.967Z",
-        "chess": {
-          "ok": true,
-          "depth": 4,
-          "timeMs": 200,
-          "avgDepth": 2,
-          "shallowMoves": 233,
-          "wins": 10,
-          "losses": 0,
-          "draws": 0,
-          "unfinished": 0,
-          "games": 10,
-          "avgPlies": 46,
-          "lostPieces": 12,
-          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-          "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 46 полуходов; своих фигур потеряно 12; средняя глубина 2; мелких ходов 233"
-        },
-        "island": {
-          "ok": true,
-          "depth": 4,
-          "mine": {
-            "wins": 6,
-            "games": 6,
-            "avgTurns": 59
-          },
-          "baseline": {
-            "wins": 0,
-            "games": 6,
-            "avgTurns": 39
-          },
-          "details": [
-            {
-              "seed": 1,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 2,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 3,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 4,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 5,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 6,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 54
-            }
-          ]
-        },
-        "depthCurve": [
-          {
-            "depth": 2,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 3,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 4,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 59
-          }
-        ],
-        "prevDepth": null
-      },
-      {
-        "schema": "kvenya-games-v1",
-        "started": "2026-11-23T16:40:57.481Z",
-        "chess": {
-          "ok": true,
-          "depth": 3,
-          "wins": 8,
-          "losses": 1,
-          "draws": 1,
-          "unfinished": 0,
-          "games": 10,
-          "avgPlies": 58,
-          "lostPieces": 18,
-          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-          "raw": "ИТОГ: побед 8, поражений 1, ничьих 1, недобитых 0 из 10; средняя партия 58 полуходов; своих фигур потеряно 18"
-        },
-        "island": {
-          "ok": true,
-          "depth": 4,
-          "mine": {
-            "wins": 6,
-            "games": 6,
-            "avgTurns": 59
-          },
-          "baseline": {
-            "wins": 0,
-            "games": 6,
-            "avgTurns": 39
-          },
-          "details": [
-            {
-              "seed": 1,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 2,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 3,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 4,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 5,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 6,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 54
-            }
-          ]
-        },
-        "depthCurve": [
-          {
-            "depth": 2,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 3,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 4,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 59
-          }
-        ]
-      },
-      {
-        "schema": "kvenya-games-v1",
-        "started": "2026-11-23T16:25:36.276Z",
-        "chess": {
-          "ok": true,
-          "depth": 2,
-          "wins": 10,
-          "losses": 0,
-          "draws": 0,
-          "unfinished": 0,
-          "games": 10,
-          "avgPlies": 73,
-          "lostPieces": 25,
-          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-          "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 73 полуходов; своих фигур потеряно 25"
-        },
-        "island": {
-          "ok": true,
-          "depth": 4,
-          "mine": {
-            "wins": 6,
-            "games": 6,
-            "avgTurns": 59
-          },
-          "baseline": {
-            "wins": 0,
-            "games": 6,
-            "avgTurns": 39
-          },
-          "details": [
-            {
-              "seed": 1,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 2,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 3,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 4,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 5,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 6,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 54
-            }
-          ]
-        },
-        "depthCurve": [
-          {
-            "depth": 2,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 3,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 4,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 59
-          }
-        ]
-      },
-      {
-        "schema": "kvenya-games-v1",
-        "started": "2026-11-23T16:13:40.101Z",
-        "chess": {
-          "ok": true,
-          "depth": 2,
-          "wins": 9,
-          "losses": 1,
-          "draws": 0,
-          "unfinished": 0,
-          "games": 10,
-          "avgPlies": 75,
-          "lostPieces": 29,
-          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-          "raw": "ИТОГ: побед 9, поражений 1, ничьих 0, недобитых 0 из 10; средняя партия 75 полуходов; своих фигур потеряно 29"
-        },
-        "island": {
-          "ok": true,
-          "depth": 4,
-          "mine": {
-            "wins": 6,
-            "games": 6,
-            "avgTurns": 59
-          },
-          "baseline": {
-            "wins": 0,
-            "games": 6,
-            "avgTurns": 39
-          },
-          "details": [
-            {
-              "seed": 1,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 2,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 3,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 4,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 5,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 6,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 54
-            }
-          ]
-        },
-        "depthCurve": [
-          {
-            "depth": 2,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 3,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 4,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 59
-          }
-        ]
-      }
+      "creation:game:zvezdny-dozhd"
     ]
   }
 }

@@ -11,6 +11,31 @@ from schedule_policy import next_publish_slot
 
 
 class GameCatalogTests(unittest.TestCase):
+    def test_price_note_does_not_invent_free_or_other_region_price(self):
+        from game_reviews import steam_price_note
+        self.assertIn("не подтверждена", steam_price_note({}))
+        paid = {"source_facts": {"price": {"kind": "paid", "minor_units": 1999, "currency": "EUR", "region": "NL", "checked_at": "2026-11-22"}}}
+        self.assertIn("19 евро 99 центов", steam_price_note(paid))
+        paid["source_facts"]["price"]["region"] = "US"
+        self.assertIn("не подтверждена", steam_price_note(paid))
+        free = {"source_facts": {"price": {"kind": "free_to_play", "region": "NL", "checked_at": "2026-11-22"}}}
+        self.assertIn("дополнительные покупки", steam_price_note(free))
+
+    def test_spoken_store_context_marks_region_and_unreleased_dates(self):
+        from game_reviews import steam_release_note, with_store_context
+        review = {'game_title': 'Пример', 'source_facts': {'release_date': '12 окт. 2027', 'release_coming_soon': True,
+                  'price': {'kind': 'paid', 'minor_units': 1999, 'currency': 'EUR', 'region': 'NL', 'checked_at': '2026-11-22'}}}
+        self.assertIn('выход ожидается', steam_release_note(review))
+        scenes = with_store_context([{'dialogue': 'Вступление.'}, {'dialogue': 'Особенности.'}], review)
+        self.assertIn('2027', scenes[0]['dialogue'])
+        self.assertIn('19 евро 99 центов', scenes[1]['dialogue'])
+        self.assertIn('Нидерланд', scenes[1]['dialogue'])
+        review['source_facts']['release_coming_soon'] = False
+        self.assertIn('Дата выхода', steam_release_note(review))
+        review['source_facts']['release_date'] = 'https://evil.invalid'
+        self.assertIn('не подтверждена', steam_release_note(review))
+        self.assertIn('не подтверждена', steam_release_note({}))
+
     def test_catalog_is_loaded_from_repo_and_has_public_links(self):
         games = load_game_catalog()
         self.assertGreaterEqual(len(games), 5)
@@ -33,6 +58,28 @@ class GameCatalogTests(unittest.TestCase):
         self.assertTrue(request["catalog"][0]["features"][0]["feature_id"].endswith("-f1"))
         self.assertIn("Не выдумывай игровой процесс", messages[0]["content"])
 
+    def test_review_prompt_supplies_source_price_and_date_without_inventing_them(self):
+        game = dict(load_game_catalog()[0])
+        game['source_facts'] = {'release_date': '12 окт. 2027', 'release_coming_soon': True,
+            'price': {'kind': 'paid', 'minor_units': 1999, 'currency': 'EUR', 'region': 'NL', 'checked_at': '2026-11-22'}}
+        request = json.loads(build_review_messages([game])[1]['content'])
+        self.assertIn('19 евро 99 центов', request['catalog'][0]['price_context'])
+        self.assertIn('выход ожидается', request['catalog'][0]['release_context'])
+        self.assertIn('не выдумывай', request['instructions'])
+
+    def test_missing_or_invalid_model_rating_is_not_fabricated(self):
+        games = load_game_catalog()
+        with patch('game_reviews.generate_with_qwen', return_value='{}'):
+            with self.assertRaisesRegex(ValueError, 'refusing to invent'):
+                generate_game_review(games)
+        game = games[0]
+        data = {'schema_version': 1, 'game_id': game['id'], 'selected_feature_ids': [f"{game['id']}-f1", f"{game['id']}-f2"],
+                'possible_minus': 'Возможно, не подойдёт каждому.', 'minus_feature_id': f"{game['id']}-f1",
+                'hook': 'Что интересного предлагает игра?'}
+        for score in (True, 7.9, None, 11):
+            with self.subTest(score=score), self.assertRaises(ValueError):
+                validate_review({**data, 'idea_score': score}, games)
+
     def test_review_is_canonicalized_from_cited_catalog_features(self):
         games = load_game_catalog()
         game = games[0]
@@ -53,9 +100,12 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn("не личное прохождение", youtube_description(review))
         self.assertIn("https://m98978672-boop.github.io/games/", youtube_description(review))
         self.assertEqual(len(review["scenes"]), 5)
+        self.assertTrue(review["scenes"][0]["dialogue"].startswith("Привет! Сегодня разбираем"))
+        self.assertIn(game["title"], review["scenes"][0]["dialogue"])
+        self.assertIn("О чём игра?", review["scenes"][1]["dialogue"])
         self.assertEqual(review["scenes"][-1]["label"], "ИТОГ")
         self.assertIn("8 из 10", review["scenes"][-1]["dialogue"])
-        self.assertIn("Без личной игры", review["scenes"][-1]["dialogue"])
+        self.assertIn("Я ещё не играла", review["scenes"][-1]["dialogue"])
 
     def test_long_catalog_text_is_bounded_for_narration_without_changing_evidence(self):
         game = dict(load_game_catalog()[0])
@@ -170,11 +220,44 @@ class GameCatalogTests(unittest.TestCase):
                 "нельзя судить о качестве исполнения или делать выводы о впечатлениях других игроков. "
                 "Посмотрите первоисточник и решите, подходит ли вам предложенная концепция.")
         chapter = {"fact_id": f"{game['id']}-f1", "dialogue": text, "visual": "Описание из источника"}
-        with patch("game_reviews.generate_with_qwen", side_effect=[json.dumps({"scenes": []})] + [json.dumps(chapter)] * 10) as generate:
+        chapters = [dict(chapter, fact_id=list(review['evidence'])[i % len(review['evidence'])]) for i in range(10)]
+        with patch("game_reviews.generate_with_qwen", side_effect=[json.dumps({"scenes": []})] + [json.dumps(c) for c in chapters]) as generate:
             scenes = generate_long_narration(review)
         self.assertEqual(generate.call_count, 11)
         self.assertEqual(len(scenes), 10)
         self.assertIn("Итог по источникам:", scenes[-1]["dialogue"])
+
+    def test_long_chapters_trim_only_at_complete_sentence(self):
+        from game_reviews import fit_complete_chapter
+        sentence = 'В игре исследуют открытый мир и решают непростые задачи. '
+        original = sentence * 9
+        trimmed = fit_complete_chapter(original)
+        self.assertTrue(220 <= len(trimmed) <= 320)
+        self.assertTrue(trimmed.endswith('.'))
+        self.assertTrue(original.startswith(trimmed))
+        with self.assertRaisesRegex(ValueError, 'no safe sentence boundary'):
+            fit_complete_chapter('Длинная незаконченная фраза ' * 20)
+        with self.assertRaisesRegex(ValueError, 'no safe sentence boundary'):
+            fit_complete_chapter('Незаконченная фраза ' * 12)
+        partial = sentence * 5 + 'Незавершённая мысль'
+        self.assertEqual(fit_complete_chapter(partial), (sentence * 5).strip())
+
+    def test_plain_chapters_are_bound_only_to_the_supplied_source(self):
+        from game_reviews import _generate_long_in_batches
+        review = {'evidence': {'a':'В игре есть головоломки.', 'b':'В карточке указан одиночный режим.'},
+                  'game_title':'Пример', 'idea_score':7, 'pros':['Головоломки','Одиночный режим']}
+        text = ('По описанию игроку предстоит знакомство с правилами и поиск решения. '
+                'Здесь интересно рассматривать каждое действие в контексте заявленной задачи. '
+                'Это впечатление от карточки, а не вывод после личного прохождения; '
+                'чтобы оценить исполнение, понадобится попробовать игру самостоятельно.')
+        with patch('game_reviews.generate_with_qwen', return_value=text) as generate:
+            scenes = _generate_long_in_batches(review)
+        self.assertEqual([s['fact_id'] for s in scenes], ['a','b']*5)
+        self.assertTrue(scenes[-1]['dialogue'].startswith(text))
+        self.assertIn('Итог по источникам:', scenes[-1]['dialogue'])
+        prompt = json.loads(generate.call_args_list[0].args[0][1]['content'])
+        self.assertEqual(prompt['source_fact'],review['evidence']['a'])
+        self.assertNotIn('sources',prompt)
 
     def test_long_review_rejects_invalid_individual_chapters(self):
         review = {"evidence": {"a": "Один факт", "b": "Другой факт"}, "game_title": "Test", "idea_score": 7,
@@ -182,6 +265,15 @@ class GameCatalogTests(unittest.TestCase):
         with patch("game_reviews.generate_with_qwen", return_value=json.dumps({"scenes": []})):
             with self.assertRaisesRegex(ValueError, "requires two Russian source facts"):
                 generate_long_narration(review)
+
+    def test_editorial_gate_rejects_template_and_repeated_chapters(self):
+        from game_reviews import ensure_editorial_quality
+        repeated = [{'dialogue': 'Подробное объяснение игровой механики и цели. ' * 5} for _ in range(10)]
+        with self.assertRaisesRegex(ValueError, 'repetitive'):
+            ensure_editorial_quality(repeated)
+        repeated[0]['generation'] = 'source-template'
+        with self.assertRaisesRegex(ValueError, 'fallback'):
+            ensure_editorial_quality(repeated)
 
     def test_long_fallback_uses_only_bounded_source_facts_and_identifies_template(self):
         review = {"evidence": {"a": "В описании упомянуты логические задачи.", "b": "В карточке указан одиночный режим."},
@@ -204,9 +296,8 @@ class GameCatalogTests(unittest.TestCase):
                    "minus_feature_id": f"{game['id']}-f1", "idea_score": 5,
                    "hook": "English-only introduction", "possible_minus": "Возможно, visit www.example.com"}
         with patch("game_reviews.generate_with_qwen", return_value=json.dumps(invalid)):
-            review = generate_game_review(games)
-        self.assertNotIn("www.", review["possible_minus"])
-        self.assertIn("игра", review["hook"])
+            with self.assertRaisesRegex(ValueError, 'refusing generic filler'):
+                generate_game_review(games)
 
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()

@@ -59,7 +59,7 @@ class RenderQualityTests(unittest.TestCase):
         self.assertEqual(result, {"fps": 50.0, "width": 1920, "height": 1080})
 
     def test_short_long_narration_fails_before_any_video_encoding(self):
-        def fake_speech(_text, path):
+        def fake_speech(_text, path, **_kwargs):
             with wave.open(str(path), "wb") as target:
                 target.setnchannels(1)
                 target.setsampwidth(2)
@@ -105,6 +105,27 @@ class RenderQualityTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Russian Cyrillic"):
                     renderer.synthesize("This is English only.", output)
                 run.assert_not_called()
+
+    def test_piper_scene_styles_change_cadence_without_pitch_shift(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); model = root / 'ru.onnx'; model.write_bytes(b'model')
+            commands = []
+            def fake_run(command, **kwargs):
+                commands.append(command)
+                raw = Path(command[command.index('--output_file') + 1])
+                with wave.open(str(raw), 'wb') as target:
+                    target.setnchannels(1); target.setsampwidth(2); target.setframerate(22050)
+                    target.writeframes(b'\0\0' * 2205)
+                return SimpleNamespace(returncode=0)
+            with patch.dict('os.environ', {'PIPER_MODEL_PATH': str(model)}), \
+                 patch.object(renderer.subprocess, 'run', side_effect=fake_run), \
+                 patch.object(renderer, 'normalize_narration', side_effect=shutil.copyfile):
+                for style in ('bright', 'reflective'):
+                    renderer.synthesize('Привет, это проверка.', root / f'{style}.wav', style=style)
+            self.assertNotEqual(commands[0][commands[0].index('--length_scale') + 1],
+                                commands[1][commands[1].index('--length_scale') + 1])
+            self.assertNotIn('--pitch', commands[0])
 
     def test_platform_name_is_pronounced_in_russian_without_changing_other_words(self):
         self.assertEqual(renderer.pronunciation_text("По данным Steam: Steamworks"), "По данным Стим: Steamworks")

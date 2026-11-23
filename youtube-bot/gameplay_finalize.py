@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from gameplay_2048 import COMMIT
+from gameplay_captions import render_srt
 
 OUTCOMES = {"won": "Партия выиграна.", "lost": "Партия завершилась поражением.",
             "no_legal_move": "Допустимых ходов больше не найдено.",
@@ -121,6 +122,7 @@ def main() -> None:
     audio_filters = []
     labels = ["[silence]"]
     spoken = 0
+    cues: list[tuple[float, float, str]] = []
     for event in events:
         clip = root / f"commentary-{spoken:03d}.wav"
         subprocess.run(["espeak-ng", "-v", "ru", "-s", "145", "-w", str(clip), commentary_text(event)], check=True)
@@ -134,6 +136,7 @@ def main() -> None:
         audio_inputs.extend(["-i", str(clip)])
         audio_filters.append(f"[{index}:a]aresample=48000,aformat=channel_layouts=stereo,adelay={int(event['at'] * 1000)}:all=1[c{spoken}]")
         labels.append(f"[c{spoken}]")
+        cues.append((float(event["at"]), float(event["at"]) + clip_seconds, commentary_text(event)))
         spoken += 1
     # The outro is deliberately a separate recap, never looped gameplay.
     filters = (f"[0:v]fps=25,scale=1280:720,setsar=1,format=yuv420p,setpts=PTS-STARTPTS[game];"
@@ -148,10 +151,14 @@ def main() -> None:
                     "-i", str(wav), *audio_inputs, "-filter_complex", filters, "-map", "[v]", "-map", "[a]", "-c:v", "libx264",
                     "-preset", "veryfast", "-crf", "23", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(output)],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    cues.append((duration, duration + speech_seconds, text))
+    (root / "captions-cues.json").write_text(json.dumps(cues, ensure_ascii=False), encoding="utf-8")
+    (root / "gameplay-with-recap.ru.srt").write_text(
+        render_srt(cues, end=duration + outro_seconds), encoding="utf-8")
     summary = {"capture_seconds": round(duration, 2), "recap_seconds": round(outro_seconds, 2),
                "outcome": report["outcome"], "moves": report["moves"], "score": report["score"],
                "max_tile": report["max_tile"], "video": output.name, "uploaded": False,
-               "commentary_clips": spoken, "voice": "espeak-ng Russian; deterministic timed commentary and recap", "game_audio": False}
+               "commentary_clips": spoken, "captions": "gameplay-with-recap.ru.srt", "voice": "espeak-ng Russian; deterministic timed commentary and recap", "game_audio": False}
     (root / "final-report.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False))
 
