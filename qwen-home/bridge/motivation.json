@@ -3,12 +3,6 @@
   "level": "Ветеран моста",
   "achievements": [
     {
-      "id": "veteran-exp",
-      "title": "Ветеран экспедиций",
-      "reward": "сама предлагает маршрут недели в журнале моста",
-      "at": "2026-11-23 21:17 UTC"
-    },
-    {
       "id": "first-pipe",
       "title": "Первая труба",
       "reward": "право самой выбрать следующую игру экспедиции",
@@ -18,6 +12,12 @@
       "id": "three-pipes",
       "title": "Три трубы за матч",
       "reward": "вечер свободной экспедиции по своему выбору",
+      "at": "2026-11-23 21:39 UTC"
+    },
+    {
+      "id": "veteran-exp",
+      "title": "Ветеран экспедиций",
+      "reward": "сама предлагает маршрут недели в журнале моста",
       "at": "2026-11-23 21:39 UTC"
     },
     {
@@ -49,8 +49,8 @@
   "closedDuties": [],
   "lastEvents": [
     {
-      "id": "20261123-2146-colinhuang314-github-io:video",
-      "at": "2026-11-23 21:45 UTC",
+      "id": "20261123-2149-colinhuang314-github-io:video",
+      "at": "2026-11-23 21:47 UTC",
       "delta": 3,
       "text": "видео экспедиции доехало до её страницы"
     },
@@ -98,8 +98,6 @@
     }
   ],
   "eventIds": [
-    "20261123-2049-colinhuang314-github-io:played",
-    "20261123-2049-colinhuang314-github-io:video",
     "20261123-2100-colinhuang314-github-io:played",
     "20261123-2100-colinhuang314-github-io:video",
     "20261123-2118-colinhuang314-github-io:played",
@@ -110,6 +108,8 @@
     "20261123-2140-ellisonleao-github-io:steps",
     "20261123-2146-colinhuang314-github-io:played",
     "20261123-2146-colinhuang314-github-io:video",
+    "20261123-2149-colinhuang314-github-io:played",
+    "20261123-2149-colinhuang314-github-io:video",
     "creation:game:ptica-i-truby",
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
@@ -124,7 +124,7 @@
   "gamesMade": 3,
   "episodesMade": 4,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-23 21:46 UTC",
+  "updatedAt": "2026-11-23 21:49 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -194,6 +194,8 @@
     "20261123-2140-ellisonleao-github-io:video",
     "20261123-2146-colinhuang314-github-io:played",
     "20261123-2146-colinhuang314-github-io:video",
+    "20261123-2149-colinhuang314-github-io:played",
+    "20261123-2149-colinhuang314-github-io:video",
     "creation:episode:ep-20261123-2-truby",
     "creation:episode:ep-20261123-4-truby",
     "creation:episode:ep-20261123-5-truby",

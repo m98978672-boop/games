@@ -1,45 +1,45 @@
 {
   "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
-  "startedAt": "2026-11-23 20:48 UTC",
+  "startedAt": "2026-11-23 21:47 UTC",
   "status": "played",
   "steps": [
     {
-      "t": 81.1,
+      "t": 65.9,
       "action": "вежливый гость: проверка robots.txt",
       "result": "robots.txt прочитан"
     },
     {
-      "t": 86.8,
+      "t": 70.4,
       "action": "открыла страницу",
       "result": "Lost Spot (Draft)"
     },
     {
-      "t": 86.9,
+      "t": 70.5,
       "action": "кнопка игры",
       "result": "не нашлась — пробую играть прямо на открытой странице"
     },
     {
-      "t": 91.0,
+      "t": 74.6,
       "action": "это сюжетная игра, а не полёт",
       "result": "история «Lost Spot (Draft)»: текст и варианты выбора, играю чтением, а не кадрами"
     },
     {
-      "t": 91.0,
+      "t": 74.6,
       "action": "читаю историю",
       "result": "сюжетная игра: смотрю текст пассажа и варианты, кликаю по выбору, помню свой путь"
     },
     {
-      "t": 142.0,
+      "t": 125.5,
       "action": "финал",
       "result": "↶ Congratulations ! You finished the game! The End"
     },
     {
-      "t": 142.9,
+      "t": 126.4,
       "action": "финал",
       "result": "↶ Congratulations ! You finished the game! The End"
     },
     {
-      "t": 142.9,
+      "t": 126.4,
       "action": "итог истории",
       "result": "прошла 37 выборов, финалов в записи: 2; последний выбор — «Game Over»"
     }
@@ -305,5 +305,6 @@
       "fresh": true,
       "text": "↶ \"You lost spot?!\" Mom said furiously. \"You are super-grounded!\" Game Over"
     }
-  }
+  },
+  "storyLine": "прошла историю: 37 выборов (35 в новых местах), последний выбор «Game Over» · дошла до финала: ↶ Congratulations ! You finished the game! The End"
 }
