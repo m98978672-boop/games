@@ -70,7 +70,7 @@ def detect_controls(text):
     return list(KEY_PLAN), 650, 'cycle', 'подсказок на экране нет — запасной план'
 
 
-EYES_JS = r"""
+EYES_SUMMARY_JS = r"""
 () => {
   const c = document.querySelector('canvas');
   if (!c) return {ok: false, why: 'no canvas'};
@@ -80,8 +80,8 @@ EYES_JS = r"""
   let img;
   try { img = ctx.getImageData(0, 0, c.width, c.height); }
   catch (e) { return {ok: false, why: 'pixels closed'}; }
-  const w = c.width, h = c.height, d = img.data, step = 3;
-  const bird = [], pipe = [], dark = [];
+  const w = c.width, h = c.height, d = img.data, step = 4;
+  const birdPts = [], cols = {}, darkCols = {}, rowCols = {};
   let cream = 0, creamAll = 0;
   const cx0 = w * 0.30, cx1 = w * 0.70, cy0 = h * 0.20, cy1 = h * 0.62;
   for (let y = 0; y < h; y += step) {
@@ -89,21 +89,47 @@ EYES_JS = r"""
       const i = (y * w + x) * 4;
       const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
       if (a < 200) continue;
-      // птица: жёлтое тело и оранжевый клюв спрайта clumsy
-      if (r > 200 && g > 150 && b < 120 && r - b > 90) bird.push(x, y);
-      // трубы: зелень спрайта pipe (кусты фона отсечёт разбор по строкам)
-      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205)) pipe.push(x, y);
-      // чёрная окантовка труб и текста
-      if (r < 70 && g < 70 && b < 70) dark.push(x, y);
-      // кремовая панель game over по центру кадра
+      if (r > 200 && g > 150 && b < 120 && r - b > 90 && x >= 0.02 * w && x <= 0.24 * w && y < 0.80 * h) birdPts.push([x, y]);
+      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205) && y < 0.86 * h) {
+        (cols[x] = cols[x] || []).push(y);
+        (rowCols[y] = rowCols[y] || new Set()).add(x);
+      }
+      if (r < 70 && g < 70 && b < 70) darkCols[x] = (darkCols[x] || 0) + 1;
       if (x >= cx0 && x <= cx1 && y >= cy0 && y <= cy1) {
         creamAll++;
         if (r > 220 && g > 220 && b > 140 && b < 225) cream++;
       }
     }
   }
-  return {ok: true, w: w, h: h, bird: bird, pipe: pipe, dark: dark,
-          cream: creamAll ? cream / creamAll : 0};
+  let bird = null;
+  if (birdPts.length >= 5) {
+    const xs = birdPts.map(p => p[0]).sort((a, b) => a - b);
+    const ys = birdPts.map(p => p[1]).sort((a, b) => a - b);
+    bird = [xs[xs.length >> 1], ys[ys.length >> 1]];
+  }
+  const wide = Math.max(6, Math.floor(0.15 * w));
+  const bgRows = new Set(Object.keys(rowCols).filter(y => rowCols[y].size >= wide).map(Number));
+  let gap = null, pipeX = null;
+  if (bird) {
+    const ahead = Object.keys(cols).map(Number).filter(x => x > bird[0] + 0.05 * w).sort((a, b) => a - b);
+    for (const x of ahead) {
+      const ys = cols[x].filter(y => !bgRows.has(y)).sort((a, b) => a - b);
+      const top = ys.filter(y => y < 0.30 * h);
+      if (top.length >= 3 && (darkCols[x] || 0) >= 4) {
+        pipeX = x;
+        const gapTop = top[top.length - 1];
+        const below = ys.filter(y => y > gapTop + 0.06 * h);
+        let gapBottom = below.length ? below[0] : Math.min(0.86 * h, gapTop + 0.293 * h);
+        if (gapBottom - gapTop < 0.16 * h || gapBottom - gapTop > 0.50 * h) {
+          gapBottom = Math.min(0.86 * h, gapTop + 0.293 * h);
+        }
+        gap = [gapTop, gapBottom];
+        break;
+      }
+    }
+  }
+  return {ok: true, w: w, h: h, bird: bird, gap: gap, pipe_x: pipeX,
+          game_over: creamAll ? (cream / creamAll) > 0.35 : false};
 }
 """
 
@@ -169,7 +195,7 @@ def _decode_png(data):
 def analyze_eyes(raw):
     """Разобрать кадр: где птица, где просвет труб, не конец ли игры.
 
-    На входе — кандидаты пикселей из EYES_JS (или из PNG-скриншота).
+    На входе — кандидаты пикселей из скриншота канваса (PNG-путь глаз).
     Птица живёт слева (в Clumsy Bird x=60 из 900), поэтому жёлтое
     ищем только в левой четверти кадра: по центру тот же жёлтый —
     надписи «get ready» и «game over», это не птица."""
@@ -215,6 +241,10 @@ def analyze_eyes(raw):
                 gap_top = top[-1]
                 below = [y for y in ys if y > gap_top + 0.06 * h]
                 gap_bottom = below[0] if below else min(0.86 * h, gap_top + 0.293 * h)
+                # проверка просвета: настоящий просвет у таких игр ~0.29 кадра;
+                # прочиталось сильно уже или шире — не верю нижней границе
+                if gap_bottom - gap_top < 0.16 * h or gap_bottom - gap_top > 0.50 * h:
+                    gap_bottom = min(0.86 * h, gap_top + 0.293 * h)
                 gap = (gap_top, gap_bottom)
                 break
     return {'w': w, 'h': h, 'bird': bird, 'gap': gap, 'pipe_x': pipe_x,
@@ -251,17 +281,37 @@ def eyes_from_png(data):
             'dark': dark, 'cream': (cream / cream_all) if cream_all else 0}
 
 
-def decide_flap(bird_y, target_y, gap_bottom, h, ms_since_flap):
-    """Решение глаз: жать ли клавишу взмаха на этом кадре.
+def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
+    """Решение глаз: жать ли взмах на этом кадре.
 
-    Птица ниже цели — взмах; птица у нижнего края просвета — взмах
-    срочно; только что взмахнули — не спамим, физике нужно время."""
+    Главный урок трасс: птицу убивает не скорость, а ВЫСОТА у трубы:
+    взмах уносит на ~96 px вверх, и если жать у середины просвета,
+    птица взлетает выше его верхнего края — а труба уже здесь.
+    Поэтому играем ЗОНОЙ: взмах только когда птица опустилась в
+    нижнюю четверть просвета (тогда подъём оставляет её внутри),
+    у нижнего края — срочно, на подъёме после взмаха — не мешаем.
+    Без просвета (трубы не видно) — держим высоту target_y."""
     if bird_y is None:
         return False
-    if gap_bottom is not None and bird_y > gap_bottom - 0.05 * h:
-        return ms_since_flap >= 90
-    return bird_y > target_y + 0.012 * h and ms_since_flap >= 120
-
+    if gap:
+        gap_top, gap_bottom = gap
+        if bird_y > gap_bottom - 0.05 * h:
+            return ms_since_flap >= 80
+        # аварийный тормоз: пулей вниз уже в середине просвета —
+        # не ждём зону, скорость сама донесёт до нижнего края
+        if vy >= 45 and bird_y > gap_top + 0.45 * (gap_bottom - gap_top):
+            return ms_since_flap >= 70
+        zone = gap_top + 0.72 * (gap_bottom - gap_top)
+        # прогноз: падаем быстро — к следующему кадру будем в зоне,
+        # жмём СЕЙЧАС, а не когда уже поздно (урок смертей «пулей»)
+        if vy > 8 and bird_y + vy * 0.9 > zone:
+            return ms_since_flap >= 80
+        return bird_y > zone and vy > -14 and ms_since_flap >= 90
+    if vy >= 34 and bird_y > target_y - 0.06 * h:
+        return ms_since_flap >= 80
+    if bird_y > target_y + 0.010 * h and vy > -12 and ms_since_flap >= 100:
+        return True
+    return vy >= 20 and bird_y > target_y - 0.06 * h and ms_since_flap >= 90
 
 class Report:
     def __init__(self, url):
@@ -405,13 +455,18 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
             eyes_png_mode = {'on': False}
 
             def read_eyes():
-                """Кадр глазами: сначала пиксели канваса изнутри страницы,
-                если браузер не даёт — скриншот канваса и свой декодер."""
+                """Кадр глазами: разбор пикселей прямо в странице (быстро,
+                ответ — пять чисел); если страница не даёт пиксели —
+                скриншот канваса и свой декодер."""
                 if not eyes_png_mode['on']:
                     try:
-                        raw = page.evaluate(EYES_JS)
+                        raw = page.evaluate(EYES_SUMMARY_JS)
                         if raw and raw.get('ok'):
-                            return analyze_eyes(raw)
+                            return {'w': raw['w'], 'h': raw['h'],
+                                    'bird': tuple(raw['bird']) if raw.get('bird') else None,
+                                    'gap': tuple(raw['gap']) if raw.get('gap') else None,
+                                    'pipe_x': raw.get('pipe_x'),
+                                    'game_over': bool(raw.get('game_over'))}
                         eyes_png_mode['on'] = True
                         report.step('глаза экспедиции', f"пиксели канваса изнутри не дались ({(raw or {}).get('why', '?')}) — смотрю скриншотами канваса")
                     except Exception:
@@ -439,7 +494,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 attempt = 0
                 shot_no = 3
                 first_start = True
-                while time.monotonic() < deadline - 6 and attempt < 3:
+                while time.monotonic() < deadline - 6 and attempt < 4:
                     attempt += 1
                     if first_start:
                         page.keyboard.press(keys[0] if keys else 'Space')
@@ -452,16 +507,25 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         page.keyboard.press(keys[0] if keys else 'Space')
                     report.step(f'попытка {attempt} (зрение)', f'стартую игру глазами, сдвиг цели {offset:+d} px')
                     attempt_start = time.monotonic()
-                    attempt_end = min(deadline, attempt_start + max(14, int((deadline - attempt_start) / (3 - attempt + 1))))
+                    attempt_end = min(deadline, attempt_start + max(14, int((deadline - attempt_start) / (4 - attempt + 1))))
                     flaps = 0
                     last_flap = 0.0
                     last_gap = None
                     last_gap_at = 0.0
                     last_bird_y = None
+                    last_bird_at = 0.0
                     frame_h = probe['h']
                     over_hits = 0
                     eyes_lost = 0
                     saw_bird = False
+                    frames = bird_frames = gap_frames = 0
+                    mid_shot = False
+                    prev_bird_y = None
+                    trace = []
+                    stuck_frames = 0
+                    flap_key = keys[0] if keys else 'Space'
+                    key_held = False
+                    held_since = 0.0
                     while time.monotonic() < attempt_end:
                         st = read_eyes()
                         if st is None:
@@ -471,41 +535,109 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             page.wait_for_timeout(120)
                             continue
                         eyes_lost = 0
+                        frames += 1
                         now = time.monotonic()
                         frame_h = st['h']
+                        bird_low = bool(st['bird'] and st['bird'][1] > 0.72 * frame_h)
                         if st['gap']:
+                            gap_frames += 1
                             last_gap = st['gap']
                             last_gap_at = now
                         if st['bird']:
+                            bird_frames += 1
                             saw_bird = True
                             last_bird_y = st['bird'][1]
+                            last_bird_at = now
+                        if not mid_shot and now - attempt_start > 6 and shot_no <= 5:
+                            shot(f'0{shot_no}-play.png')
+                            shot_no += 1
+                            mid_shot = True
                         if st['game_over'] and saw_bird and now - attempt_start > 4:
                             over_hits += 1
                             if over_hits >= 2:
                                 break
+                            page.wait_for_timeout(80)
+                            continue
+                        over_hits = 0
+                        # птица была и пропала надолго, а игра по табло стоит —
+                        # попытка кончилась, не сидим на месте до звонка
+                        if saw_bird and not st['bird'] and now - last_bird_at > 2.0 and now - attempt_start > 6:
+                            sb_now = scoreboard()
+                            if sb_now is not None and not sb_now.get('start'):
+                                break
+                        # птица лежит у земли и не двигается несколько кадров —
+                        # это уже не полёт, попытка кончилась
+                        if st['bird'] and bird_low and prev_bird_y is not None and abs(st['bird'][1] - prev_bird_y) <= 3:
+                            stuck_frames += 1
+                            if stuck_frames >= 5 and now - attempt_start > 5:
+                                break
                         else:
-                            over_hits = 0
-                        gap = st['gap'] or (last_gap if now - last_gap_at < 1.2 else None)
+                            stuck_frames = 0
+                        gap = st['gap'] or (last_gap if now - last_gap_at < 0.8 else None)
+                        target = None
+                        flapped = False
                         if st['bird']:
-                            target = ((gap[0] + gap[1]) / 2 if gap else frame_h * 0.42) + offset
-                            ms = int((now - last_flap) * 1000) if last_flap else 9999
-                            if decide_flap(st['bird'][1], target, gap[1] if gap else None, frame_h, ms):
-                                page.keyboard.press(keys[0] if keys else 'Space')
-                                flaps += 1
-                                last_flap = now
-                        page.wait_for_timeout(105)
+                            vy = (st['bird'][1] - prev_bird_y) if prev_bird_y is not None else 0
+                            prev_bird_y = st['bird'][1]
+                            if gap:
+                                # цель для трассы и разбора: середина рабочей зоны
+                                target = gap[0] + 0.72 * (gap[1] - gap[0]) + offset
+                            else:
+                                target = frame_h * 0.42 + offset
+                            # мёртвую не дёргать: лежит у земли неподвижно или
+                            # панель конца игры — там пробел уже «в меню»
+                            corpse = bird_low and abs(vy) <= 3
+                            if key_held:
+                                # держим, пока глаза не УВИДЯТ подъём: опрос игры
+                                # физически не пропустит такое нажатие
+                                if vy < -2 or now - held_since > 0.26:
+                                    page.keyboard.up(flap_key)
+                                    key_held = False
+                            elif not st['game_over'] and not corpse:
+                                ms = int((now - last_flap) * 1000) if last_flap else 9999
+                                if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy):
+                                    page.keyboard.down(flap_key)
+                                    # второй канал ввода: в этой игре клик по канвасу —
+                                    # тот же взмах; хоть один канал да долетит
+                                    try:
+                                        page.mouse.click(cx, cy)
+                                    except Exception:
+                                        pass
+                                    key_held = True
+                                    held_since = now
+                                    flaps += 1
+                                    last_flap = now
+                                    flapped = True
+                        if len(trace) < 400:
+                            trace.append({'t': round(now - attempt_start, 1),
+                                          'b': st['bird'][1] if st['bird'] else None,
+                                          'gx': st.get('pipe_x'),
+                                          'gt': gap[0] if gap else None,
+                                          'gb': gap[1] if gap else None,
+                                          'tg': round(target) if target is not None else None,
+                                          'f': 1 if flapped else 0,
+                                          'o': 1 if st['game_over'] else 0})
+                        # на падении и сразу после взмаха цикл короче:
+                        # цена лишних 40 мс на скорости «пулей» — труба
+                        page.wait_for_timeout(40 if flapped else 75)
+                    if key_held:
+                        try:
+                            page.keyboard.up(flap_key)
+                        except Exception:
+                            pass
+                        key_held = False
                     sb = scoreboard()
                     steps_now = sb.get('steps') if sb else None
                     alive = round(time.monotonic() - attempt_start, 1)
-                    vision['attempts'].append({'n': attempt, 'seconds': alive, 'flaps': flaps, 'steps': steps_now, 'offset': offset})
+                    vision['attempts'].append({'n': attempt, 'seconds': alive, 'flaps': flaps, 'steps': steps_now, 'offset': offset, 'frames': frames, 'birdFrames': bird_frames, 'gapFrames': gap_frames, 'trace': trace[-45:]})
                     if steps_now is not None:
                         vision['bestSteps'] = steps_now if vision['bestSteps'] is None else max(vision['bestSteps'], steps_now)
                     score_txt = f'труб по табло игры: {steps_now}' if steps_now is not None else 'табло не читается — счёт кадрами не подтверждён'
-                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, {score_txt}')
-                    if shot_no <= 5:
+                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, кадров {frames} (птицу видела в {bird_frames}, просвет в {gap_frames}), {score_txt}')
+                    if not mid_shot and shot_no <= 5:
                         shot(f'0{shot_no}-play.png')
                         shot_no += 1
-                    if time.monotonic() < deadline - 8 and attempt < 3:
+                    if time.monotonic() < deadline - 8 and attempt < 4:
                         if last_bird_y is not None and last_bird_y > 0.78 * frame_h:
                             offset = max(-40, offset - 14)
                             cause = 'упала к земле — в следующий раз держу птицу выше'

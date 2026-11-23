@@ -18,6 +18,7 @@ BUILD = os.path.join(HERE, 'build')
 AUDIO = os.path.join(HERE, 'audio')
 sys.path.insert(0, HERE)
 from script import SEGMENTS  # noqa: E402
+import mascot2d as M2  # noqa: E402
 
 FPS = 50
 W, H = 1920, 1080
@@ -188,8 +189,6 @@ def main():
     tl = tld['tl']
     edl, total = build_edl(tl)
     start_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-    rat_dir = os.path.join(BUILD, 'rat')
-    n_rat = len([f for f in os.listdir(rat_dir) if f.endswith('.png')])
     nframes = int(total * FPS)
     print('EDL shots:', len(edl), 'total', round(total, 1), 's', flush=True)
     ff = subprocess.Popen([FFMPEG, '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}',
@@ -202,8 +201,15 @@ def main():
     rng = np.random.default_rng(11)
     conf = [(rng.uniform(0, W), rng.uniform(0, H), int(rng.integers(0, 3))) for _ in range(90)]
 
-    def paste_cam(im, dr, ri, x, y, size, tau):
-        rim = rat_frame(ri, size)
+    def zuza(mood, tau, size):
+        key = (mood, int(tau * 12.5), size)
+        if key not in rat_cache:
+            rat_cache.clear()
+            rat_cache[key] = M2.frame(mood, tau, size)
+        return rat_cache[key]
+
+    def paste_cam(im, dr, mood, x, y, size, tau):
+        rim = zuza(mood, tau, size)
         mask = Image.new('L', (size, size), 0)
         ImageDraw.Draw(mask).rounded_rectangle([0, 0, size - 1, size - 1], radius=26, fill=255)
         sh = Image.new('RGBA', (W, H), (0, 0, 0, 0))
@@ -227,13 +233,6 @@ def main():
         dr2.text((x + 16, y + size - 30), 'маскот канала', font=f_sm, fill=(214, 210, 200))
         dr2.text((x + size - 16, y + size - 30), '♥ Квеня', font=f_sm, anchor='ra', fill=(226, 160, 190))
         return dr2
-
-    def rat_frame(ri, size):
-        key = (ri, size)
-        if key not in rat_cache:
-            rat_cache.clear()
-            rat_cache[key] = Image.open(os.path.join(rat_dir, f'{ri:05d}.png')).resize((size, size))
-        return rat_cache[key]
 
     def hud(dr, tau):
         dr.rectangle([0, 0, W, 64], fill=(16, 18, 16))
@@ -296,18 +295,13 @@ def main():
             hud(dr, tau)
         elif sh['type'] == 'cutaway':
             seg = sh['seg']
-            rim = rat_frame(int(min(n_rat - 1, tau * 12.5)), 1240)
-            bw = rim.crop((80, 80, 1160, 1160)).resize((W, H))
-            bw = bw.filter(ImageFilter.SMOOTH)
-            im.paste(bw, (0, 0))
+            dr.rectangle([0, 0, W, H], fill=(16, 16, 18))
+            big = zuza(seg['mood'], tau, 1080)
+            im.paste(big, ((W - 1080) // 2, 0))
             dr = ImageDraw.Draw(im)
-            for i in range(90):
-                a = int(120 * (1 - i / 90))
-                dr.rectangle([i, i, W - i, H - i], outline=(12 + a // 6, 12 + a // 6, 14 + a // 6))
-            rim2 = rat_frame(int(min(n_rat - 1, tau * 12.5)), 620)
-            im.paste(rim2, (W - 660, H - 660))
-            dr = ImageDraw.Draw(im)
-            dr.rectangle([W - 664, H - 664, W - 36, H - 36], outline=(18, 18, 20), width=4)
+            for i in range(70):
+                a = int(110 * (1 - i / 70))
+                dr.rectangle([(W - 1080) // 2 + i, i, (W + 1080) // 2 - i, H - i], outline=(14 + a // 6, 14 + a // 6, 16 + a // 6))
             dr.rectangle([40, 90, 470, 150], fill=(18, 18, 20))
             dr.text((56, 102), 'ЗУЗА · КРУПНЫЙ ПЛАН', font=f_hud, fill=(232, 228, 216))
             hud(dr, tau)
@@ -399,8 +393,7 @@ def main():
                 x0 = px + 24 + half
                 dr.rectangle([min(x0, x0 + fillw), ey2 + 34, max(x0, x0 + fillw), ey2 + 58], fill=(110, 163, 220))
                 dr.line([(x0, ey2 + 30), (x0, ey2 + 62)], fill=(230, 230, 224), width=3)
-                ri = int(min(n_rat - 1, tau * 12.5))
-                dr = paste_cam(im, dr, ri, 1548, 560, 300, tau)
+                dr = paste_cam(im, dr, seg['mood'], 1548, 560, 300, tau)
                 hud(dr, tau)
                 subs(dr, seg)
             else:

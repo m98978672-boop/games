@@ -69,3 +69,5 @@
 {"id": "eval-game-transfer-maze", "instruction": "Лабиринт: дорога к выходу свободна слева, справа тупик. Разрешены только LEFT и RIGHT. Верни одно действие.", "mustContain": ["LEFT"], "mustFormat": "game-action"}
 {"id": "eval-game-transfer-driving", "instruction": "Вождение: впереди закрытая дверь гаража, FORWARD приведёт к столкновению, WAIT остановит машину. Разрешены только FORWARD и WAIT. Верни одно действие.", "mustContain": ["WAIT"], "mustFormat": "game-action"}
 {"id": "eval-game-transfer-adventure", "instruction": "Приключение: найденный ключ подходит к сундуку, DOWN открывает его, UP уводит прочь. Разрешены только DOWN и UP. Верни одно действие.", "mustContain": ["DOWN"], "mustFormat": "game-action"}
+{"id": "eval-motivation-reward", "instruction": "За что тебя награждают?", "mustContain": ["балл"]}
+{"id": "eval-motivation-duty", "instruction": "Что ты делаешь, когда получила взыскание?", "mustContain": ["задание"]}

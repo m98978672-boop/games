@@ -106,6 +106,23 @@ def main():
         sources.append(got)
         print('витрина:', got['name'], '->', got['status'], flush=True)
 
+    # экспедиции и мотивацию мост не пересоздаёт, а бережно сохраняет:
+    # их пишут экспедиции и дом, сводка не вправе их стирать
+    old_bridge = {}
+    try:
+        old_bridge = json.loads((ROOT / 'kvenya' / 'bridge.json').read_text(encoding='utf-8'))
+    except Exception:
+        old_bridge = {}
+    motivation = old_bridge.get('motivation')
+    try:
+        motivation = json.loads((BRIDGE / 'motivation.json').read_text(encoding='utf-8'))
+    except Exception:
+        pass
+    wants = old_bridge.get('wants')
+    try:
+        wants = json.loads((BRIDGE / 'wants.json').read_text(encoding='utf-8'))
+    except Exception:
+        pass
     payload = {
         'updatedAt': stamp,
         'source': 'ru.wikipedia.org',
@@ -113,6 +130,9 @@ def main():
         'recent': recent,
         'letters': letters,
         'sources': sources,
+        'expeditions': old_bridge.get('expeditions', []),
+        'motivation': motivation,
+        'wants': wants,
     }
     (ROOT / 'kvenya' / 'bridge.json').write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 

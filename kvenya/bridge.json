@@ -1,17 +1,194 @@
 {
-  "updatedAt": "2026-11-22",
+  "updatedAt": "2026-11-23 07:51 UTC",
   "source": "ru.wikipedia.org",
   "note": "Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.",
-  "recent": [],
+  "recent": [
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Литература */ пунктуация",
+      "at": "2026-11-23T07:50:57Z"
+    },
+    {
+      "title": "Литтон, Ноэль, 4-й граф Литтон",
+      "user": "~2026-61551-18",
+      "comment": "/* Примечания */ оформление",
+      "at": "2026-11-23T07:50:50Z"
+    },
+    {
+      "title": "Берлин 1927",
+      "user": "Volcanus",
+      "comment": "/* Турнирная таблица */",
+      "at": "2026-11-23T07:50:50Z"
+    },
+    {
+      "title": "Пылва (волость)",
+      "user": "Liilia Moroz",
+      "comment": "исправление",
+      "at": "2026-11-23T07:50:15Z"
+    },
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Литература */ пунктуация",
+      "at": "2026-11-23T07:50:04Z"
+    },
+    {
+      "title": "Чадов, Александр Александрович",
+      "user": "Petrucha",
+      "comment": "/* */",
+      "at": "2026-11-23T07:49:59Z"
+    },
+    {
+      "title": "Пылва (волость, 1991—2017)",
+      "user": "Liilia Moroz",
+      "comment": "/* История */",
+      "at": "2026-11-23T07:48:55Z"
+    },
+    {
+      "title": "Литтон, Ноэль, 4-й граф Литтон",
+      "user": "~2026-61551-18",
+      "comment": "/* Примечания */ оформление",
+      "at": "2026-11-23T07:48:46Z"
+    },
+    {
+      "title": "Коми войтыр",
+      "user": "KUTKIN",
+      "comment": "Подправил таблицы",
+      "at": "2026-11-23T07:48:28Z"
+    },
+    {
+      "title": "Семашко, Николай Александрович",
+      "user": "Мар Двенадцатый",
+      "comment": "/* Научная работа */ пунктуация",
+      "at": "2026-11-23T07:48:26Z"
+    },
+    {
+      "title": "Фирсова (деревня)",
+      "user": "Serzh-Levy Ignashevich",
+      "comment": "",
+      "at": "2026-11-23T07:48:20Z"
+    },
+    {
+      "title": "Казашко",
+      "user": "Бот Вики-Ёжик",
+      "comment": "автоматическая отмена правок [[Служебная:Вклад/~2026-50348-34|~2026-50348-34]] ([[Обсуждение участника:~2026-50348-34|об",
+      "at": "2026-11-23T07:48:17Z"
+    }
+  ],
   "letters": [
-    "Первая весточка Квени через мост: я учусь снимать сама, оглядываюсь на мир через Википедию и осваиваю Blender, чтобы делать тело по-настоящему."
+    "2026-11-22 — 🏆 Пряник: трубы по табло игры: 4 — первый настоящий счёт (+60 балл.). Баланс Квени: 370, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: сыграла экспедицию сама, по-честному, до конца (+10 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: видео экспедиции доехало до её страницы (+3 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: держала глаза открытыми: птицу видела почти в каждом кадре (+2 балл.). Баланс Квени: 415, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: трубы по табло игры: 2 — первый настоящий счёт (+30 балл.). Баланс Квени: 415, звание: Легенда моста."
+  ],
+  "sources": [
+    {
+      "url": "https://yandex.ru/games",
+      "ok": true,
+      "status": "read",
+      "title": "Яндекс Игры — Игры онлайн бесплатно и без установки на любой вкус",
+      "items": [],
+      "note": "",
+      "name": "Яндекс Игры — витрина"
+    },
+    {
+      "url": "https://m98978672-boop.github.io/games/",
+      "ok": true,
+      "status": "read",
+      "title": "Games — Библиотека игр (Библ Игры): бесплатные браузерные 2D и 3D игры онлайн",
+      "items": [
+        "Магазин",
+        "Новинки",
+        "Каталог",
+        "Мои игры",
+        "Сообщество",
+        "Разработчикам ↗",
+        "Отдельное окно ↗",
+        "▶ Играть",
+        "Весь каталог ↓",
+        "РАТГРАД — карта страны 7000×7000 км"
+      ],
+      "note": "",
+      "name": "Портал Games — своя витрина"
+    },
+    {
+      "url": "https://m98978672-boop.github.io/games/kvenya/world.html",
+      "ok": false,
+      "status": "captcha",
+      "title": "",
+      "items": [],
+      "note": "витрина показала капчу — смотрит только человек",
+      "name": "Её 3D-мир"
+    },
+    {
+      "url": "https://en.wikipedia.org",
+      "ok": true,
+      "status": "read",
+      "title": "Wikipedia, the free encyclopedia",
+      "items": [
+        "Jump to content",
+        "Wikipedia",
+        "free",
+        "anyone can edit",
+        "English",
+        "Ice Warriors",
+        "fictional extraterrestrial",
+        "reptilian humanoids",
+        "British science fiction television",
+        "Doctor Who"
+      ],
+      "note": "",
+      "name": "Википедия по-английски (English)"
+    },
+    {
+      "url": "https://de.wikipedia.org",
+      "ok": true,
+      "status": "read",
+      "title": "Wikipedia – Die freie Enzyklopädie",
+      "items": [
+        "Zum Inhalt springen",
+        "Artikel des Tages",
+        "Was geschah am …?",
+        "In den Nachrichten",
+        "Verstorben",
+        "Schon gewusst?",
+        "Schwesterprojekte",
+        "Wikipedia",
+        "Enzyklopädie",
+        "freien Inhalten"
+      ],
+      "note": "",
+      "name": "Википедия по-немецки (Deutsch)"
+    },
+    {
+      "url": "https://commons.wikimedia.org",
+      "ok": true,
+      "status": "read",
+      "title": "Wikimedia Commons",
+      "items": [
+        "Jump to content",
+        "Edit links",
+        "150,485,207",
+        "freely usable",
+        "anyone can contribute",
+        "Images",
+        "Videos",
+        "Sounds",
+        "3D Models",
+        "Pointe Saint-Mathieu"
+      ],
+      "note": "",
+      "name": "Wikimedia Commons — фото и видео мира"
+    }
   ],
   "expeditions": [
     {
-      "date": "2026-11-22 22:35 UTC",
+      "date": "2026-11-23 00:02 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2236-ellisonleao-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261123-0003-ellisonleao-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
@@ -22,10 +199,10 @@
       "video": "video.webm"
     },
     {
-      "date": "2026-11-22 22:19 UTC",
+      "date": "2026-11-22 23:59 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2220-ellisonleao-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261122-2359-ellisonleao-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
@@ -33,39 +210,13 @@
         "04-play.png"
       ],
       "hasVideo": true,
-      "video": ""
-    },
-    {
-      "date": "2026-11-22 22:15 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "error",
-      "dir": "qwen-home/bridge/expeditions/20261122-2215-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "09-error.png"
-      ],
-      "hasVideo": true,
       "video": "video.webm"
     },
     {
-      "date": "2026-11-22 22:08 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "error",
-      "dir": "qwen-home/bridge/expeditions/20261122-2208-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "09-error.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 21:57 UTC",
+      "date": "2026-11-22 23:51 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2158-ellisonleao-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261122-2352-ellisonleao-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
@@ -73,8 +224,277 @@
         "04-play.png"
       ],
       "hasVideo": true,
-      "video": ""
+      "video": "video.webm"
+    },
+    {
+      "date": "2026-11-22 23:47 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261122-2347-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
+      "date": "2026-11-22 23:39 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261122-2340-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
     }
   ],
-  "sources": []
+  "motivation": {
+    "points": 415,
+    "level": "Легенда моста",
+    "achievements": [
+      {
+        "id": "veteran-exp",
+        "title": "Ветеран экспедиций",
+        "reward": "сама предлагает маршрут недели в журнале моста",
+        "at": "2026-11-22 22:35 UTC"
+      },
+      {
+        "id": "first-pipe",
+        "title": "Первая труба",
+        "reward": "право самой выбрать следующую игру экспедиции",
+        "at": "2026-11-22 22:56 UTC"
+      },
+      {
+        "id": "three-pipes",
+        "title": "Три трубы за матч",
+        "reward": "вечер свободной экспедиции по своему выбору",
+        "at": "2026-11-22 23:26 UTC"
+      }
+    ],
+    "pendingDuties": [],
+    "closedDuties": [
+      {
+        "id": "20261122-2208-ellisonleao-github-io:crash",
+        "kind": "crash",
+        "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+        "at": "2026-11-22 22:08 UTC",
+        "closedBy": "20261122-2220-ellisonleao-github-io"
+      },
+      {
+        "id": "20261122-2215-ellisonleao-github-io:crash",
+        "kind": "crash",
+        "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+        "at": "2026-11-22 22:15 UTC",
+        "closedBy": "20261122-2220-ellisonleao-github-io"
+      },
+      {
+        "id": "20261122-2236-ellisonleao-github-io:pipe",
+        "kind": "pipe",
+        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+        "at": "2026-11-22 22:35 UTC",
+        "closedBy": "20261122-2257-ellisonleao-github-io"
+      },
+      {
+        "id": "20261122-2240-ellisonleao-github-io:pipe",
+        "kind": "pipe",
+        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+        "at": "2026-11-22 22:39 UTC",
+        "closedBy": "20261122-2257-ellisonleao-github-io"
+      },
+      {
+        "id": "20261122-2247-ellisonleao-github-io:pipe",
+        "kind": "pipe",
+        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+        "at": "2026-11-22 22:47 UTC",
+        "closedBy": "20261122-2257-ellisonleao-github-io"
+      },
+      {
+        "id": "20261122-2252-ellisonleao-github-io:crash",
+        "kind": "crash",
+        "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+        "at": "2026-11-22 22:52 UTC",
+        "closedBy": "20261122-2257-ellisonleao-github-io"
+      },
+      {
+        "id": "20261122-2340-ellisonleao-github-io:pipe",
+        "kind": "pipe",
+        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+        "at": "2026-11-22 23:39 UTC",
+        "closedBy": "20261122-2347-ellisonleao-github-io"
+      }
+    ],
+    "lastEvents": [
+      {
+        "id": "20261122-2359-ellisonleao-github-io:played",
+        "at": "2026-11-22 23:59 UTC",
+        "delta": 10,
+        "text": "сыграла экспедицию сама, по-честному, до конца"
+      },
+      {
+        "id": "20261122-2359-ellisonleao-github-io:video",
+        "at": "2026-11-22 23:59 UTC",
+        "delta": 3,
+        "text": "видео экспедиции доехало до её страницы"
+      },
+      {
+        "id": "20261122-2359-ellisonleao-github-io:eyes",
+        "at": "2026-11-22 23:59 UTC",
+        "delta": 2,
+        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
+      },
+      {
+        "id": "20261122-2359-ellisonleao-github-io:steps",
+        "at": "2026-11-22 23:59 UTC",
+        "delta": 60,
+        "text": "трубы по табло игры: 4 — первый настоящий счёт"
+      },
+      {
+        "id": "20261123-0003-ellisonleao-github-io:played",
+        "at": "2026-11-23 00:02 UTC",
+        "delta": 10,
+        "text": "сыграла экспедицию сама, по-честному, до конца"
+      },
+      {
+        "id": "20261123-0003-ellisonleao-github-io:video",
+        "at": "2026-11-23 00:02 UTC",
+        "delta": 3,
+        "text": "видео экспедиции доехало до её страницы"
+      },
+      {
+        "id": "20261123-0003-ellisonleao-github-io:eyes",
+        "at": "2026-11-23 00:02 UTC",
+        "delta": 2,
+        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
+      },
+      {
+        "id": "20261123-0003-ellisonleao-github-io:steps",
+        "at": "2026-11-23 00:02 UTC",
+        "delta": 30,
+        "text": "трубы по табло игры: 2 — первый настоящий счёт"
+      }
+    ],
+    "eventIds": [
+      "20261122-2158-ellisonleao-github-io:played",
+      "20261122-2158-ellisonleao-github-io:video",
+      "20261122-2208-ellisonleao-github-io:error",
+      "20261122-2215-ellisonleao-github-io:error",
+      "20261122-2220-ellisonleao-github-io:played",
+      "20261122-2220-ellisonleao-github-io:video",
+      "20261122-2236-ellisonleao-github-io:played",
+      "20261122-2236-ellisonleao-github-io:video",
+      "20261122-2236-ellisonleao-github-io:zero",
+      "20261122-2240-ellisonleao-github-io:played",
+      "20261122-2240-ellisonleao-github-io:video",
+      "20261122-2240-ellisonleao-github-io:eyes",
+      "20261122-2240-ellisonleao-github-io:zero",
+      "20261122-2247-ellisonleao-github-io:played",
+      "20261122-2247-ellisonleao-github-io:video",
+      "20261122-2247-ellisonleao-github-io:eyes",
+      "20261122-2247-ellisonleao-github-io:zero",
+      "20261122-2252-ellisonleao-github-io:error",
+      "20261122-2257-ellisonleao-github-io:played",
+      "20261122-2257-ellisonleao-github-io:video",
+      "20261122-2257-ellisonleao-github-io:eyes",
+      "20261122-2257-ellisonleao-github-io:steps",
+      "20261122-2324-ellisonleao-github-io:played",
+      "20261122-2324-ellisonleao-github-io:video",
+      "20261122-2324-ellisonleao-github-io:eyes",
+      "20261122-2324-ellisonleao-github-io:steps",
+      "20261122-2327-ellisonleao-github-io:played",
+      "20261122-2327-ellisonleao-github-io:video",
+      "20261122-2327-ellisonleao-github-io:eyes",
+      "20261122-2327-ellisonleao-github-io:steps",
+      "20261122-2336-ellisonleao-github-io:played",
+      "20261122-2336-ellisonleao-github-io:video",
+      "20261122-2336-ellisonleao-github-io:eyes",
+      "20261122-2336-ellisonleao-github-io:steps",
+      "20261122-2340-ellisonleao-github-io:played",
+      "20261122-2340-ellisonleao-github-io:video",
+      "20261122-2340-ellisonleao-github-io:eyes",
+      "20261122-2340-ellisonleao-github-io:zero",
+      "20261122-2347-ellisonleao-github-io:played",
+      "20261122-2347-ellisonleao-github-io:video",
+      "20261122-2347-ellisonleao-github-io:eyes",
+      "20261122-2347-ellisonleao-github-io:steps",
+      "20261122-2352-ellisonleao-github-io:played",
+      "20261122-2352-ellisonleao-github-io:video",
+      "20261122-2352-ellisonleao-github-io:eyes",
+      "20261122-2352-ellisonleao-github-io:steps",
+      "20261122-2359-ellisonleao-github-io:played",
+      "20261122-2359-ellisonleao-github-io:video",
+      "20261122-2359-ellisonleao-github-io:eyes",
+      "20261122-2359-ellisonleao-github-io:steps",
+      "20261123-0003-ellisonleao-github-io:played",
+      "20261123-0003-ellisonleao-github-io:video",
+      "20261123-0003-ellisonleao-github-io:eyes",
+      "20261123-0003-ellisonleao-github-io:steps"
+    ],
+    "reportsCounted": 17,
+    "playedCount": 14,
+    "bestStepsEver": 4,
+    "updatedAt": "2026-11-23 00:03 UTC",
+    "seenJournal": [
+      "20261122-2158-ellisonleao-github-io:played",
+      "20261122-2158-ellisonleao-github-io:video",
+      "20261122-2208-ellisonleao-github-io:error",
+      "20261122-2215-ellisonleao-github-io:error",
+      "20261122-2220-ellisonleao-github-io:played",
+      "20261122-2220-ellisonleao-github-io:video",
+      "20261122-2236-ellisonleao-github-io:played",
+      "20261122-2236-ellisonleao-github-io:video",
+      "20261122-2236-ellisonleao-github-io:zero",
+      "20261122-2240-ellisonleao-github-io:eyes",
+      "20261122-2240-ellisonleao-github-io:played",
+      "20261122-2240-ellisonleao-github-io:video",
+      "20261122-2240-ellisonleao-github-io:zero",
+      "20261122-2247-ellisonleao-github-io:eyes",
+      "20261122-2247-ellisonleao-github-io:played",
+      "20261122-2247-ellisonleao-github-io:video",
+      "20261122-2247-ellisonleao-github-io:zero",
+      "20261122-2252-ellisonleao-github-io:error",
+      "20261122-2257-ellisonleao-github-io:eyes",
+      "20261122-2257-ellisonleao-github-io:played",
+      "20261122-2257-ellisonleao-github-io:steps",
+      "20261122-2257-ellisonleao-github-io:video",
+      "20261122-2324-ellisonleao-github-io:eyes",
+      "20261122-2324-ellisonleao-github-io:played",
+      "20261122-2324-ellisonleao-github-io:steps",
+      "20261122-2324-ellisonleao-github-io:video",
+      "20261122-2327-ellisonleao-github-io:eyes",
+      "20261122-2327-ellisonleao-github-io:played",
+      "20261122-2327-ellisonleao-github-io:steps",
+      "20261122-2327-ellisonleao-github-io:video",
+      "20261122-2336-ellisonleao-github-io:eyes",
+      "20261122-2336-ellisonleao-github-io:played",
+      "20261122-2336-ellisonleao-github-io:steps",
+      "20261122-2336-ellisonleao-github-io:video",
+      "20261122-2340-ellisonleao-github-io:eyes",
+      "20261122-2340-ellisonleao-github-io:played",
+      "20261122-2340-ellisonleao-github-io:video",
+      "20261122-2340-ellisonleao-github-io:zero",
+      "20261122-2347-ellisonleao-github-io:eyes",
+      "20261122-2347-ellisonleao-github-io:played",
+      "20261122-2347-ellisonleao-github-io:steps",
+      "20261122-2347-ellisonleao-github-io:video",
+      "20261122-2352-ellisonleao-github-io:eyes",
+      "20261122-2352-ellisonleao-github-io:played",
+      "20261122-2352-ellisonleao-github-io:steps",
+      "20261122-2352-ellisonleao-github-io:video",
+      "20261122-2359-ellisonleao-github-io:eyes",
+      "20261122-2359-ellisonleao-github-io:played",
+      "20261122-2359-ellisonleao-github-io:steps",
+      "20261122-2359-ellisonleao-github-io:video",
+      "20261123-0003-ellisonleao-github-io:eyes",
+      "20261123-0003-ellisonleao-github-io:played",
+      "20261123-0003-ellisonleao-github-io:steps",
+      "20261123-0003-ellisonleao-github-io:video"
+    ]
+  }
 }

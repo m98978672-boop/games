@@ -1,0 +1,271 @@
+{
+  "points": 469,
+  "level": "Легенда моста",
+  "achievements": [
+    {
+      "id": "veteran-exp",
+      "title": "Ветеран экспедиций",
+      "reward": "сама предлагает маршрут недели в журнале моста",
+      "at": "2026-11-22 22:35 UTC"
+    },
+    {
+      "id": "first-pipe",
+      "title": "Первая труба",
+      "reward": "право самой выбрать следующую игру экспедиции",
+      "at": "2026-11-22 22:56 UTC"
+    },
+    {
+      "id": "three-pipes",
+      "title": "Три трубы за матч",
+      "reward": "вечер свободной экспедиции по своему выбору",
+      "at": "2026-11-22 23:26 UTC"
+    },
+    {
+      "id": "game-maker",
+      "title": "Сборщик игр",
+      "reward": "право придумывать следующий шаблон самой",
+      "at": "2026-11-23"
+    },
+    {
+      "id": "game-smith",
+      "title": "Игровых дел мастер",
+      "reward": "своя полка игр в мире Квени",
+      "at": "2026-11-23"
+    },
+    {
+      "id": "first-episode",
+      "title": "Первый выпуск",
+      "reward": "студия открывает второй сезон",
+      "at": "2026-11-23"
+    }
+  ],
+  "pendingDuties": [],
+  "closedDuties": [
+    {
+      "id": "20261122-2208-ellisonleao-github-io:crash",
+      "kind": "crash",
+      "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+      "at": "2026-11-22 22:08 UTC",
+      "closedBy": "20261122-2220-ellisonleao-github-io"
+    },
+    {
+      "id": "20261122-2215-ellisonleao-github-io:crash",
+      "kind": "crash",
+      "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+      "at": "2026-11-22 22:15 UTC",
+      "closedBy": "20261122-2220-ellisonleao-github-io"
+    },
+    {
+      "id": "20261122-2236-ellisonleao-github-io:pipe",
+      "kind": "pipe",
+      "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+      "at": "2026-11-22 22:35 UTC",
+      "closedBy": "20261122-2257-ellisonleao-github-io"
+    },
+    {
+      "id": "20261122-2240-ellisonleao-github-io:pipe",
+      "kind": "pipe",
+      "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+      "at": "2026-11-22 22:39 UTC",
+      "closedBy": "20261122-2257-ellisonleao-github-io"
+    },
+    {
+      "id": "20261122-2247-ellisonleao-github-io:pipe",
+      "kind": "pipe",
+      "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+      "at": "2026-11-22 22:47 UTC",
+      "closedBy": "20261122-2257-ellisonleao-github-io"
+    },
+    {
+      "id": "20261122-2252-ellisonleao-github-io:crash",
+      "kind": "crash",
+      "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
+      "at": "2026-11-22 22:52 UTC",
+      "closedBy": "20261122-2257-ellisonleao-github-io"
+    },
+    {
+      "id": "20261122-2340-ellisonleao-github-io:pipe",
+      "kind": "pipe",
+      "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
+      "at": "2026-11-22 23:39 UTC",
+      "closedBy": "20261122-2347-ellisonleao-github-io"
+    }
+  ],
+  "lastEvents": [
+    {
+      "id": "20261123-0003-ellisonleao-github-io:played",
+      "at": "2026-11-23 00:02 UTC",
+      "delta": 10,
+      "text": "сыграла экспедицию сама, по-честному, до конца"
+    },
+    {
+      "id": "20261123-0003-ellisonleao-github-io:video",
+      "at": "2026-11-23 00:02 UTC",
+      "delta": 3,
+      "text": "видео экспедиции доехало до её страницы"
+    },
+    {
+      "id": "20261123-0003-ellisonleao-github-io:eyes",
+      "at": "2026-11-23 00:02 UTC",
+      "delta": 2,
+      "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
+    },
+    {
+      "id": "20261123-0003-ellisonleao-github-io:steps",
+      "at": "2026-11-23 00:02 UTC",
+      "delta": 30,
+      "text": "трубы по табло игры: 2 — первый настоящий счёт"
+    },
+    {
+      "id": "creation:game:ptica-i-truby",
+      "at": "2026-11-23",
+      "delta": 12,
+      "text": "собрала свою игру «Птица и трубы» из библиотеки "
+    },
+    {
+      "id": "creation:game:zvezdny-dozhd",
+      "at": "2026-11-23",
+      "delta": 12,
+      "text": "собрала свою игру «Звёздный дождь» из библиотеки "
+    },
+    {
+      "id": "creation:game:zmeika",
+      "at": "2026-11-23",
+      "delta": 12,
+      "text": "собрала свою игру «Змейка Квени» из библиотеки "
+    },
+    {
+      "id": "creation:episode:ep-20261123-2-truby",
+      "at": "2026-11-23 11:52 UTC",
+      "delta": 18,
+      "text": "опубликовала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!» "
+    }
+  ],
+  "eventIds": [
+    "20261122-2158-ellisonleao-github-io:played",
+    "20261122-2158-ellisonleao-github-io:video",
+    "20261122-2208-ellisonleao-github-io:error",
+    "20261122-2215-ellisonleao-github-io:error",
+    "20261122-2220-ellisonleao-github-io:played",
+    "20261122-2220-ellisonleao-github-io:video",
+    "20261122-2236-ellisonleao-github-io:played",
+    "20261122-2236-ellisonleao-github-io:video",
+    "20261122-2236-ellisonleao-github-io:zero",
+    "20261122-2240-ellisonleao-github-io:played",
+    "20261122-2240-ellisonleao-github-io:video",
+    "20261122-2240-ellisonleao-github-io:eyes",
+    "20261122-2240-ellisonleao-github-io:zero",
+    "20261122-2247-ellisonleao-github-io:played",
+    "20261122-2247-ellisonleao-github-io:video",
+    "20261122-2247-ellisonleao-github-io:eyes",
+    "20261122-2247-ellisonleao-github-io:zero",
+    "20261122-2252-ellisonleao-github-io:error",
+    "20261122-2257-ellisonleao-github-io:played",
+    "20261122-2257-ellisonleao-github-io:video",
+    "20261122-2257-ellisonleao-github-io:eyes",
+    "20261122-2257-ellisonleao-github-io:steps",
+    "20261122-2324-ellisonleao-github-io:played",
+    "20261122-2324-ellisonleao-github-io:video",
+    "20261122-2324-ellisonleao-github-io:eyes",
+    "20261122-2324-ellisonleao-github-io:steps",
+    "20261122-2327-ellisonleao-github-io:played",
+    "20261122-2327-ellisonleao-github-io:video",
+    "20261122-2327-ellisonleao-github-io:eyes",
+    "20261122-2327-ellisonleao-github-io:steps",
+    "20261122-2336-ellisonleao-github-io:played",
+    "20261122-2336-ellisonleao-github-io:video",
+    "20261122-2336-ellisonleao-github-io:eyes",
+    "20261122-2336-ellisonleao-github-io:steps",
+    "20261122-2340-ellisonleao-github-io:played",
+    "20261122-2340-ellisonleao-github-io:video",
+    "20261122-2340-ellisonleao-github-io:eyes",
+    "20261122-2340-ellisonleao-github-io:zero",
+    "20261122-2347-ellisonleao-github-io:played",
+    "20261122-2347-ellisonleao-github-io:video",
+    "20261122-2347-ellisonleao-github-io:eyes",
+    "20261122-2347-ellisonleao-github-io:steps",
+    "20261122-2352-ellisonleao-github-io:played",
+    "20261122-2352-ellisonleao-github-io:video",
+    "20261122-2352-ellisonleao-github-io:eyes",
+    "20261122-2352-ellisonleao-github-io:steps",
+    "20261122-2359-ellisonleao-github-io:played",
+    "20261122-2359-ellisonleao-github-io:video",
+    "20261122-2359-ellisonleao-github-io:eyes",
+    "20261122-2359-ellisonleao-github-io:steps",
+    "20261123-0003-ellisonleao-github-io:played",
+    "20261123-0003-ellisonleao-github-io:video",
+    "20261123-0003-ellisonleao-github-io:eyes",
+    "20261123-0003-ellisonleao-github-io:steps",
+    "creation:game:ptica-i-truby",
+    "creation:game:zvezdny-dozhd",
+    "creation:game:zmeika",
+    "creation:episode:ep-20261123-2-truby"
+  ],
+  "reportsCounted": 17,
+  "playedCount": 14,
+  "bestStepsEver": 4,
+  "gamesMade": 3,
+  "episodesMade": 1,
+  "ownWantsDone": 0,
+  "updatedAt": "2026-11-23 11:55 UTC",
+  "seenJournal": [
+    "20261122-2158-ellisonleao-github-io:played",
+    "20261122-2158-ellisonleao-github-io:video",
+    "20261122-2208-ellisonleao-github-io:error",
+    "20261122-2215-ellisonleao-github-io:error",
+    "20261122-2220-ellisonleao-github-io:played",
+    "20261122-2220-ellisonleao-github-io:video",
+    "20261122-2236-ellisonleao-github-io:played",
+    "20261122-2236-ellisonleao-github-io:video",
+    "20261122-2236-ellisonleao-github-io:zero",
+    "20261122-2240-ellisonleao-github-io:eyes",
+    "20261122-2240-ellisonleao-github-io:played",
+    "20261122-2240-ellisonleao-github-io:video",
+    "20261122-2240-ellisonleao-github-io:zero",
+    "20261122-2247-ellisonleao-github-io:eyes",
+    "20261122-2247-ellisonleao-github-io:played",
+    "20261122-2247-ellisonleao-github-io:video",
+    "20261122-2247-ellisonleao-github-io:zero",
+    "20261122-2252-ellisonleao-github-io:error",
+    "20261122-2257-ellisonleao-github-io:eyes",
+    "20261122-2257-ellisonleao-github-io:played",
+    "20261122-2257-ellisonleao-github-io:steps",
+    "20261122-2257-ellisonleao-github-io:video",
+    "20261122-2324-ellisonleao-github-io:eyes",
+    "20261122-2324-ellisonleao-github-io:played",
+    "20261122-2324-ellisonleao-github-io:steps",
+    "20261122-2324-ellisonleao-github-io:video",
+    "20261122-2327-ellisonleao-github-io:eyes",
+    "20261122-2327-ellisonleao-github-io:played",
+    "20261122-2327-ellisonleao-github-io:steps",
+    "20261122-2327-ellisonleao-github-io:video",
+    "20261122-2336-ellisonleao-github-io:eyes",
+    "20261122-2336-ellisonleao-github-io:played",
+    "20261122-2336-ellisonleao-github-io:steps",
+    "20261122-2336-ellisonleao-github-io:video",
+    "20261122-2340-ellisonleao-github-io:eyes",
+    "20261122-2340-ellisonleao-github-io:played",
+    "20261122-2340-ellisonleao-github-io:video",
+    "20261122-2340-ellisonleao-github-io:zero",
+    "20261122-2347-ellisonleao-github-io:eyes",
+    "20261122-2347-ellisonleao-github-io:played",
+    "20261122-2347-ellisonleao-github-io:steps",
+    "20261122-2347-ellisonleao-github-io:video",
+    "20261122-2352-ellisonleao-github-io:eyes",
+    "20261122-2352-ellisonleao-github-io:played",
+    "20261122-2352-ellisonleao-github-io:steps",
+    "20261122-2352-ellisonleao-github-io:video",
+    "20261122-2359-ellisonleao-github-io:eyes",
+    "20261122-2359-ellisonleao-github-io:played",
+    "20261122-2359-ellisonleao-github-io:steps",
+    "20261122-2359-ellisonleao-github-io:video",
+    "20261123-0003-ellisonleao-github-io:eyes",
+    "20261123-0003-ellisonleao-github-io:played",
+    "20261123-0003-ellisonleao-github-io:steps",
+    "20261123-0003-ellisonleao-github-io:video",
+    "creation:episode:ep-20261123-2-truby",
+    "creation:game:ptica-i-truby",
+    "creation:game:zmeika",
+    "creation:game:zvezdny-dozhd"
+  ]
+}
