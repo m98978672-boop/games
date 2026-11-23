@@ -104,7 +104,8 @@ async function main() {
               !p || ![p.x, p.y, p.z].every(n => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 1000000)) return null;
           const health = s.player.health, hunger = s.player.hunger;
           if (![health, hunger].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 20)) return null;
-          return {screen:s.screen, x:p.x, y:p.y, z:p.z, health, hunger};
+          if (!Array.isArray(s.earned) || s.earned.length > 1000 || s.earned.some(v => typeof v !== "string")) return null;
+          return {screen:s.screen, x:p.x, y:p.y, z:p.z, health, hunger, wood:s.earned.includes("wood")};
         } catch { return null; }
       }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),

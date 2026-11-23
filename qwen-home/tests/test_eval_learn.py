@@ -36,7 +36,7 @@ class EvalOrderTest(unittest.TestCase):
             spec = importlib.util.spec_from_file_location('test_eval_script', Path(__file__).parents[1] / 'tools/eval-learn.py')
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
-            module.generate = lambda m, *_: 'adapter' if m.adapted else 'base'
+            module.generate = lambda m, *_, **kwargs: 'adapter' if m.adapted else 'base'
             with tempfile.TemporaryDirectory() as temp:
                 root = Path(temp)
                 (root / 'manifest.json').write_text(json.dumps({'systemPrompt': 'test'}))
@@ -45,6 +45,11 @@ class EvalOrderTest(unittest.TestCase):
                 with patch.object(sys, 'argv', ['eval-learn', '--data', str(root), '--adapter', str(root / 'adapter'), '--output', str(output)]):
                     module.main()
                 rows = json.loads(output.read_text())['results']
+                model.adapted = False
+                with patch.object(sys, 'argv', ['eval-learn', '--data', str(root), '--adapter', str(root / 'adapter'), '--adapter-only', '--no-thinking', '--output', str(output)]):
+                    module.main()
+                only = json.loads(output.read_text())['results']
+                self.assertTrue(all('base' not in r and r['adapter'] == 'adapter' for r in only))
         self.assertEqual([x['base'] for x in rows], ['base'] * 3)
         self.assertEqual([x['adapter'] for x in rows], ['adapter'] * 3)
 

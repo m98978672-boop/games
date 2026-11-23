@@ -13,9 +13,9 @@ from gameplay_qwen import QwenVisionAgent
 from voxel_supervisor import assess, assisted_actions
 
 root = Path(os.environ['VOXEL_GAME_DIST'])
-base_goal = 'Survival world: explore safely. FORWARD is W, BACK is S, STRAFELEFT is A, STRAFERIGHT is D, SPACE jumps, WAIT does nothing.'
+base_goal = 'Get wood in survival: find a tree, aim at its trunk and use MINE to hold left click. WASD actions move, LOOK actions turn, SPACE jumps. Stay safe.'
 agent = QwenVisionAgent(base_goal,
-                        ('FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE','WAIT'), avoid_stalled_actions=True)
+                        ('FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE','LOOKLEFT','LOOKRIGHT','LOOKUP','LOOKDOWN','MINE','WAIT'), avoid_stalled_actions=True)
 base_actions=agent.allowed
 trace=[]
 interventions=[]
@@ -56,9 +56,12 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         distance=None
         if before and after:
             distance=round(math.sqrt(sum((after[k]-before[k])**2 for k in ('x','y','z'))),3)
+        if after and after.get('wood'):
+            stop_reason='game_reported_wood_obtained'
         trace.append({'action':agent.decisions[-1], 'game_reported_screen':after.get('screen') if after else None,
-                      'game_reported_displacement':distance,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'coarse_frame_change':round(delta,2)})
+                      'game_reported_displacement':distance,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'game_reported_wood':after.get('wood') if after else None,'coarse_frame_change':round(delta,2)})
         print('VOXEL_STEP='+json.dumps({'step':step+1, **trace[-1]}), flush=True)
+        if stop_reason == 'game_reported_wood_obtained': break
 result={'game':'Independent Minecraft Web Recreation, not Minecraft', 'source':'https://github.com/nightdong/minecraft-web-recreation',
         'commit':'85f63c01a5b67120badc57e70115a7644c361679', 'model_variant':'home-adapter',
         'setup':'scripted survival world setup via UI', 'model_actions':trace, 'filtered_steps':agent.filtered_steps, 'supervisor_interventions':interventions, 'stop_reason':stop_reason,
@@ -69,5 +72,5 @@ print('::notice title=Kvenya independent voxel survival test::'+json.dumps(resul
 summary={'steps':len(trace),'stop_reason':stop_reason,'hint_count':sum(i['type']=='hint' for i in interventions),
          'assisted_action_exclusions':sum(i['type']=='action_exclusion' for i in interventions),
          'filtered_steps':agent.filtered_steps,'last_action':trace[-1] if trace else None,
-         'victory_verified':False,'trained':False,'published':False}
+         'game_reported_wood_obtained':stop_reason == 'game_reported_wood_obtained', 'victory_verified':False,'trained':False,'published':False}
 print('::notice title=Kvenya survival supervision summary::'+json.dumps(summary))

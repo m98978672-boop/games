@@ -16,7 +16,7 @@ permissions:
 jobs:
   train-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 150
     env:
       OMP_NUM_THREADS: '4'
       MKL_NUM_THREADS: '4'
@@ -47,7 +47,7 @@ jobs:
         run: node qwen-home/tools/build-game-skill-dataset.mjs "$RUNNER_TEMP/game-data"
       - name: Test Kvenya before training
         run: |
-          python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/game-data" --adapter "$RUNNER_TEMP/initial-adapter" --output "$RUNNER_TEMP/before.json" --max-new 120
+          python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/game-data" --adapter "$RUNNER_TEMP/initial-adapter" --output "$RUNNER_TEMP/before.json" --adapter-only --no-thinking --max-new 80
           node qwen-home/tools/score-learn.mjs "$RUNNER_TEMP/before.json"
       - name: Practice 16 experimental LoRA training steps
         run: |
@@ -59,7 +59,7 @@ jobs:
           exit "$status"
       - name: Test experimental adapter after training
         run: |
-          python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/game-data" --adapter "$RUNNER_TEMP/experiment/adapter" --output "$RUNNER_TEMP/after.json" --max-new 120
+          python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/game-data" --adapter "$RUNNER_TEMP/experiment/adapter" --output "$RUNNER_TEMP/after.json" --adapter-only --no-thinking --max-new 80
           node qwen-home/tools/score-learn.mjs "$RUNNER_TEMP/after.json"
           node -e 'const fs=require("fs"), p=process.env.RUNNER_TEMP; const a=JSON.parse(fs.readFileSync(p+"/before.json")); const b=JSON.parse(fs.readFileSync(p+"/after.json")); const r=JSON.parse(fs.readFileSync(p+"/experiment/report.json")); console.log("::notice title=Kvenya game learning::"+JSON.stringify({before:a.scores.adapter,after:b.scores.adapter,steps:r.training.steps,loss_before:r.evaluation.loss_before,loss_after:r.evaluation.loss_after,published:false}));'
       - name: Report held-out cross-genre action scenarios

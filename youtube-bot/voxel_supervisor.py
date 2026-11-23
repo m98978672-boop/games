@@ -10,7 +10,9 @@ SCREENS = {'playing', 'ready', 'pause', 'inventory', 'title', 'error', 'death', 
 
 
 def assess(state, recent):
-    if not isinstance(state, dict) or set(state) != {'screen','x','y','z','health','hunger'}:
+    if not isinstance(state, dict) or set(state) != {'screen','x','y','z','health','hunger','wood'}:
+        return {'decision':'stop', 'reason':'telemetry_missing_or_invalid', 'hint':None}
+    if type(state['wood']) is not bool:
         return {'decision':'stop', 'reason':'telemetry_missing_or_invalid', 'hint':None}
     if state['screen'] not in SCREENS:
         return {'decision':'stop', 'reason':'telemetry_missing_or_invalid', 'hint':None}
@@ -27,7 +29,7 @@ def assess(state, recent):
     if not isinstance(recent, list) or len(recent) > 1000:
         raise ValueError('Invalid action history')
     last = recent[-3:]
-    if len(last) == 3 and all(type(x.get('game_reported_displacement')) in (int,float) and math.isfinite(x['game_reported_displacement']) and 0 <= x['game_reported_displacement'] < .15 for x in last):
+    if len(last) == 3 and all(x.get('action') in {'FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE'} and type(x.get('game_reported_displacement')) in (int,float) and math.isfinite(x['game_reported_displacement']) and 0 <= x['game_reported_displacement'] < .15 for x in last):
         return {'decision':'continue', 'reason':'game_reported_stagnation',
                 'hint':'Recent movement did not noticeably change reported position. Try a different safe movement; screen changes alone do not prove progress.'}
     if state['health'] <= 8:
