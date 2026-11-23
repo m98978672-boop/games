@@ -13,7 +13,7 @@ P.END_T = ("ВСЕ ТРИ ПУНКТА!", "голубь проголосовал
 P.STAMP_T = "КОММЕНТАРИЕВ: 0"
 P.SHORTS_DROP = set()
 P.SHORTS_REPLACE = {}
-P.RATE_SHORTS = 1.45
+P.RATE_SHORTS = 1.2
 
 P.TEXTS = {
     "e4_n1": "Просили голосовать цифрой в комментариях. Результаты: комментариев — ноль. Борис перепроверил три раза.",
@@ -36,7 +36,7 @@ P.DEFS = [
          sfx=[("street", 0.0, .16, "loop"), ("music", 0.0, .26, "loop"), ("purr", 0.8, .40, None),
               ("meow_happy", 3.4, .50, None), ("rustle", 5.2, .22, None), ("frr", 8.0, .30, None),
               ("purr_soft", 9.6, .35, None)]),
-    dict(k=23, lines=[("n", "e4_n2"), ("c", "e4_c2")], ov=[], pad_s=1.0,
+    dict(k=23, lines=[("n", "e4_n2"), ("c", "e4_c2")], ov=[],
          sfx=[("street", 0.0, .14, "loop"), ("music", 0.0, .24, "loop"), ("steps", 0.6, .40, None),
               ("clink", 1.6, .55, None), ("rustle", 2.6, .30, None), ("rustle", 3.4, .28, None),
               ("frr", 6.2, .35, None), ("purr", 7.6, .30, None), ("creak", 9.4, .30, None)]),
@@ -45,7 +45,7 @@ P.DEFS = [
               ("flutter", 1.6, .40, None), ("coo", 2.6, .30, None), ("steps", 3.4, .30, None),
               ("frr", 5.8, .80, None), ("pop", 5.9, .60, None), ("flutter", 6.4, .70, None),
               ("flutter", 7.0, .55, None), ("coo", 8.2, .30, None), ("meow_happy", 9.6, .45, None)]),
-    dict(k=25, lines=[("n", "e4_n4"), ("c", "e4_c4")], ov=[], pad_s=1.2,
+    dict(k=25, lines=[("n", "e4_n4"), ("c", "e4_c4")], ov=[],
          sfx=[("wind", 0.0, .28, 15.0), ("hum", 0.0, .36, "loop"), ("music", 0.0, .22, "loop"),
               ("purr", 0.6, .45, None), ("purr", 1.4, .42, None), ("meow_happy", 4.8, .45, None),
               ("rustle", 6.8, .20, None), ("clink", 7.6, .50, None), ("frr", 9.2, .30, None),
