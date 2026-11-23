@@ -92,7 +92,8 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
             stop_reason='game_reported_wood_obtained'
         feedback = measured_feedback(before, after, agent.decisions[-1])
         perf = obs.get('voxel_performance') or {}
-        trace.append({'game_reported_fps':perf.get('fps'), 'game_reported_frame_p95_ms':perf.get('frame_p95_ms'),
+        trace.append({'browser_frame_timing':obs.get('browser_frame_timing'), 'screenshot_ms':obs.get('screenshot_ms'),
+                      'game_reported_fps':perf.get('fps'), 'game_reported_frame_p95_ms':perf.get('frame_p95_ms'),
                       'game_reported_quality':perf.get('quality'), 'model_inference_seconds':round(inference_seconds,3), 'feedback_score':feedback['score'], 'feedback_reason':feedback['reason'], 'feedback_hint':feedback['hint'], 'step':step+1, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
                       'scripted_initial_approach':bool(approach_hint), 'action':agent.decisions[-1], 'game_reported_target_before':target, 'game_reported_screen':after.get('screen') if after else None,
                       'game_reported_displacement':distance,'game_reported_camera_delta':camera_delta,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'game_reported_wood':after.get('wood') if after else None,'coarse_frame_change':round(delta,2)})

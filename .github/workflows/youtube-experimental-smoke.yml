@@ -46,6 +46,14 @@ jobs:
         run: python youtube-bot/tests/smoke_long_pipeline.py
       - name: Build isolated recording container
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Compare finite game browser timing with and without recording
+        run: python youtube-bot/tests/smoke_browser_performance.py --output "$RUNNER_TEMP/browser-performance.json"
+      - name: Save private performance baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: finite-browser-performance-${{ github.run_id }}
+          path: ${{ runner.temp }}/browser-performance.json
+          retention-days: 3
       - name: Test vision-action bridge against a sandboxed browser game
         run: python youtube-bot/tests/smoke_browser_bridge.py
 

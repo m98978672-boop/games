@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      OMP_NUM_THREADS: '2'
-      MKL_NUM_THREADS: '2'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
     steps:
       - uses: actions/checkout@v7
@@ -39,6 +39,15 @@ jobs:
           docker cp "$container:/game/dist/." "$RUNNER_TEMP/voxel-dist/"
       - name: Build offline browser bridge
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Compare browser timing with and without recording (no model)
+        run: python youtube-bot/tests/smoke_browser_performance.py --voxel "$RUNNER_TEMP/voxel-dist" --output "$RUNNER_TEMP/browser-performance.json"
+      - name: Save private browser timing baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-performance-${{ github.run_id }}
+          path: ${{ runner.temp }}/browser-performance.json
+          if-no-files-found: error
+          retention-days: 3
       - name: Fetch pinned Kvenya adapter
         env:
           GH_TOKEN: ${{ github.token }}
@@ -54,7 +63,7 @@ jobs:
         run: |
           mkdir -p "$VOXEL_RECORD_DIR"
           set +e
-          python -u youtube-bot/tests/smoke_voxel_qwen.py 2>&1 | tee "$RUNNER_TEMP/voxel-probe.log"
+          nice -n 10 python -u youtube-bot/tests/smoke_voxel_qwen.py 2>&1 | tee "$RUNNER_TEMP/voxel-probe.log"
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/voxel-probe.log"; fi
           exit "$result"

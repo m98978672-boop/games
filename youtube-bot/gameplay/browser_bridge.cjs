@@ -67,6 +67,31 @@ async function main() {
   page.on("popup", popup => popup.close().catch(() => {}));
   page.on("dialog", dialog => dialog.dismiss().catch(() => {}));
   try {
+    // Browser-delivered animation callback intervals, not necessarily actual game
+    // render rate or distinct recorded frames. The page is untrusted; values are
+    // diagnostic only. Fixed-size storage and no per-frame sorting.
+    await page.addInitScript(() => {
+      let last = null, samples = [], cursor = 0;
+      const tick = now => {
+        if (last !== null) {
+          const delta = now - last;
+          if (Number.isFinite(delta) && delta > 0 && delta <= 60000) {
+            if (samples.length < 300) samples.push(delta);
+            else { samples[cursor] = delta; cursor = (cursor + 1) % 300; }
+          }
+        }
+        last = now;
+        requestAnimationFrame(tick);
+      };
+      Object.defineProperty(window, '__bridgeFrameTiming', {value: () => {
+        if (!samples.length) return {samples:0, fps:null, p95_ms:null, max_ms:null};
+        const sorted = samples.slice().sort((a,b) => a-b);
+        const sum = sorted.reduce((a,b) => a+b, 0);
+        return {samples:sorted.length, fps:1000 * sorted.length / sum,
+          p95_ms:sorted[Math.ceil(sorted.length * .95)-1], max_ms:sorted[sorted.length-1]};
+      }, configurable:false, writable:false});
+      requestAnimationFrame(tick);
+    });
     if (BOOTSTRAP === "voxel") {
       // Headless pointer lock makes absolute click positioning rotate the camera.
       // Simulate an unavailable browser capability so the game offers its own
@@ -99,7 +124,19 @@ async function main() {
     }
     await page.mouse.move(mouseX, mouseY);
     const observe = async step => {
-      const png = await page.screenshot({type:"png", timeout:10000, animations:"disabled"});
+      const screenshotStart = process.hrtime.bigint();
+      // Do not fast-forward or cancel games' CSS animations during capture.
+      const png = await page.screenshot({type:"png", timeout:10000});
+      const screenshot_ms = Number(process.hrtime.bigint() - screenshotStart) / 1e6;
+      const frameTiming = await page.evaluate(() => {
+        try {
+          const x = window.__bridgeFrameTiming();
+          if (!Number.isInteger(x.samples) || x.samples < 0 || x.samples > 300) return null;
+          if (x.samples === 0) return {samples:0, fps:null, p95_ms:null, max_ms:null};
+          if (![x.fps, x.p95_ms, x.max_ms].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 60000)) return null;
+          return x;
+        } catch { return null; }
+      });
       if (png.length > 2_000_000) throw Error("screenshot too large");
       const recording_elapsed_ms = recording ? Number((process.hrtime.bigint() - recordingOrigin) / 1000000n) : null;
       // Experimental 2048 telemetry is untrusted game-provided data, never an
@@ -188,6 +225,7 @@ async function main() {
         } catch { return null; }
       }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
+        browser_frame_timing:frameTiming, screenshot_ms:Math.round(screenshot_ms * 100) / 100,
         ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
     };
     await observe(0);

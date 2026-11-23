@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      OMP_NUM_THREADS: '2'
-      MKL_NUM_THREADS: '2'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
     steps:
       - uses: actions/checkout@v7
@@ -39,7 +39,7 @@ jobs:
         run: |
           mkdir -p "$ADVENTURE_RECORD_DIR"
           set +e
-          python -u youtube-bot/tests/smoke_adventure_qwen.py 2>&1 | tee "$RUNNER_TEMP/adventure.log"
+          nice -n 10 python -u youtube-bot/tests/smoke_adventure_qwen.py 2>&1 | tee "$RUNNER_TEMP/adventure.log"
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/adventure.log"; fi
           exit "$result"
@@ -54,8 +54,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 65
     env:
-      OMP_NUM_THREADS: '2'
-      MKL_NUM_THREADS: '2'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
     steps:
       - uses: actions/checkout@v7
@@ -87,7 +87,7 @@ jobs:
         run: |
           mkdir -p "$PUZZLE_RECORD_DIR"
           set +e
-          python -u youtube-bot/tests/smoke_puzzle_qwen.py 2>&1 | tee "$RUNNER_TEMP/puzzle.log"
+          nice -n 10 python -u youtube-bot/tests/smoke_puzzle_qwen.py 2>&1 | tee "$RUNNER_TEMP/puzzle.log"
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/puzzle.log"; fi
           exit "$result"

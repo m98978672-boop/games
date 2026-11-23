@@ -57,7 +57,9 @@ with tempfile.TemporaryDirectory(prefix='adventure-game-') as temp:
                 outcome = 'no_enabled_choices'; break
             agent.allowed = tuple(allowed)
             before = base64.b64decode(obs['screenshot_png_base64'], validate=True)
+            inference_start = time.monotonic()
             agent(before, len(trace))
+            inference_seconds = time.monotonic() - inference_start
             index = choices.index(agent.decisions[-1])
             button = buttons[index]
             obs = bridge.step({'click':[button['x'],button['y']], 'duration_ms':250})
@@ -66,7 +68,8 @@ with tempfile.TemporaryDirectory(prefix='adventure-game-') as temp:
             after = base64.b64decode(obs['screenshot_png_base64'], validate=True)
             unchanged = hashlib.sha256(before).digest() == hashlib.sha256(after).digest()
             same_screen = same_screen + 1 if unchanged else 0
-            trace.append({'step':len(trace)+1,'choice':agent.decisions[-1],
+            trace.append({'browser_frame_timing':obs.get('browser_frame_timing'), 'screenshot_ms':obs.get('screenshot_ms'),
+                          'model_inference_seconds':round(inference_seconds, 3), 'step':len(trace)+1,'choice':agent.decisions[-1],
                           'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
                           'screen_unchanged':unchanged, 'game_reported_outcome':(obs.get('adventure_telemetry') or {}).get('outcome')})
             print('ADVENTURE_STEP='+json.dumps(trace[-1]), flush=True)

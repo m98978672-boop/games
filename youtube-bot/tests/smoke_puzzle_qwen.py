@@ -50,7 +50,9 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
             agent.allowed = tuple(actions[i] for i in legal)
             agent.objective = base_goal + (' ' + hint if hint else '')
             png = base64.b64decode(obs['screenshot_png_base64'],validate=True)
+            inference_start = time.monotonic()
             agent(png, len(trace))
+            inference_seconds = time.monotonic() - inference_start
             index = actions.index(agent.decisions[-1])
             cell = diag['cells'][index]
             obs = bridge.step({'click':[cell['x'],cell['y']], 'duration_ms':250})
@@ -63,7 +65,8 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
                 best, no_progress = now, 0
             else:
                 no_progress += 1
-            trace.append({'step':len(trace)+1,'action':agent.decisions[-1], 'game_reported_distance':now,
+            trace.append({'browser_frame_timing':obs.get('browser_frame_timing'), 'screenshot_ms':obs.get('screenshot_ms'),
+                          'model_inference_seconds':round(inference_seconds, 3), 'step':len(trace)+1,'action':agent.decisions[-1], 'game_reported_distance':now,
                           'feedback_score':points, 'blocked_immediate_undo':blocked, 'blocked_recent_states':recent_blocked, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
                           'game_reported_win':obs['puzzle_telemetry']['won']})
             print('PUZZLE_STEP='+json.dumps(trace[-1]),flush=True)

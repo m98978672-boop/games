@@ -28,7 +28,9 @@ with tempfile.TemporaryDirectory(prefix='bridge-test-') as temp:
     (game / 'index.html').write_text(HTML)
     # Docker runs as the host uid; no workspace or credentials are mounted.
     with BrowserBridge(game, rights_acknowledged=True) as bridge:
-        assert pixel(bridge.receive()) == (200, 0, 0)
+        first = bridge.receive()
+        assert pixel(first) == (200, 0, 0)
+        assert isinstance(first.get('browser_frame_timing'), dict) and first['screenshot_ms'] >= 0
         assert bridge.step({'keys':['MetaLeft'], 'duration_ms':100})['type'] == 'error'
         assert bridge.step({'click':[800,0]})['type'] == 'error'
         assert bridge.step({'look':[101,0]})['type'] == 'error'
@@ -39,7 +41,9 @@ with tempfile.TemporaryDirectory(prefix='bridge-test-') as temp:
         assert pixel(bridge.step({'look':[50,0]})) == (200, 200, 0)
         assert pixel(bridge.step({'click':[400,300], 'button':'right'})) == (0, 200, 200)
         assert pixel(bridge.step({'click':[400,300], 'hold_ms':100, 'duration_ms':100})) == (0, 0, 200)
-        assert pixel(bridge.step({'keys':['KeyW'], 'duration_ms':100})) == (0, 200, 0)
+        moving = bridge.step({'keys':['KeyW'], 'duration_ms':100})
+        assert pixel(moving) == (0, 200, 0)
+        assert moving['browser_frame_timing']['samples'] > 0, moving
         assert pixel(bridge.step({'click':[400,300], 'duration_ms':100})) == (0, 0, 200)
     # Actual browser recording of the synthetic fixture, no model or upload.
     import subprocess, json
