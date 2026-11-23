@@ -185,6 +185,18 @@
   ],
   "expeditions": [
     {
+      "date": "2026-11-23 20:33 UTC",
+      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+      "status": "opened-only",
+      "dir": "qwen-home/bridge/expeditions/20261123-2034-colinhuang314-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
       "date": "2026-11-23 19:53 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
@@ -239,24 +251,10 @@
       ],
       "hasVideo": true,
       "video": "video.webm"
-    },
-    {
-      "date": "2026-11-23 00:02 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261123-0003-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
     }
   ],
   "motivation": {
-    "points": 779,
+    "points": 776,
     "level": "Легенда моста",
     "achievements": [
       {
@@ -314,7 +312,15 @@
         "at": "2026-11-23"
       }
     ],
-    "pendingDuties": [],
+    "pendingDuties": [
+      {
+        "id": "20261123-2034-colinhuang314-github-io:reach",
+        "kind": "reach",
+        "text": "Взыскание: разобрать, почему не дошла до игры, и найти другой вход",
+        "at": "2026-11-23 20:33 UTC",
+        "closedBy": ""
+      }
+    ],
     "closedDuties": [
       {
         "id": "20261122-2208-ellisonleao-github-io:crash",
@@ -368,12 +374,6 @@
     ],
     "lastEvents": [
       {
-        "id": "20261123-2007-ellisonleao-github-io:video",
-        "at": "2026-11-23 20:06 UTC",
-        "delta": 3,
-        "text": "видео экспедиции доехало до её страницы"
-      },
-      {
         "id": "20261123-2007-ellisonleao-github-io:eyes",
         "at": "2026-11-23 20:06 UTC",
         "delta": 2,
@@ -384,6 +384,12 @@
         "at": "2026-11-23 20:06 UTC",
         "delta": 30,
         "text": "трубы по табло игры: 2 — первый настоящий счёт"
+      },
+      {
+        "id": "20261123-2034-colinhuang314-github-io:short",
+        "at": "2026-11-23 20:33 UTC",
+        "delta": -3,
+        "text": "до игры не дошла — открыла дверь и всё"
       },
       {
         "id": "creation:game:ptica-i-truby",
@@ -495,19 +501,20 @@
       "20261123-2007-ellisonleao-github-io:video",
       "20261123-2007-ellisonleao-github-io:eyes",
       "20261123-2007-ellisonleao-github-io:steps",
+      "20261123-2034-colinhuang314-github-io:short",
       "creation:game:ptica-i-truby",
       "creation:game:zvezdny-dozhd",
       "creation:game:zmeika",
       "creation:episode:ep-20261123-2-truby",
       "games:chess:10/10"
     ],
-    "reportsCounted": 23,
+    "reportsCounted": 24,
     "playedCount": 20,
     "bestStepsEver": 4,
     "gamesMade": 3,
     "episodesMade": 1,
     "ownWantsDone": 0,
-    "updatedAt": "2026-11-23 20:23 UTC",
+    "updatedAt": "2026-11-23 20:34 UTC",
     "seenJournal": [
       "20261122-2158-ellisonleao-github-io:played",
       "20261122-2158-ellisonleao-github-io:video",
@@ -587,6 +594,7 @@
       "20261123-2007-ellisonleao-github-io:played",
       "20261123-2007-ellisonleao-github-io:steps",
       "20261123-2007-ellisonleao-github-io:video",
+      "20261123-2034-colinhuang314-github-io:short",
       "creation:episode:ep-20261123-2-truby",
       "creation:episode:ep-20261123-4-truby",
       "creation:game:ptica-i-truby",
