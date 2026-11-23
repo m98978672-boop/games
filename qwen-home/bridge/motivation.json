@@ -1,5 +1,5 @@
 {
-  "points": 983,
+  "points": 996,
   "level": "Легенда моста",
   "achievements": [
     {
@@ -112,8 +112,8 @@
   ],
   "lastEvents": [
     {
-      "id": "20261123-2046-colinhuang314-github-io:video",
-      "at": "2026-11-23 20:45 UTC",
+      "id": "20261123-2049-colinhuang314-github-io:video",
+      "at": "2026-11-23 20:48 UTC",
       "delta": 3,
       "text": "видео экспедиции доехало до её страницы"
     },
@@ -250,6 +250,8 @@
     "20261123-2044-ellisonleao-github-io:steps",
     "20261123-2046-colinhuang314-github-io:played",
     "20261123-2046-colinhuang314-github-io:video",
+    "20261123-2049-colinhuang314-github-io:played",
+    "20261123-2049-colinhuang314-github-io:video",
     "creation:game:ptica-i-truby",
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
@@ -258,13 +260,13 @@
     "creation:episode:ep-20261123-7-truby",
     "creation:episode:ep-20261123-match"
   ],
-  "reportsCounted": 27,
-  "playedCount": 23,
+  "reportsCounted": 28,
+  "playedCount": 24,
   "bestStepsEver": 7,
   "gamesMade": 3,
   "episodesMade": 4,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-23 20:46 UTC",
+  "updatedAt": "2026-11-23 20:49 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -355,6 +357,8 @@
     "20261123-2044-ellisonleao-github-io:video",
     "20261123-2046-colinhuang314-github-io:played",
     "20261123-2046-colinhuang314-github-io:video",
+    "20261123-2049-colinhuang314-github-io:played",
+    "20261123-2049-colinhuang314-github-io:video",
     "creation:episode:ep-20261123-2-truby",
     "creation:episode:ep-20261123-4-truby",
     "creation:episode:ep-20261123-5-truby",
