@@ -76,11 +76,25 @@ def target_assistance(allowed, target, *, health):
     """
     if target not in ('log', 'other', 'none', 'unknown'):
         target = 'unknown'
+    if health <= 8:
+        return allowed, (), 'Reported health is low. Avoid hazards and move cautiously.'
     if target == 'log':
         return allowed, (), 'Game diagnostic reports a log at the crosshair within reach. Hold MINE to break it.'
     blocked = ('MINE',) if 'MINE' in allowed and len(allowed) > 1 else ()
     rest = tuple(a for a in allowed if a not in blocked)
-    if health <= 8:
-        return rest, blocked, 'Reported health is low. Avoid hazards and move cautiously.'
     return rest, blocked, ('No log is reported at the crosshair within reach. Look around for a tree, '
                            'then move close and aim at its trunk before mining.')
+
+
+def exploration_assistance(allowed, recent, target):
+    """External one-step intervention after six looks without finding a log."""
+    last = recent[-6:]
+    looks = {'LOOKLEFT','LOOKRIGHT','LOOKUP','LOOKDOWN'}
+    moves = {'FORWARD','BACK','STRAFELEFT','STRAFERIGHT'}
+    if target == 'log' or len(last) < 6 or not all(r.get('action') in looks for r in last):
+        return allowed, (), None
+    remaining = tuple(a for a in allowed if a in moves)
+    if not remaining:
+        return allowed, (), None
+    return remaining, tuple(a for a in allowed if a not in moves), (
+        'Six looks found no log. Move cautiously to explore instead of continuing to look.')

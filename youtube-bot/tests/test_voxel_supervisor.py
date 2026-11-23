@@ -2,7 +2,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from voxel_supervisor import assess, assisted_actions, target_assistance
+from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance
 
 class SurvivalMonitorTests(unittest.TestCase):
     def setUp(self): self.ok={'screen':'playing','x':0,'y':64,'z':0,'health':20,'hunger':20,'wood':False}
@@ -32,6 +32,17 @@ class SurvivalMonitorTests(unittest.TestCase):
         self.assertEqual(blocked, ())
         self.assertIn('log', hint)
         self.assertIn('health is low', target_assistance(actions,'other',health=5)[2])
+
+    def test_prolonged_looking_gets_external_exploration_help(self):
+        actions=('MINE','LOOKUP','LOOKDOWN','FORWARD','BACK')
+        trace=[{'action':'LOOKUP' if i % 2 else 'LOOKDOWN'} for i in range(6)]
+        remaining, excluded, hint=exploration_assistance(actions,trace,'none')
+        self.assertEqual(remaining, ('FORWARD','BACK'))
+        self.assertEqual(excluded, ('MINE','LOOKUP','LOOKDOWN'))
+        self.assertIn('Move', hint)
+        self.assertEqual(exploration_assistance(actions,trace,'log'), (actions,(),None))
+        self.assertEqual(exploration_assistance(actions,trace[:5],'none'), (actions,(),None))
+        self.assertEqual(exploration_assistance(('LOOKUP',),trace,'none'), (('LOOKUP',),(),None))
 
     def test_camera_stall_is_measured_and_bounded(self):
         trace=[{'action':'LOOKUP','game_reported_camera_delta':0.0}]*3
