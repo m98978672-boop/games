@@ -29,10 +29,14 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         supervision = assess(before, trace)
         if supervision['decision'] == 'stop':
             stop_reason=supervision['reason']
-            interventions.append({'step':step,'type':'stop','reason':stop_reason})
+            event={'step':step,'type':'stop','reason':stop_reason}
+            interventions.append(event)
+            print('VOXEL_SUPERVISOR='+json.dumps(event), flush=True)
             break
         if supervision['hint']:
-            interventions.append({'step':step,'type':'hint','reason':supervision['reason']})
+            event={'step':step,'type':'hint','reason':supervision['reason']}
+            interventions.append(event)
+            print('VOXEL_SUPERVISOR='+json.dumps(event), flush=True)
         agent.objective=base_goal + (' ' + supervision['hint'] if supervision['hint'] else '')
         png=base64.b64decode(obs['screenshot_png_base64'], validate=True)
         action=agent(png, step)
@@ -48,6 +52,7 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
             distance=round(math.sqrt(sum((after[k]-before[k])**2 for k in ('x','y','z'))),3)
         trace.append({'action':agent.decisions[-1], 'game_reported_screen':after.get('screen') if after else None,
                       'game_reported_displacement':distance,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'coarse_frame_change':round(delta,2)})
+        print('VOXEL_STEP='+json.dumps({'step':step+1, **trace[-1]}), flush=True)
 result={'game':'Independent Minecraft Web Recreation, not Minecraft', 'source':'https://github.com/nightdong/minecraft-web-recreation',
         'commit':'85f63c01a5b67120badc57e70115a7644c361679', 'model_variant':'home-adapter',
         'setup':'scripted survival world setup via UI', 'model_actions':trace, 'filtered_steps':agent.filtered_steps, 'supervisor_interventions':interventions, 'stop_reason':stop_reason,

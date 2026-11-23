@@ -50,8 +50,7 @@ jobs:
           VOXEL_GAME_DIST: ${{ runner.temp }}/voxel-dist
         run: |
           set +e
-          python youtube-bot/tests/smoke_voxel_qwen.py > "$RUNNER_TEMP/voxel-probe.log" 2>&1
-          result=$?
-          cat "$RUNNER_TEMP/voxel-probe.log"
+          python -u youtube-bot/tests/smoke_voxel_qwen.py 2>&1 | tee "$RUNNER_TEMP/voxel-probe.log"
+          result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/voxel-probe.log"; fi
           exit "$result"
