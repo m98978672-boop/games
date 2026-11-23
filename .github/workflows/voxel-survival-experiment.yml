@@ -69,3 +69,21 @@ jobs:
           path: ${{ runner.temp }}/voxel-recording/
           if-no-files-found: error
           retention-days: 3
+      - name: Verify factual narration and caption pipeline
+        run: python -m unittest discover -s youtube-bot/tests -p 'test_voxel_voiceover.py'
+      - name: Download private Russian voice model
+        run: |
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/voice.onnx" https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/voice.onnx.json" https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json
+      - name: Add factual private narration and subtitles
+        env:
+          PIPER_MODEL_PATH: ${{ runner.temp }}/voice.onnx
+        run: |
+          python youtube-bot/voxel_voiceover.py "$RUNNER_TEMP/voxel-recording/recording.webm" "$RUNNER_TEMP/voxel-recording/trace.json" "$RUNNER_TEMP/voxel-voiced"
+      - name: Save private voiced experiment
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxel-private-voiced-${{ github.run_id }}
+          path: ${{ runner.temp }}/voxel-voiced/
+          if-no-files-found: error
+          retention-days: 3
