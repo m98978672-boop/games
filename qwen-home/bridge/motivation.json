@@ -37,17 +37,15 @@
       "title": "Первый выпуск",
       "reward": "студия открывает второй сезон",
       "at": "2026-11-23"
-    }
-  ],
-  "pendingDuties": [
+    },
     {
-      "id": "20261123-2034-colinhuang314-github-io:reach",
-      "kind": "reach",
-      "text": "Взыскание: разобрать, почему не дошла до игры, и найти другой вход",
-      "at": "2026-11-23 20:33 UTC",
-      "closedBy": ""
+      "id": "director",
+      "title": "Режиссёр",
+      "reward": "блог выходит по расписанию",
+      "at": "2026-11-23"
     }
   ],
+  "pendingDuties": [],
   "closedDuties": [
     {
       "id": "20261122-2208-ellisonleao-github-io:crash",
@@ -97,6 +95,13 @@
       "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
       "at": "2026-11-22 23:39 UTC",
       "closedBy": "20261122-2347-ellisonleao-github-io"
+    },
+    {
+      "id": "20261123-2034-colinhuang314-github-io:reach",
+      "kind": "reach",
+      "text": "Взыскание: разобрать, почему не дошла до игры, и найти другой вход",
+      "at": "2026-11-23 20:33 UTC",
+      "closedBy": "20261123-2039-ellisonleao-github-io"
     }
   ],
   "lastEvents": [
@@ -213,7 +218,7 @@
   "playedCount": 14,
   "bestStepsEver": 4,
   "gamesMade": 3,
-  "episodesMade": 1,
+  "episodesMade": 4,
   "ownWantsDone": 0,
   "updatedAt": "2026-11-23 11:55 UTC",
   "seenJournal": [
@@ -273,6 +278,9 @@
     "20261123-0003-ellisonleao-github-io:video",
     "creation:episode:ep-20261123-2-truby",
     "creation:episode:ep-20261123-4-truby",
+    "creation:episode:ep-20261123-5-truby",
+    "creation:episode:ep-20261123-7-truby",
+    "creation:episode:ep-20261123-match",
     "creation:game:ptica-i-truby",
     "creation:game:zmeika",
     "creation:game:zvezdny-dozhd"

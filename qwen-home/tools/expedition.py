@@ -523,6 +523,12 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 visited = set()
                 story = read_story(page, visited, int(deadline - time.monotonic()), out, report, shot)
                 report.data['story'] = story
+                fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
+                report.data['storyLine'] = (
+                    f"прошла историю: {story['moves']} выборов ({fresh} в новых местах)"
+                    + (f", последний выбор «{(story['last'] or {}).get('choice', '')}»" if story.get('last') else '')
+                    + ((' · дошла до финала: ' + (story['endings'][-1].get('text') or '')[:80].strip())
+                       if story.get('endings') else ' · до финала не дошла — история не отпустила'))
                 report.data['status'] = 'played'
                 report.step('итог истории',
                             f"прошла {story['moves']} выборов, финалов в записи: {len(story['endings'])}; последний выбор — «{(story['last'] or {}).get('choice', '—')}»")
@@ -869,17 +875,24 @@ TWINE_TASK_JS = r"""
 """
 
 
-def pick_choice(choices, visited, rng=None):
+def pick_choice(choices, visited, rng=None, passage=None, times_here=0):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
-    choices — [{'label': ..., 'key': ...}], visited — множество подписей,
-    которые уже нажимали. Так она не топчется на месте: если все варианты
-    знакомы, всё равно идёт (иначе история встанет), но отчёт это покажет.
+    visited — множество пар «пассаж+подпись», которые уже нажимали. Если в
+    пассаже побывали несколько раз, она перестаёт крутиться на месте: сначала
+    пробует ещё не нажатые здесь варианты, а из них предпочитает выход в другое
+    место (back/home/door/outside), чтобы история двигалась, а не стояла.
     """
     if not choices:
         return None, False
-    fresh = [c for c in choices if c.get('key', c.get('label', '')) not in visited]
+    here = lambda c: (passage or '', c.get('key', c.get('label', '')))
+    fresh = [c for c in choices if here(c) not in visited]
     pool = fresh or choices
+    if times_here >= 2 and len(pool) > 1:
+        exit_words = ('back', 'home', 'house', 'door', 'outside', 'leave', 'return', 'go after')
+        exits = [c for c in pool if any(w in c.get('label', '').lower() for w in exit_words)]
+        if exits:
+            pool = exits
     pick = pool[0] if rng is None else pool[rng.randrange(len(pool))]
     return pick, bool(fresh)
 
@@ -892,6 +905,8 @@ def read_story(page, visited, seconds, out, report, shot):
     path = []          # пройденный путь: подпись и кусок текста
     endings = []       # пассажи без вариантов — это финал
     stuck = 0          # сколько раз подряд вариантов не было
+    seen_here = {}     # сколько раз были в одном и том же пассаже
+    last_pick = {'label': ''}
     moves = 0
     report.step('читаю историю', 'сюжетная игра: смотрю текст пассажа и варианты, кликаю по выбору, помню свой путь')
 
@@ -905,12 +920,15 @@ def read_story(page, visited, seconds, out, report, shot):
             report.step('чтение', 'не нашла ни текста, ни вариантов — останавливаюсь честно')
             break
         text = state.get('text', '')
+        sig = text[:80]
+        seen_here[sig] = seen_here.get(sig, 0) + 1
         choices = state.get('choices') or []
         for c in choices:
             c['key'] = c.get('label', '')
         if choices:
-            pick, fresh = pick_choice(choices, visited, rng)
-            visited.add(pick['key'])
+            pick, fresh = pick_choice(choices, visited, rng, sig, seen_here[sig])
+            visited.add((sig, pick['key']))
+            last_pick['label'] = pick['label']
             try:
                 sel = f'[data-kv-choice="{pick["i"]}"]'
                 el = page.query_selector(sel)
@@ -929,8 +947,14 @@ def read_story(page, visited, seconds, out, report, shot):
             path.append({'n': moves, 'choice': pick['label'],
                          'fresh': fresh, 'text': text[:220]})
             if moves in (1, 2, 3) or moves % 6 == 0:
-                shot(f'0{min(9, 3 + moves // 6)}-story.png')
-            page.wait_for_timeout(700)
+                # Harlowe гасит старый пассаж и проявляет новый — снимаю, когда
+                # текст уже виден, иначе на скриншоте чёрный экран
+                for _w in range(10):
+                    if page.evaluate("() => { const p = document.querySelector('.passage, tw-passage, tw-story'); if (!p) return false; const st = getComputedStyle(p); return parseFloat(st.opacity || '1') > 0.85; }"):
+                        break
+                    page.wait_for_timeout(150)
+                shot(f'0{min(9, 3 + moves // 6)}-story-{moves}.png')
+            page.wait_for_timeout(1300)
             stuck = 0
         else:
             # вариантов нет: либо финал, либо история просит ввести имя/подтвердить
