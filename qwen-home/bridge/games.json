@@ -1,18 +1,18 @@
 {
   "schema": "kvenya-games-v1",
-  "started": "2026-11-23T16:25:36.276Z",
+  "started": "2026-11-23T16:40:57.481Z",
   "chess": {
     "ok": true,
-    "depth": 2,
-    "wins": 10,
-    "losses": 0,
-    "draws": 0,
+    "depth": 3,
+    "wins": 8,
+    "losses": 1,
+    "draws": 1,
     "unfinished": 0,
     "games": 10,
-    "avgPlies": 73,
-    "lostPieces": 25,
+    "avgPlies": 58,
+    "lostPieces": 18,
     "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-    "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 73 полуходов; своих фигур потеряно 25"
+    "raw": "ИТОГ: побед 8, поражений 1, ничьих 1, недобитых 0 из 10; средняя партия 58 полуходов; своих фигур потеряно 18"
   },
   "island": {
     "ok": true,
@@ -93,6 +93,101 @@
     }
   ],
   "history": [
+    {
+      "schema": "kvenya-games-v1",
+      "started": "2026-11-23T16:40:57.481Z",
+      "chess": {
+        "ok": true,
+        "depth": 3,
+        "wins": 8,
+        "losses": 1,
+        "draws": 1,
+        "unfinished": 0,
+        "games": 10,
+        "avgPlies": 58,
+        "lostPieces": 18,
+        "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
+        "raw": "ИТОГ: побед 8, поражений 1, ничьих 1, недобитых 0 из 10; средняя партия 58 полуходов; своих фигур потеряно 18"
+      },
+      "island": {
+        "ok": true,
+        "depth": 4,
+        "mine": {
+          "wins": 6,
+          "games": 6,
+          "avgTurns": 59
+        },
+        "baseline": {
+          "wins": 0,
+          "games": 6,
+          "avgTurns": 39
+        },
+        "details": [
+          {
+            "seed": 1,
+            "win": true,
+            "turns": 59,
+            "why": "поселение стоит: запасы, стройка и защита",
+            "built": 55
+          },
+          {
+            "seed": 2,
+            "win": true,
+            "turns": 59,
+            "why": "поселение стоит: запасы, стройка и защита",
+            "built": 53
+          },
+          {
+            "seed": 3,
+            "win": true,
+            "turns": 59,
+            "why": "поселение стоит: запасы, стройка и защита",
+            "built": 55
+          },
+          {
+            "seed": 4,
+            "win": true,
+            "turns": 59,
+            "why": "поселение стоит: запасы, стройка и защита",
+            "built": 55
+          },
+          {
+            "seed": 5,
+            "win": true,
+            "turns": 59,
+            "why": "поселение стоит: запасы, стройка и защита",
+            "built": 53
+          },
+          {
+            "seed": 6,
+            "win": true,
+            "turns": 59,
+            "why": "поселение стоит: запасы, стройка и защита",
+            "built": 54
+          }
+        ]
+      },
+      "depthCurve": [
+        {
+          "depth": 2,
+          "wins": 3,
+          "games": 3,
+          "avgTurns": 82
+        },
+        {
+          "depth": 3,
+          "wins": 3,
+          "games": 3,
+          "avgTurns": 82
+        },
+        {
+          "depth": 4,
+          "wins": 3,
+          "games": 3,
+          "avgTurns": 59
+        }
+      ]
+    },
     {
       "schema": "kvenya-games-v1",
       "started": "2026-11-23T16:25:36.276Z",

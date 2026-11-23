@@ -1,5 +1,5 @@
 {
-  "points": 505,
+  "points": 501,
   "level": "Легенда моста",
   "achievements": [
     {
@@ -147,10 +147,10 @@
       "text": "опубликовала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!» "
     },
     {
-      "id": "games:chess:9/10",
+      "id": "games:chess:8/10",
       "at": "2026-11-23",
-      "delta": 36,
-      "text": "честный турнир в шахматы: побед 9 из 10 "
+      "delta": 32,
+      "text": "честный турнир в шахматы: побед 8 из 10 "
     }
   ],
   "eventIds": [
@@ -212,7 +212,7 @@
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
     "creation:episode:ep-20261123-2-truby",
-    "games:chess:9/10"
+    "games:chess:8/10"
   ],
   "reportsCounted": 17,
   "playedCount": 14,
@@ -220,7 +220,7 @@
   "gamesMade": 3,
   "episodesMade": 1,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-23 16:18 UTC",
+  "updatedAt": "2026-11-23 16:44 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -280,6 +280,7 @@
     "creation:game:ptica-i-truby",
     "creation:game:zmeika",
     "creation:game:zvezdny-dozhd",
+    "games:chess:8/10",
     "games:chess:9/10"
   ]
 }
