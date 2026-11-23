@@ -34,7 +34,7 @@ ACTIONS = {
     'PLACE': {'click': [400, 300], 'button': 'right', 'duration_ms': 250},
     'INVENTORY': {'keys': ['KeyB'], 'duration_ms': 250},
     'CRAFT': {'keys': ['KeyE'], 'duration_ms': 250},
-    'MINE': {'click': [400, 300], 'hold_ms': 1500, 'duration_ms': 250},
+    'MINE': {'click': [400, 300], 'hold_ms': 4000, 'duration_ms': 250},
 }
 
 

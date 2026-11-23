@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix='bridge-test-') as temp:
         assert bridge.step({'keys':['MetaLeft'], 'duration_ms':100})['type'] == 'error'
         assert bridge.step({'click':[800,0]})['type'] == 'error'
         assert bridge.step({'look':[101,0]})['type'] == 'error'
-        assert bridge.step({'hold_ms':2001,'click':[400,300]})['type'] == 'error'
+        assert bridge.step({'hold_ms':4501,'click':[400,300]})['type'] == 'error'
         assert bridge.step({'hold_ms':100})['type'] == 'error'
         assert bridge.step({'button':'right'})['type'] == 'error'
         assert bridge.step({'click':[400,300], 'button':'middle'})['type'] == 'error'

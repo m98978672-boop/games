@@ -64,7 +64,7 @@ class QwenPolicyTests(unittest.TestCase):
             QwenVisionAgent('go', ('LEFT', 'RIGHT'), avoid_stalled_actions='true')
 
     def test_bounded_mouse_and_first_person_actions(self):
-        for name, expected in [('LOOKLEFT', {'look': [-80, 0], 'duration_ms': 250}), ('PLACE', {'click': [400, 300], 'button': 'right', 'duration_ms': 250}), ('STRAFELEFT', {'keys': ['KeyA'], 'duration_ms': 500}), ('MINE', {'click': [400, 300], 'hold_ms': 1500, 'duration_ms': 250}), ('CRAFT', {'keys': ['KeyE'], 'duration_ms': 250})]:
+        for name, expected in [('LOOKLEFT', {'look': [-80, 0], 'duration_ms': 250}), ('PLACE', {'click': [400, 300], 'button': 'right', 'duration_ms': 250}), ('STRAFELEFT', {'keys': ['KeyA'], 'duration_ms': 500}), ('MINE', {'click': [400, 300], 'hold_ms': 4000, 'duration_ms': 250}), ('CRAFT', {'keys': ['KeyE'], 'duration_ms': 250})]:
             agent = QwenVisionAgent('Test controls', (name,), generator=lambda *_: name)
             self.assertEqual(agent(frame('white'), 0), expected)
 

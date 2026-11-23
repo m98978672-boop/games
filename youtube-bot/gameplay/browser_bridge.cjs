@@ -41,7 +41,7 @@ function checkAction(action) {
   if (!["left", "right"].includes(button) || (action.button !== undefined && click === null)) throw Error("invalid button");
   if (look !== null && (!Array.isArray(look) || look.length !== 2 || !look.every(Number.isInteger) || look.some(n => n < -100 || n > 100))) throw Error("invalid look");
   const hold = action.hold_ms ?? 0;
-  if (!Number.isInteger(hold) || hold < 0 || hold > 2000 || (action.hold_ms !== undefined && click === null)) throw Error("invalid hold duration");
+  if (!Number.isInteger(hold) || hold < 0 || hold > 4500 || (action.hold_ms !== undefined && click === null)) throw Error("invalid hold duration");
   return {keys, click, button, look, hold, duration};
 }
 async function main() {
@@ -133,9 +133,23 @@ async function main() {
             } else await page.mouse.click(mouseX, mouseY, {button});
           }
           if (look) {
-            mouseX = Math.max(0, Math.min(799, mouseX + look[0]));
-            mouseY = Math.max(0, Math.min(599, mouseY + look[1]));
-            await page.mouse.move(mouseX, mouseY);
+            // The voxel game's unlocked compatibility mode rotates only while the
+            // middle button is held. Recenter unpressed, then drag; never inject
+            // synthetic DOM events or expose arbitrary middle clicks to the agent.
+            const compatibleDrag = BOOTSTRAP === "voxel" && !(await page.evaluate(() => !!document.pointerLockElement));
+            if (compatibleDrag) {
+              mouseX = 400; mouseY = 300;
+              await page.mouse.move(mouseX, mouseY);
+              await page.mouse.down({button:"middle"});
+              try {
+                mouseX += look[0]; mouseY += look[1];
+                await page.mouse.move(mouseX, mouseY);
+              } finally { await page.mouse.up({button:"middle"}).catch(() => {}); }
+            } else {
+              mouseX = Math.max(0, Math.min(799, mouseX + look[0]));
+              mouseY = Math.max(0, Math.min(599, mouseY + look[1]));
+              await page.mouse.move(mouseX, mouseY);
+            }
           }
           await page.waitForTimeout(duration);
         } finally { for (const key of keys) await page.keyboard.up(key).catch(() => {}); }
