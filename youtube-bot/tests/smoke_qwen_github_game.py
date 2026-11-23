@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import gameplay_2048 as game
 from gameplay_bridge import BrowserBridge
 from gameplay_qwen import QwenVisionAgent
+from gameplay_voiceover import voiceover
+from gameplay_edit import edit
 
 with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
     root = Path(temp) / 'game'
@@ -52,9 +54,21 @@ with tempfile.TemporaryDirectory(prefix='qwen-github-game-') as temp:
         raise RuntimeError('Game recording could not be verified')
     if trace and trace[-1]['observed_ms'] / 1000 > duration + 2:
         raise RuntimeError('Observation clock exceeds recording duration')
+    draft_created = False
+    if trace:
+        trace_file = Path(temp) / 'model-actions.json'
+        trace_file.write_text(json.dumps(trace, ensure_ascii=False), encoding='utf-8')
+        draft_dir = Path(temp) / 'voiced'
+        voice_report = voiceover(video, trace_file, draft_dir)
+        assert voice_report['model_actions'] == len(trace) and voice_report['uploaded'] is False
+        assert 'Победа не подтверждена' in (draft_dir / 'voiced.ru.srt').read_text(encoding='utf-8')
+        parts = edit(draft_dir / 'voiced.mp4', draft_dir / 'captions-cues.json', Path(temp) / 'parts',
+                     game='2048', author='Gabriele Cirulli', repository_url='https://github.com/gabrielecirulli/2048')
+        assert len(parts) == 1 and parts[0]['uploaded'] is False
+        draft_created = True
     result = {'game': '2048', 'source': 'https://github.com/gabrielecirulli/2048',
               'commit': game.COMMIT, 'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base',
               'outcome': outcome, 'actions': agent.decisions, 'stall_filter_enabled': True, 'filtered_steps': agent.filtered_steps, 'action_observations': trace, 'moves_attempted': len(agent.decisions),
-              'actual_game_win_verified': False, 'video_recorded': True, 'recording_seconds': round(duration, 2), 'recording_retained': False, 'published': False}
+              'actual_game_win_verified': False, 'video_recorded': True, 'recording_seconds': round(duration, 2), 'recording_retained': False, 'voiced_draft_created': draft_created, 'published': False}
     print('QWEN_GITHUB_GAME_REPORT=' + json.dumps(result, ensure_ascii=True))
     print('::notice title=Qwen external GitHub gameplay test::' + json.dumps(result, ensure_ascii=True))

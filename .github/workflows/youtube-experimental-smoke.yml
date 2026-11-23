@@ -11,6 +11,7 @@ on:
       - 'youtube-bot/gameplay_finalize.py'
       - 'youtube-bot/gameplay_captions.py'
       - 'youtube-bot/gameplay_edit.py'
+      - 'youtube-bot/gameplay_voiceover.py'
       - 'youtube-bot/gameplay_release_plan.py'
       - 'youtube-bot/game_reviews.py'
       - 'youtube-bot/renderer.py'
@@ -132,8 +133,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
-      - name: Install FFmpeg for the private recording test
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install video and voice tools for the private recording test
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
       - name: Install Qwen and image dependencies
         run: pip install -r youtube-bot/requirements-autopilot.txt "torchvision>=0.20,<1.0" "transformers==5.5.4" "peft==0.19.1" "accelerate==1.13.0"
       - name: Build isolated browser bridge
