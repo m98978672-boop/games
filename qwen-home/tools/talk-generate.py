@@ -517,8 +517,10 @@ def main():
     parser.add_argument('--max-new', type=int, default=320)  # было 192
     parser.add_argument('--detailed', action='store_true',
                         help='подробный ответ: 5-8 предложений вместо 1-3')
-    parser.add_argument('--int8', action='store_true',
-                        help='int8-веса: torchao quantize_ — быстрее на CPU')
+    parser.add_argument('--int8', dest='int8', action='store_true', default=True,
+                        help='int8-веса: torchao quantize_ — быстрее на CPU (по умолчанию включено)')
+    parser.add_argument('--no-int8', dest='int8', action='store_false',
+                        help='отключить int8 (остаться в bfloat16)')
     args = parser.parse_args()
     text = DIALOGUE.read_text(encoding='utf-8')
     turns = parse_turns(text)
@@ -572,12 +574,22 @@ def main():
     # (это не обучение), а выдачу ускоряет. Нет torchao — честно
     # отвечаем в bfloat16, а не падаем.
     if args.int8:
+        # Динамическое int8 (активации+веса) на x86 быстрее weight-only;
+        # нет fbgemm — берём weight-only; нет ничего — честно bfloat16.
+        quantized = False
         try:
-            from torchao.quantization import quantize_, Int8WeightOnlyConfig
-            quantize_(model, Int8WeightOnlyConfig())
-            print('Веса переведены в int8 — выдача быстрее', flush=True)
-        except Exception as exc:
-            print(f'int8 недоступен ({exc}) — остаюсь в bfloat16', flush=True)
+            from torchao.quantization import quantize_, Int8DynamicActivationInt8WeightConfig
+            quantize_(model, Int8DynamicActivationInt8WeightConfig())
+            quantized = True
+            print('Веса и активации переведены в int8 — выдача быстрее', flush=True)
+        except Exception as exc1:
+            try:
+                from torchao.quantization import quantize_, Int8WeightOnlyConfig
+                quantize_(model, Int8WeightOnlyConfig())
+                quantized = True
+                print('Веса переведены в int8 (weight-only)', flush=True)
+            except Exception as exc2:
+                print(f'int8 недоступен ({exc1}; {exc2}) — остаюсь в bfloat16', flush=True)
     # Сначала решается, нужен ли поиск, потом дом ищет за неё. Очевидные
     # случаи — мгновенным правилом, неоднозначные — самой моделью.
     if PERSONAL_QUESTION.search(owner_text):
@@ -654,7 +666,9 @@ def main():
     if detailed:
         # Больше токенов на ответ, когда владелец просит подробно:
         # не обрываем мысль на полуслове ради экономии.
-        max_new = max(args.max_new, 512)
+        # Скорость честно: 512 токенов на CPU — это десять минут, а не
+        # ответ. Бюджет подробного режима вдвое больше обычного, и хватит.
+        max_new = max(args.max_new, 256)  # 512 на CPU — это 10 минут, не ответ
         system_prompt += ('\n\nВладелец просит подробный ответ: говори 5–8 предложений, '
                           'по делу и по порядку, без воды. Факты — только те, что знаешь.')
         print(f'Подробный ответ: бюджет {max_new} токенов', flush=True)
