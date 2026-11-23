@@ -155,7 +155,9 @@ def decide_search(model, tokenizer, owner_text):
         {'role': 'system', 'content': 'Ты решаешь, нужен ли поиск в интернете для ответа на сообщение. Отвечай ТОЛЬКО одной строкой: «ПОИСК: короткий запрос» — если спрашивают факт, дату, имя, место, событие или просят найти информацию; или «БЕЗ ПОИСКА» — если это обычный разговор, приветствие или вопрос о самой Квене.'},
         {'role': 'user', 'content': owner_text},
     ]
-    raw = generate(model, tokenizer, messages, max_new=48, sample=False)
+    # Скорость: ответ формата «ПОИСК: …» / «БЕЗ ПОИСКА» — одна строка.
+    # Раньше на решение уходило 48 токенов генерации, теперь 12.
+    raw = generate(model, tokenizer, messages, max_new=12, sample=False)
     print(f'Решение о поиске: {raw!r}', flush=True)
     if 'ПОИСК' in raw.upper() and 'БЕЗ ПОИСКА' not in raw.upper():
         query = raw.split(':', 1)[1].strip() if ':' in raw else ''
@@ -473,6 +475,20 @@ def main():
             if results:
                 query = attempts[-1][0]
     context_note = ''
+    # Её собственная воля в разговоре: спрашивает о её желаниях —
+    # дом подкладывает факт её главного «хочу» из её же списка
+    # (bridge/wants.json), как факты поиска. Иначе маленькая модель
+    # отвечает общими словами и своего желания не называет.
+    want_fact = None
+    if re.search(r'(хочешь|желани|хотела|мечтаешь)', owner_text, re.I):
+        try:
+            wdata = json.loads((HOME / 'bridge' / 'wants.json').read_text(encoding='utf-8'))
+            cur = (wdata or {}).get('current') or {}
+            if cur.get('title'):
+                want_fact = (cur['title'], cur.get('why', ''))
+                print(f'Подложил ей факт её желания: {cur["title"]}', flush=True)
+        except Exception:
+            pass
     best = None
     if query:
         if results:
@@ -493,6 +509,12 @@ def main():
         final_user = (f'Владелец спрашивает: {owner_text}\n\n'
                       f'Текст из {src_name} «{best["title"]}» ({best.get("url", "")}): {best["digest"]}\n\n'
                       f'Ответь владельцу двумя короткими фразами по этому тексту: первая фраза — «{src_phrase}», вторая фраза — сам ответ из текста СВОИМИ СЛОВАМИ, с годом из текста. Ничего больше не пиши.')
+    elif want_fact:
+        # Как и с поиском, факт её желания маленькой модели подаётся
+        # структурой, а не скобкой: иначе она отвечает общими словами.
+        final_user = (f'Владелец спрашивает: {owner_text}\n\n'
+                      f'Твоё главное желание сейчас, из твоего собственного списка: «{want_fact[0]}» — {want_fact[1]}.\n\n'
+                      f'Ответь владельцу СВОИМИ СЛОВАМИ двумя фразами: первая начинается «Моё главное желание сейчас —» и называет это желание, вторая — почему оно главное. Ничего больше не пиши.')
     else:
         final_user = owner_text + context_note
     from_search = bool(results)
