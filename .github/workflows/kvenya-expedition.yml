@@ -128,7 +128,7 @@ jobs:
             echo "Файла видео в результатах экспедиции нет"
           fi
           python3 - "$DIR" <<'PY'
-          import json, sys
+          import json, sys, shutil
           from pathlib import Path
           d = Path(sys.argv[1])
           report = json.loads((d / 'report.json').read_text(encoding='utf-8'))
@@ -145,6 +145,16 @@ jobs:
               'hasVideo': bool(report.get('hasVideo')),
               'video': 'video.webm' if (d / 'video.webm').exists() else '',
           }
+          # Старые каталоги экспедиций чистим: страница показывает только
+          # последние пять, а каждый каталог тянет Jekyll-сборку вниз — при
+          # скопившихся 28 сборка Pages падала по времени (сейчас .nojekyll,
+          # но пыль всё равно не нужна: 149 МБ мусора в репозитории).
+          keep = {e.get('dir') for e in bridge['expeditions']}
+          root = Path('qwen-home/bridge/expeditions')
+          if root.exists():
+              for d in sorted(root.iterdir()):
+                  if d.is_dir() and str(d) not in keep:
+                      shutil.rmtree(d, ignore_errors=True)
           bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]
           bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           print('expedition filed:', entry)
