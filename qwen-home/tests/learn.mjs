@@ -234,5 +234,8 @@ check('сюжетную игру она ПРОХОДИТ чтением: пас�
 check('сюжетная история видна на её странице: сколько выборов, где закончила — одной строкой',
   expPy.includes('storyLine') && expWf.includes("report.get('storyLine')") && bridgeJs.includes('kv-story'));
 
+check('пыль экспедиций не копится: старые каталоги чистятся, страница держит последние пять',
+  expWf.includes('shutil.rmtree') && expWf.includes('keep = {e.get(\'dir\') for e in bridge[\'expeditions\']}'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
