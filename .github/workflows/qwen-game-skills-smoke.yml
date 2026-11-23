@@ -62,6 +62,9 @@ jobs:
           python -u qwen-home/tools/eval-learn.py --data "$RUNNER_TEMP/game-data" --adapter "$RUNNER_TEMP/experiment/adapter" --output "$RUNNER_TEMP/after.json" --max-new 120
           node qwen-home/tools/score-learn.mjs "$RUNNER_TEMP/after.json"
           node -e 'const fs=require("fs"), p=process.env.RUNNER_TEMP; const a=JSON.parse(fs.readFileSync(p+"/before.json")); const b=JSON.parse(fs.readFileSync(p+"/after.json")); const r=JSON.parse(fs.readFileSync(p+"/experiment/report.json")); console.log("::notice title=Kvenya game learning::"+JSON.stringify({before:a.scores.adapter,after:b.scores.adapter,steps:r.training.steps,loss_before:r.evaluation.loss_before,loss_after:r.evaluation.loss_after,published:false}));'
+      - name: Report held-out cross-genre action scenarios
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; import {scoreOutputs} from "./qwen-home/tools/score-learn.mjs"; const p=process.env.RUNNER_TEMP; const rows=n=>JSON.parse(fs.readFileSync(`${p}/${n}.json`)).results.filter(r=>r.id.startsWith("eval-game-transfer-")); console.log("::notice title=Text-only cross-genre action exam::"+JSON.stringify({before:scoreOutputs(rows("before")).adapter,after:scoreOutputs(rows("after")).adapter,actual_gameplay:false,published:false}));'
       - name: Save experimental adapter and exam results for inspection
         uses: actions/upload-artifact@v4
         with:
