@@ -285,7 +285,7 @@ check('сложные игры идут сами: расписание турн�
   (await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-games.yml'), 'utf8')).includes('games-tournament.mjs') &&
   motPy.includes('island-planner') && motPy.includes('better-than-rule') && motPy.includes('chess-clean') &&
   bridgeJs.includes('renderGames') && worldHtml.includes('kvBridgeGames') && bridgeSensePy.includes("'games': games") &&
-  talkGen.includes('Мои сложные игры') && talkGen.includes('порядок: ') && personaMd.includes('## Сложные игры'));
+  talkGen.includes('Факты о моих сложных играх') && talkGen.includes('Я играю расчётом') && talkGen.includes('эхо подсказки') && personaMd.includes('## Сложные игры'));
 
 const bridgeJsWants = await readFile(path.join(home, '..', 'kvenya', 'bridge.js'), 'utf8');
 check('её собственная воля и скорость: желания из фактов, главное одно, окружение из кэша, решение о поиске короткое', wantsPy.includes('def pick') && wantsPy.includes('want-five-pipes') && wantsPy.includes('bridge/wants') === false && motPy.includes('ownWantsDone') && motPy.includes('own-will') && bridgeSensePy.includes("'wants': wants") && bridgeJsWants.includes('renderWants') && worldHtml.includes('kvBridgeWants') && talkWorkflow.includes('kvenya-venv') && talkWorkflow.includes('import torch, transformers, peft') && talkGen.includes('max_new=8') && talkGen.includes('wants.json') && talkGen.includes('главное желание сейчас') && expWf.includes('wants.py pick') && dialogue.some((r) => r.id === 'dlg-156') && dialogue.some((r) => r.id === 'dlg-157') && dialogue.some((r) => r.id === 'dlg-158') && dialogue.some((r) => r.id === 'dlg-159') && personaMd.includes('## Её собственные желания'));
