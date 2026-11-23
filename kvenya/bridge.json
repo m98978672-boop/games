@@ -185,66 +185,66 @@
   ],
   "expeditions": [
     {
+      "date": "2026-11-23 19:53 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-1954-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
+      "date": "2026-11-23 19:50 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-1951-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
+      "date": "2026-11-23 19:44 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-1944-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
+      "date": "2026-11-23 19:33 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-1934-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
       "date": "2026-11-23 00:02 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
       "dir": "qwen-home/bridge/expeditions/20261123-0003-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:59 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2359-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:51 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2352-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:47 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2347-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:39 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2340-ellisonleao-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
@@ -436,8 +436,8 @@
       "20261123-0003-ellisonleao-github-io:eyes",
       "20261123-0003-ellisonleao-github-io:steps"
     ],
-    "reportsCounted": 17,
-    "playedCount": 14,
+    "reportsCounted": 22,
+    "playedCount": 19,
     "bestStepsEver": 4,
     "updatedAt": "2026-11-23 00:03 UTC",
     "seenJournal": [

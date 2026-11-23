@@ -18,7 +18,7 @@ import renderer
 
 real_run = subprocess.run
 
-def synthetic_speech(_text, output):
+def synthetic_speech(_text, output, **_kwargs):
     rate = 8000
     samples = b''.join(struct.pack('<h', int(4000 * math.sin(2 * math.pi * 440 * n / rate))) for n in range(rate))
     with wave.open(str(output), 'wb') as stream:

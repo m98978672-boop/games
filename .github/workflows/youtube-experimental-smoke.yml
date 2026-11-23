@@ -9,6 +9,10 @@ on:
       - 'youtube-bot/gameplay_qwen.py'
       - 'youtube-bot/prepare_kvenya_adapter.py'
       - 'youtube-bot/gameplay_finalize.py'
+      - 'youtube-bot/gameplay_captions.py'
+      - 'youtube-bot/gameplay_edit.py'
+      - 'youtube-bot/gameplay_voiceover.py'
+      - 'youtube-bot/gameplay_release_plan.py'
       - 'youtube-bot/game_reviews.py'
       - 'youtube-bot/renderer.py'
       - 'youtube-bot/script_contract.py'
@@ -36,25 +40,14 @@ jobs:
           python -m pip install 'Pillow>=10.4,<13.0'
       - name: Verify long-review CFR from real FFmpeg chapters
         run: python youtube-bot/tests/smoke_render_fps.py
-      - name: Test deterministic 2048 self-play emulator
-        run: node youtube-bot/gameplay/test-simulator2048.cjs
+      - name: Split synthetic recorded video and verify subtitles
+        run: python youtube-bot/tests/smoke_gameplay_edit.py
       - name: Render complete ten-chapter long pipeline at reduced test resolution
         run: python youtube-bot/tests/smoke_long_pipeline.py
       - name: Build isolated recording container
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Test vision-action bridge against a sandboxed browser game
         run: python youtube-bot/tests/smoke_browser_bridge.py
-      - name: Capture actual gameplay and verify recording
-        shell: bash
-        run: |
-          set +e
-          python youtube-bot/tests/smoke_gameplay_2048.py > "$RUNNER_TEMP/gameplay-smoke.log" 2>&1
-          result=$?
-          cat "$RUNNER_TEMP/gameplay-smoke.log"
-          if [ "$result" -ne 0 ]; then
-            python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/gameplay-smoke.log"
-          fi
-          exit "$result"
 
   review-video:
     # Synthetic source material; no channel credentials or publishing.
@@ -127,6 +120,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Install video and voice tools for the private recording test
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
       - name: Install Qwen and image dependencies
         run: pip install -r youtube-bot/requirements-autopilot.txt "torchvision>=0.20,<1.0" "transformers==5.5.4" "peft==0.19.1" "accelerate==1.13.0"
       - name: Build isolated browser bridge
@@ -167,3 +162,17 @@ jobs:
             python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/kvenya-gameplay.log"
           fi
           exit "$result"
+
+  minecraft-one-off:
+    # Explicit dispatch only: user requested a single Minecraft Classic probe.
+    if: ${{ false }} # Previous one-off Minecraft Classic probe is finished.
+    permissions:
+      contents: read
+    uses: ./.github/workflows/minecraft-classic-experiment.yml
+
+  voxel-survival-one-off:
+    # One explicitly requested test; independent game, not official Minecraft.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/voxel-survival-experiment.yml

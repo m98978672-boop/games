@@ -36,6 +36,14 @@ class SteamCatalogTests(unittest.TestCase):
         self.assertIn("https://store.steampowered.com/appreviews/456?", games[0]["sources"][1]["url"])
         self.assertEqual(games[0]["screenshots"][0].split("/")[2], "shared.akamai.steamstatic.com")
 
+    def test_release_status_is_not_inferred_from_untrusted_missing_field(self):
+        for value, expected in ((True, True), (False, False), ('false', None), (None, None)):
+            details = app_details()
+            details['123']['data']['release_date']['coming_soon'] = value
+            with self.subTest(value=value), patch.object(steam_catalog, '_safe_get_json', side_effect=[details, {}]):
+                game = steam_catalog._game_from_app('123', {'id': 123})
+                self.assertIs(game['source_facts']['release_coming_soon'], expected)
+
     def test_invalid_review_response_keeps_verified_store_facts_only(self):
         featured = {"top_sellers": {"items": [{"id": 123, "name": "Test"}]}}
         with patch.object(steam_catalog, "_safe_get_json", side_effect=[
@@ -94,6 +102,21 @@ class SteamCatalogTests(unittest.TestCase):
             games = steam_catalog.load_steam_games(featured_payload=featured, recent_game_ids=("123",), limit=1)
         self.assertEqual(games, [{"id": "123"}])
         self.assertEqual(get.call_args_list[1].args[0], "123")
+
+    def test_price_requires_explicit_regional_data(self):
+        for data_updates, expected in (({"price_overview": {"currency": "EUR", "final": 1999}}, "paid"),
+                                       ({"is_free": True}, "free_to_play"),
+                                       ({"price_overview": {"currency": "USD", "final": 1999}}, None),
+                                       ({"price_overview": {"currency": "EUR", "final": 0}}, None),
+                                       ({}, None)):
+            details = app_details()
+            details["123"]["data"].update(data_updates)
+            with self.subTest(data=data_updates), patch.object(steam_catalog, "_safe_get_json", side_effect=[details, {}]):
+                game = steam_catalog._game_from_app("123", {"id": 123})
+                price = game["source_facts"]["price"]
+                self.assertEqual(price["kind"] if price else None, expected)
+                if price:
+                    self.assertEqual(price["region"], "NL")
 
     def test_no_external_host_is_accepted_for_steam_api(self):
         with self.assertRaises(steam_catalog.SteamSourceError):
