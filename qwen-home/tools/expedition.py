@@ -946,14 +946,14 @@ def read_story(page, visited, seconds, out, report, shot):
             moves += 1
             path.append({'n': moves, 'choice': pick['label'],
                          'fresh': fresh, 'text': text[:220]})
-            if moves in (1, 2, 3) or moves % 6 == 0:
+            if moves in (1, 2, 3) or moves % 8 == 0:
                 # Harlowe гасит старый пассаж и проявляет новый — снимаю, когда
                 # текст уже виден, иначе на скриншоте чёрный экран
                 for _w in range(10):
                     if page.evaluate("() => { const p = document.querySelector('.passage, tw-passage, tw-story'); if (!p) return false; const st = getComputedStyle(p); return parseFloat(st.opacity || '1') > 0.85; }"):
                         break
                     page.wait_for_timeout(150)
-                shot(f'0{min(9, 3 + moves // 6)}-story-{moves}.png')
+                shot(f'0{min(9, 3 + moves // 8)}-story-{moves:02d}.png')
             page.wait_for_timeout(1300)
             stuck = 0
         else:
