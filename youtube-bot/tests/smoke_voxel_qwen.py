@@ -27,6 +27,7 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         if obs.get('type') != 'observation' or obs.get('step') != step:
             raise RuntimeError('Invalid observation')
         before=obs.get('voxel_telemetry')
+        orientation_before=obs.get('voxel_orientation')
         supervision = assess(before, trace)
         if supervision['decision'] == 'stop':
             stop_reason=supervision['reason']
@@ -50,6 +51,10 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         if obs.get('type') != 'observation' or obs.get('step') != step+1:
             raise RuntimeError('Invalid action response')
         after=obs.get('voxel_telemetry')
+        orientation_after=obs.get('voxel_orientation')
+        camera_delta = None
+        if orientation_before and orientation_after:
+            camera_delta=round(math.hypot(orientation_after['yaw']-orientation_before['yaw'], orientation_after['pitch']-orientation_before['pitch']), 5)
         after_png=base64.b64decode(obs['screenshot_png_base64'], validate=True)
         with Image.open(io.BytesIO(png)) as a, Image.open(io.BytesIO(after_png)) as b:
             delta=sum(ImageStat.Stat(ImageChops.difference(a.convert('RGB'),b.convert('RGB'))).mean)/3
@@ -59,7 +64,7 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         if after and after.get('wood'):
             stop_reason='game_reported_wood_obtained'
         trace.append({'action':agent.decisions[-1], 'game_reported_screen':after.get('screen') if after else None,
-                      'game_reported_displacement':distance,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'game_reported_wood':after.get('wood') if after else None,'coarse_frame_change':round(delta,2)})
+                      'game_reported_displacement':distance,'game_reported_camera_delta':camera_delta,'game_reported_health':after.get('health') if after else None, 'game_reported_hunger':after.get('hunger') if after else None,'game_reported_wood':after.get('wood') if after else None,'coarse_frame_change':round(delta,2)})
         print('VOXEL_STEP='+json.dumps({'step':step+1, **trace[-1]}), flush=True)
         if stop_reason == 'game_reported_wood_obtained': break
 result={'game':'Independent Minecraft Web Recreation, not Minecraft', 'source':'https://github.com/nightdong/minecraft-web-recreation',
@@ -72,5 +77,7 @@ print('::notice title=Kvenya independent voxel survival test::'+json.dumps(resul
 summary={'steps':len(trace),'stop_reason':stop_reason,'hint_count':sum(i['type']=='hint' for i in interventions),
          'assisted_action_exclusions':sum(i['type']=='action_exclusion' for i in interventions),
          'filtered_steps':agent.filtered_steps,'last_action':trace[-1] if trace else None,
+         'look_actions':sum(t['action'].startswith('LOOK') for t in trace),
+         'look_actions_with_game_reported_rotation':sum(t['action'].startswith('LOOK') and t['game_reported_camera_delta'] is not None and t['game_reported_camera_delta'] > 0.001 for t in trace),
          'game_reported_wood_obtained':stop_reason == 'game_reported_wood_obtained', 'victory_verified':False,'trained':False,'published':False}
 print('::notice title=Kvenya survival supervision summary::'+json.dumps(summary))

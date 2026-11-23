@@ -108,8 +108,15 @@ async function main() {
           return {screen:s.screen, x:p.x, y:p.y, z:p.z, health, hunger, wood:s.earned.includes("wood")};
         } catch { return null; }
       }) : null;
+      const orientation = TELEMETRY === "voxel" ? await page.evaluate(() => {
+        try {
+          const p = window.voxelDiagnostics.snapshot()?.player;
+          if (![p?.yaw, p?.pitch].every(n => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 1000000)) return null;
+          return {yaw:p.yaw, pitch:p.pitch};
+        } catch { return null; }
+      }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel} : {})});
+        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});
