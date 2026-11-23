@@ -75,7 +75,7 @@ async function main() {
       const tick = now => {
         if (last !== null) {
           const delta = now - last;
-          if (Number.isFinite(delta) && delta > 0 && delta <= 60000) {
+          if (Number.isFinite(delta) && delta > 0 && delta <= 3600000) {
             if (samples.length < 300) samples.push(delta);
             else { samples[cursor] = delta; cursor = (cursor + 1) % 300; }
           }
@@ -84,11 +84,12 @@ async function main() {
         requestAnimationFrame(tick);
       };
       Object.defineProperty(window, '__bridgeFrameTiming', {value: () => {
-        if (!samples.length) return {samples:0, fps:null, p95_ms:null, max_ms:null};
+        const stalled_ms = last === null ? null : Math.max(0, performance.now() - last);
+        if (!samples.length) return {samples:0, fps:null, p95_ms:null, max_ms:null, stalled_ms};
         const sorted = samples.slice().sort((a,b) => a-b);
         const sum = sorted.reduce((a,b) => a+b, 0);
         return {samples:sorted.length, fps:1000 * sorted.length / sum,
-          p95_ms:sorted[Math.ceil(sorted.length * .95)-1], max_ms:sorted[sorted.length-1]};
+          p95_ms:sorted[Math.ceil(sorted.length * .95)-1], max_ms:sorted[sorted.length-1], stalled_ms};
       }, configurable:false, writable:false});
       requestAnimationFrame(tick);
     });
@@ -132,9 +133,10 @@ async function main() {
         try {
           const x = window.__bridgeFrameTiming();
           if (!Number.isInteger(x.samples) || x.samples < 0 || x.samples > 300) return null;
-          if (x.samples === 0) return {samples:0, fps:null, p95_ms:null, max_ms:null};
-          if (![x.fps, x.p95_ms, x.max_ms].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 60000)) return null;
-          return x;
+          if (!(x.stalled_ms === null || (typeof x.stalled_ms === 'number' && Number.isFinite(x.stalled_ms) && x.stalled_ms >= 0 && x.stalled_ms <= 3600000))) return null;
+          if (x.samples === 0) return {samples:0, fps:null, p95_ms:null, max_ms:null, stalled_ms:x.stalled_ms};
+          if (![x.fps, x.p95_ms, x.max_ms].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 3600000)) return null;
+          return {samples:x.samples, fps:x.fps, p95_ms:x.p95_ms, max_ms:x.max_ms, stalled_ms:x.stalled_ms};
         } catch { return null; }
       });
       if (png.length > 2_000_000) throw Error("screenshot too large");

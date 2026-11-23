@@ -44,6 +44,8 @@ jobs:
         run: python youtube-bot/tests/smoke_gameplay_edit.py
       - name: Render complete ten-chapter long pipeline at reduced test resolution
         run: python youtube-bot/tests/smoke_long_pipeline.py
+      - name: Test frame timing diagnostics
+        run: node youtube-bot/gameplay/test-frame-timing.cjs
       - name: Build isolated recording container
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Compare finite game browser timing with and without recording
