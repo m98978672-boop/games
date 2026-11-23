@@ -182,7 +182,51 @@ def persona_for(owner_text):
 TPS_LAST = []  # (токенов/с, сколько токенов, за сколько секунд) с последней генерации
 
 
-def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_new=0):
+class Enough(Exception):
+    """Сигнал «хватит писать» для остановки генерации изнутри."""
+
+
+class SentenceStop:
+    """Стоп, когда мысль закончена.
+
+    Замер показал: на CPU модель пишет 0,8 токена в секунду, а короткий
+    ответ в диалоге укладывается в 2–3 предложения. Но маленькая модель
+    сама не ставит точку-конец и добивает бюджет до последнего токена
+    водой и повторами — это семь минут впустую. Здесь генерация
+    прекращается, как только набрано нужное число законченных фраз
+    или пошёл повтор того же предложения. Бюджет остаётся большим
+    (он для подробного ответа), но платим только за сказанное.
+    """
+
+    def __init__(self, tokenizer, prompt_len, max_sentences):
+        self.tokenizer = tokenizer
+        self.prompt_len = prompt_len
+        self.max_sentences = max_sentences
+        self.steps = 0
+        self.total = 0
+        self.seen = set()
+
+    def __call__(self, input_ids, scores, **kwargs):
+        self.steps += 1
+        self.total += 1
+        if self.total < 24:
+            return False  # раньше 24 токенов предложения просто не бывает
+        if self.steps % 3:
+            return False
+        text = self.tokenizer.decode(input_ids[0][self.prompt_len:], skip_special_tokens=True)
+        sentences = [x.strip() for x in re.split(r'(?<=[.!?…])\s+', text) if x.strip()]
+        if len(sentences) >= self.max_sentences and re.search(r'[.!?…]\s*$', text.strip()):
+            return True
+        for phrase in sentences:
+            key = phrase.lower()[:60]
+            if key in self.seen:
+                return True  # пошёл повтор — дальше будет та же вода
+            self.seen.add(key)
+        return False
+
+
+
+def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_new=0, max_sentences=3):
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
     inputs = tokenizer(prompt, return_tensors='pt')
     started = time.monotonic()
@@ -196,6 +240,12 @@ def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_n
         kwargs.update(do_sample=True, temperature=temperature, top_p=0.9, top_k=40)
     else:
         kwargs.update(do_sample=False)
+    stopper = SentenceStop(tokenizer, int(inputs['input_ids'].shape[1]), max_sentences)
+    try:
+        from transformers import StoppingCriteriaList
+        kwargs['stopping_criteria'] = StoppingCriteriaList([stopper])
+    except Exception:
+        stopper = None
     with torch.inference_mode():
         out = model.generate(**inputs, **kwargs)
     produced = int(out[0].shape[-1]) - int(inputs['input_ids'].shape[1])
@@ -581,12 +631,14 @@ def main():
             from torchao.quantization import quantize_, Int8DynamicActivationInt8WeightConfig
             quantize_(model, Int8DynamicActivationInt8WeightConfig())
             quantized = True
+            globals()['INT8_ON'] = True
             print('Веса и активации переведены в int8 — выдача быстрее', flush=True)
         except Exception as exc1:
             try:
                 from torchao.quantization import quantize_, Int8WeightOnlyConfig
                 quantize_(model, Int8WeightOnlyConfig())
                 quantized = True
+                globals()['INT8_ON'] = True
                 print('Веса переведены в int8 (weight-only)', flush=True)
             except Exception as exc2:
                 print(f'int8 недоступен ({exc1}; {exc2}) — остаюсь в bfloat16', flush=True)
@@ -684,7 +736,8 @@ def main():
     # а факты для ответа уже лежат последним блоком.
     messages.append({'role': 'user', 'content': final_user})
     torch.manual_seed(42 + len(turns))
-    raw_reply = generate(model, tokenizer, messages, max_new=max_new, sample=True, temperature=0.4 if results else 0.7)
+    raw_reply = generate(model, tokenizer, messages, max_new=max_new, sample=True,
+                        temperature=0.4 if results else 0.7, max_sentences=6 if detailed else 3)
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
     drafts = [raw_reply]
     reply = clean_reply(raw_reply)
@@ -723,7 +776,8 @@ def main():
         # Скорость: повторы не гоняем на полный потолок 192 токенов —
         # хороший ответ это 1–3 предложения; плохой черновик от длины
         # лучше не станет, а три полные генерации стоят минут.
-        raw_retry = generate(model, tokenizer, retry, max_new=min(max_new, 96), sample=True, temperature=0.1)
+        raw_retry = generate(model, tokenizer, retry, max_new=min(max_new, 96), sample=True, temperature=0.1,
+                            max_sentences=6 if detailed else 3)
         drafts.append(raw_retry)
         reply = clean_reply(raw_retry)
         problem = reply_problem(reply)
@@ -731,7 +785,8 @@ def main():
     # иначе дом не сможет проверить, что действительно стало быстрее.
     speed_line = None
     if TPS_LAST:
-        speed_line = f'Токенов в секунду: {TPS_LAST[0]:.1f} ({TPS_LAST[1]} за {TPS_LAST[2]:.1f} c)'
+        speed_line = (f'Токенов в секунду: {TPS_LAST[0]:.1f} ({TPS_LAST[1]} за {TPS_LAST[2]:.1f} c); '
+                      f'бюджет {max_new}, подробно: {"да" if detailed else "нет"}, int8: {"да" if globals().get("INT8_ON") else "нет"}')
     if query:
         # Черновики — в журнал: дом честно показывает, как она отвечала.
         with SEARCH_LOG.open('a', encoding='utf-8') as log_file:
