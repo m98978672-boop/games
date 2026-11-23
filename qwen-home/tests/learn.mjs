@@ -267,5 +267,12 @@ check('карта истории видна: места, переходы и н�
   expPy.includes("report.data['storyMap']") && expWf.includes("report.get('storyMap')")
   && bridgeJs.includes('kv-map') && bridgeJs.includes('карта истории'));
 
+check('не топчется: петли и обратные ходы в историю — в последнюю очередь, плюс стоп-кран',
+  expPy.includes('def is_loop') && expPy.includes('came_from') && expPy.includes('стоп-кран')
+  && expPy.includes('два места') && expPy.includes("return ' '.join((text or '').split()).lower()"));
+
+check('диалог подтверждения в истории: жмёт «OK», а не «Cancel»',
+  expPy.includes("('ok', 'okay', 'yes', 'да'") && expPy.includes('affirm'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
