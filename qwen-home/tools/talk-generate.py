@@ -754,7 +754,8 @@ def main():
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
     drafts = [raw_reply]
     reply = clean_reply(raw_reply)
-    past_replies = {b.strip().lower()[:45] for role, b in answered_turns if role == 'assistant' and b.strip()}
+    past_reply_list = [b.strip().lower() for role, b in answered_turns if role == 'assistant' and b.strip()]
+    past_replies = {b[:45] for b in past_reply_list}
 
     def reply_problem(text):
         """Что не так с черновиком: мусор, обрыв или цифры не из фактов."""
@@ -762,8 +763,19 @@ def main():
             return 'невпопад: мусорный шаблон или обращение к самой себе'
         # Повтор своего прошлого ответа — не ответ на этот вопрос: маленькая
         # модель цепляется за собственную прошлую реплику и выдаёт её снова.
-        if past_replies and (text or '').strip().lower()[:45] in past_replies:
-            return 'повтор прошлого ответа'
+        if past_replies:
+            low = (text or '').strip().lower()
+            if low[:45] in past_replies:
+                return 'повтор прошлого ответа'
+            # Повтор по смыслу: та же заученная заготовка другими словами
+            # («уроки и дневник» на любой вопрос). Сравниваем связки слов,
+            # а не буквы: маленькая модель переставляет их и считает новым.
+            stems = {w[:6] for w in re.findall(r'[\w]{5,}', low)}
+            if len(stems) >= 3:
+                for past in past_reply_list:
+                    past_stems = {w[:6] for w in re.findall(r'[\w]{5,}', past)}
+                    if past_stems and len(stems & past_stems) / len(stems | past_stems) > 0.55:
+                        return 'та же заготовка другими словами'
         # Обрыв видно по знаку на конце, а не по длине: короткая верная
         # фраза — не брак, а растянутый баг — не образец. Иначе бюджет
         # рос, а страж резал ответы, которые до него не дотягивали.
@@ -821,8 +833,27 @@ def main():
         parts = [p for p in re.split(r'(?<=[.!?])\s+', reply) if p.strip()]
         reply = ' '.join(parts[:2]).strip()
     if problem and not results:
-        # И повтор не спас: честнее признать, чем опубликовать чепуху.
-        reply = 'Я задумалась и ответила невпопад. Спроси меня ещё раз, пожалуйста!'
+        bad = reply
+        # И повтор не спас. Если черновик просто оборван — обрезаем по
+        # последней законченной фразе: половина правды лучше признания
+        # «невпопад» на каждый второй вопрос. Если это была заготовка —
+        # честнее признать, чем опять про уроки и дневник.
+        whole = [x.strip() for x in re.split(r'(?<=[.!?…])\s+', bad or '') if x.strip()]
+        salvage = ' '.join(whole[:6]).strip()
+        stems = {w[:6] for w in re.findall(r'[\w]{5,}', (bad or '').lower())}
+        repeated = False
+        for past in past_reply_list:
+            past_stems = {w[:6] for w in re.findall(r'[\w]{5,}', past)}
+            if past_stems and stems and len(stems & past_stems) / len(stems | past_stems) > 0.55:
+                repeated = True
+                break
+        if salvage and len(salvage) >= 25 and salvage[-1] in '.!?…»"' and not repeated:
+            reply = salvage
+            print(f'Спасла законченную часть черновика: {reply!r}', flush=True)
+        else:
+            reply = ('Я задумалась и ответила невпопад. Спроси меня ещё раз, пожалуйста!'
+                     if not repeated else
+                     'Я опять сбилась на свои уроки и дневник — это не ответ на твой вопрос. Спроси ещё раз, я скажу иначе.')
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
     DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
