@@ -290,7 +290,7 @@ check('сложные игры идут сами: расписание турн�
   existsSync(path.join(home, '..', '.github', 'workflows', 'kvenya-games.yml')) &&
   (await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-games.yml'), 'utf8')).includes('games-tournament.mjs') &&
   motPy.includes('island-planner') && motPy.includes('better-than-rule') && motPy.includes('chess-clean') &&
-  bridgeJs.includes('renderGames') && worldHtml.includes('kvBridgeGames') && bridgeSensePy.includes("'games': games") &&
+  bridgeJs.includes('renderGames') && worldHtml.includes('kvBridgeGames') && bridgeSensePy.includes("payload['games'] = games") &&
   talkGen.includes('Факты о моих сложных играх') && talkGen.includes('Я играю расчётом') && talkGen.includes('эхо подсказки') && personaMd.includes('## Сложные игры'));
 
 const bridgeJsWants = await readFile(path.join(home, '..', 'kvenya', 'bridge.js'), 'utf8');

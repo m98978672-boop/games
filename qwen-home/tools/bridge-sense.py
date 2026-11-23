@@ -130,7 +130,6 @@ def main():
         pass
     payload = {
         'updatedAt': stamp,
-        'games': games,
         'source': 'ru.wikipedia.org',
         'note': 'Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.',
         'recent': recent,
@@ -140,6 +139,10 @@ def main():
         'motivation': motivation,
         'wants': wants,
     }
+    # Счёт сложных игр добавляем, только если он реально есть: иначе мост
+    # затирал бы свежий турнир старым снимком из bridge.json.
+    if games:
+        payload['games'] = games
     (ROOT / 'kvenya' / 'bridge.json').write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
     lines = ['# Сводка моста: что вокруг', '', f'Обновлено: {stamp}. Источник — открытая русская Википедия.', '']

@@ -1,5 +1,5 @@
 {
-  "points": 501,
+  "points": 509,
   "level": "Легенда моста",
   "achievements": [
     {
@@ -19,6 +19,12 @@
       "title": "Три трубы за матч",
       "reward": "вечер свободной экспедиции по своему выбору",
       "at": "2026-11-22 23:26 UTC"
+    },
+    {
+      "id": "chess-clean",
+      "title": "Чистая партия",
+      "reward": "все партии выиграны у спарринга",
+      "at": "2026-11-23"
     },
     {
       "id": "island-planner",
@@ -147,10 +153,10 @@
       "text": "опубликовала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!» "
     },
     {
-      "id": "games:chess:8/10",
+      "id": "games:chess:10/10",
       "at": "2026-11-23",
-      "delta": 32,
-      "text": "честный турнир в шахматы: побед 8 из 10 "
+      "delta": 40,
+      "text": "честный турнир в шахматы: побед 10 из 10 "
     }
   ],
   "eventIds": [
@@ -212,7 +218,7 @@
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
     "creation:episode:ep-20261123-2-truby",
-    "games:chess:8/10"
+    "games:chess:10/10"
   ],
   "reportsCounted": 17,
   "playedCount": 14,
@@ -220,7 +226,7 @@
   "gamesMade": 3,
   "episodesMade": 1,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-23 16:44 UTC",
+  "updatedAt": "2026-11-23 18:32 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -280,6 +286,7 @@
     "creation:game:ptica-i-truby",
     "creation:game:zmeika",
     "creation:game:zvezdny-dozhd",
+    "games:chess:10/10",
     "games:chess:8/10",
     "games:chess:9/10"
   ]
