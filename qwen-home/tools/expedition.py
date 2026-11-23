@@ -523,6 +523,12 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 visited = set()
                 story = read_story(page, visited, int(deadline - time.monotonic()), out, report, shot)
                 report.data['story'] = story
+                fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
+                report.data['storyLine'] = (
+                    f"прошла историю: {story['moves']} выборов ({fresh} в новых местах)"
+                    + (f", последний выбор «{(story['last'] or {}).get('choice', '')}»" if story.get('last') else '')
+                    + ((' · дошла до финала: ' + (story['endings'][-1].get('text') or '')[:80].strip())
+                       if story.get('endings') else ' · до финала не дошла — история не отпустила'))
                 report.data['status'] = 'played'
                 report.step('итог истории',
                             f"прошла {story['moves']} выборов, финалов в записи: {len(story['endings'])}; последний выбор — «{(story['last'] or {}).get('choice', '—')}»")

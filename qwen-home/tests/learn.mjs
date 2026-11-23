@@ -231,5 +231,8 @@ check('сюжетную игру она ПРОХОДИТ чтением: пас�
   && expPy.includes('data-kv-choice') && expPy.includes("report.data['kind'] = 'story'")
   && expPy.includes('reachedEnd') && expPy.includes('история её не отпустила'));
 
+check('сюжетная история видна на её странице: сколько выборов, где закончила — одной строкой',
+  expPy.includes('storyLine') && expWf.includes("report.get('storyLine')") && bridgeJs.includes('kv-story'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

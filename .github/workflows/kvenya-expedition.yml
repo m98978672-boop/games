@@ -140,6 +140,8 @@ jobs:
               'status': report.get('status', 'error'),
               'dir': str(d),
               'screenshots': report.get('screenshots', [])[:4],
+              'kind': report.get('kind') or 'game',
+              'storyLine': report.get('storyLine') or '',
               'hasVideo': bool(report.get('hasVideo')),
               'video': 'video.webm' if (d / 'video.webm').exists() else '',
           }
