@@ -494,7 +494,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 attempt = 0
                 shot_no = 3
                 first_start = True
-                while time.monotonic() < deadline - 6 and attempt < 3:
+                while time.monotonic() < deadline - 6 and attempt < 4:
                     attempt += 1
                     if first_start:
                         page.keyboard.press(keys[0] if keys else 'Space')
@@ -507,7 +507,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                         page.keyboard.press(keys[0] if keys else 'Space')
                     report.step(f'попытка {attempt} (зрение)', f'стартую игру глазами, сдвиг цели {offset:+d} px')
                     attempt_start = time.monotonic()
-                    attempt_end = min(deadline, attempt_start + max(14, int((deadline - attempt_start) / (3 - attempt + 1))))
+                    attempt_end = min(deadline, attempt_start + max(14, int((deadline - attempt_start) / (4 - attempt + 1))))
                     flaps = 0
                     last_flap = 0.0
                     last_gap = None
@@ -637,7 +637,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     if not mid_shot and shot_no <= 5:
                         shot(f'0{shot_no}-play.png')
                         shot_no += 1
-                    if time.monotonic() < deadline - 8 and attempt < 3:
+                    if time.monotonic() < deadline - 8 and attempt < 4:
                         if last_bird_y is not None and last_bird_y > 0.78 * frame_h:
                             offset = max(-40, offset - 14)
                             cause = 'упала к земле — в следующий раз держу птицу выше'
