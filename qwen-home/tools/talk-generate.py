@@ -712,6 +712,7 @@ def main():
                 print(f'Подложил ей факт её желания: {cur["title"]}', flush=True)
         except Exception:
             pass
+    fact_topic = False
     best = None
     if query:
         if results:
@@ -742,6 +743,7 @@ def main():
         # Факты о её сложных играх — из её же последнего турнира, а не
         # выдуманные: счёт берётся из qwen-home/bridge/games.json.
         game_fact = ''
+        fact_topic = True  # вопрос о сложных играх: отвечаем по фактам, без истории
         try:
             g = json.loads((HOME / 'bridge' / 'games.json').read_text(encoding='utf-8'))
             c = g.get('chess') or {}
@@ -761,6 +763,7 @@ def main():
                       'Ответь мне на вопрос выше от своего имени, тепло и по делу, двумя-тремя предложениями, '
                       'опираясь на эти факты.')
     elif SELF_TALK.search(owner_text) or re.search(r'(счасть|радост|нравится|горд|мечта)', owner_text, re.I):
+        fact_topic = True  # ответ по живым фактам о себе — тоже без истории
         # Маленькая модель на «что для тебя счастье» уходит в заученное
         # «уроки и дневник». Опора подаётся той же проверенной формой, что
         # факты поиска: текст, потом прямой вопрос — и без обрывающих
@@ -777,7 +780,11 @@ def main():
                       'двумя-тремя предложениями и опирайся на эти факты о себе.')
     else:
         final_user = owner_text + context_note
-    from_search = bool(results)
+    # Ответ по подложенным фактам (поиск, желание, сложные игры) собирается
+    # БЕЗ истории: иначе маленькая модель копирует из неё свою заученную
+    # заготовку («уроки и дневник») вместо факта, который ей дали.
+    from_facts = bool(results) or bool(want_fact) or fact_topic
+    from_search = from_facts
     detailed = bool(args.detailed) or bool(DETAILED_ASK.search(owner_text))
     system_prompt = persona + OWNER_MODE_NOTE
     max_new = args.max_new
