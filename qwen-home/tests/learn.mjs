@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { buildGameDataset } from '../tools/build-game-skill-dataset.mjs';
@@ -227,8 +229,64 @@ const studioMd = await readFile(path.join(home, 'studio', 'README.md'), 'utf8');
 check('её библиотека, сборщик игр и видеоблог: кирпичи опыта, игры из шаблонов, выпуски не в репозиторий', libPy.includes('def search') && libPy.includes('register_creation') && makerPy.includes('def make') && makerPy.includes('node') && vlogPy.includes('def build_episode') && vlogPy.includes('publish.json') && studioMd.includes('Не в репозиторий games') && studioMd.includes('Drive') && motPy.includes('gamesMade') && motPy.includes('game-smith') && motPy.includes('first-episode') && expWf.includes('vlog.py auto') && dialogue.some((r) => r.id === 'dlg-152') && dialogue.some((r) => r.id === 'dlg-153') && dialogue.some((r) => r.id === 'dlg-154') && dialogue.some((r) => r.id === 'dlg-155') && personaMd.includes('иблиотекарь'));
 check('ещё быстрее: модель из локального кэша, адаптер влит в веса, сэмплинг без полной сортировки словаря, разреженный checkout', talkGen.includes('local_files_only') && talkGen.includes('merge_and_unload') && talkGen.includes('top_k=40') && talkWorkflow.includes('sparse-checkout') && talkWorkflow.includes('kvenya-py.txt') && relayWorkflow.includes('sparse-checkout') && dialogue.some((r) => r.id === 'dlg-160'));
 check('больше токенов и токенов в секунду: бюджет 320, подробный режим, персона по теме, int8, все ядра, честный замер в секунду', talkGen.includes('def persona_for') && talkGen.includes('Персона для ответа') && talkGen.includes('Токенов в секунду') && talkGen.includes('Int8DynamicActivationInt8WeightConfig') && talkGen.includes('--no-int8') && talkGen.includes('quantize_dynamic') && talkGen.includes('оборвался на полуслове') && talkGen.includes('повторяющийся шаблон') && talkGen.includes('Ответь мне на вопрос выше') && talkGen.includes('Третий проход без истории') && talkGen.includes('Живые факты о твоей жизни') && talkGen.includes('Спасла законченную') && talkGen.includes('min(8, os.cpu_count') && talkGen.includes('inference_mode') && talkGen.includes('class SentenceStop') && talkGen.includes('StoppingCriteriaList') && talkWorkflow.includes('KV_DETAILED') && talkWorkflow.includes('torchao') && dialogue.some((r) => r.id === 'dlg-161') && dialogue.some((r) => r.id === 'dlg-163'));
+const chessBrainFile = existsSync(path.join(home, '..', 'kvenya', 'letsplay', 'chess_brain.mjs'))
+  ? await readFile(path.join(home, '..', 'kvenya', 'letsplay', 'chess_brain.mjs'), 'utf8') : '';
+const islandFile = existsSync(path.join(home, '..', 'kvenya', 'letsplay', 'island.mjs'))
+  ? await readFile(path.join(home, '..', 'kvenya', 'letsplay', 'island.mjs'), 'utf8') : '';
+// Сложные игры: шахматы и «Остров». Страж не верит файлам — он играет.
+const brainPath = path.join(home, '..', 'kvenya', 'letsplay', 'chess_brain.mjs');
+const islandPath = path.join(home, '..', 'kvenya', 'letsplay', 'island.mjs');
+const islandBrainPath = path.join(home, '..', 'kvenya', 'letsplay', 'island-brain.mjs');
+let chessBrain = null, islandMod = null, islandBrain = null;
+const chessAvailable = existsSync(path.join(home, '..', 'kvenya', 'letsplay', 'node_modules', 'chess.js'));
+try { chessBrain = await import(brainPath); } catch {}
+try { islandMod = await import(islandPath); } catch {}
+try { islandBrain = await import(islandBrainPath); } catch {}
+check('мозг для сложных игр на месте: оценка позиции, альфа-бета, спокойный поиск, порядок ходов',
+  !!chessBrain && typeof chessBrain.pickMove === 'function' && typeof chessBrain.evaluate === 'function' &&
+  chessBrainFile.includes('альфа-бета') && chessBrainFile.includes('quiesce') && chessBrainFile.includes('ordered'));
+let ChessMod = null;
+try { ChessMod = (await import(pathToFileURL(path.join(home, '..', 'kvenya', 'letsplay', 'node_modules', 'chess.js', 'dist', 'esm', 'chess.js')).href)).Chess; } catch {}
+check('шахматный мозг считает в срок и находит мат в один ход',
+  !!chessBrain && !!ChessMod && (() => {
+    const c = new ChessMod('6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1');
+    const t0 = Date.now();
+    const pick = chessBrain.pickMove(c, { timeMs: 500, maxDepth: 3 });
+    return Date.now() - t0 < 3000 && pick.move.san === 'Ra8#';
+  })());
+check('«Остров»: правила, экономика с ртами рабочих, волны и честная победа на месте',
+  !!islandMod && islandMod.ACTIONS.includes('tower') && islandMod.ACTIONS.includes('farm') &&
+  typeof islandMod.step === 'function' && typeof islandMod.finished === 'function' &&
+  islandFile.includes('каждое здание — один рот') && islandFile.includes('Волна каждые'));
+check('играет «Остров» лучше простой эвристики и объясняет ходы словами',
+  !!islandMod && !!islandBrain && (() => {
+    const play = (policy) => {
+      let wins = 0;
+      for (const seed of [1, 2, 3]) {
+        const g = islandBrain.playGame({ seed, policy });
+        if (g.win) wins++;
+      }
+      return wins;
+    };
+    const brainWins = play((w) => islandBrain.chooseAction(w, { depth: 4 }).action);
+    const baseWins = play((w) => islandMod.baselinePolicy(w));
+    const sample = islandBrain.explainChoice(islandMod.newWorld({ seed: 1 }), islandBrain.chooseAction(islandMod.newWorld({ seed: 1 }), { depth: 3 }));
+    return brainWins === 3 && baseWins < 3 && sample.length > 20 && sample.includes('потому что');
+  })());
+check('сложные игры записаны в уроки: перебор, порядок «еда → защита → рост», замер и честные пределы',
+  ['game-complex-lookahead', 'game-complex-order', 'game-complex-measure', 'game-complex-explain', 'game-complex-limits']
+    .every((id) => gameSkills.some((r) => r.id === id)) &&
+  gameSkills.filter((r) => r.id.startsWith('game-complex-')).every((r) => r.response.length > 200));
+
 const wantsPy = await readFile(path.join(home, 'tools', 'wants.py'), 'utf8');
 const bridgeSensePy = await readFile(path.join(home, 'tools', 'bridge-sense.py'), 'utf8');
+check('сложные игры идут сами: расписание турнира, награды за честный счёт, счёт на странице мира',
+  existsSync(path.join(home, '..', '.github', 'workflows', 'kvenya-games.yml')) &&
+  (await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-games.yml'), 'utf8')).includes('games-tournament.mjs') &&
+  motPy.includes('island-planner') && motPy.includes('better-than-rule') && motPy.includes('chess-clean') &&
+  bridgeJs.includes('renderGames') && worldHtml.includes('kvBridgeGames') && bridgeSensePy.includes("'games': games") &&
+  talkGen.includes('Мои сложные игры') && talkGen.includes('порядок: ') && personaMd.includes('## Сложные игры'));
+
 const bridgeJsWants = await readFile(path.join(home, '..', 'kvenya', 'bridge.js'), 'utf8');
 check('её собственная воля и скорость: желания из фактов, главное одно, окружение из кэша, решение о поиске короткое', wantsPy.includes('def pick') && wantsPy.includes('want-five-pipes') && wantsPy.includes('bridge/wants') === false && motPy.includes('ownWantsDone') && motPy.includes('own-will') && bridgeSensePy.includes("'wants': wants") && bridgeJsWants.includes('renderWants') && worldHtml.includes('kvBridgeWants') && talkWorkflow.includes('kvenya-venv') && talkWorkflow.includes('import torch, transformers, peft') && talkGen.includes('max_new=8') && talkGen.includes('wants.json') && talkGen.includes('главное желание сейчас') && expWf.includes('wants.py pick') && dialogue.some((r) => r.id === 'dlg-156') && dialogue.some((r) => r.id === 'dlg-157') && dialogue.some((r) => r.id === 'dlg-158') && dialogue.some((r) => r.id === 'dlg-159') && personaMd.includes('## Её собственные желания'));
 

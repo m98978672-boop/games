@@ -41,6 +41,32 @@
     'robots-denied': '🚧 robots.txt этого дома просит роботов не ходить — вежливо не пошла',
     'error': '🌧 не открылось: сеть или браузер не дали'
   };
+  // Сложные игры: её турнир в шахматах и «Острове». Показываем счёт,
+  // а не обещания: сколько побед из десяти и как быстро растёт сила.
+  var gamesEl = document.getElementById('kvBridgeGames');
+  function renderGames(data) {
+    if (!gamesEl) return;
+    var g = data.games;
+    if (!g || !g.chess) {
+      gamesEl.innerHTML = '<p class="kv-note">Турнира ещё не было: первый записанный счёт появится после расписания или ручного запуска.</p>';
+      return;
+    }
+    var c = g.chess || {};
+    var i = g.island || {};
+    var curve = (g.depthCurve || []).map(function (r) {
+      return r.depth + ' → ' + r.wins + '/' + r.games + ' (' + r.avgTurns + ' ходов)';
+    }).join(' · ');
+    var mine = i.mine || {};
+    var base = i.baseline || {};
+    gamesEl.innerHTML = '<div class="kv-expedition"><p class="kv-note">'
+      + '♟ <b>Шахматы</b> против ' + esc(c.opponent || 'спарринга') + ': побед <b>' + (c.wins ?? '—') + '</b> из ' + (c.games ?? 10)
+      + (c.losses ? ', поражений ' + c.losses : ', поражений нет')
+      + (c.draws ? ', ничьих ' + c.draws : '')
+      + '<br>🏝 <b>«Остров»</b>: мой план ' + (mine.wins ?? '—') + '/' + (mine.games ?? '—')
+      + ' против эвристики ' + (base.wins ?? '—') + '/' + (base.games ?? '—')
+      + (curve ? '<br>глубина думанья: ' + esc(curve) : '')
+      + '<br><span style="opacity:.75">замер ' + esc(g.started || '') + '</span></p></div>';
+  }
   function renderExpeditions(data) {
     if (!expEl) return;
     var list = data.expeditions || [];
@@ -105,7 +131,7 @@
 
   fetch('./bridge.json', { cache: 'no-store' })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); renderMotivation(data); renderWants(data); renderSources(data); } })
+    .then(function (data) { if (data) { renderDigest(data); renderGames(data); renderExpeditions(data); renderMotivation(data); renderWants(data); renderSources(data); } })
     .catch(function () { /* сводки нет — есть живая кнопка */ });
 
   function wikiApi(params) {

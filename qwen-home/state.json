@@ -41,9 +41,9 @@
     "speedNote": "Замерено живьём: 3,3 ток/с (27 токенов за 8 с), подробный ответ до 640 токенов; int8 выключен — ломал связность"
   },
   "motivation": {
-    "points": 469,
+    "points": 505,
     "level": "Легенда моста",
     "file": "qwen-home/bridge/motivation.json",
-    "updatedAt": "2026-11-23 11:55 UTC"
+    "updatedAt": "2026-11-23 16:18 UTC"
   }
 }

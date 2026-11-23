@@ -123,8 +123,14 @@ def main():
         wants = json.loads((BRIDGE / 'wants.json').read_text(encoding='utf-8'))
     except Exception:
         pass
+    games = old_bridge.get('games')
+    try:
+        games = json.loads((BRIDGE / 'games.json').read_text(encoding='utf-8'))
+    except Exception:
+        pass
     payload = {
         'updatedAt': stamp,
+        'games': games,
         'source': 'ru.wikipedia.org',
         'note': 'Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.',
         'recent': recent,
