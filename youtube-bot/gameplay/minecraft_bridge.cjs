@@ -13,13 +13,15 @@ async function main() {
     const u = new URL(route.request().url());
     // This restricts Playwright HTTP requests, not browser/kernel network access.
     return u.protocol === 'https:' && u.hostname === 'classic.minecraft.net' && (!u.port || u.port === '443')
-      ? route.continue() : route.abort();
+      ? route.continue() : (blockedRequests++, route.abort());
   });
   await context.routeWebSocket('**/*', ws => ws.close());
   const page = await context.newPage();
+  page.on('requestfailed', () => { failedRequests++; });
   page.on('popup', p => p.close().catch(() => {}));
   page.on('dialog', d => d.dismiss().catch(() => {}));
   let x = 400, y = 300, step = 0;
+  let blockedRequests = 0, failedRequests = 0;
   try {
     await page.goto(HOME, {waitUntil:'domcontentloaded',timeout:20000});
     // Setup is scripted, not a model action: use a disposable nickname only if
@@ -39,11 +41,25 @@ async function main() {
         await page.waitForTimeout(3000);
       }
     } catch (_) { setup = 'start_form_not_found_or_timeout'; }
+    const diagnostic = await page.evaluate(() => {
+      const text = (document.body?.innerText || '').toLowerCase();
+      const c = document.createElement('canvas');
+      return {
+        reports_missing_keyboard: text.includes('requires a keyboard'),
+        reports_missing_webgl_or_webrtc: text.includes('webgl or webrtc'),
+        visible_text_inputs: Array.from(document.querySelectorAll('input:not([type]),input[type=text]')).filter(e => !!e.getClientRects().length).length,
+        start_buttons: Array.from(document.querySelectorAll('button,input[type=button],input[type=submit]')).filter(e => /^(start)$/i.test((e.innerText || e.value || '').trim())).length,
+        canvases: document.querySelectorAll('canvas').length,
+        webgl_available: !!(c.getContext('webgl') || c.getContext('experimental-webgl')),
+      };
+    });
+    diagnostic.blocked_requests = blockedRequests;
+    diagnostic.failed_requests = failedRequests;
     await page.mouse.move(x,y);
     async function observe() {
       const png = await page.screenshot({type:'png',timeout:10000});
       if (png.length > 2000000) throw Error('screenshot too large');
-      emit({type:'observation',step,width:800,height:600,setup,screenshot_png_base64:png.toString('base64')});
+      emit({type:'observation',step,width:800,height:600,setup,diagnostic,screenshot_png_base64:png.toString('base64')});
     }
     await observe();
     const lines = readline.createInterface({input:process.stdin,crlfDelay:Infinity});
