@@ -70,7 +70,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
         title = review["title"][:100]
-    remember_game(history_path, review["game_id"])
+    # Selection memory is updated only by the publisher after confirmed upload.
     # Slow rendering may consume the lead time. Preserve the chosen slot if it
     # still works; otherwise explicitly report a safe one-off delay. Never
     # change the recurring cadence.

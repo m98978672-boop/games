@@ -40,7 +40,7 @@ class RunReviewTests(unittest.TestCase):
             self.assertEqual(result["metadata"]["publish_at"], "2026-11-24T13:00:00Z")
             render.assert_called_once()
             quality.assert_called_once()
-            self.assertEqual(json.loads((root / "recent-games.json").read_text()), ["12345"])
+            self.assertFalse((root / "recent-games.json").exists(), "rendering alone must not be remembered as a published game")
 
     def test_generic_long_script_does_not_render_or_poison_history(self):
         game = {'id': '1', 'title': 'Игра', 'features': ['Первый факт', 'Второй факт']}
