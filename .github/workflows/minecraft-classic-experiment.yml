@@ -7,6 +7,7 @@ on:
       - 'youtube-bot/gameplay_minecraft_bridge.py'
       - 'youtube-bot/tests/smoke_minecraft_qwen.py'
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:

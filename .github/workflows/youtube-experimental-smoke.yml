@@ -162,3 +162,10 @@ jobs:
             python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/kvenya-gameplay.log"
           fi
           exit "$result"
+
+  minecraft-one-off:
+    # Explicit dispatch only: user requested a single Minecraft Classic probe.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/minecraft-classic-experiment.yml
