@@ -865,6 +865,22 @@ def main():
     if results:
         parts = [p for p in re.split(r'(?<=[.!?])\s+', reply) if p.strip()]
         reply = ' '.join(parts[:2]).strip()
+    if problem and not results and past_reply_list:
+        # Третий шанс без истории: заготовку она копирует из собственных
+        # прошлых реплик в разговоре. Один чистый проход — только вопрос,
+        # её персона и живые факты; бояться заученного там нечего.
+        print('Третий проход без истории: только вопрос и живые факты', flush=True)
+        torch.manual_seed(404)
+        fresh = [messages[0], {'role': 'user', 'content': final_user}]
+        raw_fresh = generate(model, tokenizer, fresh, max_new=min(max_new, 160), sample=True,
+                             temperature=0.55, max_sentences=3)
+        drafts.append(raw_fresh)
+        fresh_reply = clean_reply(raw_fresh)
+        fresh_problem = reply_problem(fresh_reply)
+        if not fresh_problem:
+            reply, problem = fresh_reply, None
+        else:
+            print(f'Третий проход тоже не годится ({fresh_problem}): {fresh_reply!r}', flush=True)
     if problem and not results:
         bad = reply
         # И повтор не спас. Если черновик просто оборван — обрезаем по
