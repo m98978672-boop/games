@@ -420,6 +420,17 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
     return _generate_long_in_batches(review)
 
 
+def fit_complete_chapter(text: str, *, minimum: int = 220, maximum: int = 320) -> str:
+    """Shorten a verbose response only at a full sentence boundary, or reject it."""
+    text = re.sub(r"\s+", " ", str(text)).strip()
+    if len(text) <= maximum:
+        return text
+    ends = [m.end() for m in re.finditer(r"[.!?](?=\s|$)", text[:maximum + 1]) if m.end() <= maximum]
+    if ends and ends[-1] >= minimum:
+        return text[:ends[-1]].strip()
+    raise ValueError(f"long narration chapter length is {len(text)} with no safe sentence boundary")
+
+
 def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]:
     """Ask for one bounded chapter at a time and reject malformed model output.
 
@@ -471,6 +482,7 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                     visual = speech_excerpt(str(evidence[selected_id]), 100)
                 if fact_id not in allowed or fact_id != selected_id:
                     raise ValueError("long narration fact id does not match the supplied source")
+                dialogue = fit_complete_chapter(dialogue)
                 if not 220 <= len(dialogue) <= 320:
                     raise ValueError(f"long narration chapter length is {len(dialogue)} (required 220–320)")
                 if _russian_ratio(dialogue) < 0.7:

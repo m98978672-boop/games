@@ -227,6 +227,17 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(len(scenes), 10)
         self.assertIn("Итог по источникам:", scenes[-1]["dialogue"])
 
+    def test_long_chapters_trim_only_at_complete_sentence(self):
+        from game_reviews import fit_complete_chapter
+        sentence = 'В игре исследуют открытый мир и решают непростые задачи. '
+        original = sentence * 9
+        trimmed = fit_complete_chapter(original)
+        self.assertTrue(220 <= len(trimmed) <= 320)
+        self.assertTrue(trimmed.endswith('.'))
+        self.assertTrue(original.startswith(trimmed))
+        with self.assertRaisesRegex(ValueError, 'no safe sentence boundary'):
+            fit_complete_chapter('Длинная незаконченная фраза ' * 20)
+
     def test_plain_chapters_are_bound_only_to_the_supplied_source(self):
         from game_reviews import _generate_long_in_batches
         review = {'evidence': {'a':'В игре есть головоломки.', 'b':'В карточке указан одиночный режим.'},
