@@ -248,7 +248,7 @@ def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_n
         # Ум: слова из её прошлых ответов теряют вес. Иначе маленькая модель
         # снова и снова выбирает ту же заученную заготовку («уроки, дневник»)
         # на любой вопрос. Минус не запрет — новая мысль всегда возможна.
-        if past_stems:
+        if False and past_stems:
             state = {'steps': 0}
 
             def penalize(input_ids, scores):
