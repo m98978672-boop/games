@@ -63,6 +63,11 @@ class QwenPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             QwenVisionAgent('go', ('LEFT', 'RIGHT'), avoid_stalled_actions='true')
 
+    def test_bounded_mouse_and_first_person_actions(self):
+        for name, expected in [('LOOKLEFT', {'look': [-80, 0], 'duration_ms': 250}), ('PLACE', {'click': [400, 300], 'button': 'right', 'duration_ms': 250}), ('STRAFELEFT', {'keys': ['KeyA'], 'duration_ms': 500})]:
+            agent = QwenVisionAgent('Test controls', (name,), generator=lambda *_: name)
+            self.assertEqual(agent(frame('white'), 0), expected)
+
     def test_fail_closed(self):
         with self.assertRaises(ValueError): QwenVisionAgent('go', ('SHELL',))
         agent = QwenVisionAgent('go', ('LEFT',), generator=lambda *_: 'RIGHT')

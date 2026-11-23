@@ -12,6 +12,8 @@ HTML = '''<!doctype html><html><body style="margin:0;background:rgb(200,0,0)">
 <script>
 window.addEventListener('keydown', e => { if(e.code === 'KeyW') document.body.style.background='rgb(0,200,0)' });
 window.addEventListener('click', () => { document.body.style.background='rgb(0,0,200)' });
+window.addEventListener('mousemove', e => { if(e.clientX > 420) document.body.style.background='rgb(200,200,0)' });
+window.addEventListener('contextmenu', e => { e.preventDefault(); document.body.style.background='rgb(0,200,200)' });
 </script></body></html>'''
 def pixel(observation):
     assert observation['type'] == 'observation', observation
@@ -28,6 +30,11 @@ with tempfile.TemporaryDirectory(prefix='bridge-test-') as temp:
         assert pixel(bridge.receive()) == (200, 0, 0)
         assert bridge.step({'keys':['MetaLeft'], 'duration_ms':100})['type'] == 'error'
         assert bridge.step({'click':[800,0]})['type'] == 'error'
+        assert bridge.step({'look':[101,0]})['type'] == 'error'
+        assert bridge.step({'button':'right'})['type'] == 'error'
+        assert bridge.step({'click':[400,300], 'button':'middle'})['type'] == 'error'
+        assert pixel(bridge.step({'look':[50,0]})) == (200, 200, 0)
+        assert pixel(bridge.step({'click':[400,300], 'button':'right'})) == (0, 200, 200)
         assert pixel(bridge.step({'keys':['KeyW'], 'duration_ms':100})) == (0, 200, 0)
         assert pixel(bridge.step({'click':[400,300], 'duration_ms':100})) == (0, 0, 200)
     # Actual browser recording of the synthetic fixture, no model or upload.

@@ -29,13 +29,16 @@ const server = http.createServer((req, res) => {
 });
 function checkAction(action) {
   if (!action || typeof action !== "object" || Array.isArray(action)) throw Error("invalid action");
-  const allowed = ["keys", "click", "duration_ms"];
+  const allowed = ["keys", "click", "button", "look", "duration_ms"];
   if (Object.keys(action).some(key => !allowed.includes(key))) throw Error("unknown action field");
   const keys = action.keys ?? [], click = action.click ?? null, duration = action.duration_ms ?? 250;
   if (!Array.isArray(keys) || keys.length > 4 || new Set(keys).size !== keys.length || keys.some(key => !KEYS.has(key))) throw Error("invalid keys");
   if (!Number.isInteger(duration) || duration < 50 || duration > 2000) throw Error("invalid duration");
   if (click !== null && (!Array.isArray(click) || click.length !== 2 || !click.every(Number.isInteger) || click[0] < 0 || click[0] >= 800 || click[1] < 0 || click[1] >= 600)) throw Error("invalid click");
-  return {keys, click, duration};
+  const button = action.button ?? "left", look = action.look ?? null;
+  if (!["left", "right"].includes(button) || (action.button !== undefined && click === null)) throw Error("invalid button");
+  if (look !== null && (!Array.isArray(look) || look.length !== 2 || !look.every(Number.isInteger) || look.some(n => n < -100 || n > 100))) throw Error("invalid look");
+  return {keys, click, button, look, duration};
 }
 async function main() {
   await new Promise(resolve => server.listen(PORT, HOST, resolve));
@@ -54,10 +57,12 @@ async function main() {
   const video = recording ? page.video() : null;
   let normalClose = false;
   let step = 0;
+  let mouseX = 400, mouseY = 300;
   page.on("popup", popup => popup.close().catch(() => {}));
   page.on("dialog", dialog => dialog.dismiss().catch(() => {}));
   try {
     await page.goto(`http://${HOST}:${PORT}/${ENTRY}`, {waitUntil:"load", timeout:15000});
+    await page.mouse.move(mouseX, mouseY);
     const observe = async step => {
       const png = await page.screenshot({type:"png", timeout:10000, animations:"disabled"});
       if (png.length > 2_000_000) throw Error("screenshot too large");
@@ -88,11 +93,16 @@ async function main() {
       if (request && request.type === "close" && Object.keys(request).length === 1) { normalClose = true; break; }
       try {
         if (!request || request.type !== "step" || Object.keys(request).some(k => !["type", "action"].includes(k))) throw Error("invalid request");
-        const {keys, click, duration} = checkAction(request.action);
+        const {keys, click, button, look, duration} = checkAction(request.action);
         if (++step > 10000) throw Error("step limit reached");
         try {
           for (const key of keys) await page.keyboard.down(key);
-          if (click) await page.mouse.click(click[0], click[1]);
+          if (click) { mouseX = click[0]; mouseY = click[1]; await page.mouse.click(mouseX, mouseY, {button}); }
+          if (look) {
+            mouseX = Math.max(0, Math.min(799, mouseX + look[0]));
+            mouseY = Math.max(0, Math.min(599, mouseY + look[1]));
+            await page.mouse.move(mouseX, mouseY);
+          }
           await page.waitForTimeout(duration);
         } finally { for (const key of keys) await page.keyboard.up(key).catch(() => {}); }
         await observe(step);

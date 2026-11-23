@@ -23,6 +23,16 @@ ACTIONS = {
     'WAIT': {'duration_ms': 250},
     'TABLET': {'keys': ['KeyT'], 'duration_ms': 250},
     'FORWARD': {'keys': ['KeyW'], 'duration_ms': 1000},
+    'BACK': {'keys': ['KeyS'], 'duration_ms': 500},
+    'STRAFELEFT': {'keys': ['KeyA'], 'duration_ms': 500},
+    'STRAFERIGHT': {'keys': ['KeyD'], 'duration_ms': 500},
+    'LOOKLEFT': {'look': [-80, 0], 'duration_ms': 250},
+    'LOOKRIGHT': {'look': [80, 0], 'duration_ms': 250},
+    'LOOKUP': {'look': [0, -80], 'duration_ms': 250},
+    'LOOKDOWN': {'look': [0, 80], 'duration_ms': 250},
+    'INTERACT': {'click': [400, 300], 'duration_ms': 250},
+    'PLACE': {'click': [400, 300], 'button': 'right', 'duration_ms': 250},
+    'INVENTORY': {'keys': ['KeyB'], 'duration_ms': 250},
 }
 
 
