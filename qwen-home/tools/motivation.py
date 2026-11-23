@@ -19,6 +19,7 @@
 сводка в state.json. Страница мира показывает баллы через bridge.json.
 """
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -133,6 +134,40 @@ def collect():
             duty(f'{name}:crash', 'crash',
                  'Взыскание: письменно разобрать сбой — что упало и какой фикс нужен', at)
 
+    # Творчество: игры и выпуски из реестра её библиотеки.
+    # Судья тот же — факты: игра +12, выпуск собран +8, опубликован +10 сверху.
+    try:
+        sys.path.insert(0, str(HOME / 'tools'))
+        import library
+        creations = library.load_creations()
+    except Exception:
+        creations = []
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    games_made = 0
+    episodes_made = 0
+    for c in creations:
+        slug = c.get('slug', '?')
+        cat = c.get('at') or now
+        if c.get('kind') == 'game':
+            games_made += 1
+            events.append({'id': f'creation:game:{slug}', 'at': cat, 'delta': 12,
+                           'text': f"собрала свою игру «{c.get('title')}» из библиотеки "})
+        elif c.get('kind') == 'episode':
+            episodes_made += 1
+            published = c.get('status') == 'published'
+            events.append({'id': f'creation:episode:{slug}', 'at': cat,
+                           'delta': 18 if published else 8,
+                           'text': (f"опубликовала выпуск блога «{c.get('title')}» "
+                                    if published else f"собрала выпуск блога «{c.get('title')}» ")})
+    if games_made:
+        ach('game-maker', 'Сборщик игр', 'право придумывать следующий шаблон самой', now)
+    if games_made >= 3:
+        ach('game-smith', 'Игровых дел мастер', 'своя полка игр в мире Квени', now)
+    if episodes_made:
+        ach('first-episode', 'Первый выпуск', 'студия открывает второй сезон', now)
+    if episodes_made >= 3:
+        ach('director', 'Режиссёр', 'блог выходит по расписанию', now)
+
     points = max(0, sum(e['delta'] for e in events))
     return {
         'points': points,
@@ -145,6 +180,8 @@ def collect():
         'reportsCounted': len(reports),
         'playedCount': played_count,
         'bestStepsEver': best_steps_ever,
+        'gamesMade': games_made,
+        'episodesMade': episodes_made,
     }
 
 
