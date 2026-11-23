@@ -27,3 +27,9 @@ assert len(calls) >= 3 and review['game_id'] == gid and review['idea_score'] == 
 print(json.dumps({'fixture_only':True,'uploaded':False,'calls':len(calls),'game_id':gid,
                   'possible_minus':review['possible_minus'],'minus_evidence':review['minus_evidence'],
                   'limitation_generation':review.get('limitation_generation','model')},ensure_ascii=False))
+# Also test the real end-to-end plan. This is private metadata, not a video or upload.
+game_reviews.generate_with_qwen = real_generate
+real = game_reviews.generate_game_review(games)
+print(json.dumps({'fixture_only':False, 'uploaded':False, 'game_id':real['game_id'],
+                  'possible_minus':real['possible_minus'], 'minus_evidence':real['minus_evidence'],
+                  'limitation_generation':real.get('limitation_generation','model')},ensure_ascii=False))
