@@ -29,7 +29,11 @@ jobs:
       TOKENIZERS_PARALLELISM: 'false'
       GH_TOKEN: ${{ github.token }}
     steps:
+      # Скорость приёма: разговору нужен только её дом (qwen-home),
+      # а не весь репозиторий — разреженный checkout за секунды.
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: qwen-home
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -59,14 +63,23 @@ jobs:
       - name: Install CPU inference dependencies (only on cold cache)
         run: |
           VENV="$HOME/.cache/kvenya-venv"
-          if [ -x "$VENV/bin/python" ] && "$VENV/bin/python" -c "import torch, transformers, peft" 2>/dev/null; then
-            echo "Окружение поднялось из кэша — установка не нужна, отвечаем сразу"
+          # Скорость: полная проверка окружения импортом torch стоит
+          # секунды на каждый ответ. Если версия Python та же, что при
+          # сборке окружения, верим штампу и не импортируем зря; штамп
+          # не сошёлся — честная полная проверка импортом, а дальше
+          # пересборка, а не падение.
+          if [ -x "$VENV/bin/python" ] && [ "$(cat "$VENV/kvenya-py.txt" 2>/dev/null)" = "$(python -V 2>&1)" ]; then
+            echo "Окружение из кэша, версия Python та же — отвечаем сразу"
+          elif [ -x "$VENV/bin/python" ] && "$VENV/bin/python" -c "import torch, transformers, peft" 2>/dev/null; then
+            echo "Окружение поднялось из кэша (проверено импортом)"
+            python -V 2>&1 > "$VENV/kvenya-py.txt"
           else
             echo "Холодный кэш: собираю окружение один раз"
             rm -rf "$VENV"
             python -m venv "$VENV"
             "$VENV/bin/pip" install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
             "$VENV/bin/pip" install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+            python -V 2>&1 > "$VENV/kvenya-py.txt"
           fi
           echo "PY=$VENV/bin/python" >> "$GITHUB_ENV"
       - name: Download her home adapter

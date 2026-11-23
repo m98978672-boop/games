@@ -27,9 +27,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # Ретранслятору нужен только файл её диалога — разреженный
+      # checkout приносит вопрос быстрее, чем весь репозиторий.
       - uses: actions/checkout@v4
         with:
           ref: main
+          sparse-checkout: qwen-home
       - name: Relay the question into her home
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
