@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Звёздный дождь — игра Квени</title>
+<style>
+  body { margin:0; background:#0b1020; color:#e8ecf8; font-family:system-ui, sans-serif; text-align:center; }
+  h1 { font-size:20px; margin:14px 0 4px; }
+  p.hint { opacity:.75; margin:4px 0 10px; font-size:14px; }
+  canvas { background:#87ceeb; border-radius:12px; max-width:94vw; height:auto; touch-action:none; }
+  .foot { opacity:.6; font-size:12px; margin:10px; }
+</style></head><body>
+<h1>Звёздный дождь</h1>
+<p class="hint">Лови падающие звёзды: мышь или стрелки двигают корзину, пробел — старт</p>
+<canvas id="game" width="480" height="640"></canvas>
+<p class="foot">Собрала Квеня из своей библиотеки · шаблон «catch» · 2026-11-23</p>
+<script>
+
+const c = document.getElementById('game'), x = c.getContext('2d');
+let basket = 210, stars = [], score = 0, lives = 3, run = false, t = 0;
+function spawn() { stars.push({ x: 20 + Math.random() * 440, y: -20, v: 2 + Math.random() * 2 + t / 900 }); }
+function reset() { basket = 210; stars = []; score = 0; lives = 3; run = true; t = 0; }
+c.addEventListener('pointermove', e => { const r = c.getBoundingClientRect(); basket = (e.clientX - r.left) * (480 / r.width) - 35; });
+addEventListener('keydown', e => {
+  if (e.code === 'ArrowLeft') basket -= 26;
+  if (e.code === 'ArrowRight') basket += 26;
+  if (e.code === 'Space' && !run) reset();
+});
+c.addEventListener('pointerdown', () => { if (!run) reset(); });
+function draw() {
+  x.fillStyle = '#0e2a4a'; x.fillRect(0, 0, 480, 640);
+  x.fillStyle = '#ffd94d'; x.font = '26px sans-serif';
+  for (const s of stars) x.fillText('★', s.x, s.y);
+  x.fillStyle = '#ff9d5c'; x.fillRect(basket, 600, 70, 14);
+  x.fillStyle = '#fff'; x.font = '18px sans-serif';
+  x.fillText('Счёт: ' + score + '   Жизни: ' + lives, 14, 26);
+  if (!run) { x.font = '22px sans-serif'; x.fillText(score || lives <= 0 ? 'Клик или пробел — ещё раз' : 'Клик или пробел — старт', 96, 330); }
+}
+function loop() {
+  t++;
+  if (run) {
+    if (t % 26 === 0) spawn();
+    for (const s of stars) s.y += s.v;
+    stars = stars.filter(s => {
+      if (s.y > 594 && s.y < 622 && s.x > basket - 8 && s.x < basket + 70) { score++; return false; }
+      if (s.y > 650) { lives--; return false; }
+      return true;
+    });
+    if (lives <= 0) run = false;
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+draw(); loop();
+
+</script>
+</body></html>

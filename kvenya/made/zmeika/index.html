@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Змейка Квени — игра Квени</title>
+<style>
+  body { margin:0; background:#0b1020; color:#e8ecf8; font-family:system-ui, sans-serif; text-align:center; }
+  h1 { font-size:20px; margin:14px 0 4px; }
+  p.hint { opacity:.75; margin:4px 0 10px; font-size:14px; }
+  canvas { background:#87ceeb; border-radius:12px; max-width:94vw; height:auto; touch-action:none; }
+  .foot { opacity:.6; font-size:12px; margin:10px; }
+</style></head><body>
+<h1>Змейка Квени</h1>
+<p class="hint">Змейка: стрелки или WASD, пробел — заново</p>
+<canvas id="game" width="480" height="640"></canvas>
+<p class="foot">Собрала Квеня из своей библиотеки · шаблон «snake» · 2026-11-23</p>
+<script>
+
+const c = document.getElementById('game'), x = c.getContext('2d');
+const N = 24, S = 480 / N;
+let snake, dir, food, score, run = false, tick = 0;
+function place() { food = { x: (Math.random() * N) | 0, y: (Math.random() * N) | 0 }; }
+function reset() { snake = [{ x: 12, y: 12 }]; dir = { x: 1, y: 0 }; score = 0; run = true; place(); }
+addEventListener('keydown', e => {
+  const k = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1], KeyA: [-1, 0], KeyD: [1, 0], KeyW: [0, -1], KeyS: [0, 1] }[e.code];
+  if (k && (k[0] !== -dir.x || k[1] !== -dir.y)) dir = { x: k[0], y: k[1] };
+  if (e.code === 'Space' && !run) reset();
+});
+c.addEventListener('pointerdown', () => { if (!run) reset(); });
+function draw() {
+  x.fillStyle = '#10331c'; x.fillRect(0, 0, 480, 640);
+  x.fillStyle = '#ffd94d'; x.fillRect(food.x * S + 3, food.y * S + 3, S - 6, S - 6);
+  x.fillStyle = '#7ee081';
+  for (const p of snake) x.fillRect(p.x * S + 1, p.y * S + 1, S - 2, S - 2);
+  x.fillStyle = '#fff'; x.font = '18px sans-serif';
+  x.fillText('Счёт: ' + score, 14, 622);
+  if (!run) { x.font = '22px sans-serif'; x.fillText('Клик или пробел — старт', 92, 330); }
+}
+function step() {
+  const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+  if (head.x < 0 || head.y < 0 || head.x >= N || head.y >= N || snake.some(p => p.x === head.x && p.y === head.y)) { run = false; return; }
+  snake.unshift(head);
+  if (head.x === food.x && head.y === food.y) { score++; place(); } else snake.pop();
+}
+function loop() {
+  tick++;
+  if (run && tick % Math.max(4, 9 - (score / 4 | 0)) === 0) step();
+  draw();
+  requestAnimationFrame(loop);
+}
+draw(); loop();
+
+</script>
+</body></html>
