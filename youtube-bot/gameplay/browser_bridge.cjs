@@ -65,6 +65,16 @@ async function main() {
   page.on("popup", popup => popup.close().catch(() => {}));
   page.on("dialog", dialog => dialog.dismiss().catch(() => {}));
   try {
+    if (BOOTSTRAP === "voxel") {
+      // Headless pointer lock makes absolute click positioning rotate the camera.
+      // Simulate an unavailable browser capability so the game offers its own
+      // documented compatibility controls; this does not modify game state.
+      await page.addInitScript(() => {
+        Object.defineProperty(HTMLElement.prototype, "requestPointerLock", {
+          configurable: true, value: () => Promise.reject(new Error("pointer lock unavailable"))
+        });
+      });
+    }
     await page.goto(`http://${HOST}:${PORT}/${ENTRY}`, {waitUntil:"load", timeout:15000});
     if (BOOTSTRAP === "voxel") {
       // Test setup only, NOT model play: create an empty survival world through UI.
