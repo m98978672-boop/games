@@ -250,7 +250,14 @@ check('в истории она АНАЛИЗИРУЕТ: карта мест и �
 
 check('в истории она ДОБЫВАЕТ новое: после финала начинает заново и идёт в непройденные ветки',
   expPy.includes('def restart_story') && expPy.includes('tw-icon[title="Restart" i]')
-  && expPy.includes('runs') && expPy.includes('заходов хватит'));
+  && expPy.includes('runs') && expPy.includes('заходов хватит')
+  && expPy.includes('def mark_open') && expPy.includes('непройденных вариантов не осталось'));
+
+check('карта честная: переход записывается, когда видно, куда он привёл',
+  expPy.includes("story_map.link(pending['from'], pending['choice'], text)"));
+
+check('находки только настоящие: «рука в кармане» за добычу не считается',
+  expPy.includes('you scour the shelves') && !expPy.includes("'in your pocket', 'you grab'"));
 
 check('вымотанной она не бежит за псом, а отдыхает: силы влияют на выбор',
   expPy.includes('def is_rest') && expPy.includes('def is_far') && expPy.includes('if energy < 0:'));
