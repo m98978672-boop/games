@@ -20,7 +20,7 @@ class VoxelVoiceTests(unittest.TestCase):
         events=narration_events(self.report,30)
         self.assertIn('Привет',events[0][1]); self.assertIn('помощью',events[1][1])
         self.assertIn('пробуем добывать',events[2][1]); self.assertIn('гибели',events[-1][1])
-        self.assertIn('Баг игры не подтверждён',events[-1][1])
+        self.assertIn('Баг не подтверждён',events[-1][1])
     @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'ffmpeg required')
     def test_renders_video_and_matching_subtitles(self):
         from voxel_voiceover import voiceover

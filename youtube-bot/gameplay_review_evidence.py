@@ -76,20 +76,20 @@ def session_evidence(report: dict[str, Any]) -> dict[str, Any]:
 
 def spoken_review(evidence: dict[str, Any]) -> str:
     """Conservative, deterministic summary; not a verified personal opinion."""
-    parts = ['Итог пробной сессии: мы использовали внешние подсказки и ограничения действий.']
+    parts = ['Итог: мы использовали внешние подсказки и ограничения действий.']
     if evidence['game_reported_rotations']:
-        parts.append('Плюс для этого теста: игра сообщала о поворотах камеры после команд.')
+        parts.append('Плюс: по диагностике игры камера поворачивалась.')
     if evidence['game_reported_wood']:
         parts.append('Игра сообщила о получении дерева, но это не подтверждает прохождение.')
     elif not evidence['game_reported_log_targets'] and not evidence['unknown_target_observations']:
-        parts.append('Ограничение опыта: диагностика не сообщила о стволе в пределах досягаемости, добыча дерева не подтверждена.')
+        parts.append('Ограничение опыта: ближайший ствол и добыча дерева не подтверждены.')
     elif evidence['game_reported_log_targets']:
         parts.append('Ствол был отмечен диагностикой игры, но получение дерева не подтверждено.')
     else:
         parts.append('Диагностики недостаточно, чтобы судить о стволах или добыче дерева.')
     if evidence['outcome'] == 'game_reported_death':
-        parts.append('Игра сообщила о гибели персонажа.')
-    parts.append('Баг игры не подтверждён: застревание агента само по себе не доказывает ошибку игры.')
+        parts.append('Игра сообщила о гибели.')
+    parts.append('Баг не подтверждён: застревание агента не доказывает ошибку игры.')
     return ' '.join(parts)
 
 
