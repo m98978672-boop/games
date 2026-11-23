@@ -11,7 +11,9 @@ const TYPES = {".html":"text/html", ".js":"text/javascript", ".mjs":"text/javasc
 const KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter", "Escape", "ShiftLeft", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(k => "Key" + k), ..."0123456789".split("").map(k => "Digit" + k)]);
 const ENTRY = process.env.BRIDGE_ENTRY || "index.html";
 const TELEMETRY = process.env.BRIDGE_TELEMETRY || "";
-if (!["", "2048"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
+const BOOTSTRAP = process.env.BRIDGE_BOOTSTRAP || "";
+if (!["", "voxel"].includes(BOOTSTRAP)) throw Error("invalid bootstrap mode");
+if (!["", "2048", "voxel"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
 if (!/^(?:[a-zA-Z0-9_-]+\/)*index\.html$/.test(ENTRY)) throw Error("invalid entry path");
 const emit = value => process.stdout.write(JSON.stringify(value) + "\n");
 const server = http.createServer((req, res) => {
@@ -62,6 +64,17 @@ async function main() {
   page.on("dialog", dialog => dialog.dismiss().catch(() => {}));
   try {
     await page.goto(`http://${HOST}:${PORT}/${ENTRY}`, {waitUntil:"load", timeout:15000});
+    if (BOOTSTRAP === "voxel") {
+      // Test setup only, NOT model play: create an empty survival world through UI.
+      await page.locator('[data-action="create"]').click({timeout:30000});
+      await page.locator('[data-action="start-new"]').click({timeout:10000});
+      await page.locator('[data-action="resume"]').waitFor({state:"visible", timeout:90000});
+      await page.locator('[data-action="resume"]').click({timeout:10000});
+      await page.waitForTimeout(1500);
+      const compat = page.locator('[data-action="compatible"]');
+      if (await compat.isVisible()) await compat.click({timeout:10000});
+      await page.waitForTimeout(1500);
+    }
     await page.mouse.move(mouseX, mouseY);
     const observe = async step => {
       const png = await page.screenshot({type:"png", timeout:10000, animations:"disabled"});
@@ -81,8 +94,17 @@ async function main() {
           return {score:state.score, max_tile:Math.max(...values), won:state.won, over:state.over};
         } catch { return null; }
       }) : null;
+      // Read-only, bounded data provided by the game; do not treat it as trusted evidence.
+      const voxel = TELEMETRY === "voxel" ? await page.evaluate(() => {
+        try {
+          const s = window.voxelDiagnostics.snapshot(), p = s?.player?.pos;
+          if (!["playing", "ready", "pause", "inventory", "title", "error"].includes(s?.screen) ||
+              !p || ![p.x, p.y, p.z].every(n => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 1000000)) return null;
+          return {screen:s.screen, x:p.x, y:p.y, z:p.z};
+        } catch { return null; }
+      }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {})});
+        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});

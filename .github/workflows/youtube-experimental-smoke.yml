@@ -165,7 +165,14 @@ jobs:
 
   minecraft-one-off:
     # Explicit dispatch only: user requested a single Minecraft Classic probe.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ false }} # Previous one-off Minecraft Classic probe is finished.
     permissions:
       contents: read
     uses: ./.github/workflows/minecraft-classic-experiment.yml
+
+  voxel-survival-one-off:
+    # One explicitly requested test; independent game, not official Minecraft.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/voxel-survival-experiment.yml

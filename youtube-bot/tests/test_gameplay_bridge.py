@@ -51,6 +51,18 @@ class BridgeSafetyTests(unittest.TestCase):
             self.assertEqual(command[command.index('--network') + 1], 'none')
             with self.assertRaises(ValueError): docker_command(game, name, telemetry='shell')
 
+    def test_voxel_setup_is_opt_in_and_offline(self):
+        with tempfile.TemporaryDirectory() as temp:
+            game = Path(temp) / 'game'; game.mkdir(); (game / 'index.html').write_text('test')
+            name = 'games-bridge-' + 'a' * 32
+            plain = docker_command(game, name)
+            self.assertNotIn('BRIDGE_BOOTSTRAP=voxel', plain)
+            command = docker_command(game, name, telemetry='voxel', bootstrap='voxel')
+            self.assertIn('BRIDGE_BOOTSTRAP=voxel', command)
+            self.assertIn('BRIDGE_TELEMETRY=voxel', command)
+            self.assertEqual(command[command.index('--network') + 1], 'none')
+            with self.assertRaises(ValueError): docker_command(game, name, bootstrap='other')
+
     def test_rights_are_explicit_and_steps_bounded(self):
         with self.assertRaisesRegex(ValueError, 'rights'):
             BrowserBridge(Path('.'))
