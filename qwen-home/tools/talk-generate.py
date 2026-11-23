@@ -580,7 +580,10 @@ def main():
         else:
             retry_note = '\n(Прошлый черновик не годится: он невпопад. Отвечай владельцу от своего имени, тепло и точно по вопросу, 1–3 предложения целиком. К самой себе по имени не обращайся и чужие роли не пиши.)'
         retry = messages[:-1] + [{'role': 'user', 'content': final_user + retry_note}]
-        raw_retry = generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.1)
+        # Скорость: повторы не гоняем на полный потолок 192 токенов —
+        # хороший ответ это 1–3 предложения; плохой черновик от длины
+        # лучше не станет, а три полные генерации стоят минут.
+        raw_retry = generate(model, tokenizer, retry, max_new=min(args.max_new, 96), sample=True, temperature=0.1)
         drafts.append(raw_retry)
         reply = clean_reply(raw_retry)
         problem = reply_problem(reply)
