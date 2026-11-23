@@ -142,16 +142,6 @@ code {
 }
 .kv-card h2 { margin: 0 0 10px; font-size: 19px; color: #fff; }
 .kv-note { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 8px 0; }
-/* Карточка её сложных игр и экспедиций: та же рамка, что у остальных
-   блоков дома, чтобы счёт турнира читался на телефоне так же ясно. */
-.kv-expedition {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin: 8px 0;
-}
-.kv-expedition b { color: #fff; }
 .kv-more { display: inline-block; margin-top: 10px; font-size: 13.5px; font-weight: 600; text-decoration: none; }
 .kv-more:hover { text-decoration: underline; }
 

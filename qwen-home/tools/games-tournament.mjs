@@ -28,21 +28,15 @@ export function chessTournament({ depth = 3, games = 10 } = {}) {
   }
   const stdout = execFileSync(process.execPath, ['chess_match.mjs', 'scan'], {
     cwd: letsplay,
-    // Бюджет времени проверен живьём: 200 мс даёт 10/10 даже на медленном
-    // раннере, 700 мс там же давало 8/10 (времени не хватало на уровни).
-    env: { ...process.env, KV_DEPTH: String(depth), KV_TIME_MS: process.env.KV_TIME_MS || '200' },
+    env: { ...process.env, KV_DEPTH: String(depth) },
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
   const line = stdout.split('\n').find((l) => l.startsWith('ИТОГ:')) || '';
   const n = (re) => Number((line.match(re) || [])[1] || 0);
-  const f = (re) => Number((line.match(re) || [])[1] || 0);
   return {
     ok: true,
     depth,
-    timeMs: Number(process.env.KV_TIME_MS || 200),
-    avgDepth: f(/средняя глубина ([\d.]+)/) || 0,
-    shallowMoves: n(/мелких ходов (\d+)/),
     wins: n(/побед (\d+)/),
     losses: n(/поражений (\d+)/),
     draws: n(/ничьих (\d+)/),
@@ -98,19 +92,10 @@ export async function depthCurve() {
 
 export async function main() {
   const started = new Date().toISOString();
-  // Средняя глубина за прошлый турнир, чтобы сравнить «стало ли глубже».
-  let prevDepth = null;
-  try {
-    prevDepth = JSON.parse(readFileSync(out, 'utf8')).chess?.avgDepth ?? null;
-  } catch {}
   const chess = chessTournament({ depth: Number(process.env.KV_DEPTH || 3) });
   const island = await islandTournament({ depth: Number(process.env.KV_ISLAND_DEPTH || 4) });
   const curve = await depthCurve();
-  const report = { schema: 'kvenya-games-v1', started, chess, island, depthCurve: curve, prevDepth };
-  if (prevDepth !== null && chess.ok) {
-    const delta = Math.round((chess.avgDepth - prevDepth) * 10) / 10;
-    console.log(`Глубина против прошлого турнира: ${delta >= 0 ? '+' : ''}${delta} (${prevDepth} → ${chess.avgDepth})`);
-  }
+  const report = { schema: 'kvenya-games-v1', started, chess, island, depthCurve: curve };
   mkdirSync(path.dirname(out), { recursive: true });
   let history = [];
   if (existsSync(out)) {
