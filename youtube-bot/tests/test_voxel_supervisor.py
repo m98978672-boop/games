@@ -21,6 +21,13 @@ class SurvivalMonitorTests(unittest.TestCase):
         self.assertEqual(assisted_actions(allowed,recent,'no_alert'), (allowed, ()))
         self.assertEqual(assisted_actions(('BACK',),recent,'game_reported_stagnation'), (('BACK',), ()))
 
+    def test_camera_stall_is_measured_and_bounded(self):
+        trace=[{'action':'LOOKUP','game_reported_camera_delta':0.0}]*3
+        self.assertEqual(assess(self.ok,trace)['reason'],'game_reported_camera_stagnation')
+        self.assertEqual(assisted_actions(('LOOKUP','LOOKDOWN'),trace,'game_reported_camera_stagnation'), (('LOOKDOWN',),('LOOKUP',)))
+        self.assertEqual(assess(self.ok,[{'action':'LOOKUP','game_reported_camera_delta':None}]*3)['reason'],'no_alert')
+        self.assertEqual(assess(self.ok,[{'action':'LOOKUP','game_reported_camera_delta':False}]*3)['reason'],'no_alert')
+
     def test_stagnation_advice_only_on_valid_measurements(self):
         items=[{'action':'BACK','game_reported_displacement':0.1}]*3
         self.assertEqual(assess(self.ok,items)['reason'],'game_reported_stagnation')

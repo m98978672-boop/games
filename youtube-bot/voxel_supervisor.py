@@ -32,6 +32,11 @@ def assess(state, recent):
         return {'decision':'continue', 'reason':'game_reported_low_health',
                 'hint':'Reported health is low. Avoid hazards and move cautiously; do not assume you are safe.'}
     last = recent[-3:]
+    if (len(last) == 3 and last[0].get('action') in {'LOOKLEFT','LOOKRIGHT','LOOKUP','LOOKDOWN'}
+            and all(x.get('action') == last[0]['action'] and type(x.get('game_reported_camera_delta')) in (int,float)
+                    and math.isfinite(x['game_reported_camera_delta']) and 0 <= x['game_reported_camera_delta'] < .001 for x in last)):
+        return {'decision':'continue', 'reason':'game_reported_camera_stagnation',
+                'hint':'Repeated looking did not rotate the camera. Try a different direction or move toward a visible tree.'}
     if len(last) == 3 and all(x.get('action') == 'MINE' and x.get('game_reported_wood') is False for x in last):
         return {'decision':'continue', 'reason':'mining_without_wood',
                 'hint':'Three mining attempts have not yielded wood yet. Look for a tree and aim at its trunk before mining again.'}
@@ -47,6 +52,11 @@ def assisted_actions(allowed, recent, reason):
     This is an external intervention, not learned policy or proof a new action works.
     """
     movement = {'FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE'}
+    if reason == 'game_reported_camera_stagnation':
+        blocked = {r.get('action') for r in recent[-3:] if r.get('action') in {'LOOKLEFT','LOOKRIGHT','LOOKUP','LOOKDOWN'}}
+        remaining = tuple(a for a in allowed if a not in blocked)
+        if remaining:
+            return remaining, tuple(a for a in allowed if a in blocked)
     if reason == 'mining_without_wood' and 'MINE' in allowed and len(allowed) > 1:
         return tuple(a for a in allowed if a != 'MINE'), ('MINE',)
     if reason != 'game_reported_stagnation':
