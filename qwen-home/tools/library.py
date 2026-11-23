@@ -61,9 +61,14 @@ def register_creation(kind, slug, title, at, extra=None):
     existing = []
     if CREATIONS.exists():
         existing = [json.loads(l) for l in CREATIONS.read_text(encoding='utf-8').splitlines() if l.strip()]
-    if not any(c.get('kind') == kind and c.get('slug') == slug for c in existing):
-        with CREATIONS.open('a', encoding='utf-8') as fh:
-            fh.write(json.dumps(row, ensure_ascii=False) + '\n')
+    for c in existing:
+        if c.get('kind') == kind and c.get('slug') == slug:
+            c.update(row)  # статус растёт: collected -> published
+            CREATIONS.write_text(''.join(json.dumps(x, ensure_ascii=False) + '\n' for x in existing),
+                                 encoding='utf-8')
+            return c
+    with CREATIONS.open('a', encoding='utf-8') as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + '\n')
     return row
 
 
