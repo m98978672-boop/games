@@ -39,7 +39,15 @@
       "at": "2026-11-23"
     }
   ],
-  "pendingDuties": [],
+  "pendingDuties": [
+    {
+      "id": "20261123-2034-colinhuang314-github-io:reach",
+      "kind": "reach",
+      "text": "Взыскание: разобрать, почему не дошла до игры, и найти другой вход",
+      "at": "2026-11-23 20:33 UTC",
+      "closedBy": ""
+    }
+  ],
   "closedDuties": [
     {
       "id": "20261122-2208-ellisonleao-github-io:crash",
