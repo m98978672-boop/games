@@ -403,6 +403,18 @@ def make_cam(pos, target):
     pitch = math.atan2(d[1], math.hypot(d[0], d[2]))
     return pos, yaw, pitch
 
+def cam_space(p, cam):
+    pos, yaw, pitch = cam
+    v = sub(p, pos)
+    c, s = math.cos(yaw), math.sin(yaw)
+    x1 = v[0]*c - v[2]*s; z1 = v[0]*s + v[2]*c; y1 = v[1]
+    c2, s2 = math.cos(pitch), math.sin(pitch)
+    y2 = y1*c2 - z1*s2; z2 = y1*s2 + z1*c2
+    return (x1, y2, z2)
+
+def project_cs(c):
+    return (W / 2 + F * c[0] / c[2], H / 2 - F * c[1] / c[2], c[2])
+
 def project(p, cam):
     pos, yaw, pitch = cam
     v = sub(p, pos)
@@ -1356,7 +1368,13 @@ def render_frame(k, t, ovl_imgs, ot=None):
         elif t >= 5.0:
             faces += quad((0.06, 0.014, -2.0), (0.34, 0.014, -2.0), (0.34, 0.014, -1.8), (0.06, 0.014, -1.8), (238, 232, 214))
             faces += quad((0.10, 0.016, -1.96), (0.30, 0.016, -1.96), (0.30, 0.016, -1.93), (0.10, 0.016, -1.93), (190, 90, 80))
-        faces += quad((-10, 0, -8), (10, 0, -8), (10, 0, 6), (-10, 0, 6), (96, 102, 80))
+        faces += quad((-40, 0, -30), (40, 0, -30), (40, 0, 40), (-40, 0, 40), (96, 102, 80))
+        faces += quad((-40, 0.003, -30), (40, 0.003, -30), (40, 0.003, -12), (-40, 0.003, -12), (90, 100, 76))
+        faces += quad((-20, 0.005, -14), (20, 0.005, -14), (20, 0.005, -8), (-20, 0.005, -8), (88, 100, 72))
+        faces += quad((-16, 0.004, -9), (-5, 0.004, -9), (-5, 0.004, -1), (-16, 0.004, -1), (86, 98, 70))
+        faces += quad((4, 0.004, -8), (15, 0.004, -8), (15, 0.004, -1), (4, 0.004, -1), (106, 114, 88))
+        faces += quad((-18, 0.004, 1), (-6, 0.004, 1), (-6, 0.004, 12), (-18, 0.004, 12), (106, 114, 88))
+        faces += quad((5, 0.004, 2), (17, 0.004, 2), (17, 0.004, 13), (5, 0.004, 13), (86, 98, 70))
         faces += quad((-0.55 - 0.35, 0.010, zp - 0.25), (-0.55 + 0.35, 0.010, zp - 0.25),
                       (-0.55 + 0.35, 0.010, zp + 0.25), (-0.55 - 0.35, 0.010, zp + 0.25), (58, 62, 48))
         faces += quad((-1.05 - 0.35, 0.010, zf - 0.25), (-1.05 + 0.35, 0.010, zf - 0.25),
@@ -1386,7 +1404,10 @@ def render_frame(k, t, ovl_imgs, ot=None):
                     faces += quad((px - pr, py - pr, -2.45), (px + pr, py - pr, -2.45),
                                   (px + pr, py + pr, -2.45), (px - pr, py + pr, -2.45), (240, 240, 236), True)
         shadow = (0.3, -1.7)
-        faces += quad((-7, 0, -6), (7, 0, -6), (7, 0, 3), (-7, 0, 3), (168, 132, 108))
+        faces += quad((-40, 0, -30), (40, 0, -30), (40, 0, 40), (-40, 0, 40), (168, 132, 108))
+        faces += quad((-20, 0.005, -16), (20, 0.005, -16), (20, 0.005, -9), (-20, 0.005, -9), (112, 116, 84))
+        faces += quad((-16, 0.004, -8), (-4, 0.004, -8), (-4, 0.004, 2), (-16, 0.004, 2), (104, 108, 78))
+        faces += quad((4, 0.004, -8), (16, 0.004, -8), (16, 0.004, 2), (4, 0.004, 2), (92, 98, 70))
         for i in range(4):
             z0 = -2.75 - i * 0.85
             faces += quad((-0.95, 0.012, z0), (0.95, 0.012, z0), (0.95, 0.012, z0 - 0.62), (-0.95, 0.012, z0 - 0.62), (186, 180, 170))
@@ -1550,7 +1571,11 @@ def render_frame(k, t, ovl_imgs, ot=None):
         grid = False
         glow = 0.7 + 0.2 * math.sin(t * 1.2)
         shadow = None
-        faces += quad((-10, 0, -8), (10, 0, -8), (10, 0, 6), (-10, 0, 6), (52, 58, 48))
+        faces += quad((-40, 0, -30), (40, 0, -30), (40, 0, 40), (-40, 0, 40), (40, 46, 40), True)
+        faces += quad((-16, 0.004, -9), (-5, 0.004, -9), (-5, 0.004, 0), (-16, 0.004, 0), (34, 40, 34), True)
+        faces += quad((4, 0.004, -8), (15, 0.004, -8), (15, 0.004, 0), (4, 0.004, 0), (46, 52, 44), True)
+        faces += quad((-18, 0.004, 1), (-6, 0.004, 1), (-6, 0.004, 12), (-18, 0.004, 12), (46, 52, 44), True)
+        faces += quad((5, 0.004, 2), (17, 0.004, 2), (17, 0.004, 13), (5, 0.004, 13), (34, 40, 34), True)
         faces += human_house(0, 6.0, 0.0, 1.0, night=True, glow=glow, t=t)
         wz = 6.0 - 2.16
         faces += box((-1.7, 1.42, wz), (0.42, 0.36, 0.1), (40, 36, 40))
@@ -1567,7 +1592,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
                   head_yaw=0.2 * math.sin(t * 0.6) + 0.6 * smooth(6, 7.5, t), tail_t=t * 0.7,
                   blink=blink(t), painted=True)
         cfb, clb = cat_faces(Pb); faces += cfb; lines += clb
-        faces += quad((-2.55, 0.010, -2.05), (-1.85, 0.010, -2.05), (-1.85, 0.010, -1.55), (-2.55, 0.010, -1.55), (30, 34, 28))
+        faces += quad((-2.55, 0.010, -2.05), (-1.85, 0.010, -2.05), (-1.85, 0.010, -1.55), (-2.55, 0.010, -1.55), (26, 30, 24), True)
         faces += [([(-3.4, 5.2, 9.2), (-2.8, 5.2, 9.2), (-2.8, 5.8, 9.2), (-3.4, 5.8, 9.2)], (238, 236, 224), True)]
         for sx, sy in ((-4.2, 6.4), (-1.6, 7.2), (2.4, 6.8), (4.2, 7.6), (0.6, 8.2), (-0.8, 5.6)):
             faces += [([(sx, sy, 9.4), (sx + 0.09, sy, 9.4), (sx + 0.09, sy + 0.09, 9.4), (sx, sy + 0.09, 9.4)], (230, 230, 224), True)]
@@ -1632,8 +1657,18 @@ def render_frame(k, t, ovl_imgs, ot=None):
     for item in faces:
         q, col, emis = item[0], item[1], item[2]
         ol = item[3] if len(item) > 3 else False
-        pp = [project(p, cam) for p in q]
-        if any(p is None for p in pp): continue
+        cs = [cam_space(p, cam) for p in q]
+        clp = []
+        nn = len(cs)
+        for i in range(nn):
+            a, b = cs[i], cs[(i + 1) % nn]
+            ain, binp = a[2] >= 0.15, b[2] >= 0.15
+            if ain: clp.append(a)
+            if ain != binp:
+                tt = (0.15 - a[2]) / (b[2] - a[2])
+                clp.append(tuple(a[j] + (b[j] - a[j]) * tt for j in range(3)))
+        if len(clp) < 3: continue
+        pp = [project_cs(p) for p in clp]
         depth = sum(p[2] for p in pp)/len(pp)
         proj.append((depth, [(p[0], p[1]) for p in pp], shade((q, col, emis)), ol))
     proj.sort(key=lambda x: -x[0])
