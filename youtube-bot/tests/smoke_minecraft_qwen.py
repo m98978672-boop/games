@@ -15,9 +15,9 @@ from gameplay_qwen import QwenVisionAgent
 focus_agent = QwenVisionAgent('Focus the game by clicking the screen center.', ('INTERACT', 'WAIT'))
 move_agent = QwenVisionAgent(
     'Explore the 3D scene using WASD: FORWARD walks ahead, BACK walks backwards, '
-    'STRAFELEFT and STRAFERIGHT move sideways, SPACE jumps, LOOK actions turn. '
+    'STRAFELEFT and STRAFERIGHT move sideways, SPACE jumps. '
     'Choose a movement to explore. WAIT does nothing.',
-    ('FORWARD', 'BACK', 'STRAFELEFT', 'STRAFERIGHT', 'SPACE', 'LOOKLEFT', 'LOOKRIGHT', 'WAIT'),
+    ('FORWARD', 'BACK', 'STRAFELEFT', 'STRAFERIGHT', 'SPACE', 'WAIT'),
     avoid_stalled_actions=True)
 actions=[]
 visual_changes=[]
@@ -51,5 +51,5 @@ with MinecraftBridge() as bridge:
             delta=sum(ImageStat.Stat(ImageChops.difference(before.convert('RGB'),after.convert('RGB'))).mean)/3
         visual_changes.append(round(delta, 2))
 result={'source':'https://classic.minecraft.net/','model_variant':'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base',
-        'setup':setup,'diagnostic':diagnostic,'actions':actions,'coarse_frame_changes':visual_changes,'stage_policy':'model focus then model movement; external stall filter removes a repeated action after two nearly unchanged screens','filtered_steps':move_agent.filtered_steps,'world_entered_verified':False,'gameplay_verified':False,'recorded':False,'trained':False,'published':False}
+        'setup':setup,'diagnostic':diagnostic,'actions':actions,'coarse_frame_changes':visual_changes,'stage_policy':'model focus then model movement (looking temporarily disabled); external stall filter removes a repeated action after two nearly unchanged screens','filtered_steps':move_agent.filtered_steps,'world_entered_verified':False,'gameplay_verified':False,'recorded':False,'trained':False,'published':False}
 print('::notice title=Minecraft Classic experimental probe::'+json.dumps(result))
