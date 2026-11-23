@@ -29,6 +29,9 @@ def assess(state, recent):
     if not isinstance(recent, list) or len(recent) > 1000:
         raise ValueError('Invalid action history')
     last = recent[-3:]
+    if len(last) == 3 and all(x.get('action') == 'MINE' and x.get('game_reported_wood') is False for x in last):
+        return {'decision':'continue', 'reason':'mining_without_wood',
+                'hint':'Three mining attempts have not yielded wood yet. Look for a tree and aim at its trunk before mining again.'}
     if len(last) == 3 and all(x.get('action') in {'FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE'} and type(x.get('game_reported_displacement')) in (int,float) and math.isfinite(x['game_reported_displacement']) and 0 <= x['game_reported_displacement'] < .15 for x in last):
         return {'decision':'continue', 'reason':'game_reported_stagnation',
                 'hint':'Recent movement did not noticeably change reported position. Try a different safe movement; screen changes alone do not prove progress.'}
@@ -44,6 +47,8 @@ def assisted_actions(allowed, recent, reason):
     This is an external intervention, not learned policy or proof a new action works.
     """
     movement = {'FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE'}
+    if reason == 'mining_without_wood' and 'MINE' in allowed and len(allowed) > 1:
+        return tuple(a for a in allowed if a != 'MINE'), ('MINE',)
     if reason != 'game_reported_stagnation':
         return allowed, ()
     blocked = {r.get('action') for r in recent[-3:] if r.get('action') in movement}

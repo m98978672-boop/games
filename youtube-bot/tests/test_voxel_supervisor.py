@@ -26,5 +26,7 @@ class SurvivalMonitorTests(unittest.TestCase):
         self.assertEqual(assess(self.ok,[{'game_reported_displacement':None}]*3)['reason'],'no_alert')
         self.assertEqual(assess(self.ok,[{'game_reported_displacement':False}]*3)['reason'],'no_alert')
         self.assertEqual(assess(self.ok,[{'action':'MINE','game_reported_displacement':0}]*3)['reason'],'no_alert')
+        self.assertEqual(assess(self.ok,[{'action':'MINE','game_reported_wood':False}]*3)['reason'],'mining_without_wood')
+        self.assertEqual(assisted_actions(('MINE','FORWARD'), [], 'mining_without_wood'), (('FORWARD',),('MINE',)))
 
 if __name__ == '__main__': unittest.main()
