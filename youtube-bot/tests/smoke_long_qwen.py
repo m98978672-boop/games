@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from game_reviews import generate_long_narration
+from game_reviews import generate_long_narration, ensure_editorial_quality
 from renderer import synthesize
 from speech_policy import fit_speech_text
 
@@ -23,6 +23,12 @@ review = {
 }
 scenes = generate_long_narration(review)
 assert len(scenes) == 10
+try:
+    ensure_editorial_quality(scenes)
+except ValueError as exc:
+    print(f'::warning title=Editorial quality gate::Production would reject this private sample: {exc}')
+else:
+    print('::notice title=Editorial quality gate::Private sample passed basic repetition/fallback checks; facts and voice still require review.')
 assert all(scene["fact_id"] in review["evidence"] for scene in scenes)
 assert "Итог по источникам:" in scenes[-1]["dialogue"]
 print("Long-script smoke passed:", len(scenes), "chapters;", sum(len(s["dialogue"]) for s in scenes), "characters")
