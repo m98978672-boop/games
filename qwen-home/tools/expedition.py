@@ -356,7 +356,17 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0, sure=True):
         return False
     if gap:
         gap_top, gap_bottom = gap
-        if bird_y > gap_bottom - 0.05 * h:
+        # Срочность у нижнего края: порог с запасом на тело птицы (полвысоты
+        # ~30 px) и на задержку кадра. По живому прогону птица дошла до 468
+        # при крае 470 — взмах пришёл, когда она уже была в трубе; не хватало
+        # трёх пикселей. 0.07h вместо 0.05h даёт эти пиксели.
+        if bird_y > gap_bottom - 0.07 * h:
+            return ms_since_flap >= 80
+        # Упреждение по скорости. При падении 44 px за кадр птица проскакивает
+        # даже широкий порог целиком: по живому прогону она шла 284 -> 328 ->
+        # 468 -> труба, и взмах приходил уже внутри. Если через кадр-два она
+        # будет у края — жмём СЕЙЧАС.
+        if vy > 20 and bird_y + vy * 1.6 > gap_bottom - 0.10 * h:
             return ms_since_flap >= 80
         # аварийный тормоз: пулей вниз уже в середине просвета —
         # не ждём зону, скорость сама донесёт до нижнего края
@@ -592,10 +602,13 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     prev_bird_y = None
                     trace = []
                     stuck_frames = 0
+                    frame_ms_sum = frame_ms_max = 0.0
+                    frame_ms_n = 0
                     flap_key = keys[0] if keys else 'Space'
                     key_held = False
                     held_since = 0.0
                     while time.monotonic() < attempt_end:
+                        frame_started = time.monotonic()
                         st = read_eyes()
                         if st is None:
                             eyes_lost += 1
@@ -605,6 +618,11 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             continue
                         eyes_lost = 0
                         frames += 1
+                        # сколько занял сам разбор кадра: это и есть «слепота» глаз
+                        frame_ms = (time.monotonic() - frame_started) * 1000
+                        frame_ms_sum += frame_ms
+                        frame_ms_max = max(frame_ms_max, frame_ms)
+                        frame_ms_n += 1
                         now = time.monotonic()
                         frame_h = st['h']
                         bird_low = bool(st['bird'] and st['bird'][1] > 0.72 * frame_h)
@@ -702,7 +720,14 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     if steps_now is not None:
                         vision['bestSteps'] = steps_now if vision['bestSteps'] is None else max(vision['bestSteps'], steps_now)
                     score_txt = f'труб по табло игры: {steps_now}' if steps_now is not None else 'табло не читается — счёт кадрами не подтверждён'
-                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, кадров {frames} (птицу видела в {bird_frames}, просвет в {gap_frames}), {score_txt}')
+                    eye_avg = round(frame_ms_sum / frame_ms_n, 1) if frame_ms_n else 0.0
+                    vision.setdefault('eyeMs', []).append({'attempt': attempt, 'avg': eye_avg,
+                                                           'max': round(frame_ms_max, 1), 'frames': frame_ms_n})
+                    # Честный вывод о зрении: при разборе кадра дольше 40 мс глаза
+                    # физически не успевают за игрой, и это видно в отчёте, а не
+                    # выясняется догадками.
+                    eye_verdict = ('успевала' if eye_avg <= 40 else 'отставала')
+                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, кадров {frames} (птицу видела в {bird_frames}, просвет в {gap_frames}); кадр разбирался в среднем {eye_avg} мс (худший {round(frame_ms_max, 1)} мс) — {eye_verdict}; {score_txt}')
                     if not mid_shot and shot_no <= 5:
                         shot(f'0{shot_no}-play.png')
                         shot_no += 1
