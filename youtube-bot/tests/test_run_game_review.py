@@ -30,6 +30,7 @@ class RunReviewTests(unittest.TestCase):
                  patch.object(run_game_review, "generate_game_review", return_value=review), \
                  patch.object(run_game_review, "generate_long_narration", return_value=[{"dialogue": "текст"} for _ in range(10)]), \
                  patch.object(run_game_review, "download_screenshots", return_value=[]), \
+                 patch.object(run_game_review, "ensure_editorial_quality") as quality, \
                  patch.object(run_game_review, "render_long_review", return_value={"fps": 50, "resolution": "1920x1080", "duration_seconds": 210}) as render, \
                  patch.object(run_game_review, "next_publish_slot", return_value=datetime(2026, 11, 24, 13, tzinfo=timezone.utc)):
                 result = run_game_review.run(root / "long.mp4", video_format="long")
@@ -38,7 +39,25 @@ class RunReviewTests(unittest.TestCase):
             self.assertIn("https://store.steampowered.com/app/12345/", result["metadata"]["description"])
             self.assertEqual(result["metadata"]["publish_at"], "2026-11-24T13:00:00Z")
             render.assert_called_once()
+            quality.assert_called_once()
             self.assertEqual(json.loads((root / "recent-games.json").read_text()), ["12345"])
+
+    def test_generic_long_script_does_not_render_or_poison_history(self):
+        game = {'id': '1', 'title': 'Игра', 'features': ['Первый факт', 'Второй факт']}
+        review = {'game_id': '1', 'game_title': 'Игра', 'screenshots': []}
+        template = [{'dialogue': 'Повторяемая фраза ' * 12, 'generation': 'source-template'} for _ in range(10)]
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.object(run_game_review, 'DATA_DIR', Path(temp)), \
+             patch.object(run_game_review, 'load_steam_games', return_value=[game]), \
+             patch.object(run_game_review, 'generate_game_review', return_value=review), \
+             patch.object(run_game_review, 'generate_long_narration', return_value=template), \
+             patch.object(run_game_review, 'render_long_review') as render, \
+             patch.object(run_game_review, 'download_screenshots') as download:
+            with self.assertRaisesRegex(ValueError, 'generic fallback'):
+                run_game_review.run(Path(temp) / 'long.mp4', video_format='long')
+            render.assert_not_called()
+            download.assert_not_called()
+            self.assertFalse((Path(temp) / 'recent-games.json').exists())
 
     def test_manual_choice_is_validated_twice_and_passed_to_metadata(self):
         game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}

@@ -23,7 +23,7 @@ class GameCatalogTests(unittest.TestCase):
 
     def test_spoken_store_context_marks_region_and_unreleased_dates(self):
         from game_reviews import steam_release_note, with_store_context
-        review = {'source_facts': {'release_date': '12 окт. 2027', 'release_coming_soon': True,
+        review = {'game_title': 'Пример', 'source_facts': {'release_date': '12 окт. 2027', 'release_coming_soon': True,
                   'price': {'kind': 'paid', 'minor_units': 1999, 'currency': 'EUR', 'region': 'NL', 'checked_at': '2026-11-22'}}}
         self.assertIn('выход ожидается', steam_release_note(review))
         scenes = with_store_context([{'dialogue': 'Вступление.'}, {'dialogue': 'Особенности.'}], review)
@@ -100,6 +100,9 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn("не личное прохождение", youtube_description(review))
         self.assertIn("https://m98978672-boop.github.io/games/", youtube_description(review))
         self.assertEqual(len(review["scenes"]), 5)
+        self.assertTrue(review["scenes"][0]["dialogue"].startswith("Привет! Сегодня разбираем"))
+        self.assertIn(game["title"], review["scenes"][0]["dialogue"])
+        self.assertIn("Что здесь происходит?", review["scenes"][1]["dialogue"])
         self.assertEqual(review["scenes"][-1]["label"], "ИТОГ")
         self.assertIn("8 из 10", review["scenes"][-1]["dialogue"])
         self.assertIn("Без личной игры", review["scenes"][-1]["dialogue"])
@@ -230,6 +233,15 @@ class GameCatalogTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "requires two Russian source facts"):
                 generate_long_narration(review)
 
+    def test_editorial_gate_rejects_template_and_repeated_chapters(self):
+        from game_reviews import ensure_editorial_quality
+        repeated = [{'dialogue': 'Подробное объяснение игровой механики и цели. ' * 5} for _ in range(10)]
+        with self.assertRaisesRegex(ValueError, 'repetitive'):
+            ensure_editorial_quality(repeated)
+        repeated[0]['generation'] = 'source-template'
+        with self.assertRaisesRegex(ValueError, 'fallback'):
+            ensure_editorial_quality(repeated)
+
     def test_long_fallback_uses_only_bounded_source_facts_and_identifies_template(self):
         review = {"evidence": {"a": "В описании упомянуты логические задачи.", "b": "В карточке указан одиночный режим."},
                   "game_title": "Игра", "idea_score": 7, "hook": "Что предлагает игра?",
@@ -251,9 +263,8 @@ class GameCatalogTests(unittest.TestCase):
                    "minus_feature_id": f"{game['id']}-f1", "idea_score": 5,
                    "hook": "English-only introduction", "possible_minus": "Возможно, visit www.example.com"}
         with patch("game_reviews.generate_with_qwen", return_value=json.dumps(invalid)):
-            review = generate_game_review(games)
-        self.assertNotIn("www.", review["possible_minus"])
-        self.assertIn("игра", review["hook"])
+            with self.assertRaisesRegex(ValueError, 'refusing generic filler'):
+                generate_game_review(games)
 
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()

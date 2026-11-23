@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from game_reviews import generate_game_review, generate_long_narration, youtube_description
+from game_reviews import generate_game_review, generate_long_narration, youtube_description, ensure_editorial_quality
 from renderer import render_long_review, render_short
 from schedule_policy import manual_publish_time, next_publish_slot, resolve_manual_after_render, CHANNEL_TZ
 from steam_catalog import download_screenshots, load_steam_games
@@ -53,15 +53,16 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         recent_game_ids=previous,
         seed=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
-    remember_game(history_path, review["game_id"])
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     workdir = output.parent / f"{output.stem}-work"
+    if video_format == "long":
+        review["scenes"] = generate_long_narration(review)
+        ensure_editorial_quality(review["scenes"])
     review["screenshot_paths"] = download_screenshots(
         list(review.get("screenshots", [])), workdir / "steam-assets", limit=6,
     )
     if video_format == "long":
-        review["scenes"] = generate_long_narration(review)
         review["format"] = "game-review-long"
         rendered = render_long_review(review, output, workdir)
         title = f"Полный обзор: {review['game_title']} — разбор по источникам"[:100]
@@ -69,6 +70,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
         title = review["title"][:100]
+    remember_game(history_path, review["game_id"])
     # Slow rendering may consume the lead time. Preserve the chosen slot if it
     # still works; otherwise explicitly report a safe one-off delay. Never
     # change the recurring cadence.
