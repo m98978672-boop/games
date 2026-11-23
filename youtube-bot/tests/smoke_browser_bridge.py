@@ -12,6 +12,9 @@ HTML = '''<!doctype html><html><body style="margin:0;background:rgb(200,0,0)">
 <script>
 window.addEventListener('keydown', e => { if(e.code === 'KeyW') document.body.style.background='rgb(0,200,0)' });
 window.addEventListener('click', () => { document.body.style.background='rgb(0,0,200)' });
+window.addEventListener('mousemove', e => { if(e.clientX > 420) document.body.style.background='rgb(200,200,0)' });
+window.addEventListener('mousedown', () => { document.body.style.background='rgb(200,0,200)' });
+window.addEventListener('contextmenu', e => { e.preventDefault(); document.body.style.background='rgb(0,200,200)' });
 </script></body></html>'''
 def pixel(observation):
     assert observation['type'] == 'observation', observation
@@ -28,8 +31,28 @@ with tempfile.TemporaryDirectory(prefix='bridge-test-') as temp:
         assert pixel(bridge.receive()) == (200, 0, 0)
         assert bridge.step({'keys':['MetaLeft'], 'duration_ms':100})['type'] == 'error'
         assert bridge.step({'click':[800,0]})['type'] == 'error'
+        assert bridge.step({'look':[101,0]})['type'] == 'error'
+        assert bridge.step({'hold_ms':4501,'click':[400,300]})['type'] == 'error'
+        assert bridge.step({'hold_ms':100})['type'] == 'error'
+        assert bridge.step({'button':'right'})['type'] == 'error'
+        assert bridge.step({'click':[400,300], 'button':'middle'})['type'] == 'error'
+        assert pixel(bridge.step({'look':[50,0]})) == (200, 200, 0)
+        assert pixel(bridge.step({'click':[400,300], 'button':'right'})) == (0, 200, 200)
+        assert pixel(bridge.step({'click':[400,300], 'hold_ms':100, 'duration_ms':100})) == (0, 0, 200)
         assert pixel(bridge.step({'keys':['KeyW'], 'duration_ms':100})) == (0, 200, 0)
         assert pixel(bridge.step({'click':[400,300], 'duration_ms':100})) == (0, 0, 200)
+    # Actual browser recording of the synthetic fixture, no model or upload.
+    import subprocess, json
+    recording = Path(temp) / 'recording'
+    recording.mkdir()
+    with BrowserBridge(game, rights_acknowledged=True, record_dir=recording) as bridge:
+        bridge.receive()
+        bridge.step({'keys':['KeyW'], 'duration_ms':500})
+        bridge.step({'click':[400,300], 'duration_ms':500})
+        video = bridge.finish_recording()
+    info = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration:stream=codec_type', '-of', 'json', str(video)], check=True, capture_output=True, text=True).stdout)
+    assert float(info['format']['duration']) > 0 and any(s.get('codec_type') == 'video' for s in info['streams']), info
+    print('Actual browser bridge recording validated; synthetic fixture, no upload')
     def test_agent(png, step):
         color = Image.open(io.BytesIO(png)).convert('RGB').getpixel((400, 300))
         if step == 0:

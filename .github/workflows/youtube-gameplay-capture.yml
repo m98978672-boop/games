@@ -26,9 +26,9 @@ concurrency:
 
 jobs:
   capture:
-    if: >-
-      (github.event_name == 'schedule' && vars.GAMEPLAY_2048_RIGHTS_APPROVED == 'true') ||
-      (github.event_name == 'workflow_dispatch' && inputs.rights_acknowledged == true)
+    # Disabled on this branch: the owner prohibited training on endless games.
+    # This includes the capture's automatic 2048 strategy tuning.
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 160
     steps:
@@ -85,6 +85,8 @@ jobs:
           path: |
             ${{ steps.finalize.outputs.source }}
             ${{ steps.finalize.outputs.output }}/gameplay-with-recap.mp4
+            ${{ steps.finalize.outputs.output }}/gameplay-with-recap.ru.srt
+            ${{ steps.finalize.outputs.output }}/captions-cues.json
             ${{ steps.finalize.outputs.output }}/final-report.json
             ${{ steps.finalize.outputs.output }}/report.json
             ${{ steps.finalize.outputs.output }}/commentary-events.json

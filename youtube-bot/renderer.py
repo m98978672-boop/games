@@ -74,9 +74,15 @@ def pronunciation_text(text: str) -> str:
     return re.sub(r"(?<![A-Za-z0-9_])Steam(?![A-Za-z0-9_])", "Стим", text, flags=re.IGNORECASE)
 
 
-def synthesize(text: str, output: Path, voice: str = "ru") -> float:
+def synthesize(text: str, output: Path, voice: str = "ru", *, style: str = "neutral") -> float:
     """Produce locally synthesized Russian speech with consistent voice dynamics."""
     import os
+    profiles = {"neutral": ("1.03", "0.60", "0.78", "0.18"),
+                "bright": ("0.99", "0.65", "0.82", "0.16"),
+                "reflective": ("1.07", "0.55", "0.73", "0.21")}
+    if style not in profiles:
+        raise ValueError("Unsupported narration style")
+    length, noise, noise_w, pause = profiles[style]
     if not any("\u0400" <= char <= "\u04ff" for char in text):
         raise ValueError("Narration must contain Russian Cyrillic; refusing accidental English TTS.")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -90,7 +96,7 @@ def synthesize(text: str, output: Path, voice: str = "ru") -> float:
                 raise RuntimeError("Configured Russian Piper voice model is missing; refusing broken fallback audio.")
             subprocess.run(
                 ["piper", "--model", str(model_path), "--output_file", str(raw),
-                 "--length_scale", "1.06", "--noise_scale", "0.55", "--noise_w_scale", "0.75", "--sentence_silence", "0.18"],
+                 "--length_scale", length, "--noise_scale", noise, "--noise_w_scale", noise_w, "--sentence_silence", pause],
                 input=spoken_text, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
             )
         else:
@@ -364,9 +370,10 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
     total_seconds = 0.0
     for scene_index, scene in enumerate(script["scenes"]):
         audio_path = audio_dir / f"line-{scene_index:02d}.wav"
+        style = {"happy":"bright", "curious":"neutral", "calm":"reflective"}.get(scene.get("emotion"), "neutral")
         dialogue, seconds = fit_speech_text(
             str(scene["dialogue"]),
-            lambda candidate: synthesize(candidate, audio_path),
+            lambda candidate: synthesize(candidate, audio_path, style=style),
             max_seconds=12.0,
         )
         # Keep the bubble, recorded review, and final audio in sync after any safe shortening.
@@ -502,8 +509,10 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
     # Synthesize and validate the entire narration before encoding expensive video.
     for scene_index, scene in enumerate(script["scenes"]):
         wav = audio_dir / f"chapter-{scene_index:02d}.wav"
+        # Gentle chapter-level cadence variation, not a claim of human expression.
+        style = ("bright", "neutral", "neutral", "reflective")[scene_index % 4]
         dialogue, seconds = fit_speech_text(
-            str(scene["dialogue"]), lambda candidate: synthesize(candidate, wav),
+            str(scene["dialogue"]), lambda candidate: synthesize(candidate, wav, style=style),
             max_seconds=40.0, attempts=6,
         )
         scene["dialogue"] = dialogue

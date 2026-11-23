@@ -15,6 +15,9 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
+from datetime import datetime, timedelta, timezone
+from schedule_policy import next_publish_slot
 from pathlib import Path
 from typing import Any
 
@@ -47,6 +50,23 @@ def _safe_urlopen(request: urllib.request.Request, timeout: int):
 
 class PublishError(RuntimeError):
     """A safe-to-print publishing failure; never includes credentials or upload URLs."""
+
+
+class SlotOccupied(PublishError):
+    """Publisher positively identified a different job holding the slot."""
+
+
+def _different_job_id(value: Any, expected: Any) -> bool:
+    if not isinstance(value, str) or not isinstance(expected, str):
+        return False
+    try:
+        return uuid.UUID(value) != uuid.UUID(expected)
+    except ValueError:
+        return False
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _mask(secret: str) -> None:
@@ -160,8 +180,12 @@ def _supabase_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("metadata"), dict):
                 expected_job_id = payload["metadata"].get("job_id")
             if (status == 409 and result.get("status") in {"scheduled", "processing"}
+                    and isinstance(expected_job_id, str) and bool(expected_job_id)
                     and result.get("job_id") == expected_job_id):
                 return result
+            if (path == "/autopilot/prepare" and status == 409 and result.get("status") == "scheduled"
+                    and _different_job_id(result.get("job_id"), expected_job_id)):
+                raise SlotOccupied("Publish slot belongs to a different job; no upload was started.") from exc
             if status not in TRANSIENT_HTTP:
                 detail = result.get("error") or result.get("message") or f"HTTP {status}"
                 raise PublishError(f"Publisher rejected the request: {str(detail)[:240]}.") from exc
@@ -387,10 +411,36 @@ def publish(result_path: Path) -> dict[str, Any]:
         if field not in metadata:
             raise PublishError(f"Review metadata is missing {field}.")
 
-    prepared = _supabase_post("/autopilot/prepare", {"metadata": metadata})
+    # Only a positively identified different job is safe to move around. A
+    # missing job ID, network failure or same-job result remains ambiguous.
+    for slot_attempt in range(4):
+        try:
+            prepared = _supabase_post("/autopilot/prepare", {"metadata": metadata})
+            if (prepared.get("status") == "scheduled" and prepared.get("video_id")
+                    and _different_job_id(prepared.get("job_id"), metadata["job_id"])):
+                raise SlotOccupied("Publish slot belongs to a different job; no upload was started.")
+            break
+        except SlotOccupied:
+            # Only a positively identified, already-scheduled different job
+            # reaches this branch. Never move an explicitly requested time.
+            if metadata.get("requested_publish_at"):
+                raise PublishError("Requested publication slot is occupied; no upload was started. Choose another time after checking Studio.")
+            if slot_attempt == 3:
+                raise PublishError("Four regular publication slots were occupied; no upload was started.")
+            try:
+                previous = datetime.fromisoformat(str(metadata["publish_at"]).replace("Z", "+00:00"))
+                video_format = metadata.get("video_format")
+                if previous.tzinfo is None or video_format not in {"short", "long"}:
+                    raise ValueError("Timezone and format required")
+                base = max(previous.astimezone(timezone.utc) + timedelta(seconds=1), _utc_now())
+                next_slot = next_publish_slot(base, video_format=video_format)
+                metadata["publish_at"] = next_slot.isoformat().replace("+00:00", "Z")
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise PublishError("Cannot safely find the next regular slot; no upload was started.") from exc
+            print(f"::warning::A different scheduled job occupies this slot; trying next regular slot {metadata['publish_at']}. No upload has started yet.")
     if prepared.get("status") == "scheduled" and prepared.get("video_id"):
         if prepared.get("job_id") != metadata["job_id"]:
-            raise PublishError("Publisher returned a different job for this slot; no second video was uploaded.")
+            raise PublishError("Publisher did not identify the job for this slot; no second video was uploaded. Check YouTube Studio.")
         print(json.dumps({"status": "scheduled", "video_id": prepared["video_id"], "watch_url": prepared.get("watch_url"), "publish_at": metadata["publish_at"], "reused": True}, ensure_ascii=False))
         return prepared
     if prepared.get("status") != "ready_for_upload":
@@ -443,11 +493,35 @@ def publish(result_path: Path) -> dict[str, Any]:
     return completed
 
 
+def diagnostic_category(error: Exception) -> tuple[str, str]:
+    """Report fixed, non-secret diagnostics even when remote logs are unavailable.
+
+    Never expose server text, OAuth tokens, upload URLs, or game content in a
+    GitHub annotation. Classification is advisory, not proof of upload state.
+    """
+    text = str(error).lower()
+    if "untrusted github identity claims" in text or "oidc" in text or "github identity" in text:
+        return "identity", "GitHub identity or OIDC failed. Check workflow, branch, claims and publisher configuration."
+    if "youtube accepted" in text or "check studio before" in text or "without a video id" in text:
+        return "ambiguous-upload", "Upload result may be ambiguous. Check YouTube Studio before retrying."
+    if "reservation" in text or "different job" in text or "same slot" in text:
+        return "reservation", "Upload reservation or publish slot conflicted. Check publisher records and YouTube Studio."
+    if "publisher" in text:
+        return "publisher", "Publisher rejected or did not complete the request. Inspect the run log and publisher state."
+    if "youtube" in text or "upload" in text:
+        return "youtube-upload", "YouTube upload failed. Check YouTube Studio before any retry."
+    return "unknown", "Upload step failed. Inspect its log and YouTube Studio before any retry."
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         raise SystemExit("Usage: python publish_to_supabase.py path/to/review.result.json")
     try:
         publish(Path(sys.argv[1]))
     except Exception as exc:
+        category, message = diagnostic_category(exc)
+        # Only fixed text appears in annotations. stderr retains the existing
+        # detailed diagnostic subject to GitHub's credential masking.
+        print(f"::error title=Publish diagnostic {category}::{message}")
         print(f"Safe publish stop: {exc}", file=sys.stderr)
         raise SystemExit(1)

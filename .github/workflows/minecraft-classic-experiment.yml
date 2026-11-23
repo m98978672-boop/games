@@ -1,0 +1,58 @@
+name: Minecraft Classic one-off experiment (no publication)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/minecraft-classic-experiment.yml'
+      - 'youtube-bot/gameplay/minecraft_bridge.cjs'
+      - 'youtube-bot/gameplay_minecraft_bridge.py'
+      - 'youtube-bot/tests/smoke_minecraft_qwen.py'
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  minecraft-probe:
+    # Disposable hosted runner only. Never mount checkout or credentials in browser.
+    # Playwright request filtering is not a network firewall; Docker is not a security boundary.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install Qwen dependencies
+        run: pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
+      - name: Build disposable browser image
+        run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Fetch and verify Kvenya adapter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kvenya-release"
+          gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
+          python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Try official Minecraft Classic without upload
+        env:
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+        run: |
+          set +e
+          python youtube-bot/tests/smoke_minecraft_qwen.py > "$RUNNER_TEMP/minecraft-probe.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/minecraft-probe.log"
+          if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/minecraft-probe.log"; fi
+          exit "$result"
+      - name: Keep pixelated startup diagnostic briefly
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-pixelated-startup-${{ github.run_id }}
+          path: ${{ runner.temp }}/minecraft-pixelated-preview.png
+          if-no-files-found: warn
+          retention-days: 1

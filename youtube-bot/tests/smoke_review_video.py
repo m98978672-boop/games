@@ -10,16 +10,25 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from renderer import render_short
+from game_reviews import validate_review
 
-script = {
-    "format": "game-review", "game_title": "Проверочный проект", "idea_score": 7,
-    "screenshot_paths": [],
-    "scenes": [
-        {"label": "ПЕРВЫЙ ВЗГЛЯД", "visual": "Проверка оформления", "dialogue": "Что интересного в этой игре?"},
-        {"label": "ФАКТ ИЗ STEAM", "visual": "Тестовая карточка источника", "dialogue": "Стим описывает особенности проекта."},
-        {"label": "ИТОГ", "visual": "Оценка идеи по источникам", "dialogue": "Итог: оценка идеи семь из десяти."},
-    ],
+game = {
+    'id':'test-game', 'title':'Проверочный проект',
+    'description':'В этой тестовой игре игрок решает головоломки и ищет выход из лаборатории.',
+    'features':['Игрок решает головоломки и ищет выход из лаборатории.', 'В игре указан одиночный режим.'],
 }
+script = validate_review({
+    'schema_version':1, 'game_id':'test-game',
+    'selected_feature_ids':['test-game-f1','test-game-f2'],
+    'possible_minus':'Возможно, любителям сетевой игры не подойдёт одиночный режим.',
+    'minus_feature_id':'test-game-f2', 'idea_score':7,
+    'hook':'Коротко о том, как устроена эта игра.',
+}, [game])
+script['screenshot_paths'] = []
+assert script['scenes'][0]['dialogue'].startswith('Привет! Сегодня разбираем')
+assert 'О чём игра?' in script['scenes'][1]['dialogue']
+assert 'Итог' in script['scenes'][-1]['dialogue']
+
 with tempfile.TemporaryDirectory(prefix="review-smoke-") as temp:
     root = Path(temp)
     output = root / "review.mp4"
