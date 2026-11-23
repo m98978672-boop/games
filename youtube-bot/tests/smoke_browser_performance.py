@@ -54,5 +54,6 @@ with tempfile.TemporaryDirectory(prefix='fps-comparison-') as temp:
                 'note':'top-level animation callbacks, not game or recorded unique-frame FPS; untrusted page',
                 'median_callback_fps':round(statistics.median(fps),2) if fps else None, 'samples':rows})
             print(json.dumps(results[-1],ensure_ascii=True), flush=True)
+            print(f"::notice title=Browser timing::{name}, recording={recorded}, median callback FPS={results[-1]['median_callback_fps']}; no model, not measured game FPS", flush=True)
 args.output.parent.mkdir(parents=True,exist_ok=True)
 args.output.write_text(json.dumps(results,indent=2),encoding='utf-8')

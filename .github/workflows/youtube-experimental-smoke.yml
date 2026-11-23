@@ -175,7 +175,6 @@ jobs:
 
   private-review-repair:
     # Real Steam and Qwen, synthetic failed plans; no publishing credentials.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -191,7 +190,14 @@ jobs:
         env:
           OMP_NUM_THREADS: '2'
           MKL_NUM_THREADS: '2'
-        run: python -u youtube-bot/tests/smoke_review_repair_qwen.py
+        shell: bash
+        run: |
+          set +e
+          python -u youtube-bot/tests/smoke_review_repair_qwen.py > "$RUNNER_TEMP/repair.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/repair.log"
+          if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/repair.log"; fi
+          exit "$result"
 
   minecraft-one-off:
     # Explicit dispatch only: user requested a single Minecraft Classic probe.
