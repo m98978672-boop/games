@@ -104,7 +104,10 @@ def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_n
     if min_new:
         kwargs['min_new_tokens'] = min_new  # не даём оборвать фразу на полуслове
     if sample:
-        kwargs.update(do_sample=True, temperature=temperature, top_p=0.9)
+        # Скорость: раньше top_p сортировал весь словарь (151k) на КАЖДЫЙ
+        # токен. top_k=40 сначала оставляет 40 кандидатов — сортировка
+        # становится дешёвой, а характер ответов не меняется.
+        kwargs.update(do_sample=True, temperature=temperature, top_p=0.9, top_k=40)
     else:
         kwargs.update(do_sample=False)
     with torch.no_grad():
@@ -156,8 +159,9 @@ def decide_search(model, tokenizer, owner_text):
         {'role': 'user', 'content': owner_text},
     ]
     # Скорость: ответ формата «ПОИСК: …» / «БЕЗ ПОИСКА» — одна строка.
-    # Раньше на решение уходило 48 токенов генерации, теперь 12.
-    raw = generate(model, tokenizer, messages, max_new=12, sample=False)
+    # Раньше на решение уходило 48 токенов генерации, потом 12, теперь 8:
+    # запрос при «ПОИСК» всё равно подстрахует сам текст владельца.
+    raw = generate(model, tokenizer, messages, max_new=8, sample=False)
     print(f'Решение о поиске: {raw!r}', flush=True)
     if 'ПОИСК' in raw.upper() and 'БЕЗ ПОИСКА' not in raw.upper():
         query = raw.split(':', 1)[1].strip() if ':' in raw else ''
@@ -439,12 +443,25 @@ def main():
     persona = PERSONA.read_text(encoding='utf-8').strip()
     run_started = time.monotonic()
     torch.set_num_threads(max(1, min(4, os.cpu_count() or 2)))
-    tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
-    model = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
+    # Скорость: сначала пробуем загрузиться целиком из кэша Actions
+    # (local_files_only) — без сетевых проверок Hugging Face, которые
+    # на каждый ответ стоят секунд и иногда висят на повторах. Если
+    # кэш пуст (холодный раннер), честно идём в сеть как раньше.
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION, local_files_only=True)
+        model = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True, local_files_only=True)
+        print('Модель и токенизатор — из локального кэша, без сети', flush=True)
+    except Exception:
+        tokenizer = AutoTokenizer.from_pretrained(MODEL, revision=REVISION)
+        model = AutoModelForImageTextToText.from_pretrained(MODEL, revision=REVISION, dtype=torch.bfloat16, low_cpu_mem_usage=True)
+        print('Кэш пуст — модель скачана из сети', flush=True)
     print(f'Модель загружена за {time.monotonic() - run_started:.1f} c (потоков: {torch.get_num_threads()})', flush=True)
     if args.adapter and args.adapter.exists():
         model = PeftModel.from_pretrained(model, args.adapter)
-        print(f'Адаптер подключён: {args.adapter}', flush=True)
+        # Скорость: вливаю адаптер в веса один раз при загрузке —
+        # дальше каждый токен идёт без peft-обёртки поверх слоёв.
+        model = model.merge_and_unload()
+        print(f'Адаптер подключён и влит в модель: {args.adapter}', flush=True)
     else:
         print('ВНИМАНИЕ: отвечаю базовой моделью без домашнего адаптера', flush=True)
     model.eval()
@@ -563,7 +580,10 @@ def main():
         else:
             retry_note = '\n(Прошлый черновик не годится: он невпопад. Отвечай владельцу от своего имени, тепло и точно по вопросу, 1–3 предложения целиком. К самой себе по имени не обращайся и чужие роли не пиши.)'
         retry = messages[:-1] + [{'role': 'user', 'content': final_user + retry_note}]
-        raw_retry = generate(model, tokenizer, retry, max_new=args.max_new, sample=True, temperature=0.1)
+        # Скорость: повторы не гоняем на полный потолок 192 токенов —
+        # хороший ответ это 1–3 предложения; плохой черновик от длины
+        # лучше не станет, а три полные генерации стоят минут.
+        raw_retry = generate(model, tokenizer, retry, max_new=min(args.max_new, 96), sample=True, temperature=0.1)
         drafts.append(raw_retry)
         reply = clean_reply(raw_retry)
         problem = reply_problem(reply)
