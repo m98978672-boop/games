@@ -75,6 +75,17 @@
       + (last ? '<p class="kv-note">' + last + '</p>' : '');
   }
 
+  var wantsEl = document.getElementById('kvBridgeWants');
+  function renderWants(data) {
+    if (!wantsEl) return;
+    var w = data.wants;
+    if (!w || !w.current) { wantsEl.innerHTML = ''; return; }
+    var open = (w.open || []).map(function (o) { return '· ' + esc(o.title); }).join('<br>');
+    wantsEl.innerHTML = '<p class="kv-note">💭 <b>Чего хочет сама Квеня</b> (выбирает из своих дел, а не из заданий):<br><b>' + esc(w.current.title) + '</b> — ' + esc(w.current.why) + '</p>'
+      + (open ? '<p class="kv-note">В очереди её желаний:<br>' + open + '</p>' : '')
+      + '<p class="kv-note">Сделано по собственной воле: ' + (w.doneCount || 0) + '</p>';
+  }
+
   var sourcesEl = document.getElementById('kvBridgeSources');
   function renderSources(data) {
     if (!sourcesEl) return;
@@ -94,7 +105,7 @@
 
   fetch('./bridge.json', { cache: 'no-store' })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); renderMotivation(data); renderSources(data); } })
+    .then(function (data) { if (data) { renderDigest(data); renderExpeditions(data); renderMotivation(data); renderWants(data); renderSources(data); } })
     .catch(function () { /* сводки нет — есть живая кнопка */ });
 
   function wikiApi(params) {

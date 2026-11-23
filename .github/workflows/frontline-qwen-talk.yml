@@ -47,10 +47,28 @@ jobs:
         with:
           path: ~/.cache/huggingface
           key: kvenya-hf-Qwen3.5-0.8B-2fc06364715b967f1860aea9cf38778875588b17
-      - name: Install CPU inference dependencies
+      # Скорость приёма: раньше КАЖДЫЙ ответ начинался с установки
+      # torch — минуты даже с кэшем колёс. Теперь готовое окружение
+      # целиком живёт в кэше Actions; установка — только при холодном
+      # кэше или если окружение не поднялось (проверка импортом).
+      - name: Cache her installed environment (venv)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/kvenya-venv
+          key: kvenya-venv-${{ runner.os }}-py311-torch280-v1
+      - name: Install CPU inference dependencies (only on cold cache)
         run: |
-          python -m pip install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
-          python -m pip install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+          VENV="$HOME/.cache/kvenya-venv"
+          if [ -x "$VENV/bin/python" ] && "$VENV/bin/python" -c "import torch, transformers, peft" 2>/dev/null; then
+            echo "Окружение поднялось из кэша — установка не нужна, отвечаем сразу"
+          else
+            echo "Холодный кэш: собираю окружение один раз"
+            rm -rf "$VENV"
+            python -m venv "$VENV"
+            "$VENV/bin/pip" install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
+            "$VENV/bin/pip" install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+          fi
+          echo "PY=$VENV/bin/python" >> "$GITHUB_ENV"
       - name: Download her home adapter
         run: |
           set +e
@@ -64,9 +82,9 @@ jobs:
       - name: Kvenya answers
         run: |
           if [ -n "${ADAPTER:-}" ]; then
-            python -u qwen-home/tools/talk-generate.py --adapter "$ADAPTER"
+            "${PY:-python}" -u qwen-home/tools/talk-generate.py --adapter "$ADAPTER"
           else
-            python -u qwen-home/tools/talk-generate.py
+            "${PY:-python}" -u qwen-home/tools/talk-generate.py
           fi
       - name: Commit her words back to the branch
         id: commit

@@ -168,6 +168,24 @@ def collect():
     if episodes_made >= 3:
         ach('director', 'Режиссёр', 'блог выходит по расписанию', now)
 
+    # Её собственная воля: желание, которое она выбрала сама и сама
+    # закрыла делом, — +10. Судья тот же: файл её желаний.
+    own_done = 0
+    try:
+        wpath = HOME / 'wants' / 'list.jsonl'
+        wants = [json.loads(l) for l in wpath.read_text(encoding='utf-8').splitlines() if l.strip()]
+    except Exception:
+        wants = []
+    for w in wants:
+        if w.get('status') == 'done':
+            own_done += 1
+            events.append({'id': f"want:{w.get('id')}", 'at': w.get('doneAt') or now, 'delta': 10,
+                           'text': f"сделала, что хотела сама: {w.get('title')} "})
+    if own_done:
+        ach('own-will', 'Своя воля', 'право самой ставить себе следующую большую цель', now)
+    if own_done >= 3:
+        ach('self-directed', 'Сама себе командир', 'её желания попадают в расписание недели', now)
+
     points = max(0, sum(e['delta'] for e in events))
     return {
         'points': points,
@@ -182,6 +200,7 @@ def collect():
         'bestStepsEver': best_steps_ever,
         'gamesMade': games_made,
         'episodesMade': episodes_made,
+        'ownWantsDone': own_done,
     }
 
 

@@ -62,7 +62,7 @@ jobs:
             echo "Не удалось доставить вопрос за 5 попыток"
             exit 1
           fi
-          gh issue comment "$ISSUE_NUMBER" --body "✅ Передал вопрос Квене в её дом. Она отвечает своей моделью — обычно 2–6 минут, и ответ появится в разговоре на странице: https://m98978672-boop.github.io/games/kvenya/"
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Передал вопрос Квене в её дом. Она отвечает своей моделью — обычно 1–4 минуты (окружение и модель лежат в кэше), и ответ появится в разговоре на странице: https://m98978672-boop.github.io/games/kvenya/"
           gh issue close "$ISSUE_NUMBER"
           # ВАЖНО: push от GITHUB_TOKEN не запускает другие workflow
           # (защита GitHub от рекурсии) — разговор сам не стартанёт.

@@ -155,7 +155,9 @@ def decide_search(model, tokenizer, owner_text):
         {'role': 'system', 'content': 'Ты решаешь, нужен ли поиск в интернете для ответа на сообщение. Отвечай ТОЛЬКО одной строкой: «ПОИСК: короткий запрос» — если спрашивают факт, дату, имя, место, событие или просят найти информацию; или «БЕЗ ПОИСКА» — если это обычный разговор, приветствие или вопрос о самой Квене.'},
         {'role': 'user', 'content': owner_text},
     ]
-    raw = generate(model, tokenizer, messages, max_new=48, sample=False)
+    # Скорость: ответ формата «ПОИСК: …» / «БЕЗ ПОИСКА» — одна строка.
+    # Раньше на решение уходило 48 токенов генерации, теперь 12.
+    raw = generate(model, tokenizer, messages, max_new=12, sample=False)
     print(f'Решение о поиске: {raw!r}', flush=True)
     if 'ПОИСК' in raw.upper() and 'БЕЗ ПОИСКА' not in raw.upper():
         query = raw.split(':', 1)[1].strip() if ':' in raw else ''
