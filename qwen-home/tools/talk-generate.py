@@ -596,8 +596,11 @@ def main():
     answered_turns = turns[:len(turns) - len(pending)]
     if len(pending) > 1:
         print(f'Без ответа вопросов: {len(pending)} — отвечаю на все разом', flush=True)
-    persona = persona_for(owner_text)
-    print(f'Персона для ответа: {len(persona)} символов (было {PERSONA.stat().st_size})', flush=True)
+    # Эксперимент по связности: полная персона (она же — и обучение адаптера).
+    # Сжатый пакет оставляем в коде: если полная окажется не лучше по смыслу,
+    # вернёмся к нему ради скорости.
+    persona = PERSONA.read_text(encoding='utf-8').strip()
+    print(f'Персона для ответа: {len(persona)} символов (полная)', flush=True)
     run_started = time.monotonic()
     # Скорость: раньше было жёстко 4 потока даже на 8-ядерном раннере.
     # Теперь берём все ядра (но не больше 8 — дальше выигрыша нет).
