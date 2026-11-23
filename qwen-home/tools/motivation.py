@@ -159,6 +159,29 @@ def collect():
                            'delta': 18 if published else 8,
                            'text': (f"опубликовала выпуск блога «{c.get('title')}» "
                                     if published else f"собрала выпуск блога «{c.get('title')}» ")})
+    # Сложные игры: награда не за запись «поиграла», а за честный счёт.
+    # Судья — файл турнира (bridge/games.json), который пишет сам инструмент.
+    try:
+        g = json.loads((BRIDGE / 'games.json').read_text(encoding='utf-8'))
+        chess = g.get('chess') or {}
+        island = g.get('island') or {}
+        wins = int(chess.get('wins') or 0)
+        played = int(chess.get('games') or 0)
+        mine = (island.get('mine') or {})
+        base = (island.get('baseline') or {})
+        island_wins = int(mine.get('wins') or 0)
+        island_games = int(mine.get('games') or 0)
+        if played and wins:
+            events.append({'id': f'games:chess:{wins}/{played}', 'at': now, 'delta': min(40, wins * 4),
+                           'text': f'честный турнир в шахматы: побед {wins} из {played} '})
+        if played and wins == played:
+            ach('chess-clean', 'Чистая партия', 'все партии выиграны у спарринга', now)
+        if island_games and island_wins == island_games:
+            ach('island-planner', 'Хозяйка острова', 'план поселения ни разу не развалился', now)
+        if island_games and int(base.get('wins') or 0) == 0:
+            ach('better-than-rule', 'Лучше правила', 'её план обошёл простую эвристику', now)
+    except Exception:
+        pass
     if games_made:
         ach('game-maker', 'Сборщик игр', 'право придумывать следующий шаблон самой', now)
     if games_made >= 3:
