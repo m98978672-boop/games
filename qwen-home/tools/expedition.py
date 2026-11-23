@@ -527,6 +527,11 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
                 runs = story.get('runs') or []
                 ends = {e['text'][:120] for e in (story.get('endings') or [])}
+                report.data['storyMap'] = {
+                    'places': mp.get('places', 0), 'links': mp.get('links', 0),
+                    'tried': mp.get('tried', 0), 'finds': mp.get('finds', [])[:5],
+                    'tired': mp.get('tired', 0), 'energetic': mp.get('energetic', 0),
+                }
                 report.data['storyLine'] = (
                     f"прошла историю: {story['moves']} выборов, {len(runs)} захода(ов), "
                     f"{mp.get('places', 0)} мест в карте, концовок видела {len(ends)}"
@@ -1065,14 +1070,20 @@ RESTART_JS = r"""
   // Harlowe держит историю в localStorage. Ищем ключ истории и чистим его —
   // это ровно то, что делает кнопка Restart в меню, только без поиска иконки.
   const keys = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i) || '';
-    if (/twine|harlowe|story|passage/i.test(k)) keys.push(k);
-  }
-  if (!keys.length) return {ok: false, why: 'ключа истории в localStorage нет', keys: []};
-  keys.forEach(k => localStorage.removeItem(k));
-  const place = localStorage.getItem('twine-position') || null;
-  if (place) localStorage.removeItem('twine-position');
+  const wipe = (store, name) => {
+    if (!store) return;
+    const mine = [];
+    for (let i = 0; i < store.length; i++) {
+      const k = store.key(i) || '';
+      // Harlowe хранит сессию и «где я остановилась» под своими именами;
+      // берём всё, что похоже на историю, а не на чужие настройки браузера.
+      if (/twine|harlowe|story|passage|session|storydata/i.test(k)) mine.push(k);
+    }
+    mine.forEach(k => { store.removeItem(k); keys.push(name + ':' + k); });
+  };
+  wipe(localStorage, 'local');
+  try { wipe(sessionStorage, 'session'); } catch (e) {}
+  if (!keys.length) return {ok: false, why: 'ключа истории ни в local, ни в session', keys: []};
   return {ok: true, keys: keys.slice(0, 8)};
 }
 """

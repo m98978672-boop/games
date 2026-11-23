@@ -252,7 +252,7 @@ check('в истории она ДОБЫВАЕТ новое: после фина
   expPy.includes('def restart_story') && expPy.includes('tw-icon[title="Restart" i]')
   && expPy.includes('runs') && expPy.includes('заходов хватит')
   && expPy.includes('def mark_open') && expPy.includes('непройденных вариантов не осталось')
-  && expPy.includes('RESTART_JS') && expPy.includes('localStorage.removeItem'));
+  && expPy.includes('RESTART_JS') && expPy.includes('sessionStorage') && expPy.includes("store.removeItem(k)"));
 
 check('карта честная: переход записывается, когда видно, куда он привёл',
   expPy.includes("story_map.link(pending['from'], pending['choice'], text)"));
@@ -262,6 +262,10 @@ check('находки только настоящие: «рука в карма�
 
 check('вымотанной она не бежит за псом, а отдыхает: силы влияют на выбор',
   expPy.includes('def is_rest') && expPy.includes('def is_far') && expPy.includes('if energy < 0:'));
+
+check('карта истории видна: места, переходы и находки на её странице',
+  expPy.includes("report.data['storyMap']") && expWf.includes("report.get('storyMap')")
+  && bridgeJs.includes('kv-map') && bridgeJs.includes('карта истории'));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
