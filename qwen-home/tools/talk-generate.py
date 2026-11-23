@@ -479,14 +479,13 @@ def main():
     # дом подкладывает факт её главного «хочу» из её же списка
     # (bridge/wants.json), как факты поиска. Иначе маленькая модель
     # отвечает общими словами и своего желания не называет.
+    want_fact = None
     if re.search(r'(хочешь|желани|хотела|мечтаешь)', owner_text, re.I):
         try:
             wdata = json.loads((HOME / 'bridge' / 'wants.json').read_text(encoding='utf-8'))
             cur = (wdata or {}).get('current') or {}
             if cur.get('title'):
-                context_note += (f'\n\n(Твоё главное желание сейчас, из твоего собственного списка: '
-                                 f'«{cur["title"]}» — {cur.get("why", "")}. Скажи о нём владельцу '
-                                 f'своими словами и честно: это ты выбрала сама.)')
+                want_fact = (cur['title'], cur.get('why', ''))
                 print(f'Подложил ей факт её желания: {cur["title"]}', flush=True)
         except Exception:
             pass
