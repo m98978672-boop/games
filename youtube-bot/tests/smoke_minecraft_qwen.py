@@ -26,6 +26,10 @@ with MinecraftBridge() as bridge:
         frame = Image.open(io.BytesIO(base64.b64decode(obs['screenshot_png_base64'], validate=True))).convert('RGB')
         preview = frame.resize((80, 60), Image.Resampling.BOX).filter(ImageFilter.GaussianBlur(1)).resize((800, 600), Image.Resampling.NEAREST)
         preview.save(Path(os.environ['RUNNER_TEMP']) / 'minecraft-pixelated-preview.png')
+        # Low-resolution diagnostic, not a raw screenshot or readable invite link.
+        buf = io.BytesIO()
+        preview.resize((80, 60), Image.Resampling.BOX).save(buf, format='JPEG', quality=35)
+        print('::notice title=Minecraft startup pixelated diagnostic::'+base64.b64encode(buf.getvalue()).decode('ascii'))
     if setup not in ('start_form_not_found', 'start_form_not_found_or_timeout', 'start_clicked_not_verified'):
         raise RuntimeError('Unexpected startup result')
     for step in range(12):
