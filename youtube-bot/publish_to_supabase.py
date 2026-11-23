@@ -176,6 +176,7 @@ def _supabase_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("metadata"), dict):
                 expected_job_id = payload["metadata"].get("job_id")
             if (status == 409 and result.get("status") in {"scheduled", "processing"}
+                    and isinstance(expected_job_id, str) and bool(expected_job_id)
                     and result.get("job_id") == expected_job_id):
                 return result
             if (path == "/autopilot/prepare" and status == 409 and result.get("status") == "scheduled"

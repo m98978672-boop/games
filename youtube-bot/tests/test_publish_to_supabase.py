@@ -317,6 +317,14 @@ class PublisherNetworkTests(unittest.TestCase):
              patch.object(publisher,'_safe_urlopen',side_effect=error):
             self.assertEqual(publisher._supabase_post('/autopilot/prepare', {'metadata':{'job_id':expected}})['video_id'], 'video123')
 
+    def test_conflict_without_job_identity_is_not_idempotent(self):
+        response=json.dumps({'status':'scheduled','video_id':'existing'}).encode()
+        error=HTTPError('https://example.test',409,'Conflict',{},io.BytesIO(response))
+        with patch.object(publisher,'github_oidc_token',return_value='oidc'), \
+             patch.object(publisher,'_safe_urlopen',side_effect=error):
+            with self.assertRaises(publisher.PublishError):
+                publisher._supabase_post('/autopilot/prepare', {'metadata':{}})
+
     def test_unfinished_other_job_does_not_automatically_move_to_new_slot(self):
         expected = 'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3'
         other = '22222222-2222-4222-8222-222222222222'
