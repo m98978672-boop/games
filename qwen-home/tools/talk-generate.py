@@ -802,7 +802,11 @@ def main():
             return 'невпопад: мусорный шаблон или обращение к самой себе'
         # Повтор своего прошлого ответа — не ответ на этот вопрос: маленькая
         # модель цепляется за собственную прошлую реплику и выдаёт её снова.
-        if past_replies:
+        # Проверка повтора — только для свободного разговора. Когда дом
+        # подложил факт (желание, поиск), требуемая формула ответа обязана
+        # совпасть с прошлой: «Моё главное желание сейчас — …» — это не
+        # заготовка, а правильный ответ, и резать его нельзя.
+        if past_replies and not want_fact and not results:
             low = (text or '').strip().lower()
             if low[:45] in past_replies:
                 return 'повтор прошлого ответа'
@@ -897,7 +901,7 @@ def main():
         salvage = ' '.join(whole[:6]).strip()
         stems = {w[:6] for w in re.findall(r'[\w]{5,}', (bad or '').lower())}
         repeated = False
-        for past in past_reply_list:
+        for past in ([] if want_fact else past_reply_list):
             other_stems = {w[:6] for w in re.findall(r'[\w]{5,}', past)}
             if other_stems and stems and len(stems & other_stems) / len(stems | other_stems) > 0.55:
                 repeated = True
