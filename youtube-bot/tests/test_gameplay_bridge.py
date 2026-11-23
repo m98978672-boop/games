@@ -63,6 +63,14 @@ class BridgeSafetyTests(unittest.TestCase):
             self.assertEqual(command[command.index('--network') + 1], 'none')
             with self.assertRaises(ValueError): docker_command(game, name, bootstrap='other')
 
+    def test_adventure_telemetry_is_explicit_and_isolated(self):
+        with tempfile.TemporaryDirectory() as temp:
+            game = Path(temp) / 'game'; game.mkdir(); (game / 'index.html').write_text('test')
+            name = 'games-bridge-' + 'a' * 32
+            command = docker_command(game, name, telemetry='adventure')
+            self.assertIn('BRIDGE_TELEMETRY=adventure', command)
+            self.assertEqual(command[command.index('--network') + 1], 'none')
+
     def test_rights_are_explicit_and_steps_bounded(self):
         with self.assertRaisesRegex(ValueError, 'rights'):
             BrowserBridge(Path('.'))

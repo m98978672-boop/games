@@ -15,6 +15,10 @@ from typing import Callable
 from PIL import Image, ImageChops, ImageStat
 
 ACTIONS = {
+    # The experiment maps these choices to validated UI coordinates externally.
+    'CHOICEONE': {'duration_ms': 250},
+    'CHOICETWO': {'duration_ms': 250},
+    'CHOICETHREE': {'duration_ms': 250},
     'LEFT': {'keys': ['ArrowLeft'], 'duration_ms': 250},
     'RIGHT': {'keys': ['ArrowRight'], 'duration_ms': 250},
     'UP': {'keys': ['ArrowUp'], 'duration_ms': 250},

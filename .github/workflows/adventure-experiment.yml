@@ -1,0 +1,52 @@
+name: Private finite adventure experiment (no upload)
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  adventure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OMP_NUM_THREADS: '2'
+      MKL_NUM_THREADS: '2'
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install verifier and local model
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
+      - name: Build offline bridge
+        run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Fetch pinned home adapter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kvenya-release"
+          gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
+          python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Record real model choices without padding
+        env:
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+          ADVENTURE_RECORD_DIR: ${{ runner.temp }}/adventure-recording
+        shell: bash
+        run: |
+          mkdir -p "$ADVENTURE_RECORD_DIR"
+          set +e
+          python -u youtube-bot/tests/smoke_adventure_qwen.py 2>&1 | tee "$RUNNER_TEMP/adventure.log"
+          result=${PIPESTATUS[0]}
+          if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/adventure.log"; fi
+          exit "$result"
+      - name: Save private recording and observed trace
+        uses: actions/upload-artifact@v4
+        with:
+          name: adventure-private-${{ github.run_id }}
+          path: ${{ runner.temp }}/adventure-recording/
+          if-no-files-found: error
+          retention-days: 3

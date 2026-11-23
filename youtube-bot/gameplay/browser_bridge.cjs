@@ -13,7 +13,7 @@ const ENTRY = process.env.BRIDGE_ENTRY || "index.html";
 const TELEMETRY = process.env.BRIDGE_TELEMETRY || "";
 const BOOTSTRAP = process.env.BRIDGE_BOOTSTRAP || "";
 if (!["", "voxel"].includes(BOOTSTRAP)) throw Error("invalid bootstrap mode");
-if (!["", "2048", "voxel"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
+if (!["", "2048", "voxel", "adventure"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
 if (!/^(?:[a-zA-Z0-9_-]+\/)*index\.html$/.test(ENTRY)) throw Error("invalid entry path");
 const emit = value => process.stdout.write(JSON.stringify(value) + "\n");
 const server = http.createServer((req, res) => {
@@ -135,8 +135,25 @@ async function main() {
           return {yaw:p.yaw, pitch:p.pitch};
         } catch { return null; }
       }) : null;
+      // Fixed, opt-in UI telemetry for the pinned text adventure. Screen content
+      // is untrusted; only bounded button coordinates and terminal state escape.
+      const adventure = TELEMETRY === "adventure" ? await page.evaluate(() => {
+        try {
+          const buttons = Array.from(document.querySelectorAll('#choices-container .choice-button'));
+          if (buttons.length > 3) return null;
+          const choices = buttons.map((button, index) => {
+            const r = button.getBoundingClientRect();
+            const x = Math.round(r.left + r.width / 2), y = Math.round(r.top + r.height / 2);
+            return {index, x, y, enabled: !button.disabled && r.width > 0 && r.height > 0 && x >= 0 && x < 800 && y >= 0 && y < 600};
+          });
+          const t = document.querySelector('#story-text')?.textContent || '';
+          const ended = !!document.querySelector('#story-text .game-end');
+          const outcome = !ended ? 'playing' : t.includes('Victory! You found the Lost Artifact.') ? 'victory' : t.includes('Defeated.') ? 'death' : 'unknown';
+          return {choices, outcome};
+        } catch { return null; }
+      }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget} : {})});
+        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});

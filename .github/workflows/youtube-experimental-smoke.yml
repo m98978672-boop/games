@@ -176,3 +176,10 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/voxel-survival-experiment.yml
+
+  finite-adventure-one-off:
+    # Private, bounded, finite game; never uploads or pads a short session.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
