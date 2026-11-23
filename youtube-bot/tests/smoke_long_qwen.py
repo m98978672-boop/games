@@ -26,7 +26,7 @@ assert len(scenes) == 10
 try:
     ensure_editorial_quality(scenes)
 except ValueError as exc:
-    print(f'::warning title=Editorial quality gate::Production would reject this private sample: {exc}')
+    print(f'::warning title=Editorial quality gate::Production would reject this private sample: {exc}; reason: {scenes[0].get("fallback_reason", "quality gate")}')
 else:
     print('::notice title=Editorial quality gate::Private sample passed basic repetition/fallback checks; facts and voice still require review.')
 assert all(scene["fact_id"] in review["evidence"] for scene in scenes)

@@ -392,8 +392,10 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 visual = re.sub(r'\s+', ' ', str(scene.get('visual', ''))).strip()
                 cyrillic = sum('\u0400' <= char <= '\u04ff' for char in dialogue)
                 letters = sum(char.isalpha() for char in dialogue)
-                if fact_id not in allowed or not 220 <= len(dialogue) <= 320:
-                    raise ValueError("long narration fact id or chapter length is invalid")
+                if fact_id not in allowed:
+                    raise ValueError("long narration fact id is invalid")
+                if not 220 <= len(dialogue) <= 320:
+                    raise ValueError(f"long narration chapter length is {len(dialogue)} (required 220–320)")
                 if not letters or cyrillic / letters < 0.7:
                     raise ValueError("long narration must be Russian, not English text")
                 if not visual or len(visual) > 120 or re.search(r'https?://|www\.|@[\w.-]+', dialogue, re.I):
@@ -469,10 +471,10 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                 messages.append({"role": "user", "content": f"Ошибка формата: {exc}. Верни один исправленный JSON, dialogue 220–320 символов."})
         else:
             print(f"Qwen could not produce chapter {index + 1}: {last_error}; using clearly labelled source-based template.", file=sys.stderr)
-            return _source_template_long_narration(review)
+            return _source_template_long_narration(review, reason=f"chapter {index + 1}: {last_error}")
     if sum(len(scene["dialogue"]) for scene in clean) < 2400:
         print("Qwen chapter total too short; using clearly labelled source-based template.", file=sys.stderr)
-        return _source_template_long_narration(review)
+        return _source_template_long_narration(review, reason="chapters too short")
     summary = speech_excerpt(str(review["pros"][0]), 50)
     verdict = f"Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
     clean[-1]["dialogue"] = f"{speech_excerpt(clean[-1]['dialogue'], 200)} {verdict}"
@@ -481,7 +483,7 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
 
 
 
-def _source_template_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
+def _source_template_long_narration(review: Mapping[str, Any], *, reason: str = "unknown") -> list[dict[str, str]]:
     """A transparent source-only fallback when the model cannot follow its schema.
 
     This deliberately avoids treating catalog copy as firsthand evidence or
@@ -513,7 +515,7 @@ def _source_template_long_narration(review: Mapping[str, Any]) -> list[dict[str,
         fact_id, fact = usable[index % len(usable)]
         prefix = "В источнике указано: " + fact.rstrip(". ") + ". "
         scenes.append({"fact_id": fact_id, "dialogue": prefix + paragraph,
-                       "visual": "ОПИСАНИЕ ИЗ ИСТОЧНИКА", "generation": "source-template"})
+                       "visual": "ОПИСАНИЕ ИЗ ИСТОЧНИКА", "generation": "source-template", "fallback_reason": reason})
     summary = speech_excerpt(str(review["pros"][0]), 50)
     scenes[-1]["dialogue"] += f" Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
     scenes[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
