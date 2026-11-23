@@ -458,8 +458,10 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                 fact_id = str(scene.get("fact_id", ""))
                 dialogue = re.sub(r"\s+", " ", str(scene.get("dialogue", ""))).strip()
                 visual = re.sub(r"\s+", " ", str(scene.get("visual", ""))).strip()
-                if fact_id not in allowed or not 220 <= len(dialogue) <= 320:
-                    raise ValueError("long narration fact id or chapter length is invalid")
+                if fact_id not in allowed:
+                    raise ValueError("long narration fact id is invalid")
+                if not 220 <= len(dialogue) <= 320:
+                    raise ValueError(f"long narration chapter length is {len(dialogue)} (required 220–320)")
                 if _russian_ratio(dialogue) < 0.7:
                     raise ValueError("long narration must be Russian, not English text")
                 if not visual or len(visual) > 120 or re.search(r"https?://|www\.|@[\w.-]+", dialogue, re.I):
