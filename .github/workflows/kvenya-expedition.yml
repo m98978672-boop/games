@@ -146,16 +146,18 @@ jobs:
               'video': 'video.webm' if (d / 'video.webm').exists() else '',
           }
           # Старые каталоги экспедиций чистим: страница показывает только
-          # последние пять, а каждый каталог тянет Jekyll-сборку вниз — при
+          # последние пять, а каждый каталог тянет сборку вниз — при
           # скопившихся 28 сборка Pages падала по времени (сейчас .nojekyll,
           # но пыль всё равно не нужна: 149 МБ мусора в репозитории).
-          keep = {e.get('dir') for e in bridge['expeditions']}
+          # ВАЖНО: список «оставить» считается уже вместе с новой экспедицией,
+          # иначе уборка сносит каталог, который сама же и записала.
+          bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]
+          keep = {e.get('dir') for e in bridge['expeditions'] if e.get('dir')}
           root = Path('qwen-home/bridge/expeditions')
           if root.exists():
-              for d in sorted(root.iterdir()):
-                  if d.is_dir() and str(d) not in keep:
-                      shutil.rmtree(d, ignore_errors=True)
-          bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]
+              for old_dir in sorted(root.iterdir()):
+                  if old_dir.is_dir() and str(old_dir) not in keep:
+                      shutil.rmtree(old_dir, ignore_errors=True)
           bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           print('expedition filed:', entry)
           PY
