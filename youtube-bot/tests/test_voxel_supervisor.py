@@ -2,7 +2,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance
+from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance, initial_tree_approach
 
 class SurvivalMonitorTests(unittest.TestCase):
     def setUp(self): self.ok={'screen':'playing','x':0,'y':64,'z':0,'health':20,'hunger':20,'wood':False}
@@ -43,6 +43,17 @@ class SurvivalMonitorTests(unittest.TestCase):
         self.assertEqual(exploration_assistance(actions,trace,'log'), (actions,(),None))
         self.assertEqual(exploration_assistance(actions,trace[:5],'none'), (actions,(),None))
         self.assertEqual(exploration_assistance(('LOOKUP',),trace,'none'), (('LOOKUP',),(),None))
+
+    def test_spawn_approach_is_bounded_and_stops_on_risk_or_uncertainty(self):
+        actions=('FORWARD','LOOKLEFT','MINE')
+        step={'action':'FORWARD','game_reported_displacement':1.0}
+        self.assertEqual(initial_tree_approach(actions, [], 'none', health=20)[0], ('FORWARD',))
+        self.assertEqual(initial_tree_approach(actions, [step], 'other', health=20)[0], ('FORWARD',))
+        for recent, target, health in (([step,step], 'none', 20), ([], 'log', 20),
+                                       ([], 'unknown', 20), ([], 'none', 8),
+                                       ([{**step, 'game_reported_displacement':0}], 'none', 20),
+                                       ([{**step, 'action':'LOOKLEFT'}], 'none', 20)):
+            self.assertEqual(initial_tree_approach(actions, recent, target, health=health), (actions, (), None))
 
     def test_camera_stall_is_measured_and_bounded(self):
         trace=[{'action':'LOOKUP','game_reported_camera_delta':0.0}]*3

@@ -98,3 +98,20 @@ def exploration_assistance(allowed, recent, target):
         return allowed, (), None
     return remaining, tuple(a for a in allowed if a not in moves), (
         'Six looks found no log. Move cautiously to explore instead of continuing to look.')
+
+
+def initial_tree_approach(allowed, recent, target, *, health):
+    """Bounded scripted help, relying on this pinned game's spawn-facing behavior.
+
+    Not a learned action: at most two forward moves, only before any camera turn,
+    and only while healthy, without a reachable log or failed movement. The game
+    may not have found a tree at spawn, so the result must be observed, not assumed.
+    """
+    if health <= 8 or target not in ('none', 'other') or 'FORWARD' not in allowed or len(recent) >= 2:
+        return allowed, (), None
+    if any(r.get('action') != 'FORWARD' or type(r.get('game_reported_displacement')) not in (int, float)
+           or not math.isfinite(r['game_reported_displacement']) or r['game_reported_displacement'] < .15
+           for r in recent):
+        return allowed, (), None
+    return ('FORWARD',), tuple(a for a in allowed if a != 'FORWARD'), (
+        'Scripted experiment: cautiously approach the initial view; stop if movement fails or health falls.')

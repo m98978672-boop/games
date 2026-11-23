@@ -10,7 +10,7 @@ from PIL import Image, ImageChops, ImageStat
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
 from gameplay_qwen import QwenVisionAgent
-from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance
+from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance, initial_tree_approach
 
 root = Path(os.environ['VOXEL_GAME_DIST'])
 base_goal = 'Get wood in survival: find a tree, aim at its trunk and use MINE to hold left click. WASD actions move, LOOK actions turn, SPACE jumps. Stay safe.'
@@ -53,7 +53,11 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
         agent.allowed, explore_excluded, explore_hint = exploration_assistance(agent.allowed, trace, target) if before['health'] > 8 else (agent.allowed, (), None)
         if explore_excluded:
             interventions.append({'step':step,'type':'exploration_action_exclusion','actions':explore_excluded})
-        agent.objective=base_goal + ' ' + (explore_hint or target_hint)
+        agent.allowed, approach_excluded, approach_hint = initial_tree_approach(agent.allowed, trace, target, health=before['health'])
+        if approach_hint:
+            interventions.append({'step':step,'type':'scripted_initial_approach', 'forced_action':'FORWARD'})
+            print('VOXEL_SUPERVISOR='+json.dumps(interventions[-1]), flush=True)
+        agent.objective=base_goal + ' ' + (approach_hint or explore_hint or target_hint)
         if supervision['hint'] and len(agent.objective) + len(supervision['hint']) + 1 <= 300:
             agent.objective += ' ' + supervision['hint']
         png=base64.b64decode(obs['screenshot_png_base64'], validate=True)
@@ -89,6 +93,7 @@ summary={'steps':len(trace),'stop_reason':stop_reason,'hint_count':sum(i['type']
          'assisted_action_exclusions':sum(i['type']=='action_exclusion' for i in interventions),
          'filtered_steps':agent.filtered_steps,'last_action':trace[-1] if trace else None,
          'exploration_action_exclusions':sum(i['type']=='exploration_action_exclusion' for i in interventions),
+         'scripted_initial_approach_steps':sum(i['type']=='scripted_initial_approach' for i in interventions),
          'target_help':True, 'target_action_exclusions':sum(i['type']=='target_action_exclusion' for i in interventions),
          'log_target_observations':sum(t['game_reported_target_before']=='log' for t in trace),
          'look_actions':sum(t['action'].startswith('LOOK') for t in trace),
