@@ -142,7 +142,7 @@ def persona_for(owner_text, budget=4600):
     600 токенов вместо прежних 8–9 тысяч на каждый ответ.
     """
     head, secs = read_sections(PERSONA)
-    order = ['Твой характер', 'Эмоции и чувства']
+    order = ['Живые факты о твоей жизни', 'Твой характер', 'Эмоции и чувства']
     if re.search(r'(хочешь|желани|хотел|мечт)', owner_text, re.I):
         order.append('Её собственные желания')
     for ask, want in SECTION_HINTS:
@@ -180,6 +180,13 @@ def persona_for(owner_text):
 
 
 TPS_LAST = []  # (токенов/с, сколько токенов, за сколько секунд) с последней генерации
+
+
+try:
+    from transformers import LogitsProcessorList as _Processors
+except Exception:  # очень старые сборки — обойдёмся без штрафа
+    class _Processors(list):
+        pass
 
 
 class Enough(Exception):
@@ -226,7 +233,7 @@ class SentenceStop:
 
 
 
-def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_new=0, max_sentences=3):
+def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_new=0, max_sentences=3, past_stems=None):
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
     inputs = tokenizer(prompt, return_tensors='pt')
     started = time.monotonic()
@@ -238,6 +245,21 @@ def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_n
         # токен. top_k=40 сначала оставляет 40 кандидатов — сортировка
         # становится дешёвой, а характер ответов не меняется.
         kwargs.update(do_sample=True, temperature=temperature, top_p=0.9, top_k=40)
+        # Ум: слова из её прошлых ответов теряют вес. Иначе маленькая модель
+        # снова и снова выбирает ту же заученную заготовку («уроки, дневник»)
+        # на любой вопрос. Минус не запрет — новая мысль всегда возможна.
+        if past_stems:
+            def penalize(input_ids, scores):
+                try:
+                    for tok_list, sc in zip(input_ids, scores):
+                        for tok in tok_list[-1:]:
+                            piece = tokenizer.decode([int(tok)]).strip().lower()
+                            if piece and piece[:6] in past_stems:
+                                sc[int(tok)] -= 6.0
+                except Exception:
+                    pass
+                return scores
+            kwargs['logits_processor'] = _Processors([penalize])
     else:
         kwargs.update(do_sample=False)
     stopper = SentenceStop(tokenizer, int(inputs['input_ids'].shape[1]), max_sentences)
@@ -749,13 +771,20 @@ def main():
     # а факты для ответа уже лежат последним блоком.
     messages.append({'role': 'user', 'content': final_user})
     torch.manual_seed(42 + len(turns))
+    past_reply_list = [b.strip().lower() for role, b in answered_turns if role == 'assistant' and b.strip()]
+    past_replies = {b[:45] for b in past_reply_list}
+    # Стемы (первые буквы слов) из её прошлых ответов — чтобы генерация
+    # сама не возвращалась к заученной заготовке на новый вопрос.
+    past_stems_reply = set()
+    for past in past_reply_list:
+        past_stems_reply |= {w[:6] for w in re.findall(r'[\w]{5,}', past)}
+    past_stems_reply = {w for w in past_stems_reply if len(w) >= 5}
     raw_reply = generate(model, tokenizer, messages, max_new=max_new, sample=True,
-                        temperature=0.4 if results else 0.7, max_sentences=6 if detailed else 3)
+                        temperature=0.4 if results else 0.7, max_sentences=6 if detailed else 3,
+                        past_stems=past_stems_reply)
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
     drafts = [raw_reply]
     reply = clean_reply(raw_reply)
-    past_reply_list = [b.strip().lower() for role, b in answered_turns if role == 'assistant' and b.strip()]
-    past_replies = {b[:45] for b in past_reply_list}
 
     def reply_problem(text):
         """Что не так с черновиком: мусор, обрыв или цифры не из фактов."""
@@ -773,8 +802,8 @@ def main():
             stems = {w[:6] for w in re.findall(r'[\w]{5,}', low)}
             if len(stems) >= 3:
                 for past in past_reply_list:
-                    past_stems = {w[:6] for w in re.findall(r'[\w]{5,}', past)}
-                    if past_stems and len(stems & past_stems) / len(stems | past_stems) > 0.55:
+                    other_stems = {w[:6] for w in re.findall(r'[\w]{5,}', past)}
+                    if other_stems and len(stems & other_stems) / len(stems | other_stems) > 0.55:
                         return 'та же заготовка другими словами'
         # Обрыв видно по знаку на конце, а не по длине: короткая верная
         # фраза — не брак, а растянутый баг — не образец. Иначе бюджет
@@ -843,8 +872,8 @@ def main():
         stems = {w[:6] for w in re.findall(r'[\w]{5,}', (bad or '').lower())}
         repeated = False
         for past in past_reply_list:
-            past_stems = {w[:6] for w in re.findall(r'[\w]{5,}', past)}
-            if past_stems and stems and len(stems & past_stems) / len(stems | past_stems) > 0.55:
+            other_stems = {w[:6] for w in re.findall(r'[\w]{5,}', past)}
+            if other_stems and stems and len(stems & other_stems) / len(stems | other_stems) > 0.55:
                 repeated = True
                 break
         if salvage and len(salvage) >= 25 and salvage[-1] in '.!?…»"' and not repeated:
