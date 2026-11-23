@@ -249,6 +249,14 @@ check('на медленном раннере не ходит наугад: да
     const pick = chessBrain.pickMove(c, { timeMs: 0, maxDepth: 4, persona: { jit: 20 } });
     return pick && pick.move && pick.depth >= 2;
   })());
+check('считает быстро и в сложной позиции: миттельшпиль не занимает больше секунды на ход',
+  !!chessBrain && !!ChessMod && (() => {
+    // Раньше эта позиция считалась 8,7 с на один ход, и турнир на раннере падал.
+    const c = new ChessMod('r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 4 4');
+    const t0 = Date.now();
+    const pick = chessBrain.pickMove(c, { timeMs: 200, maxDepth: 4 });
+    return Date.now() - t0 < 3000 && pick.move && pick.depth >= 2;
+  })());
 check('«Остров»: правила, экономика с ртами рабочих, волны и честная победа на месте',
   !!islandMod && islandMod.ACTIONS.includes('tower') && islandMod.ACTIONS.includes('farm') &&
   typeof islandMod.step === 'function' && typeof islandMod.finished === 'function' &&

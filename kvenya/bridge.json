@@ -68,6 +68,20 @@
   ],
   "expeditions": [
     {
+      "date": "2026-11-23 19:07 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-1907-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
       "date": "2026-11-23 00:02 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
@@ -122,24 +136,10 @@
       ],
       "hasVideo": true,
       "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:39 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2340-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
     }
   ],
   "motivation": {
-    "points": 509,
+    "points": 547,
     "level": "Легенда моста",
     "achievements": [
       {
@@ -251,22 +251,16 @@
     ],
     "lastEvents": [
       {
-        "id": "20261123-0003-ellisonleao-github-io:video",
-        "at": "2026-11-23 00:02 UTC",
-        "delta": 3,
-        "text": "видео экспедиции доехало до её страницы"
-      },
-      {
-        "id": "20261123-0003-ellisonleao-github-io:eyes",
-        "at": "2026-11-23 00:02 UTC",
+        "id": "20261123-1907-ellisonleao-github-io:eyes",
+        "at": "2026-11-23 19:07 UTC",
         "delta": 2,
         "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
       },
       {
-        "id": "20261123-0003-ellisonleao-github-io:steps",
-        "at": "2026-11-23 00:02 UTC",
-        "delta": 30,
-        "text": "трубы по табло игры: 2 — первый настоящий счёт"
+        "id": "20261123-1907-ellisonleao-github-io:steps",
+        "at": "2026-11-23 19:07 UTC",
+        "delta": 15,
+        "text": "трубы по табло игры: 1 — первый настоящий счёт"
       },
       {
         "id": "creation:game:ptica-i-truby",
@@ -291,6 +285,12 @@
         "at": "2026-11-23 11:52 UTC",
         "delta": 18,
         "text": "опубликовала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!» "
+      },
+      {
+        "id": "creation:episode:ep-20261123-1-truby",
+        "at": "2026-11-23 19:07 UTC",
+        "delta": 8,
+        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: 1 труб по табло!» "
       },
       {
         "id": "games:chess:10/10",
@@ -354,19 +354,24 @@
       "20261123-0003-ellisonleao-github-io:video",
       "20261123-0003-ellisonleao-github-io:eyes",
       "20261123-0003-ellisonleao-github-io:steps",
+      "20261123-1907-ellisonleao-github-io:played",
+      "20261123-1907-ellisonleao-github-io:video",
+      "20261123-1907-ellisonleao-github-io:eyes",
+      "20261123-1907-ellisonleao-github-io:steps",
       "creation:game:ptica-i-truby",
       "creation:game:zvezdny-dozhd",
       "creation:game:zmeika",
       "creation:episode:ep-20261123-2-truby",
+      "creation:episode:ep-20261123-1-truby",
       "games:chess:10/10"
     ],
-    "reportsCounted": 17,
-    "playedCount": 14,
+    "reportsCounted": 18,
+    "playedCount": 15,
     "bestStepsEver": 4,
     "gamesMade": 3,
-    "episodesMade": 1,
+    "episodesMade": 2,
     "ownWantsDone": 0,
-    "updatedAt": "2026-11-23 18:32 UTC",
+    "updatedAt": "2026-11-23 19:07 UTC",
     "seenJournal": [
       "20261122-2158-ellisonleao-github-io:played",
       "20261122-2158-ellisonleao-github-io:video",
@@ -422,6 +427,11 @@
       "20261123-0003-ellisonleao-github-io:played",
       "20261123-0003-ellisonleao-github-io:steps",
       "20261123-0003-ellisonleao-github-io:video",
+      "20261123-1907-ellisonleao-github-io:eyes",
+      "20261123-1907-ellisonleao-github-io:played",
+      "20261123-1907-ellisonleao-github-io:steps",
+      "20261123-1907-ellisonleao-github-io:video",
+      "creation:episode:ep-20261123-1-truby",
       "creation:episode:ep-20261123-2-truby",
       "creation:game:ptica-i-truby",
       "creation:game:zmeika",
@@ -460,22 +470,22 @@
   },
   "games": {
     "schema": "kvenya-games-v1",
-    "started": "2026-11-23T18:11:55.967Z",
+    "started": "2026-11-23T18:55:42.768Z",
     "chess": {
       "ok": true,
       "depth": 4,
       "timeMs": 200,
       "avgDepth": 2,
-      "shallowMoves": 233,
+      "shallowMoves": 288,
       "wins": 10,
       "losses": 0,
       "draws": 0,
       "unfinished": 0,
       "games": 10,
-      "avgPlies": 46,
-      "lostPieces": 12,
+      "avgPlies": 57,
+      "lostPieces": 20,
       "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-      "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 46 полуходов; своих фигур потеряно 12; средняя глубина 2; мелких ходов 233"
+      "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 57 полуходов; своих фигур потеряно 20; средняя глубина 2; мелких ходов 288"
     },
     "island": {
       "ok": true,
@@ -555,8 +565,206 @@
         "avgTurns": 59
       }
     ],
-    "prevDepth": null,
+    "prevDepth": 2,
     "history": [
+      {
+        "schema": "kvenya-games-v1",
+        "started": "2026-11-23T18:55:42.768Z",
+        "chess": {
+          "ok": true,
+          "depth": 4,
+          "timeMs": 200,
+          "avgDepth": 2,
+          "shallowMoves": 288,
+          "wins": 10,
+          "losses": 0,
+          "draws": 0,
+          "unfinished": 0,
+          "games": 10,
+          "avgPlies": 57,
+          "lostPieces": 20,
+          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
+          "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 57 полуходов; своих фигур потеряно 20; средняя глубина 2; мелких ходов 288"
+        },
+        "island": {
+          "ok": true,
+          "depth": 4,
+          "mine": {
+            "wins": 6,
+            "games": 6,
+            "avgTurns": 59
+          },
+          "baseline": {
+            "wins": 0,
+            "games": 6,
+            "avgTurns": 39
+          },
+          "details": [
+            {
+              "seed": 1,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 55
+            },
+            {
+              "seed": 2,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 53
+            },
+            {
+              "seed": 3,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 55
+            },
+            {
+              "seed": 4,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 55
+            },
+            {
+              "seed": 5,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 53
+            },
+            {
+              "seed": 6,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 54
+            }
+          ]
+        },
+        "depthCurve": [
+          {
+            "depth": 2,
+            "wins": 3,
+            "games": 3,
+            "avgTurns": 82
+          },
+          {
+            "depth": 3,
+            "wins": 3,
+            "games": 3,
+            "avgTurns": 82
+          },
+          {
+            "depth": 4,
+            "wins": 3,
+            "games": 3,
+            "avgTurns": 59
+          }
+        ],
+        "prevDepth": 2
+      },
+      {
+        "schema": "kvenya-games-v1",
+        "started": "2026-11-23T18:49:28.664Z",
+        "chess": {
+          "ok": true,
+          "depth": 4,
+          "timeMs": 200,
+          "avgDepth": 2,
+          "shallowMoves": 321,
+          "wins": 10,
+          "losses": 0,
+          "draws": 0,
+          "unfinished": 0,
+          "games": 10,
+          "avgPlies": 63,
+          "lostPieces": 22,
+          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
+          "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 63 полуходов; своих фигур потеряно 22; средняя глубина 2; мелких ходов 321"
+        },
+        "island": {
+          "ok": true,
+          "depth": 4,
+          "mine": {
+            "wins": 6,
+            "games": 6,
+            "avgTurns": 59
+          },
+          "baseline": {
+            "wins": 0,
+            "games": 6,
+            "avgTurns": 39
+          },
+          "details": [
+            {
+              "seed": 1,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 55
+            },
+            {
+              "seed": 2,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 53
+            },
+            {
+              "seed": 3,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 55
+            },
+            {
+              "seed": 4,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 55
+            },
+            {
+              "seed": 5,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 53
+            },
+            {
+              "seed": 6,
+              "win": true,
+              "turns": 59,
+              "why": "поселение стоит: запасы, стройка и защита",
+              "built": 54
+            }
+          ]
+        },
+        "depthCurve": [
+          {
+            "depth": 2,
+            "wins": 3,
+            "games": 3,
+            "avgTurns": 82
+          },
+          {
+            "depth": 3,
+            "wins": 3,
+            "games": 3,
+            "avgTurns": 82
+          },
+          {
+            "depth": 4,
+            "wins": 3,
+            "games": 3,
+            "avgTurns": 59
+          }
+        ],
+        "prevDepth": 2
+      },
       {
         "schema": "kvenya-games-v1",
         "started": "2026-11-23T18:11:55.967Z",

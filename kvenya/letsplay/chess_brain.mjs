@@ -164,17 +164,23 @@ function quiesce(c, alpha, beta, st, qdepth = 4) {
   return maximizing ? alpha : beta;
 }
 
-/** Тот же поиск, но без бюджета времени: для гарантированных уровней. */
-function searchUnlimited(c, depth, alpha, beta) {
+/**
+ * Тот же поиск, но по счёту узлов, а не по часам: для гарантированных уровней.
+ * Жёсткий предел узлов здесь обязателен. Без него миттельшпиль считался
+ * 8,7 секунды на ОДИН ход (замерено), турнир из десяти партий не укладывался
+ * в лимит запуска и падал. Предел делает гарантию глубины предсказуемой.
+ */
+function searchUnlimited(c, depth, alpha, beta, budget = { n: 0, max: 6000 }) {
+  if (budget.n++ > budget.max) return c.turn() === 'w' ? evaluate(c) : -evaluate(c);
   if (c.isGameOver()) {
     if (c.isCheckmate()) return -MATE + (10 - depth) * 100;
     return 0;
   }
-  if (depth <= 0) return quiesceUnlimited(c, alpha, beta, 3);
+  if (depth <= 0) return quiesceUnlimited(c, alpha, beta, 3, budget);
   let best = -Infinity;
   for (const m of ordered(c, c.moves({ verbose: true }))) {
     c.move(m);
-    const v = -searchUnlimited(c, depth - 1, -beta, -alpha);
+    const v = -searchUnlimited(c, depth - 1, -beta, -alpha, budget);
     c.undo();
     if (v > best) best = v;
     if (best > alpha) alpha = best;
@@ -184,9 +190,9 @@ function searchUnlimited(c, depth, alpha, beta) {
 }
 
 /** Спокойный добор без бюджета, с жёстким пределом глубины. */
-function quiesceUnlimited(c, alpha, beta, qdepth) {
+function quiesceUnlimited(c, alpha, beta, qdepth, budget = { n: 0, max: 6000 }) {
   const stand = c.turn() === 'w' ? evaluate(c) : -evaluate(c);
-  if (qdepth <= 0) return stand;
+  if (qdepth <= 0 || budget.n > budget.max) return stand;
   const maximizing = c.turn() === 'w';
   if (maximizing) {
     if (stand >= beta) return beta;
@@ -195,11 +201,13 @@ function quiesceUnlimited(c, alpha, beta, qdepth) {
     if (stand <= alpha) return alpha;
     if (stand < beta) beta = stand;
   }
+  budget.n++;  // moves() здесь стоит ~3 мс — считаем именно его
   const caps = c.moves({ verbose: true }).filter((m) => m.captured || m.promotion);
   if (!caps.length) return stand;
   for (const m of ordered(c, caps)) {
+    if (budget.n > budget.max) break;
     c.move(m);
-    const v = -quiesceUnlimited(c, -beta, -alpha, qdepth - 1);
+    const v = -quiesceUnlimited(c, -beta, -alpha, qdepth - 1, budget);
     c.undo();
     if (maximizing) {
       if (v >= beta) return beta;
@@ -251,11 +259,13 @@ export function pickMove(c, { rng = Math.random, persona = {}, timeMs = 700, max
     const moves = ordered(c, c.moves({ verbose: true }));
     const scored = [];
     const forced = depth <= minDepth;
+    // Общий бюджет узлов на гарантированные уровни: делится между ходами.
+    const gbudget = { n: 0, max: Math.max(300, Math.floor(2500 / Math.max(1, moves.length))) };
     for (const m of moves) {
       c.move(m);
       // Для гарантированных уровней время не смотрим: иначе недосчитанный
       // уровень отвергается и мы остаёмся без хода вовсе.
-      let v = forced ? -searchUnlimited(c, depth - 1, -Infinity, Infinity) : -search(c, depth - 1, -Infinity, Infinity, st);
+      let v = forced ? -searchUnlimited(c, depth - 1, -Infinity, Infinity, gbudget) : -search(c, depth - 1, -Infinity, Infinity, st);
       c.undo();
       // Характер: жадность и тяга к шахам — маленькие добавки, не ломающие
       // честную оценку; случайность — чтобы партии не совпадали.
@@ -285,7 +295,7 @@ export function pickMove(c, { rng = Math.random, persona = {}, timeMs = 700, max
     const moves = ordered(c, c.moves({ verbose: true }));
     const scored = moves.map((m) => {
       c.move(m);
-      const v = -searchUnlimited(c, Math.max(0, minDepth - 1), -Infinity, Infinity);
+      const v = -searchUnlimited(c, Math.max(0, minDepth - 1), -Infinity, Infinity, { n: 0, max: 2500 });
       c.undo();
       return { m, v, raw: v };
     }).sort((a, b) => b.v - a.v);
