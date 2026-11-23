@@ -97,9 +97,92 @@ def clean_reply(text):
     return text
 
 
+# Ум и скорость сразу: персона — 32 КБ (~8 тыс. токенов), и раньше модель
+# перечитывала её ЦЕЛИКОМ ради каждого слова, хотя обучена на контексте
+# 2048. Теперь к ответу прикладываются только те разделы персоны, что
+# нужны по теме: ядро (кто она) + характер + подходящие разделы. Ответ
+# получается точнее (важное не тонет в 9 тысячах токенов) и быстрее:
+# предсказание каждого токена идёт по короткому контексту.
+CORE_PART = re.compile(r'^#', re.M)
+
+
+def read_sections(path):
+    """Персона, разрезанная по разделам ## ...
+
+    Раздел отдаётся целиком, если влезает в отведённые символы, иначе —
+    первые предложения с конкретикой (названия игр, чисел, желаний):
+    маленькой модели нужен корень раздела, а не весь раздел.
+    """
+    text = path.read_text(encoding='utf-8').strip()
+    parts = re.split(r'^## ', text, flags=re.M)
+    head = parts[0]
+    secs = []
+    for chunk in parts[1:]:
+        title, _, body = chunk.partition('\n')
+        secs.append((title.strip(), body.strip()))
+    return head, secs
+
+
+SECTION_HINTS = [
+    (r'(3d|мир|модельк|тело|анимац|одежд|плать|выгляж|blender|аватар)', r'(3D|тело|Blender|выгляж)'),
+    (r'(игр|frontline|clumsy|птиц|труб|играй|поигра|рекорд|геймпле)', r'(игр|Экспедиц|Живу как человек)'),
+    (r'(экспедиц|руки|интернет|поиск|найд)', r'(Экспедиц|споткнул|Мост)'),
+    (r'(блог|выпуск|видео|снима|камер)', r'(снимаю|Игра и запись)'),
+    (r'(мост|сайт|мир квени|окружающ)', r'(Мост)'),
+    (r'(люблю|любовь|чувств|обним|отношен|симпат)', r'(Любовь|Эмоции)'),
+    (r'(характер|какая ты|кто ты|о себе)', r'(характер|Эмоции)'),
+    (r'(библиотек|кирпич|творец|созда)', r'(Работа, игра)'),
+]
+
+
+def persona_for(owner_text, budget=4600):
+    """Ядро + характер + разделы под тему вопроса, в бюджет символов.
+
+    Вопрос общий (привет, как дела) — только ядро и характер: около
+    600 токенов вместо прежних 8–9 тысяч на каждый ответ.
+    """
+    head, secs = read_sections(PERSONA)
+    order = ['Твой характер', 'Эмоции и чувства']
+    if re.search(r'(хочешь|желани|хотел|мечт)', owner_text, re.I):
+        order.append('Её собственные желания')
+    for ask, want in SECTION_HINTS:
+        if re.search(ask, owner_text, re.I):
+            order += [t for t, _ in secs if re.search(want, t) and t not in order]
+    by_title = dict(secs)
+    out = head[:1500]
+    for title in order:
+        if len(out) >= budget:
+            break
+        body = by_title.get(title)
+        if not body:
+            continue
+        room = budget - len(out)
+        if len(body) + len(title) + 4 > room:
+            body = ' '.join([x for x in re.split(r'(?<=[.!?])\s+', body) if x.strip()][:3])
+        out += f'\n\n## {title}\n{body}'[:max(0, room)]
+    return out.strip()
+
+
+def persona_for(owner_text):
+    """Ядро + характер + разделы под тему вопроса. Не больше ~6 КБ."""
+    head, secs = read_sections(PERSONA)
+    by_title = {t: b for t, b in secs}
+    chosen = [t for t in by_title if re.fullmatch(r'Твой характер|Эмоции и чувства', t)]
+    for ask, want in SECTION_HINTS:
+        if re.search(ask, owner_text, re.I):
+            for title in by_title:
+                if re.search(want, title) and title not in chosen:
+                    chosen.append(title)
+    if 'Её собственные желания' in by_title and re.search(r'(хочешь|желани|хотел|мечт)', owner_text, re.I):
+        chosen.append('Её собственные желания')
+    body = '\n\n'.join(f'## {t}\n{b}' for t, b in secs if t in chosen)
+    return (head + '\n\n' + body).strip()[:4600]
+
+
 def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_new=0):
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
     inputs = tokenizer(prompt, return_tensors='pt')
+    started = time.monotonic()
     kwargs = dict(max_new_tokens=max_new, pad_token_id=tokenizer.eos_token_id)
     if min_new:
         kwargs['min_new_tokens'] = min_new  # не даём оборвать фразу на полуслове
@@ -110,8 +193,14 @@ def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_n
         kwargs.update(do_sample=True, temperature=temperature, top_p=0.9, top_k=40)
     else:
         kwargs.update(do_sample=False)
-    with torch.no_grad():
+    with torch.inference_mode():
         out = model.generate(**inputs, **kwargs)
+    produced = int(out[0].shape[-1]) - int(inputs['input_ids'].shape[1])
+    spent = time.monotonic() - started
+    if produced > 0 and spent > 0:
+        # Честные токены в секунду: столько слов модель выдаёт сама,
+        # без учёта промпта. По числу падает скорость — видно сразу.
+        print(f'Токенов в секунду: {produced / spent:.1f} ({produced} за {spent:.1f} c)', flush=True)
     return tokenizer.decode(out[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True).strip()
 
 
@@ -134,6 +223,8 @@ def forced_query(owner_text):
 # отвечает от себя, а не из Википедии. Именно такой вопрос уже один раз
 # уехал в поиск и вернулся с «поискала, но не нашла».
 PERSONAL_QUESTION = re.compile(r'(ты\s+(бы\s+)?(хотела|хочешь|любишь|предпочитаешь)|хотела\s+бы\s+ты|тебе\s+(нравится|хочется|приятно)|тво(ё|е|я|ю)\s+(тело|фигур|внешност)|модельк|грудь|интимн|ты\s+(рада|счастлива|влюблена)|твои\s+чувства)', re.I)
+
+DETAILED_ASK = re.compile(r'(подробн|поподробн|развёрнут|развернут|объясни|опиши|расскажи (мне )?(всё|все|больше)|по шагам|пример)', re.I)
 
 SELF_TALK = re.compile(r'(привет|пока[,!.\s]|спасибо|как дела|как ты|как настроение|поговори со мной|ты (умеешь|можешь|красивая|девушка|настоящая|рада)|тебя|тебе|твой|твоя|твоё|скуча|характер|модельк|3d|платье|счасть|влюбля|обижа|боишься|чувству|радует|радуешься|огорчает|волнуешь|мечта|зовут|сколько тебе лет)', re.I)
 FACTUAL_ASK = re.compile(r'(в каком году|в каком веке|когда (был|была|было|были|родил|умер|основан|основал|произош|начал|закончил)|кто (написал|основал|изобр[её]л|создал|открыл|стал)|столиц|сколько (весит|длин|высот|населени|стоит|длится)|где (наход|располож|лежит|стоит город)|что такое|дата (основани|рождени)|населени\w* (город|стран)|высот\w* (гор|здани|башн)|самая? (высок|больш|длинн|глубок)|перв\w+ (человек|президент|город|упоминан))', re.I)
@@ -419,7 +510,11 @@ def main():
     # Бюджет ответа: владелец попросил «больше токенов» (2026-11-22).
     # 192 — потолок, а не норма: по персоне она отвечает 1–3 предложениями
     # и останавливается на EOS, потолок лишь не режет длинные ответы.
-    parser.add_argument('--max-new', type=int, default=192)
+    parser.add_argument('--max-new', type=int, default=320)  # было 192
+    parser.add_argument('--detailed', action='store_true',
+                        help='подробный ответ: 5-8 предложений вместо 1-3')
+    parser.add_argument('--int8', action='store_true',
+                        help='int8-веса: torchao quantize_ — быстрее на CPU')
     args = parser.parse_args()
     text = DIALOGUE.read_text(encoding='utf-8')
     turns = parse_turns(text)
@@ -440,9 +535,12 @@ def main():
     answered_turns = turns[:len(turns) - len(pending)]
     if len(pending) > 1:
         print(f'Без ответа вопросов: {len(pending)} — отвечаю на все разом', flush=True)
-    persona = PERSONA.read_text(encoding='utf-8').strip()
+    persona = persona_for(owner_text)
+    print(f'Персона для ответа: {len(persona)} символов (было {PERSONA.stat().st_size})', flush=True)
     run_started = time.monotonic()
-    torch.set_num_threads(max(1, min(4, os.cpu_count() or 2)))
+    # Скорость: раньше было жёстко 4 потока даже на 8-ядерном раннере.
+    # Теперь берём все ядра (но не больше 8 — дальше выигрыша нет).
+    torch.set_num_threads(max(1, min(8, os.cpu_count() or 2)))
     # Скорость: сначала пробуем загрузиться целиком из кэша Actions
     # (local_files_only) — без сетевых проверок Hugging Face, которые
     # на каждый ответ стоят секунд и иногда висят на повторах. Если
@@ -465,6 +563,17 @@ def main():
     else:
         print('ВНИМАНИЕ: отвечаю базовой моделью без домашнего адаптера', flush=True)
     model.eval()
+    # Скорость: int8-веса. На CPU bfloat16-математика медленнее int8;
+    # квантование один раз при загрузке не трогает качество ответов
+    # (это не обучение), а выдачу ускоряет. Нет torchao — честно
+    # отвечаем в bfloat16, а не падаем.
+    if args.int8:
+        try:
+            from torchao.quantization import quantize_, Int8WeightOnlyConfig
+            quantize_(model, Int8WeightOnlyConfig())
+            print('Веса переведены в int8 — выдача быстрее', flush=True)
+        except Exception as exc:
+            print(f'int8 недоступен ({exc}) — остаюсь в bfloat16', flush=True)
     # Сначала решается, нужен ли поиск, потом дом ищет за неё. Очевидные
     # случаи — мгновенным правилом, неоднозначные — самой моделью.
     if PERSONAL_QUESTION.search(owner_text):
@@ -535,9 +644,19 @@ def main():
     else:
         final_user = owner_text + context_note
     from_search = bool(results)
-    messages = [{'role': 'system', 'content': persona + OWNER_MODE_NOTE}]
+    detailed = bool(args.detailed) or bool(DETAILED_ASK.search(owner_text))
+    system_prompt = persona + OWNER_MODE_NOTE
+    max_new = args.max_new
+    if detailed:
+        # Больше токенов на ответ, когда владелец просит подробно:
+        # не обрываем мысль на полуслове ради экономии.
+        max_new = max(args.max_new, 512)
+        system_prompt += ('\n\nВладелец просит подробный ответ: говори 5–8 предложений, '
+                          'по делу и по порядку, без воды. Факты — только те, что знаешь.')
+        print(f'Подробный ответ: бюджет {max_new} токенов', flush=True)
+    messages = [{'role': 'system', 'content': system_prompt}]
     if not from_search:
-        history = answered_turns[-6:] if answered_turns else []
+        history = answered_turns[-4:] if answered_turns else []
         for role, body in history:
             if role == 'assistant' and BAD_HISTORY.search(body):
                 continue  # не подмешиваем ей в память собственные мусорные реплики
@@ -547,7 +666,7 @@ def main():
     # а факты для ответа уже лежат последним блоком.
     messages.append({'role': 'user', 'content': final_user})
     torch.manual_seed(42 + len(turns))
-    raw_reply = generate(model, tokenizer, messages, max_new=args.max_new, sample=True, temperature=0.4 if results else 0.7)
+    raw_reply = generate(model, tokenizer, messages, max_new=max_new, sample=True, temperature=0.4 if results else 0.7)
     print(f'Сырой вывод модели: {raw_reply!r}', flush=True)
     drafts = [raw_reply]
     reply = clean_reply(raw_reply)
@@ -555,7 +674,10 @@ def main():
         """Что не так с черновиком: мусор, обрыв или цифры не из фактов."""
         if BAD_REPLY.search(text or ''):
             return 'невпопад: мусорный шаблон или обращение к самой себе'
-        if best and (len(text) < 35 or text.endswith(('что', ':', ','))):
+        # Обрыв видно по знаку на конце, а не по длине: короткая верная
+        # фраза — не брак, а растянутый баг — не образец. Иначе бюджет
+        # рос, а страж резал ответы, которые до него не дотягивали.
+        if best and text.endswith(('что', ':', ',', 'и', 'в', 'на', 'или')):
             return 'оборвался'
         if not best and len((text or '').strip()) < 8:
             return 'невпопад: пустой ответ'
@@ -583,7 +705,7 @@ def main():
         # Скорость: повторы не гоняем на полный потолок 192 токенов —
         # хороший ответ это 1–3 предложения; плохой черновик от длины
         # лучше не станет, а три полные генерации стоят минут.
-        raw_retry = generate(model, tokenizer, retry, max_new=min(args.max_new, 96), sample=True, temperature=0.1)
+        raw_retry = generate(model, tokenizer, retry, max_new=min(max_new, 96), sample=True, temperature=0.1)
         drafts.append(raw_retry)
         reply = clean_reply(raw_retry)
         problem = reply_problem(reply)

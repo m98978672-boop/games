@@ -33,7 +33,7 @@
     "loraAlpha": 64,
     "targetModules": "все линейные слои (q, k, v, o, gate, up, down)",
     "maxTokens": 2048,
-    "answerTokenBudget": 192,
+    "answerTokenBudget": 320,
     "publishedAt": "2026-11-22",
     "note": "Урок №3: адаптер новой формы (r=32) обучен с базы и опубликован; баллы его экзамена восстановит следующий урок своим экзаменом до/после."
   },
