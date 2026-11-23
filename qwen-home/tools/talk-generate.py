@@ -249,13 +249,22 @@ def generate(model, tokenizer, messages, max_new, sample, temperature=0.7, min_n
         # снова и снова выбирает ту же заученную заготовку («уроки, дневник»)
         # на любой вопрос. Минус не запрет — новая мысль всегда возможна.
         if past_stems:
+            state = {'steps': 0}
+
             def penalize(input_ids, scores):
+                # Только начало ответа (первые 40 токенов) и только очень
+                # мягкий минус (-2.5): цель — не дать снова начать ту же
+                # заготовку, а не сломать связную речь. Раньше штраф -6 по
+                # всему ответу давал быстрый, но бессвязный бред.
+                state['steps'] += 1
+                if state['steps'] > 40:
+                    return scores
                 try:
                     for tok_list, sc in zip(input_ids, scores):
                         for tok in tok_list[-1:]:
                             piece = tokenizer.decode([int(tok)]).strip().lower()
-                            if piece and piece[:6] in past_stems:
-                                sc[int(tok)] -= 6.0
+                            if piece and len(piece) > 3 and piece[:6] in past_stems:
+                                sc[int(tok)] -= 2.5
                 except Exception:
                     pass
                 return scores
@@ -775,10 +784,13 @@ def main():
     past_replies = {b[:45] for b in past_reply_list}
     # Стемы (первые буквы слов) из её прошлых ответов — чтобы генерация
     # сама не возвращалась к заученной заготовке на новый вопрос.
-    past_stems_reply = set()
+    from collections import Counter
+    stem_counts = Counter()
     for past in past_reply_list:
-        past_stems_reply |= {w[:6] for w in re.findall(r'[\w]{5,}', past)}
-    past_stems_reply = {w for w in past_stems_reply if len(w) >= 5}
+        stem_counts.update({w[:6] for w in re.findall(r'[\w]{5,}', past)})
+    # Заготовка — слово, которое повторялось у неё в ДВУХ и более ответах.
+    # Случайное слово из одного ответа не трогаем: это живая речь.
+    past_stems_reply = {w for w, n in stem_counts.items() if n >= 2 and len(w) >= 5}
     raw_reply = generate(model, tokenizer, messages, max_new=max_new, sample=True,
                         temperature=0.4 if results else 0.7, max_sentences=6 if detailed else 3,
                         past_stems=past_stems_reply)
