@@ -237,5 +237,8 @@ check('сюжетная история видна на её странице: с
 check('пыль экспедиций не копится: старые каталоги чистятся после записи списка',
   expWf.includes('shutil.rmtree') && expWf.indexOf("bridge_path.write_text") < expWf.indexOf('shutil.rmtree'));
 
+check('уборка доезжает до main: удаления каталогов тоже записываются в коммит',
+  expWf.includes('git add -A qwen-home/bridge/expeditions'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
