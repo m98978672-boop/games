@@ -185,6 +185,20 @@
   ],
   "expeditions": [
     {
+      "date": "2026-11-23 19:50 UTC",
+      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-1951-ellisonleao-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-play.png",
+        "04-play.png"
+      ],
+      "hasVideo": true,
+      "video": "video.webm"
+    },
+    {
       "date": "2026-11-23 19:44 UTC",
       "url": "https://ellisonleao.github.io/clumsy-bird/",
       "status": "played",
@@ -239,24 +253,10 @@
       ],
       "hasVideo": true,
       "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:51 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2352-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
     }
   ],
   "motivation": {
-    "points": 621,
+    "points": 651,
     "level": "Легенда моста",
     "achievements": [
       {
@@ -362,22 +362,22 @@
     ],
     "lastEvents": [
       {
-        "id": "20261123-1944-ellisonleao-github-io:video",
-        "at": "2026-11-23 19:44 UTC",
+        "id": "20261123-1951-ellisonleao-github-io:video",
+        "at": "2026-11-23 19:50 UTC",
         "delta": 3,
         "text": "видео экспедиции доехало до её страницы"
       },
       {
-        "id": "20261123-1944-ellisonleao-github-io:eyes",
-        "at": "2026-11-23 19:44 UTC",
+        "id": "20261123-1951-ellisonleao-github-io:eyes",
+        "at": "2026-11-23 19:50 UTC",
         "delta": 2,
         "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
       },
       {
-        "id": "20261123-1944-ellisonleao-github-io:steps",
-        "at": "2026-11-23 19:44 UTC",
-        "delta": 30,
-        "text": "трубы по табло игры: 2 — первый настоящий счёт"
+        "id": "20261123-1951-ellisonleao-github-io:steps",
+        "at": "2026-11-23 19:50 UTC",
+        "delta": 15,
+        "text": "трубы по табло игры: 1 — первый настоящий счёт"
       },
       {
         "id": "creation:game:ptica-i-truby",
@@ -477,19 +477,23 @@
       "20261123-1944-ellisonleao-github-io:video",
       "20261123-1944-ellisonleao-github-io:eyes",
       "20261123-1944-ellisonleao-github-io:steps",
+      "20261123-1951-ellisonleao-github-io:played",
+      "20261123-1951-ellisonleao-github-io:video",
+      "20261123-1951-ellisonleao-github-io:eyes",
+      "20261123-1951-ellisonleao-github-io:steps",
       "creation:game:ptica-i-truby",
       "creation:game:zvezdny-dozhd",
       "creation:game:zmeika",
       "creation:episode:ep-20261123-2-truby",
       "games:chess:8/10"
     ],
-    "reportsCounted": 20,
-    "playedCount": 17,
+    "reportsCounted": 21,
+    "playedCount": 18,
     "bestStepsEver": 4,
     "gamesMade": 3,
     "episodesMade": 1,
     "ownWantsDone": 0,
-    "updatedAt": "2026-11-23 19:44 UTC",
+    "updatedAt": "2026-11-23 19:51 UTC",
     "seenJournal": [
       "20261122-2158-ellisonleao-github-io:played",
       "20261122-2158-ellisonleao-github-io:video",
@@ -557,6 +561,10 @@
       "20261123-1944-ellisonleao-github-io:played",
       "20261123-1944-ellisonleao-github-io:steps",
       "20261123-1944-ellisonleao-github-io:video",
+      "20261123-1951-ellisonleao-github-io:eyes",
+      "20261123-1951-ellisonleao-github-io:played",
+      "20261123-1951-ellisonleao-github-io:steps",
+      "20261123-1951-ellisonleao-github-io:video",
       "creation:episode:ep-20261123-2-truby",
       "creation:game:ptica-i-truby",
       "creation:game:zmeika",
