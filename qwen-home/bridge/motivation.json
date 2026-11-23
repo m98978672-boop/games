@@ -111,12 +111,6 @@
   ],
   "lastEvents": [
     {
-      "id": "20261123-0003-ellisonleao-github-io:played",
-      "at": "2026-11-23 00:02 UTC",
-      "delta": 10,
-      "text": "сыграла экспедицию сама, по-честному, до конца"
-    },
-    {
       "id": "20261123-0003-ellisonleao-github-io:video",
       "at": "2026-11-23 00:02 UTC",
       "delta": 3,
@@ -232,7 +226,7 @@
   "gamesMade": 3,
   "episodesMade": 1,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-23 18:32 UTC",
+  "updatedAt": "2026-11-23 18:59 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
