@@ -10,12 +10,13 @@ from PIL import Image, ImageChops, ImageStat
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
 from gameplay_qwen import QwenVisionAgent
-from voxel_supervisor import assess
+from voxel_supervisor import assess, assisted_actions
 
 root = Path(os.environ['VOXEL_GAME_DIST'])
 base_goal = 'Survival world: explore safely. FORWARD is W, BACK is S, STRAFELEFT is A, STRAFERIGHT is D, SPACE jumps, WAIT does nothing.'
 agent = QwenVisionAgent(base_goal,
                         ('FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE','WAIT'), avoid_stalled_actions=True)
+base_actions=agent.allowed
 trace=[]
 interventions=[]
 stop_reason='step_limit'
@@ -35,6 +36,11 @@ with BrowserBridge(root, rights_acknowledged=True, telemetry='voxel', bootstrap=
             break
         if supervision['hint']:
             event={'step':step,'type':'hint','reason':supervision['reason']}
+            interventions.append(event)
+            print('VOXEL_SUPERVISOR='+json.dumps(event), flush=True)
+        agent.allowed, excluded = assisted_actions(base_actions, trace, supervision['reason'])
+        if excluded:
+            event={'step':step,'type':'action_exclusion','actions':excluded}
             interventions.append(event)
             print('VOXEL_SUPERVISOR='+json.dumps(event), flush=True)
         agent.objective=base_goal + (' ' + supervision['hint'] if supervision['hint'] else '')
@@ -59,3 +65,9 @@ result={'game':'Independent Minecraft Web Recreation, not Minecraft', 'source':'
         'telemetry_is_untrusted_game_report':True,'world_entered_verified':False,'victory_verified':False,
         'recorded':False,'trained':False,'published':False}
 print('::notice title=Kvenya independent voxel survival test::'+json.dumps(result))
+
+summary={'steps':len(trace),'stop_reason':stop_reason,'hint_count':sum(i['type']=='hint' for i in interventions),
+         'assisted_action_exclusions':sum(i['type']=='action_exclusion' for i in interventions),
+         'filtered_steps':agent.filtered_steps,'last_action':trace[-1] if trace else None,
+         'victory_verified':False,'trained':False,'published':False}
+print('::notice title=Kvenya survival supervision summary::'+json.dumps(summary))

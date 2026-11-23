@@ -2,7 +2,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from voxel_supervisor import assess
+from voxel_supervisor import assess, assisted_actions
 
 class SurvivalMonitorTests(unittest.TestCase):
     def setUp(self): self.ok={'screen':'playing','x':0,'y':64,'z':0,'health':20,'hunger':20}
@@ -13,6 +13,13 @@ class SurvivalMonitorTests(unittest.TestCase):
         self.assertEqual(assess({**self.ok,'health':4},[])['decision'],'stop')
         self.assertEqual(assess({**self.ok,'screen':'death'},[])['decision'],'stop')
         self.assertEqual(assess({**self.ok,'health':8},[])['reason'],'game_reported_low_health')
+    def test_stall_help_temporarily_excludes_only_recent_movement(self):
+        allowed=('FORWARD','BACK','SPACE','WAIT')
+        recent=[{'action':'BACK'}, {'action':'BACK'}, {'action':'SPACE'}]
+        self.assertEqual(assisted_actions(allowed,recent,'game_reported_stagnation'), (('FORWARD','WAIT'), ('BACK','SPACE')))
+        self.assertEqual(assisted_actions(allowed,recent,'no_alert'), (allowed, ()))
+        self.assertEqual(assisted_actions(('BACK',),recent,'game_reported_stagnation'), (('BACK',), ()))
+
     def test_stagnation_advice_only_on_valid_measurements(self):
         items=[{'game_reported_displacement':0.1}]*3
         self.assertEqual(assess(self.ok,items)['reason'],'game_reported_stagnation')

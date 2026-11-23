@@ -34,3 +34,18 @@ def assess(state, recent):
         return {'decision':'continue', 'reason':'game_reported_low_health',
                 'hint':'Reported health is low. Avoid hazards and move cautiously; do not assume you are safe.'}
     return {'decision':'continue', 'reason':'no_alert', 'hint':None}
+
+
+def assisted_actions(allowed, recent, reason):
+    """On measured stagnation, exclude recently ineffective moves for one decision.
+
+    This is an external intervention, not learned policy or proof a new action works.
+    """
+    movement = {'FORWARD','BACK','STRAFELEFT','STRAFERIGHT','SPACE'}
+    if reason != 'game_reported_stagnation':
+        return allowed, ()
+    blocked = {r.get('action') for r in recent[-3:] if r.get('action') in movement}
+    remaining = tuple(a for a in allowed if a not in blocked)
+    if not remaining:
+        return allowed, ()
+    return remaining, tuple(a for a in allowed if a in blocked)
