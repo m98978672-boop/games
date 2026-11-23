@@ -21,13 +21,29 @@ async function main() {
   page.on('dialog', d => d.dismiss().catch(() => {}));
   let x = 400, y = 300, step = 0;
   try {
-    await page.goto(HOME, {waitUntil:'domcontentloaded',timeout:30000});
-    await page.waitForTimeout(5000);
+    await page.goto(HOME, {waitUntil:'domcontentloaded',timeout:20000});
+    // Setup is scripted, not a model action: use a disposable nickname only if
+    // a single visible text field and Start control can be identified. Never
+    // enter credentials, follow a link, or guess coordinates for the form.
+    let setup = 'start_form_not_found';
+    const fields = page.locator('input:not([type]), input[type=text]');
+    const start = page.getByRole('button', {name: /^start$/i});
+    try {
+      await start.first().waitFor({state:'visible',timeout:25000});
+      const visible = [];
+      for (let i=0; i<Math.min(await fields.count(),10); i++) if (await fields.nth(i).isVisible()) visible.push(fields.nth(i));
+      if (visible.length === 1 && await start.count() === 1) {
+        await visible[0].fill('KvenyaTest');
+        await start.click({timeout:5000});
+        setup = 'start_clicked_not_verified';
+        await page.waitForTimeout(3000);
+      }
+    } catch (_) { setup = 'start_form_not_found_or_timeout'; }
     await page.mouse.move(x,y);
     async function observe() {
       const png = await page.screenshot({type:'png',timeout:10000});
       if (png.length > 2000000) throw Error('screenshot too large');
-      emit({type:'observation',step,width:800,height:600,screenshot_png_base64:png.toString('base64')});
+      emit({type:'observation',step,width:800,height:600,setup,screenshot_png_base64:png.toString('base64')});
     }
     await observe();
     const lines = readline.createInterface({input:process.stdin,crlfDelay:Infinity});

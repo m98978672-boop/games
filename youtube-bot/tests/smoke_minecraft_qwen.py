@@ -17,6 +17,9 @@ agent = QwenVisionAgent(
 actions=[]
 with MinecraftBridge() as bridge:
     obs=bridge.receive(timeout=60)
+    setup = obs.get('setup')
+    if setup not in ('start_form_not_found', 'start_form_not_found_or_timeout', 'start_clicked_not_verified'):
+        raise RuntimeError('Unexpected startup result')
     for step in range(12):
         if obs.get('type') != 'observation' or obs.get('step') != step:
             raise RuntimeError('Bad observation from online bridge')
@@ -27,5 +30,5 @@ with MinecraftBridge() as bridge:
             raise RuntimeError('Bad action response from online bridge')
         actions.append(agent.decisions[-1])
 result={'source':'https://classic.minecraft.net/','model_variant':'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base',
-        'actions':actions,'world_entered_verified':False,'gameplay_verified':False,'recorded':False,'trained':False,'published':False}
+        'setup':setup,'actions':actions,'world_entered_verified':False,'gameplay_verified':False,'recorded':False,'trained':False,'published':False}
 print('::notice title=Minecraft Classic experimental probe::'+json.dumps(result))
