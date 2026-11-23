@@ -94,7 +94,21 @@ def clean_reply(text):
     for marker in ('\nВладелец:', '\nКвеня:', '\nВладелец', '\nUser:', '\nuser\n', '\nassistant\n', '\nuser ', '\nassistant '):
         if marker in text:
             text = text.split(marker)[0].strip()
-    return text
+    # Эхо подсказки: модель иногда начинает ответ с самой инструкции дома.
+    # Выкидываем служебные строки, а не отбрасываем весь ответ целиком.
+    kept = []
+    for line in text.split('\n'):
+        low = line.strip().lower()
+        if low.startswith(('владелец спрашивает', 'вопрос владельца', 'мои сложные игры',
+                          'твои живые факты', 'мои живые факты', 'факты о моих')):
+            continue
+        kept.append(line)
+    text = '\n'.join(kept).strip()
+    # Хвост ролей в самом конце без перевода строки после («…из 6.\nuser»):
+    # модель дописывает служебные метки, и без этого ответ считался обрывом.
+    text = re.sub(r'\n\s*(user|assistant|system|Владелец|Квеня)\s*:?\s*$', '', text, flags=re.I)
+    text = re.sub(r'^\s*(assistant|user|system)\s*:?\s*', '', text, flags=re.I)
+    return text.strip()
 
 
 # Ум и скорость сразу: персона — 32 КБ (~8 тыс. токенов), и раньше модель
@@ -209,16 +223,20 @@ class SentenceStop:
     def __call__(self, input_ids, scores, **kwargs):
         self.steps += 1
         self.total += 1
-        if self.total < 24:
-            return False  # раньше 24 токенов предложения просто не бывает
+        if self.total < 40:
+            return False  # раньше 40 токенов одной законченной фразы просто не бывает
         if self.steps % 3:
             return False
         text = self.tokenizer.decode(input_ids[0][self.prompt_len:], skip_special_tokens=True)
         sentences = [x.strip() for x in re.split(r'(?<=[.!?…])\s+', text) if x.strip()]
         if len(sentences) >= self.max_sentences and re.search(r'[.!?…]\s*$', text.strip()):
             return True
-        for phrase in sentences:
-            key = phrase.lower()[:60]
+        # Повтор считаем только по ДВУМ и более законченным фразам: одна
+        # фраза — это ещё не «вода», а отсечение на первой же фразе
+        # обрывало ответ до того, как она успевала сказать мысль.
+        complete = [x for x in sentences if x.endswith(('.', '!', '?', '…', '»'))]
+        if len(complete) >= 2:
+            key = complete[-1].lower()[:60]
             if key in self.seen:
                 return True  # пошёл повтор — дальше будет та же вода
             self.seen.add(key)
@@ -704,6 +722,7 @@ def main():
                 print(f'Подложил ей факт её желания: {cur["title"]}', flush=True)
         except Exception:
             pass
+    fact_topic = False
     best = None
     if query:
         if results:
@@ -730,7 +749,33 @@ def main():
         final_user = (f'Владелец спрашивает: {owner_text}\n\n'
                       f'Твоё главное желание сейчас, из твоего собственного списка: «{want_fact[0]}» — {want_fact[1]}.\n\n'
                       f'Ответь владельцу СВОИМИ СЛОВАМИ двумя фразами: первая начинается «Моё главное желание сейчас —» и называет это желание, вторая — почему оно главное.')
+    elif re.search(r'(шахмат|сложн\w* игр|остров|турнир|проект)', owner_text, re.I):
+        # Факты о её сложных играх — из её же последнего турнира, а не
+        # выдуманные: счёт берётся из qwen-home/bridge/games.json.
+        game_fact = ''
+        fact_topic = True  # вопрос о сложных играх: отвечаем по фактам, без истории
+        try:
+            g = json.loads((HOME / 'bridge' / 'games.json').read_text(encoding='utf-8'))
+            c = g.get('chess') or {}
+            i = (g.get('island') or {})
+            mine = i.get('mine') or {}
+            base = i.get('baseline') or {}
+            game_fact = (f'Шахматы против спарринга: побед {c.get("wins", 0)} из {c.get("games", 0)}. '
+                         f'«Остров»: мой план победил в {mine.get("wins", 0)} из {mine.get("games", 0)} партий, '
+                         f'простая эвристика — в {base.get("wins", 0)} из {base.get("games", 0)}.')
+        except Exception:
+            game_fact = 'Турнир в сложных играх ещё не записан.'
+        # Якорная подача (проверена на желании и поиске): модель не копирует
+        # начало подсказки, если ей задана первая фраза ответа, а факт стоит
+        # сразу за ней. Свободная формулировка на 0.8B возвращает эхо вопроса.
+        final_user = (f'Факты о моих сложных играх: {game_fact} '
+                      'В шахматах я считаю варианты вперёд, оцениваю позицию и объясняю ход; '
+                      'в «Острове» держу порядок: сначала еда, потом защита, потом рост.'
+                      f'\n\nВопрос владельца: {owner_text}'
+                      '\n\nОтветь двумя фразами: первая начинается «Я играю расчётом», '
+                      'вторая — про мой счёт из фактов выше (сколько побед из скольких).')
     elif SELF_TALK.search(owner_text) or re.search(r'(счасть|радост|нравится|горд|мечта)', owner_text, re.I):
+        fact_topic = True  # ответ по живым фактам о себе — тоже без истории
         # Маленькая модель на «что для тебя счастье» уходит в заученное
         # «уроки и дневник». Опора подаётся той же проверенной формой, что
         # факты поиска: текст, потом прямой вопрос — и без обрывающих
@@ -747,7 +792,11 @@ def main():
                       'двумя-тремя предложениями и опирайся на эти факты о себе.')
     else:
         final_user = owner_text + context_note
-    from_search = bool(results)
+    # Ответ по подложенным фактам (поиск, желание, сложные игры) собирается
+    # БЕЗ истории: иначе маленькая модель копирует из неё свою заученную
+    # заготовку («уроки и дневник») вместо факта, который ей дали.
+    from_facts = bool(results) or bool(want_fact) or fact_topic
+    from_search = from_facts
     detailed = bool(args.detailed) or bool(DETAILED_ASK.search(owner_text))
     system_prompt = persona + OWNER_MODE_NOTE
     max_new = args.max_new
@@ -800,6 +849,10 @@ def main():
         """Что не так с черновиком: мусор, обрыв или цифры не из фактов."""
         if BAD_REPLY.search(text or ''):
             return 'невпопад: мусорный шаблон или обращение к самой себе'
+        # Эхо подсказки: она повторяет инструкцию дома вместо ответа.
+        # Ловится по служебным меткам ролей, которых в живой речи не бывает.
+        if re.search(r'(Владелец спрашивает|Твои живые факты|Мои живые факты|\bassistant\b|\nuser)', text or ''):
+            return 'эхо подсказки, а не ответ'
         # Повтор своего прошлого ответа — не ответ на этот вопрос: маленькая
         # модель цепляется за собственную прошлую реплику и выдаёт её снова.
         # Проверка повтора — только для свободного разговора. Когда дом
@@ -824,6 +877,10 @@ def main():
         # рос, а страж резал ответы, которые до него не дотягивали.
         if text and text[-1] not in '.!?…»"\)':
             return 'оборвался на полуслове'
+        # Ответ по фактам уже назвал главное (что она играет расчётом):
+        # отсутствие числа — повод уточнить, а не браковать весь ответ.
+        if fact_topic and len((text or '').strip()) >= 45:
+            return None
         if best and text.endswith(('что', ':', ',', 'и', 'в', 'на', 'или')):
             return 'оборвался'
         if not best and len((text or '').strip()) < 8:
@@ -915,6 +972,16 @@ def main():
                      'Я опять сбилась на свои уроки и дневник — это не ответ на твой вопрос. Спроси ещё раз, я скажу иначе.')
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
+    if problem or reply.startswith(('Я задумалась и ответила невпопад', 'Я задумалась и потеряла мысль', 'Я опять сбилась')):
+        # Честный след: что именно она сказала, когда дом не принял ответ.
+        # Иначе причина отказа теряется, а логи раннера не всегда доступны.
+        try:
+            with SEARCH_LOG.open('a', encoding='utf-8') as log_file:
+                log_file.write(f'\n## {time.strftime("%Y-%m-%d %H:%M")} отказ ответа\n'
+                               f'Вопрос: {owner_text!r}\nПричина: {problem!r}\n'
+                               f'Черновики: {drafts!r}\n\n')
+        except Exception:
+            pass
     DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
     LAST_REPLY.write_text(reply + '\n', encoding='utf-8')
     print(f'Всего на ответ ушло {time.monotonic() - run_started:.1f} c', flush=True)
