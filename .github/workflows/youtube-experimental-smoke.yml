@@ -173,6 +173,26 @@ jobs:
           fi
           exit "$result"
 
+  private-review-repair:
+    # Real Steam and Qwen, synthetic failed plans; no publishing credentials.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install model dependencies
+        run: pip install -r youtube-bot/requirements-autopilot.txt
+      - name: Test source-linked limitation repair with real Qwen
+        env:
+          OMP_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+        run: python -u youtube-bot/tests/smoke_review_repair_qwen.py
+
   minecraft-one-off:
     # Explicit dispatch only: user requested a single Minecraft Classic probe.
     if: ${{ false }} # Previous one-off Minecraft Classic probe is finished.

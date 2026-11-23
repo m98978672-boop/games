@@ -333,7 +333,43 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
         f"Qwen plan failed validation twice ({last_error}); using a catalogue-only safe fallback.",
         file=sys.stderr,
     )
-    return _catalog_only_fallback(last_raw, game_list, recent)
+    try:
+        return _catalog_only_fallback(last_raw, game_list, recent)
+    except ValueError as exc:
+        if 'No specific grounded possible limitation' not in str(exc):
+            raise
+        # Repair only the failing field, with the selected game's own facts.
+        # Do not transfer an assessment to another game or invent a rating.
+        try:
+            draft = _extract_json(last_raw)
+        except (TypeError, ValueError):
+            raise exc
+        chosen = next((g for g in game_list if str(g['id']) == str(draft.get('game_id', ''))), None)
+        if chosen is None or (str(chosen['id']) in recent and any(str(g['id']) not in recent for g in game_list)):
+            raise exc
+        facts = {f"{chosen['id']}-f{i+1}": str(f) for i, f in enumerate(chosen.get('features', [])[:12])}
+        for _ in range(2):
+            repair_messages = [
+                {'role':'system', 'content':(
+                    'Исправь только возможный минус для обзора по источнику. '
+                    'Не утверждай, что играл, и не выдумывай баги или свойства игры. '
+                    'Назови конкретное предпочтение игрока, связанное с одним из указанных фактов; '
+                    'это предположение, а не установленный недостаток. '
+                    'По-русски, 10–100 символов, без ссылок, с обязательным словом «возможно» или «может». '
+                    'Верни только JSON с полями possible_minus и minus_feature_id.')},
+                {'role':'user', 'content':json.dumps({'game_id':str(chosen['id']), 'source_facts':facts}, ensure_ascii=False)},
+            ]
+            correction = generate_with_qwen(repair_messages, max_new_tokens=220)
+            try:
+                fields = _extract_json(correction)
+                minus_id = str(fields.get('minus_feature_id', ''))
+                if minus_id not in facts:
+                    raise ValueError('Repair cites a fact outside the selected game')
+                fixed = dict(draft, possible_minus=fields.get('possible_minus'), minus_feature_id=minus_id)
+                return _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
+            except (TypeError, ValueError) as repair_error:
+                print(f"Possible limitation repair rejected ({repair_error}); not publishing unsupported claims.", file=sys.stderr)
+        raise ValueError('Could not produce a source-linked possible limitation after targeted retries; no upload') from exc
 
 
 def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:

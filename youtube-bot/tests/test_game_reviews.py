@@ -296,8 +296,31 @@ class GameCatalogTests(unittest.TestCase):
                    "minus_feature_id": f"{game['id']}-f1", "idea_score": 5,
                    "hook": "English-only introduction", "possible_minus": "Возможно, visit www.example.com"}
         with patch("game_reviews.generate_with_qwen", return_value=json.dumps(invalid)):
-            with self.assertRaisesRegex(ValueError, 'refusing generic filler'):
+            with self.assertRaisesRegex(ValueError, 'targeted retries'):
                 generate_game_review(games)
+
+    def test_targeted_limitation_repair_preserves_game_score_and_source(self):
+        game = dict(load_game_catalog()[0]); gid = game['id']
+        draft = {'schema_version':1, 'game_id':gid, 'selected_feature_ids':[f'{gid}-f1', f'{gid}-f2'],
+                 'minus_feature_id':f'{gid}-f1', 'idea_score':7, 'hook':'Что предлагает этот проект?',
+                 'possible_minus':'Недостаток неизвестен'}
+        correction = {'possible_minus':'Возможно, такой игровой формат подойдёт не каждому.', 'minus_feature_id':f'{gid}-f2'}
+        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft),json.dumps(draft),json.dumps(correction)]) as gen:
+            review = generate_game_review([game])
+        self.assertEqual(gen.call_count,3)
+        self.assertEqual(review['game_id'],gid); self.assertEqual(review['idea_score'],7)
+        self.assertEqual(review['possible_minus'],correction['possible_minus'])
+        self.assertEqual(review['minus_evidence'],game['features'][1])
+        self.assertIn('source_facts',json.loads(gen.call_args.args[0][1]['content']))
+
+    def test_targeted_repair_rejects_wrong_fact_and_unsupported_text(self):
+        game = dict(load_game_catalog()[0]); gid = game['id']
+        draft = {'game_id':gid, 'idea_score':6, 'possible_minus':'Нет', 'hook':'Что предлагает игра?'}
+        wrong = {'possible_minus':'Возможно, формат подойдёт не каждому.', 'minus_feature_id':'other-f1'}
+        unsupported = {'possible_minus':'Игра сломана!', 'minus_feature_id':f'{gid}-f1'}
+        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft),json.dumps(draft),json.dumps(wrong),json.dumps(unsupported)]):
+            with self.assertRaisesRegex(ValueError,'targeted retries'):
+                generate_game_review([game])
 
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()
