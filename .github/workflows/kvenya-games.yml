@@ -43,7 +43,11 @@ jobs:
           npm install --no-audit --no-fund
       - name: Kvenya plays her tournaments by herself
         env:
-          KV_DEPTH: '3'
+          # Замер на живом раннере: при 700 мс на ход там выходит 8/10
+          # (времени не хватает доиграть уровни), при 200 мс — 10/10.
+          # Гарантия глубины 2 делает ход осмысленным даже на слабом CPU.
+          KV_DEPTH: '4'
+          KV_TIME_MS: '200'
           KV_ISLAND_DEPTH: '4'
         run: |
           node qwen-home/tools/games-tournament.mjs
