@@ -1,45 +1,45 @@
 {
   "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
-  "startedAt": "2026-11-23 21:17 UTC",
+  "startedAt": "2026-11-23 21:56 UTC",
   "status": "played",
   "steps": [
     {
-      "t": 75.0,
+      "t": 44.3,
       "action": "вежливый гость: проверка robots.txt",
       "result": "robots.txt прочитан"
     },
     {
-      "t": 79.5,
+      "t": 48.8,
       "action": "открыла страницу",
       "result": "Lost Spot (Draft)"
     },
     {
-      "t": 79.6,
+      "t": 48.9,
       "action": "кнопка игры",
       "result": "не нашлась — пробую играть прямо на открытой странице"
     },
     {
-      "t": 83.6,
+      "t": 53.0,
       "action": "это сюжетная игра, а не полёт",
       "result": "история «Lost Spot (Draft)»: текст и варианты выбора, играю чтением, а не кадрами"
     },
     {
-      "t": 83.7,
+      "t": 53.0,
       "action": "читаю историю",
       "result": "сюжетная игра: смотрю текст пассажа и варианты, кликаю по выбору, помню свой путь"
     },
     {
-      "t": 134.6,
+      "t": 108.1,
       "action": "финал",
       "result": "↶ Congratulations ! You finished the game! The End"
     },
     {
-      "t": 135.5,
+      "t": 109.0,
       "action": "финал",
       "result": "↶ Congratulations ! You finished the game! The End"
     },
     {
-      "t": 135.5,
+      "t": 109.0,
       "action": "итог истории",
       "result": "прошла 37 выборов, финалов в записи: 2; последний выбор — «Game Over»"
     }
@@ -48,15 +48,13 @@
     "01-open.png",
     "02-after-play.png",
     "03-story.png",
-    "03-story-1.png",
-    "03-story-2.png",
-    "03-story-3.png",
-    "04-story-6.png",
-    "05-story-12.png",
-    "06-story-18.png",
-    "07-story-24.png",
-    "08-story-30.png",
-    "09-story-36.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "07-story-32.png",
     "09-story-end.png"
   ],
   "kind": "story",
