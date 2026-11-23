@@ -102,10 +102,10 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(len(review["scenes"]), 5)
         self.assertTrue(review["scenes"][0]["dialogue"].startswith("Привет! Сегодня разбираем"))
         self.assertIn(game["title"], review["scenes"][0]["dialogue"])
-        self.assertIn("Что здесь происходит?", review["scenes"][1]["dialogue"])
+        self.assertIn("О чём игра?", review["scenes"][1]["dialogue"])
         self.assertEqual(review["scenes"][-1]["label"], "ИТОГ")
         self.assertIn("8 из 10", review["scenes"][-1]["dialogue"])
-        self.assertIn("Без личной игры", review["scenes"][-1]["dialogue"])
+        self.assertIn("Я ещё не играла", review["scenes"][-1]["dialogue"])
 
     def test_long_catalog_text_is_bounded_for_narration_without_changing_evidence(self):
         game = dict(load_game_catalog()[0])

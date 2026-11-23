@@ -194,10 +194,10 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     description = re.sub(r'^Описание Steam:\s*', '', description, flags=re.I)
     scenes = [
         {"speaker": "Games AI", "dialogue": review_opening(game['title']), "visual": f"Обзор: {game['title']}", "emotion": "happy", "label": "ПРИВЕТ!"},
-        {"speaker": "Games AI", "dialogue": f"Что здесь происходит? {speech_excerpt(description, 90)}", "visual": description, "emotion": "curious", "label": "О ЧЁМ ИГРА"},
+        {"speaker": "Games AI", "dialogue": f"О чём игра? По описанию авторов: {speech_excerpt(description, 90)}", "visual": description, "emotion": "curious", "label": "О ЧЁМ ИГРА"},
         {"speaker": "Games AI", "dialogue": f"Ещё одна деталь: {speech_excerpt(pros[1], 76)}", "visual": pros[1], "emotion": "happy", "label": "ОСОБЕННОСТИ"},
         {"speaker": "Games AI", "dialogue": f"А что может не понравиться? {speech_excerpt(possible_minus, 76)}", "visual": f"Основание: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
-        {"speaker": "Games AI", "dialogue": f"Итог: {speech_excerpt(pros[0], 40)}. Моя оценка идеи — {score} из 10. Без личной игры.", "visual": f"ИТОГ ПО ИСТОЧНИКАМ · {score}/10 · НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", "emotion": "calm", "label": "ИТОГ"},
+        {"speaker": "Games AI", "dialogue": f"Итог: по описанию оценка идеи — {score} из 10. Я ещё не играла, поэтому оценка предварительная.", "visual": f"ИТОГ ПО ИСТОЧНИКАМ · {score}/10 · НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", "emotion": "calm", "label": "ИТОГ"},
     ]
     if any(_russian_ratio(scene["dialogue"]) < 0.45 for scene in scenes):
         raise ValueError("A fact cannot be safely narrated in Russian; refusing English or mixed-language audio.")
