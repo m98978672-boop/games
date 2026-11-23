@@ -947,12 +947,17 @@ def read_story(page, visited, seconds, out, report, shot):
             path.append({'n': moves, 'choice': pick['label'],
                          'fresh': fresh, 'text': text[:220]})
             if moves in (1, 2, 3) or moves % 8 == 0:
-                # Harlowe гасит старый пассаж и проявляет новый — снимаю, когда
-                # текст уже виден, иначе на скриншоте чёрный экран
-                for _w in range(10):
-                    if page.evaluate("() => { const p = document.querySelector('.passage, tw-passage, tw-story'); if (!p) return false; const st = getComputedStyle(p); return parseFloat(st.opacity || '1') > 0.85; }"):
+                # Harlowe гасит старый пассаж и проявляет новый. Ждать надо не
+                # «прозрачность > 0.85» (старый пассаж ещё непрозрачен, пока
+                # переход не начался — так выходили чёрные кадры), а СМЕНУ
+                # текста: пока видимый текст совпадает с прежним, кадр чёрный.
+                before = text[:60]
+                for _w in range(14):
+                    now = page.evaluate("() => { const p = document.querySelector('.passage, tw-passage, tw-story') || document.body; return ((p.innerText || '').replace(/\\s+/g, ' ').trim()).slice(0, 60); }")
+                    if now and now != before and len(now) > 3:
+                        page.wait_for_timeout(320)   # дать тексту проявиться
                         break
-                    page.wait_for_timeout(150)
+                    page.wait_for_timeout(160)
                 shot(f'0{min(9, 3 + moves // 8)}-story-{moves:02d}.png')
             page.wait_for_timeout(1300)
             stuck = 0
