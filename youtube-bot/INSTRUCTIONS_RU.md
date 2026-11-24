@@ -58,6 +58,7 @@
 | `gameplay/help_lookup.py` | «поиск помощи в интернете»: только `en.wikipedia.org`, `ru.wikipedia.org`, `store.steampowered.com` по HTTPS, без редиректов, тело ≤ 200 КБ, таймаут 5 с, кэш на неделю; по умолчанию сеть выключена |
 | `gameplay/action_pacer.py` | непрерывное движение: интент разворачивается в серию действий на окно `cadence_ms ≈ 1000 мс`; при опоздании решения или зависании кадра окно сокращается (до 250 мс), при запасе — растёт обратно |
 | `gameplay/reflex_runner.py` | живой прогон через настоящий мост: сначала отправляются «догоняющие» пачки движения, затем решение; в отчёт идут реальные замеры, включая `browser_frame_timing` |
+| `gameplay/realtime_loop.py` | живая игра без паузы: мост получает пачки движения каждый тик, модель считает в одном фоновом потоке по свежему кадру; опоздание пишется как `deadline_miss`, а не прячется |
 | `reflex_agent.py` | сборка: `agent(png, step)` совместим с `run_agent`, шаг дольше `2 с` — ошибка, а не тихое зависание |
 | `gameplay/reflex_cli.py` | команды оператора: `bench`, `skills`, `forget`, `import`, `profiles`, `budget` |
 
@@ -80,7 +81,10 @@ python3 -m unittest youtube-bot/tests/test_gameplay_reflex.py youtube-bot/tests/
 python3 youtube-bot/gameplay/test_reflex_cli.py
 python youtube-bot/gameplay/benchmark_reflex.py 40   # код 1, если p95 восприятия > 300 мс
 python youtube-bot/tests/smoke_reflex_bridge.py       # только там, где есть Docker
+python -m gameplay.reflex_cli live --steps 16         # то же самое одной командой
 ```
+
+Smoke-скрипт делает **два** прохода: пошаговый (`run_live`) и живой (`run_realtime`) с намеренно медленным советником. Второй проход и проверяет главное обещание: действий отправлено больше, чем решений принято, а `paused_during_inference` равен `false` — игра не встаёт на паузу, пока модель думает. Старый эксперимент `voxel_timing.decide_with_game_paused` оставлен как есть: он честно помечает запись как игру с паузами, и заменять его в исторических отчётах нельзя.
 
 Живой прогон идёт отдельным workflow `.github/workflows/reflex-live-smoke.yml` (только на PR с правками игрового слоя и вручную): он собирает изолированный образ моста, запускает синтетическую игру и требует `perception_max_ms ≤ 300`, `decision_max_ms ≤ 2000` и хотя бы одну «догоняющую» пачку движения на шаг. Отчёт о времени складывается в артефакт `reflex-live-<run_id>`; публикации и обучения нет.
 
