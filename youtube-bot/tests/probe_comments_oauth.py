@@ -17,7 +17,14 @@ def main():
         opener.open(urllib.request.Request(url), timeout=30)
     except urllib.error.HTTPError as response:
         if response.code != 302:
-            print(f'::error::Comment OAuth start returned HTTP {response.code}; no Google consent requested.')
+            body = response.read(4096).decode('utf-8', errors='replace')
+            if 'Подключение не завершено' in body:
+                kind = 'function reported setup error'
+            elif 'BOOT_ERROR' in body or 'WORKER_ERROR' in body:
+                kind = 'edge runtime boot error'
+            else:
+                kind = 'gateway or unknown error'
+            print(f'::error::Comment OAuth start returned HTTP {response.code} ({kind}); no Google consent requested.')
             return 1
         target = urllib.parse.urlsplit(response.headers.get('Location', ''))
         query = urllib.parse.parse_qs(target.query)
