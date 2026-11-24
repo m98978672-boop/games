@@ -126,6 +126,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
+          # Причина падения должна быть видна: раньше шаг молча падал, и по
+          # логам нельзя было понять, что именно сломалось.
+          trap 'echo "СТРОКА $LINENO: команда «$BASH_COMMAND» упала с кодом $?" >&2' ERR
           SRC="$RUNNER_TEMP/expedition"
           [ -f "$SRC/report.json" ] || { echo "Отчёта нет — складывать нечего"; exit 0; }
           STAMP=$(date -u +%Y%m%d-%H%M)
@@ -142,11 +145,16 @@ jobs:
           if [ -f "$SRC/expedition.webm" ]; then
             SIZE=$(stat -c %s "$SRC/expedition.webm")
             echo "Видео экспедиции: $SIZE байт; ffmpeg: $(command -v ffmpeg || echo отсутствует)"
-            if [ "$SIZE" -lt 10000000 ]; then
+            if [ "$SIZE" -lt 8000000 ]; then
               cp "$SRC/expedition.webm" "$DIR/video.webm"
             elif command -v ffmpeg >/dev/null 2>&1; then
-              ffmpeg -y -loglevel error -i "$SRC/expedition.webm" -vf "scale=854:-2,fps=12" -c:v libvpx -b:v 400k -an "$DIR/video.webm" || echo "ffmpeg не справился — видео останется только в артефактах"
-              [ -f "$DIR/video.webm" ] && [ "$(stat -c %s "$DIR/video.webm")" -gt 8000000 ] && rm -f "$DIR/video.webm"
+              # Длинный прогон (10 минут) даёт большое видео: пережимаем сильнее —
+              # 12 кадров в секунду и 640 px хватает, чтобы видеть, что она делает.
+              ffmpeg -y -loglevel error -i "$SRC/expedition.webm" -vf "scale=640:-2,fps=12" -c:v libvpx -b:v 300k -an "$DIR/video.webm" || echo "ffmpeg не справился — видео останется только в артефактах"
+              if [ -f "$DIR/video.webm" ] && [ "$(stat -c %s "$DIR/video.webm")" -ge 8000000 ]; then
+                echo "Пережатое видео всё ещё $(stat -c %s "$DIR/video.webm") байт — на страницу не кладу"
+                rm -f "$DIR/video.webm"
+              fi
             fi
             [ -f "$DIR/video.webm" ] && echo "Видео экспедиции уедет на её страницу: $DIR/video.webm" || echo "Видео на страницу не уехало — оно в артефактах этого запуска"
           else
@@ -218,5 +226,5 @@ jobs:
             git fetch origin main
             git merge --no-edit origin/main || { git merge --abort; exit 1; }
           done
-          if [ -z "$pushed" ]; then echo "Не удалось доставить отчёт за 5 попыток"; exit 1; fi
+          if [ -z "$pushed" ]; then echo "Не удалось доставить отчёт за 5 попыток" >&2; exit 1; fi
           gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
