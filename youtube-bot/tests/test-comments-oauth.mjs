@@ -8,7 +8,7 @@ for (const [channels, videos] of [
   [{items:[]}, {items:[]}],
 ]) assert.throws(() => verifiedOwner(channels, videos));
 const settings = {SUPABASE_SERVICE_ROLE_KEY:'service', SUPABASE_URL:'https://test.supabase.co',
-  YOUTUBE_OAUTH_CLIENT_ID:'upload-client', YOUTUBE_COMMENTS_CLIENT_ID:'distinct-client', YOUTUBE_COMMENTS_CLIENT_SECRET:'secret', YOUTUBE_COMMENTS_ENCRYPTION_KEY:'12'.repeat(32)};
+  YOUTUBE_OAUTH_CLIENT_ID:'upload-client', YOUTUBE_COMMENTS_CLIENT_ID:'distinct-client', YOUTUBE_COMMENTS_CLIENT_SECRET:'secret', YOUTUBE_BOT_ENCRYPTION_KEY:'12'.repeat(32)};
 globalThis.Deno = {env:{get:key => settings[key]}};
 let stateRow, storage, wrongOwner = false, scope = 'https://www.googleapis.com/auth/youtube.force-ssl';
 const reqs = [];

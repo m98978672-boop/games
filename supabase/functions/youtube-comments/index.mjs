@@ -45,12 +45,17 @@ async function googleJson(url, init = {}) {
   if (!response.ok) throw new Error('Google API error');
   return response.json();
 }
-async function encrypt(token) {
-  // Separate key and associated data prevent confusion with the upload token.
-  const raw = env('YOUTUBE_COMMENTS_ENCRYPTION_KEY');
-  if (!/^[0-9a-f]{64}$/i.test(raw)) throw new Error('Invalid encryption key');
+async function commentsKey() {
+  // Derive a purpose-separated AES key. Never use the uploader's AES key
+  // directly for comments, and never change the existing uploader secret.
+  const raw = env('YOUTUBE_BOT_ENCRYPTION_KEY');
+  if (!/^[0-9a-f]{64}$/i.test(raw)) throw new Error('Invalid root key');
   const bytes = new Uint8Array(raw.match(/../g).map(x => parseInt(x, 16)));
-  const key = await crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['encrypt']);
+  const material = await crypto.subtle.importKey('raw', bytes, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'HKDF', hash:'SHA-256', salt:encoder.encode('youtube-comments-salt-v1'), info:encoder.encode('comments-refresh-aes-key-v1')}, material, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function encrypt(token) {
+  const key = await commentsKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv, additionalData:encoder.encode('youtube-comments-v1')}, key, encoder.encode(token)));
   return {token_cipher:b64(ciphertext), token_iv:b64(iv)};
@@ -144,10 +149,7 @@ async function storedCommentsToken() {
   return rows[0];
 }
 async function refreshAccessToken(stored) {
-  const raw = env('YOUTUBE_COMMENTS_ENCRYPTION_KEY');
-  if (!/^[0-9a-f]{64}$/i.test(raw)) throw new Error('Invalid key');
-  const bytes = new Uint8Array(raw.match(/../g).map(x => parseInt(x, 16)));
-  const key = await crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['decrypt']);
+  const key = await commentsKey();
   const clear = await crypto.subtle.decrypt({name:'AES-GCM', iv:decodeBase64(stored.token_iv), additionalData:encoder.encode('youtube-comments-v1')}, key, decodeBase64(stored.token_cipher));
   const refresh = new TextDecoder().decode(clear);
   const form = new URLSearchParams({client_id:commentsClient(), client_secret:env('YOUTUBE_COMMENTS_CLIENT_SECRET'), refresh_token:refresh, grant_type:'refresh_token'});
