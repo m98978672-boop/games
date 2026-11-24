@@ -10,6 +10,21 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def probe_callback(opener):
+    # Missing credentials deliberately exercise a fixed error response, without
+    # consuming a real OAuth state or exposing a code.
+    url = 'https://cuhfnzgytndyntpbnbda.supabase.co/functions/v1/youtube-comments/oauth/callback'
+    try:
+        response = opener.open(urllib.request.Request(url), timeout=30)
+    except urllib.error.HTTPError as error:
+        response = error
+    content_type = response.headers.get('Content-Type', '')
+    body = response.read(4096)
+    valid = response.code == 400 and content_type.lower().startswith('text/html') and 'Ответ Google неполный.'.encode('utf-8') in body
+    print(f'::notice title=OAuth callback rendering::status={response.code}; content_type={content_type}; expected_utf8={valid}')
+    return valid
+
+
 def main():
     url = 'https://cuhfnzgytndyntpbnbda.supabase.co/functions/v1/youtube-comments/auth/start'
     opener = urllib.request.build_opener(NoRedirect())
@@ -37,7 +52,7 @@ def main():
             print('::error::Unexpected OAuth redirect; no Google consent requested.')
             return 1
         print('Comment OAuth start returned a correctly scoped Google redirect; consent was not performed.')
-        return 0
+        return 0 if probe_callback(opener) else 1
     except Exception:
         print('::error::Cannot reach comment OAuth service; no Google consent requested.')
         return 1
