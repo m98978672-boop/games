@@ -93,9 +93,16 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 1)
 
     def test_live_without_docker_fails_loudly(self):
-        code, out = run(['live', '--steps', '2'])
+        # CI runners do have Docker, so availability is pinned rather than
+        # assumed: without it the command must report and exit 1, never hang or
+        # pretend the game was played.
+        import gameplay_bridge
+        from unittest import mock
+        with mock.patch.object(gameplay_bridge.shutil, 'which', return_value=None):
+            code, out = run(['live', '--steps', '2'])
         self.assertEqual(code, 1)
         self.assertIn('Docker', out)
+        self.assertFalse(json.loads(out)['published'])
 
     def test_live_rejects_absurd_step_counts(self):
         with contextlib.redirect_stderr(io.StringIO()):
