@@ -3,10 +3,11 @@
 Each invocation is one GitHub Actions job for one format. Jobs for different
 formats may run concurrently. A failed or ambiguous upload stops this queue.
 
-Bad workflow inputs (a queue of several videos without a starting time, an
-unknown format or a non-numeric count) are configuration mistakes: they are
-reported as one readable line before any rendering starts, never as a raw
-traceback. Nothing is rendered or uploaded in that case.
+An empty publish_at means "use the regular schedule": one video takes the next
+slot, a batch of several walks the daily Shorts/long cadence. Bad workflow
+inputs (an unknown format, a non-numeric count, an unusable time) are reported
+as one readable line before any rendering starts, never as a raw traceback.
+Nothing is rendered or uploaded in that case.
 """
 from __future__ import annotations
 
@@ -20,8 +21,9 @@ from datetime import timedelta
 from pathlib import Path
 
 from schedule_policy import CHANNEL_TZ, manual_publish_time, next_publish_slot
-
 LIMITS = {"short": 5, "long": 2}
+# Batch rendering can take hours; the first automatic slot keeps this much lead.
+BATCH_LEAD = timedelta(hours=8)
 
 
 def parse_count(value: object) -> int:
@@ -46,7 +48,7 @@ def parse_format(value: object) -> str:
 
 def suggest_start(video_format: str, *, now=None) -> str:
     """A concrete Moscow time the owner can paste into publish_at."""
-    slot = next_publish_slot(now, video_format=video_format).astimezone(CHANNEL_TZ)
+    slot = next_publish_slot(now, video_format=video_format, min_lead=BATCH_LEAD).astimezone(CHANNEL_TZ)
     return slot.strftime("%Y-%m-%d %H:%M")
 
 
@@ -55,19 +57,19 @@ def plan(count: int, video_format: str, start: str, *, now=None) -> list[str]:
     if maximum is None or not 1 <= count <= maximum:
         raise ValueError("Queue limit: 1–5 Shorts or 1–2 long reviews per run.")
     text = "" if start is None else str(start).strip()
-    if not text:
-        if count != 1:
-            # A queue of several videos publishes one item per day at the same
-            # wall time, so it needs an explicit first slot. Guessing dates
-            # would move publications the owner never approved.
-            raise ValueError(
-                f"A queue of {count} needs a starting Moscow publication time: fill "
-                f"publish_at (format YYYY-MM-DD HH:MM, for example {suggest_start(video_format, now=now)}) "
-                f"or set batch_count to 1 to use the regular schedule."
-            )
+    # An empty start means "let the regular schedule decide": one item takes the
+    # next slot, a batch walks the short/long cadence (main's staggered plan).
+    if not text and count == 1:
         return [""]
-    first = manual_publish_time(text, now=now).astimezone(CHANNEL_TZ)
-    return [(first + timedelta(days=index)).strftime("%Y-%m-%d %H:%M") for index in range(count)]
+    # Batch rendering can take hours. Choose the first regular slot with a
+    # generous lead, but never assume it is free: the publisher must reserve it.
+    first = (manual_publish_time(text, now=now) if text else
+             next_publish_slot(now, video_format=video_format, min_lead=BATCH_LEAD)).astimezone(CHANNEL_TZ)
+    if video_format == 'short':
+        times = (first + timedelta(days=index // 2, hours=4 * (index % 2)) for index in range(count))
+    else:
+        times = (first + timedelta(days=index) for index in range(count))
+    return [slot.strftime("%Y-%m-%d %H:%M") for slot in times]
 
 
 def run_queue(times: list[str], video_format: str, output_dir: Path) -> None:

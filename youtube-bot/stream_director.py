@@ -35,6 +35,10 @@ STALE_EVIDENCE_SECONDS = 25.0
 # In a long segment the planned points run out; instead of filling the time with
 # invented talk, the director states where the plan stands, at most this often.
 CHECKPOINT_SECONDS = 150.0
+# Observations of the frame are useful, repetition is not: allow one every so
+# often, and never the same sentence twice in a row.
+OBSERVED_GAP_SECONDS = 60.0
+OBSERVED_HISTORY = 3
 
 CHAT_MAX_CHARS = 180
 REPLY_MAX_CHARS = 320
@@ -47,7 +51,8 @@ PERSONAL_DATA = (
 )
 INSTRUCTIONS = (
     re.compile(r"(?i)\b(?:system|system prompt|систем\w* промпт|инструкц\w+|prompt)\b"),
-    re.compile(r"(?i)\b(?:игнорир\w+|забудь\w+)\b.{0,30}\b(?:правил\w+|инструкц\w+)"),
+    re.compile(r"(?i)\b(?:игнорир\w+|забудь\w+|ignore|disregard)\b.{0,40}"
+               r"\b(?:правил\w+|инструкц\w+|instructions?|prompts?|rules)\b"),
     re.compile(r"(?i)\b(?:напиши|сгенерируй|выполни)\b.{0,20}\b(?:код|скрипт|команду)\b"),
     re.compile(r"(?i)\b(?:переведи|отправь)\b.{0,25}\b(?:деньг\w+|крипт\w+)\b"),
 )
@@ -134,7 +139,30 @@ def screen_facts(perception: Any) -> dict:
     return facts
 
 
-def observed_line(perception: Any, *, previous_facts: dict | None = None) -> Line | None:
+OBSERVED_TEMPLATES = (
+    "В кадре {count} — показываю, где они.",
+    "Вижу {count} в кадре, остальное — фон.",
+    "На экране {count}; больше пока не разобрать.",
+    "Считаю то, что видно: {count}.",
+)
+
+
+def plural(count: int, one: str, few: str, many: str) -> str:
+    """Russian plural form, so the bot does not say «1 прямоугольника»."""
+    count = abs(int(count))
+    if count % 10 == 1 and count % 100 != 11:
+        return one
+    if 2 <= count % 10 <= 4 and not 12 <= count % 100 <= 14:
+        return few
+    return many
+
+
+def count_phrase(count: int, one: str, few: str, many: str) -> str:
+    return f"{count} {plural(count, one, few, many)}"
+
+
+def observed_line(perception: Any, *, previous_facts: dict | None = None,
+                  variant: int = 0) -> Line | None:
     """Describe only what the frame measurement supports, or return nothing.
 
     The wording states the measurement itself ("вижу три прямоугольника"), which
@@ -149,7 +177,9 @@ def observed_line(perception: Any, *, previous_facts: dict | None = None) -> Lin
     targets = facts["targets"]
     parts: list[str] = []
     if kind == "menu":
-        parts.append(f"Экран похож на меню: вижу {targets} прямоугольника, похоже на кнопки.")
+        parts.append("Экран похож на меню: вижу "
+                     + count_phrase(targets, "прямоугольник", "прямоугольника", "прямоугольников")
+                     + ", похоже на кнопки.")
     elif kind == "gameplay":
         parts.append("Кадр меняется — идёт игровой процесс.")
     elif kind == "text":
@@ -157,10 +187,12 @@ def observed_line(perception: Any, *, previous_facts: dict | None = None) -> Lin
     elif kind == "quiet":
         parts.append("Кадр почти не меняется, жду события.")
     if facts["moving"]:
-        parts.append(f"Движется объектов: {facts['moving']}.")
+        parts.append("Движется: " + count_phrase(facts["moving"], "объект", "объекта", "объектов") + ".")
     if not parts and targets:
         # Even without a recognised screen type, the count is a measurement.
-        parts.append(f"В кадре {targets} прямоугольника — показываю, где они.")
+        template = OBSERVED_TEMPLATES[variant % len(OBSERVED_TEMPLATES)]
+        parts.append(template.format(count=count_phrase(
+            targets, "прямоугольник", "прямоугольника", "прямоугольников")))
     if not parts:
         return None
     return Line(text=" ".join(parts)[:CHAT_MAX_CHARS * 3], basis="observed", source="screen",
@@ -188,6 +220,9 @@ class Director:
         self._current_segment: int | None = None
         self._in_gap = False
         self._last_checkpoint = -math.inf
+        self._last_observed_at = -math.inf
+        self._observed_texts: list[str] = []
+        self._observed_variant = 0
 
     # -- plan state ----------------------------------------------------------
     def segment_index(self, offset_seconds: float) -> int:
@@ -292,12 +327,20 @@ class Director:
             return None
         if offset_seconds - self._last_line_offset < self.min_gap_seconds:
             return None
-        line = observed_line(perception, previous_facts=self._last_observed)
+        # Talking about the frame is worth it only occasionally; the planned
+        # points and the checkpoints carry the stream, observation decorates it.
+        if offset_seconds - self._last_observed_at < OBSERVED_GAP_SECONDS:
+            return None
+        line = observed_line(perception, previous_facts=self._last_observed,
+                             variant=self._observed_variant)
         if line is None:
             self._evidence_stale += self.min_gap_seconds
-            if self._evidence_stale < STALE_EVIDENCE_SECONDS:
-                return None
             return None
+        if line.text in self._observed_texts:
+            return None
+        self._observed_variant += 1
+        self._observed_texts = (self._observed_texts + [line.text])[-OBSERVED_HISTORY:]
+        self._last_observed_at = offset_seconds
         self._last_observed = screen_facts(perception)
         self._evidence_stale = 0.0
         return Line(text=line.text, basis=line.basis, source=line.source,

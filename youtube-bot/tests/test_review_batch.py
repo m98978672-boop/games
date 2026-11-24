@@ -5,12 +5,12 @@ import os
 import sys
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from review_batch import main, parse_count, parse_format, plan, run_queue, suggest_start
+from review_batch import main, parse_count, parse_format, plan, run_queue, suggest_start, validate_inputs
 from schedule_policy import CHANNEL_TZ
 
 
@@ -19,7 +19,10 @@ class ReviewBatchTests(unittest.TestCase):
         now = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
         self.assertEqual(plan(2, 'long', '2026-11-25 20:30', now=now), ['2026-11-25 20:30', '2026-11-26 20:30'])
         self.assertEqual(plan(1, 'short', '', now=now), [''])
-        for args in [(0, 'short', ''), (6, 'short', ''), (3, 'long', ''), (2, 'short', ''), (1, 'other', '')]:
+        self.assertEqual(plan(5, 'short', '2026-11-25 08:00', now=now), ['2026-11-25 08:00', '2026-11-25 12:00', '2026-11-26 08:00', '2026-11-26 12:00', '2026-11-27 08:00'])
+        self.assertEqual(plan(2, 'short', '', now=now), ['2026-11-25 08:00', '2026-11-25 12:00'])
+        self.assertEqual(plan(2, 'long', '', now=now), ['2026-11-25 06:00', '2026-11-26 06:00'])
+        for args in [(0, 'short', ''), (6, 'short', ''), (3, 'long', ''), (1, 'other', '')]:
             with self.subTest(args=args), self.assertRaises(ValueError):
                 plan(*args, now=now)
 
@@ -70,17 +73,19 @@ class ReviewBatchTests(unittest.TestCase):
                 run_queue(['a', 'b'], 'long', Path(tmp))
             self.assertEqual(run.call_count, 1)
 
-    def test_queue_without_start_time_says_what_to_fix(self):
-        # The run #45484226931 failure: batch_count > 1 with an empty publish_at.
-        now = datetime(2026, 11, 24, 21, tzinfo=timezone.utc)
-        with self.assertRaises(ValueError) as caught:
-            plan(2, 'short', '', now=now)
-        message = str(caught.exception)
-        self.assertIn('publish_at', message)
-        self.assertIn('batch_count to 1', message)
-        # The hint must be a pasteable Moscow time in the workflow's format.
-        self.assertRegex(message, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}')
-        self.assertIn(suggest_start('short', now=now), message)
+    def test_empty_start_uses_regular_cadence_for_a_batch(self):
+        # main's staggered plan: an empty publish_at is not a mistake any more,
+        # a batch simply walks the regular slots with a long lead.
+        now = datetime(2026, 11, 24, 21, tzinfo=timezone(timedelta(hours=3))).astimezone(timezone.utc)
+        shorts = plan(4, 'short', '', now=now)
+        self.assertEqual(len(shorts), 4)
+        self.assertEqual(shorts, sorted(shorts))
+        self.assertTrue(all('08:00' in s or '12:00' in s for s in shorts), shorts)
+        longs = plan(2, 'long', '', now=now)
+        self.assertEqual(len(longs), 2)
+        self.assertTrue(all(s.endswith('06:00') for s in longs), longs)
+        # Blank and padded input behaves like an empty one.
+        self.assertEqual(plan(2, 'short', '   ', now=now), shorts[:2])
 
     def test_blank_and_whitespace_inputs_are_one_item(self):
         now = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
@@ -102,17 +107,32 @@ class ReviewBatchTests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 parse_format(bad)
 
-    def test_check_mode_fails_readably_without_rendering(self):
-        # Reproduces the failed run: a Shorts batch of 2 and no publish_at.
-        env = {'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': '2', 'MANUAL_PUBLISH_AT': '', 'RUNNER_TEMP': ''}
-        with patch.dict(os.environ, env, clear=True), patch('review_batch.subprocess.run') as run, \
-                contextlib.redirect_stdout(io.StringIO()) as output:
-            self.assertEqual(main(['--check']), 1)
-            run.assert_not_called()
-        text = output.getvalue()
-        self.assertIn('::error::', text)
-        self.assertIn('publish_at', text)
-        self.assertIn('nothing was rendered or uploaded', text)
+    def test_check_mode_reports_bad_input_in_one_readable_line(self):
+        # The run #45484226931 failure showed a raw traceback; now every bad
+        # input is one ::error:: line and nothing is rendered.
+        for env in (
+            {'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': 'два', 'MANUAL_PUBLISH_AT': ''},
+            {'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': '6', 'MANUAL_PUBLISH_AT': ''},
+            {'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': '1', 'MANUAL_PUBLISH_AT': '2020-01-01 10:00'},
+            {'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': '1', 'MANUAL_PUBLISH_AT': 'завтра'},
+            {'VIDEO_FORMAT': 'video', 'REVIEW_BATCH_COUNT': '1', 'MANUAL_PUBLISH_AT': ''},
+        ):
+            with self.subTest(env=env), patch.dict(os.environ, {**env, 'RUNNER_TEMP': ''}, clear=True), \
+                    patch('review_batch.subprocess.run') as run, \
+                    contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(main(['--check']), 1)
+                run.assert_not_called()
+            text = output.getvalue()
+            self.assertIn('::error::', text)
+            self.assertIn('nothing was rendered or uploaded', text)
+            self.assertNotIn('Traceback', text)
+
+    def test_bad_publish_at_is_quoted_back(self):
+        bad = '2026-01-01 10:00'
+        with patch.dict(os.environ, {'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': '1', 'MANUAL_PUBLISH_AT': bad}, clear=True):
+            with self.assertRaises(ValueError) as caught:
+                validate_inputs()
+        self.assertIn(bad, str(caught.exception))
 
     def test_check_mode_accepts_a_valid_queue(self):
         now = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_at:
-        description: "Moscow time YYYY-MM-DD HH:MM; required when batch_count > 1; if rendering runs late, publish later once"
+        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 2 Shorts a day / 1 long a day)"
         type: string
         required: false
       made_for_kids:
@@ -29,7 +29,7 @@ on:
         default: short
         required: true
       batch_count:
-        description: "Sequential queue size (1–5 Shorts or 1–2 long); requires publish_at when > 1"
+        description: "Sequential queue size (1–5 Shorts or 1–2 long); blank publish_at picks a regular slot"
         type: string
         default: "1"
         required: true
@@ -67,9 +67,9 @@ jobs:
       - name: Select review format from trusted workflow event
         run: python youtube-bot/review_workflow_format.py
       - name: Validate queue and publication times before rendering
-        # One readable line with the exact fix (for example a pasteable Moscow
-        # time when batch_count > 1 but publish_at is empty) instead of a
-        # traceback. Nothing is rendered or uploaded when this step fails.
+        # One readable ::error:: line instead of a raw traceback for a bad
+        # batch_count, format or time. Nothing is rendered or uploaded when
+        # this step fails; an empty publish_at is valid and picks slots.
         run: python youtube-bot/review_batch.py --check
       - name: Require the explicit owner-approved audience value
         run: |

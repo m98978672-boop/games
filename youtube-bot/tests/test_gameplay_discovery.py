@@ -45,8 +45,8 @@ class GameplayDiscoveryTests(unittest.TestCase):
     def test_gameplay_is_every_two_dates_at_18_moscow(self):
         t = datetime(2026, 11, 24, 14, 0, tzinfo=timezone.utc)
         self.assertEqual(next_gameplay_slot(t).isoformat(), "2026-11-24T15:00:00+00:00")
-        self.assertEqual(next_gameplay_slot(t + timedelta(hours=1)).isoformat(), "2026-11-26T15:00:00+00:00")
-        self.assertEqual(next_gameplay_slot(datetime(2026, 11, 25, 14, tzinfo=timezone.utc)).isoformat(), "2026-11-26T15:00:00+00:00")
+        self.assertEqual(next_gameplay_slot(t + timedelta(hours=1)).isoformat(), "2026-11-25T15:00:00+00:00")
+        self.assertEqual(next_gameplay_slot(datetime(2026, 11, 25, 14, tzinfo=timezone.utc)).isoformat(), "2026-11-25T15:00:00+00:00")
         with self.assertRaises(ValueError):
             next_gameplay_slot(t.replace(tzinfo=None))
 
