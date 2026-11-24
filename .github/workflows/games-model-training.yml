@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       video_pilot:
-        description: «Короткий пилот Qwen: игры и сценарии, без релиза»
+        description: "Короткий пилот Qwen: игры и сценарии, без релиза"
         type: boolean
         default: false
       steps:
