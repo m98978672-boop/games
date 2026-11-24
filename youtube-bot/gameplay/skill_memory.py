@@ -19,6 +19,7 @@ import os
 import re
 import sqlite3
 import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -56,7 +57,9 @@ class SkillMemory:
         self._hot_limit = 512
         # A connection is cheap to open but 10x dearer than reusing one, and the
         # reflex loop reads and writes once per tick. WAL keeps readers fast.
-        self._conn = None
+        # One connection *per thread*: sqlite3 forbids sharing a connection across
+        # threads, and the real-time loop calls the agent from a worker thread.
+        self._conns: dict[int, sqlite3.Connection] = {}
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             with self._connect() as db:
@@ -71,16 +74,23 @@ class SkillMemory:
 
     def _connect(self):
         assert self.path is not None
-        if self._conn is None:
-            self._conn = sqlite3.connect(self.path, timeout=30, isolation_level=None)
-            self._conn.execute("PRAGMA journal_mode=WAL")
-            self._conn.execute("PRAGMA synchronous=NORMAL")
-        return self._conn
+        key = threading.get_ident()
+        conn = self._conns.get(key)
+        if conn is None:
+            conn = sqlite3.connect(self.path, timeout=30, isolation_level=None)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
+            self._conns[key] = conn
+        return conn
 
     def close(self) -> None:
-        if self._conn is not None:
-            self._conn.close()
-            self._conn = None
+        """Close every thread's connection (safe to call from any thread)."""
+        for conn in list(self._conns.values()):
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
+        self._conns.clear()
 
     # -- writes -----------------------------------------------------------
     def record(self, signature: str, intent: str, changed: bool) -> None:
@@ -137,7 +147,7 @@ class SkillMemory:
         return max(ranked, key=lambda s: (s.confidence, s.hits))
 
     def recall(self, signature: str) -> str | None:
-        if signature in self._hot:
+        if signature in self._hot:  # reads are atomic enough for a dict cache
             return self._hot[signature]
         best = self.best(signature)
         intent = best.intent if best is not None else None
