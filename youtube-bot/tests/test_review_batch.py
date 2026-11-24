@@ -39,6 +39,25 @@ class ReviewBatchTests(unittest.TestCase):
                 run_queue(['a', 'b'], 'short', Path(tmp))
             self.assertEqual(run.call_count, 2)
 
+    def test_renderer_retry_occurs_only_before_upload(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, patch('review_batch.time.sleep'):
+            failed = type('R', (), {'returncode': 1})()
+            success = type('R', (), {'returncode': 0})()
+            run.side_effect = [failed, success, success]
+            run_queue([''], 'short', Path(tmp))
+            self.assertEqual(len(run.call_args_list), 3)
+            self.assertIn('run_game_review.py', run.call_args_list[0].args[0][1])
+            self.assertIn('run_game_review.py', run.call_args_list[1].args[0][1])
+            self.assertIn('publish_to_supabase.py', run.call_args_list[2].args[0][1])
+
+    def test_missing_adjustment_flag_never_uploads_batch(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, patch('review_batch.manual_publish_time'):
+            run.return_value.returncode = 0
+            Path(tmp, 'games-review-1.result.json').write_text(json.dumps({'metadata': {}}))
+            with self.assertRaises(RuntimeError):
+                run_queue(['a', 'b'], 'short', Path(tmp))
+            self.assertEqual(run.call_count, 1)
+
     def test_adjusted_batch_slot_never_uploads(self):
         with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, patch('review_batch.manual_publish_time'):
             run.return_value.returncode = 0

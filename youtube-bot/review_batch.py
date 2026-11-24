@@ -49,8 +49,8 @@ def run_queue(times: list[str], video_format: str, output_dir: Path) -> None:
         result_path = output.with_suffix('.result.json')
         if len(times) > 1:
             metadata = json.loads(result_path.read_text(encoding='utf-8'))['metadata']
-            if metadata.get('manual_time_adjusted'):
-                raise RuntimeError('Batch slot became too close during rendering; queue stopped before upload.')
+            if metadata.get('manual_time_adjusted') is not False:
+                raise RuntimeError('Batch slot was adjusted or cannot be verified; queue stopped before upload.')
         # Upload exactly once; any failure or interruption requires Studio inspection.
         subprocess.run([sys.executable, "youtube-bot/publish_to_supabase.py", str(result_path)], env=env, check=True)
 
