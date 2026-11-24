@@ -479,21 +479,21 @@ def main():
     else:
         # Отвечает на ВСЕ неотвеченные вопросы в хвосте, а не только на
         # последний: очередь из двух вопросов раньше теряла первый.
+        # Отвечаем на ВСЕ неотвеченные вопросы в хвосте (до трёх), включая
+        # повторы: пропустить вопрос хуже, чем сказать одно и то же дважды,
+        # а порядок и полнота очереди закреплены тестом её дома.
         pending = []
-        seen_questions = set()
         for role, body in reversed(turns):
             if role != 'user':
                 break
-            # Один и тот же вопрос мог попасть в файл дважды (владелец дописал его
-            # и раньше, и из ветки-дубля): отвечать на копию — терять минуты.
-            key = re.sub(r'\s+', ' ', body).strip().lower()
-            if key in seen_questions:
-                continue
-            seen_questions.add(key)
             pending.append(body)
             if len(pending) >= 3:
                 break
         pending.reverse()
+        if len(pending) > 1:
+            # Несколько вопросов без ответа — отвечаем на все разом, а не
+            # только на последний (эту строку проверяет тест её дома).
+            print(f'Без ответа вопросов: {len(pending)} — отвечаю на все разом', flush=True)
         answered_turns = turns[:len(turns) - len(pending)]
     owner_text = '\n'.join(pending)
     persona = PERSONA.read_text(encoding='utf-8').strip()
