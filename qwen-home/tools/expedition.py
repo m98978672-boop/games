@@ -23,6 +23,7 @@
   error         — сеть/браузер не дали даже открыть.
 """
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -418,13 +419,14 @@ def robots_allows(url):
         return True, f'robots.txt не прочитался ({type(err).__name__}) — иду осторожно'
 
 
-def run(url, seconds, out, task_keys='', interval_ms=0):
+def run(url, seconds, out, task_keys='', interval_ms=0, memo_from=None):
     from playwright.sync_api import sync_playwright  # ленивая: --help и тесты логики без браузера
 
     out.mkdir(parents=True, exist_ok=True)
     video_dir = out / 'video-raw'
     report = Report(url)
-    deadline = time.monotonic() + max(20, min(180, seconds))
+    # Прогон целиком: до 10 минут, чтобы история успела пройти несколько раз.
+    deadline = time.monotonic() + max(20, min(600, seconds))
 
     allowed, robots_note = robots_allows(url)
     report.step('вежливый гость: проверка robots.txt', robots_note)
@@ -521,12 +523,17 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
                 shot('03-story.png')
                 visited = set()
-                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=3)
+                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=6)
                 report.data['story'] = story
                 mp = story.get('map') or {}
                 fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
                 runs = story.get('runs') or []
                 ends = {e['text'][:120] for e in (story.get('endings') or [])}
+                report.data['storyMap'] = {
+                    'places': mp.get('places', 0), 'links': mp.get('links', 0),
+                    'tried': mp.get('tried', 0), 'finds': mp.get('finds', [])[:5],
+                    'tired': mp.get('tired', 0), 'energetic': mp.get('energetic', 0),
+                }
                 report.data['storyLine'] = (
                     f"прошла историю: {story['moves']} выборов, {len(runs)} захода(ов), "
                     f"{mp.get('places', 0)} мест в карте, концовок видела {len(ends)}"
@@ -940,7 +947,11 @@ class StoryMap:
 
     @staticmethod
     def key(text):
-        return (text or '')[:80].strip().lower()
+        # Ключ — хэш ВСЕГО текста пассажа: у Lost Spot общее начало («You at in
+        # front of your house…»), и по обрезку все места дома сливались в одно.
+        # Хэш ещё и компактен — карту можно хранить между прогонами.
+        norm = ' '.join((text or '').split()).lower()
+        return hashlib.sha1(norm.encode('utf-8')).hexdigest()[:16]
 
     def see(self, text):
         """Записать место в карту и вернуть, что в нём видно."""
@@ -952,6 +963,18 @@ class StoryMap:
             self.nodes[k] = node
         node['visits'] += 1
         return node
+
+    def is_loop(self, text, choice, came_from=None):
+        """Петля: вариант возвращает туда, откуда пришли, или в это же место."""
+        k = self.key(text)
+        for e in self.edges:
+            if e['from'] != k or e['choice'] != choice:
+                continue
+            if e['to'] == k:
+                return True          # «Nothing has changed» — то же место
+            if came_from and e['to'] == self.key(came_from):
+                return True          # обратный ход: «back», «Leave quietly!»
+        return False
 
     def mark_open(self, text, choices):
         """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
@@ -991,6 +1014,30 @@ class StoryMap:
                 'tired': sum(1 for n in self.nodes.values() if n.get('energy', 0) < 0),
                 'finds': sorted({f for n in self.nodes.values() for f in n.get('finds', [])})}
 
+    def to_cache(self):
+        """Слепок карты для следующего прогона: места, переходы, что нажато."""
+        places = {k: {'text': v.get('text', '')[:160], 'visits': v.get('visits', 0),
+                      'energy': v.get('energy', 0), 'finds': v.get('finds', []),
+                      'clues': v.get('clues', 0), 'open': bool(v.get('open'))}
+                  for k, v in self.nodes.items()}
+        return {'places': places,
+                'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
+                'tried': sorted([list(t) for t in self.tried])}
+
+    def load_cache(self, data):
+        """Вспомнить карту прошлого прогона: там уже есть места и переходы."""
+        if not data:
+            return 0
+        for k, v in (data.get('places') or {}).items():
+            self.nodes[k] = dict(v)
+        for e in (data.get('links') or []):
+            if e not in self.edges:
+                self.edges.append(e)
+        for pair in (data.get('tried') or []):
+            if len(pair) == 2:
+                self.tried.add((pair[0], pair[1]))
+        return len(self.nodes)
+
     def as_report(self):
         nodes = [{'key': k[:60], 'visits': v['visits'], 'energy': v.get('energy', 0),
                   'finds': v.get('finds', []), 'clues': v.get('clues', 0),
@@ -1000,7 +1047,7 @@ class StoryMap:
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
-                story_map=None, energy=0):
+                story_map=None, energy=0, came_from=None):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
     visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
@@ -1012,18 +1059,35 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     """
     if not choices:
         return None, False
-    here = lambda c: (passage or '', c.get('key', c.get('label', '')))
-    fresh = [c for c in choices if here(c) not in visited]
+    k = passage or ''
+
+    def not_tried(c):
+        """Этот выбор в этом месте ещё не нажимали?"""
+        if story_map is not None and passage:
+            return (k, c.get('label')) not in story_map.tried
+        return here_key(c) not in visited
+
+    def here_key(c):
+        return (k, c.get('key', c.get('label', '')))
+
+    # Диалог подтверждения: сначала «OK», а не «Cancel».
+    if len(choices) <= 3:
+        affirm = [c for c in choices if (c.get('label') or '').strip().lower() in
+                  ('ok', 'okay', 'yes', 'да', 'продолжить', 'continue', 'next', 'далее')]
+        if affirm:
+            return affirm[0], True
+
+    # ГЛАВНОЕ: идём по ещё не нажатым ВЫБОРАМ. Раньше я считал новизну по месту,
+    # куда пришла, — и после «house» любой переход выглядел новым: она крутила
+    # дом → кухня → «Go After Spot» → дом шесть заходов подряд.
+    fresh = [c for c in choices if not_tried(c)]
     pool = fresh or choices
 
-    if story_map is not None and passage:
-        unseen = story_map.untried_targets(passage, choices)
-        if unseen:
-            pool = unseen
-        else:
-            not_tried = story_map.fresh_choices(passage, choices)
-            if not_tried:
-                pool = not_tried
+    # Петля (ведёт туда же, откуда пришла) — в самом конце.
+    if passage and len(pool) > 1:
+        no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)] if story_map else pool
+        if no_loops:
+            pool = no_loops
 
     # осторожность: вымотана — сначала передохнуть, даже если отдых уже нажимала.
     # Отдых ищем среди ВСЕХ вариантов: в карте он может быть «изведан», но силы
@@ -1037,11 +1101,6 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             if far:
                 pool = far
 
-    if times_here >= 2 and len(pool) > 1:
-        exits = [c for c in pool if any(w in c.get('label', '').lower()
-                                        for w in ('back', 'home', 'house', 'door', 'outside', 'leave', 'return'))]
-        if exits:
-            pool = exits
 
     pick = pool[0] if rng is None else pool[rng.randrange(len(pool))]
     return pick, bool(fresh)
@@ -1060,45 +1119,78 @@ def is_far(label):
                                   'hospital', 'restaurant', 'park', 'outside', 'street'))
 
 
-def restart_story(page, report):
-    """Начать историю заново: Twine хранит пройденное, нужен чистый лист.
+RESTART_JS = r"""
+() => {
+  // Harlowe держит историю в localStorage. Ищем ключ истории и чистим его —
+  // это ровно то, что делает кнопка Restart в меню, только без поиска иконки.
+  const keys = [];
+  const wipe = (store, name) => {
+    if (!store) return;
+    const mine = [];
+    for (let i = 0; i < store.length; i++) {
+      const k = store.key(i) || '';
+      // Harlowe хранит сессию и «где я остановилась» под своими именами;
+      // берём всё, что похоже на историю, а не на чужие настройки браузера.
+      if (/twine|harlowe|story|passage|session|storydata/i.test(k)) mine.push(k);
+    }
+    mine.forEach(k => { store.removeItem(k); keys.push(name + ':' + k); });
+  };
+  wipe(localStorage, 'local');
+  try { wipe(sessionStorage, 'session'); } catch (e) {}
+  if (!keys.length) return {ok: false, why: 'ключа истории ни в local, ни в session', keys: []};
+  return {ok: true, keys: keys.slice(0, 8)};
+}
+"""
 
-    Пробуем по-честному, как человек: кнопка «Restart» в панели истории, затем
-    обычная перезагрузка страницы. Ничего не подделываем в состоянии игры —
-    просто просим её начать сначала.
+
+def restart_story(page, report):
+    """Начать историю заново — по-честному, теми же средствами, что и человек.
+
+    Порядок: кнопка Restart в панели, очистка сохранённой истории в
+    localStorage (её же чистит кнопка), затем перезагрузка. Перезагрузка одна
+    проблему не решает: прогресс лежит в localStorage и возвращает на финал.
     """
+    # 1) кнопка Restart, если она есть в панели истории
     for sel in ('tw-icon[title="Restart" i]', 'tw-icon[aria-label="Restart" i]',
-                'button:has-text("Restart")', '[title="Restart" i]'):
+                '[title="Restart" i]', 'button:has-text("Restart")'):
         try:
             el = page.query_selector(sel)
             if el:
                 el.click(timeout=2500)
                 page.wait_for_timeout(1200)
-                report.step('начать заново', f'нажала «Restart» ({sel}) — иду по другой ветке')
-                return True
+                st = page.evaluate(TWINE_TASK_JS)
+                if st and st.get('choices'):
+                    report.step('начать заново', f'нажала «Restart» ({sel}) — история с начала')
+                    return True
         except Exception:
             continue
+    # 2) чистим сохранённую историю и перезагружаем
+    try:
+        cleared = page.evaluate(RESTART_JS)
+    except Exception as err:
+        cleared = {'ok': False, 'why': str(err)}
     try:
         page.reload(wait_until='domcontentloaded')
-        page.wait_for_timeout(2500)
-        # Harlowe в старте может снова спросить имя — подтверждаем
-        for _i in range(6):
+        page.wait_for_timeout(2200)
+        for _i in range(8):
             st = page.evaluate(TWINE_TASK_JS)
             if st and st.get('choices'):
-                break
+                report.step('начать заново',
+                            f'очистила сохранённую историю ({", ".join(cleared.get("keys") or [])[:60] or cleared.get("why", "?")}) и перезагрузила — история с начала')
+                return True
             try:
-                page.keyboard.press('Enter')
+                page.keyboard.press('Enter')   # Harlowe может снова спросить имя
             except Exception:
                 pass
-            page.wait_for_timeout(600)
-        report.step('начать заново', 'перезагрузила страницу — история с начала, иду искать другую ветку')
-        return True
+            page.wait_for_timeout(700)
+        report.step('начать заново', 'после очистки и перезагрузки вариантов нет — история не начинается заново')
+        return False
     except Exception as err:
         report.step('начать заново', f'не вышло начать заново: {err}')
         return False
 
 
-def read_story(page, seconds, out, report, shot, runs=3):
+def read_story(page, seconds, out, report, shot, runs=6):
     """Пройти сюжетную игру чтением и добрать ветки, которых ещё не видела.
 
     Один заход — до финала. Если время осталось и в карте есть неизведанные
@@ -1107,8 +1199,28 @@ def read_story(page, seconds, out, report, shot, runs=3):
     """
     import random
     rng = random.Random(7)
-    deadline = time.monotonic() + max(20, min(180, seconds))
+    # Окно истории: до 10 минут. Раньше было 180 с — на второй заход едва
+    # хватало, на третий не оставалось вовсе.
+    deadline = time.monotonic() + max(20, min(600, seconds))
     story_map = StoryMap()
+    # Память между прогонами: карта прошлой экспедиции в тот же адрес. Без неё
+    # каждый прогон начинал знание с нуля и топтался по тем же местам.
+    memo_path = out / 'storymap.json'
+    memo_loaded = 0
+    try:
+        # Сначала память прошлых прогонов из репозитория (её подкладывает
+        # workflow), потом своя папка — на случай локального повтора.
+        for cand in ([Path(memo_from)] if memo_from else []) + [memo_path]:
+            if cand and Path(cand).exists():
+                n = story_map.load_cache(json.loads(Path(cand).read_text(encoding='utf-8')))
+                if n:
+                    memo_loaded = n
+                    break
+            if memo_loaded:
+                report.step('вспомнила карту',
+                            f'в прошлый раз знала {memo_loaded} мест и {len(story_map.tried)} нажатых вариантов — начинаю не с нуля')
+    except Exception as err:
+        report.step('память карты', f'прошлую карту не прочитать: {err}')
     visited = set()
     path, endings, runs_done = [], [], []
     report.step('читаю историю',
@@ -1138,6 +1250,11 @@ def read_story(page, seconds, out, report, shot, runs=3):
         stuck = 0
         fresh_moves = 0
         pending = {'from': '', 'choice': '', 'done': True}
+        trail = []        # последние места: ловим хождение по кругу
+        last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
+        last_text = ['']   # прошлый текст: ловим «страница не сменилась»
+        same_text = [0]
+        prev_place = ['']  # место предыдущего шага
         new_places = 0
         run_end = ''
         while time.monotonic() < deadline - 4:
@@ -1154,6 +1271,9 @@ def read_story(page, seconds, out, report, shot, runs=3):
                 # пришли из предыдущего пассажа: записываем ребро карты
                 story_map.link(pending['from'], pending['choice'], text)
                 pending['done'] = True
+            if text and last_text[0] and text[:120] == last_text[0][:120] and moves > 0:
+                same_text[0] += 1
+            last_text[0] = text
             sight = story_map.see(text)          # зрение: силы, находки, следы
             if sight['visits'] == 1:
                 new_places += 1
@@ -1162,9 +1282,19 @@ def read_story(page, seconds, out, report, shot, runs=3):
                 c['key'] = c.get('label', '')
             story_map.mark_open(text, choices)
             if choices:
+                # след последних мест: если ходит по кругу, дальше не жмём
+                trail.append(story_map.key(text))
+                last_place[0] = prev_place[0]
+                if len(trail) > 18:
+                    trail.pop(0)
+                if len(trail) >= 18 and len(set(trail[-8:])) <= 2:
+                    report.step('стоп-кран',
+                                f'топчется на месте (последние {len(trail)} шагов — два места) — прекращаю заход')
+                    break
                 pick, fresh = pick_choice(choices, visited, rng,
                                           story_map.key(text), sight['visits'],
-                                          story_map=story_map, energy=sight.get('energy', 0))
+                                          story_map=story_map, energy=sight.get('energy', 0),
+                                          came_from=last_place[0])
                 story_map.tried.add((story_map.key(text), pick['label']))
                 visited.add((story_map.key(text), pick['label']))
                 try:
@@ -1198,6 +1328,7 @@ def read_story(page, seconds, out, report, shot, runs=3):
                             break
                         page.wait_for_timeout(160)
                     shot(f'0{min(9, 3 + moves // 8)}-story-{moves:02d}.png')
+                prev_place[0] = story_map.key(text)   # для следующего шага: откуда пришли
                 page.wait_for_timeout(1300)
                 stuck = 0
             else:
@@ -1230,6 +1361,13 @@ def read_story(page, seconds, out, report, shot, runs=3):
                     f'заход {run}: мест в карте {len(story_map.nodes)}, нажато вариантов {all_choice_pairs}; '
                     + ('есть куда идти — начинаю заново' if run < runs else 'заходов хватит'))
 
+    # Карту сохраняем рядом с отчётом — её подхватит следующий прогон.
+    try:
+        memo_path.write_text(json.dumps(story_map.to_cache(), ensure_ascii=False), encoding='utf-8')
+        report.step('карта сохранена', f'{len(story_map.nodes)} мест для следующего прогона')
+    except Exception as err:
+        report.step('карта', f'не сохранилась: {err}')
+
     hit = [p for p in path if p.get('finds')]
     return {
         'moves': sum(r['moves'] for r in runs_done),
@@ -1241,6 +1379,7 @@ def read_story(page, seconds, out, report, shot, runs=3):
         'map': story_map.as_report(),
         'sawFinds': hit[:5],
         'freshPlaces': sum(r['newPlaces'] for r in runs_done),
+        'remembered': memo_loaded,
     }
 
 def finish(browser, context, video_dir, out, report):
@@ -1272,8 +1411,9 @@ def main():
     parser.add_argument('--keys', default='', help='план клавиш из задания, через запятую')
     parser.add_argument('--interval-ms', type=int, default=0, help='ритм нажатий из задания, мс')
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--memo', default='', help='прошлая карта истории: следующая экспедиция её вспомнит')
     args = parser.parse_args()
-    return run(args.url, args.seconds, args.out, args.keys, args.interval_ms)
+    return run(args.url, args.seconds, args.out, args.keys, args.interval_ms, args.memo)
 
 
 if __name__ == '__main__':

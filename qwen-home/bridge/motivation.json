@@ -18,25 +18,25 @@
       "id": "game-maker",
       "title": "Сборщик игр",
       "reward": "право придумывать следующий шаблон самой",
-      "at": "2026-11-23"
+      "at": "2026-11-24"
     },
     {
       "id": "game-smith",
       "title": "Игровых дел мастер",
       "reward": "своя полка игр в мире Квени",
-      "at": "2026-11-23"
+      "at": "2026-11-24"
     },
     {
       "id": "first-episode",
       "title": "Первый выпуск",
       "reward": "студия открывает второй сезон",
-      "at": "2026-11-23"
+      "at": "2026-11-24"
     },
     {
       "id": "director",
       "title": "Режиссёр",
       "reward": "блог выходит по расписанию",
-      "at": "2026-11-23"
+      "at": "2026-11-24"
     }
   ],
   "pendingDuties": [],
@@ -155,7 +155,7 @@
   "playedCount": 14,
   "bestStepsEver": 4,
   "gamesMade": 3,
-  "episodesMade": 4,
+  "episodesMade": 5,
   "ownWantsDone": 0,
   "updatedAt": "2026-11-23 11:55 UTC",
   "seenJournal": [
@@ -218,6 +218,7 @@
     "creation:episode:ep-20261123-5-truby",
     "creation:episode:ep-20261123-7-truby",
     "creation:episode:ep-20261123-match",
+    "creation:episode:ep-20261124-match",
     "creation:game:ptica-i-truby",
     "creation:game:zmeika",
     "creation:game:zvezdny-dozhd"
