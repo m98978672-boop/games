@@ -36,6 +36,8 @@ MODEL = 'Qwen/Qwen3.5-0.8B'
 REVISION = '2fc06364715b967f1860aea9cf38778875588b17'
 
 HOME = Path(__file__).resolve().parent.parent
+from self_facts import SelfFactsError, build_fact_block, read_home, topics_in  # noqa: E402
+
 DIALOGUE = HOME / 'talk' / 'dialogue.md'
 PERSONA = HOME / 'talk' / 'persona.md'
 LAST_REPLY = HOME / 'talk' / 'last-reply.txt'
@@ -506,6 +508,19 @@ def main():
                 print(f'Подложил ей факт её желания: {cur["title"]}', flush=True)
         except Exception:
             pass
+    # Факты о ней самой: вопрос «какой у тебя счёт в шахматах» раньше уходил
+    # модели без опоры — она выдумывала. Теперь дом подкладывает настоящие
+    # числа из state.json и bridge/games.json, как факты поиска.
+    self_topics = topics_in(owner_text)
+    self_facts = None
+    fact_block = ''
+    if self_topics:
+        try:
+            self_facts = read_home(HOME)
+            fact_block = build_fact_block(self_facts, self_topics)
+            print(f'Вопрос о ней самой, темы: {self_topics}; фактов из дома: {len(self_facts.facts())}', flush=True)
+        except SelfFactsError as error:
+            print(f'Дом не прочитался: {error}', flush=True)
     best = None
     if query:
         if results:
@@ -526,6 +541,11 @@ def main():
         final_user = (f'Владелец спрашивает: {owner_text}\n\n'
                       f'Текст из {src_name} «{best["title"]}» ({best.get("url", "")}): {best["digest"]}\n\n'
                       f'Ответь владельцу двумя короткими фразами по этому тексту: первая фраза — «{src_phrase}», вторая фраза — сам ответ из текста СВОИМИ СЛОВАМИ, с годом из текста. Ничего больше не пиши.')
+    elif fact_block:
+        final_user = (f'Владелец спрашивает: {owner_text}\n\n{fact_block}\n\n'
+                      'Ответь владельцу по этим фактам, 1–3 предложениями, своими словами. '
+                      'Числа и названия бери ровно такими, как выше, ничего не добавляй от себя. '
+                      'Если про что-то в списке ничего нет, честно скажи, что в доме этого не записано.')
     elif want_fact:
         # Как и с поиском, факт её желания маленькой модели подаётся
         # структурой, а не скобкой: иначе она отвечает общими словами.
@@ -559,6 +579,12 @@ def main():
             return 'оборвался'
         if not best and len((text or '').strip()) < 8:
             return 'невпопад: пустой ответ'
+        if self_facts is not None:
+            allowed = set(re.findall(r'\d+', ' '.join(v for _, v in self_facts.facts())))
+            used = set(re.findall(r'\d+', text or ''))
+            invented = {n for n in used if n not in allowed and len(n) > 1}
+            if invented:
+                return f'цифры не из дома (выдумано: {", ".join(sorted(invented))})'
         if best:
             fact_years = set(re.findall(r'\b\d{3,4}\b', best['digest']))
             reply_years = set(re.findall(r'\b\d{3,4}\b', text))
@@ -575,7 +601,9 @@ def main():
         attempt += 1
         print(f'Черновик плох ({problem}), попытка {attempt + 1}: {reply!r}', flush=True)
         torch.manual_seed(100 + attempt)
-        if results:
+        if fact_block:
+            retry_note = '\n(Прошлый черновик не годится: цифры не из фактов выше. Возьми числа ровно из списка и ответь 1–3 предложениями.)'
+        elif results:
             retry_note = '\n(Прошлый черновик не годится. Пиши обе фразы целиком до точки, а год бери из текста выше — тот же год, что там написан, цифры не меняй.)'
         else:
             retry_note = '\n(Прошлый черновик не годится: он невпопад. Отвечай владельцу от своего имени, тепло и точно по вопросу, 1–3 предложения целиком. К самой себе по имени не обращайся и чужие роли не пиши.)'
