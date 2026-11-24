@@ -1071,7 +1071,11 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     pool = fresh or choices
 
     if story_map is not None and passage:
-        unseen = story_map.untried_targets(passage, choices)
+        # Петля (вариант возвращает туда же) — это НЕ новое место: сначала
+        # смотрим, куда он вёл в прошлый раз. Иначе «house → Leave quietly!»
+        # считается неизведанным и повторяется, пока стоп-кран не остановит.
+        no_loop_choices = [c for c in choices if not story_map.is_loop(passage, c.get('label'), came_from)]
+        unseen = story_map.untried_targets(passage, no_loop_choices)
         if unseen:
             pool = unseen
         else:
@@ -1254,6 +1258,8 @@ def read_story(page, seconds, out, report, shot, runs=6):
         pending = {'from': '', 'choice': '', 'done': True}
         trail = []        # последние места: ловим хождение по кругу
         last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
+        last_text = ['']   # прошлый текст: ловим «страница не сменилась»
+        same_text = [0]
         prev_place = ['']  # место предыдущего шага
         new_places = 0
         run_end = ''
@@ -1271,6 +1277,9 @@ def read_story(page, seconds, out, report, shot, runs=6):
                 # пришли из предыдущего пассажа: записываем ребро карты
                 story_map.link(pending['from'], pending['choice'], text)
                 pending['done'] = True
+            if text and last_text[0] and text[:120] == last_text[0][:120] and moves > 0:
+                same_text[0] += 1
+            last_text[0] = text
             sight = story_map.see(text)          # зрение: силы, находки, следы
             if sight['visits'] == 1:
                 new_places += 1
@@ -1282,9 +1291,9 @@ def read_story(page, seconds, out, report, shot, runs=6):
                 # след последних мест: если ходит по кругу, дальше не жмём
                 trail.append(story_map.key(text))
                 last_place[0] = prev_place[0]
-                if len(trail) > 12:
+                if len(trail) > 18:
                     trail.pop(0)
-                if len(trail) >= 12 and len(set(trail[-6:])) <= 2:
+                if len(trail) >= 18 and len(set(trail[-8:])) <= 2:
                     report.step('стоп-кран',
                                 f'топчется на месте (последние {len(trail)} шагов — два места) — прекращаю заход')
                     break
