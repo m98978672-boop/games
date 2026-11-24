@@ -50,6 +50,13 @@ class SkillMemory:
         self.max_entries = max_entries
         self.min_confidence = min_confidence
         self._rows: dict[tuple[str, str], list[int]] = {}
+        # Hot cache of the last lookups: with a disk database every recall() would
+        # be a query, and the reflex loop does one per frame. Bounded on purpose.
+        self._hot: dict[str, str | None] = {}
+        self._hot_limit = 512
+        # A connection is cheap to open but 10x dearer than reusing one, and the
+        # reflex loop reads and writes once per tick. WAL keeps readers fast.
+        self._conn = None
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
             with self._connect() as db:
@@ -58,10 +65,22 @@ class SkillMemory:
                     " signature TEXT NOT NULL, intent TEXT NOT NULL,"
                     " hits INTEGER NOT NULL DEFAULT 0, misses INTEGER NOT NULL DEFAULT 0,"
                     " last_seen REAL NOT NULL, PRIMARY KEY (signature, intent))")
+                # recall() runs once per frame, so the lookup must be indexed.
+                db.execute(
+                    "CREATE INDEX IF NOT EXISTS skills_signature ON skills (signature)")
 
     def _connect(self):
         assert self.path is not None
-        return sqlite3.connect(self.path, timeout=30)
+        if self._conn is None:
+            self._conn = sqlite3.connect(self.path, timeout=30, isolation_level=None)
+            self._conn.execute("PRAGMA journal_mode=WAL")
+            self._conn.execute("PRAGMA synchronous=NORMAL")
+        return self._conn
+
+    def close(self) -> None:
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
 
     # -- writes -----------------------------------------------------------
     def record(self, signature: str, intent: str, changed: bool) -> None:
@@ -72,6 +91,7 @@ class SkillMemory:
             raise ValueError("invalid intent")
         if type(changed) is not bool:
             raise ValueError("changed must be boolean")
+        self._hot.pop(signature, None)
         if self.path is None:
             hits, misses = self._rows.setdefault((signature, intent), [0, 0])
             if changed:
@@ -102,6 +122,7 @@ class SkillMemory:
             del self._rows[weakest]
 
     def best(self, signature: str, *, min_confidence: float | None = None) -> Skill | None:
+        """Highest-confidence intent for a screen (single indexed query)."""
         if self.path is None:
             candidates = [Skill(signature, intent, h, m) for (sig, intent), (h, m) in self._rows.items()
                           if sig == signature]
@@ -116,8 +137,14 @@ class SkillMemory:
         return max(ranked, key=lambda s: (s.confidence, s.hits))
 
     def recall(self, signature: str) -> str | None:
+        if signature in self._hot:
+            return self._hot[signature]
         best = self.best(signature)
-        return best.intent if best is not None else None
+        intent = best.intent if best is not None else None
+        if len(self._hot) >= self._hot_limit:
+            self._hot.pop(next(iter(self._hot)))
+        self._hot[signature] = intent
+        return intent
 
     # -- file transfer ---------------------------------------------------
     def load_json(self, source: Path | str) -> int:
@@ -152,6 +179,7 @@ class SkillMemory:
         """Delete one screen's entry (or everything); returns rows removed."""
         if signature is not None and not signature_pattern.fullmatch(signature or ""):
             raise ValueError("invalid screen signature")
+        self._hot.clear()
         if self.path is None:
             victims = [k for k in self._rows if signature is None or k[0] == signature]
             for key in victims:
