@@ -12,8 +12,10 @@ const KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"
 const ENTRY = process.env.BRIDGE_ENTRY || "index.html";
 const TELEMETRY = process.env.BRIDGE_TELEMETRY || "";
 const BOOTSTRAP = process.env.BRIDGE_BOOTSTRAP || "";
+const VOXEL_FAST = process.env.BRIDGE_VOXEL_FAST === "1";
+if (VOXEL_FAST && BOOTSTRAP !== "voxel") throw Error("fast quality requires voxel setup");
 if (!["", "voxel"].includes(BOOTSTRAP)) throw Error("invalid bootstrap mode");
-if (!["", "2048", "voxel"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
+if (!["", "2048", "voxel", "adventure", "puzzle"].includes(TELEMETRY)) throw Error("invalid telemetry mode");
 if (!/^(?:[a-zA-Z0-9_-]+\/)*index\.html$/.test(ENTRY)) throw Error("invalid entry path");
 const emit = value => process.stdout.write(JSON.stringify(value) + "\n");
 const server = http.createServer((req, res) => {
@@ -65,6 +67,32 @@ async function main() {
   page.on("popup", popup => popup.close().catch(() => {}));
   page.on("dialog", dialog => dialog.dismiss().catch(() => {}));
   try {
+    // Browser-delivered animation callback intervals, not necessarily actual game
+    // render rate or distinct recorded frames. The page is untrusted; values are
+    // diagnostic only. Fixed-size storage and no per-frame sorting.
+    await page.addInitScript(() => {
+      let last = null, samples = [], cursor = 0;
+      const tick = now => {
+        if (last !== null) {
+          const delta = now - last;
+          if (Number.isFinite(delta) && delta > 0 && delta <= 3600000) {
+            if (samples.length < 300) samples.push(delta);
+            else { samples[cursor] = delta; cursor = (cursor + 1) % 300; }
+          }
+        }
+        last = now;
+        requestAnimationFrame(tick);
+      };
+      Object.defineProperty(window, '__bridgeFrameTiming', {value: () => {
+        const stalled_ms = last === null ? null : Math.max(0, performance.now() - last);
+        if (!samples.length) return {samples:0, fps:null, p95_ms:null, max_ms:null, stalled_ms};
+        const sorted = samples.slice().sort((a,b) => a-b);
+        const sum = sorted.reduce((a,b) => a+b, 0);
+        return {samples:sorted.length, fps:1000 * sorted.length / sum,
+          p95_ms:sorted[Math.ceil(sorted.length * .95)-1], max_ms:sorted[sorted.length-1], stalled_ms};
+      }, configurable:false, writable:false});
+      requestAnimationFrame(tick);
+    });
     if (BOOTSTRAP === "voxel") {
       // Headless pointer lock makes absolute click positioning rotate the camera.
       // Simulate an unavailable browser capability so the game offers its own
@@ -77,6 +105,14 @@ async function main() {
     }
     await page.goto(`http://${HOST}:${PORT}/${ENTRY}`, {waitUntil:"load", timeout:15000});
     if (BOOTSTRAP === "voxel") {
+      if (VOXEL_FAST) {
+        // Explicit performance-only setup via the game's own options, not game state injection.
+        await page.locator('[data-action="options"]').click({timeout:30000});
+        const quality = page.locator('[data-action="quality-preset"]');
+        for (let i = 0; i < 3 && !(await quality.textContent() || '').includes('流畅'); i++) await quality.click();
+        if (!(await quality.textContent() || '').includes('流畅')) throw Error('fast quality not confirmed');
+        await page.locator('[data-action="back"]').click({timeout:10000});
+      }
       // Test setup only, NOT model play: create an empty survival world through UI.
       await page.locator('[data-action="create"]').click({timeout:30000});
       await page.locator('[data-action="start-new"]').click({timeout:10000});
@@ -89,7 +125,20 @@ async function main() {
     }
     await page.mouse.move(mouseX, mouseY);
     const observe = async step => {
-      const png = await page.screenshot({type:"png", timeout:10000, animations:"disabled"});
+      const screenshotStart = process.hrtime.bigint();
+      // Do not fast-forward or cancel games' CSS animations during capture.
+      const png = await page.screenshot({type:"png", timeout:10000});
+      const screenshot_ms = Number(process.hrtime.bigint() - screenshotStart) / 1e6;
+      const frameTiming = await page.evaluate(() => {
+        try {
+          const x = window.__bridgeFrameTiming();
+          if (!Number.isInteger(x.samples) || x.samples < 0 || x.samples > 300) return null;
+          if (!(x.stalled_ms === null || (typeof x.stalled_ms === 'number' && Number.isFinite(x.stalled_ms) && x.stalled_ms >= 0 && x.stalled_ms <= 3600000))) return null;
+          if (x.samples === 0) return {samples:0, fps:null, p95_ms:null, max_ms:null, stalled_ms:x.stalled_ms};
+          if (![x.fps, x.p95_ms, x.max_ms].every(n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 3600000)) return null;
+          return {samples:x.samples, fps:x.fps, p95_ms:x.p95_ms, max_ms:x.max_ms, stalled_ms:x.stalled_ms};
+        } catch { return null; }
+      });
       if (png.length > 2_000_000) throw Error("screenshot too large");
       const recording_elapsed_ms = recording ? Number((process.hrtime.bigint() - recordingOrigin) / 1000000n) : null;
       // Experimental 2048 telemetry is untrusted game-provided data, never an
@@ -118,6 +167,14 @@ async function main() {
           return {screen:s.screen, x:p.x, y:p.y, z:p.z, health, hunger, wood:s.earned.includes("wood")};
         } catch { return null; }
       }) : null;
+      // FPS and CPU frame time are game-reported diagnostics; not a GPU benchmark.
+      const voxelPerformance = TELEMETRY === "voxel" ? await page.evaluate(() => {
+        try {
+          const s = window.voxelDiagnostics.snapshot(), fps = s?.fps, p95 = s?.performance?.frame?.p95Ms;
+          if (![fps, p95].every(n => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 10000)) return null;
+          return {fps, frame_p95_ms:p95, quality: ['fast','balanced','high'].includes(s?.quality?.preset) ? s.quality.preset : 'unknown'};
+        } catch { return null; }
+      }) : null;
       // The crosshair target is privileged game diagnostics, not visual model
       // perception. Only a coarse, fixed vocabulary is sent to the operator.
       const voxelTarget = TELEMETRY === "voxel" ? await page.evaluate(() => {
@@ -135,8 +192,43 @@ async function main() {
           return {yaw:p.yaw, pitch:p.pitch};
         } catch { return null; }
       }) : null;
+      // Fixed, opt-in UI telemetry for the pinned text adventure. Screen content
+      // is untrusted; only bounded button coordinates and terminal state escape.
+      const adventure = TELEMETRY === "adventure" ? await page.evaluate(() => {
+        try {
+          const buttons = Array.from(document.querySelectorAll('#choices-container .choice-button'));
+          if (buttons.length > 3) return null;
+          const choices = buttons.map((button, index) => {
+            const r = button.getBoundingClientRect();
+            const x = Math.round(r.left + r.width / 2), y = Math.round(r.top + r.height / 2);
+            return {index, x, y, enabled: !button.disabled && r.width > 0 && r.height > 0 && x >= 0 && x < 800 && y >= 0 && y < 600};
+          });
+          const t = document.querySelector('#story-text')?.textContent || '';
+          const ended = !!document.querySelector('#story-text .game-end');
+          const outcome = !ended ? 'playing' : t.includes('Victory! You found the Lost Artifact.') ? 'victory' : t.includes('Defeated.') ? 'death' : 'unknown';
+          return {choices, outcome};
+        } catch { return null; }
+      }) : null;
+      // Pinned finite 15-puzzle DOM diagnostics: values/centres are untrusted
+      // external help. No state mutations or arbitrary selectors are exposed.
+      const puzzle = TELEMETRY === "puzzle" ? await page.evaluate(() => {
+        try {
+          const buttons = Array.from(document.querySelectorAll('.grid button'));
+          if (buttons.length !== 16) return null;
+          const cells = buttons.map((button, index) => {
+            const r = button.getBoundingClientRect(), t = button.textContent.trim();
+            const value = t === '' ? 0 : Number(t);
+            return {index, value, x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2)};
+          });
+          if (cells.some(c => !Number.isInteger(c.value) || c.value < 0 || c.value > 15 || c.x < 0 || c.x >= 800 || c.y < 0 || c.y >= 600)) return null;
+          const play = document.querySelector('.footer button'), r = play?.getBoundingClientRect();
+          const setup = play?.textContent.trim() === 'Play' && r ? {x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2)} : null;
+          return {cells, setup, won: document.querySelector('.message')?.textContent.trim() === 'You win!'};
+        } catch { return null; }
+      }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget} : {})});
+        browser_frame_timing:frameTiming, screenshot_ms:Math.round(screenshot_ms * 100) / 100,
+        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});

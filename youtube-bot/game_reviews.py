@@ -333,7 +333,93 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
         f"Qwen plan failed validation twice ({last_error}); using a catalogue-only safe fallback.",
         file=sys.stderr,
     )
-    return _catalog_only_fallback(last_raw, game_list, recent)
+    # Malformed JSON cannot supply a trustworthy score. Choose a fresh candidate
+    # deterministically and ask Qwen for only its score; do not mine partial JSON
+    # or fabricate a rating. The selection method is disclosed in the result.
+    recovered_selection = False
+    try:
+        _extract_json(last_raw)
+    except (TypeError, ValueError):
+        chosen = next((g for g in game_list if str(g['id']) not in recent), game_list[0] if game_list else None)
+        if chosen is None or len(chosen.get('features', [])) < 2:
+            raise ValueError('No eligible game for score recovery')
+        score_messages = [
+            {'role':'system','content':'Оцени идею игры исключительно по описанию, не утверждая, что играл. Ответь одним целым числом от 1 до 10 без пояснений и знаков.'},
+            {'role':'user','content':json.dumps({'game':str(chosen.get('title','')), 'facts':chosen['features'][:6]},ensure_ascii=False)},
+        ]
+        score = None
+        for _ in range(2):
+            answer = generate_with_qwen(score_messages, max_new_tokens=12).strip()
+            if re.fullmatch(r'(?:10|[1-9])', answer):
+                score = int(answer)
+                break
+        if score is None:
+            raise ValueError('Model could not provide an unambiguous score; no upload')
+        gid = str(chosen['id'])
+        last_raw = json.dumps({'schema_version':1,'game_id':gid,'idea_score':score,
+            'selected_feature_ids':[f'{gid}-f1',f'{gid}-f2'], 'minus_feature_id':f'{gid}-f1',
+            'possible_minus':'', 'hook':'Что интересного предлагает эта игра?'}, ensure_ascii=False)
+        recovered_selection = True
+    try:
+        result = _catalog_only_fallback(last_raw, game_list, recent)
+        if recovered_selection: result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
+        return result
+    except ValueError as exc:
+        if 'No specific grounded possible limitation' not in str(exc):
+            raise
+        # Repair only the failing field, with the selected game's own facts.
+        # Do not transfer an assessment to another game or invent a rating.
+        try:
+            draft = _extract_json(last_raw)
+        except (TypeError, ValueError):
+            raise exc
+        chosen = next((g for g in game_list if str(g['id']) == str(draft.get('game_id', ''))), None)
+        if chosen is None or (str(chosen['id']) in recent and any(str(g['id']) not in recent for g in game_list)):
+            raise exc
+        facts = {f"{chosen['id']}-f{i+1}": str(f) for i, f in enumerate(chosen.get('features', [])[:12])}
+        for _ in range(2):
+            repair_messages = [
+                {'role':'system', 'content':(
+                    'Исправь только возможный минус для обзора по источнику. '
+                    'Не утверждай, что играл, и не выдумывай баги или свойства игры. '
+                    'Назови конкретное предпочтение игрока, связанное с одним из указанных фактов; '
+                    'это предположение, а не установленный недостаток. '
+                    'По-русски, 10–100 символов, без ссылок, с обязательным словом «возможно» или «может». '
+                    'Верни только JSON с полями possible_minus и minus_feature_id.')},
+                {'role':'user', 'content':json.dumps({'game_id':str(chosen['id']), 'source_facts':facts}, ensure_ascii=False)},
+            ]
+            correction = generate_with_qwen(repair_messages, max_new_tokens=220)
+            try:
+                fields = _extract_json(correction)
+                minus_id = str(fields.get('minus_feature_id', ''))
+                if minus_id not in facts:
+                    raise ValueError('Repair cites a fact outside the selected game')
+                fixed = dict(draft, possible_minus=fields.get('possible_minus'), minus_feature_id=minus_id)
+                result = _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
+                if recovered_selection: result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
+                return result
+            except (TypeError, ValueError) as repair_error:
+                print(f"Possible limitation repair rejected ({repair_error}); not publishing unsupported claims.", file=sys.stderr)
+        # A deterministic fallback is allowed only for an explicit negative
+        # platform flag from Steam, not absence of a field or inferred bugs.
+        # The wording describes the store card and a relevant player preference.
+        reported = chosen.get('source_facts', {}).get('platforms_not_marked_supported', [])
+        if isinstance(reported, list):
+            for platform in ('Linux', 'macOS'):
+                expected = f'Карточка Steam не отмечает поддержку {platform}'
+                if platform not in reported or expected not in facts.values():
+                    continue
+                feature_id = next(k for k,v in facts.items() if v == expected)
+                fixed = dict(draft, possible_minus=f'Возможно, игра не подойдёт тем, кому нужна поддержка {platform} в Steam.',
+                             minus_feature_id=feature_id)
+                try:
+                    result = _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
+                except ValueError:
+                    continue
+                result['limitation_generation'] = 'explicit_steam_platform_flag_template'
+                if recovered_selection: result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
+                return result
+        raise ValueError('Could not produce a source-linked possible limitation after targeted retries; no upload') from exc
 
 
 def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:

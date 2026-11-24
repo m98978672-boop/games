@@ -21,7 +21,7 @@ MAX_LINE = 3_000_000
 
 
 def docker_command(game_dir: Path, container_name: str, entry: str = "index.html", record_dir: Path | None = None,
-                   telemetry: str | None = None, bootstrap: str | None = None) -> list[str]:
+                   telemetry: str | None = None, bootstrap: str | None = None, voxel_fast: bool = False) -> list[str]:
     game = game_dir.resolve(strict=True)
     if not isinstance(entry, str) or not re.fullmatch(r"(?:[a-zA-Z0-9_-]+/)*index\.html", entry):
         raise ValueError("Invalid game entry path")
@@ -41,9 +41,11 @@ def docker_command(game_dir: Path, container_name: str, entry: str = "index.html
         record = record_dir.resolve(strict=True)
         if any(c in str(record) for c in (",", "\n", "\r")) or record == game or game in record.parents or record in game.parents:
             raise ValueError("Recording directory must be separate from the game")
+    if type(voxel_fast) is not bool or (voxel_fast and bootstrap != "voxel"):
+        raise ValueError("Fast quality requires voxel setup")
     if bootstrap not in (None, "voxel"):
         raise ValueError("Unsupported bootstrap mode")
-    if telemetry not in (None, "2048", "voxel"):
+    if telemetry not in (None, "2048", "voxel", "adventure", "puzzle"):
         raise ValueError("Unsupported telemetry mode")
     command = ["docker", "run", "--rm", "-i", "--name", container_name, "--network", "none", "--read-only",
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "256",
@@ -56,18 +58,20 @@ def docker_command(game_dir: Path, container_name: str, entry: str = "index.html
         command.extend(["--env", f"BRIDGE_TELEMETRY={telemetry}"])
     if bootstrap is not None:
         command.extend(["--env", "BRIDGE_BOOTSTRAP=voxel"])
+    if voxel_fast:
+        command.extend(["--env", "BRIDGE_VOXEL_FAST=1"])
     return command + ["--entrypoint", "node", IMAGE, "/runner/browser_bridge.cjs"]
 
 
 class BrowserBridge:
     def __init__(self, game_dir: Path, *, rights_acknowledged: bool = False, entry: str = "index.html", record_dir: Path | None = None,
-                 telemetry: str | None = None, bootstrap: str | None = None):
+                 telemetry: str | None = None, bootstrap: str | None = None, voxel_fast: bool = False):
         if not rights_acknowledged:
             raise ValueError("Review game, assets and recording rights before starting")
         if shutil.which("docker") is None:
             raise RuntimeError("Docker is required; never run the game on the host")
         self.name = "games-bridge-" + uuid.uuid4().hex
-        command = docker_command(game_dir, self.name, entry, record_dir, telemetry, bootstrap)
+        command = docker_command(game_dir, self.name, entry, record_dir, telemetry, bootstrap, voxel_fast)
         self.record_dir = record_dir
         self.recording_finalized = False
         self.process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,

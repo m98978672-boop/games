@@ -44,6 +44,19 @@ class SteamCatalogTests(unittest.TestCase):
                 game = steam_catalog._game_from_app('123', {'id': 123})
                 self.assertIs(game['source_facts']['release_coming_soon'], expected)
 
+    def test_only_explicit_false_platform_flags_support_limitation(self):
+        details=app_details()
+        details['123']['data']['platforms']={'windows':True, 'mac':False}
+        with patch.object(steam_catalog, '_safe_get_json', side_effect=[details, {}]):
+            game=steam_catalog._game_from_app('123', {'id':123})
+        self.assertEqual(game['source_facts']['platforms_not_marked_supported'], ['macOS'])
+        self.assertIn('Карточка Steam не отмечает поддержку macOS', game['features'])
+        self.assertNotIn('Карточка Steam не отмечает поддержку Linux', game['features'])
+        details['123']['data']['platforms']['mac']='false'
+        with patch.object(steam_catalog, '_safe_get_json', side_effect=[details, {}]):
+            game=steam_catalog._game_from_app('123', {'id':123})
+        self.assertEqual(game['source_facts']['platforms_not_marked_supported'], [])
+
     def test_invalid_review_response_keeps_verified_store_facts_only(self):
         featured = {"top_sellers": {"items": [{"id": 123, "name": "Test"}]}}
         with patch.object(steam_catalog, "_safe_get_json", side_effect=[

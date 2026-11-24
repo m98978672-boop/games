@@ -1,304 +1,120 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>БОРИС · Эпизод 1: Улица — сериал про кота-модельку</title>
-<meta name="description" content="Борис — низкополигональный кот с улицы. Эпизод 1: начало жизни, поиск еды и большое голосование зрителей.">
-<script src="../shared/engine.js"></script>
-<script src="../shared/engine-bootstrap.js" defer></script>
-<style>
-  :root{--bg:#0e0f12;--panel:#17181d;--line:#26282f;--txt:#ececec;--mut:#9aa0a8;--acc:#ffa842;--acc2:#ff7a1a}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 80px}
-  header{display:flex;align-items:center;gap:14px;padding:6px 0 22px}
-  .logo{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-size:26px}
-  h1{font-size:26px;margin:0}
-  .tag{color:var(--mut);font-size:14px}
-  .player{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);background:#000;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-  .player.v{max-width:430px;margin:0 auto}
-  .player.v video{aspect-ratio:9/16}
-  video{display:block;width:100%;aspect-ratio:16/9;background:#000}
-  .bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:18px 0 8px}
-  .btn{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#161310;font-weight:700;text-decoration:none;padding:14px 22px;border-radius:14px;font-size:17px;box-shadow:0 8px 24px rgba(255,122,26,.35)}
-  .btn:hover{filter:brightness(1.07)}
-  .btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line);box-shadow:none}
-  .meta{color:var(--mut);font-size:14px}
-  .cols{display:grid;grid-template-columns:1.6fr 1fr;gap:22px;margin-top:26px}
-  @media(max-width:820px){.cols{grid-template-columns:1fr}}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
-  h2{font-size:18px;margin:0 0 12px}
-  p{margin:0 0 10px;color:#cfd3d8}
-  .vote{display:grid;gap:10px}
-  .opt{display:flex;gap:12px;align-items:center;background:#1e2026;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-  .num{width:34px;height:34px;flex:none;border-radius:9px;background:var(--acc);color:#161310;font-weight:800;display:grid;place-items:center}
-  .eps{display:grid;gap:10px}
-  .ep{display:flex;gap:12px;align-items:center}
-  .ep img{width:112px;border-radius:8px;border:1px solid var(--line)}
-  .ep .soon{opacity:.55;filter:grayscale(.6)}
-  footer{margin-top:34px;color:var(--mut);font-size:13px}
-  code{background:#1e2026;padding:2px 6px;border-radius:6px}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0b0d">
+  <meta name="description" content="Борис Видео — каталог серий, Shorts и авторских роликов. Смотреть онлайн, продолжать просмотр и сохранять видео.">
+  <title>Борис Видео — видеобиблиотека</title>
+  <script src="../shared/engine.js"></script>
+  <link rel="stylesheet" href="site.css">
+  <script src="../shared/engine-bootstrap.js" defer></script>
+  <script src="videos.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="logo">🐈</div>
-    <div>
-      <h1>БОРИС</h1>
-      <div class="tag">сериал про кота, которого не докрасили · эпизод 1</div>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="icon-button menu-toggle" id="sidebarToggle" type="button" aria-label="Открыть меню" aria-expanded="false" title="Меню">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <a class="brand" href="./index.html" data-home aria-label="Борис Видео — главная">
+        <span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.8v10.4L18 12z"/></svg></span>
+        <span class="brand-name">БОРИС<span>ВИДЕО</span></span>
+        <span class="brand-region">RU</span>
+      </a>
+    </div>
+
+    <form class="searchbar" id="searchForm" role="search">
+      <label class="sr-only" for="searchInput">Поиск видео</label>
+      <div class="search-field">
+        <svg class="search-field-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4 4"/></svg>
+        <input id="searchInput" type="search" placeholder="Поиск видео" autocomplete="off">
+        <button id="clearSearch" class="search-clear" type="button" aria-label="Очистить поиск" hidden>×</button>
+      </div>
+      <button class="search-submit" type="submit" aria-label="Искать">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4 4"/></svg>
+      </button>
+    </form>
+
+    <div class="topbar-actions">
+      <button class="icon-button mobile-search-toggle" id="mobileSearchToggle" type="button" aria-label="Показать поиск">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4 4"/></svg>
+      </button>
+      <button class="icon-button history-shortcut" type="button" data-view="history" aria-label="История просмотров" title="История">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11a8.5 8.5 0 1 1 2.1 5.7M3.5 5.2v5.9h5.8M12 7v5l3.3 2"/></svg>
+      </button>
+      <button class="profile-button" type="button" data-view="home" aria-label="Профиль: локальная библиотека">Б</button>
     </div>
   </header>
 
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_ep01.png" src="boris_ep01_ulitsa.mp4"></video>
-  </div>
+  <aside class="sidebar" id="sidebar" aria-label="Главное меню">
+    <nav class="side-nav" aria-label="Разделы">
+      <button class="nav-item is-active" type="button" data-view="home" title="Главная">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10.5 8.5-7 8.5 7v9a1.5 1.5 0 0 1-1.5 1.5h-14a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M9 21v-7h6v7"/></svg><span>Главная</span>
+      </button>
+      <button class="nav-item" type="button" data-view="series" title="Серии Бориса">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="m10 8 6 4-6 4z"/></svg><span>Серии Бориса</span>
+      </button>
+      <button class="nav-item" type="button" data-view="shorts" title="Shorts">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 3.2 7.4 7.4a3 3 0 0 0 .2 5.2l4.7 2.6-2.9 1.7a2.1 2.1 0 0 0 2.1 3.6l5.1-2.9a4.1 4.1 0 0 0-.1-7.2L12 7.8l4.8-2.7a1.1 1.1 0 0 0-2.1-1.9z"/><path d="m9.6 8.7 4.5 2.5"/></svg><span>Shorts</span>
+      </button>
+      <button class="nav-item" type="button" data-view="chess" title="Квеня и шахматы">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21h12M8 21l1-4h6l1 4M9 17l-1-4 2-2-2-3 4-4 2 4-1 3 3 2-1 4"/></svg><span>Квеня и шахматы</span>
+      </button>
+      <button class="nav-item" type="button" data-view="meme" title="Похождения Балтики 0">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3.5" width="10" height="17" rx="3"/><path d="M8.5 7h7M8.5 16.5h7M12 9.5v4"/></svg><span>Балтика 0 · пролог</span>
+      </button>
+    </nav>
 
-  <div class="bar">
-    <a class="btn" href="boris_ep01_ulitsa.mp4" download="boris_ep01_ulitsa.mp4">⬇ Скачать видео (MP4, 1080p)</a>
-    <a class="btn ghost" href="thumb_ep01.png" download="boris_ep01_thumb.png">Обложка для YouTube</a>
-    <span class="meta">1:51 · 1920×1080 · 25 fps · звук: диктор + Борис</span>
-  </div>
+    <div class="sidebar-rule"></div>
+    <nav class="side-nav side-library" aria-label="Ваша библиотека">
+      <div class="side-heading">Ваша библиотека <span aria-hidden="true">›</span></div>
+      <button class="nav-item" type="button" data-view="history" title="История">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11a8.5 8.5 0 1 1 2.1 5.7M3.5 5.2v5.9h5.8M12 7v5l3.3 2"/></svg><span>История</span>
+      </button>
+      <button class="nav-item" type="button" data-view="later" title="Смотреть позже">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h12v16l-6-4-6 4z"/></svg><span>Смотреть позже</span>
+      </button>
+      <button class="nav-item" type="button" data-view="liked" title="Понравившиеся">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 10.5 11 4a1.9 1.9 0 0 1 3.5 1.2l-.6 3.8h4.3a2 2 0 0 1 1.9 2.6l-2 7a2 2 0 0 1-1.9 1.4H8.5M4 10h3.5v10H4z"/></svg><span>Понравившиеся</span>
+      </button>
+    </nav>
 
-  <h2 style="margin-top:26px">Эпизод 2 · Дом (по итогам вашего голосования)</h2>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_ep02.png" src="boris_ep02_dom.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="boris_ep02_dom.mp4" download="boris_ep02_dom.mp4">⬇ Скачать «Эпизод 2 · Дом» (MP4, 1080p)</a>
-    <span class="meta">16:9 · 50 fps · вы проголосовали «2 — тёплый дом» — Борис получил дом</span>
-  </div>
-  <div class="cols">
-    <div class="card">
-      <h2>Shorts «Дом» (9:16)</h2>
-      <div class="player v">
-        <video controls preload="metadata" poster="thumb_ep02.png" src="boris_ep02_dom_shorts.mp4"></video>
-      </div>
-      <div class="bar">
-        <a class="btn" href="boris_ep02_dom_shorts.mp4" download="boris_ep02_dom_shorts.mp4">⬇ Скачать Shorts (MP4, 9:16)</a>
-        <span class="meta">до 60 с · 1080×1920 · 50 fps · финал: новое голосование</span>
-      </div>
-      <h2 style="margin-top:18px">О серии</h2>
-      <p>Зрители выбрали «2 — тёплый дом», а в комментариях написали «дом ему». Борис устраивает смотр жилья (коробка — проходили, под машиной — сигналят), находит настоящий дом у двери и заселяется.</p>
-      <p>Финал: снег за окном, плед и батарея внутри, а из домика торчит довольный хвост. В конце — новое голосование: друг-кот, подоконник с видом или голубь-сосед.</p>
-      <p>И да, хвост Бориса разукрашен не просто так: это штрих-код — пикнешь, выдаст сосиску. Не смывать до следующего эпизода.</p>
-      <p>Звук и картинка стали настоящевее: мяу Бориса — живые записи кота (лицензия MIT), дом оброс досками, коньком и снегом на крыше, машина — стёклами, фарами и колпаками, и теперь трясётся от собственного гудка. Плюс анимации: качающиеся занавески, снег, что ложится на крышу, голубь на коньке и второй в полёте, дыхание кота. Всё в 50 fps.</p>
+    <div class="sidebar-rule"></div>
+    <div class="subscriptions">
+      <div class="side-heading">Каналы</div>
+      <button class="subscription-item" type="button" data-view="series"><span class="mini-avatar avatar-boris">Б</span><span>Борис</span><i></i></button>
+      <button class="subscription-item" type="button" data-view="chess"><span class="mini-avatar avatar-chess">К</span><span>Квеня · Зуза</span><i></i></button>
+      <button class="subscription-item" type="button" data-view="meme"><span class="mini-avatar avatar-baltika">0</span><span>Балтика 0</span><i class="is-new"></i></button>
     </div>
-    <div class="card">
-      <h2>Итоги голосования эпизода 3</h2>
-      <div class="vote">
-        <div class="opt" style="border-color:#ffac4a"><span class="num">1</span> Друг-кот — победил ✓</div>
-        <div class="opt"><span class="num">2</span> Подоконник с видом</div>
-        <div class="opt"><span class="num">3</span> Голубь-сосед</div>
-      </div>
-      <p class="meta" style="margin-top:10px">Спасибо, что проголосовали. Следующий выбор — во второй части истории друга.</p>
-    </div>
-  </div>
 
+    <div class="sidebar-footer">
+      <p>Плеер и история работают локально в этом браузере.</p>
+      <span class="engine-hud-slot" data-engine-badge aria-label="Версия движка"></span>
+      <span class="engine-version">RatCore <span data-engine-version="short"></span></span>
+      <span class="copyright">© Борис Видео</span>
+    </div>
+  </aside>
+  <button class="sidebar-shade" id="sidebarShade" type="button" aria-label="Закрыть меню" tabindex="-1"></button>
 
-  <h2 style="margin-top:26px">Эпизод 3 · Друг-кот, часть 1 (по итогам вашего голосования)</h2>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_ep03.png" src="boris_ep03_friend.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="boris_ep03_friend.mp4" download="boris_ep03_friend.mp4">⬇ Скачать «Эпизод 3 · Друг-кот» (MP4, 1080p)</a>
-    <span class="meta">16:9 · 50 fps · вы проголосовали «1 — друг-кот» — Борис получил друга</span>
-  </div>
-  <div class="cols">
-    <div class="card">
-      <h2>Shorts «Друг-кот» (9:16)</h2>
-      <div class="player v">
-        <video controls preload="metadata" poster="thumb_ep03.png" src="boris_ep03_friend_shorts.mp4"></video>
-      </div>
-      <div class="bar">
-        <a class="btn" href="boris_ep03_friend_shorts.mp4" download="boris_ep03_friend_shorts.mp4">⬇ Скачать Shorts (MP4, 9:16)</a>
-        <span class="meta">42 c · 1080×1920 · 50 fps · без голосования в конце</span>
-      </div>
-      <h2 style="margin-top:18px">О серии</h2>
-      <p>Вы проголосовали «1 — друг-кот», и Борис сделал вид, что не рад. Но усы вымыл дважды. После переговоров с голубями (крошки — не аргумент) у двери появляется чёрный кот и садится так, будто дом всегда был общий.</p>
-      <p>Дальше — бодание головами, дуэт вымешивания на пледе и финал: из домика торчит два довольных хвоста. Голубь теперь третий лишний, и он это знает.</p>
-      <p><b>В этой серии нет голосования.</b> Что будет дальше — решите во второй части истории друга.</p>
+  <main class="main-content" id="mainContent">
+    <div class="mobile-search-panel" id="mobileSearchPanel">
+      <form class="searchbar mobile-searchbar" id="mobileSearchForm" role="search">
+        <label class="sr-only" for="mobileSearchInput">Поиск видео</label>
+        <div class="search-field">
+          <svg class="search-field-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4 4"/></svg>
+          <input id="mobileSearchInput" type="search" placeholder="Поиск видео" autocomplete="off">
+        </div>
+        <button class="search-submit" type="submit" aria-label="Искать"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4 4"/></svg></button>
+      </form>
     </div>
-    <div class="card">
-      <h2>Что нового и что старого</h2>
-      <p><b>Новое:</b> чёрный друг-кот (жёлтые глаза, собственный характер), бодание головами у двери, дуэт вымешивания на пледе, два хвоста в одном дверном проёме, штамп «ДРУГ ПРИНЯТ».</p>
-      <p><b>Старое, любимое:</b> дом с коньком, фронтонами и снегом по скатам; голубь-сосед на коньке; плед, батарея и качающиеся занавески; хвост Бориса со штрих-кодом; голоса диктора и Бориса; 50 fps и настоящие мяу — теперь строго в моментах радости.</p>
+    <div class="chip-bar" id="chipBar" aria-label="Категории видео"></div>
+    <div class="page-content" id="pageContent" aria-live="polite">
+      <div class="loading-state"><span class="loading-spinner"></span><span>Загружаем видеотеку…</span></div>
     </div>
-  </div>
+  </main>
 
-
-  <h2 style="margin-top:26px">Эпизод 4 · Голосование <span class="meta" style="background:#ffac4a;color:#20140a;border-radius:10px;padding:2px 10px;font-weight:700">НОВОЕ</span></h2>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_ep04.png" src="boris_ep04_part1_shorts.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="boris_ep04_part1_shorts.mp4" download="boris_ep04_part1_shorts.mp4">⬇ Часть 1 (MP4, 9:16)</a>
-    <span class="meta">часть 1 · 0:43 · 9:16 · 50 fps · итоги голосования: ноль комментариев</span>
-  </div>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_ep04b.png" src="boris_ep04_part2_shorts.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="boris_ep04_part2_shorts.mp4" download="boris_ep04_part2_shorts.mp4">⬇ Часть 2 (MP4, 9:16)</a>
-    <span class="meta">часть 2 · 0:41 · 9:16 · 50 fps · всё сбылось · голоса в родном темпе, 1x</span>
-  </div>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_ep04c.png" src="boris_ep04_part3_shorts.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="boris_ep04_part3_shorts.mp4" download="boris_ep04_part3_shorts.mp4">⬇ Часть 3 (MP4, 9:16)</a>
-    <span class="meta">часть 3 · 0:58 · 9:16 · 50 fps · котов приютили · по вашим комментариям</span>
-  </div>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_ep04d.png" src="boris_ep04_part4_shorts.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="boris_ep04_part4_shorts.mp4" download="boris_ep04_part4_shorts.mp4">⬇ Часть 4 (MP4, 9:16)</a>
-    <span class="meta">часть 4 · 0:59 · 9:16 · 50 fps · просто жизнь · финал дня · голоса 1x</span>
-  </div>
-  <div class="cols">
-    <div class="card">
-      <h2>О серии</h2>
-      <p>В прошлой части мы просили вас проголосовать цифрой в комментариях. Комментариев не было. Ноль. Борис перепроверил три раза, друг проголосовал спиной лёжа на мисках, а единственный голос прилетел голубем — следом на объявлении.</p>
-      <p>Итог: сбылись все три пункта сразу. Друг остался, охота состоялась, человек принёс вторую миску просто так. Демократия по-кошачьи признана состоявшейся.</p>
-      <p><b>Формат:</b> голос диктора и Бориса идёт в родном темпе, 1x, без ускорения. Часть 1 — итоги и голос голубя, часть 2 — как сбылось всё сразу, часть 3 — по вашим комментариям котов приютили (приют взаимный, голубь стал соседом по коньку), часть 4 — финал дня без голосований: просто жизнь, плед пополам и спасибо, что были с нами.</p>
-    </div>
-    <div class="card">
-      <h2>Что нового и что старого</h2>
-      <p><b>Новое:</b> штамп «КОММЕНТАРИЕВ: 0», плашка итогов голосования, голубь в роли предвыборного штаба, финальная шутка про сосисочные комментарии.</p>
-      <p><b>Старое, любимое:</b> друг-кот и плед пополам, голубь-сосед, голоса диктора и Бориса, 50 fps и мяу строго в моментах радости.</p>
-    </div>
-  </div>
-
-  <h2 style="margin-top:26px">Зуза комментирует · Квеня играет в шахматы</h2>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_chess.png" src="kvenya_chess_letsplay.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="kvenya_chess_letsplay.mp4" download="kvenya_chess_letsplay.mp4">⬇ Скачать «Партия целиком» (MP4, 1080p50)</a>
-    <span class="meta">7:30 · 16:9 · 50 fps · запись всей партии ИИ · монтаж: врезки, повторы, крупные планы</span>
-  </div>
-  <div class="cols">
-    <div class="card">
-      <h2>О записи</h2>
-      <p>Квеня (белые) против спарринг-скрипта ФЕРЗЬ-3000: 41 ход, 16 шахов, мат ферзём на f7. Запись всей партии без перемоток — каждый ход показан и прокомментирован, с первого до последнего.</p>
-      <p>Комментирует Зуза — маскот канала, крыса в наушниках из потёртого кресла: плюсы, минусы и просто болтовня по ходу партии. Дачное начало, конь-герой, гуляющий король и ферзь-енот на кухне — всё на месте.</p>
-      <p><b>Монтаж:</b> главкарточки дебюта, миттельшпиля и атаки; крупный план Зузы на эмоциях; повторы рейда коня и матовой лестницы с замедлением; зум-камера на каждый ход; индикатор «ЗАПИСЬ СЕССИИ» с таймером.</p>
-    </div>
-    <div class="card">
-      <h2>Игра из чужого репозитория</h2>
-      <p>Партию ведёт <b>chess.js</b> — шахматный движок Джефа Хлывы (BSD-2-Clause, github.com/jhlywa/chess.js). Никаких игр из нашего магазина: чужой код, наша графика и комментарий маскота.</p>
-      <p class="meta" style="margin-top:10px">Голос — диктор. Плашки «КВЕНЯ ДУМАЕТ…» честные: ходы действительно считает ИИ, минимакс с характером.</p>
-    </div>
-  </div>
-
-  <h2 style="margin-top:26px">Эпизод 3 · Часть 2 — Обычная жизнь кота <span class="meta">в архиве</span></h2>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_ep03p2.png" src="boris_ep03_part2.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="boris_ep03_part2.mp4" download="boris_ep03_part2.mp4">⬇ Скачать «Эпизод 3 · Часть 2» (MP4, 1080p)</a>
-    <span class="meta">16:9 · 50 fps · продолжение истории друга · просто посмеяться</span>
-  </div>
-  <div class="cols">
-    <div class="card">
-      <h2>Shorts «Обычная жизнь» (9:16)</h2>
-      <div class="player v">
-        <video controls preload="metadata" poster="thumb_ep03p2.png" src="boris_ep03_part2_shorts.mp4"></video>
-      </div>
-      <div class="bar">
-        <a class="btn" href="boris_ep03_part2_shorts.mp4" download="boris_ep03_part2_shorts.mp4">⬇ Скачать Shorts (MP4, 9:16)</a>
-        <span class="meta">50 c · 1080×1920 · 50 fps · финал: ваше голосование</span>
-      </div>
-      <h2 style="margin-top:18px">О серии</h2>
-      <p>Обычная жизнь кота — теперь в двух экземплярах. Утро: друг лежит на месте Бориса («это моё место, всегда было»). Завтрак: миска Бориса — половина, миска друга — полная и чужая, и он смотрит в глаза.</p>
-      <p>Командная охота на голубей срывается из-за одного «апчхи», голуби уходят с достоинством. Вечером плед один, котов двое, хвосты пополам — и хвост друга периодически гладит Бориса по лицу («это вентилятор уюта, не мешай работать»). Финал: двое на коньке смотрят на город.</p>
-    </div>
-    <div class="card">
-      <h2>Голосование: что дальше</h2>
-      <div class="vote">
-        <div class="opt"><span class="num">1</span> Друг остаётся навсегда</div>
-        <div class="opt"><span class="num">2</span> Совместная охота на голубя</div>
-        <div class="opt"><span class="num">3</span> Вторая миска для друга</div>
-      </div>
-      <p class="meta" style="margin-top:10px">Цифру — в комментарии. Как и обещали: выбор именно во второй части.</p>
-    </div>
-  </div>
-
-  <h2 style="margin-top:26px">Новая серия · Просто жизнь кота</h2>
-  <div class="player">
-    <video controls preload="metadata" poster="thumb_life.png" src="boris_life.mp4"></video>
-  </div>
-  <div class="bar">
-    <a class="btn" href="boris_life.mp4" download="boris_life.mp4">⬇ Скачать «Просто жизнь кота» (MP4, 1080p)</a>
-    <span class="meta">1:23 · 1920×1080 · 50 fps · диктор + Борис + настоящие мяу и улица</span>
-  </div>
-
-  <div class="cols">
-    <div class="card">
-      <h2>Shorts-версия «Просто жизнь» (9:16)</h2>
-      <div class="player v">
-        <video controls preload="metadata" poster="thumb_life.png" src="boris_life_shorts.mp4"></video>
-      </div>
-      <div class="bar">
-        <a class="btn" href="boris_life_shorts.mp4" download="boris_life_shorts.mp4">⬇ Скачать Shorts (MP4, 9:16)</a>
-        <span class="meta">58 с · 1080×1920 · 50 fps · без «подпишись» — просто посмеяться</span>
-      </div>
-      <h2 style="margin-top:18px">О серии</h2>
-      <p>Один день Бориса: утренняя потягушка на тёплом люке, охота на голубей длиной в три секунды, дождь под лавкой «по плану» и вечер, когда человек за окном выносит миску.</p>
-      <p>Финал: автор смотрит на Бориса… и сжалится. Борис наконец покрашен — нормальные текстуры: рыжий, белый, полосатый.</p>
-    </div>
-    <div class="card">
-      <h2>Голоса и звуки</h2>
-      <p>Диктор — бодрый человеческий голос <code>voice-03</code>, Борис — <code>voice-01</code> плюс мяуканье: теперь это живые записи настоящего кота (opensource-записи, MIT) с питч-вариантами, а остальное синтезировано с нуля. Дождь, голуби, шаги, миска и пшик баллончика — все звуки синтезированы с нуля (<code>boris/sfx.py</code>).</p>
-      <p class="meta">Голосовой пакет сохранён в папке <code>boris/voices/</code>: образцы диктора и кота, реплики серии и манифест <code>voices.json</code>.</p>
-    </div>
-  </div>
-
-  <div class="cols">
-    <div class="card">
-      <h2>Shorts-версия эпизода 1 (9:16, до 60 секунд)</h2>
-      <div class="player v">
-        <video controls preload="metadata" poster="thumb_ep01.png" src="boris_ep01_shorts.mp4"></video>
-      </div>
-      <div class="bar">
-        <a class="btn" href="boris_ep01_shorts.mp4" download="boris_ep01_shorts.mp4">⬇ Скачать Shorts (MP4, 9:16)</a>
-        <span class="meta">1080×1920 · 25 fps · чёткий голос</span>
-      </div>
-      <h2 style="margin-top:18px">О серии</h2>
-      <p>Борис начинает жизнь на улице: триста двадцать полигонов, непрокрашенный хвост и большая мечта о сосиске. Впереди — мусорные баки, коробка-недвижимость и тёплое окно с человеком.</p>
-      <p>В финале Борис встаёт в Т-позу и ждёт вашего вердикта: что он получит в следующем эпизоде?</p>
-      <h2 style="margin-top:18px">Голосование зрителей</h2>
-      <div class="vote">
-        <div class="opt"><span class="num">1</span> Миска с едой</div>
-        <div class="opt"><span class="num">2</span> Тёплый дом</div>
-        <div class="opt"><span class="num">3</span> Друг-кот</div>
-      </div>
-      <p class="meta" style="margin-top:10px">Цифру пишите в комментариях к видео на YouTube — победивший вариант попадёт в эпизод 2.</p>
-    </div>
-    <div class="card">
-      <h2>Эпизоды</h2>
-      <div class="eps">
-        <div class="ep"><img src="thumb_ep04.png" alt=""><div><b>Эпизод 4 · Голосование</b><br><span class="meta">Shorts 9:16 · НОВОЕ · 4 части · голос 1x · просто жизнь</span></div></div>
-        <div class="ep"><img src="thumb_ep01.png" alt=""><div><b>Эпизод 1 · Улица</b><br><span class="meta">1:51 · 16:9 · архив · 25 fps</span></div></div>
-        <div class="ep"><img src="thumb_life.png" alt=""><div><b>Просто жизнь кота</b><br><span class="meta">1:23 · 16:9 + Shorts 58 с</span></div></div>
-        <div class="ep"><img src="thumb_chess.png" alt=""><div><b>Шахматы · партия ИИ</b><br><span class="meta">16:9 · Зуза комментирует каждый ход</span></div></div>
-        <div class="ep"><img src="thumb_ep03p2.png" alt=""><div><b>Эпизод 3 · Часть 2</b><br><span class="meta">16:9 + Shorts · обычная жизнь · голосование</span></div></div>
-        <div class="ep"><img src="thumb_ep03.png" alt=""><div><b>Эпизод 3 · Часть 1</b><br><span class="meta">16:9 + Shorts · друг приходит · без голосования</span></div></div>
-        <div class="ep"><img src="thumb_ep02.png" alt=""><div><b>Эпизод 2 · Дом</b><br><span class="meta">16:9 + Shorts · голосование сбылось · 50 fps</span></div></div>
-        <div class="ep"><img class="soon" src="img/07_tpose.png" alt=""><div><b>Эпизод 2 · ???</b><br><span class="meta">скоро — решит голосование</span></div></div>
-      </div>
-      <h2 style="margin-top:18px">Файлы</h2>
-      <p class="meta"><code>boris_ep01_ulitsa.mp4</code> — видео<br><code>thumb_ep01.png</code> — превью 1280×720</p>
-    </div>
-  </div>
-
-  <footer>
-    Сделано в Arena.ai · голоса: диктор и Борис · стиль: честный низкополигональный вьюпорт
-    <span class="meta" data-engine-badge></span>
-    <span class="meta">Движок: <span data-engine-version>RatCore</span></span>
-  </footer>
-</div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
