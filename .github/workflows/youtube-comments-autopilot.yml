@@ -29,7 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      HF_HOME: ${{ runner.temp }}/huggingface
       PYTHONPATH: youtube-bot
       COMMENTS_DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true') || 'false' }}
     steps:
@@ -47,4 +46,6 @@ jobs:
       - name: Install local model and YouTube dependencies
         run: python -m pip install -r youtube-bot/requirements-autopilot.txt
       - name: Analyze and answer limited simple reactions
+        env:
+          HF_HOME: ${{ runner.temp }}/huggingface
         run: python youtube-bot/comments_cloud_worker.py
