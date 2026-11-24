@@ -15,6 +15,9 @@ import time
 
 from gameplay.action_pacer import ActionPacer
 from gameplay.input_profiles import InputProfile, profile_from_name
+from gameplay.screen_recognizer import classify, preferred_intents
+from gameplay.tracker import Tracker, describe as describe_tracks
+from gameplay.world_model import WorldModel
 from gameplay_qwen import ACTIONS
 from gameplay_qwen_advisor import SlowAdvisor
 from gameplay.reflex_layer import (DECISION_BUDGET_MS, PERCEPTION_BUDGET_MS, Decision,
@@ -30,6 +33,8 @@ class ReflexAgentStats:
     ticks: list = field(default_factory=list)
     advisor_calls: int = 0
     advisor_skipped_for_budget: int = 0
+    screen: str | None = None
+    tracks: list = field(default_factory=list)
 
     def summary(self) -> dict:
         data = summarise(self.ticks)
@@ -54,7 +59,9 @@ class ReflexAgent:
                  advisor: Callable[[Perception, int], str | None] | None = None,
                  advisor_budget_ms: float = 1400.0,
                  controller: ReflexController | None = None,
-                 pacer: "ActionPacer | None" = None):
+                 pacer: "ActionPacer | None" = None,
+                 world_model: WorldModel | None = None,
+                 tracker: Tracker | None = None):
         self.profile = profile_from_name(profile) if isinstance(profile, str) else profile
         self.controller = controller or ReflexController(
             default_intent=self._default_intent(),
@@ -64,6 +71,12 @@ class ReflexAgent:
         self.stats = ReflexAgentStats()
         self._action_window_ends = 0.0
         self.pacer = pacer if pacer is not None else ActionPacer(self.profile)
+        # Planning and perception extensions. Both are optional and local: with
+        # them the agent explores and aims, without them it still walks.
+        self.world_model = world_model
+        self.tracker = tracker if tracker is not None else Tracker()
+        self.tracks: list = []
+        self.screen = None
         self.pending_bursts: list[dict] = []
         self._intent: str | None = None
         self._last_perception: Perception | None = None
@@ -132,10 +145,13 @@ class ReflexAgent:
         # looked like after that action ran, so ``changed`` is its outcome.
         if self._last_perception is not None and self._last_decision is not None:
             self.controller.note_outcome(self._last_perception, self._last_decision, perception.changed)
+            self.learn_transition(self._last_perception.signature, self._last_decision.intent,
+                                  perception.signature)
         # The advisor sees the cheap perception summary; screen content stays
         # untrusted and the model's answer is filtered against the profile.
         decision: Decision = self.controller.decide(
             perception, step, advisor=self._guarded_advisor if self.advisor else None)
+        decision = self._plan(perception, decision)
         if decision.intent != self._intent:
             if self._intent is not None:
                 self.pacer.stats.switches += 1
@@ -156,6 +172,8 @@ class ReflexAgent:
         stats = self.pacer.stats
         # Recomputed per tick on purpose: the summary is small and derived, and
         # caching it would hide cadence changes from the report.
+        self.stats.screen = self.screen.label if self.screen else None
+        self.stats.tracks = [t.as_dict() for t in self.tracks[:4]]
         self.stats.pacer = {"windows": stats.windows, "late_windows": stats.late_windows,
                             "stalls": stats.stalls, "bursts": stats.bursts,
                             "intent_switches_during_window": stats.switches}
@@ -163,6 +181,41 @@ class ReflexAgent:
         if elapsed > MAX_STEP_SECONDS:
             raise RuntimeError(f"step {step} took {elapsed:.2f}s, above {MAX_STEP_SECONDS}s")
         return action
+
+    def _plan(self, perception, decision) -> Decision:
+        """Prefer a planned intent when the decision came from reflex/fallback.
+
+        Memory and advisor answers are kept as they are: they are evidence, while
+        planning is only a way to choose among *unknown* situations.
+        """
+        self.screen = classify(perception)
+        self.tracks = self.tracker.update(perception.targets)
+        if decision.source not in ("reflex", "fallback"):
+            return decision
+        allowed = preferred_intents(self.screen, self.profile)
+        if self.world_model is not None:
+            try:
+                plan = self.world_model.plan(perception.signature, allowed)
+            except ValueError:
+                return decision
+            if plan.intent != decision.intent:
+                return Decision(plan.intent, f"plan:{plan.source}", decision.latency_ms,
+                                decision.target)
+            return decision
+        # No learned model yet: let the screen kind narrow the choice, and rotate
+        # through the preferred intents so the agent does not freeze on one key.
+        if allowed and decision.intent not in allowed:
+            return Decision(allowed[0], "screen", decision.latency_ms, decision.target)
+        return decision
+
+    def learn_transition(self, before_signature: str, intent: str, after_signature: str) -> None:
+        """Record one observed screen -> intent -> screen transition."""
+        if self.world_model is None:
+            return
+        try:
+            self.world_model.record(before_signature, intent, after_signature)
+        except ValueError:
+            return
 
     def observe_frame_timing(self, observation: dict, *, tick: Tick | None = None) -> dict:
         """Feed bridge frame telemetry and the last tick back into the pacer."""
