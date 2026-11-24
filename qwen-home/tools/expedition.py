@@ -523,7 +523,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0, memo_from=None):
                             f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
                 shot('03-story.png')
                 visited = set()
-                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=6)
+                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=6, memo_from=memo_from)
                 report.data['story'] = story
                 mp = story.get('map') or {}
                 fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
@@ -1190,7 +1190,7 @@ def restart_story(page, report):
         return False
 
 
-def read_story(page, seconds, out, report, shot, runs=6):
+def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
     """Пройти сюжетную игру чтением и добрать ветки, которых ещё не видела.
 
     Один заход — до финала. Если время осталось и в карте есть неизведанные

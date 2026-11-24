@@ -220,5 +220,78 @@ const bridgeSensePy = await readFile(path.join(home, 'tools', 'bridge-sense.py')
 const bridgeJsWants = await readFile(path.join(home, '..', 'kvenya', 'bridge.js'), 'utf8');
 check('её собственная воля и скорость: желания из фактов, главное одно, окружение из кэша, решение о поиске короткое', wantsPy.includes('def pick') && wantsPy.includes('want-five-pipes') && wantsPy.includes('bridge/wants') === false && motPy.includes('ownWantsDone') && motPy.includes('own-will') && bridgeSensePy.includes("'wants': wants") && bridgeJsWants.includes('renderWants') && worldHtml.includes('kvBridgeWants') && talkWorkflow.includes('kvenya-venv') && talkWorkflow.includes('import torch, transformers, peft') && talkGen.includes('max_new=8') && talkGen.includes('wants.json') && talkGen.includes('главное желание сейчас') && expWf.includes('wants.py pick') && dialogue.some((r) => r.id === 'dlg-156') && dialogue.some((r) => r.id === 'dlg-157') && dialogue.some((r) => r.id === 'dlg-158') && dialogue.some((r) => r.id === 'dlg-159') && personaMd.includes('## Её собственные желания'));
 
+check('зрение проверяется замером, а не догадкой: отчёт пишет задержку кадра и вердикт',
+  expPy.includes('frame_ms_sum') && expPy.includes('eyeMs') && expPy.includes('успевала') && expPy.includes('отставала') && expPy.includes('кадр разбирался в среднем'));
+
+check('пять труб держим только по табло игры: награда привязана к настоящему счёту',
+  motPy.includes('five-pipes') && expPy.includes('scoreboard()') && expPy.includes('труб по табло игры'));
+
+check('сюжетную игру она ПРОХОДИТ чтением: пассажи, выборы, память пути, честный финал',
+  expPy.includes('TWINE_TASK_JS') && expPy.includes('def read_story') && expPy.includes('def pick_choice')
+  && expPy.includes('data-kv-choice') && expPy.includes("report.data['kind'] = 'story'")
+  && expPy.includes('reachedEnd') && expPy.includes('история её не отпустила'));
+
+check('сюжетная история видна на её странице: сколько выборов, где закончила — одной строкой',
+  expPy.includes('storyLine') && expWf.includes("report.get('storyLine')") && bridgeJs.includes('kv-story'));
+
+check('пыль экспедиций не копится: старые каталоги чистятся после записи списка',
+  expWf.includes('shutil.rmtree') && expWf.indexOf("bridge_path.write_text") < expWf.indexOf('shutil.rmtree'));
+
+check('уборка доезжает до main: удаления каталогов тоже записываются в коммит',
+  expWf.includes('git add -A qwen-home/bridge/expeditions'));
+
+check('в истории она ВИДИТ состояние: силы, находки, следы — читает по словам, а не угадывает',
+  expPy.includes('def read_signal') && expPy.includes('STORY_ENERGY') && expPy.includes('STORY_FINDS')
+  && expPy.includes('STORY_CLUES') && expPy.includes("'clues': clues") && expPy.includes('very tired'));
+
+check('в истории она АНАЛИЗИРУЕТ: карта мест и переходов, а не просто клики',
+  expPy.includes('class StoryMap') && expPy.includes('def untried_targets') && expPy.includes('def fresh_choices')
+  && expPy.includes("'places': len(self.nodes)") && expPy.includes("'map': story_map.as_report()"));
+
+check('в истории она ДОБЫВАЕТ новое: после финала начинает заново и идёт в непройденные ветки',
+  expPy.includes('def restart_story') && expPy.includes('tw-icon[title="Restart" i]')
+  && expPy.includes('runs') && expPy.includes('заходов хватит')
+  && expPy.includes('def mark_open') && expPy.includes('непройденных вариантов не осталось')
+  && expPy.includes('RESTART_JS') && expPy.includes('sessionStorage') && expPy.includes("store.removeItem(k)"));
+
+check('карта честная: переход записывается, когда видно, куда он привёл',
+  expPy.includes("story_map.link(pending['from'], pending['choice'], text)"));
+
+check('находки только настоящие: «рука в кармане» за добычу не считается',
+  expPy.includes('you scour the shelves') && !expPy.includes("'in your pocket', 'you grab'"));
+
+check('вымотанной она не бежит за псом, а отдыхает: силы влияют на выбор',
+  expPy.includes('def is_rest') && expPy.includes('def is_far') && expPy.includes('if energy < 0:'));
+
+check('карта истории видна: места, переходы и находки на её странице',
+  expPy.includes("report.data['storyMap']") && expWf.includes("report.get('storyMap')")
+  && bridgeJs.includes('kv-map') && bridgeJs.includes('карта истории'));
+
+check('не топчется: петли и обратные ходы в историю — в последнюю очередь, плюс стоп-кран',
+  expPy.includes('def is_loop') && expPy.includes('came_from') && expPy.includes('стоп-кран')
+  && expPy.includes('два места') && expPy.includes("hashlib.sha1(norm.encode('utf-8'))"));
+
+check('идёт по НЕнажатым выборам, а не по «новому месту»: цикла дом→кухня→дом нет',
+  expPy.includes('def not_tried') && expPy.includes('return (k, c.get(\'label\')) not in story_map.tried')
+  && expPy.includes('no_loops'));
+
+check('стоп-кран мягче 18 шагов: успевает обойти дом, но не жжёт время',
+  expPy.includes('len(trail) > 18') && expPy.includes('len(set(trail[-8:])) <= 2'));
+
+check('диалог подтверждения в истории: жмёт «OK», а не «Cancel»',
+  expPy.includes("('ok', 'okay', 'yes', 'да'") && expPy.includes('affirm'));
+
+check('карта истории помнится между прогонами: место — хэш, карта едет в репозиторий',
+  expPy.includes('def to_cache') && expPy.includes('def load_cache') && expPy.includes('hashlib.sha1')
+  && expWf.includes('storymap.json') && expWf.includes('--memo')
+  // иначе карта грузится, но до чтения истории не доходит: «name memo_from is not defined»
+  && expPy.includes('runs=6, memo_from=memo_from'));
+
+check('долгая история: окно до 10 минут и до шести заходов, а не 180 секунд',
+  expPy.includes('min(600, seconds)') && expPy.includes('runs=6') && !expPy.includes('min(180, seconds)'));
+
+check('длинный прогон доносит отчёт: причина падения видна, видео не больше 8 МБ',
+  expWf.includes('trap ') && expWf.includes('scale=640:-2,fps=12') && expWf.includes('Пережатое видео всё ещё'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
