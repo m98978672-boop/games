@@ -129,7 +129,10 @@ def _verified_thread(youtube: Any, parent_id: str) -> tuple[str, str]:
     top = snippet.get("topLevelComment", {})
     if top.get("id") != parent_id:
         raise ValueError("Only top-level comments can be answered.")
-    if top.get("snippet", {}).get("authorChannelId", {}).get("value") == channel:
+    author = top.get("snippet", {}).get("authorChannelId", {}).get("value")
+    if not isinstance(author, str) or not author:
+        raise ValueError("Cannot verify the comment author; refusing to reply.")
+    if author == channel:
         raise ValueError("Refusing to reply to the channel's own comment.")
     video_id = str(snippet.get("videoId", ""))
     if not video_id:

@@ -226,6 +226,18 @@ class CommentAssistantTests(unittest.TestCase):
                 ]})
         self.assertEqual(assistant.recent_public_videos(RecentAPI()), ["abcdefghijk"])
 
+    def test_reply_rejects_missing_author_identity(self):
+        from unittest.mock import patch
+        api = API()
+        missing_author = Request({'items': [{'snippet': {'videoId': 'video', 'topLevelComment':
+            {'id': 'parent', 'snippet': {}}}}]})
+        original_list = api.list
+        with patch.object(api, 'list', side_effect=lambda **kw: missing_author if kw.get('id') == 'parent' else original_list(**kw)):
+            with tempfile.TemporaryDirectory() as temp:
+                with self.assertRaisesRegex(ValueError, 'author'):
+                    assistant.post_reviewed_reply(api, parent_id='parent', reply='Спасибо!', ledger=Path(temp) / 'db')
+        self.assertEqual(api.inserted, [])
+
     def test_existing_reply_or_foreign_video_rejected(self):
         api = API()
         with tempfile.TemporaryDirectory() as temp:
