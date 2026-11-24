@@ -415,6 +415,41 @@ def log_search(query, results, best=None):
     SEARCH_LOG.write_text(old.rstrip() + '\n\n' + '\n'.join(lines), encoding='utf-8')
 
 
+def _retake_index(turns):
+    """Индекс вопроса, на который стоит плохой ответ и его надо переписать.
+
+    Условия узкие, чтобы не переписывать хорошие ответы:
+    * последняя пара — «вопрос → ответ»;
+    * вопрос о ней самой (шахматы, уроки, дом, желание, поиск);
+    * в ответе есть цифра, которой нет в её доме, или ответ короче 12 символов.
+    """
+    if len(turns) < 2:
+        return None
+    question_role, question = turns[-2]
+    answer_role, answer = turns[-1]
+    if question_role != 'user' or answer_role != 'assistant':
+        return None
+    if not topics_in(question):
+        return None
+    try:
+        facts = read_home(HOME)
+    except SelfFactsError:
+        return None
+    allowed = set(re.findall(r'\d+', ' '.join(value for _, value in facts.facts())))
+    used = set(re.findall(r'\d+', answer or ''))
+    invented = {number for number in used if number not in allowed and len(number) > 1}
+    # Ответ может быть и без выдуманных цифр, но мимо вопроса: так она уже
+    # ответила «собираю 3D-модельку» на вопрос о счёте в шахматах.
+    off_topic = not re.search(r'(счёт|шаг|урок|модельн|дом|жив|желан|википед|поиск|умею)',
+                              answer or '', re.I)
+    if invented or off_topic or len((answer or '').strip()) < 12:
+        reason = (f'выдуманные цифры {sorted(invented)}' if invented
+                  else 'ответ мимо вопроса' if off_topic else 'слишком короткий')
+        print(f'Плохой прошлый ответ: {reason}', flush=True)
+        return len(turns) - 2
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--adapter', type=Path, help='home adapter folder; without it the base model answers')
@@ -425,37 +460,42 @@ def main():
     args = parser.parse_args()
     text = DIALOGUE.read_text(encoding='utf-8')
     turns = parse_turns(text)
-    if not turns or turns[-1][0] != 'user':
+    # Переписываем ли мы плохой прошлый ответ? Тогда вопрос уже «отвечен»
+    # формально, и обычная ветка «последнее слово не за владельцем» молча
+    # выходила — именно так висел её неверный ответ про «3D-модельку».
+    retake_index = None
+    if turns and turns[-1][0] == 'assistant':
+        candidate = _retake_index(turns)
+        if candidate is not None:
+            retake_index = candidate
+            print('Переписываю свой прошлый ответ: он не опирался на дом', flush=True)
+    if not turns or (turns[-1][0] != 'user' and retake_index is None):
         print('Нечего отвечать: последнее слово не за владельцем.')
         return
-    # Отвечает на ВСЕ неотвеченные вопросы в хвосте, а не только на
-    # последний: очередь из двух вопросов раньше теряла первый.
-    pending = []
-    seen_questions = set()
-    for role, body in reversed(turns):
-        if role != 'user':
-            break
-        # Один и тот же вопрос мог попасть в файл дважды (владелец дописал его
-        # и раньше, и из ветки-дубля): отвечать на копию — терять минуты.
-        key = re.sub(r'\s+', ' ', body).strip().lower()
-        if key in seen_questions:
-            continue
-        seen_questions.add(key)
-        pending.append(body)
-        if len(pending) >= 3:
-            break
-    pending.reverse()
+    if retake_index is not None:
+        # Вопрос — тот, на который был плохой ответ; историю берём до него.
+        answered_turns = turns[:retake_index]
+        pending = [turns[retake_index][1]]
+    else:
+        # Отвечает на ВСЕ неотвеченные вопросы в хвосте, а не только на
+        # последний: очередь из двух вопросов раньше теряла первый.
+        pending = []
+        seen_questions = set()
+        for role, body in reversed(turns):
+            if role != 'user':
+                break
+            # Один и тот же вопрос мог попасть в файл дважды (владелец дописал его
+            # и раньше, и из ветки-дубля): отвечать на копию — терять минуты.
+            key = re.sub(r'\s+', ' ', body).strip().lower()
+            if key in seen_questions:
+                continue
+            seen_questions.add(key)
+            pending.append(body)
+            if len(pending) >= 3:
+                break
+        pending.reverse()
+        answered_turns = turns[:len(turns) - len(pending)]
     owner_text = '\n'.join(pending)
-    answered_turns = turns[:len(turns) - len(pending)]
-    # Последний вопрос уже мог быть задан раньше и остаться без ответа.
-    # Тогда прошлый прогон упал — отвечаем снова, а не молчим.
-    last_question = re.sub(r'\s+', ' ', pending[-1]).strip().lower() if pending else ''
-    asked_before = any(re.sub(r'\s+', ' ', body).strip().lower() == last_question
-                       and role == 'user' for role, body in answered_turns)
-    if asked_before:
-        print('Этот вопрос уже был раньше и остался без ответа — отвечаю снова', flush=True)
-    if len(pending) > 1:
-        print(f'Без ответа вопросов: {len(pending)} — отвечаю на все разом', flush=True)
     persona = PERSONA.read_text(encoding='utf-8').strip()
     run_started = time.monotonic()
     torch.set_num_threads(max(1, min(4, os.cpu_count() or 2)))
@@ -641,7 +681,18 @@ def main():
         reply = 'Я задумалась и ответила невпопад. Спроси меня ещё раз, пожалуйста!'
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
-    DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
+    if retake_index is not None:
+        # Заменяем ровно свой прошлый ответ, а не дописываем второй.
+        lines = []
+        for index, (role, body) in enumerate(turns):
+            speaker = 'Владелец' if role == 'user' else 'Квеня'
+            lines.append(f'{speaker}: {body}')
+            if retake_index is not None and index == retake_index + 1:
+                lines[-1] = f'Квеня: {reply}'
+        updated = '\n\n'.join(lines) + '\n'
+        DIALOGUE.write_text(updated, encoding='utf-8')
+    else:
+        DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
     LAST_REPLY.write_text(reply + '\n', encoding='utf-8')
     print(f'Всего на ответ ушло {time.monotonic() - run_started:.1f} c', flush=True)
     print('ОТВЕТ КВЕНИ:')

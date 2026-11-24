@@ -108,5 +108,76 @@ class DraftCheckTests(unittest.TestCase):
         self.assertTrue(self.problem('Я прошла 5123 шага обучения.', facts))
 
 
+class RetakeTests(unittest.TestCase):
+    """Её плохой ответ не должен висеть навсегда: вопрос заслуживает повтора.
+
+    Реальный случай: на вопрос «какой счёт в шахматах» она ответила
+    «собираю 3D-модельку», и этот ответ остался последним в диалоге —
+    следующий прогон видел «последнее слово за ней» и молча выходил.
+    """
+
+    @staticmethod
+    def turns(*pairs):
+        return [('user' if index % 2 == 0 else 'assistant', text) for index, text in enumerate(pairs)]
+
+    def _retake(self, turns, home=HOME):
+        """Та же логика, что в talk-generate.py, но без загрузки torch."""
+        import re
+        if len(turns) < 2:
+            return None
+        question_role, question = turns[-2]
+        answer_role, answer = turns[-1]
+        if question_role != 'user' or answer_role != 'assistant':
+            return None
+        if not question_needs_self_facts(question):
+            return None
+        facts = read_home(home)
+        allowed = set(re.findall(r'\d+', ' '.join(v for _, v in facts.facts())))
+        used = set(re.findall(r'\d+', answer or ''))
+        invented = {n for n in used if n not in allowed and len(n) > 1}
+        off_topic = not re.search(r'(счёт|шаг|урок|модельн|дом|жив|желан|википед|поиск|умею)',
+                                  (answer or ''), re.I)
+        if invented or off_topic or len((answer or '').strip()) < 12:
+            return len(turns) - 2
+        return None
+
+    def test_an_answer_with_an_invented_number_is_retaken(self):
+        turns = self.turns(
+            'Квеня, ответь по фактам: какой у тебя счёт в шахматах и сколько шагов обучения?',
+            'У меня счёт 47 из 53 в шахматах, шагов обучения — 5123.',
+        )
+        self.assertEqual(self._retake(turns), 0)
+
+    def test_the_off_topic_answer_that_really_happened_is_retaken_too(self):
+        # Её настоящий ответ на вопрос о счёте: цифр не выдумала, но и вопроса
+        # не коснулась. Такой ответ тоже не должен висеть в диалоге навсегда.
+        turns = self.turns(
+            'Квеня, ответь по фактам из дома, коротко: какой у тебя счёт в шахматах?',
+            'Отвечаю тебе, а между разговорами собираю свой 3D-модельку: силуэт, таз, плечи и шею.',
+        )
+        self.assertEqual(self._retake(turns), 0)
+
+    def test_an_answer_with_her_real_numbers_stands(self):
+        facts = read_home(HOME)
+        turns = self.turns(
+            'Квеня, какой у тебя счёт в шахматах?',
+            f'Счёт — {facts.chess["wins"]} из {facts.chess["games"]}, играю расчётом.',
+        )
+        self.assertIsNone(self._retake(turns))
+
+    def test_a_world_question_is_never_retaken(self):
+        turns = self.turns('В каком году основан город?', 'Это было в 1703 году.')
+        self.assertIsNone(self._retake(turns))
+
+    def test_her_answer_about_the_home_stands(self):
+        turns = self.turns('Квеня, какой у тебя счёт в шахматах?',
+                           'Счёт 8 из 10: играю расчётом против ФЕРЗЬ-3000.')
+        self.assertIsNone(self._retake(turns))
+
+    def test_a_last_owner_message_is_still_answered_normally(self):
+        turns = self.turns('Квеня, какой у тебя счёт в шахматах?')
+        self.assertIsNone(self._retake(turns))
+
+
 if __name__ == '__main__':
     unittest.main()
