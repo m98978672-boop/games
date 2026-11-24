@@ -1,0 +1,3509 @@
+{
+  "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+  "startedAt": "2026-11-24 05:27 UTC",
+  "status": "played",
+  "steps": [
+    {
+      "t": 70.3,
+      "action": "вежливый гость: проверка robots.txt",
+      "result": "robots.txt прочитан"
+    },
+    {
+      "t": 76.4,
+      "action": "открыла страницу",
+      "result": "Lost Spot (Draft)"
+    },
+    {
+      "t": 76.5,
+      "action": "кнопка игры",
+      "result": "не нашлась — пробую играть прямо на открытой странице"
+    },
+    {
+      "t": 80.6,
+      "action": "это сюжетная игра, а не полёт",
+      "result": "история «Lost Spot (Draft)»: текст и варианты выбора, играю чтением, а не кадрами"
+    },
+    {
+      "t": 80.6,
+      "action": "читаю историю",
+      "result": "сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки"
+    },
+    {
+      "t": 213.9,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 213.9,
+      "action": "разбор захода",
+      "result": "заход 1: мест в карте 89, нажато вариантов 144; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 213.9,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 33 — иду заново"
+    },
+    {
+      "t": 216.3,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 365.1,
+      "action": "финал",
+      "result": "заход 2: 104 выборов, новых мест 3 — ↶ Congratulations ! You finished the game! The End"
+    },
+    {
+      "t": 365.1,
+      "action": "разбор захода",
+      "result": "заход 2: мест в карте 92, нажато вариантов 149; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 365.1,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 30 — иду заново"
+    },
+    {
+      "t": 367.3,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 409.6,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 409.6,
+      "action": "разбор захода",
+      "result": "заход 3: мест в карте 92, нажато вариантов 149; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 409.6,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 30 — иду заново"
+    },
+    {
+      "t": 411.8,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 449.9,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 449.9,
+      "action": "разбор захода",
+      "result": "заход 4: мест в карте 92, нажато вариантов 149; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 449.9,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 30 — иду заново"
+    },
+    {
+      "t": 452.1,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 483.0,
+      "action": "финал",
+      "result": "заход 5: 20 выборов, новых мест 0 — ↶ Congratulations ! You finished the game! The End"
+    },
+    {
+      "t": 483.0,
+      "action": "разбор захода",
+      "result": "заход 5: мест в карте 92, нажато вариантов 149; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 483.0,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 28 — иду заново"
+    },
+    {
+      "t": 485.3,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 542.7,
+      "action": "финал",
+      "result": "заход 6: 39 выборов, новых мест 2 — ↶ Congratulations ! You finished the game! The End"
+    },
+    {
+      "t": 542.7,
+      "action": "разбор захода",
+      "result": "заход 6: мест в карте 94, нажато вариантов 151; заходов хватит"
+    },
+    {
+      "t": 542.7,
+      "action": "карта сохранена",
+      "result": "94 мест для следующего прогона"
+    },
+    {
+      "t": 542.7,
+      "action": "итог истории",
+      "result": "выборов 309 за 6 заход(ов); мест в карте 94, связей 174, нажато вариантов 151; концовок видела 1; находки: chips on the bottom, find your favorite, you found, you grab"
+    }
+  ],
+  "screenshots": [
+    "01-open.png",
+    "02-after-play.png",
+    "03-story.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "07-story-32.png",
+    "08-story-40.png",
+    "09-story-48.png",
+    "09-story-56.png",
+    "09-story-64.png",
+    "09-story-72.png",
+    "09-story-80.png",
+    "09-story-88.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "07-story-32.png",
+    "08-story-40.png",
+    "09-story-48.png",
+    "09-story-56.png",
+    "09-story-64.png",
+    "09-story-72.png",
+    "09-story-80.png",
+    "09-story-88.png",
+    "09-story-96.png",
+    "09-story-104.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "07-story-32.png",
+    "09-story-end.png"
+  ],
+  "kind": "story",
+  "hasVideo": true,
+  "textSample": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel",
+  "story": {
+    "moves": 309,
+    "runs": [
+      {
+        "run": 1,
+        "moves": 93,
+        "fresh": 10,
+        "newPlaces": 3,
+        "end": "",
+        "placesByNow": 89
+      },
+      {
+        "run": 2,
+        "moves": 104,
+        "fresh": 8,
+        "newPlaces": 3,
+        "end": "↶ Congratulations ! You finished the game! The End",
+        "placesByNow": 92
+      },
+      {
+        "run": 3,
+        "moves": 28,
+        "fresh": 3,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 92
+      },
+      {
+        "run": 4,
+        "moves": 25,
+        "fresh": 2,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 92
+      },
+      {
+        "run": 5,
+        "moves": 20,
+        "fresh": 3,
+        "newPlaces": 0,
+        "end": "↶ Congratulations ! You finished the game! The End",
+        "placesByNow": 92
+      },
+      {
+        "run": 6,
+        "moves": 39,
+        "fresh": 4,
+        "newPlaces": 2,
+        "end": "↶ Congratulations ! You finished the game! The End",
+        "placesByNow": 94
+      }
+    ],
+    "path": [
+      {
+        "run": 1,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 1,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 1,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 1,
+        "n": 4,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 1,
+        "n": 5,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. You are tired."
+      },
+      {
+        "run": 1,
+        "n": 6,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 1,
+        "n": 7,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 1,
+        "n": 8,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 1,
+        "n": 9,
+        "choice": "Go After Spot",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 10,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You must find Spot quickly! You are not supposed to be out of the house! Mom makes a big point to stay in my room during homework time. You cou"
+      },
+      {
+        "run": 1,
+        "n": 11,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 12,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide."
+      },
+      {
+        "run": 1,
+        "n": 13,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 1,
+        "n": 14,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 15,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 1,
+        "n": 16,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 17,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 1,
+        "n": 18,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 19,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 20,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 1,
+        "n": 21,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle."
+      },
+      {
+        "run": 1,
+        "n": 22,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 1,
+        "n": 23,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 1,
+        "n": 24,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 1,
+        "n": 25,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 26,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 27,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 28,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 29,
+        "choice": "Leave quietly!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ Nothing has changed. Leave quietly!"
+      },
+      {
+        "run": 1,
+        "n": 30,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 31,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 32,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 33,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 1,
+        "n": 34,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 35,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 1,
+        "n": 36,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 37,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 1,
+        "n": 38,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 39,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 40,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 1,
+        "n": 41,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 42,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 43,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 44,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 45,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 46,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 47,
+        "choice": "Leave quietly!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ Nothing has changed. Leave quietly!"
+      },
+      {
+        "run": 1,
+        "n": 48,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 49,
+        "choice": "waiters",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 1,
+        "n": 50,
+        "choice": "She responds...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 3,
+        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds..."
+      },
+      {
+        "run": 1,
+        "n": 51,
+        "choice": "How do you know my dog's name?",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Hi ! I'm sorry you lost Spot. I havn't seen him. I hope you find him though!\" How do you know my name? How do you know my dog's name?"
+      },
+      {
+        "run": 1,
+        "n": 52,
+        "choice": "back",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"How do you know my dog's name?\" you ask. \"I heard from a friend that there was a dog missing named spot! I hope you find him! I got to go now!\" back"
+      },
+      {
+        "run": 1,
+        "n": 53,
+        "choice": "She responds...",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 3,
+        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds... back"
+      },
+      {
+        "run": 1,
+        "n": 54,
+        "choice": "How do you know my dog's name?",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Hi ! I'm sorry you lost Spot. I havn't seen him. I hope you find him though!\" How do you know my name? How do you know my dog's name?"
+      },
+      {
+        "run": 1,
+        "n": 55,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"How do you know my dog's name?\" you ask. \"I heard from a friend that there was a dog missing named spot! I hope you find him! I got to go now!\" back"
+      },
+      {
+        "run": 1,
+        "n": 56,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 3,
+        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds... back"
+      },
+      {
+        "run": 1,
+        "n": 57,
+        "choice": "home",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 1,
+        "n": 58,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 59,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 1,
+        "n": 60,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 61,
+        "choice": "receptionist",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 1,
+        "n": 62,
+        "choice": "The receptionist responds...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
+      },
+      {
+        "run": 1,
+        "n": 63,
+        "choice": "Wait 15 min and go inside.",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
+      },
+      {
+        "run": 1,
+        "n": 64,
+        "choice": "leave",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
+      },
+      {
+        "run": 1,
+        "n": 65,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 1,
+        "n": 66,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 67,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 1,
+        "n": 68,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 69,
+        "choice": "past the hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 1,
+        "n": 70,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 1,
+        "n": 71,
+        "choice": "past the hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 1,
+        "n": 72,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 1,
+        "n": 73,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 1,
+        "n": 74,
+        "choice": "playground",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 1,
+        "n": 75,
+        "choice": "swings",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. Check under the playground structure. back"
+      },
+      {
+        "run": 1,
+        "n": 76,
+        "choice": "To playground",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ While you play on the swings, something weird catches your eye. Straight ahead, past the store, is a strange grey color. It makes up a large figure in the shape of a cube. To playground"
+      },
+      {
+        "run": 1,
+        "n": 77,
+        "choice": "structure",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. Check under the playground structure. back"
+      },
+      {
+        "run": 1,
+        "n": 78,
+        "choice": "To playground",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ You get on your knees and search under the playground. You have to dig a little tanbark out to fit under the platform. You look left, then look right, but there are no signs of Spot. As you crawl out, your knee scrapes"
+      },
+      {
+        "run": 1,
+        "n": 79,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. Check under the playground structure. back"
+      },
+      {
+        "run": 1,
+        "n": 80,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ While you play on the swings, something weird catches your eye. Straight ahead, past the store, is a strange grey color. It makes up a large figure in the shape of a cube. To playground"
+      },
+      {
+        "run": 1,
+        "n": 81,
+        "choice": "structure",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. Check under the playground structure. back"
+      },
+      {
+        "run": 1,
+        "n": 82,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ You get on your knees and search under the playground. You have to dig a little tanbark out to fit under the platform. You look left, then look right, but there are no signs of Spot. As you crawl out, your knee scrapes"
+      },
+      {
+        "run": 1,
+        "n": 83,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. Check under the playground structure. back"
+      },
+      {
+        "run": 1,
+        "n": 84,
+        "choice": "playground",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 1,
+        "n": 85,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. Check under the playground structure. back"
+      },
+      {
+        "run": 1,
+        "n": 86,
+        "choice": "house",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 1,
+        "n": 87,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 88,
+        "choice": "home",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 1,
+        "n": 89,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 90,
+        "choice": "home",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 1,
+        "n": 91,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 92,
+        "choice": "home",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 1,
+        "n": 93,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 2,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 2,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 2,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 2,
+        "n": 4,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 2,
+        "n": 5,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. You are tired."
+      },
+      {
+        "run": 2,
+        "n": 6,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 2,
+        "n": 7,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 2,
+        "n": 8,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 2,
+        "n": 9,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 10,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 11,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ The kitchen is empty. back"
+      },
+      {
+        "run": 2,
+        "n": 12,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 13,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ The kitchen is empty. back"
+      },
+      {
+        "run": 2,
+        "n": 14,
+        "choice": "door",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 15,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 16,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 2,
+        "n": 17,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 18,
+        "choice": "couch",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 19,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Get up"
+      },
+      {
+        "run": 2,
+        "n": 20,
+        "choice": "couch",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 21,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Get up"
+      },
+      {
+        "run": 2,
+        "n": 22,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 23,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ The kitchen is empty. back"
+      },
+      {
+        "run": 2,
+        "n": 24,
+        "choice": "homework",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 25,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 26,
+        "choice": "door",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 27,
+        "choice": "You yell after him, \"Spot!\"",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 28,
+        "choice": ". . .",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Spot!\", you yell out the door. \"Is something wrong honey?\" your Mom asks from the kitchen. \"No! Everythings fine, Mom! \"Ok, just remember, you have a very strict homework time, so go to your room!\" . . ."
+      },
+      {
+        "run": 2,
+        "n": 29,
+        "choice": "go after Spot",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You have no choice but to go after Spot! Mom would freak out if Spot got lost!"
+      },
+      {
+        "run": 2,
+        "n": 30,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You could go left towards the school, or right towards the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 31,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 2,
+        "n": 32,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 33,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 2,
+        "n": 34,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 35,
+        "choice": "You run up to the bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You walk up to the bushes carefully. You run up to the bushes."
+      },
+      {
+        "run": 2,
+        "n": 36,
+        "choice": "Turn right",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You look behind the bushes. It's like a maze in here! Turn left Turn right"
+      },
+      {
+        "run": 2,
+        "n": 37,
+        "choice": "Turn right",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go deeper into the bushes. You can go left or right. Turn left Turn right"
+      },
+      {
+        "run": 2,
+        "n": 38,
+        "choice": "Go around the corner",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ It's getting darker. Go around the corner"
+      },
+      {
+        "run": 2,
+        "n": 39,
+        "choice": "back to park",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You reach a dead end. You heard a noise to your left and realize it's just a bird. back to park"
+      },
+      {
+        "run": 2,
+        "n": 40,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 41,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 2,
+        "n": 42,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 43,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 2,
+        "n": 44,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 45,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 2,
+        "n": 46,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 47,
+        "choice": "waiters",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 2,
+        "n": 48,
+        "choice": "He responds...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 3,
+        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is tall with a bowtie. He looks at you with concern. He responds..."
+      },
+      {
+        "run": 2,
+        "n": 49,
+        "choice": "\"Are you sure?\"",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ \"I'm sorry to hear that. I have a dog myself and would be worried sick if he was missing. I haven't seen a dog here, but I will let you know if I do!\" Say \"Okay!\" and go on your way. \"Are you sure?\""
+      },
+      {
+        "run": 2,
+        "n": 50,
+        "choice": "\"Okay, sorry.\"",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ His smile faded and looked at you confused. \"Yes I'm sure. I said I'd let you know if I saw him.\" \"Okay, sorry.\" \"I don't believe you!"
+      },
+      {
+        "run": 2,
+        "n": 51,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ Embassased, you walk out of the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 52,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 2,
+        "n": 53,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 54,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 2,
+        "n": 55,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 56,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 2,
+        "n": 57,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 58,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 2,
+        "n": 59,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 60,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 2,
+        "n": 61,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 62,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 2,
+        "n": 63,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 64,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 2,
+        "n": 65,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 66,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 2,
+        "n": 67,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 2,
+        "n": 68,
+        "choice": "past the hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 2,
+        "n": 69,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 2,
+        "n": 70,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 2,
+        "n": 71,
+        "choice": "fresh produce aisle",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle."
+      },
+      {
+        "run": 2,
+        "n": 72,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You speed-walk to the cucumbers because you know Spot loves them. As you walk, you notice that the bananas are all perfectly ripe. Not only that, but all the fruits look ready to eat! You havn't been to the store often"
+      },
+      {
+        "run": 2,
+        "n": 73,
+        "choice": "fresh produce aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 74,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You speed-walk to the cucumbers because you know Spot loves them. As you walk, you notice that the bananas are all perfectly ripe. Not only that, but all the fruits look ready to eat! You havn't been to the store often"
+      },
+      {
+        "run": 2,
+        "n": 75,
+        "choice": "fresh produce aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 76,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You speed-walk to the cucumbers because you know Spot loves them. As you walk, you notice that the bananas are all perfectly ripe. Not only that, but all the fruits look ready to eat! You havn't been to the store often"
+      },
+      {
+        "run": 2,
+        "n": 77,
+        "choice": "bread aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 78,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "you pick up"
+        ],
+        "clues": 1,
+        "text": "↶ There are all kinds of bread here, some that you've never heard of before. You don't see spot right away, but you are persistant and look behind the loaves. As your sift through the bread, deafening screeching noises c"
+      },
+      {
+        "run": 2,
+        "n": 79,
+        "choice": "fresh produce aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 80,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You speed-walk to the cucumbers because you know Spot loves them. As you walk, you notice that the bananas are all perfectly ripe. Not only that, but all the fruits look ready to eat! You havn't been to the store often"
+      },
+      {
+        "run": 2,
+        "n": 81,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 82,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 2,
+        "n": 83,
+        "choice": "fresh produce aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 84,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You speed-walk to the cucumbers because you know Spot loves them. As you walk, you notice that the bananas are all perfectly ripe. Not only that, but all the fruits look ready to eat! You havn't been to the store often"
+      },
+      {
+        "run": 2,
+        "n": 85,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 86,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 2,
+        "n": 87,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 88,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 2,
+        "n": 89,
+        "choice": "bread aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 90,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "you pick up"
+        ],
+        "clues": 1,
+        "text": "↶ There are all kinds of bread here, some that you've never heard of before. You don't see spot right away, but you are persistant and look behind the loaves. As your sift through the bread, deafening screeching noises c"
+      },
+      {
+        "run": 2,
+        "n": 91,
+        "choice": "fresh produce aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 92,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You speed-walk to the cucumbers because you know Spot loves them. As you walk, you notice that the bananas are all perfectly ripe. Not only that, but all the fruits look ready to eat! You havn't been to the store often"
+      },
+      {
+        "run": 2,
+        "n": 93,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Search the fresh produce aisle. Explore the bread aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 94,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 2,
+        "n": 95,
+        "choice": "Stay longer and look around",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 2,
+        "n": 96,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You take a quick look around. You can't help but wonder what this thing is. It is very peculiar. It's in the shape of a perfect cube. Maybe you'll understand later. Go to the store. Go to the Hospital."
+      },
+      {
+        "run": 2,
+        "n": 97,
+        "choice": "past the hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 2,
+        "n": 98,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 2,
+        "n": 99,
+        "choice": "past the hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 2,
+        "n": 100,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 2,
+        "n": 101,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 2,
+        "n": 102,
+        "choice": "\"for pets\" aisle",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the \"for pets\" aisle. Sneak into the wine aisle. back"
+      },
+      {
+        "run": 2,
+        "n": 103,
+        "choice": "home!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ The pets aisle! Of course! And as you expected, you see Spot wagging his tail and playing with a buch of toys. \"There you are, Spot! You had me so worried. I got to get you home!\""
+      },
+      {
+        "run": 2,
+        "n": 104,
+        "choice": "You found Spot!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "you found"
+        ],
+        "clues": 1,
+        "text": "↶ You take Spot home and are greeted by an upset Mom. \"You are grounded! You know you are supposed to be doing homework at this time!\" You go to your room, relieved you found Spot. Although... something felt off about to"
+      },
+      {
+        "run": 3,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 3,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 3,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 3,
+        "n": 4,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 3,
+        "n": 5,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. You are tired."
+      },
+      {
+        "run": 3,
+        "n": 6,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 3,
+        "n": 7,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 3,
+        "n": 8,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 3,
+        "n": 9,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 10,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 3,
+        "n": 11,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 12,
+        "choice": "homework",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 13,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 14,
+        "choice": "homework",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 15,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 16,
+        "choice": "homework",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 17,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 18,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 19,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ The kitchen is empty. back"
+      },
+      {
+        "run": 3,
+        "n": 20,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 21,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ The kitchen is empty. back"
+      },
+      {
+        "run": 3,
+        "n": 22,
+        "choice": "homework",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 23,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 24,
+        "choice": "homework",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 25,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 26,
+        "choice": "homework",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 27,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 28,
+        "choice": "homework",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 4,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 4,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 4,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 4,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 4,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 4,
+        "n": 7,
+        "choice": "Go After Spot",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 8,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You must find Spot quickly! You are not supposed to be out of the house! Mom makes a big point to stay in my room during homework time. You cou"
+      },
+      {
+        "run": 4,
+        "n": 9,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 4,
+        "n": 10,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 4,
+        "n": 11,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 4,
+        "n": 12,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 4,
+        "n": 13,
+        "choice": "frozen aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle."
+      },
+      {
+        "run": 4,
+        "n": 14,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You doubt Spot would be in such a cold location, but you take a look anyway. You get distracted by the frozen pizzas, but then refocus on your goal. Go back"
+      },
+      {
+        "run": 4,
+        "n": 15,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 4,
+        "n": 16,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 4,
+        "n": 17,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 4,
+        "n": 18,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 4,
+        "n": 19,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 4,
+        "n": 20,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 4,
+        "n": 21,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 4,
+        "n": 22,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 4,
+        "n": 23,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 4,
+        "n": 24,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 4,
+        "n": 25,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 5,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 5,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 5,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 5,
+        "n": 4,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 5,
+        "n": 5,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. You are tired."
+      },
+      {
+        "run": 5,
+        "n": 6,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 5,
+        "n": 7,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 5,
+        "n": 8,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 5,
+        "n": 9,
+        "choice": "You yell after him, \"Spot!\"",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 10,
+        "choice": ". . .",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Spot!\", you yell out the door. \"Is something wrong honey?\" your Mom asks from the kitchen. \"No! Everythings fine, Mom! \"Ok, just remember, you have a very strict homework time, so go to your room!\" . . ."
+      },
+      {
+        "run": 5,
+        "n": 11,
+        "choice": "go after Spot",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You have no choice but to go after Spot! Mom would freak out if Spot got lost!"
+      },
+      {
+        "run": 5,
+        "n": 12,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You could go left towards the school, or right towards the restaurant."
+      },
+      {
+        "run": 5,
+        "n": 13,
+        "choice": "home",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 5,
+        "n": 14,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 5,
+        "n": 15,
+        "choice": "waiters",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 5,
+        "n": 16,
+        "choice": "He responds...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 3,
+        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is tall with a bowtie. He looks at you with concern. He responds..."
+      },
+      {
+        "run": 5,
+        "n": 17,
+        "choice": "\"Are you sure?\"",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ \"I'm sorry to hear that. I have a dog myself and would be worried sick if he was missing. I haven't seen a dog here, but I will let you know if I do!\" Say \"Okay!\" and go on your way. \"Are you sure?\""
+      },
+      {
+        "run": 5,
+        "n": 18,
+        "choice": "\"I don't believe you!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ His smile faded and looked at you confused. \"Yes I'm sure. I said I'd let you know if I saw him.\" \"Okay, sorry.\" \"I don't believe you!"
+      },
+      {
+        "run": 5,
+        "n": 19,
+        "choice": "behind you",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You push past the waiter and storm into the employees-only section of the restaurant to check for Spot. You have a stong feeling that the waiter was keeping something from you. You seach everywhere until someone comes "
+      },
+      {
+        "run": 5,
+        "n": 20,
+        "choice": "You failed to find Spot",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ It's a police officer. \"You'll have to come with us,\" the officer said as they dragged you into the police car. You are taken into the police station for questioning. Your Mom arrives and is furious. \"You are so ground"
+      },
+      {
+        "run": 6,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 6,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 6,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 6,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 6,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 6,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 6,
+        "n": 7,
+        "choice": "You yell after him, \"Spot!\"",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 6,
+        "n": 8,
+        "choice": ". . .",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Spot!\", you yell out the door. \"Is something wrong honey?\" your Mom asks from the kitchen. \"No! Everythings fine, Mom! \"Ok, just remember, you have a very strict homework time, so go to your room!\" . . ."
+      },
+      {
+        "run": 6,
+        "n": 9,
+        "choice": "go after Spot",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You have no choice but to go after Spot! Mom would freak out if Spot got lost!"
+      },
+      {
+        "run": 6,
+        "n": 10,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You could go left towards the school, or right towards the restaurant."
+      },
+      {
+        "run": 6,
+        "n": 11,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 6,
+        "n": 12,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 6,
+        "n": 13,
+        "choice": "Leave quietly!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ Nothing has changed. Leave quietly!"
+      },
+      {
+        "run": 6,
+        "n": 14,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 6,
+        "n": 15,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 6,
+        "n": 16,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide."
+      },
+      {
+        "run": 6,
+        "n": 17,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 6,
+        "n": 18,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 6,
+        "n": 19,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 6,
+        "n": 20,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 6,
+        "n": 21,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 6,
+        "n": 22,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 6,
+        "n": 23,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 6,
+        "n": 24,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 6,
+        "n": 25,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 6,
+        "n": 26,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 6,
+        "n": 27,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 6,
+        "n": 28,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 6,
+        "n": 29,
+        "choice": "Hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 6,
+        "n": 30,
+        "choice": "past the hospital",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the hospital. Something about hospitals frighten you. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
+      },
+      {
+        "run": 6,
+        "n": 31,
+        "choice": "Stay longer and look around",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 6,
+        "n": 32,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You take a quick look around. You can't help but wonder what this thing is. It is very peculiar. It's in the shape of a perfect cube. Maybe you'll understand later. Go to the store. Go to the Hospital."
+      },
+      {
+        "run": 6,
+        "n": 33,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 6,
+        "n": 34,
+        "choice": "house",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 6,
+        "n": 35,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 6,
+        "n": 36,
+        "choice": "home",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 6,
+        "n": 37,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 6,
+        "n": 38,
+        "choice": "Say nothing and go to your room",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You look in the kitchen to see if Spot has returned, but as you turn the corner, your Mom walks through the hallway toward you. \"Hey! You were supposed to be in your room! You are grounded!\" \"But I was trying to find S"
+      },
+      {
+        "run": 6,
+        "n": 39,
+        "choice": "Game Over",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You walk to your room, defeated. Game Over"
+      }
+    ],
+    "endings": [
+      {
+        "run": 2,
+        "n": 104,
+        "text": "↶ Congratulations ! You finished the game! The End"
+      },
+      {
+        "run": 5,
+        "n": 20,
+        "text": "↶ Congratulations ! You finished the game! The End"
+      },
+      {
+        "run": 6,
+        "n": 39,
+        "text": "↶ Congratulations ! You finished the game! The End"
+      }
+    ],
+    "reachedEnd": true,
+    "last": {
+      "run": 6,
+      "n": 39,
+      "choice": "Game Over",
+      "fresh": true,
+      "energy": 0,
+      "finds": [],
+      "clues": 0,
+      "text": "↶ You walk to your room, defeated. Game Over"
+    },
+    "map": {
+      "places": 94,
+      "links": 174,
+      "tried": 151,
+      "energetic": 6,
+      "tired": 5,
+      "finds": [
+        "chips on the bottom",
+        "find your favorite",
+        "you found",
+        "you grab",
+        "you pick up",
+        "you scour the shelves",
+        "you take the"
+      ]
+    },
+    "sawFinds": [
+      {
+        "run": 1,
+        "n": 22,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 2,
+        "n": 78,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "you pick up"
+        ],
+        "clues": 1,
+        "text": "↶ There are all kinds of bread here, some that you've never heard of before. You don't see spot right away, but you are persistant and look behind the loaves. As your sift through the bread, deafening screeching noises c"
+      },
+      {
+        "run": 2,
+        "n": 90,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "you pick up"
+        ],
+        "clues": 1,
+        "text": "↶ There are all kinds of bread here, some that you've never heard of before. You don't see spot right away, but you are persistant and look behind the loaves. As your sift through the bread, deafening screeching noises c"
+      },
+      {
+        "run": 2,
+        "n": 104,
+        "choice": "You found Spot!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "you found"
+        ],
+        "clues": 1,
+        "text": "↶ You take Spot home and are greeted by an upset Mom. \"You are grounded! You know you are supposed to be doing homework at this time!\" You go to your room, relieved you found Spot. Although... something felt off about to"
+      },
+      {
+        "run": 4,
+        "n": 20,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      }
+    ],
+    "freshPlaces": 8,
+    "remembered": 86
+  },
+  "storyMap": {
+    "places": 94,
+    "links": 174,
+    "tried": 151,
+    "finds": [
+      "chips on the bottom",
+      "find your favorite",
+      "you found",
+      "you grab",
+      "you pick up"
+    ],
+    "tired": 5,
+    "energetic": 6
+  },
+  "storyLine": "прошла историю: 309 выборов, 6 захода(ов), 94 мест в карте, концовок видела 1, нашла: chips on the bottom, find your favorite, you found · финал: ↶ Congratulations ! You finished the game! The End"
+}
