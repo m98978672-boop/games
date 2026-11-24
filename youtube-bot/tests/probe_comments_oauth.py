@@ -18,10 +18,11 @@ def probe_callback(opener):
         response = opener.open(urllib.request.Request(url), timeout=30)
     except urllib.error.HTTPError as error:
         response = error
-    content_type = response.headers.get('Content-Type', '')
-    body = response.read(4096)
-    valid = response.code == 400 and content_type.lower().startswith('text/html') and 'Ответ Google неполный.'.encode('utf-8') in body
-    print(f'::notice title=OAuth callback rendering::status={response.code}; content_type={content_type}; expected_utf8={valid}')
+    location = response.headers.get('Location', '')
+    valid = (response.code == 303 and location ==
+             'https://m98978672-boop.github.io/games/youtube-bot/comments-connect-error.html' and
+             response.headers.get('Referrer-Policy', '').lower() == 'no-referrer')
+    print(f'::notice title=OAuth callback redirect::status={response.code}; safe_redirect={valid}')
     return valid
 
 
