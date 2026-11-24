@@ -30,6 +30,30 @@ def img(name):
     return 'data:image/png;base64,' + base64.b64encode(p.read_bytes()).decode()
 
 
+# Что она нашла в истории: ищем в пройденных пассажах ключевые события пути.
+MILESTONES = (
+    ('кусты с псом', 'spots fur'),
+    ('нашла пса', 'found you'),
+    ('лабиринт в кустах', 'maze in here'),
+    ('качели и горка', 'play on the swings'),
+    ('под площадкой', 'playground structure'),
+    ('магазин: чипсы', 'favorite chips'),
+    ('магазин: бананы', 'bananas are all perfectly'),
+    ('больница', 'receptionist'),
+    ('ресторан', 'go here with your Mom'),
+    ('кухня: пёс дома', 'sits in the kitchen'),
+    ('улица, бетон', 'block of concrete'),
+)
+seen = {}
+for p in path:
+    low = (p.get('text') or '').lower()
+    for title, needle in MILESTONES:
+        if needle in low and title not in seen:
+            seen[title] = p
+milestones = ''.join('<li><b>%s</b> — заход %s, ход %s: %s</li>' % (
+    t, v.get('run', 1), v.get('n', 0), (v.get('text') or '')[:110].replace('<', '&lt;'))
+    for t, v in seen.items())
+
 rows = '\n'.join(
     '<tr><td>%s·%s</td><td>%s</td><td class="%s">%s</td><td>%s</td><td>%s</td></tr>' % (
         p.get('run', 1), p.get('n', 0), p.get('choice', ''),
@@ -76,6 +100,7 @@ th{color:#9ecbff;position:sticky;top:0;background:#0d1117} .new{color:#3fb950} .
 <h2>Заходы</h2><ul>{{runs}}</ul>
 <h2>Что было на экране</h2>
 <div class="grid">{{figs}}</div>
+<h2>Что она нашла по дороге</h2><ul>{{milestones}}</ul>
 <h2>Что она поняла про игру (карта)</h2>
 <p>Мест <b>{{places}}</b>, переходов <b>{{links}}</b>, нажато вариантов {{tried}}.
 Усталых мест {{tired}}, бодрых {{energetic}}. Находки: {{finds_list}}.</p>
@@ -90,7 +115,7 @@ values = {
     'links': m.get('links', 0), 'finds': len(m.get('finds') or []), 'runs': runs_html,
     'figs': figs, 'tried': m.get('tried', 0), 'tired': m.get('tired', 0),
     'energetic': m.get('energetic', 0), 'finds_list': ', '.join(m.get('finds') or []) or '—',
-    'rows': rows,
+    'rows': rows, 'milestones': milestones,
 }
 
 for k, v in values.items():
