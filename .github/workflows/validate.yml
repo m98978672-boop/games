@@ -53,7 +53,11 @@ jobs:
             youtube-bot/tests/test_gameplay_voiceover.py \
             youtube-bot/tests/test_gameplay_release_plan.py \
             youtube-bot/tests/test_feedback_youtube.py \
-            youtube-bot/tests/test_playthrough_continue.py
+            youtube-bot/tests/test_playthrough_continue.py \
+            youtube-bot/tests/test_gameplay_reflex.py \
+            youtube-bot/tests/test_gameplay_help_lookup.py
+          python youtube-bot/gameplay/benchmark_reflex.py 40
+          python -m unittest youtube-bot/gameplay/test_reflex_cli.py
           node supabase/functions/youtube-bot/tests/oidc-policy.test.mjs
           node youtube-bot/gameplay/test-solver2048.cjs
           node --check youtube-bot/gameplay/play2048.cjs

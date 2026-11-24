@@ -137,3 +137,14 @@ https://cuhfnzgytndyntpbnbda.supabase.co/functions/v1/youtube-bot/oauth/callback
 ```
 
 Это не Arena preview. Публичный сайт содержит кнопку автономного приватного теста; опубликованная страница обновится после слияния PR. Удаление OAuth-доступа доступно через Google Account → Security → Third-party connections.
+
+## Игровой автопилот: быстрый слой рефлексов
+
+Модель Qwen осталась «медленным советником», а кадры разбирает отдельный быстрый слой: восприятие 800×600 укладывается в 300 мс (замер: p95 ≈ 18 мс), решение — в 2 с, найденные кнопки превращаются в точки клика, а удачные связки «экран → действие» кэшируются в SQLite. Профили ввода покрывают клавиатуру, стрелки и экранный d-pad. Подробности и ограничения — в [INSTRUCTIONS_RU.md](./INSTRUCTIONS_RU.md#быстрый-слой-рефлексов-видеть-за-030-с-думать-до-2-с).
+
+```bash
+cd youtube-bot
+python -m gameplay.reflex_cli bench      # скорость восприятия на этой машине
+python -m gameplay.reflex_cli skills     # что уже выучено
+python -m gameplay.reflex_cli budget     # контракт по времени
+```
