@@ -22,11 +22,15 @@ function env(name) {
   if (!value) throw new Error('Missing configuration');
   return value;
 }
-function page(message, status = 200) {
-  // Only fixed, developer-controlled strings are passed here.
-  return new Response(`<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>YouTube Bot</title><body style="font:17px system-ui;max-width:38rem;margin:12vh auto;padding:1rem"><h1>Комментарии YouTube</h1><p>${message}</p></body></html>`, {
-    status, headers: {'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store', 'Referrer-Policy':'no-referrer', 'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"},
-  });
+function page(message, _status = 200) {
+  // The Supabase gateway forces text/plain for HTML. Redirect to a static page;
+  // never copy the request URL, state, authorization code, or error text there.
+  const success = message === 'Разрешение сохранено отдельно. Автоматическое чтение и ответы ещё не включены.';
+  const result = success ? 'comments-connected.html' : 'comments-connect-error.html';
+  return new Response(null, {status: 303, headers: {
+    Location: `https://m98978672-boop.github.io/games/youtube-bot/${result}`,
+    'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer',
+  }});
 }
 async function db(table, query, init = {}) {
   const key = env('SUPABASE_SERVICE_ROLE_KEY');
