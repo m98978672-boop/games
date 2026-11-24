@@ -239,6 +239,26 @@ def recent_public_videos(youtube: Any, *, limit: int = 10) -> list[str]:
     return [video_id for video_id in ids if video_id in allowed]
 
 
+def summarize_channel(youtube: Any, *, generator: Any = None, video_limit: int = 5) -> list[dict[str, Any]]:
+    """Read a bounded set of recent public uploads; never post or send author IDs to Qwen.
+
+    Callers must keep results private: even summaries can contain sensitive data.
+    Comment-disabled videos are skipped, while other API or model errors fail closed.
+    """
+    if type(video_limit) is not int or not 1 <= video_limit <= 10:
+        raise ValueError("video limit must be between 1 and 10")
+    results = []
+    for video_id in recent_public_videos(youtube, limit=video_limit):
+        try:
+            summary = summarize_comments(youtube, video_id, generator=generator)
+        except Exception as exc:
+            if _comments_disabled(exc):
+                continue
+            raise
+        results.append({"video_id": video_id, **summary})
+    return results
+
+
 def _reserve_auto_attempt(ledger: Path, channel: str, parent: str, day: str, *, daily_limit: int) -> bool:
     """Reserve before any network post. Unknown outcomes stay blocked permanently."""
     ledger.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -332,6 +352,8 @@ def main() -> None:
     summary = sub.add_parser("summarize", help="Read and summarize recent comments locally without posting")
     summary.add_argument("video_id")
     summary.add_argument("--limit", type=int, default=20)
+    channel_summary = sub.add_parser("summarize-channel", help="Summarize recent public uploads locally; keep output private")
+    channel_summary.add_argument("--video-limit", type=int, default=5)
     auto = sub.add_parser("auto", help="Opt in to at most five fixed-template replies on one owned video")
     auto.add_argument("video_id")
     auto.add_argument("--enable-posting", action="store_true", required=True)
@@ -353,7 +375,10 @@ def main() -> None:
         token.chmod(0o600)
         print("Comment access connected locally. No comment was posted.")
         return
-    youtube = _youtube(readonly=args.command == 'summarize')
+    youtube = _youtube(readonly=args.command in {'summarize', 'summarize-channel'})
+    if args.command == "summarize-channel":
+        print(json.dumps(summarize_channel(youtube, video_limit=args.video_limit), ensure_ascii=False, indent=2))
+        return
     if args.command == "summarize":
         print(json.dumps(summarize_comments(youtube, args.video_id, limit=args.limit), ensure_ascii=False, indent=2))
         return

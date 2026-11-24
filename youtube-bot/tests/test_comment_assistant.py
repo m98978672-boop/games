@@ -45,6 +45,24 @@ class API:
 
 
 class CommentAssistantTests(unittest.TestCase):
+    def test_channel_summary_bounded_and_no_post(self):
+        from unittest.mock import patch
+        api = API()
+        with patch.object(assistant, 'recent_public_videos', return_value=['video']) as recent:
+            result = assistant.summarize_channel(api, generator=lambda *a, **k: 'Выборка: приветствия.', video_limit=1)
+        recent.assert_called_once_with(api, limit=1)
+        self.assertEqual(result, [{'video_id': 'video', 'count': 1, 'summary': 'Выборка: приветствия.'}])
+        self.assertEqual(api.inserted, [])
+        with self.assertRaises(ValueError):
+            assistant.summarize_channel(api, video_limit=11)
+
+    def test_channel_summary_stops_on_unexpected_error(self):
+        from unittest.mock import patch
+        with patch.object(assistant, 'recent_public_videos', return_value=['video']), \
+             patch.object(assistant, 'summarize_comments', side_effect=RuntimeError('API error')):
+            with self.assertRaisesRegex(RuntimeError, 'API error'):
+                assistant.summarize_channel(API())
+
     def test_list_checks_channel_ownership(self):
         api = API()
         self.assertEqual(assistant.list_comments(api, "video"), [{"id": "parent", "text": "Привет!"}])
