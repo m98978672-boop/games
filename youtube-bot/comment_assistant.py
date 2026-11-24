@@ -290,7 +290,7 @@ def _comments_disabled(exc: Exception) -> bool:
 
 
 def auto_reply_channel(youtube: Any, *, ledger: Path = LEDGER, run_limit: int = 5, daily_limit: int = 20,
-                       now: datetime | None = None) -> int:
+                       now: datetime | None = None, video_limit: int = 10) -> int:
     """Process recent public uploads with fixed text and a persistent daily cap.
 
     One machine and one persistent ledger must be used. Never delete or copy the
@@ -304,7 +304,7 @@ def auto_reply_channel(youtube: Any, *, ledger: Path = LEDGER, run_limit: int = 
     channel = _channel_id(youtube)
     day = now.astimezone(timezone.utc).date().isoformat()
     sent = 0
-    for video_id in recent_public_videos(youtube):
+    for video_id in recent_public_videos(youtube, limit=video_limit):
         try:
             comments = list_comments(youtube, video_id)
         except Exception as exc:
@@ -323,6 +323,20 @@ def auto_reply_channel(youtube: Any, *, ledger: Path = LEDGER, run_limit: int = 
             if sent >= run_limit:
                 return sent
     return sent
+
+
+def run_comment_cycle(youtube: Any, *, ledger: Path = LEDGER, generator: Any = None,
+                      video_limit: int = 5, enable_posting: bool = False) -> dict[str, Any]:
+    """Analyze first; optionally send only the existing fixed, rate-limited replies.
+
+    The caller must treat the returned summaries as private. A failed analysis
+    prevents any posting. Never run multiple instances with different ledgers.
+    """
+    if type(enable_posting) is not bool:
+        raise ValueError("enable_posting must be a boolean")
+    summaries = summarize_channel(youtube, generator=generator, video_limit=video_limit)
+    sent = auto_reply_channel(youtube, ledger=ledger, video_limit=video_limit) if enable_posting else 0
+    return {"summaries": summaries, "sent": sent}
 
 
 def _youtube(*, readonly: bool = False) -> Any:
@@ -360,6 +374,9 @@ def main() -> None:
     auto.add_argument("--limit", type=int, default=5)
     channel_auto = sub.add_parser("auto-channel", help="Reply automatically on recent public uploads with persistent daily limits")
     channel_auto.add_argument("--enable-posting", action="store_true", required=True)
+    cycle = sub.add_parser("cycle", help="Analyze comments with Qwen and optionally publish limited fixed-template replies")
+    cycle.add_argument("--video-limit", type=int, default=5)
+    cycle.add_argument("--enable-posting", action="store_true")
     answer = sub.add_parser("reply")
     answer.add_argument("video_id")
     answer.add_argument("comment_id")
@@ -375,7 +392,12 @@ def main() -> None:
         token.chmod(0o600)
         print("Comment access connected locally. No comment was posted.")
         return
-    youtube = _youtube(readonly=args.command in {'summarize', 'summarize-channel'})
+    youtube = _youtube(readonly=args.command in {'summarize', 'summarize-channel'} or (args.command == 'cycle' and not args.enable_posting))
+    if args.command == 'cycle':
+        result = run_comment_cycle(youtube, video_limit=args.video_limit, enable_posting=args.enable_posting)
+        # No comment text or AI output in potentially shared scheduler logs.
+        print(f"Проанализировано видео: {len(result['summaries'])}; опубликовано ответов: {result['sent']}.")
+        return
     if args.command == "summarize-channel":
         print(json.dumps(summarize_channel(youtube, video_limit=args.video_limit), ensure_ascii=False, indent=2))
         return

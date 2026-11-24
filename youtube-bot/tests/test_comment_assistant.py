@@ -45,6 +45,21 @@ class API:
 
 
 class CommentAssistantTests(unittest.TestCase):
+    def test_cycle_default_never_posts_and_failure_stops_posting(self):
+        from unittest.mock import patch
+        api = API()
+        with patch.object(assistant, 'summarize_channel', return_value=[{'count': 1}]), \
+             patch.object(assistant, 'auto_reply_channel', return_value=2) as post:
+            self.assertEqual(assistant.run_comment_cycle(api)['sent'], 0)
+            post.assert_not_called()
+            self.assertEqual(assistant.run_comment_cycle(api, enable_posting=True)['sent'], 2)
+            post.assert_called_once()
+        with patch.object(assistant, 'summarize_channel', side_effect=RuntimeError('Qwen unavailable')), \
+             patch.object(assistant, 'auto_reply_channel') as post:
+            with self.assertRaises(RuntimeError):
+                assistant.run_comment_cycle(api, enable_posting=True)
+            post.assert_not_called()
+
     def test_channel_summary_bounded_and_no_post(self):
         from unittest.mock import patch
         api = API()
