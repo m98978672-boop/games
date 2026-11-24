@@ -91,8 +91,10 @@ def _is_github_oidc_endpoint(parsed: urllib.parse.SplitResult) -> bool:
     )
 
 
-def github_oidc_token() -> str:
+def github_oidc_token(*, audience: str = 'youtube-bot') -> str:
     """Request a fresh audience-scoped GitHub token for each Supabase API call."""
+    if audience not in {'youtube-bot', 'youtube-comments'}:
+        raise PublishError('Unapproved GitHub OIDC audience.')
     request_url = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", "")
     request_token = os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", "")
     if not request_url or not request_token:
@@ -107,7 +109,7 @@ def github_oidc_token() -> str:
         )
     query = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
     query = [(key, value) for key, value in query if key != "audience"]
-    query.append(("audience", "youtube-bot"))
+    query.append(("audience", audience))
     url = urllib.parse.urlunsplit(("https", parsed.netloc, parsed.path, urllib.parse.urlencode(query), ""))
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {request_token}"})
     _mask(request_token)

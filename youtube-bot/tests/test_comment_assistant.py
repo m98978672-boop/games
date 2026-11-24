@@ -45,12 +45,78 @@ class API:
 
 
 class CommentAssistantTests(unittest.TestCase):
+    def test_cycle_default_never_posts_and_failure_stops_posting(self):
+        from unittest.mock import patch
+        api = API()
+        with patch.object(assistant, 'summarize_channel', return_value=[{'count': 1}]), \
+             patch.object(assistant, 'auto_reply_channel', return_value=2) as post:
+            self.assertEqual(assistant.run_comment_cycle(api)['sent'], 0)
+            post.assert_not_called()
+            self.assertEqual(assistant.run_comment_cycle(api, enable_posting=True)['sent'], 2)
+            post.assert_called_once()
+        with patch.object(assistant, 'summarize_channel', side_effect=RuntimeError('Qwen unavailable')), \
+             patch.object(assistant, 'auto_reply_channel') as post:
+            with self.assertRaises(RuntimeError):
+                assistant.run_comment_cycle(api, enable_posting=True)
+            post.assert_not_called()
+
+    def test_channel_summary_bounded_and_no_post(self):
+        from unittest.mock import patch
+        api = API()
+        with patch.object(assistant, 'recent_public_videos', return_value=['video']) as recent:
+            result = assistant.summarize_channel(api, generator=lambda *a, **k: 'Выборка: приветствия.', video_limit=1)
+        recent.assert_called_once_with(api, limit=1)
+        self.assertEqual(result, [{'video_id': 'video', 'count': 1, 'summary': 'Выборка: приветствия.'}])
+        self.assertEqual(api.inserted, [])
+        with self.assertRaises(ValueError):
+            assistant.summarize_channel(api, video_limit=11)
+
+    def test_channel_summary_stops_on_unexpected_error(self):
+        from unittest.mock import patch
+        with patch.object(assistant, 'recent_public_videos', return_value=['video']), \
+             patch.object(assistant, 'summarize_comments', side_effect=RuntimeError('API error')):
+            with self.assertRaisesRegex(RuntimeError, 'API error'):
+                assistant.summarize_channel(API())
+
     def test_list_checks_channel_ownership(self):
         api = API()
         self.assertEqual(assistant.list_comments(api, "video"), [{"id": "parent", "text": "Привет!"}])
         api.video_owner = "other"
         with self.assertRaises(ValueError):
             assistant.list_comments(api, "video")
+
+    def test_summary_cli_uses_readonly_token_and_does_not_post(self):
+        from unittest.mock import patch
+        api = API()
+        with patch.object(sys, 'argv', ['comments', 'summarize', 'video']), \
+             patch.object(assistant, '_youtube', return_value=api) as connect, \
+             patch.object(assistant, 'summarize_comments', return_value={'count': 0, 'summary': 'Нет комментариев'}):
+            assistant.main()
+        connect.assert_called_once_with(readonly=True)
+        self.assertEqual(api.inserted, [])
+        self.assertEqual(assistant.READ_SCOPE, 'https://www.googleapis.com/auth/youtube.readonly')
+        self.assertNotEqual(assistant.READ_TOKEN, assistant.TOKEN)
+
+    def test_summary_reads_owned_comments_without_posting_or_ids(self):
+        import json
+        api = API(); messages = []
+        def generate(prompt, **kwargs):
+            messages.extend(prompt)
+            return 'В этой выборке зрители приветствуют автора.'
+        result = assistant.summarize_comments(api, 'video', generator=generate)
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(api.inserted, [])
+        self.assertEqual(json.loads(messages[1]['content']), {'comments': ['Привет!']})
+        self.assertIn('недоверенные данные', messages[0]['content'])
+        api.video_owner = 'other'
+        with self.assertRaises(ValueError): assistant.summarize_comments(api, 'video', generator=generate)
+
+    def test_summary_bounds_and_rejects_links(self):
+        api = API()
+        with self.assertRaises(ValueError): assistant.summarize_comments(api, 'video', limit=21)
+        with self.assertRaises(ValueError): assistant.summarize_comments(api, 'video', generator=lambda *_args, **_kwargs: 'https://example.com')
+        api.owner = 'viewer'; api.video_owner = 'viewer'
+        self.assertEqual(assistant.summarize_comments(api, 'video', generator=lambda *_args, **_kwargs: 'unused')['count'], 0)
 
     def test_draft_is_not_a_post_and_filters_links(self):
         seen = []
@@ -159,6 +225,18 @@ class CommentAssistantTests(unittest.TestCase):
                     {"id": "abcdefghij1", "snippet": {"channelId": "other"}, "status": {"privacyStatus": "public"}},
                 ]})
         self.assertEqual(assistant.recent_public_videos(RecentAPI()), ["abcdefghijk"])
+
+    def test_reply_rejects_missing_author_identity(self):
+        from unittest.mock import patch
+        api = API()
+        missing_author = Request({'items': [{'snippet': {'videoId': 'video', 'topLevelComment':
+            {'id': 'parent', 'snippet': {}}}}]})
+        original_list = api.list
+        with patch.object(api, 'list', side_effect=lambda **kw: missing_author if kw.get('id') == 'parent' else original_list(**kw)):
+            with tempfile.TemporaryDirectory() as temp:
+                with self.assertRaisesRegex(ValueError, 'author'):
+                    assistant.post_reviewed_reply(api, parent_id='parent', reply='Спасибо!', ledger=Path(temp) / 'db')
+        self.assertEqual(api.inserted, [])
 
     def test_existing_reply_or_foreign_video_rejected(self):
         api = API()
