@@ -29,7 +29,7 @@ on:
         default: short
         required: true
       batch_count:
-        description: "Sequential queue size (1–5 Shorts or 1–2 long); requires publish_at when > 1"
+        description: "Sequential queue size (1–5 Shorts or 1–2 long); blank publish_at picks a regular slot"
         type: string
         default: "1"
         required: true

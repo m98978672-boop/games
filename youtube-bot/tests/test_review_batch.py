@@ -15,7 +15,10 @@ class ReviewBatchTests(unittest.TestCase):
         now = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
         self.assertEqual(plan(2, 'long', '2026-11-25 20:30', now=now), ['2026-11-25 20:30', '2026-11-26 20:30'])
         self.assertEqual(plan(1, 'short', '', now=now), [''])
-        for args in [(0, 'short', ''), (6, 'short', ''), (3, 'long', ''), (2, 'short', ''), (1, 'other', '')]:
+        self.assertEqual(plan(5, 'short', '2026-11-25 08:00', now=now), ['2026-11-25 08:00', '2026-11-25 12:00', '2026-11-26 08:00', '2026-11-26 12:00', '2026-11-27 08:00'])
+        self.assertEqual(plan(2, 'short', '', now=now), ['2026-11-25 08:00', '2026-11-25 12:00'])
+        self.assertEqual(plan(2, 'long', '', now=now), ['2026-11-25 06:00', '2026-11-26 06:00'])
+        for args in [(0, 'short', ''), (6, 'short', ''), (3, 'long', ''), (1, 'other', '')]:
             with self.subTest(args=args), self.assertRaises(ValueError):
                 plan(*args, now=now)
 
