@@ -269,10 +269,17 @@ check('карта истории видна: места, переходы и н�
 
 check('не топчется: петли и обратные ходы в историю — в последнюю очередь, плюс стоп-кран',
   expPy.includes('def is_loop') && expPy.includes('came_from') && expPy.includes('стоп-кран')
-  && expPy.includes('два места') && expPy.includes("return ' '.join((text or '').split()).lower()"));
+  && expPy.includes('два места') && expPy.includes("hashlib.sha1(norm.encode('utf-8'))"));
 
 check('диалог подтверждения в истории: жмёт «OK», а не «Cancel»',
   expPy.includes("('ok', 'okay', 'yes', 'да'") && expPy.includes('affirm'));
+
+check('карта истории помнится между прогонами: место — хэш, карта едет в репозиторий',
+  expPy.includes('def to_cache') && expPy.includes('def load_cache') && expPy.includes('hashlib.sha1')
+  && expWf.includes('storymap.json') && expWf.includes('--memo'));
+
+check('долгая история: окно до 10 минут и до шести заходов, а не 180 секунд',
+  expPy.includes('min(600, seconds)') && expPy.includes('runs=6') && !expPy.includes('min(180, seconds)'));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

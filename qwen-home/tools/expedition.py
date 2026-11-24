@@ -23,6 +23,7 @@
   error         — сеть/браузер не дали даже открыть.
 """
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -418,13 +419,14 @@ def robots_allows(url):
         return True, f'robots.txt не прочитался ({type(err).__name__}) — иду осторожно'
 
 
-def run(url, seconds, out, task_keys='', interval_ms=0):
+def run(url, seconds, out, task_keys='', interval_ms=0, memo_from=None):
     from playwright.sync_api import sync_playwright  # ленивая: --help и тесты логики без браузера
 
     out.mkdir(parents=True, exist_ok=True)
     video_dir = out / 'video-raw'
     report = Report(url)
-    deadline = time.monotonic() + max(20, min(180, seconds))
+    # Прогон целиком: до 10 минут, чтобы история успела пройти несколько раз.
+    deadline = time.monotonic() + max(20, min(600, seconds))
 
     allowed, robots_note = robots_allows(url)
     report.step('вежливый гость: проверка robots.txt', robots_note)
@@ -521,7 +523,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
                 shot('03-story.png')
                 visited = set()
-                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=3)
+                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=6)
                 report.data['story'] = story
                 mp = story.get('map') or {}
                 fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
@@ -945,10 +947,11 @@ class StoryMap:
 
     @staticmethod
     def key(text):
-        # Ключ — ВЕСЬ текст, а не первые 80 знаков: у пассажей Lost Spot общее
-        # начало («You at in front of your house…»), и по обрезку все места дома
-        # сливались в одно, а петли не находились.
-        return ' '.join((text or '').split()).lower()
+        # Ключ — хэш ВСЕГО текста пассажа: у Lost Spot общее начало («You at in
+        # front of your house…»), и по обрезку все места дома сливались в одно.
+        # Хэш ещё и компактен — карту можно хранить между прогонами.
+        norm = ' '.join((text or '').split()).lower()
+        return hashlib.sha1(norm.encode('utf-8')).hexdigest()[:16]
 
     def see(self, text):
         """Записать место в карту и вернуть, что в нём видно."""
@@ -1010,6 +1013,30 @@ class StoryMap:
                 'energetic': sum(1 for n in self.nodes.values() if n.get('energy', 0) > 0),
                 'tired': sum(1 for n in self.nodes.values() if n.get('energy', 0) < 0),
                 'finds': sorted({f for n in self.nodes.values() for f in n.get('finds', [])})}
+
+    def to_cache(self):
+        """Слепок карты для следующего прогона: места, переходы, что нажато."""
+        places = {k: {'text': v.get('text', '')[:160], 'visits': v.get('visits', 0),
+                      'energy': v.get('energy', 0), 'finds': v.get('finds', []),
+                      'clues': v.get('clues', 0), 'open': bool(v.get('open'))}
+                  for k, v in self.nodes.items()}
+        return {'places': places,
+                'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
+                'tried': sorted([list(t) for t in self.tried])}
+
+    def load_cache(self, data):
+        """Вспомнить карту прошлого прогона: там уже есть места и переходы."""
+        if not data:
+            return 0
+        for k, v in (data.get('places') or {}).items():
+            self.nodes[k] = dict(v)
+        for e in (data.get('links') or []):
+            if e not in self.edges:
+                self.edges.append(e)
+        for pair in (data.get('tried') or []):
+            if len(pair) == 2:
+                self.tried.add((pair[0], pair[1]))
+        return len(self.nodes)
 
     def as_report(self):
         nodes = [{'key': k[:60], 'visits': v['visits'], 'energy': v.get('energy', 0),
@@ -1165,7 +1192,7 @@ def restart_story(page, report):
         return False
 
 
-def read_story(page, seconds, out, report, shot, runs=3):
+def read_story(page, seconds, out, report, shot, runs=6):
     """Пройти сюжетную игру чтением и добрать ветки, которых ещё не видела.
 
     Один заход — до финала. Если время осталось и в карте есть неизведанные
@@ -1174,8 +1201,28 @@ def read_story(page, seconds, out, report, shot, runs=3):
     """
     import random
     rng = random.Random(7)
-    deadline = time.monotonic() + max(20, min(180, seconds))
+    # Окно истории: до 10 минут. Раньше было 180 с — на второй заход едва
+    # хватало, на третий не оставалось вовсе.
+    deadline = time.monotonic() + max(20, min(600, seconds))
     story_map = StoryMap()
+    # Память между прогонами: карта прошлой экспедиции в тот же адрес. Без неё
+    # каждый прогон начинал знание с нуля и топтался по тем же местам.
+    memo_path = out / 'storymap.json'
+    memo_loaded = 0
+    try:
+        # Сначала память прошлых прогонов из репозитория (её подкладывает
+        # workflow), потом своя папка — на случай локального повтора.
+        for cand in ([Path(memo_from)] if memo_from else []) + [memo_path]:
+            if cand and Path(cand).exists():
+                n = story_map.load_cache(json.loads(Path(cand).read_text(encoding='utf-8')))
+                if n:
+                    memo_loaded = n
+                    break
+            if memo_loaded:
+                report.step('вспомнила карту',
+                            f'в прошлый раз знала {memo_loaded} мест и {len(story_map.tried)} нажатых вариантов — начинаю не с нуля')
+    except Exception as err:
+        report.step('память карты', f'прошлую карту не прочитать: {err}')
     visited = set()
     path, endings, runs_done = [], [], []
     report.step('читаю историю',
@@ -1311,6 +1358,13 @@ def read_story(page, seconds, out, report, shot, runs=3):
                     f'заход {run}: мест в карте {len(story_map.nodes)}, нажато вариантов {all_choice_pairs}; '
                     + ('есть куда идти — начинаю заново' if run < runs else 'заходов хватит'))
 
+    # Карту сохраняем рядом с отчётом — её подхватит следующий прогон.
+    try:
+        memo_path.write_text(json.dumps(story_map.to_cache(), ensure_ascii=False), encoding='utf-8')
+        report.step('карта сохранена', f'{len(story_map.nodes)} мест для следующего прогона')
+    except Exception as err:
+        report.step('карта', f'не сохранилась: {err}')
+
     hit = [p for p in path if p.get('finds')]
     return {
         'moves': sum(r['moves'] for r in runs_done),
@@ -1322,6 +1376,7 @@ def read_story(page, seconds, out, report, shot, runs=3):
         'map': story_map.as_report(),
         'sawFinds': hit[:5],
         'freshPlaces': sum(r['newPlaces'] for r in runs_done),
+        'remembered': memo_loaded,
     }
 
 def finish(browser, context, video_dir, out, report):
@@ -1353,8 +1408,9 @@ def main():
     parser.add_argument('--keys', default='', help='план клавиш из задания, через запятую')
     parser.add_argument('--interval-ms', type=int, default=0, help='ритм нажатий из задания, мс')
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--memo', default='', help='прошлая карта истории: следующая экспедиция её вспомнит')
     args = parser.parse_args()
-    return run(args.url, args.seconds, args.out, args.keys, args.interval_ms)
+    return run(args.url, args.seconds, args.out, args.keys, args.interval_ms, args.memo)
 
 
 if __name__ == '__main__':
