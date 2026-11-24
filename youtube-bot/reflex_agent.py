@@ -64,6 +64,8 @@ class ReflexAgent:
         self.pacer = pacer if pacer is not None else ActionPacer(self.profile)
         self.pending_bursts: list[dict] = []
         self._intent: str | None = None
+        self._last_perception: Perception | None = None
+        self._last_decision: Decision | None = None
         self.windows = 0
         if memory is not None:
             self.controller.memory = memory
@@ -124,6 +126,10 @@ class ReflexAgent:
         action_window_ends = self._action_window_ends
         perception = self.controller.observe(png)
         perception_ended = time.monotonic()
+        # Close the loop on the *previous* decision: this frame is what the game
+        # looked like after that action ran, so ``changed`` is its outcome.
+        if self._last_perception is not None and self._last_decision is not None:
+            self.controller.note_outcome(self._last_perception, self._last_decision, perception.changed)
         # The advisor sees the cheap perception summary; screen content stays
         # untrusted and the model's answer is filtered against the profile.
         decision: Decision = self.controller.decide(
@@ -144,6 +150,7 @@ class ReflexAgent:
             intent=decision.intent, action=action, source=decision.source,
             overlap_ms=round(overlap_ms * 1000.0, 2),
             perception_started_before_action_finished=overlap_ms > 0))
+        self._last_perception, self._last_decision = perception, decision
         self.stats.pacer = self.pacer.stats.summary()
         elapsed = time.monotonic() - tick_started
         if elapsed > MAX_STEP_SECONDS:

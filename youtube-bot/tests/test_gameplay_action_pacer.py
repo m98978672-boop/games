@@ -150,6 +150,14 @@ class RunnerTests(unittest.TestCase):
         self.assertLessEqual(summary['decision_max_ms'], 2000.0)
         self.assertEqual(summary['published'], False)
 
+    def test_agent_learns_from_the_following_frame(self):
+        from gameplay.skill_memory import SkillMemory
+        memory = SkillMemory()
+        agent = ReflexAgent('keyboard', memory=memory)
+        for step in range(4):
+            agent(frame(20 * step), step)
+        self.assertTrue(memory.dump(), 'outcomes must be recorded from real frames')
+
     def test_runner_stops_when_the_condition_fires(self):
         bridge = FakeBridge()
         agent = ReflexAgent('keyboard')
