@@ -11,6 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
+from gameplay.skill_memory import SkillMemory
+from puzzle_learning import learn_win, recall_move
 from gameplay_qwen import QwenVisionAgent, _vision_runtime, qwen_observe
 from puzzle_supervisor import validate_board, legal_indices, distance, feedback, avoid_immediate_undo, avoid_recent_states, verify_transition, board_hint
 
@@ -22,6 +24,8 @@ base_goal = ('Solve the finite 15-puzzle: arrange numbers in ascending order, bl
 agent = QwenVisionAgent(base_goal, actions, observer=qwen_observe)
 _vision_runtime()  # Avoid wasting the active game session on loading weights.
 trace, outcome, no_progress = [], 'time_limit', 0
+memory = SkillMemory(os.environ.get('PUZZLE_SKILL_DB') or record / 'skills.sqlite3')
+route = []
 with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
     game = Path(temp) / 'game'; game.mkdir()
     for name in ('index.html','style.css','script.js'):
@@ -50,11 +54,15 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
             agent.allowed = tuple(actions[i] for i in legal)
             # Telemetry is validated and provided as external assistance, not learned knowledge.
             agent.objective = base_goal + ' ' + board_hint(before) + (' ' + hint if hint else '')
-            png = base64.b64decode(obs['screenshot_png_base64'],validate=True)
-            inference_start = time.monotonic()
-            agent(png, len(trace))
-            inference_seconds = time.monotonic() - inference_start
-            index = actions.index(agent.decisions[-1])
+            index = recall_move(memory, before, legal)
+            recalled = index is not None
+            inference_seconds = 0.0
+            if index is None:
+                png = base64.b64decode(obs['screenshot_png_base64'],validate=True)
+                inference_start = time.monotonic()
+                agent(png, len(trace))
+                inference_seconds = time.monotonic() - inference_start
+                index = actions.index(agent.decisions[-1])
             cell = diag['cells'][index]
             obs = bridge.step({'click':[cell['x'],cell['y']], 'duration_ms':250})
             if obs.get('type') != 'observation' or obs.get('step') != len(trace)+2:
@@ -63,6 +71,8 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
             moved = verify_transition(before, after, index)
             if obs['puzzle_telemetry']['won'] and after != list(range(1, 16)) + [0]:
                 raise RuntimeError('Reported win contradicts the puzzle board')
+            if moved:
+                route.append((before, index, after))
             points, hint = feedback(before, after, best=best, previous=previous, history=history)
             now = distance(after)
             if now < best:
@@ -70,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
             else:
                 no_progress += 1
             trace.append({'browser_frame_timing':obs.get('browser_frame_timing'), 'screenshot_ms':obs.get('screenshot_ms'),
-                          'model_inference_seconds':round(inference_seconds, 3), 'step':len(trace)+1,'action':agent.decisions[-1], 'game_reported_distance':now,
+                          'model_inference_seconds':round(inference_seconds, 3), 'step':len(trace)+1,'action':actions[index], 'action_source':'verified_memory' if recalled else 'model', 'game_reported_distance':now,
                           'feedback_score':points, 'move_verified':moved, 'blocked_immediate_undo':blocked, 'blocked_recent_states':recent_blocked, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
                           'game_reported_win':obs['puzzle_telemetry']['won']})
             print('PUZZLE_STEP='+json.dumps(trace[-1]),flush=True)
@@ -86,7 +96,10 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
     seconds = float(info['format']['duration'])
     if seconds <= 0 or not any(s.get('codec_type') == 'video' for s in info['streams']):
         raise RuntimeError('Invalid actual recording')
-    result = {'game':'16 Puzzle', 'source':'https://github.com/kunjgit/GameZone',
+    learned = learn_win(memory, route, reported_win=outcome == 'game_reported_win')
+    memory.export(record / 'skills.json')
+    memory.close()
+    result = {'learned_positions':learned, 'memory_actions':sum(row['action_source'] == 'verified_memory' for row in trace), 'game':'16 Puzzle', 'source':'https://github.com/kunjgit/GameZone',
               'author':'Kunj Git contributors','game_code_license':'Apache-2.0',
               'asset_and_recording_rights_verified':False, 'outcome':outcome, 'duration_seconds':round(seconds,2),
               'duration_at_least_20_minutes':seconds>=1200,'qualifies_for_release':False,
