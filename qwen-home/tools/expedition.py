@@ -1059,29 +1059,35 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     """
     if not choices:
         return None, False
-    # Диалог подтверждения: сначала «OK», а не «Cancel» — иначе она отменяет
-    # собственный вход в историю (так и было: первый ход второго захода — Cancel).
+    k = passage or ''
+
+    def not_tried(c):
+        """Этот выбор в этом месте ещё не нажимали?"""
+        if story_map is not None and passage:
+            return (k, c.get('label')) not in story_map.tried
+        return here_key(c) not in visited
+
+    def here_key(c):
+        return (k, c.get('key', c.get('label', '')))
+
+    # Диалог подтверждения: сначала «OK», а не «Cancel».
     if len(choices) <= 3:
         affirm = [c for c in choices if (c.get('label') or '').strip().lower() in
                   ('ok', 'okay', 'yes', 'да', 'продолжить', 'continue', 'next', 'далее')]
         if affirm:
             return affirm[0], True
-    here = lambda c: (passage or '', c.get('key', c.get('label', '')))
-    fresh = [c for c in choices if here(c) not in visited]
+
+    # ГЛАВНОЕ: идём по ещё не нажатым ВЫБОРАМ. Раньше я считал новизну по месту,
+    # куда пришла, — и после «house» любой переход выглядел новым: она крутила
+    # дом → кухня → «Go After Spot» → дом шесть заходов подряд.
+    fresh = [c for c in choices if not_tried(c)]
     pool = fresh or choices
 
-    if story_map is not None and passage:
-        # Петля (вариант возвращает туда же) — это НЕ новое место: сначала
-        # смотрим, куда он вёл в прошлый раз. Иначе «house → Leave quietly!»
-        # считается неизведанным и повторяется, пока стоп-кран не остановит.
-        no_loop_choices = [c for c in choices if not story_map.is_loop(passage, c.get('label'), came_from)]
-        unseen = story_map.untried_targets(passage, no_loop_choices)
-        if unseen:
-            pool = unseen
-        else:
-            not_tried = story_map.fresh_choices(passage, choices)
-            if not_tried:
-                pool = not_tried
+    # Петля (ведёт туда же, откуда пришла) — в самом конце.
+    if passage and len(pool) > 1:
+        no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)] if story_map else pool
+        if no_loops:
+            pool = no_loops
 
     # осторожность: вымотана — сначала передохнуть, даже если отдых уже нажимала.
     # Отдых ищем среди ВСЕХ вариантов: в карте он может быть «изведан», но силы
@@ -1095,18 +1101,6 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             if far:
                 pool = far
 
-    # Петли («Leave quietly!» возвращает туда же, откуда пришла) — в самый
-    # конец: иначе второй заход крутился house → Leave quietly! → house двадцать раз.
-    if story_map is not None and passage and len(pool) > 1:
-        no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)]
-        if no_loops:
-            pool = no_loops
-
-    if times_here >= 2 and len(pool) > 1:
-        exits = [c for c in pool if any(w in c.get('label', '').lower()
-                                        for w in ('back', 'home', 'house', 'door', 'outside', 'leave', 'return'))]
-        if exits:
-            pool = exits
 
     pick = pool[0] if rng is None else pool[rng.randrange(len(pool))]
     return pick, bool(fresh)
