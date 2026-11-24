@@ -185,6 +185,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   box-shadow: inset 0 -2px 0 var(--accent);
 }
 
+.nav-links a.nav-link-video { color: #ffacb6; }
+.nav-links a.nav-link-video:hover { color: #fff; background: rgba(255, 74, 97, .14); }
+
 .nav-actions {
   display: flex;
   align-items: center;
@@ -271,11 +274,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: linear-gradient(90deg, rgba(33, 162, 255, 0.28), rgba(33, 162, 255, 0.12));
   color: #ffffff;
 }
-.ribbon-link.is-highlight {
+.ribbon-link.is-highlight,
+.ribbon-link.is-video {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
+
+.ribbon-link.is-video { color: #ffe2e5; }
+.ribbon-link.is-video:hover { background: rgba(255, 73, 96, .25); }
+.ribbon-link.is-video .ribbon-pill { background: rgba(255, 104, 123, .22); color: #ffe1e4; }
 
 .ribbon-pill {
   padding: 1px 6px;
@@ -672,6 +680,156 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: var(--ink-dim);
 }
 
+/* =========================== Борис Видео — Games media spotlight =========================== */
+.video-catalog-feature {
+  max-width: 1320px;
+  margin: 0 auto 20px;
+  padding: 0 22px;
+}
+
+.video-catalog-feature-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(230px, .46fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(18px, 3vw, 36px);
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid rgba(255, 104, 123, .32);
+  border-radius: 7px;
+  background:
+    radial-gradient(500px 260px at 88% 18%, rgba(108, 72, 139, .19), transparent 72%),
+    linear-gradient(110deg, #121722, #1b1d2b 64%, #201b2a);
+  box-shadow: 0 12px 34px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.035);
+  isolation: isolate;
+}
+
+.video-catalog-poster {
+  position: relative;
+  z-index: 1;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(255, 221, 185, .32);
+  border-radius: 5px;
+  background: #141523;
+  box-shadow: 0 8px 22px rgba(0,0,0,.34);
+}
+
+.video-catalog-poster img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  transition: transform .28s ease, filter .25s ease;
+}
+
+.video-catalog-poster:hover img { transform: scale(1.035); filter: brightness(.78); }
+.video-catalog-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.36);
+  border-radius: 50%;
+  background: rgba(255,65,84,.94);
+  color: #fff;
+  font-size: 20px;
+  opacity: 0;
+  transform: translate(-50%, -43%) scale(.9);
+  transition: opacity .18s ease, transform .18s ease;
+  box-shadow: 0 7px 20px rgba(0,0,0,.32);
+}
+.video-catalog-poster:hover .video-catalog-play,
+.video-catalog-poster:focus-visible .video-catalog-play {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.video-catalog-poster-tag {
+  position: absolute;
+  left: 10px;
+  bottom: 9px;
+  padding: 4px 7px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 3px;
+  background: rgba(14,16,23,.82);
+  color: #ffe7bf;
+  font: 700 9px/1.2 var(--mono);
+  letter-spacing: .08em;
+}
+.video-catalog-copy { position: relative; z-index: 1; padding: 4px 8px 4px 0; }
+.video-catalog-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  color: #ff9aa5;
+  font: 800 10px/1.2 var(--mono);
+  letter-spacing: .12em;
+}
+.video-catalog-kicker span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff596c;
+  box-shadow: 0 0 10px rgba(255,89,108,.7);
+}
+.video-catalog-copy h2 {
+  color: #fff;
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 820;
+  letter-spacing: -.035em;
+  line-height: 1.15;
+}
+.video-catalog-description {
+  max-width: 700px;
+  margin-top: 7px;
+  color: #c4c4ce;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.video-catalog-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  color: #9298a7;
+  font-size: 11px;
+}
+.video-catalog-meta i { width: 3px; height: 3px; border-radius: 50%; background: #777d88; }
+.video-catalog-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 13px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,101,119,.52);
+  border-radius: 4px;
+  background: linear-gradient(135deg, #ed4259, #bc294b);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 5px 16px rgba(207,47,75,.2);
+  transition: filter .16s, transform .16s;
+}
+.video-catalog-cta:hover { color: #fff; filter: brightness(1.1); transform: translateY(-1px); }
+.video-catalog-cta span { font-size: 17px; line-height: .8; }
+.video-catalog-glow {
+  position: absolute;
+  z-index: 0;
+  right: -112px;
+  bottom: -222px;
+  width: 340px;
+  height: 340px;
+  border: 1px solid rgba(255,197,102,.13);
+  border-radius: 50%;
+  box-shadow: 0 0 0 31px rgba(255,197,102,.025), 0 0 0 67px rgba(255,197,102,.018);
+  pointer-events: none;
+}
+
 .link-btn {
   border: 0;
   background: transparent;
@@ -824,6 +982,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   background: rgba(117, 176, 34, 0.28);
   color: #ffffff;
 }
+.side-link.is-video { color: #ffb2bd; }
+.side-link.is-video:hover { background: rgba(255, 74, 97, .13); color: #fff; }
+.side-link.is-video .side-badge { background: rgba(255, 80, 103, .14); color: #ffc2ca; }
 
 .side-badge {
   padding: 2px 6px;
@@ -2723,4 +2884,16 @@ body.ai-fullscreen .portal-ai-frame-wrap {
   border-color: #34d399;
   background: rgba(16, 185, 129, 0.14);
   box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.22);
+}
+
+@media (max-width: 640px) {
+  .video-catalog-feature { margin-bottom: 16px; padding: 0 12px; }
+  .video-catalog-feature-inner { grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 11px; }
+  .video-catalog-poster { width: 100%; max-width: 520px; }
+  .video-catalog-copy { padding: 0 2px 2px; }
+  .video-catalog-copy h2 { font-size: 23px; }
+  .video-catalog-description { font-size: 12px; }
+  .video-catalog-meta { font-size: 10px; }
+  .video-catalog-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .video-catalog-glow { right: -190px; bottom: -245px; }
 }
