@@ -1,79 +1,79 @@
 {
-  "updatedAt": "2026-11-24 18:59 UTC",
+  "updatedAt": "2026-11-24 22:34 UTC",
   "source": "ru.wikipedia.org",
   "note": "Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.",
   "recent": [
     {
-      "title": "Реликтовое излучение",
-      "user": "Roxiffe-le-boim",
-      "comment": "/* Природа излучения */ бред то какой",
-      "at": "2026-11-24T18:59:32Z"
+      "title": "Фаза проекта",
+      "user": "XMHNHMX",
+      "comment": "Создана, прошу править по мере готовности, возможности и желания",
+      "at": "2026-11-24T22:34:11Z"
     },
     {
-      "title": "Жизнь и приключения робота-подростка",
-      "user": "MoonLight5648",
-      "comment": "/* Главные персонажи */ Добавил ссылку на статью",
-      "at": "2026-11-24T18:59:15Z"
-    },
-    {
-      "title": "Волохин, Евгений Дмитриевич",
+      "title": "Волынская резня",
       "user": "InternetArchiveBot",
-      "comment": "Спасено источников — 3, отмечено мёртвыми — 0. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
-      "at": "2026-11-24T18:59:13Z"
+      "comment": "Спасено источников — 1, отмечено мёртвыми — 4. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-24T22:34:03Z"
     },
     {
-      "title": "Гаврилов, Михаил Аполлонович",
-      "user": "Kalendar",
-      "comment": "оформление",
-      "at": "2026-11-24T18:58:57Z"
-    },
-    {
-      "title": "Волохин, Александр Осипович",
-      "user": "InternetArchiveBot",
-      "comment": "Спасено источников — 2, отмечено мёртвыми — 0. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
-      "at": "2026-11-24T18:58:47Z"
-    },
-    {
-      "title": "Австрийский чёрный крест",
-      "user": "Wi1-ch",
-      "comment": "",
-      "at": "2026-11-24T18:58:46Z"
-    },
-    {
-      "title": "Казахи",
-      "user": "GnuUserr",
-      "comment": "/* Экзоэтнонимы казахов */",
-      "at": "2026-11-24T18:58:38Z"
-    },
-    {
-      "title": "Ангелос Акотантос",
-      "user": "Mrkhlopov",
-      "comment": "/* История отождествения автора Завещания с создателем подписных икон */ оформление",
-      "at": "2026-11-24T18:58:17Z"
-    },
-    {
-      "title": "Магнит (компания)",
-      "user": "~2026-61827-45",
-      "comment": "/* */",
-      "at": "2026-11-24T18:58:13Z"
-    },
-    {
-      "title": "Австрийский Красный Крест",
-      "user": "Wi1-ch",
-      "comment": "",
-      "at": "2026-11-24T18:58:12Z"
-    },
-    {
-      "title": "Пятёрочка",
+      "title": "Devil Pray",
       "user": "EyeBot",
-      "comment": "автоматическая отмена правки участника [[special:contribs/~2026-61906-10|~2026-61906-10]] - R:6B ORES: 0.8699",
-      "at": "2026-11-24T18:58:04Z"
+      "comment": "автоматическая отмена правки участника [[special:contribs/~2026-61659-88|~2026-61659-88]] - R:5E ORES: 0.1060",
+      "at": "2026-11-24T22:33:59Z"
     },
     {
-      "title": "Ёж Сильвер",
-      "user": "MoonLight5648",
-      "comment": "Добавил ссылку на актёра озвучки Сильвера и обновил информацию",
-      "at": "2026-11-24T18:58:00Z"
+      "title": "Devil Pray",
+      "user": "~2026-61659-88",
+      "comment": "перевод с английского",
+      "at": "2026-11-24T22:33:30Z"
+    },
+    {
+      "title": "Яблочко",
+      "user": "Cinnabon Soleil",
+      "comment": "/* Танец */ источники, стиль",
+      "at": "2026-11-24T22:33:03Z"
+    },
+    {
+      "title": "Боатенг, Эммануэль (футболист, 1994)",
+      "user": "Darkhan",
+      "comment": "/* */ иллюстрирование",
+      "at": "2026-11-24T22:32:53Z"
+    },
+    {
+      "title": "Дискография Алана Уокера",
+      "user": "Invincible Mannn",
+      "comment": "",
+      "at": "2026-11-24T22:32:37Z"
+    },
+    {
+      "title": "Варенье",
+      "user": "EyeBot",
+      "comment": "автоматическая отмена правки участника [[special:contribs/~2026-62018-24|~2026-62018-24]] - R:1B LWA: 0.9940 ORES: 0.876",
+      "at": "2026-11-24T22:32:32Z"
+    },
+    {
+      "title": "Нела, Себастьяно",
+      "user": "AleUst",
+      "comment": "/* */ оформление",
+      "at": "2026-11-24T22:32:15Z"
+    },
+    {
+      "title": "Варенье",
+      "user": "~2026-62018-24",
+      "comment": "",
+      "at": "2026-11-24T22:32:13Z"
+    },
+    {
+      "title": "Волынская область",
+      "user": "InternetArchiveBot",
+      "comment": "Спасено источников — 2, отмечено мёртвыми — 5. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-24T22:31:53Z"
+    },
+    {
+      "title": "Португальская готика",
+      "user": "Kent Wang",
+      "comment": "Azulejos in the terrace of gothic cloister of Sé do Porto 29.jpg",
+      "at": "2026-11-24T22:31:34Z"
     }
   ],
   "letters": [
@@ -539,482 +539,5 @@
     ],
     "doneCount": 0,
     "updatedAt": "2026-11-24 05:35 UTC"
-  },
-  "games": {
-    "schema": "kvenya-games-v1",
-    "started": "2026-11-24T18:57:07.376Z",
-    "chess": {
-      "ok": true,
-      "depth": 3,
-      "wins": 0,
-      "losses": 0,
-      "draws": 0,
-      "unfinished": 0,
-      "games": 10,
-      "avgPlies": 0,
-      "lostPieces": 0,
-      "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-      "raw": ""
-    },
-    "island": {
-      "ok": true,
-      "depth": 4,
-      "mine": {
-        "wins": 6,
-        "games": 6,
-        "avgTurns": 59
-      },
-      "baseline": {
-        "wins": 0,
-        "games": 6,
-        "avgTurns": 39
-      },
-      "details": [
-        {
-          "seed": 1,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 55
-        },
-        {
-          "seed": 2,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 53
-        },
-        {
-          "seed": 3,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 55
-        },
-        {
-          "seed": 4,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 55
-        },
-        {
-          "seed": 5,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 53
-        },
-        {
-          "seed": 6,
-          "win": true,
-          "turns": 59,
-          "why": "поселение стоит: запасы, стройка и защита",
-          "built": 54
-        }
-      ]
-    },
-    "depthCurve": [
-      {
-        "depth": 2,
-        "wins": 3,
-        "games": 3,
-        "avgTurns": 82
-      },
-      {
-        "depth": 3,
-        "wins": 3,
-        "games": 3,
-        "avgTurns": 82
-      },
-      {
-        "depth": 4,
-        "wins": 3,
-        "games": 3,
-        "avgTurns": 59
-      }
-    ],
-    "history": [
-      {
-        "schema": "kvenya-games-v1",
-        "started": "2026-11-24T18:57:07.376Z",
-        "chess": {
-          "ok": true,
-          "depth": 3,
-          "wins": 0,
-          "losses": 0,
-          "draws": 0,
-          "unfinished": 0,
-          "games": 10,
-          "avgPlies": 0,
-          "lostPieces": 0,
-          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-          "raw": ""
-        },
-        "island": {
-          "ok": true,
-          "depth": 4,
-          "mine": {
-            "wins": 6,
-            "games": 6,
-            "avgTurns": 59
-          },
-          "baseline": {
-            "wins": 0,
-            "games": 6,
-            "avgTurns": 39
-          },
-          "details": [
-            {
-              "seed": 1,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 2,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 3,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 4,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 5,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 6,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 54
-            }
-          ]
-        },
-        "depthCurve": [
-          {
-            "depth": 2,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 3,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 4,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 59
-          }
-        ]
-      },
-      {
-        "schema": "kvenya-games-v1",
-        "started": "2026-11-23T16:40:57.481Z",
-        "chess": {
-          "ok": true,
-          "depth": 3,
-          "wins": 8,
-          "losses": 1,
-          "draws": 1,
-          "unfinished": 0,
-          "games": 10,
-          "avgPlies": 58,
-          "lostPieces": 18,
-          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-          "raw": "ИТОГ: побед 8, поражений 1, ничьих 1, недобитых 0 из 10; средняя партия 58 полуходов; своих фигур потеряно 18"
-        },
-        "island": {
-          "ok": true,
-          "depth": 4,
-          "mine": {
-            "wins": 6,
-            "games": 6,
-            "avgTurns": 59
-          },
-          "baseline": {
-            "wins": 0,
-            "games": 6,
-            "avgTurns": 39
-          },
-          "details": [
-            {
-              "seed": 1,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 2,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 3,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 4,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 5,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 6,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 54
-            }
-          ]
-        },
-        "depthCurve": [
-          {
-            "depth": 2,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 3,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 4,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 59
-          }
-        ]
-      },
-      {
-        "schema": "kvenya-games-v1",
-        "started": "2026-11-23T16:25:36.276Z",
-        "chess": {
-          "ok": true,
-          "depth": 2,
-          "wins": 10,
-          "losses": 0,
-          "draws": 0,
-          "unfinished": 0,
-          "games": 10,
-          "avgPlies": 73,
-          "lostPieces": 25,
-          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-          "raw": "ИТОГ: побед 10, поражений 0, ничьих 0, недобитых 0 из 10; средняя партия 73 полуходов; своих фигур потеряно 25"
-        },
-        "island": {
-          "ok": true,
-          "depth": 4,
-          "mine": {
-            "wins": 6,
-            "games": 6,
-            "avgTurns": 59
-          },
-          "baseline": {
-            "wins": 0,
-            "games": 6,
-            "avgTurns": 39
-          },
-          "details": [
-            {
-              "seed": 1,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 2,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 3,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 4,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 5,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 6,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 54
-            }
-          ]
-        },
-        "depthCurve": [
-          {
-            "depth": 2,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 3,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 4,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 59
-          }
-        ]
-      },
-      {
-        "schema": "kvenya-games-v1",
-        "started": "2026-11-23T16:13:40.101Z",
-        "chess": {
-          "ok": true,
-          "depth": 2,
-          "wins": 9,
-          "losses": 1,
-          "draws": 0,
-          "unfinished": 0,
-          "games": 10,
-          "avgPlies": 75,
-          "lostPieces": 29,
-          "opponent": "ФЕРЗЬ-3000 (минимакс на 2 полухода)",
-          "raw": "ИТОГ: побед 9, поражений 1, ничьих 0, недобитых 0 из 10; средняя партия 75 полуходов; своих фигур потеряно 29"
-        },
-        "island": {
-          "ok": true,
-          "depth": 4,
-          "mine": {
-            "wins": 6,
-            "games": 6,
-            "avgTurns": 59
-          },
-          "baseline": {
-            "wins": 0,
-            "games": 6,
-            "avgTurns": 39
-          },
-          "details": [
-            {
-              "seed": 1,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 2,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 3,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 4,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 55
-            },
-            {
-              "seed": 5,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 53
-            },
-            {
-              "seed": 6,
-              "win": true,
-              "turns": 59,
-              "why": "поселение стоит: запасы, стройка и защита",
-              "built": 54
-            }
-          ]
-        },
-        "depthCurve": [
-          {
-            "depth": 2,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 3,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 82
-          },
-          {
-            "depth": 4,
-            "wins": 3,
-            "games": 3,
-            "avgTurns": 59
-          }
-        ]
-      }
-    ]
   }
 }
