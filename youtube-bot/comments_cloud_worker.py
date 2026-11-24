@@ -47,7 +47,7 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
     if dry_run:
         return {'videos_analyzed': len(summaries), 'sent': 0}
     sent = 0
-    for video_id in comments.recent_public_videos(youtube, limit=5):
+    for video_id in comments.recent_public_videos(youtube, limit=50):
         try:
             recent = comments.list_comments(youtube, video_id)
         except Exception as exc:
@@ -61,7 +61,7 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
             actual_channel, verified_video = comments._verified_thread(youtube, comment['id'])
             if actual_channel != channel or verified_video != video_id:
                 raise RuntimeError('Comment ownership changed; stopping.')
-            if comments._already_replied(youtube, comment['id'], channel):
+            if comments.has_any_reply(youtube, comment['id']):
                 continue
             if api('reserve', {'parent_id': comment['id']}).get('reserved') is not True:
                 continue
@@ -76,7 +76,7 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
             if api('sent', {'parent_id': comment['id'], 'reply_id': reply_id}).get('recorded') is not True:
                 raise RuntimeError('Reply record uncertain; check Studio.')
             sent += 1
-            if sent >= 5:
+            if sent >= 20:
                 return {'videos_analyzed': len(summaries), 'sent': sent}
     return {'videos_analyzed': len(summaries), 'sent': sent}
 
