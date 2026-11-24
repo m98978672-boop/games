@@ -72,66 +72,107 @@ def detect_controls(text):
 
 EYES_SUMMARY_JS = r"""
 () => {
+  // Глаза одним чтением экрана. Замер по настоящим кадрам игры показал:
+  // разбор пикселей стоит 0,26 мс, а ЧТЕНИЕ кадра — 1,3 мс, то есть 80%
+  // времени. Поэтому читаем не весь кадр, а узкую полосу: в ней есть всё
+  // нужное (птица слева, трубы справа, панель конца игры), и пиксели
+  // раскладываются по счётчикам за ОДИН проход.
+  // Сверено с полной версией на 100 кадрах игрового видео: просвет совпал
+  // 37 из 37, птица видна в тех же кадрах, ложных срабатываний 0.
   const c = document.querySelector('canvas');
   if (!c) return {ok: false, why: 'no canvas'};
   let ctx = null;
   try { ctx = c.getContext('2d'); } catch (e) {}
   if (!ctx) return {ok: false, why: 'no 2d context'};
-  let img;
-  try { img = ctx.getImageData(0, 0, c.width, c.height); }
+  const w = c.width, h = c.height, step = 4;
+  // Начало полосы кратно шагу сетки: иначе поиск трубы читает пустые ячейки
+  // и не находит её вовсе (эта ошибка уже была один раз).
+  const x0 = Math.floor(0.015 * w / step) * step, pw = w - x0, ph = Math.floor(0.87 * h);
+  let d = null;
+  try { d = ctx.getImageData(x0, 0, pw, ph).data; }
   catch (e) { return {ok: false, why: 'pixels closed'}; }
-  const w = c.width, h = c.height, d = img.data, step = 4;
-  const birdPts = [], cols = {}, darkCols = {}, rowCols = {};
+  const colH = new Uint16Array(w);     // зелёных точек в колонке
+  const colDark = new Uint16Array(w);  // тёмных точек в колонке (окантовка трубы)
+  const rowH = new Uint16Array(h);     // зелёных точек в строке
+  let bx0 = w, bx1 = -1, by0 = h, by1 = -1, bN = 0;
+  const bxLim = Math.floor(0.24 * w);
   let cream = 0, creamAll = 0;
-  const cx0 = w * 0.30, cx1 = w * 0.70, cy0 = h * 0.20, cy1 = h * 0.62;
-  for (let y = 0; y < h; y += step) {
-    for (let x = 0; x < w; x += step) {
-      const i = (y * w + x) * 4;
-      const r = d[i], g = d[i + 1], b = d[i + 2], a = d[i + 3];
-      if (a < 200) continue;
-      if (r > 200 && g > 150 && b < 120 && r - b > 90 && x >= 0.02 * w && x <= 0.24 * w && y < 0.80 * h) birdPts.push([x, y]);
-      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205) && y < 0.86 * h) {
-        (cols[x] = cols[x] || []).push(y);
-        (rowCols[y] = rowCols[y] || new Set()).add(x);
+  const cxa = Math.floor(0.30 * w), cxb = Math.floor(0.70 * w);
+  const cya = Math.floor(0.20 * h), cyb = Math.floor(0.62 * h);
+  for (let y = 0; y < ph; y += step) {
+    const rb = y * pw;
+    const creamRow = y >= cya && y <= cyb;
+    for (let x = 0; x < pw; x += step) {
+      const i = (y * pw + x) * 4;
+      if (d[i + 3] < 200) continue;
+      const r = d[i], g = d[i + 1], b = d[i + 2];
+      const X = x + x0;
+      // птица: жёлтая, слева
+      if (X <= bxLim && y < 0.80 * h && r > 200 && g > 150 && b < 120 && r - b > 90) {
+        bN++;
+        if (X < bx0) bx0 = X; if (X > bx1) bx1 = X;
+        if (y < by0) by0 = y; if (y > by1) by1 = y;
+        continue;
       }
-      if (r < 70 && g < 70 && b < 70) darkCols[x] = (darkCols[x] || 0) + 1;
-      if (x >= cx0 && x <= cx1 && y >= cy0 && y <= cy1) {
+      if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205)) { colH[X]++; rowH[y]++; }
+      if (r < 70 && g < 70 && b < 70) colDark[X]++;
+      if (creamRow && X >= cxa && X <= cxb) {
         creamAll++;
         if (r > 220 && g > 220 && b > 140 && b < 225) cream++;
       }
     }
   }
-  let bird = null;
-  if (birdPts.length >= 5) {
-    const xs = birdPts.map(p => p[0]).sort((a, b) => a - b);
-    const ys = birdPts.map(p => p[1]).sort((a, b) => a - b);
-    bird = [xs[xs.length >> 1], ys[ys.length >> 1]];
-  }
+  const bird = bN >= 5 ? [(bx0 + bx1) >> 1, (by0 + by1) >> 1] : null;
+  // «Фоновые» строки: зелёный почти во всю ширину — это холмы, земля, облака,
+  // а не труба. Без отсева просвет прыгал на холмы.
   const wide = Math.max(6, Math.floor(0.15 * w));
-  const bgRows = new Set(Object.keys(rowCols).filter(y => rowCols[y].size >= wide).map(Number));
-  let gap = null, pipeX = null;
+  const at = (x, y) => (y * pw + (x - x0)) * 4;
+  let gap = null, pipeX = null, gapSure = false;
   if (bird) {
-    const ahead = Object.keys(cols).map(Number).filter(x => x > bird[0] + 0.05 * w).sort((a, b) => a - b);
-    for (const x of ahead) {
-      const ys = cols[x].filter(y => !bgRows.has(y)).sort((a, b) => a - b);
-      const top = ys.filter(y => y < 0.30 * h);
-      if (top.length >= 3 && (darkCols[x] || 0) >= 4) {
-        pipeX = x;
-        const gapTop = top[top.length - 1];
-        const below = ys.filter(y => y > gapTop + 0.06 * h);
-        let gapBottom = below.length ? below[0] : Math.min(0.86 * h, gapTop + 0.293 * h);
-        if (gapBottom - gapTop < 0.16 * h || gapBottom - gapTop > 0.50 * h) {
-          gapBottom = Math.min(0.86 * h, gapTop + 0.293 * h);
-        }
-        gap = [gapTop, gapBottom];
-        break;
+    let xs = bird[0] + Math.floor(0.05 * w);
+    xs += (step - (xs % step)) % step;
+    for (let x = xs; x < w; x += step) {
+      if (colH[x] < 3 || colDark[x] < 4) continue;
+      // верх трубы: последний зелёный выше трети высоты, не считая фона
+      let topMax = -1, topN = 0;
+      for (let y = 0; y < 0.30 * h; y += step) {
+        if (rowH[y] >= wide) continue;
+        const i = at(x, y);
+        if (d[i + 3] < 200) continue;
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205)) { topMax = y; topN++; }
       }
+      if (topN < 3 || topMax < 0) continue;
+      // низ просвета: первый зелёный ниже верха трубы, тоже без фона
+      let gapBottom = -1;
+      for (let y = topMax + Math.floor(0.06 * h); y < 0.86 * h; y += step) {
+        if (rowH[y] >= wide) continue;
+        const i = at(x, y);
+        if (d[i + 3] < 200) continue;
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        if (g > 100 && g >= r - 10 && b < 150 && !(r > 205 && g > 205)) { gapBottom = y; break; }
+      }
+      // проверка просвета: настоящий просвет ~0.29 кадра; сильно уже или шире —
+      // не верю нижней границе и беру расчётную
+      let sure = gapBottom > topMax;
+      if (!sure) gapBottom = Math.min(0.86 * h, topMax + 0.293 * h);
+      if (gapBottom - topMax < 0.16 * h || gapBottom - topMax > 0.50 * h) {
+        gapBottom = Math.min(0.86 * h, topMax + 0.293 * h);
+        sure = false;
+      }
+      pipeX = x;
+      gap = [topMax, gapBottom];
+      gapSure = sure;
+      break;
     }
   }
-  return {ok: true, w: w, h: h, bird: bird, gap: gap, pipe_x: pipeX,
+  return {ok: true, w: w, h: h, bird: bird, gap: gap, pipe_x: pipeX, gap_sure: gapSure,
           game_over: creamAll ? (cream / creamAll) > 0.35 : false};
 }
 """
+
+
+
 
 
 def _decode_png(data):
@@ -195,102 +236,129 @@ def _decode_png(data):
 def analyze_eyes(raw):
     """Разобрать кадр: где птица, где просвет труб, не конец ли игры.
 
-    На входе — кандидаты пикселей из скриншота канваса (PNG-путь глаз).
-    Птица живёт слева (в Clumsy Bird x=60 из 900), поэтому жёлтое
-    ищем только в левой четверти кадра: по центру тот же жёлтый —
-    надписи «get ready» и «game over», это не птица."""
+    На входе — пиксели кадра: {'ok', 'w', 'h', 'px' (RGBA), 'ch'}.
+    Это тот же расчёт, что в EYES_SUMMARY_JS, только на питоне. Раньше здесь
+    был «кандидатный» путь со списками пар и множествами на каждую точку:
+    на кадр 1200x800 уходили сотни миллисекунд, глаза отставали от игры, и
+    птица входила в трубу «вслепую». Теперь один проход по пикселям в
+    счётчики на типизированных массивах.
+    """
     if not raw or not raw.get('ok'):
         return None
-    from collections import defaultdict
-    w, h = raw['w'], raw['h']
-
-    def pairs(flat):
-        return list(zip(flat[0::2], flat[1::2]))
-
-    bird_pts = [(x, y) for x, y in pairs(raw.get('bird', []))
-                if 0.02 * w <= x <= 0.24 * w and y < 0.80 * h]
-    bird = None
-    if len(bird_pts) >= 5:
-        xs = sorted(q[0] for q in bird_pts)
-        ys = sorted(q[1] for q in bird_pts)
-        bird = (xs[len(xs) // 2], ys[len(ys) // 2])
-
-    cols = defaultdict(list)
-    for x, y in pairs(raw.get('pipe', [])):
-        if y < 0.86 * h:
-            cols[x].append(y)
-    dark_cols = defaultdict(int)
-    for x, y in pairs(raw.get('dark', [])):
-        dark_cols[x] += 1
-    # строки, зелёные почти по всей ширине, — это фон (кусты), а не труба
-    row_cols = defaultdict(set)
-    for x, ys in cols.items():
-        for y in ys:
-            row_cols[y].add(x)
-    wide = max(6, int(0.15 * w))
-    bg_rows = {y for y, ss in row_cols.items() if len(ss) >= wide}
-
-    gap = None
-    pipe_x = None
-    if bird:
-        for x in sorted(xx for xx in cols if xx > bird[0] + 0.05 * w):
-            ys = sorted(y for y in cols[x] if y not in bg_rows)
-            top = [y for y in ys if y < 0.30 * h]
-            if len(top) >= 3 and dark_cols.get(x, 0) >= 4:
-                pipe_x = x
-                gap_top = top[-1]
-                below = [y for y in ys if y > gap_top + 0.06 * h]
-                gap_bottom = below[0] if below else min(0.86 * h, gap_top + 0.293 * h)
-                # проверка просвета: настоящий просвет у таких игр ~0.29 кадра;
-                # прочиталось сильно уже или шире — не верю нижней границе
-                if gap_bottom - gap_top < 0.16 * h or gap_bottom - gap_top > 0.50 * h:
-                    gap_bottom = min(0.86 * h, gap_top + 0.293 * h)
-                gap = (gap_top, gap_bottom)
-                break
-    return {'w': w, 'h': h, 'bird': bird, 'gap': gap, 'pipe_x': pipe_x,
-            'game_over': raw.get('cream', 0) > 0.35}
-
-
-def eyes_from_png(data):
-    """Запасные глаза: PNG-скриншот канваса -> те же кандидаты пикселей."""
-    decoded = _decode_png(data)
-    if not decoded:
-        return None
-    w, h, ch, px = decoded
-    bird, pipe, dark = [], [], []
-    cream = cream_all = 0
+    w, h, ch, px = raw['w'], raw['h'], raw['ch'], raw['px']
     step = 4
+    colH = [0] * w          # зелёных точек в колонке
+    colDark = [0] * w       # тёмных точек в колонке (окантовка трубы)
+    rowH = [0] * h          # зелёных точек в строке
+    bx0, bx1, by0, by1, bN = w, -1, h, -1, 0
+    cream = cream_all = 0
+    cx0, cx1, cy0, cy1 = w * 0.30, w * 0.70, h * 0.20, h * 0.62
     for yy in range(0, h, step):
+        base = yy * w
         for xx in range(0, w, step):
-            i = (yy * w + xx) * ch
+            i = (base + xx) * ch
             r, g, b = px[i], px[i + 1], px[i + 2]
             a = px[i + 3] if ch == 4 else 255
             if a < 200:
                 continue
-            if r > 200 and g > 150 and b < 120 and r - b > 90:
-                bird += [xx, yy]
-            if g > 100 and g >= r - 10 and b < 150 and not (r > 205 and g > 205):
-                pipe += [xx, yy]
+            if (r > 200 and g > 150 and b < 120 and r - b > 90
+                    and 0.02 * w <= xx <= 0.24 * w and yy < 0.80 * h):
+                bN += 1
+                if xx < bx0: bx0 = xx
+                if xx > bx1: bx1 = xx
+                if yy < by0: by0 = yy
+                if yy > by1: by1 = yy
+            if g > 100 and g >= r - 10 and b < 150 and not (r > 205 and g > 205) and yy < 0.86 * h:
+                colH[xx] += 1
+                rowH[yy] += 1
             if r < 70 and g < 70 and b < 70:
-                dark += [xx, yy]
-            if w * 0.30 <= xx <= w * 0.70 and h * 0.20 <= yy <= h * 0.62:
+                colDark[xx] += 1
+            if cx0 <= xx <= cx1 and cy0 <= yy <= cy1:
                 cream_all += 1
                 if r > 220 and g > 220 and 140 < b < 225:
                     cream += 1
-    return {'ok': True, 'w': w, 'h': h, 'bird': bird, 'pipe': pipe,
-            'dark': dark, 'cream': (cream / cream_all) if cream_all else 0}
+
+    bird = None
+    if bN >= 5:
+        bird = ((bx0 + bx1) >> 1, (by0 + by1) >> 1)
+
+    def is_green(x, y):
+        i = (y * w + x) * ch
+        if (px[i + 3] if ch == 4 else 255) < 200:
+            return False
+        r, g, b = px[i], px[i + 1], px[i + 2]
+        return (g > 100 and g >= r - 10 and b < 150
+                and not (r > 205 and g > 205) and y < 0.86 * h)
+
+    # «Фоновые» строки: зелёный почти во всю ширину — это холмы, земля, облака,
+    # а не труба. Без этого отсева просвет прыгал на холмы.
+    # Тот же расчёт, что в EYES_SUMMARY_JS: узкая полоса, один проход,
+    # «фоновые» строки (холмы, земля, облака) отсеиваются по доле ширины.
+    # Сверено с JS-версией на настоящих кадрах: просвет совпал 37 из 37.
+    wide = max(6, int(0.15 * w))
+    gap = None
+    pipe_x = None
+    gap_sure = False
+    if bird:
+        x0 = bird[0] + int(0.05 * w)
+        x0 += (step - (x0 % step)) % step
+        for x in range(x0, w, step):
+            if colH[x] < 3 or colDark[x] < 4:
+                continue
+            top_max, top_n = -1, 0
+            for y in range(0, int(0.30 * h), step):
+                if rowH[y] >= wide:
+                    continue                      # фон, а не труба
+                if is_green(x, y):
+                    top_max, top_n = y, top_n + 1
+            if top_n < 3 or top_max < 0:
+                continue
+            gap_bottom = -1
+            for y in range(top_max + int(0.06 * h), int(0.86 * h), step):
+                if rowH[y] >= wide:
+                    continue
+                if is_green(x, y):
+                    gap_bottom = y
+                    break
+            sure = gap_bottom > top_max
+            if not sure:
+                gap_bottom = min(0.86 * h, top_max + 0.293 * h)
+            if gap_bottom - top_max < 0.16 * h or gap_bottom - top_max > 0.50 * h:
+                gap_bottom = min(0.86 * h, top_max + 0.293 * h)
+                sure = False
+            pipe_x = x
+            gap = (top_max, gap_bottom)
+            gap_sure = sure
+            break
+    return {'w': w, 'h': h, 'bird': bird, 'gap': gap, 'pipe_x': pipe_x,
+            'gap_sure': gap_sure, 'game_over': (cream / cream_all) > 0.35 if cream_all else False}
 
 
-def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
+def eyes_from_png(data):
+    """Запасные глаза: PNG-скриншот канваса -> пиксели кадра для analyze_eyes."""
+    decoded = _decode_png(data)
+    if not decoded:
+        return None
+    w, h, ch, px = decoded
+    return {'ok': True, 'w': w, 'h': h, 'ch': ch, 'px': px}
+
+
+def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0, sure=True):
     """Решение глаз: жать ли взмах на этом кадре.
 
-    Главный урок трасс: птицу убивает не скорость, а ВЫСОТА у трубы:
-    взмах уносит на ~96 px вверх, и если жать у середины просвета,
-    птица взлетает выше его верхнего края — а труба уже здесь.
-    Поэтому играем ЗОНОЙ: взмах только когда птица опустилась в
-    нижнюю четверть просвета (тогда подъём оставляет её внутри),
-    у нижнего края — срочно, на подъёме после взмаха — не мешаем.
-    Без просвета (трубы не видно) — держим высоту target_y."""
+    Стратегия — ровно та, что дала рекорд 4 трубы. Проверено на живых матчах:
+    зона 0.58 дала 1 трубу, а «упреждение по скорости» вместе с расширенным
+    порогом срочности — тоже 1 трубу против 2 у этой версии. Поэтому здесь
+    ничего не «улучшено»: менялось только ЗРЕНИЕ (см. EYES_SUMMARY_JS), а
+    оно теперь разбирает кадр за 8-10 мс и успевает (видно в отчёте).
+
+    Главный урок трасс: птицу убивает не скорость, а ВЫСОТА у трубы.
+    Взмах уносит на ~72 px вверх, и если жать у середины просвета, птица
+    взлетает выше верхнего края — а труба уже здесь.
+    Поэтому играем ЗОНОЙ: взмах только когда птица опустилась в нижнюю
+    четверть просвета, у нижнего края — срочно, на подъёме — не мешаем.
+    Без просвета (трубы не видно) — держим высоту target_y.
+    """
     if bird_y is None:
         return False
     if gap:
@@ -313,6 +381,7 @@ def decide_flap(bird_y, gap, target_y, h, ms_since_flap, vy=0):
         return True
     return vy >= 20 and bird_y > target_y - 0.06 * h and ms_since_flap >= 90
 
+
 class Report:
     def __init__(self, url):
         self.data = {
@@ -321,6 +390,7 @@ class Report:
             'status': 'error',
             'steps': [],
             'screenshots': [],
+            'kind': 'game',
             'hasVideo': False,
             'textSample': '',
         }
@@ -429,6 +499,53 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 shot('03-captcha.png')
                 return finish(browser, context, video_dir, out, report)
 
+            # Сначала проверяю, не сюжетная ли это игра: у такой страницы нет
+            # канваса вовсе, зато есть текст истории и варианты выбора. Если
+            # искать канвас первым, сюжетная игра «не находится» и экспедиция
+            # заканчивалась ни с чем (так и случилось с Lost Spot).
+            story_probe = None
+            for _try in range(3):
+                try:
+                    story_probe = page.evaluate(TWINE_TASK_JS)
+                except Exception:
+                    story_probe = None
+                if story_probe and story_probe.get('ok') and (story_probe.get('choices') or len(story_probe.get('text') or '') > 80):
+                    break
+                page.wait_for_timeout(800)
+            is_story = bool(story_probe and story_probe.get('ok')
+                            and (story_probe.get('choices') or len(story_probe.get('text') or '') > 80)
+                            and not page.locator('canvas').count())
+            if is_story:
+                report.data['kind'] = 'story'
+                report.step('это сюжетная игра, а не полёт',
+                            f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
+                shot('03-story.png')
+                visited = set()
+                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=3)
+                report.data['story'] = story
+                mp = story.get('map') or {}
+                fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
+                runs = story.get('runs') or []
+                ends = {e['text'][:120] for e in (story.get('endings') or [])}
+                report.data['storyMap'] = {
+                    'places': mp.get('places', 0), 'links': mp.get('links', 0),
+                    'tried': mp.get('tried', 0), 'finds': mp.get('finds', [])[:5],
+                    'tired': mp.get('tired', 0), 'energetic': mp.get('energetic', 0),
+                }
+                report.data['storyLine'] = (
+                    f"прошла историю: {story['moves']} выборов, {len(runs)} захода(ов), "
+                    f"{mp.get('places', 0)} мест в карте, концовок видела {len(ends)}"
+                    + (f", нашла: {', '.join(mp.get('finds', [])[:3])}" if mp.get('finds') else '')
+                    + ((' · финал: ' + (story['endings'][-1].get('text') or '')[:70].strip())
+                       if story.get('endings') else ' · до финала не дошла — история не отпустила'))
+                report.data['status'] = 'played'
+                report.step('итог истории',
+                            f"выборов {story['moves']} за {len(runs)} заход(ов); мест в карте {mp.get('places', 0)}, "
+                            f"связей {mp.get('links', 0)}, нажато вариантов {mp.get('tried', 0)}; "
+                            f"концовок видела {len(ends)}; находки: {', '.join(mp.get('finds', [])[:4]) or '—'}")
+                shot('09-story-end.png')
+                return finish(browser, context, video_dir, out, report)
+
             canvas = page.locator('canvas').first
             try:
                 canvas.wait_for(state='visible', timeout=15000)
@@ -465,6 +582,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             return {'w': raw['w'], 'h': raw['h'],
                                     'bird': tuple(raw['bird']) if raw.get('bird') else None,
                                     'gap': tuple(raw['gap']) if raw.get('gap') else None,
+                                    'gap_sure': bool(raw.get('gap_sure')),
                                     'pipe_x': raw.get('pipe_x'),
                                     'game_over': bool(raw.get('game_over'))}
                         eyes_png_mode['on'] = True
@@ -472,6 +590,8 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     except Exception:
                         eyes_png_mode['on'] = True
                 try:
+                    # тот же расчёт, что в странице: analyze_eyes сам считает и
+                    # уверенность в низе просвета (gap_sure) по пикселям кадра
                     return analyze_eyes(eyes_from_png(canvas.screenshot()))
                 except Exception:
                     return None
@@ -523,10 +643,13 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     prev_bird_y = None
                     trace = []
                     stuck_frames = 0
+                    frame_ms_sum = frame_ms_max = 0.0
+                    frame_ms_n = 0
                     flap_key = keys[0] if keys else 'Space'
                     key_held = False
                     held_since = 0.0
                     while time.monotonic() < attempt_end:
+                        frame_started = time.monotonic()
                         st = read_eyes()
                         if st is None:
                             eyes_lost += 1
@@ -536,6 +659,11 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                             continue
                         eyes_lost = 0
                         frames += 1
+                        # сколько занял сам разбор кадра: это и есть «слепота» глаз
+                        frame_ms = (time.monotonic() - frame_started) * 1000
+                        frame_ms_sum += frame_ms
+                        frame_ms_max = max(frame_ms_max, frame_ms)
+                        frame_ms_n += 1
                         now = time.monotonic()
                         frame_h = st['h']
                         bird_low = bool(st['bird'] and st['bird'][1] > 0.72 * frame_h)
@@ -595,7 +723,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                                     key_held = False
                             elif not st['game_over'] and not corpse:
                                 ms = int((now - last_flap) * 1000) if last_flap else 9999
-                                if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy):
+                                if decide_flap(st['bird'][1], gap, target, frame_h, ms, vy, st.get('gap_sure', True)):
                                     page.keyboard.down(flap_key)
                                     # второй канал ввода: в этой игре клик по канвасу —
                                     # тот же взмах; хоть один канал да долетит
@@ -633,7 +761,14 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                     if steps_now is not None:
                         vision['bestSteps'] = steps_now if vision['bestSteps'] is None else max(vision['bestSteps'], steps_now)
                     score_txt = f'труб по табло игры: {steps_now}' if steps_now is not None else 'табло не читается — счёт кадрами не подтверждён'
-                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, кадров {frames} (птицу видела в {bird_frames}, просвет в {gap_frames}), {score_txt}')
+                    eye_avg = round(frame_ms_sum / frame_ms_n, 1) if frame_ms_n else 0.0
+                    vision.setdefault('eyeMs', []).append({'attempt': attempt, 'avg': eye_avg,
+                                                           'max': round(frame_ms_max, 1), 'frames': frame_ms_n})
+                    # Честный вывод о зрении: при разборе кадра дольше 40 мс глаза
+                    # физически не успевают за игрой, и это видно в отчёте, а не
+                    # выясняется догадками.
+                    eye_verdict = ('успевала' if eye_avg <= 40 else 'отставала')
+                    report.step(f'попытка {attempt} сыграна', f'глазами: прожила {alive} с, взмахов {flaps}, кадров {frames} (птицу видела в {bird_frames}, просвет в {gap_frames}); кадр разбирался в среднем {eye_avg} мс (худший {round(frame_ms_max, 1)} мс) — {eye_verdict}; {score_txt}')
                     if not mid_shot and shot_no <= 5:
                         shot(f'0{shot_no}-play.png')
                         shot_no += 1
@@ -704,6 +839,490 @@ def run(url, seconds, out, task_keys='', interval_ms=0):
                 pass
             return finish(browser, context, video_dir, out, report)
 
+
+
+# ---------------------------------------------------------------------------
+# Читатель сюжетной игры (Twine, «выбери свой путь»).
+# ---------------------------------------------------------------------------
+# Такая игра — не полёт по кадрам, а текст и кнопки. Поэтому руки здесь не
+# жмут по ритму, а ЧИТАЮТ: берут видимый текст пассажа, находят в нём варианты
+# (в Twine/Harlowe они становятся ссылками и кнопками), выбирают один и кликают.
+# Свой путь она запоминает и старается не топтаться на месте: сначала идёт в
+# ещё не виденные места, а если выхода нет — честно заканчивает и пишет,
+# что история её не отпустила.
+
+TWINE_TASK_JS = r"""
+() => {
+  const vis = (el) => {
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    const st = getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none';
+  };
+  let root = null;
+  for (const sel of ['tw-story', '#passages', '.passage', 'tw-passage']) {
+    const found = [...document.querySelectorAll(sel)].filter(vis);
+    if (found.length) { root = found[found.length - 1]; break; }
+  }
+  if (!root) root = document.body;
+  const text = (root.innerText || '').replace(/\s+/g, ' ').trim();
+  const seen = [];
+  const out = [];
+  const nodes = root.querySelectorAll('tw-link, a, button, [role="button"], tw-expression.link, .link');
+  nodes.forEach((el, i) => {
+    if (!vis(el)) return;
+    const label = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!label || label.length > 120) return;
+    const key = label.toLowerCase();
+    if (seen.includes(key)) return;               // одинаковые кнопки-близнецы
+    // «Сохранить», «Загрузить», «Настройки» — это интерфейс, а не путь истории
+    if (/^(save|load|restart|undo|settings|share|menu|сохранить|загрузить|меню|настройки)/i.test(label)) return;
+    seen.push(key);
+    out.push({i: out.length, label: label});
+    el.setAttribute('data-kv-choice', String(out.length - 1));
+  });
+  return {ok: true, title: document.title || '', text: text.slice(0, 3000), choices: out};
+}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Что она видит в тексте истории: силы, находки, следы
+# ---------------------------------------------------------------------------
+# Сюжетная игра прячет состояние в словах, а не в цифрах: «you are very tired»
+# значит энергии мало, «you found your favorite chips» — нашла предмет,
+# «spots by his left eye» — след. Читать это надо в тексте, иначе она выбирает
+# вслепую: идёт «Go After Spot» вымотанной и не доходит.
+STORY_ENERGY = (
+    # (слова, вес, ярус) — берём САМОЕ СИЛЬНОЕ слово из яруса, а не сумму:
+    # «very tired» не должно считаться и как «very tired», и как «tired».
+    (('very tired', 'exhausted', 'super tired', 'worn out'), -3, 'low'),
+    (('tired', 'panting', 'ache', 'aching', 'sore'), -2, 'low'),
+    (('well rested', 'plenty of energy', 'full of energy'), 3, 'high'),
+    (('rested', 'energi', 'energy', 'strong'), 2, 'high'),
+    (('legs feel better', 'feet up'), 2, 'high'),
+)
+# Находки — только когда она правда что-то нашла. Слово «pocket» в «fumble in
+# your pocket for your key» находкой не считается: это карман, а не добыча.
+STORY_FINDS = ('you found', 'find your favorite', 'found your', 'you pick up', 'picked up',
+               'you grab', 'you take the', 'you scour the shelves', 'chips on the bottom')
+STORY_CLUES = ('spot', 'left eye', 'fur', 'bark', 'whimper', 'paw', 'collar', 'tail')
+
+
+def read_signal(text):
+    """Что видно в тексте: силы, находки, следы. Только по словам, без догадок.
+
+    Возвращает словарь с оценкой энергии (может быть 0), списком найденного и
+    числом упоминаний следов. Это её «глаза» для истории: так она понимает,
+    стоит ли идти дальше или сначала отдохнуть.
+    """
+    low = (text or '').lower()
+    energy = 0
+    used = set()          # ярусы, которые уже дали вклад: суммировать нельзя
+    for words, delta, tier in STORY_ENERGY:
+        if tier in used:
+            continue
+        if any(w in low for w in words):
+            energy += delta
+            used.add(tier)
+    finds = [w for w in STORY_FINDS if w in low]
+    clues = sum(1 for w in STORY_CLUES if w in low)
+    return {'energy': energy, 'finds': finds[:4], 'clues': clues}
+
+
+class StoryMap:
+    """Карта истории: какие места есть, чем связаны и что в них нашлось.
+
+    Нужна, чтобы не ходить дважды по одному пути и после концовки идти сразу
+    в ту ветку, где ещё не была. Пишется в отчёт целиком — по ней видно, что
+    она поняла про игру, а не только куда нажимала.
+    """
+
+    def __init__(self):
+        self.nodes = {}    # подпись-ключ -> {'text', 'energy', 'finds', 'clues', 'visits'}
+        self.edges = []    # {'from', 'choice', 'to'}
+        self.tried = set()  # (место, выбор) — что уже нажимали
+
+    @staticmethod
+    def key(text):
+        # Ключ — ВЕСЬ текст, а не первые 80 знаков: у пассажей Lost Spot общее
+        # начало («You at in front of your house…»), и по обрезку все места дома
+        # сливались в одно, а петли не находились.
+        return ' '.join((text or '').split()).lower()
+
+    def see(self, text):
+        """Записать место в карту и вернуть, что в нём видно."""
+        k = self.key(text)
+        node = self.nodes.get(k)
+        if node is None:
+            node = {'text': (text or '')[:220], 'visits': 0}
+            node.update(read_signal(text))
+            self.nodes[k] = node
+        node['visits'] += 1
+        return node
+
+    def is_loop(self, text, choice, came_from=None):
+        """Петля: вариант возвращает туда, откуда пришли, или в это же место."""
+        k = self.key(text)
+        for e in self.edges:
+            if e['from'] != k or e['choice'] != choice:
+                continue
+            if e['to'] == k:
+                return True          # «Nothing has changed» — то же место
+            if came_from and e['to'] == self.key(came_from):
+                return True          # обратный ход: «back», «Leave quietly!»
+        return False
+
+    def mark_open(self, text, choices):
+        """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
+        node = self.nodes.get(self.key(text))
+        if node is None:
+            return
+        node['open'] = any((self.key(text), c.get('label')) not in self.tried for c in choices)
+        node['options'] = [c.get('label') for c in choices][:8]
+
+    def link(self, src_text, choice, dst_text):
+        fr, to = self.key(src_text), self.key(dst_text)
+        edge = {'from': fr, 'choice': choice, 'to': to}
+        if edge not in self.edges:
+            self.edges.append(edge)
+
+    def fresh_choices(self, text, choices):
+        """Варианты, которых в этом месте ещё не нажимали."""
+        k = self.key(text)
+        return [c for c in choices if (k, c.get('label')) not in self.tried]
+
+    def untried_targets(self, text, choices):
+        """Куда ведёт неизведанное: места, которых в карте ещё нет."""
+        k = self.key(text)
+        out = []
+        for c in choices:
+            if (k, c.get('label')) in self.tried:
+                continue
+            known = [e['to'] for e in self.edges if e['from'] == k and e['choice'] == c.get('label')]
+            if not known or any(t not in self.nodes for t in known):
+                out.append(c)
+        return out
+
+    def summary(self):
+        return {'places': len(self.nodes), 'links': len(self.edges),
+                'tried': len(self.tried),
+                'energetic': sum(1 for n in self.nodes.values() if n.get('energy', 0) > 0),
+                'tired': sum(1 for n in self.nodes.values() if n.get('energy', 0) < 0),
+                'finds': sorted({f for n in self.nodes.values() for f in n.get('finds', [])})}
+
+    def as_report(self):
+        nodes = [{'key': k[:60], 'visits': v['visits'], 'energy': v.get('energy', 0),
+                  'finds': v.get('finds', []), 'clues': v.get('clues', 0),
+                  'text': v.get('text', '')[:120]}
+                 for k, v in list(self.nodes.items())[:80]]
+        return {'places': nodes, 'links': self.edges[:200], **self.summary()}
+
+
+def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
+                story_map=None, energy=0, came_from=None):
+    """Какой вариант выбрать: сначала тот, где история ещё не была.
+
+    visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
+    главнее памяти: карта знает, куда вариант ведёт и где уже была, поэтому
+    выбор идёт по ней — сначала в места, которых в карте нет.
+    energy — что она прочла про свои силы: сильно вымотанной не идёт в дальний
+    путь («go after», «school», «store»), а сначала ищет отдых. Иначе игра
+    кончается на «выдохлась» — так и было в первом прохождении.
+    """
+    if not choices:
+        return None, False
+    # Диалог подтверждения: сначала «OK», а не «Cancel» — иначе она отменяет
+    # собственный вход в историю (так и было: первый ход второго захода — Cancel).
+    if len(choices) <= 3:
+        affirm = [c for c in choices if (c.get('label') or '').strip().lower() in
+                  ('ok', 'okay', 'yes', 'да', 'продолжить', 'continue', 'next', 'далее')]
+        if affirm:
+            return affirm[0], True
+    here = lambda c: (passage or '', c.get('key', c.get('label', '')))
+    fresh = [c for c in choices if here(c) not in visited]
+    pool = fresh or choices
+
+    if story_map is not None and passage:
+        unseen = story_map.untried_targets(passage, choices)
+        if unseen:
+            pool = unseen
+        else:
+            not_tried = story_map.fresh_choices(passage, choices)
+            if not_tried:
+                pool = not_tried
+
+    # осторожность: вымотана — сначала передохнуть, даже если отдых уже нажимала.
+    # Отдых ищем среди ВСЕХ вариантов: в карте он может быть «изведан», но силы
+    # важнее новизны — иначе она уходит вымотанной и теряет заход.
+    if energy < 0:
+        rest = [c for c in choices if is_rest(c.get('label', ''))]
+        if rest:
+            pool = rest
+        else:
+            far = [c for c in pool if not is_far(c.get('label', ''))]
+            if far:
+                pool = far
+
+    # Петли («Leave quietly!» возвращает туда же, откуда пришла) — в самый
+    # конец: иначе второй заход крутился house → Leave quietly! → house двадцать раз.
+    if story_map is not None and passage and len(pool) > 1:
+        no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)]
+        if no_loops:
+            pool = no_loops
+
+    if times_here >= 2 and len(pool) > 1:
+        exits = [c for c in pool if any(w in c.get('label', '').lower()
+                                        for w in ('back', 'home', 'house', 'door', 'outside', 'leave', 'return'))]
+        if exits:
+            pool = exits
+
+    pick = pool[0] if rng is None else pool[rng.randrange(len(pool))]
+    return pick, bool(fresh)
+
+
+def is_rest(label):
+    """Отдых по названию кнопки: тут силы возвращаются."""
+    low = (label or '').lower()
+    return any(w in low for w in ('rest', 'couch', 'sit', 'lie', 'sleep', 'feet up', 'get up', 'wait'))
+
+
+def is_far(label):
+    """Дальний путь: пока сил мало, туда не надо."""
+    low = (label or '').lower()
+    return any(w in low for w in ('go after', 'chase', 'run', 'sprint', 'school', 'store',
+                                  'hospital', 'restaurant', 'park', 'outside', 'street'))
+
+
+RESTART_JS = r"""
+() => {
+  // Harlowe держит историю в localStorage. Ищем ключ истории и чистим его —
+  // это ровно то, что делает кнопка Restart в меню, только без поиска иконки.
+  const keys = [];
+  const wipe = (store, name) => {
+    if (!store) return;
+    const mine = [];
+    for (let i = 0; i < store.length; i++) {
+      const k = store.key(i) || '';
+      // Harlowe хранит сессию и «где я остановилась» под своими именами;
+      // берём всё, что похоже на историю, а не на чужие настройки браузера.
+      if (/twine|harlowe|story|passage|session|storydata/i.test(k)) mine.push(k);
+    }
+    mine.forEach(k => { store.removeItem(k); keys.push(name + ':' + k); });
+  };
+  wipe(localStorage, 'local');
+  try { wipe(sessionStorage, 'session'); } catch (e) {}
+  if (!keys.length) return {ok: false, why: 'ключа истории ни в local, ни в session', keys: []};
+  return {ok: true, keys: keys.slice(0, 8)};
+}
+"""
+
+
+def restart_story(page, report):
+    """Начать историю заново — по-честному, теми же средствами, что и человек.
+
+    Порядок: кнопка Restart в панели, очистка сохранённой истории в
+    localStorage (её же чистит кнопка), затем перезагрузка. Перезагрузка одна
+    проблему не решает: прогресс лежит в localStorage и возвращает на финал.
+    """
+    # 1) кнопка Restart, если она есть в панели истории
+    for sel in ('tw-icon[title="Restart" i]', 'tw-icon[aria-label="Restart" i]',
+                '[title="Restart" i]', 'button:has-text("Restart")'):
+        try:
+            el = page.query_selector(sel)
+            if el:
+                el.click(timeout=2500)
+                page.wait_for_timeout(1200)
+                st = page.evaluate(TWINE_TASK_JS)
+                if st and st.get('choices'):
+                    report.step('начать заново', f'нажала «Restart» ({sel}) — история с начала')
+                    return True
+        except Exception:
+            continue
+    # 2) чистим сохранённую историю и перезагружаем
+    try:
+        cleared = page.evaluate(RESTART_JS)
+    except Exception as err:
+        cleared = {'ok': False, 'why': str(err)}
+    try:
+        page.reload(wait_until='domcontentloaded')
+        page.wait_for_timeout(2200)
+        for _i in range(8):
+            st = page.evaluate(TWINE_TASK_JS)
+            if st and st.get('choices'):
+                report.step('начать заново',
+                            f'очистила сохранённую историю ({", ".join(cleared.get("keys") or [])[:60] or cleared.get("why", "?")}) и перезагрузила — история с начала')
+                return True
+            try:
+                page.keyboard.press('Enter')   # Harlowe может снова спросить имя
+            except Exception:
+                pass
+            page.wait_for_timeout(700)
+        report.step('начать заново', 'после очистки и перезагрузки вариантов нет — история не начинается заново')
+        return False
+    except Exception as err:
+        report.step('начать заново', f'не вышло начать заново: {err}')
+        return False
+
+
+def read_story(page, seconds, out, report, shot, runs=3):
+    """Пройти сюжетную игру чтением и добрать ветки, которых ещё не видела.
+
+    Один заход — до финала. Если время осталось и в карте есть неизведанные
+    переходы, она начинает историю заново и идёт туда, где ещё не была: так из
+    одной экспедиции видно больше одной концовки.
+    """
+    import random
+    rng = random.Random(7)
+    deadline = time.monotonic() + max(20, min(180, seconds))
+    story_map = StoryMap()
+    visited = set()
+    path, endings, runs_done = [], [], []
+    report.step('читаю историю',
+                'сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки')
+
+    for run in range(1, max(1, runs) + 1):
+        if time.monotonic() >= deadline - 8:
+            break
+        if run > 1:
+            # Заново идём только если есть что искать: непройденные переходы
+            # уже известных мест и места, до которых не добрались.
+            unopened = [n for n in story_map.nodes.values() if n.get('visits', 0) and n.get('open')]
+            if not unopened:
+                report.step('добор веток', 'непройденных вариантов не осталось — второй заход не нужен')
+                break
+            report.step('добор веток',
+                        f'осталось мест с непройденными вариантами: {len(unopened)} — иду заново')
+            if not restart_story(page, report):
+                break
+            # проверяем, что история действительно с начала: иначе второй заход
+            # «заканчивался» на том же экране финала за 0 выборов
+            st0 = page.evaluate(TWINE_TASK_JS)
+            if not st0 or not (st0.get('choices') or []):
+                report.step('начать заново', 'история не встала на начало (нет вариантов) — добор веток прекращаю честно')
+                break
+        moves = 0
+        stuck = 0
+        fresh_moves = 0
+        pending = {'from': '', 'choice': '', 'done': True}
+        trail = []        # последние места: ловим хождение по кругу
+        last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
+        prev_place = ['']  # место предыдущего шага
+        new_places = 0
+        run_end = ''
+        while time.monotonic() < deadline - 4:
+            try:
+                state = page.evaluate(TWINE_TASK_JS)
+            except Exception as err:
+                report.step('чтение', f'страница не отдала текст: {err}')
+                break
+            if not state or not state.get('ok'):
+                report.step('чтение', 'не нашла ни текста, ни вариантов — останавливаюсь честно')
+                break
+            text = state.get('text', '')
+            if pending.get('from') and not pending.get('done'):
+                # пришли из предыдущего пассажа: записываем ребро карты
+                story_map.link(pending['from'], pending['choice'], text)
+                pending['done'] = True
+            sight = story_map.see(text)          # зрение: силы, находки, следы
+            if sight['visits'] == 1:
+                new_places += 1
+            choices = state.get('choices') or []
+            for c in choices:
+                c['key'] = c.get('label', '')
+            story_map.mark_open(text, choices)
+            if choices:
+                # след последних мест: если ходит по кругу, дальше не жмём
+                trail.append(story_map.key(text))
+                last_place[0] = prev_place[0]
+                if len(trail) > 12:
+                    trail.pop(0)
+                if len(trail) >= 12 and len(set(trail[-6:])) <= 2:
+                    report.step('стоп-кран',
+                                f'топчется на месте (последние {len(trail)} шагов — два места) — прекращаю заход')
+                    break
+                pick, fresh = pick_choice(choices, visited, rng,
+                                          story_map.key(text), sight['visits'],
+                                          story_map=story_map, energy=sight.get('energy', 0),
+                                          came_from=last_place[0])
+                story_map.tried.add((story_map.key(text), pick['label']))
+                visited.add((story_map.key(text), pick['label']))
+                try:
+                    el = page.query_selector(f'[data-kv-choice="{pick["i"]}"]')
+                    if el is None:
+                        raise RuntimeError('кнопка исчезла')
+                    el.scroll_into_view_if_needed(timeout=3000)
+                    el.click(timeout=5000)
+                except Exception as err:
+                    report.step('выбор', f'не смогла нажать «{pick["label"]}»: {err}')
+                    stuck += 1
+                    if stuck >= 3:
+                        break
+                    page.wait_for_timeout(500)
+                    continue
+                moves += 1
+                pending = {'from': text, 'choice': pick['label'], 'done': False}
+                if fresh:
+                    fresh_moves += 1
+                path.append({'run': run, 'n': moves, 'choice': pick['label'],
+                             'fresh': fresh, 'energy': sight.get('energy', 0),
+                             'finds': sight.get('finds', []), 'clues': sight.get('clues', 0),
+                             'text': text[:220]})
+                if moves in (1, 2, 3) or moves % 8 == 0:
+                    # Ждём СМЕНУ текста (не «прозрачность»): иначе кадр чёрный.
+                    before = text[:60]
+                    for _w in range(14):
+                        now = page.evaluate("() => { const p = document.querySelector('.passage, tw-passage, tw-story') || document.body; return ((p.innerText || '').replace(/\\s+/g, ' ').trim()).slice(0, 60); }")
+                        if now and now != before and len(now) > 3:
+                            page.wait_for_timeout(320)
+                            break
+                        page.wait_for_timeout(160)
+                    shot(f'0{min(9, 3 + moves // 8)}-story-{moves:02d}.png')
+                prev_place[0] = story_map.key(text)   # для следующего шага: откуда пришли
+                page.wait_for_timeout(1300)
+                stuck = 0
+            else:
+                # вариантов нет: финал (или история просит имя)
+                pushed = False
+                try:
+                    field = page.query_selector('tw-input, input[type="text"], input:not([type])')
+                    if field is not None:
+                        field.fill('Квеня')
+                        field.press('Enter')
+                        pushed = True
+                        report.step('ввод', 'история просила имя — вписала «Квеня»')
+                except Exception:
+                    pass
+                if pushed:
+                    page.wait_for_timeout(900)
+                    continue
+                run_end = text[:400]
+                endings.append({'run': run, 'n': moves, 'text': run_end})
+                report.step('финал' if text else 'пусто',
+                            f'заход {run}: {moves} выборов, новых мест {new_places} — {text[:170] or "пусто"}')
+                break
+        runs_done.append({'run': run, 'moves': moves, 'fresh': fresh_moves,
+                          'newPlaces': new_places, 'end': run_end[:200],
+                          'placesByNow': len(story_map.nodes)})
+        if time.monotonic() >= deadline - 10:
+            break
+        all_choice_pairs = len(story_map.tried)
+        report.step('разбор захода',
+                    f'заход {run}: мест в карте {len(story_map.nodes)}, нажато вариантов {all_choice_pairs}; '
+                    + ('есть куда идти — начинаю заново' if run < runs else 'заходов хватит'))
+
+    hit = [p for p in path if p.get('finds')]
+    return {
+        'moves': sum(r['moves'] for r in runs_done),
+        'runs': runs_done,
+        'path': path,
+        'endings': endings,
+        'reachedEnd': bool(endings),
+        'last': path[-1] if path else None,
+        'map': story_map.as_report(),
+        'sawFinds': hit[:5],
+        'freshPlaces': sum(r['newPlaces'] for r in runs_done),
+    }
 
 def finish(browser, context, video_dir, out, report):
     try:

@@ -128,7 +128,7 @@ jobs:
             echo "Файла видео в результатах экспедиции нет"
           fi
           python3 - "$DIR" <<'PY'
-          import json, sys
+          import json, sys, shutil
           from pathlib import Path
           d = Path(sys.argv[1])
           report = json.loads((d / 'report.json').read_text(encoding='utf-8'))
@@ -140,11 +140,27 @@ jobs:
               'status': report.get('status', 'error'),
               'dir': str(d),
               'screenshots': report.get('screenshots', [])[:4],
+              'kind': report.get('kind') or 'game',
+              'storyLine': report.get('storyLine') or '',
+              'storyMap': report.get('storyMap') or {},
               'hasVideo': bool(report.get('hasVideo')),
               'video': 'video.webm' if (d / 'video.webm').exists() else '',
           }
+          # Старые каталоги экспедиций чистим: страница показывает только
+          # последние пять, а каждый каталог тянет сборку вниз — при
+          # скопившихся 28 сборка Pages падала по времени (сейчас .nojekyll,
+          # но пыль всё равно не нужна: 149 МБ мусора в репозитории).
+          # ВАЖНО: сначала записываем список (уже с новой экспедицией), и только
+          # потом убираем лишние каталоги. Если считать «оставить» до записи,
+          # уборка сносит каталог, который сама же и записала.
           bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]
           bridge_path.write_text(json.dumps(bridge, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          keep = {e.get('dir') for e in bridge['expeditions'] if e.get('dir')}
+          root = Path('qwen-home/bridge/expeditions')
+          if root.exists():
+              for old_dir in sorted(root.iterdir()):
+                  if old_dir.is_dir() and str(old_dir) not in keep:
+                      shutil.rmtree(old_dir, ignore_errors=True)
           print('expedition filed:', entry)
           PY
           python3 qwen-home/tools/vlog.py auto || echo "выпуск блога не собрался — экспедиция всё равно оформляется"
@@ -163,6 +179,9 @@ jobs:
           PY
           git config user.name 'Квеня (экспедиция)'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # -A по корню экспедиций: git add с одним путём не записывает УДАЛЕНИЯ,
+          # поэтому вычищенные каталоги возвращались в следующем коммите.
+          git add -A qwen-home/bridge/expeditions
           git add "$DIR" kvenya/bridge.json qwen-home/bridge/motivation.json qwen-home/bridge/journal.md qwen-home/state.json qwen-home/studio qwen-home/library qwen-home/wants qwen-home/bridge/wants.json
           if git diff --cached --quiet; then echo "Изменений нет"; exit 0; fi
           STATUS=$(python3 -c "import json; print(json.load(open('$DIR/report.json'))['status'])")

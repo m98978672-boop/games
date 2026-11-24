@@ -35,6 +35,7 @@
   var expEl = document.getElementById('kvBridgeExpeditions');
   var EXP_STATUS = {
     'played': '🎮 сыграла сама: ввод ушёл в игру, видео записано',
+    'story': '📖 прошла сюжетную игру чтением',
     'opened-only': '🚪 открыла страницу, но до игры не дошло',
     'no-canvas': '🖱 кнопку нажала, а игрового канваса нет',
     'captcha-wall': '🧱 упёрлась в «я не робот» — сфотографировала и честно остановилась',
@@ -54,6 +55,11 @@
       }).join('');
       return '<div class="kv-expedition"><p class="kv-note">🧭 <b>' + esc(e.date) + '</b> · ' + esc(EXP_STATUS[e.status] || e.status)
         + '<br><a href="' + esc(e.url) + '" target="_blank" rel="noopener">' + esc(e.url) + '</a>'
+        + (e.storyLine ? '<br><span class="kv-story">📖 ' + esc(e.storyLine) + '</span>' : '')
+        + (e.storyMap && e.storyMap.places ? '<br><span class="kv-map">🗺 карта истории: '
+            + esc(e.storyMap.places) + ' мест, ' + esc(e.storyMap.links) + ' переходов, нажато '
+            + esc(e.storyMap.tried) + (e.storyMap.finds && e.storyMap.finds.length ? ', находки: ' + esc(e.storyMap.finds.join(', ')) : '')
+            + '</span>' : '')
         + ' · <a href="../' + esc(e.dir) + '/report.json" target="_blank" rel="noopener">пошаговый отчёт</a>'
         + (e.hasVideo && !e.video ? ' · видео — в артефактах запуска на GitHub Actions' : '') + '</p>'
         + (e.video ? '<video controls preload="metadata" src="../' + esc(e.dir) + '/' + esc(e.video) + '" style="width:100%;max-width:420px;border-radius:12px"></video>' : '')

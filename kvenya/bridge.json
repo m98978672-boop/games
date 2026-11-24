@@ -1,87 +1,87 @@
 {
-  "updatedAt": "2026-11-23 07:51 UTC",
+  "updatedAt": "2026-11-24 00:00 UTC",
   "source": "ru.wikipedia.org",
   "note": "Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.",
   "recent": [
     {
-      "title": "Семашко, Николай Александрович",
-      "user": "Мар Двенадцатый",
-      "comment": "/* Литература */ пунктуация",
-      "at": "2026-11-23T07:50:57Z"
-    },
-    {
-      "title": "Литтон, Ноэль, 4-й граф Литтон",
-      "user": "~2026-61551-18",
-      "comment": "/* Примечания */ оформление",
-      "at": "2026-11-23T07:50:50Z"
-    },
-    {
-      "title": "Берлин 1927",
-      "user": "Volcanus",
-      "comment": "/* Турнирная таблица */",
-      "at": "2026-11-23T07:50:50Z"
-    },
-    {
-      "title": "Пылва (волость)",
-      "user": "Liilia Moroz",
-      "comment": "исправление",
-      "at": "2026-11-23T07:50:15Z"
-    },
-    {
-      "title": "Семашко, Николай Александрович",
-      "user": "Мар Двенадцатый",
-      "comment": "/* Литература */ пунктуация",
-      "at": "2026-11-23T07:50:04Z"
-    },
-    {
-      "title": "Чадов, Александр Александрович",
-      "user": "Petrucha",
-      "comment": "/* */",
-      "at": "2026-11-23T07:49:59Z"
-    },
-    {
-      "title": "Пылва (волость, 1991—2017)",
-      "user": "Liilia Moroz",
-      "comment": "/* История */",
-      "at": "2026-11-23T07:48:55Z"
-    },
-    {
-      "title": "Литтон, Ноэль, 4-й граф Литтон",
-      "user": "~2026-61551-18",
-      "comment": "/* Примечания */ оформление",
-      "at": "2026-11-23T07:48:46Z"
-    },
-    {
-      "title": "Коми войтыр",
-      "user": "KUTKIN",
-      "comment": "Подправил таблицы",
-      "at": "2026-11-23T07:48:28Z"
-    },
-    {
-      "title": "Семашко, Николай Александрович",
-      "user": "Мар Двенадцатый",
-      "comment": "/* Научная работа */ пунктуация",
-      "at": "2026-11-23T07:48:26Z"
-    },
-    {
-      "title": "Фирсова (деревня)",
-      "user": "Serzh-Levy Ignashevich",
+      "title": "Айюб Табит",
+      "user": "Roman Kubanskiy",
       "comment": "",
-      "at": "2026-11-23T07:48:20Z"
+      "at": "2026-11-24T00:00:25Z"
     },
     {
-      "title": "Казашко",
-      "user": "Бот Вики-Ёжик",
-      "comment": "автоматическая отмена правок [[Служебная:Вклад/~2026-50348-34|~2026-50348-34]] ([[Обсуждение участника:~2026-50348-34|об",
-      "at": "2026-11-23T07:48:17Z"
+      "title": "Война за независимость Аргентины",
+      "user": "InternetArchiveBot",
+      "comment": "Спасено источников — 1, отмечено мёртвыми — 0. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-24T00:00:19Z"
+    },
+    {
+      "title": "Война за независимость Анголы",
+      "user": "InternetArchiveBot",
+      "comment": "Спасено источников — 0, отмечено мёртвыми — 1. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-24T00:00:17Z"
+    },
+    {
+      "title": "Абдалла Байхум",
+      "user": "Roman Kubanskiy",
+      "comment": "",
+      "at": "2026-11-24T00:00:12Z"
+    },
+    {
+      "title": "Война за независимость Алжира",
+      "user": "InternetArchiveBot",
+      "comment": "Спасено источников — 0, отмечено мёртвыми — 2. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-23T23:59:48Z"
+    },
+    {
+      "title": "Война за лангустов",
+      "user": "InternetArchiveBot",
+      "comment": "Спасено источников — 0, отмечено мёртвыми — 3. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-23T23:59:39Z"
+    },
+    {
+      "title": "Альфред Наккаш",
+      "user": "Roman Kubanskiy",
+      "comment": "",
+      "at": "2026-11-23T23:59:38Z"
+    },
+    {
+      "title": "Война за водохранилище",
+      "user": "InternetArchiveBot",
+      "comment": "Спасено источников — 0, отмечено мёртвыми — 1. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-23T23:59:33Z"
+    },
+    {
+      "title": "Айюб Табит",
+      "user": "Roman Kubanskiy",
+      "comment": "",
+      "at": "2026-11-23T23:59:26Z"
+    },
+    {
+      "title": "Холдеман, Джо",
+      "user": "Rosiestep",
+      "comment": "Joe Haldeman at World Fantasy Awards 2026.jpg",
+      "at": "2026-11-23T23:58:42Z"
+    },
+    {
+      "title": "Хамди аль-Баджаджи",
+      "user": "Roman Kubanskiy",
+      "comment": "",
+      "at": "2026-11-23T23:58:41Z"
+    },
+    {
+      "title": "Салех Джабр",
+      "user": "Roman Kubanskiy",
+      "comment": "",
+      "at": "2026-11-23T23:58:21Z"
     }
   ],
   "letters": [
-    "2026-11-22 — 🏆 Пряник: трубы по табло игры: 4 — первый настоящий счёт (+60 балл.). Баланс Квени: 370, звание: Легенда моста.",
-    "2026-11-23 — 🏆 Пряник: сыграла экспедицию сама, по-честному, до конца (+10 балл.). Баланс Квени: 415, звание: Легенда моста.",
-    "2026-11-23 — 🏆 Пряник: видео экспедиции доехало до её страницы (+3 балл.). Баланс Квени: 415, звание: Легенда моста.",
-    "2026-11-23 — 🏆 Пряник: держала глаза открытыми: птицу видела почти в каждом кадре (+2 балл.). Баланс Квени: 415, звание: Легенда моста.",
-    "2026-11-23 — 🏆 Пряник: трубы по табло игры: 2 — первый настоящий счёт (+30 балл.). Баланс Квени: 415, звание: Легенда моста."
+    "2026-11-23 — 🏆 Пряник: собрала свою игру «Звёздный дождь» из библиотеки  (+12 балл.). Баланс Квени: 459, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: собрала свою игру «Змейка Квени» из библиотеки  (+12 балл.). Баланс Квени: 459, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: собрала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!»  (+8 балл.). Баланс Квени: 459, звание: Легенда моста.",
+    "2026-11-23 — 🏆 Пряник: видео экспедиции доехало до её страницы (+3 балл.). Баланс Квени: 143, звание: Ветеран моста.",
+    "2026-11-23 — 🏆 Пряник: видео экспедиции доехало до её страницы (+3 балл.). Баланс Квени: 143, звание: Ветеран моста."
   ],
   "sources": [
     {
@@ -133,11 +133,11 @@
         "free",
         "anyone can edit",
         "English",
-        "Ice Warriors",
-        "fictional extraterrestrial",
-        "reptilian humanoids",
-        "British science fiction television",
-        "Doctor Who"
+        "great white shark",
+        "shark",
+        "temperate",
+        "open ocean",
+        "apex predator"
       ],
       "note": "",
       "name": "Википедия по-английски (English)"
@@ -185,261 +185,220 @@
   ],
   "expeditions": [
     {
-      "date": "2026-11-23 00:02 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "date": "2026-11-23 22:50 UTC",
+      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261123-0003-ellisonleao-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261123-2253-colinhuang314-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
+        "03-story.png",
+        "03-story-01.png"
       ],
+      "kind": "story",
+      "storyLine": "прошла историю: 109 выборов, 2 захода(ов), 58 мест в карте, концовок видела 1, нашла: chips on the bottom, find your favorite, you grab · финал: ↶ Congratulations ! You finished the game! The End",
+      "storyMap": {
+        "places": 58,
+        "links": 89,
+        "tried": 87,
+        "finds": [
+          "chips on the bottom",
+          "find your favorite",
+          "you grab",
+          "you scour the shelves"
+        ],
+        "tired": 5,
+        "energetic": 5
+      },
+      "hasVideo": true,
+      "video": ""
+    },
+    {
+      "date": "2026-11-23 22:46 UTC",
+      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-2249-colinhuang314-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-story.png",
+        "03-story-01.png"
+      ],
+      "kind": "story",
+      "storyLine": "прошла историю: 109 выборов, 2 захода(ов), 27 мест в карте, концовок видела 1 · финал: ↶ Congratulations ! You finished the game! The End",
+      "storyMap": {
+        "places": 27,
+        "links": 43,
+        "tried": 42,
+        "finds": [],
+        "tired": 2,
+        "energetic": 4
+      },
+      "hasVideo": true,
+      "video": ""
+    },
+    {
+      "date": "2026-11-23 22:13 UTC",
+      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+      "status": "played",
+      "dir": "qwen-home/bridge/expeditions/20261123-2215-colinhuang314-github-io",
+      "screenshots": [
+        "01-open.png",
+        "02-after-play.png",
+        "03-story.png",
+        "03-story-01.png"
+      ],
+      "kind": "story",
+      "storyLine": "прошла историю: 35 выборов, 1 захода(ов), 24 мест в карте, концовок видела 1 · финал: ↶ Congratulations ! You finished the game! The End",
       "hasVideo": true,
       "video": "video.webm"
     },
     {
-      "date": "2026-11-22 23:59 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "date": "2026-11-23 22:10 UTC",
+      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2359-ellisonleao-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261123-2211-colinhuang314-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
+        "03-story.png",
+        "03-story-01.png"
       ],
+      "kind": "story",
+      "storyLine": "прошла историю: 35 выборов, 3 захода(ов), 24 мест в карте, концовок видела 1, нашла: in your pocket · финал: ↶ Congratulations ! You finished the game! The End",
       "hasVideo": true,
       "video": "video.webm"
     },
     {
-      "date": "2026-11-22 23:51 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
+      "date": "2026-11-23 21:56 UTC",
+      "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2352-ellisonleao-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261123-2157-colinhuang314-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
+        "03-story.png",
+        "03-story-01.png"
       ],
-      "hasVideo": true,
-      "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:47 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2347-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
-      "hasVideo": true,
-      "video": "video.webm"
-    },
-    {
-      "date": "2026-11-22 23:39 UTC",
-      "url": "https://ellisonleao.github.io/clumsy-bird/",
-      "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261122-2340-ellisonleao-github-io",
-      "screenshots": [
-        "01-open.png",
-        "02-after-play.png",
-        "03-play.png",
-        "04-play.png"
-      ],
+      "kind": "story",
+      "storyLine": "прошла историю: 37 выборов (35 в новых местах), последний выбор «Game Over» · дошла до финала: ↶ Congratulations ! You finished the game! The End",
       "hasVideo": true,
       "video": "video.webm"
     }
   ],
   "motivation": {
-    "points": 415,
-    "level": "Легенда моста",
+    "points": 143,
+    "level": "Ветеран моста",
     "achievements": [
       {
         "id": "veteran-exp",
         "title": "Ветеран экспедиций",
         "reward": "сама предлагает маршрут недели в журнале моста",
-        "at": "2026-11-22 22:35 UTC"
+        "at": "2026-11-23 22:13 UTC"
       },
       {
-        "id": "first-pipe",
-        "title": "Первая труба",
-        "reward": "право самой выбрать следующую игру экспедиции",
-        "at": "2026-11-22 22:56 UTC"
+        "id": "game-maker",
+        "title": "Сборщик игр",
+        "reward": "право придумывать следующий шаблон самой",
+        "at": "2026-11-23"
       },
       {
-        "id": "three-pipes",
-        "title": "Три трубы за матч",
-        "reward": "вечер свободной экспедиции по своему выбору",
-        "at": "2026-11-22 23:26 UTC"
+        "id": "game-smith",
+        "title": "Игровых дел мастер",
+        "reward": "своя полка игр в мире Квени",
+        "at": "2026-11-23"
+      },
+      {
+        "id": "first-episode",
+        "title": "Первый выпуск",
+        "reward": "студия открывает второй сезон",
+        "at": "2026-11-23"
+      },
+      {
+        "id": "director",
+        "title": "Режиссёр",
+        "reward": "блог выходит по расписанию",
+        "at": "2026-11-23"
       }
     ],
     "pendingDuties": [],
-    "closedDuties": [
-      {
-        "id": "20261122-2208-ellisonleao-github-io:crash",
-        "kind": "crash",
-        "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
-        "at": "2026-11-22 22:08 UTC",
-        "closedBy": "20261122-2220-ellisonleao-github-io"
-      },
-      {
-        "id": "20261122-2215-ellisonleao-github-io:crash",
-        "kind": "crash",
-        "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
-        "at": "2026-11-22 22:15 UTC",
-        "closedBy": "20261122-2220-ellisonleao-github-io"
-      },
-      {
-        "id": "20261122-2236-ellisonleao-github-io:pipe",
-        "kind": "pipe",
-        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
-        "at": "2026-11-22 22:35 UTC",
-        "closedBy": "20261122-2257-ellisonleao-github-io"
-      },
-      {
-        "id": "20261122-2240-ellisonleao-github-io:pipe",
-        "kind": "pipe",
-        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
-        "at": "2026-11-22 22:39 UTC",
-        "closedBy": "20261122-2257-ellisonleao-github-io"
-      },
-      {
-        "id": "20261122-2247-ellisonleao-github-io:pipe",
-        "kind": "pipe",
-        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
-        "at": "2026-11-22 22:47 UTC",
-        "closedBy": "20261122-2257-ellisonleao-github-io"
-      },
-      {
-        "id": "20261122-2252-ellisonleao-github-io:crash",
-        "kind": "crash",
-        "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
-        "at": "2026-11-22 22:52 UTC",
-        "closedBy": "20261122-2257-ellisonleao-github-io"
-      },
-      {
-        "id": "20261122-2340-ellisonleao-github-io:pipe",
-        "kind": "pipe",
-        "text": "Взыскание: тренировочный матч — разобрать трассу кадров, найти, где умирает птица, и пройти первую трубу",
-        "at": "2026-11-22 23:39 UTC",
-        "closedBy": "20261122-2347-ellisonleao-github-io"
-      }
-    ],
+    "closedDuties": [],
     "lastEvents": [
       {
-        "id": "20261122-2359-ellisonleao-github-io:played",
-        "at": "2026-11-22 23:59 UTC",
-        "delta": 10,
-        "text": "сыграла экспедицию сама, по-честному, до конца"
-      },
-      {
-        "id": "20261122-2359-ellisonleao-github-io:video",
-        "at": "2026-11-22 23:59 UTC",
+        "id": "20261123-2253-colinhuang314-github-io:video",
+        "at": "2026-11-23 22:50 UTC",
         "delta": 3,
         "text": "видео экспедиции доехало до её страницы"
       },
       {
-        "id": "20261122-2359-ellisonleao-github-io:eyes",
-        "at": "2026-11-22 23:59 UTC",
-        "delta": 2,
-        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
+        "id": "creation:game:ptica-i-truby",
+        "at": "2026-11-23",
+        "delta": 12,
+        "text": "собрала свою игру «Птица и трубы» из библиотеки "
       },
       {
-        "id": "20261122-2359-ellisonleao-github-io:steps",
-        "at": "2026-11-22 23:59 UTC",
-        "delta": 60,
-        "text": "трубы по табло игры: 4 — первый настоящий счёт"
+        "id": "creation:game:zvezdny-dozhd",
+        "at": "2026-11-23",
+        "delta": 12,
+        "text": "собрала свою игру «Звёздный дождь» из библиотеки "
       },
       {
-        "id": "20261123-0003-ellisonleao-github-io:played",
-        "at": "2026-11-23 00:02 UTC",
-        "delta": 10,
-        "text": "сыграла экспедицию сама, по-честному, до конца"
+        "id": "creation:game:zmeika",
+        "at": "2026-11-23",
+        "delta": 12,
+        "text": "собрала свою игру «Змейка Квени» из библиотеки "
       },
       {
-        "id": "20261123-0003-ellisonleao-github-io:video",
-        "at": "2026-11-23 00:02 UTC",
-        "delta": 3,
-        "text": "видео экспедиции доехало до её страницы"
+        "id": "creation:episode:ep-20261123-2-truby",
+        "at": "2026-11-23 11:52 UTC",
+        "delta": 18,
+        "text": "опубликовала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!» "
       },
       {
-        "id": "20261123-0003-ellisonleao-github-io:eyes",
-        "at": "2026-11-23 00:02 UTC",
-        "delta": 2,
-        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
+        "id": "creation:episode:ep-20261123-5-truby",
+        "at": "2026-11-23 20:39 UTC",
+        "delta": 8,
+        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: 5 труб по табло!» "
       },
       {
-        "id": "20261123-0003-ellisonleao-github-io:steps",
-        "at": "2026-11-23 00:02 UTC",
-        "delta": 30,
-        "text": "трубы по табло игры: 2 — первый настоящий счёт"
+        "id": "creation:episode:ep-20261123-7-truby",
+        "at": "2026-11-23 20:44 UTC",
+        "delta": 8,
+        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: 7 труб по табло!» "
+      },
+      {
+        "id": "creation:episode:ep-20261123-match",
+        "at": "2026-11-23 20:46 UTC",
+        "delta": 8,
+        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
       }
     ],
     "eventIds": [
-      "20261122-2158-ellisonleao-github-io:played",
-      "20261122-2158-ellisonleao-github-io:video",
-      "20261122-2208-ellisonleao-github-io:error",
-      "20261122-2215-ellisonleao-github-io:error",
-      "20261122-2220-ellisonleao-github-io:played",
-      "20261122-2220-ellisonleao-github-io:video",
-      "20261122-2236-ellisonleao-github-io:played",
-      "20261122-2236-ellisonleao-github-io:video",
-      "20261122-2236-ellisonleao-github-io:zero",
-      "20261122-2240-ellisonleao-github-io:played",
-      "20261122-2240-ellisonleao-github-io:video",
-      "20261122-2240-ellisonleao-github-io:eyes",
-      "20261122-2240-ellisonleao-github-io:zero",
-      "20261122-2247-ellisonleao-github-io:played",
-      "20261122-2247-ellisonleao-github-io:video",
-      "20261122-2247-ellisonleao-github-io:eyes",
-      "20261122-2247-ellisonleao-github-io:zero",
-      "20261122-2252-ellisonleao-github-io:error",
-      "20261122-2257-ellisonleao-github-io:played",
-      "20261122-2257-ellisonleao-github-io:video",
-      "20261122-2257-ellisonleao-github-io:eyes",
-      "20261122-2257-ellisonleao-github-io:steps",
-      "20261122-2324-ellisonleao-github-io:played",
-      "20261122-2324-ellisonleao-github-io:video",
-      "20261122-2324-ellisonleao-github-io:eyes",
-      "20261122-2324-ellisonleao-github-io:steps",
-      "20261122-2327-ellisonleao-github-io:played",
-      "20261122-2327-ellisonleao-github-io:video",
-      "20261122-2327-ellisonleao-github-io:eyes",
-      "20261122-2327-ellisonleao-github-io:steps",
-      "20261122-2336-ellisonleao-github-io:played",
-      "20261122-2336-ellisonleao-github-io:video",
-      "20261122-2336-ellisonleao-github-io:eyes",
-      "20261122-2336-ellisonleao-github-io:steps",
-      "20261122-2340-ellisonleao-github-io:played",
-      "20261122-2340-ellisonleao-github-io:video",
-      "20261122-2340-ellisonleao-github-io:eyes",
-      "20261122-2340-ellisonleao-github-io:zero",
-      "20261122-2347-ellisonleao-github-io:played",
-      "20261122-2347-ellisonleao-github-io:video",
-      "20261122-2347-ellisonleao-github-io:eyes",
-      "20261122-2347-ellisonleao-github-io:steps",
-      "20261122-2352-ellisonleao-github-io:played",
-      "20261122-2352-ellisonleao-github-io:video",
-      "20261122-2352-ellisonleao-github-io:eyes",
-      "20261122-2352-ellisonleao-github-io:steps",
-      "20261122-2359-ellisonleao-github-io:played",
-      "20261122-2359-ellisonleao-github-io:video",
-      "20261122-2359-ellisonleao-github-io:eyes",
-      "20261122-2359-ellisonleao-github-io:steps",
-      "20261123-0003-ellisonleao-github-io:played",
-      "20261123-0003-ellisonleao-github-io:video",
-      "20261123-0003-ellisonleao-github-io:eyes",
-      "20261123-0003-ellisonleao-github-io:steps"
+      "20261123-2157-colinhuang314-github-io:played",
+      "20261123-2157-colinhuang314-github-io:video",
+      "20261123-2211-colinhuang314-github-io:played",
+      "20261123-2211-colinhuang314-github-io:video",
+      "20261123-2215-colinhuang314-github-io:played",
+      "20261123-2215-colinhuang314-github-io:video",
+      "20261123-2249-colinhuang314-github-io:played",
+      "20261123-2249-colinhuang314-github-io:video",
+      "20261123-2253-colinhuang314-github-io:played",
+      "20261123-2253-colinhuang314-github-io:video",
+      "creation:game:ptica-i-truby",
+      "creation:game:zvezdny-dozhd",
+      "creation:game:zmeika",
+      "creation:episode:ep-20261123-2-truby",
+      "creation:episode:ep-20261123-5-truby",
+      "creation:episode:ep-20261123-7-truby",
+      "creation:episode:ep-20261123-match"
     ],
-    "reportsCounted": 17,
-    "playedCount": 14,
-    "bestStepsEver": 4,
-    "updatedAt": "2026-11-23 00:03 UTC",
+    "reportsCounted": 5,
+    "playedCount": 5,
+    "bestStepsEver": 0,
+    "gamesMade": 3,
+    "episodesMade": 4,
+    "ownWantsDone": 0,
+    "updatedAt": "2026-11-23 22:53 UTC",
     "seenJournal": [
       "20261122-2158-ellisonleao-github-io:played",
       "20261122-2158-ellisonleao-github-io:video",
@@ -494,7 +453,54 @@
       "20261123-0003-ellisonleao-github-io:eyes",
       "20261123-0003-ellisonleao-github-io:played",
       "20261123-0003-ellisonleao-github-io:steps",
-      "20261123-0003-ellisonleao-github-io:video"
+      "20261123-0003-ellisonleao-github-io:video",
+      "20261123-2154-colinhuang314-github-io:played",
+      "20261123-2154-colinhuang314-github-io:video",
+      "20261123-2157-colinhuang314-github-io:played",
+      "20261123-2157-colinhuang314-github-io:video",
+      "20261123-2211-colinhuang314-github-io:played",
+      "20261123-2211-colinhuang314-github-io:video",
+      "20261123-2215-colinhuang314-github-io:played",
+      "20261123-2215-colinhuang314-github-io:video",
+      "20261123-2249-colinhuang314-github-io:played",
+      "20261123-2249-colinhuang314-github-io:video",
+      "20261123-2253-colinhuang314-github-io:played",
+      "20261123-2253-colinhuang314-github-io:video",
+      "creation:episode:ep-20261123-2-truby",
+      "creation:episode:ep-20261123-4-truby",
+      "creation:episode:ep-20261123-5-truby",
+      "creation:episode:ep-20261123-7-truby",
+      "creation:episode:ep-20261123-match",
+      "creation:game:ptica-i-truby",
+      "creation:game:zmeika",
+      "creation:game:zvezdny-dozhd"
     ]
+  },
+  "wants": {
+    "current": {
+      "id": "want-five-pipes",
+      "title": "Взять пять труб в Clumsy Bird",
+      "why": "рекорд сейчас 4 из 5 — достижение уже ждёт в доме"
+    },
+    "open": [
+      {
+        "id": "want-new-game",
+        "title": "Придумать и собрать игру нового шаблона"
+      },
+      {
+        "id": "want-next-episode",
+        "title": "Снять следующий выпуск видеоблога"
+      },
+      {
+        "id": "want-new-brick",
+        "title": "Положить в библиотеку кирпич из свежего опыта"
+      },
+      {
+        "id": "want-weekly-flight",
+        "title": "Сходить в еженедельную экспедицию и не уйти с нулём"
+      }
+    ],
+    "doneCount": 0,
+    "updatedAt": "2026-11-23 22:53 UTC"
   }
 }
