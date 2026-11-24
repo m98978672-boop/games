@@ -82,6 +82,8 @@ async function start() {
   // An entirely distinct Web client is required, so its grants never replace
   // the publisher's client/token slot. Google must have the callback registered.
   const client = commentsClient();
+  env('YOUTUBE_COMMENTS_CLIENT_SECRET');
+  await commentsKey(); // Fail before asking the owner for consent if storage is not ready.
   const state = b64url(crypto.getRandomValues(new Uint8Array(32)));
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
   const challenge = b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(verifier))));
