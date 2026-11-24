@@ -32,6 +32,21 @@
     <p class="help">Пароль Google не передаётся этому сайту. Запрашиваемое разрешение — загрузка видео на YouTube. Не нажимайте повторно, если загрузка завершилась с неопределённым результатом: сначала проверьте YouTube Studio.</p>
   </section>
 
+  <section class="card" aria-labelledby="comments-title">
+    <h2 id="comments-title">Комментарии с телефона</h2>
+    <p class="muted">Подключите Google отдельно с правом только на чтение, укажите своё видео и посмотрите до 50 последних комментариев. Ответы не публикуются. Доступ хранится только в памяти этой вкладки.</p>
+    <button class="button" id="comments-connect" type="button">Подключить чтение комментариев</button>
+    <label for="comments-video" style="display:block;margin-top:18px">Ссылка на своё видео или его ID</label>
+    <input id="comments-video" type="text" inputmode="url" autocomplete="off" placeholder="https://youtu.be/…" style="width:100%;margin:8px 0 12px;padding:12px;border:1px solid #465264;border-radius:10px;background:#0b0d12;color:#fff;font:inherit">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="button" id="comments-read" type="button" disabled>Показать комментарии</button>
+      <button class="button secondary" id="comments-disconnect" type="button" hidden>Отключить в этой вкладке</button>
+    </div>
+    <p id="comments-status" class="help" role="status" aria-live="polite">Google может попросить подтвердить доступ только на чтение.</p>
+    <div id="comments-output" aria-live="polite"></div>
+    <p class="help">Это просмотр в браузере, не автоматическая обработка ИИ. Комментарии и токен не сохраняются на сервере. Для отзыва разрешения откройте <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">подключения Google</a>.</p>
+  </section>
+
   <section class="card">
     <h2>Что делает эта версия</h2>
     <ol class="steps muted">
@@ -66,5 +81,7 @@ if (result === 'private_upload_complete') {
   history.replaceState(null, '', location.pathname);
 }
 </script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="mobile-comments.js" defer></script>
 </body>
 </html>
