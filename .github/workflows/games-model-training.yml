@@ -7,6 +7,11 @@ name: Games model — обучение и проверка
 # На push не висит: обучение долгое и дорогое, его запускают осознанно.
 # Всё публикуется артефактами; веса не коммитятся в репозиторий.
 on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths:
+      - .github/workflows/games-model-training.yml
+      - tools/training/build-video-pilot.py
   workflow_dispatch:
     inputs:
       video_pilot:
@@ -29,7 +34,7 @@ permissions:
   contents: write  # нужно, чтобы опубликовать релиз с адаптером
 jobs:
   train:
-    if: github.repository == 'm98978672-boop/games' && !inputs.video_pilot
+    if: github.repository == 'm98978672-boop/games' && github.event_name == 'workflow_dispatch' && !inputs.video_pilot
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
@@ -197,7 +202,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   video-pilot:
-    if: inputs.video_pilot
+    if: github.event_name == 'push' || inputs.video_pilot
     permissions:
       contents: read
     runs-on: ubuntu-latest
