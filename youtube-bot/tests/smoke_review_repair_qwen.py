@@ -33,3 +33,14 @@ real = game_reviews.generate_game_review(games)
 print(json.dumps({'fixture_only':False, 'uploaded':False, 'game_id':real['game_id'],
                   'possible_minus':real['possible_minus'], 'minus_evidence':real['minus_evidence'],
                   'limitation_generation':real.get('limitation_generation','model')},ensure_ascii=False))
+# Force corrupt JSON, but obtain the replacement score from the real model.
+malformed_calls=[]
+def inject_bad_json(messages, **kwargs):
+    malformed_calls.append(1)
+    return '{broken' if len(malformed_calls) <= 2 else real_generate(messages, **kwargs)
+game_reviews.generate_with_qwen = inject_bad_json
+recovered = game_reviews.generate_game_review(games)
+assert recovered['selection_method'] == 'first_eligible_catalog_candidate_after_invalid_json'
+assert type(recovered['idea_score']) is int and 1 <= recovered['idea_score'] <= 10
+print(json.dumps({'malformed_fixture_only':True, 'uploaded':False,
+                  'score_from_model':recovered['idea_score'], 'game_id':recovered['game_id']},ensure_ascii=False))

@@ -337,6 +337,20 @@ class GameCatalogTests(unittest.TestCase):
         with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2):
             with self.assertRaisesRegex(ValueError,'targeted retries'): generate_game_review([game])
 
+    def test_malformed_json_recovers_only_unambiguous_model_score(self):
+        game=dict(load_game_catalog()[0]); gid=game['id']
+        game['features']=list(game['features'])+['Карточка Steam не отмечает поддержку Linux']
+        game['source_facts']={'platforms_not_marked_supported':['Linux']}
+        with patch('game_reviews.generate_with_qwen',side_effect=['{broken','{broken','8','{}','{}']):
+            review=generate_game_review([game])
+        self.assertEqual(review['idea_score'],8)
+        self.assertEqual(review['selection_method'],'first_eligible_catalog_candidate_after_invalid_json')
+        self.assertIn('Linux',review['minus_evidence'])
+        for bad in ('Оценка: 8','11','8/10'):
+            with self.subTest(bad=bad),patch('game_reviews.generate_with_qwen',side_effect=['{broken','{broken',bad,bad]):
+                with self.assertRaisesRegex(ValueError,'unambiguous score'):
+                    generate_game_review([game])
+
     def test_generation_uses_catalog_only_fallback_after_invalid_feature_ids(self):
         games = load_game_catalog()
         game = games[0]

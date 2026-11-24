@@ -333,8 +333,37 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
         f"Qwen plan failed validation twice ({last_error}); using a catalogue-only safe fallback.",
         file=sys.stderr,
     )
+    # Malformed JSON cannot supply a trustworthy score. Choose a fresh candidate
+    # deterministically and ask Qwen for only its score; do not mine partial JSON
+    # or fabricate a rating. The selection method is disclosed in the result.
+    recovered_selection = False
     try:
-        return _catalog_only_fallback(last_raw, game_list, recent)
+        _extract_json(last_raw)
+    except (TypeError, ValueError):
+        chosen = next((g for g in game_list if str(g['id']) not in recent), game_list[0] if game_list else None)
+        if chosen is None or len(chosen.get('features', [])) < 2:
+            raise ValueError('No eligible game for score recovery')
+        score_messages = [
+            {'role':'system','content':'Оцени идею игры исключительно по описанию, не утверждая, что играл. Ответь одним целым числом от 1 до 10 без пояснений и знаков.'},
+            {'role':'user','content':json.dumps({'game':str(chosen.get('title','')), 'facts':chosen['features'][:6]},ensure_ascii=False)},
+        ]
+        score = None
+        for _ in range(2):
+            answer = generate_with_qwen(score_messages, max_new_tokens=12).strip()
+            if re.fullmatch(r'(?:10|[1-9])', answer):
+                score = int(answer)
+                break
+        if score is None:
+            raise ValueError('Model could not provide an unambiguous score; no upload')
+        gid = str(chosen['id'])
+        last_raw = json.dumps({'schema_version':1,'game_id':gid,'idea_score':score,
+            'selected_feature_ids':[f'{gid}-f1',f'{gid}-f2'], 'minus_feature_id':f'{gid}-f1',
+            'possible_minus':'', 'hook':'Что интересного предлагает эта игра?'}, ensure_ascii=False)
+        recovered_selection = True
+    try:
+        result = _catalog_only_fallback(last_raw, game_list, recent)
+        if recovered_selection: result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
+        return result
     except ValueError as exc:
         if 'No specific grounded possible limitation' not in str(exc):
             raise
@@ -366,7 +395,9 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
                 if minus_id not in facts:
                     raise ValueError('Repair cites a fact outside the selected game')
                 fixed = dict(draft, possible_minus=fields.get('possible_minus'), minus_feature_id=minus_id)
-                return _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
+                result = _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
+                if recovered_selection: result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
+                return result
             except (TypeError, ValueError) as repair_error:
                 print(f"Possible limitation repair rejected ({repair_error}); not publishing unsupported claims.", file=sys.stderr)
         # A deterministic fallback is allowed only for an explicit negative
@@ -386,6 +417,7 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
                 except ValueError:
                     continue
                 result['limitation_generation'] = 'explicit_steam_platform_flag_template'
+                if recovered_selection: result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
                 return result
         raise ValueError('Could not produce a source-linked possible limitation after targeted retries; no upload') from exc
 
