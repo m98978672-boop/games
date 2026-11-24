@@ -48,6 +48,7 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
         return {'videos_analyzed': len(summaries), 'sent': 0}
     sent = 0
     scanned_videos = scanned_comments = matched = answered = 0
+    topics = {'question': 0, 'continuation': 0, 'production': 0, 'other': 0}
     for video_id in comments.recent_public_videos(youtube, limit=200):
         try:
             recent = comments.list_comments(youtube, video_id, limit=500)
@@ -58,6 +59,7 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
         scanned_videos += 1
         scanned_comments += len(recent)
         for comment in recent:
+            topics[comments.comment_topic(comment['text'])] += 1
             reply = comments.automatic_reply(comment['text'])
             if not reply:
                 continue
@@ -86,7 +88,8 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
         if sent >= 50:
             break
     return {'videos_analyzed': len(summaries), 'sent': sent, 'videos_scanned': scanned_videos,
-            'comments_scanned': scanned_comments, 'matched': matched, 'already_answered': answered}
+            'comments_scanned': scanned_comments, 'matched': matched, 'already_answered': answered,
+            **{f'topic_{name}': count for name, count in topics.items()}}
 
 
 def main() -> None:
