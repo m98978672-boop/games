@@ -2,7 +2,7 @@ name: YouTube comments assistant
 
 on:
   schedule:
-    - cron: '17 */6 * * *'
+    - cron: '17 */4 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
