@@ -13,19 +13,25 @@ import time
 from datetime import timedelta
 from pathlib import Path
 
-from schedule_policy import CHANNEL_TZ, manual_publish_time
+from schedule_policy import CHANNEL_TZ, manual_publish_time, next_publish_slot
 
 
 def plan(count: int, video_format: str, start: str, *, now=None) -> list[str]:
     maximum = {"short": 5, "long": 2}.get(video_format)
     if maximum is None or not 1 <= count <= maximum:
         raise ValueError("Queue limit: 1–5 Shorts or 1–2 long reviews per run.")
-    if not start:
-        if count != 1:
-            raise ValueError("A starting Moscow publication time is required for a queue.")
+    start = start.strip()
+    if not start and count == 1:
         return [""]
-    first = manual_publish_time(start, now=now).astimezone(CHANNEL_TZ)
-    return [(first + timedelta(days=index)).strftime("%Y-%m-%d %H:%M") for index in range(count)]
+    # Batch rendering can take hours. Choose the first regular slot with a
+    # generous lead, but never assume it is free: the publisher must reserve it.
+    first = (manual_publish_time(start, now=now) if start else
+             next_publish_slot(now, video_format=video_format, min_lead=timedelta(hours=8))).astimezone(CHANNEL_TZ)
+    if video_format == 'short':
+        times = (first + timedelta(days=index // 2, hours=4 * (index % 2)) for index in range(count))
+    else:
+        times = (first + timedelta(days=index) for index in range(count))
+    return [slot.strftime("%Y-%m-%d %H:%M") for slot in times]
 
 
 def run_queue(times: list[str], video_format: str, output_dir: Path) -> None:
