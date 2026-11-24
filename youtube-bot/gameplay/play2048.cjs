@@ -4,7 +4,6 @@
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
-const { randomBytes } = require("node:crypto");
 const { chromium } = require("playwright");
 const { choose } = require("./solver2048.cjs");
 const { train } = require("./simulator2048.cjs");
@@ -28,7 +27,7 @@ const server = http.createServer((req, res) => {
 });
 
 async function main() {
-  const training = train(randomBytes(4).readUInt32LE()); // Fresh, recorded seed; bounded offline self-play.
+  const training = train(); // Bounded local self-play, completed before recording.
   await new Promise(resolve => server.listen(8787, "127.0.0.1", resolve));
   const browser = await chromium.launch({headless: true});
   const context = await browser.newContext({ viewport: {width: 1280, height: 720}, recordVideo: {dir: OUT, size: {width: 1280, height: 720}} });

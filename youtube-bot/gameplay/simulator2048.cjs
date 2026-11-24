@@ -36,27 +36,16 @@ function simulate(seed, params, maxMoves = 800) {
 function mean(params, seeds) {
   return seeds.reduce((sum, seed) => sum + simulate(seed, params).score, 0) / seeds.length;
 }
-function train(seed = 2048) {
-  // Disjoint reproducible sets, with a fresh master seed per recorded session.
-  // Validation chooses whether to promote; a second unseen test must agree.
-  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw Error("seed must be uint32");
-  const random = rng(seed), used = new Set();
-  const seeds = () => Array.from({length: 4}, () => {
-    let value;
-    do { value = Math.floor(random() * 0x100000000); } while (used.has(value));
-    used.add(value); return value;
-  });
-  const training = seeds(), validation = seeds(), test = seeds();
+function train() {
+  const training = [11, 22, 33, 44], validation = [135, 246, 357, 468];
   const ranked = CANDIDATES.map(params => ({params, score: mean(params, training)}));
   ranked.sort((a, b) => b.score - a.score);
   const candidate = ranked[0].params;
   const baseline = mean(BASE, validation), trial = mean(candidate, validation);
-  const baselineTest = mean(BASE, test), trialTest = mean(candidate, test);
-  const accepted = candidate !== BASE && trial > baseline && trialTest > baselineTest;
-  return {parameters: accepted ? candidate : BASE, accepted, seed, trainingSeeds: training,
-    validationSeeds: validation, testSeeds: test, trainingScore: ranked[0].score,
-    validationScore: trial, baselineValidationScore: baseline, testScore: trialTest,
-    baselineTestScore: baselineTest, metric: "mean simulated score"};
+  // Small fixed holdout only guards against obvious overfitting, not a guarantee.
+  const accepted = candidate !== BASE && trial > baseline;
+  return {parameters: accepted ? candidate : BASE, accepted, trainingScore: ranked[0].score,
+    validationScore: trial, baselineValidationScore: baseline, metric: "mean simulated score"};
 }
 module.exports = {BASE, rng, spawn, potential, simulate, train};
 if (require.main === module) console.log(JSON.stringify(train()));

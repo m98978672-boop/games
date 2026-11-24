@@ -58,6 +58,30 @@ class GameCatalogTests(unittest.TestCase):
         self.assertTrue(request["catalog"][0]["features"][0]["feature_id"].endswith("-f1"))
         self.assertIn("Не выдумывай игровой процесс", messages[0]["content"])
 
+    def test_score_prompt_is_not_anchored_to_seven(self):
+        prompt = build_review_messages(load_game_catalog())[0]['content']
+        self.assertIn('весь диапазон', prompt)
+        self.assertNotIn('"idea_score":7', prompt)
+
+    def test_each_valid_rating_is_preserved(self):
+        game = load_game_catalog()[0]
+        gid = game['id']
+        for score in (1, 4, 7, 10):
+            data = {'schema_version': 1, 'game_id': gid, 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'],
+                    'possible_minus': 'Возможно, этот формат подойдёт не всем.', 'minus_feature_id': f'{gid}-f1',
+                    'idea_score': score, 'hook': 'Что интересного предлагает игра?'}
+            with self.subTest(score=score):
+                result = validate_review(data, [game])
+                self.assertEqual(result['idea_score'], score)
+                self.assertIn(f'{score} из 10', result['scenes'][-1]['dialogue'])
+
+    def test_spoken_source_labels_and_foreign_title(self):
+        from game_reviews import spoken_feature, review_opening
+        self.assertEqual(spoken_feature('Описание Steam: Кооперативная игра.'), 'Кооперативная игра.')
+        self.assertEqual(spoken_feature('Жанры, указанные в Steam: Головоломки'), 'Жанры игры: Головоломки')
+        self.assertIn('эту игру', review_opening('PERI.CO'))
+        self.assertIn('Борис', review_opening('Борис'))
+
     def test_review_prompt_supplies_source_price_and_date_without_inventing_them(self):
         game = dict(load_game_catalog()[0])
         game['source_facts'] = {'release_date': '12 окт. 2027', 'release_coming_soon': True,

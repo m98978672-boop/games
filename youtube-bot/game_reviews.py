@@ -20,13 +20,16 @@ SYSTEM_PROMPT = """Ты — редактор русскоязычного кан
 Выбери одну реальную игру из переданного списка Steam и ровно две особенности (только точные
 feature_id из внешних источников). Не выдумывай игровой процесс, отзывы, производительность,
 доступность, цены, платформы, сюжет или другие факты, которых нет в источниках. Оценка —
-субъективная оценка по опубликованным данным, а не результат личного прохождения. Укажи
+субъективная оценка по опубликованным данным, а не результат личного прохождения. Перед выбором
+оценки сопоставь конкретные сильные стороны, возможные ограничения и полноту сведений. Используй
+весь диапазон целых чисел от 1 до 10, не выбирай одну и ту же оценку по шаблону. Не делай выводы
+о качестве игры, если источников недостаточно; не выдумывай отсутствующий личный опыт. Укажи
 возможный минус только как гипотезу («может не подойти…») и привяжи к одному feature_id.
 Озвучиваемый текст напиши естественным русским языком кириллицей; английское название игры
 не вставляй в реплики, если можно произнести его русским описанием. Не заявляй, что ты лично
 играл. Пиши без оскорблений и кликбейта. Ссылки на источники добавит программа отдельно.
 Не выбирай игру из recent_game_ids, если есть другие варианты. Верни только JSON по схеме:
-{"schema_version":1,"game_id":"id из списка Steam","selected_feature_ids":["точные feature-id","точные feature-id"],"possible_minus":"короткая осторожная гипотеза до 100 символов","minus_feature_id":"точный feature-id","idea_score":7,"hook":"короткий крючок до 100 символов"}
+{"schema_version":1,"game_id":"id из списка Steam","selected_feature_ids":["точные feature-id","точные feature-id"],"possible_minus":"короткая осторожная гипотеза до 100 символов","minus_feature_id":"точный feature-id","idea_score":"целое число от 1 до 10","hook":"короткий крючок до 100 символов"}
 """
 
 
@@ -116,13 +119,29 @@ def build_review_messages(
     ]
 
 
+def spoken_feature(text: str) -> str:
+    """Remove machine-readable source labels from speech, not from evidence."""
+    text = re.sub(r'\s+', ' ', str(text)).strip()
+    replacements = (
+        (r'^Описание Steam:\s*', ''),
+        (r'^Жанры, указанные в Steam:\s*', 'Жанры игры: '),
+        (r'^Платформы из карточки Steam:\s*', 'Указанные платформы: '),
+        (r'^Отзывы Steam:\s*', 'Отзывы игроков в Стиме: '),
+        (r'^Дата релиза из Steam:\s*', 'Указанная дата выхода: '),
+        (r'^Разработчик в карточке Steam:\s*', 'Разработчик: '),
+    )
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+
 def review_opening(title: str) -> str:
     """A short host introduction; game name is a source-provided title, not a claim."""
     title = re.sub(r'\s+', ' ', str(title)).strip()
     if not title:
         raise ValueError('A game title is required for the introduction')
-    title = speech_excerpt(title, 45)
-    return f'Привет! Сегодня разбираем {title}: что это за игра и кому она может подойти.'
+    spoken_title = speech_excerpt(title, 45) if _russian_ratio(title) >= 0.5 else 'эту игру'
+    return f'Привет! Сегодня разбираем {spoken_title}: что это за игра и кому она может подойти.'
 
 
 def ensure_editorial_quality(scenes: list[dict[str, str]]) -> None:
@@ -195,7 +214,7 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     scenes = [
         {"speaker": "Games AI", "dialogue": review_opening(game['title']), "visual": f"Обзор: {game['title']}", "emotion": "happy", "label": "ПРИВЕТ!"},
         {"speaker": "Games AI", "dialogue": f"О чём игра? По описанию авторов: {speech_excerpt(description, 90)}", "visual": description, "emotion": "curious", "label": "О ЧЁМ ИГРА"},
-        {"speaker": "Games AI", "dialogue": f"Ещё одна деталь: {speech_excerpt(pros[1], 76)}", "visual": pros[1], "emotion": "happy", "label": "ОСОБЕННОСТИ"},
+        {"speaker": "Games AI", "dialogue": f"Ещё одна деталь: {speech_excerpt(spoken_feature(pros[1]), 76)}", "visual": pros[1], "emotion": "happy", "label": "ОСОБЕННОСТИ"},
         {"speaker": "Games AI", "dialogue": f"А что может не понравиться? {speech_excerpt(possible_minus, 76)}", "visual": f"Основание: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
         {"speaker": "Games AI", "dialogue": f"Итог: по описанию оценка идеи — {score} из 10. Я ещё не играла, поэтому оценка предварительная.", "visual": f"ИТОГ ПО ИСТОЧНИКАМ · {score}/10 · НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", "emotion": "calm", "label": "ИТОГ"},
     ]
