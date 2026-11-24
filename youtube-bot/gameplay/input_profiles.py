@@ -54,9 +54,21 @@ def validate_action(action) -> dict:
     hold = action.get("hold_ms", 0)
     if not isinstance(hold, int) or not 0 <= hold <= 4500:
         raise InputProfileError("invalid hold")
-    return {"keys": list(keys), "click": list(click) if click else None,
-            "button": action.get("button", "left"), "look": list(look) if look else None,
-            "hold_ms": hold, "duration_ms": duration}
+    # Emit only the fields that were actually requested. The bridge rejects
+    # ``button``/``hold_ms`` when no click accompanies them ("invalid button"),
+    # so a normalised action must not carry empty placeholders.
+    clean: dict = {}
+    if keys:
+        clean["keys"] = list(keys)
+    if click:
+        clean["click"] = list(click)
+        clean["button"] = action.get("button", "left")
+        if hold:
+            clean["hold_ms"] = hold
+    if look:
+        clean["look"] = list(look)
+    clean["duration_ms"] = duration
+    return clean
 
 
 @dataclass(frozen=True)
@@ -147,7 +159,9 @@ def keyboard_profile(name: str = "wasd-fps") -> InputProfile:
         "SPRINT": KeyBinding(("ShiftLeft", "KeyW"), duration_ms=600),
         "JUMP": KeyBinding(("Space",)),
         "INTERACT": KeyBinding(("KeyE",), duration_ms=250),
-        "MINE": KeyBinding(hold_ms=1500, duration_ms=200),
+        # Mining is a held click at the crosshair: the bridge rejects hold_ms
+        # without a click, so this must stay a screen binding.
+        "MINE": ScreenBinding(400, 300, duration_ms=200, hold_ms=1500),
         "EXPLORE": KeyBinding(("KeyW",), look=(30, 0), duration_ms=400),
     })
     return InputProfile(name=name, bindings=bindings)

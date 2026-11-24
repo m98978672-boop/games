@@ -10,8 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay.reflex_layer import (DECISION_BUDGET_MS, FRAME, PERCEPTION_BUDGET_MS, Perception,
                                    ReflexController, ReflexRunner, Target, detect_targets,
                                    perceive, summarise)
-from gameplay.input_profiles import (InputProfileError, keyboard_profile, validate_action,
-                                     virtual_joystick_profile, arrows_profile)
+from gameplay.input_profiles import (InputProfileError, arrows_profile, keyboard_profile,
+                                     validate_action, virtual_joystick_profile)
 from gameplay.skill_memory import SkillMemory
 from reflex_agent import ReflexAgent, build_agent, describe_budget
 from gameplay_qwen_advisor import SlowAdvisor, AdvisorStats, build_prompt
@@ -171,6 +171,26 @@ class ProfileTests(unittest.TestCase):
 
     def test_arrow_profile(self):
         self.assertEqual(arrows_profile().action('LEFT')['keys'], ['ArrowLeft'])
+
+    def test_bridge_rule_button_and_hold_need_a_click(self):
+        # The bridge raises "invalid button" for a click-less button field and
+        # "invalid hold duration" for a click-less hold; every profile action
+        # must therefore stay free of those placeholders. Caught by CI before
+        # the fix, so it is pinned here.
+        for factory in (keyboard_profile, arrows_profile, virtual_joystick_profile):
+            for intent in factory().intents():
+                action = factory().action(intent)
+                if 'button' in action:
+                    self.assertIn('click', action, (factory.__name__, intent))
+                if 'hold_ms' in action:
+                    self.assertIn('click', action, (factory.__name__, intent))
+        self.assertIn('click', keyboard_profile().action('MINE'))
+
+    def test_validated_action_is_not_padded_with_placeholders(self):
+        clean = validate_action({'keys': ['KeyW']})
+        self.assertEqual(clean, {'keys': ['KeyW'], 'duration_ms': 250})
+        clean = validate_action({'look': [10, 0]})
+        self.assertEqual(clean, {'look': [10, 0], 'duration_ms': 250})
 
     def test_invalid_inputs_are_refused(self):
         for bad in ({'keys': ['KeyW', 'KeyW']}, {'keys': ['F13']}, {'click': [900, 10]},
