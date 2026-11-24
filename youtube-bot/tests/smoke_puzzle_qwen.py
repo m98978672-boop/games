@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
         hint = ''
         previous = None
         history = []
-        while time.monotonic() - start < 1800 and len(trace) < 600:
+        while time.monotonic() - start < int(os.getenv("FINITE_GAME_SECONDS", "1800")) and len(trace) < 600:
             diag = obs.get('puzzle_telemetry')
             if diag.get('won'):
                 outcome = 'game_reported_win'; break

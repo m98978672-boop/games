@@ -37,7 +37,7 @@ with tempfile.TemporaryDirectory(prefix='adventure-game-') as temp:
         obs = bridge.receive(timeout=120)
         started = time.monotonic()
         same_screen = 0
-        while time.monotonic() - started < 1800 and len(trace) < 180:
+        while time.monotonic() - started < int(os.getenv("FINITE_GAME_SECONDS", "1800")) and len(trace) < 180:
             diag = obs.get('adventure_telemetry')
             if not isinstance(diag, dict) or diag.get('outcome') not in ('playing','victory','death','unknown'):
                 outcome = 'invalid_game_telemetry'; break
