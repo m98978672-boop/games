@@ -157,6 +157,15 @@ def _already_replied(youtube: Any, parent_id: str, channel: str) -> bool:
             raise RuntimeError("Too many replies to safely verify duplicates; inspect in YouTube Studio.")
 
 
+def has_any_reply(youtube: Any, parent_id: str) -> bool:
+    """Skip a thread with any existing reply, including replies from viewers."""
+    page = youtube.comments().list(part="id", parentId=parent_id, maxResults=1).execute()
+    items = page.get("items")
+    if not isinstance(items, list):
+        raise RuntimeError("Cannot verify whether the comment has replies.")
+    return bool(items) or bool(page.get("nextPageToken"))
+
+
 def post_reviewed_reply(youtube: Any, *, parent_id: str, reply: str, ledger: Path = LEDGER) -> str:
     """Post once after verification; uncertain network outcomes remain blocked."""
     reply = reply.strip()
@@ -221,9 +230,9 @@ def auto_reply_video(youtube: Any, video_id: str, *, limit: int = 5, ledger: Pat
 
 
 def recent_public_videos(youtube: Any, *, limit: int = 10) -> list[str]:
-    """Fetch at most ten recent uploads, and recheck owner and public status."""
-    if not 1 <= limit <= 10:
-        raise ValueError("video limit must be between 1 and 10")
+    """Fetch up to 50 recent uploads, and recheck owner and public status."""
+    if not 1 <= limit <= 50:
+        raise ValueError("video limit must be between 1 and 50")
     channels = youtube.channels().list(part="id,contentDetails", mine=True, maxResults=1).execute().get("items", [])
     if len(channels) != 1 or not channels[0].get("id"):
         raise RuntimeError("Cannot verify the connected YouTube channel.")
