@@ -59,6 +59,7 @@ jobs:
             youtube-bot/tests/test_playthrough_continue.py
           node supabase/functions/youtube-bot/tests/oidc-policy.test.mjs
           node youtube-bot/tests/test-mobile-comments.cjs
+          node youtube-bot/tests/test-credential-copy.cjs
           node youtube-bot/tests/test-comments-oauth.mjs
           node youtube-bot/gameplay/test-solver2048.cjs
           node --check youtube-bot/gameplay/play2048.cjs
