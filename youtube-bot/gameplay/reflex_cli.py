@@ -1,6 +1,7 @@
 """Operator-facing entry point for the reflex layer.
 
     python -m gameplay.reflex_cli bench            # speed of perception on this host
+    python -m gameplay.reflex_cli live             # real bridge: step-sync + real-time pass
     python -m gameplay.reflex_cli skills           # what the agent has learned
     python -m gameplay.reflex_cli forget --all     # wipe the skill table
     python -m gameplay.reflex_cli import FILE      # merge a snapshot from a run
@@ -80,6 +81,7 @@ def cmd_live(args) -> int:
     argv = ['--steps', str(args.steps)]
     if args.report:
         argv += ['--report', str(args.report)]
+    argv += ['--advisor-delay', str(args.advisor_delay)]
     try:
         return live_main(argv)
     except RuntimeError as error:
@@ -117,15 +119,20 @@ def main(argv: list[str] | None = None) -> int:
     imp.set_defaults(func=cmd_import)
     sub.add_parser('profiles', help='list control schemes').set_defaults(func=cmd_profiles)
     sub.add_parser('budget', help='show the timing contract').set_defaults(func=cmd_budget)
-    live = sub.add_parser('live', help='play a synthetic game through the Docker bridge')
+    live = sub.add_parser('live', help='play a synthetic game through the Docker bridge '
+                                       '(step-sync + real-time pass)')
     live.add_argument('--steps', type=int, default=16)
     live.add_argument('--report', type=Path, default=None)
+    live.add_argument('--advisor-delay', type=float, default=0.35,
+                      help='seconds of simulated thinking per tick in the real-time pass')
     live.set_defaults(func=cmd_live)
     args = parser.parse_args(argv)
     if args.command == 'bench' and not 1 <= args.frames <= 2000:
         parser.error('frames must be 1..2000')
     if args.command == 'live' and not 1 <= args.steps <= 200:
         parser.error('steps must be 1..200')
+    if args.command == 'live' and not 0 <= args.advisor_delay <= 5:
+        parser.error('advisor delay must be 0..5 seconds')
     return args.func(args)
 
 
