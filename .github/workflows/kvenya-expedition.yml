@@ -23,7 +23,7 @@ on:
         required: false
         default: ''
       seconds:
-        description: 'Длина экспедиции в секундах (20–180)'
+        description: 'Длина экспедиции в секундах (20–600; сюжетной истории нужно больше)'
         required: true
         default: '60'
 
@@ -89,7 +89,29 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/expedition"
           SECONDS_TO_PLAY="${EXP_SECONDS:-$EXP_SECONDS}"
-          python3 qwen-home/tools/expedition.py --url "$EXP_URL" --seconds "$SECONDS_TO_PLAY" --keys "${EXP_KEYS:-}" --interval-ms "${EXP_INTERVAL:-0}" --out "$RUNNER_TEMP/expedition"
+          # Прошлая карта истории: берём самый свежий storymap.json в репозитории,
+          # чтобы эта экспедиция не начинала знание с нуля. Если история по тому
+          # же адресу ещё не сохранялась — флага просто нет.
+          MEMO=$(python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          url = os.environ.get('EXP_URL', '')
+          best = None
+          for rep in sorted(Path('qwen-home/bridge/expeditions').glob('*/report.json')):
+              try:
+                  r = json.loads(rep.read_text(encoding='utf-8'))
+              except Exception:
+                  continue
+              if r.get('url') != url:
+                  continue
+              cand = rep.parent / 'storymap.json'
+              if cand.exists():
+                  best = cand
+          print(best or '')
+          PY
+          )
+          [ -n "$MEMO" ] && echo "Вспомню карту прошлого прогона: $MEMO — $(stat -c %s "$MEMO") байт" || echo "Прошлой карты для этого адреса нет — начну с чистого листа"
+          python3 qwen-home/tools/expedition.py --url "$EXP_URL" --seconds "$SECONDS_TO_PLAY" --keys "${EXP_KEYS:-}" --interval-ms "${EXP_INTERVAL:-0}" --out "$RUNNER_TEMP/expedition" ${MEMO:+--memo "$MEMO"}
       - name: Keep the full video as an artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -111,6 +133,9 @@ jobs:
           DIR="qwen-home/bridge/expeditions/$STAMP-$HOST"
           mkdir -p "$DIR"
           cp "$SRC/report.json" "$DIR/report.json"
+          # Карта истории едет вместе с отчётом: следующий прогон вспомнит места
+          # и не будет искать их заново.
+          [ -f "$SRC/storymap.json" ] && cp "$SRC/storymap.json" "$DIR/storymap.json" || true
           for f in "$SRC"/*.png; do [ -f "$f" ] && cp "$f" "$DIR/"; done
           # Видео — прямо на её страницу, а не только в артефакты:
           # маленькое кладём как есть, большое пережимаем ffmpeg.
