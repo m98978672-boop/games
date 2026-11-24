@@ -228,7 +228,7 @@ def automatic_reply(comment: str) -> str | None:
     No comments or model output can specify the published text or commands.
     """
     text = re.sub(r"\s+", " ", comment.strip().lower()).strip(" !.😊👍❤️")
-    if re.fullmatch(r"(?:спасибо|спасибо за видео|класс|отличное видео|понравилось|отлично|thanks|great video)", text):
+    if re.fullmatch(r"(?:спасибо|большое спасибо|спасибо большое|спасибо за видео|спасибо за обзор|класс|круто|супер|отличное видео|хорошее видео|понравилось|отлично|thanks|thank you|great video)", text):
         return "Спасибо за отзыв! Рады, что вы посмотрели видео."
     if re.fullmatch(r"(?:жду продолжения|продолжай|хочу продолжение|жду следующую часть|more please)", text):
         return "Спасибо за интерес к продолжению! Мы учтём ваш отзыв."
