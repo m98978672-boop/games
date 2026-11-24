@@ -271,8 +271,9 @@ check('не топчется: петли и обратные ходы в ист�
   expPy.includes('def is_loop') && expPy.includes('came_from') && expPy.includes('стоп-кран')
   && expPy.includes('два места') && expPy.includes("hashlib.sha1(norm.encode('utf-8'))"));
 
-check('петля не считается новым местом: «house → Leave quietly!» не повторяется',
-  expPy.includes('no_loop_choices') && expPy.includes('not story_map.is_loop(passage, c.get(\'label\'), came_from)'));
+check('идёт по НЕнажатым выборам, а не по «новому месту»: цикла дом→кухня→дом нет',
+  expPy.includes('def not_tried') && expPy.includes('return (k, c.get(\'label\')) not in story_map.tried')
+  && expPy.includes('no_loops'));
 
 check('стоп-кран мягче 18 шагов: успевает обойти дом, но не жжёт время',
   expPy.includes('len(trail) > 18') && expPy.includes('len(set(trail[-8:])) <= 2'));
