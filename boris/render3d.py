@@ -89,6 +89,11 @@ def loft(rings, col, ol=True, caps=True):
         faces.append((list(reversed(rings[-1])), col, False, ol))
     return faces
 
+def puff_ball(px, py, pz, r, col=(240, 240, 236)):
+    rings = [octa(pz - r*0.55, py, r*0.62), octa(pz, py, r), octa(pz + r*0.55, py, r*0.62)]
+    rings = [[(q[0]+px, q[1], q[2]) for q in ring] for ring in rings]
+    return [(q, col, True, False) for q, c, e, ol in loft(rings, col, False, True)]
+
 def disc(cx, cy, cz, r, squash=1.0):
     pts = []
     for k in range(8):
@@ -97,7 +102,7 @@ def disc(cx, cy, cz, r, squash=1.0):
     return pts
 
 def B4(c, s, col):
-    return [(q, col, False, True) for q, _c, _e in box(c, s, col)]
+    return [(q, col, False, False) for q, _c, _e in box(c, s, col)]
 
 def cat_faces(P):
     """P: x,z,yaw,lift,pitch,walk,head_yaw,head_pitch,sit,rear,tp,tail_t,blink,detach,paper,crouch,grey,ear_tw"""
@@ -114,7 +119,7 @@ def cat_faces(P):
     BS = [(-0.22, 0.295, 0.068), (-0.12, 0.310, 0.090), (0.04, 0.317, 0.088),
           (0.15, 0.327, 0.074), (0.22, 0.337, 0.056)]
     rings = [octa(z, yc, r) for z, yc, r in BS]
-    faces += [([body(p) for p in q], c, e, ol) for q, c, e, ol in loft(rings, CLAY)]
+    faces += [([body(p) for p in q], c, e, ol) for q, c, e, ol in loft(rings, CLAY, False)]
     pr = [octa(z, yc, r*1.06) for z, yc, r in BS]
     for i in (1, 2):
         faces += [([body(p) for p in [pr[i][1], pr[i][2], pr[i+1][2], pr[i+1][1]]], ORANGE, False, False)]
@@ -149,7 +154,7 @@ def cat_faces(P):
         return body(p)
     HS = [(0.155, 0.465, 0.070), (0.225, 0.475, 0.096), (0.315, 0.480, 0.090), (0.375, 0.472, 0.062)]
     hr = [octa(z, yc, r, 0.95) for z, yc, r in HS]
-    faces += [([head(p) for p in q], c, e, ol) for q, c, e, ol in loft(hr, CLAY)]
+    faces += [([head(p) for p in q], c, e, ol) for q, c, e, ol in loft(hr, CLAY, False)]
     ph = [octa(z, yc, r*1.05, 0.95) for z, yc, r in HS]
     for i in (1, 2):
         faces += [([head(p) for p in [ph[i][1], ph[i][2], ph[i+1][2], ph[i+1][1]]], ORANGE, False, False)]
@@ -161,7 +166,7 @@ def cat_faces(P):
         base = [(sgn*0.052-0.034, 0.545, 0.22), (sgn*0.052+0.034, 0.545, 0.22), (sgn*0.052, 0.545, 0.285)]
         tip = [(sgn*0.052-0.009, 0.620, 0.225), (sgn*0.052+0.009, 0.620, 0.225), (sgn*0.052, 0.620, 0.250)]
         pv = (sgn*0.052, 0.545, 0.20)
-        ear = loft([base, tip], ORANGE if (sgn > 0 or P.get("painted")) else CLAY)
+        ear = loft([base, tip], ORANGE if (sgn > 0 or P.get("painted")) else CLAY, False)
         faces += [([head(rz(p, sgn*0.16+ext, pv)) for p in q], c, e, ol) for q, c, e, ol in ear]
     # глаза-круги с зрачком и бликом
     bl = P.get("blink", 1.0)
@@ -183,19 +188,15 @@ def cat_faces(P):
         tb = (0.12+0.03*math.sin(w*5), 0.46+0.04*math.sin(w*3.1), -0.30)
     pos = tb
     w = P["tail_t"]
-    for i in range(7):
+    for i in range(10):
         eb = -0.35 if P.get("tail_down") else 0.75
-        elev = eb + 0.22*math.sin(w*2.0 + i*0.55)
-        azim = 0.45*math.sin(w*2.6 + i*0.40)
-        d = (math.sin(azim)*0.048, math.sin(elev)*0.048, -math.cos(azim)*0.048)
+        elev = eb + 0.22*math.sin(w*2.0 + i*0.42)
+        azim = 0.45*math.sin(w*2.6 + i*0.31)
+        d = (math.sin(azim)*0.038, math.sin(elev)*0.038, -math.cos(azim)*0.038)
         pos = (pos[0]+d[0], pos[1]+d[1], pos[2]+d[2])
-        s = 0.050 - 0.024*(i/6.0)
-        if P.get("painted"):
-            col = ORANGE if i % 2 == 0 else (205, 115, 45)
-            faces += [([body(p) for p in q], col, False, True) for q, c2, e in box(pos, (s, s, s*1.1), col)]
-        else:
-            col = PURP if i % 2 == 0 else BLACK
-            faces += [([body(p) for p in q], col, True, False) for q, c2, e in box(pos, (s, s, s*1.1), col)]
+        s = 0.054 - 0.028*(i/9.0)
+        col = (200, 110, 45) if (P.get("painted") and i % 3 == 1) else CLAY
+        faces += [([body(p) for p in q], col, False, False) for q, c2, e in box(pos, (s, s, s*1.5), col)]
     if P.get("painted"):
         # нормальные текстуры: белая шерсть + рыжие полоски табби
         for i in (0, 3):
@@ -324,29 +325,30 @@ def human_house(x, z, yaw=0.0, s=1.0, night=False, glow=1.0, t=0.0, door_open=Fa
     f += _xform(box((0, 0.09, -2.28), (1.34, 0.12, 0.34), (150, 148, 142)), T_)  # порог
     f += _xform(quad((-0.7, 0.014, -2.42), (0.7, 0.014, -2.42), (0.7, 0.014, -2.86), (-0.7, 0.014, -2.86), (150, 70, 60)), T_)
     f += _xform(quad((-0.55, 0.016, -2.50), (0.55, 0.016, -2.50), (0.55, 0.016, -2.78), (-0.55, 0.016, -2.78), (170, 90, 78)), T_)
-    D = list(box((0, 1.30, -2.08), (1.1, 2.3, 0.12), (52, 84, 66)))          # полотно
+    f += _xform([([(-0.50, 0.20, -2.025), (0.50, 0.20, -2.025), (0.50, 2.40, -2.025), (-0.50, 2.40, -2.025)], (216, 168, 96), True)], T_)
+    D = list(box((0, 1.30, -2.08), (1.1, 2.3, 0.12), (172, 124, 68)))          # полотно
     for cx, cy, w, h in ((-0.27, 1.88, 0.40, 0.62), (0.27, 1.88, 0.40, 0.62),
                          (-0.27, 0.85, 0.40, 0.72), (0.27, 0.85, 0.40, 0.72)):
         D += quad((cx - w / 2, cy - h / 2, -2.146), (cx + w / 2, cy - h / 2, -2.146),
-                  (cx + w / 2, cy + h / 2, -2.146), (cx - w / 2, cy + h / 2, -2.146), (30, 58, 44))
-        D += list(box((cx, cy + h / 2 + 0.03, -2.16), (w + 0.10, 0.06, 0.04), (88, 134, 106)))
-        D += list(box((cx, cy - h / 2 - 0.03, -2.16), (w + 0.10, 0.06, 0.04), (88, 134, 106)))
-        D += list(box((cx - w / 2 - 0.03, cy, -2.16), (0.06, h + 0.12, 0.04), (88, 134, 106)))
-        D += list(box((cx + w / 2 + 0.03, cy, -2.16), (0.06, h + 0.12, 0.04), (88, 134, 106)))
+                  (cx + w / 2, cy + h / 2, -2.146), (cx - w / 2, cy + h / 2, -2.146), (146, 100, 52))
+        D += list(box((cx, cy + h / 2 + 0.03, -2.16), (w + 0.10, 0.06, 0.04), (206, 160, 98)))
+        D += list(box((cx, cy - h / 2 - 0.03, -2.16), (w + 0.10, 0.06, 0.04), (206, 160, 98)))
+        D += list(box((cx - w / 2 - 0.03, cy, -2.16), (0.06, h + 0.12, 0.04), (206, 160, 98)))
+        D += list(box((cx + w / 2 + 0.03, cy, -2.16), (0.06, h + 0.12, 0.04), (206, 160, 98)))
         D += quad((cx - w / 2 + 0.03, cy + h / 2 - 0.06, -2.150), (cx + w / 2 - 0.03, cy + h / 2 - 0.06, -2.150),
-                  (cx + w / 2 - 0.03, cy + h / 2 - 0.03, -2.150), (cx - w / 2 + 0.03, cy + h / 2 - 0.03, -2.150), (34, 60, 46))
+                  (cx + w / 2 - 0.03, cy + h / 2 - 0.03, -2.150), (cx - w / 2 + 0.03, cy + h / 2 - 0.03, -2.150), (120, 82, 44))
         D += quad((cx - w / 2 + 0.03, cy - h / 2 + 0.03, -2.150), (cx - w / 2 + 0.06, cy - h / 2 + 0.03, -2.150),
-                  (cx - w / 2 + 0.06, cy + h / 2 - 0.03, -2.150), (cx - w / 2 + 0.03, cy + h / 2 - 0.03, -2.150), (34, 60, 46))
+                  (cx - w / 2 + 0.06, cy + h / 2 - 0.03, -2.150), (cx - w / 2 + 0.03, cy + h / 2 - 0.03, -2.150), (120, 82, 44))
         D += quad((cx - w / 2 + 0.03, cy - h / 2 + 0.03, -2.150), (cx + w / 2 - 0.03, cy - h / 2 + 0.03, -2.150),
-                  (cx + w / 2 - 0.03, cy - h / 2 + 0.06, -2.150), (cx - w / 2 + 0.03, cy - h / 2 + 0.06, -2.150), (86, 128, 100))
+                  (cx + w / 2 - 0.03, cy - h / 2 + 0.06, -2.150), (cx - w / 2 + 0.03, cy - h / 2 + 0.06, -2.150), (222, 178, 116))
         D += quad((cx + w / 2 - 0.06, cy - h / 2 + 0.03, -2.150), (cx + w / 2 - 0.03, cy - h / 2 + 0.03, -2.150),
-                  (cx + w / 2 - 0.03, cy + h / 2 - 0.03, -2.150), (cx + w / 2 - 0.06, cy + h / 2 - 0.03, -2.150), (86, 128, 100))
+                  (cx + w / 2 - 0.03, cy + h / 2 - 0.03, -2.150), (cx + w / 2 - 0.06, cy + h / 2 - 0.03, -2.150), (222, 178, 116))
     for bx2, by2, bw2, bh2 in ((0, 2.42, 1.02, 0.07), (0, 0.20, 1.02, 0.07), (-0.51, 1.30, 0.07, 2.3), (0.51, 1.30, 0.07, 2.3)):
         D += list(box((bx2, by2, -2.155), (bw2, bh2, 0.03), TR))                # белый кант полотна
     for wa in range(8):                                                        # венок
-        wx, wy = 0.14 * math.cos(wa * math.pi / 4), 1.37 + 0.14 * math.sin(wa * math.pi / 4)
-        D += list(box((wx, wy, -2.17), (0.075, 0.075, 0.04), (58, 108, 62)))
-    D += list(box((0, 1.225, -2.18), (0.09, 0.08, 0.03), (190, 60, 50)))        # бант
+        wx, wy = 0.16 * math.cos(wa * math.pi / 4), 1.37 + 0.16 * math.sin(wa * math.pi / 4)
+        D += list(box((wx, wy, -2.17), (0.085, 0.085, 0.045), (74, 128, 64)))
+    D += list(box((0, 1.225, -2.18), (0.13, 0.10, 0.04), (196, 62, 52)))        # бант
     D += list(box((0.42, 1.30, -2.155), (0.06, 0.30, 0.03), (200, 170, 80)))  # планка ручки
     D += list(box((0.33, 1.32, -2.17), (0.16, 0.05, 0.05), (226, 190, 90)))   # рукоятка
     D += list(box((0.42, 1.16, -2.16), (0.035, 0.06, 0.02), (90, 74, 40)))    # замочная скважина
@@ -355,7 +357,7 @@ def human_house(x, z, yaw=0.0, s=1.0, night=False, glow=1.0, t=0.0, door_open=Fa
     if not door_open:
         f += _xform(D, T_)
     else:
-        hx, hz, a = 0.55, -2.08, -0.62
+        hx, hz, a = 0.55, -2.08, -1.35
         def _rot(pt):
             dx, dz = pt[0] - hx, pt[2] - hz
             return (hx + dx * math.cos(a) + dz * math.sin(a), pt[1], hz - dx * math.sin(a) + dz * math.cos(a))
@@ -1401,8 +1403,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
             pr = 0.05 + 0.16 * (t - 6.05)
             for pj, (px, py) in enumerate(((0.52, 1.05), (0.40, 1.15), (0.30, 0.95))):
                 if t > 6.05 + pj * 0.12:
-                    faces += quad((px - pr, py - pr, -2.45), (px + pr, py - pr, -2.45),
-                                  (px + pr, py + pr, -2.45), (px - pr, py + pr, -2.45), (240, 240, 236), True)
+                    faces += puff_ball(px, py, -2.45, pr)
         shadow = (0.3, -1.7)
         faces += quad((-40, 0, -30), (40, 0, -30), (40, 0, 40), (-40, 0, 40), (168, 132, 108))
         faces += quad((-20, 0.005, -16), (20, 0.005, -16), (20, 0.005, -9), (-20, 0.005, -9), (112, 116, 84))
@@ -1638,8 +1639,9 @@ def render_frame(k, t, ovl_imgs, ot=None):
         bp = 1.4 if 5.0 < t < 5.5 else (0.5 + 0.5 * math.sin(t * 2.2))
         faces += pigeon_faces(0.62, 4.72 + (0.15 if 5.5 < t < 6.1 else 0.0), math.pi, t, fly=0.0, peck=bp, scale=1.15, y=0.85)
         if 5.0 < t < 5.5:
-            faces += quad((0.52, 1.2, 4.42), (0.72, 1.2, 4.42), (0.72, 1.24, 4.42), (0.52, 1.24, 4.42), (250, 250, 246), True)
-            faces += quad((0.60, 1.1, 4.42), (0.64, 1.1, 4.42), (0.64, 1.34, 4.42), (0.60, 1.34, 4.42), (250, 250, 246), True)
+            faces += puff_ball(0.62, 1.32, 4.40, 0.075, (250, 240, 190))
+            faces += puff_ball(0.46, 1.18, 4.40, 0.055, (250, 240, 190))
+            faces += puff_ball(0.78, 1.16, 4.40, 0.055, (250, 240, 190))
         faces += pigeon_faces(-0.98, 4.78, math.pi * 0.85 if t < 5.6 else math.pi * 0.35, t + 1.3, fly=0.0, peck=0.0, scale=1.1, y=0.85)
         cf, cl = cat_faces(P); faces += cf; lines += cl
         if MODE == "shorts":
