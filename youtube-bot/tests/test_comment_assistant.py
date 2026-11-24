@@ -222,6 +222,20 @@ class CommentAssistantTests(unittest.TestCase):
                 return super().list(**kw)
         self.assertEqual([c['id'] for c in assistant.list_comments(PagedAPI(), 'video', limit=500)], ['p', 'pnext'])
 
+    def test_upload_pagination_checks_each_video_batch(self):
+        class PagedUploads:
+            def channels(self): return self
+            def playlistItems(self): return self
+            def videos(self): return self
+            def list(self, **kw):
+                if kw.get('mine'):
+                    return Request({'items': [{'id': 'owner', 'contentDetails': {'relatedPlaylists': {'uploads': 'p'}}}]})
+                if kw.get('playlistId'):
+                    video = 'abcdefghij1' if kw.get('pageToken') else 'abcdefghij0'
+                    return Request({'items': [{'contentDetails': {'videoId': video}}], **({} if kw.get('pageToken') else {'nextPageToken': 'next'})})
+                return Request({'items': [{'id': video, 'snippet': {'channelId': 'owner'}, 'status': {'privacyStatus': 'public'}} for video in kw['id'].split(',')]})
+        self.assertEqual(assistant.recent_public_videos(PagedUploads(), limit=100), ['abcdefghij0', 'abcdefghij1'])
+
     def test_recent_videos_rejects_private_and_foreign_uploads(self):
         class RecentAPI:
             def channels(self): return self

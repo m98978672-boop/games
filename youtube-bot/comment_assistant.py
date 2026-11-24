@@ -242,9 +242,9 @@ def auto_reply_video(youtube: Any, video_id: str, *, limit: int = 5, ledger: Pat
 
 
 def recent_public_videos(youtube: Any, *, limit: int = 10) -> list[str]:
-    """Fetch up to 50 recent uploads, and recheck owner and public status."""
-    if not 1 <= limit <= 50:
-        raise ValueError("video limit must be between 1 and 50")
+    """Fetch up to 200 uploads, and recheck owner and public status."""
+    if type(limit) is not int or not 1 <= limit <= 200:
+        raise ValueError("video limit must be between 1 and 200")
     channels = youtube.channels().list(part="id,contentDetails", mine=True, maxResults=1).execute().get("items", [])
     if len(channels) != 1 or not channels[0].get("id"):
         raise RuntimeError("Cannot verify the connected YouTube channel.")
@@ -252,14 +252,28 @@ def recent_public_videos(youtube: Any, *, limit: int = 10) -> list[str]:
     playlist = channels[0].get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
     if not isinstance(playlist, str) or not playlist:
         raise RuntimeError("Channel uploads playlist unavailable.")
-    page = youtube.playlistItems().list(part="contentDetails", playlistId=playlist, maxResults=limit).execute()
-    ids = [str(item.get("contentDetails", {}).get("videoId", "")) for item in page.get("items", [])]
-    ids = list(dict.fromkeys(item for item in ids if re.fullmatch(r"[A-Za-z0-9_-]{11}", item)))[:limit]
-    if not ids:
-        return []
-    videos = youtube.videos().list(part="snippet,status", id=",".join(ids), maxResults=limit).execute().get("items", [])
-    allowed = {str(item.get("id")) for item in videos if item.get("snippet", {}).get("channelId") == owner
-               and item.get("status", {}).get("privacyStatus") == "public"}
+    ids, token, seen_tokens = [], None, set()
+    for _ in range((limit + 49) // 50):
+        params = dict(part="contentDetails", playlistId=playlist, maxResults=min(50, limit - len(ids)))
+        if token:
+            params["pageToken"] = token
+        page = youtube.playlistItems().list(**params).execute()
+        for item in page.get("items", []):
+            video_id = str(item.get("contentDetails", {}).get("videoId", ""))
+            if re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id) and video_id not in ids:
+                ids.append(video_id)
+        token = page.get("nextPageToken")
+        if not token or len(ids) >= limit:
+            break
+        if token in seen_tokens:
+            raise RuntimeError("Repeated uploads page token")
+        seen_tokens.add(token)
+    allowed = set()
+    for offset in range(0, len(ids), 50):
+        batch = ids[offset:offset + 50]
+        videos = youtube.videos().list(part="snippet,status", id=",".join(batch), maxResults=len(batch)).execute().get("items", [])
+        allowed.update(str(item.get("id")) for item in videos if item.get("snippet", {}).get("channelId") == owner
+                       and item.get("status", {}).get("privacyStatus") == "public")
     return [video_id for video_id in ids if video_id in allowed]
 
 
