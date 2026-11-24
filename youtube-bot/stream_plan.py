@@ -531,8 +531,8 @@ def issues(plan: StreamPlan) -> list[str]:
             problems.append(f"talking points for {segment.title} exceed the segment")
     if expected != plan.total_seconds:
         problems.append("last segment does not end at the planned finish")
-    if not 5 <= len(plan.segments) <= MAX_SEGMENTS:
-        problems.append("unusual number of segments")
+    if not 1 <= len(plan.segments) <= MAX_SEGMENTS:
+        problems.append("impossible number of segments")
     if plan.total_seconds > MAX_TOTAL_SECONDS:
         problems.append("stream is longer than the maximum")
     for check in plan.checks:

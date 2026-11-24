@@ -10,6 +10,8 @@
     python -m gameplay.reflex_cli model            # the learned screen graph
     python -m gameplay.reflex_cli plan --game ... --author ... --minutes 90
                                                    # plan a stream ahead of time
+    python -m gameplay.reflex_cli stream --game ... --author ... --minutes 30 --out DIR
+                                                   # run the plan, write report + SRT
 
 Everything writes plain JSON to stdout and never touches the network. The
 commands are read-only except ``forget`` and ``import``, which only modify the
@@ -143,6 +145,60 @@ def cmd_plan(args) -> int:
     return 0 if not problems else 1
 
 
+def cmd_stream(args) -> int:
+    """Run a planned stream against measured frames and write reviewable artifacts.
+
+    No broadcast: frames come from a synthetic fixture or a saved recording, and the
+    output is report.json + captions.srt + recap.md in ``--out``.
+    """
+    from datetime import datetime, timezone
+
+    from stream_plan import PlanError, build_plan, issues
+    from stream_run import Frame, check_against_contract, run_stream, write_artifacts
+
+    start = args.start or datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    try:
+        plan = build_plan(game=args.game, author=args.author, start=start,
+                          minutes=args.minutes, kinds=tuple(args.kind or ()) or None)
+    except PlanError as error:
+        _emit({"error": str(error)})
+        return 2
+    problems = issues(plan)
+    if problems:
+        _emit({"error": "plan is not coherent", "problems": problems})
+        return 2
+
+    frames = synthetic_frames(minutes=args.minutes, every=args.every)
+    chat = [(float(item[0]), item[1]) for item in (args.chat or [])]
+    report = run_stream(plan, frames, chat=chat)
+    paths = write_artifacts(report, args.out) if args.out else {}
+    run_problems = check_against_contract(report, min_seconds=args.min_seconds)
+    _emit({"summary": report.summary(), "director": report.director.stats.summary(),
+           "artifacts": paths, "problems": run_problems})
+    return 0 if not run_problems else 1
+
+
+def synthetic_frames(*, minutes: float, every: float = 10.0):
+    """Deterministic stand-in frames, so the loop is testable without a game."""
+    from stream_run import Frame
+
+    class FakePerception:
+        def __init__(self, targets: int, changed: bool):
+            self.targets = [object() for _ in range(targets)]
+            self.changed = changed
+            self.change_ratio = 0.2 if changed else 0.0
+
+    total = int(minutes * 60)
+    step = max(0.5, float(every))
+    count = int(total / step)
+    frames = []
+    for index in range(count):
+        offset = index * step
+        targets = 1 + (index % 3)
+        frames.append(Frame(offset, FakePerception(targets, index % 2 == 0)))
+    return frames
+
+
 def cmd_budget(_args) -> int:
     _emit({"perception_budget_ms": PERCEPTION_BUDGET_MS,
            "decision_budget_ms": DECISION_BUDGET_MS,
@@ -185,6 +241,21 @@ def main(argv: list[str] | None = None) -> int:
     plan.add_argument('--out', type=Path, default=None, help='save the plan as JSON')
     plan.add_argument('--markdown', action='store_true', help='print a readable run of show')
     plan.set_defaults(func=cmd_plan)
+    stream = sub.add_parser('stream', help='run a planned stream and write report + captions')
+    stream.add_argument('--game', required=True)
+    stream.add_argument('--author', required=True)
+    stream.add_argument('--minutes', type=float, default=30.0)
+    stream.add_argument('--start', type=datetime_iso, default=None)
+    stream.add_argument('--kind', action='append', default=[],
+                        help='segment kind, repeatable (intro, gameplay, probe, review, chat, wrap)')
+    stream.add_argument('--every', type=float, default=10.0, help='seconds between measured frames')
+    stream.add_argument('--chat', action='append', nargs=2, metavar=('OFFSET', 'MESSAGE'),
+                        default=[], help='chat message and the second it arrives')
+    stream.add_argument('--min-seconds', type=float, default=60.0,
+                        help='shortest honest stream length to report success')
+    stream.add_argument('--out', type=Path, default=None,
+                        help='write report.json, captions.srt and recap.md here')
+    stream.set_defaults(func=cmd_stream)
     live = sub.add_parser('live', help='play a synthetic game through the Docker bridge '
                                        '(step-sync + real-time pass)')
     live.add_argument('--steps', type=int, default=16)
@@ -201,6 +272,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.error('advisor delay must be 0..5 seconds')
     if args.command == 'plan' and not 5 <= args.minutes <= 480:
         parser.error('minutes must be 5..480')
+    if args.command == 'stream':
+        if not 5 <= args.minutes <= 480:
+            parser.error('minutes must be 5..480')
+        if not 0.5 <= args.every <= 120:
+            parser.error('every must be 0.5..120 seconds')
+        if len(args.chat) > 200:
+            parser.error('at most 200 chat messages')
     return args.func(args)
 
 

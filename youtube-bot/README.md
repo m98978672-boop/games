@@ -162,4 +162,12 @@ python -m gameplay.reflex_cli plan --game "Квентя" --author "владел�
   --minutes 90 --start 2026-11-24T18:00Z --markdown
 ```
 
+Прогон по плану — `stream_run.py`: проигрывает эфир на измеренных кадрах (часы подменяются, поэтому двухчасовой эфир проверяется в CI за миллисекунды) и пишет три артефакта — `report.json` с покрытием плана и честными флагами `on_air: false` / `published: false`, `captions.srt` только из произнесённых реплик и `recap.md` с фактами эфира. `check_against_contract()` не даст выдать за успех прогон, где дыры между кадрами больше 30 секунд.
+
+```bash
+cd youtube-bot
+python -m gameplay.reflex_cli stream --game "Квентя" --author "владелец канала" \
+  --minutes 45 --out out/stream --chat 90 "какой план на эфир?"
+```
+
 Подробности и ограничения — в [INSTRUCTIONS_RU.md](./INSTRUCTIONS_RU.md#стрим-по-плану-эфир-готовится-заранее-а-не-начинается-с-пустого-экрана).
