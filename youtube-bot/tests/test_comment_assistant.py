@@ -222,6 +222,14 @@ class CommentAssistantTests(unittest.TestCase):
                 return super().list(**kw)
         self.assertEqual([c['id'] for c in assistant.list_comments(PagedAPI(), 'video', limit=500)], ['p', 'pnext'])
 
+    def test_topic_detection_does_not_determine_posting(self):
+        self.assertEqual(assistant.comment_topic('Когда выйдет продолжение?'), 'question')
+        self.assertEqual(assistant.comment_topic('Жду продолжения'), 'continuation')
+        self.assertEqual(assistant.comment_topic('Пожалуйста, улучши озвучку'), 'production')
+        self.assertEqual(assistant.comment_topic('Привет'), 'other')
+        self.assertIsNone(assistant.automatic_reply('Когда выйдет продолжение?'))
+        self.assertIsNone(assistant.automatic_reply('Пожалуйста, улучши озвучку'))
+
     def test_upload_pagination_checks_each_video_batch(self):
         class PagedUploads:
             def channels(self): return self

@@ -208,6 +208,20 @@ def post_reviewed_reply(youtube: Any, *, parent_id: str, reply: str, ledger: Pat
         return reply_id
 
 
+def comment_topic(comment: str) -> str:
+    """Coarse, private aggregate for prioritizing feedback; not a posting decision."""
+    text = re.sub(r"\s+", " ", str(comment).casefold()).strip()
+    if not text:
+        return 'other'
+    if '?' in text or re.match(r'^(?:как|почему|когда|где|что|зачем|можно ли|how|why|when|where|what)\b', text):
+        return 'question'
+    if re.search(r'\b(?:продолжени\w*|следующ\w* част\w*|more please)\b', text):
+        return 'continuation'
+    if re.search(r'\b(?:звук|озвучк\w*|субтитр\w*|монтаж|громк\w*|audio|subtitles)\b', text):
+        return 'production'
+    return 'other'
+
+
 def automatic_reply(comment: str) -> str | None:
     """Recognize a few simple reactions; never auto-answer open-ended text.
 

@@ -38,7 +38,7 @@ class CloudWorkerTests(unittest.TestCase):
             calls.append((route, body))
             return {'reserved': True} if route == 'reserve' else {'recorded': True}
         yt = FakeYouTube()
-        self.assertEqual(self.run_with(api, youtube=yt), {'videos_analyzed': 1, 'sent': 1, 'videos_scanned': 1, 'comments_scanned': 2, 'matched': 1, 'already_answered': 0})
+        self.assertEqual(self.run_with(api, youtube=yt), {'videos_analyzed': 1, 'sent': 1, 'videos_scanned': 1, 'comments_scanned': 2, 'matched': 1, 'already_answered': 0, 'topic_question': 0, 'topic_continuation': 0, 'topic_production': 0, 'topic_other': 2})
         self.assertEqual([c[0] for c in calls], ['reserve', 'sent'])
         self.assertEqual(yt.posts[0]['body']['snippet']['textOriginal'], 'Спасибо за отзыв! Рады, что вы посмотрели видео.')
         self.assertEqual(len(yt.posts), 1)
