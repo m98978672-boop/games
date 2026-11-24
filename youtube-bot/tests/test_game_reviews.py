@@ -294,6 +294,20 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(prompt['source_fact'],review['evidence']['a'])
         self.assertNotIn('sources',prompt)
 
+    def test_individual_chapter_retries_long_unpunctuated_output(self):
+        from game_reviews import _generate_long_in_batches
+        review = {'evidence': {'a': 'В игре есть головоломки.', 'b': 'В карточке указан одиночный режим.'},
+                  'game_title': 'Пример', 'idea_score': 7, 'pros': ['Головоломки', 'Одиночный режим']}
+        text = ('По описанию игроку предстоит знакомство с правилами и поиск решения. '
+                'Здесь интересно рассматривать каждое действие в контексте заявленной задачи. '
+                'Это впечатление от карточки, а не вывод после личного прохождения; '
+                'чтобы оценить исполнение, понадобится попробовать игру самостоятельно.')
+        with patch('game_reviews.generate_with_qwen', side_effect=['Слишком длинная мысль ' * 40] * 3 + [text] * 10) as gen:
+            scenes = _generate_long_in_batches(review)
+        self.assertEqual(len(scenes), 10)
+        self.assertEqual(gen.call_count, 13)
+        self.assertIn('4 коротких', gen.call_args_list[1].args[0][-1]['content'])
+
     def test_long_review_rejects_invalid_individual_chapters(self):
         review = {"evidence": {"a": "Один факт", "b": "Другой факт"}, "game_title": "Test", "idea_score": 7,
                   "hook": "Что предлагает игра?", "pros": ["Один факт", "Другой факт"], "possible_minus": "Возможно, не для всех."}
@@ -353,9 +367,20 @@ class GameCatalogTests(unittest.TestCase):
         draft = {'game_id':gid, 'idea_score':6, 'possible_minus':'Нет', 'hook':'Что предлагает игра?'}
         wrong = {'possible_minus':'Возможно, формат подойдёт не каждому.', 'minus_feature_id':'other-f1'}
         unsupported = {'possible_minus':'Игра сломана!', 'minus_feature_id':f'{gid}-f1'}
-        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft),json.dumps(draft),json.dumps(wrong),json.dumps(unsupported)]):
+        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft),json.dumps(draft),json.dumps(wrong),json.dumps(unsupported)]+["Нет"]*3):
             with self.assertRaisesRegex(ValueError,'targeted retries'):
                 generate_game_review([game])
+
+    def test_single_fact_repair_binds_source_without_model_id(self):
+        game = dict(load_game_catalog()[0]); gid = game['id']
+        draft = {'game_id': gid, 'idea_score': 6, 'possible_minus': 'Нет', 'hook': 'Что предлагает игра?'}
+        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft)] * 2 + ['{}'] * 2 +
+                   ['Возможно, такой формат подойдёт не каждому игроку.']) as gen:
+            result = generate_game_review([game])
+        self.assertEqual(result['limitation_generation'], 'single_fact_model_repair')
+        self.assertEqual(result['minus_evidence'], game['features'][0])
+        self.assertEqual(json.loads(gen.call_args.args[0][1]['content'])['факт'], game['features'][0])
+        self.assertEqual(result['idea_score'], 6)
 
     def test_platform_fallback_requires_explicit_platform_evidence(self):
         game=dict(load_game_catalog()[0]); gid=game['id']
@@ -363,13 +388,13 @@ class GameCatalogTests(unittest.TestCase):
         game['source_facts']={'platforms_not_marked_supported':['Linux']}
         draft={'game_id':gid,'idea_score':7,'possible_minus':'Нет','hook':'Что предлагает игра?'}
         invalid={'possible_minus':'Нет','minus_feature_id':f'{gid}-f1'}
-        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2):
+        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2+["Нет"]*3):
             review=generate_game_review([game])
         self.assertEqual(review['minus_evidence'],'Карточка Steam не отмечает поддержку Linux')
         self.assertEqual(review['limitation_generation'],'explicit_steam_platform_flag_template')
         self.assertIn('Linux',review['possible_minus'])
         game['source_facts']={}
-        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2):
+        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2+["Нет"]*3):
             with self.assertRaisesRegex(ValueError,'targeted retries'): generate_game_review([game])
 
     def test_missing_score_is_recovered_for_same_game_only(self):
@@ -391,7 +416,7 @@ class GameCatalogTests(unittest.TestCase):
         game=dict(load_game_catalog()[0]); gid=game['id']
         game['features']=list(game['features'])+['Карточка Steam не отмечает поддержку Linux']
         game['source_facts']={'platforms_not_marked_supported':['Linux']}
-        with patch('game_reviews.generate_with_qwen',side_effect=['{broken','{broken','8','{}','{}']):
+        with patch('game_reviews.generate_with_qwen',side_effect=['{broken','{broken','8','{}','{}']+['Нет']*3):
             review=generate_game_review([game])
         self.assertEqual(review['idea_score'],8)
         self.assertEqual(review['selection_method'],'first_eligible_catalog_candidate_after_invalid_json')

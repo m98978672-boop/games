@@ -431,6 +431,30 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
                 return result
             except (TypeError, ValueError) as repair_error:
                 print(f"Possible limitation repair rejected ({repair_error}); not publishing unsupported claims.", file=sys.stderr)
+        # A smaller, single-fact prompt avoids having the model invent feature
+        # identifiers. We bind the exact ID ourselves and still validate the
+        # hypothesis and all narration; provenance is not a proof of entailment.
+        for feature_id, fact in list(facts.items())[:3]:
+            one_fact_messages = [
+                {'role': 'system', 'content': (
+                    'На основе единственного факта предложи конкретную возможную причину, '
+                    'почему идея может не подойти определённому игроку. Не выдумывай свойства '
+                    'игры и не утверждай, что играл. Только одно короткое русское предложение '
+                    'от 10 до 100 символов со словом «возможно» или «может», без ссылок и кавычек.')},
+                {'role': 'user', 'content': json.dumps({'факт': fact}, ensure_ascii=False)},
+            ]
+            try:
+                hypothesis = generate_with_qwen(one_fact_messages, max_new_tokens=100).strip().strip('"«»')
+                if re.search(r'[{}<>`\n]', hypothesis):
+                    raise ValueError('Repair must be one plain-text sentence')
+                fixed = dict(draft, possible_minus=hypothesis, minus_feature_id=feature_id)
+                result = _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
+                result['limitation_generation'] = 'single_fact_model_repair'
+                if recovered_selection:
+                    result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
+                return result
+            except (TypeError, ValueError) as repair_error:
+                print(f"Single-fact limitation repair rejected ({repair_error}); no unsupported fallback.", file=sys.stderr)
         # A deterministic fallback is allowed only for an explicit negative
         # platform flag from Steam, not absence of a field or inferred bugs.
         # The wording describes the store card and a relevant player preference.
@@ -584,8 +608,11 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
             }, ensure_ascii=False)},
         ]
         last_error: ValueError | None = None
-        for _ in range(2):
-            raw = generate_with_qwen(messages, max_new_tokens=700)
+        for _ in range(4):
+            # A long completion often wanders into 800+ characters or runs out
+            # of punctuation. Leave enough room for Russian tokens, but avoid
+            # asking the small model to generate an entire essay for one chapter.
+            raw = generate_with_qwen(messages, max_new_tokens=400)
             try:
                 if '{' in str(raw) or '}' in str(raw):
                     scene = _extract_json(raw)
@@ -611,7 +638,12 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                 break
             except ValueError as exc:
                 last_error = exc
-                messages.append({"role": "user", "content": f"Предыдущий ответ не подошёл: {exc}. Верни только один абзац из 220–320 символов."})
+                messages.append({"role": "user", "content": (
+                    f"Предыдущий ответ не подошёл: {exc}. Напиши новый абзац целиком. "
+                    "Используй 4 коротких законченных предложения с точками, каждое примерно "
+                    "по 55–70 символов. Только данный факт и осторожные выводы, без новых фактов. "
+                    "Всего 220–320 символов, только готовый текст без пояснений."
+                )})
         else:
             print(f"Qwen could not produce chapter {index + 1}: {last_error}; using clearly labelled source-based template.", file=sys.stderr)
             return _source_template_long_narration(review, reason=f"chapter {index + 1}: {last_error}")
