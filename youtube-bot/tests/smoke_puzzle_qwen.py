@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
-from gameplay_qwen import QwenVisionAgent, _vision_runtime
+from gameplay_qwen import QwenVisionAgent, _vision_runtime, qwen_observe
 from puzzle_supervisor import validate_board, legal_indices, distance, feedback, avoid_immediate_undo, avoid_recent_states, verify_transition, board_hint
 
 root = Path(__file__).resolve().parents[2] / 'collection' / '16-puzzle'
@@ -19,7 +19,7 @@ record = Path(os.environ['PUZZLE_RECORD_DIR'])
 actions = tuple('TILE'+c for c in 'ABCDEFGHIJKLMNOP')
 base_goal = ('Solve the finite 15-puzzle: arrange numbers in ascending order, blank last. '
              'Positions A to P read left to right, top to bottom. Choose an allowed tile.')
-agent = QwenVisionAgent(base_goal, actions)
+agent = QwenVisionAgent(base_goal, actions, observer=qwen_observe)
 _vision_runtime()  # Avoid wasting the active game session on loading weights.
 trace, outcome, no_progress = [], 'time_limit', 0
 with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
               'duration_at_least_20_minutes':seconds>=1200,'qualifies_for_release':False,
               'model_actions':trace,'scripted_setup':True,'game_telemetry_untrusted':True,
               'legal_move_filter_is_external_help':True, 'anti_undo_filter_is_external_help':True, 'recent_state_filter_is_external_help':True,
-              'board_text_is_external_help':True, 'feedback_is_session_context_not_training':True,
+              'board_text_is_external_help':True, 'two_stage_vision_enabled':True, 'feedback_is_session_context_not_training':True,
               'trained':False,'published':False}
     (record/'trace.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
     print('::notice title=Private finite puzzle experiment::'+json.dumps(result,ensure_ascii=True),flush=True)

@@ -13,7 +13,7 @@ import sys
 from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
-from gameplay_qwen import QwenVisionAgent
+from gameplay_qwen import QwenVisionAgent, qwen_observe
 
 HTML = '''<!doctype html><html><style>
 body {margin:0;background:white;font-family:Arial;text-align:center}
@@ -35,7 +35,7 @@ with tempfile.TemporaryDirectory(prefix='qwen-game-') as temp:
     game = Path(temp) / 'game'
     game.mkdir()
     (game / 'index.html').write_text(HTML, encoding='utf-8')
-    agent = QwenVisionAgent('Follow the large arrow displayed in the center of the screen.', ('LEFT', 'RIGHT'))
+    agent = QwenVisionAgent('Follow the large arrow displayed in the center of the screen.', ('LEFT', 'RIGHT'), observer=qwen_observe)
     outcome = 'not_completed'
     with BrowserBridge(game, rights_acknowledged=True) as bridge:
         obs = bridge.receive(timeout=60)
@@ -54,7 +54,7 @@ with tempfile.TemporaryDirectory(prefix='qwen-game-') as temp:
                 break
     report = {'outcome': outcome, 'qwen_actions': agent.decisions,
               'model': 'Qwen/Qwen3.5-0.8B', 'game': 'two-stage visual arrow test',
-              'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base', 'game_finetuned': False, 'last_model_response': agent.last_response, 'published': False}
+              'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base', 'game_finetuned': False, 'vision_observation_used': agent.last_observation is not None, 'last_model_response': agent.last_response, 'published': False}
     print('QWEN_GAMEPLAY_REPORT=' + json.dumps(report, ensure_ascii=True))
     print(f"::notice title=Qwen gameplay test::{json.dumps(report, ensure_ascii=True)}")
 
