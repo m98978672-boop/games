@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_at:
-        description: "Moscow time YYYY-MM-DD HH:MM; if rendering runs late, publish later once"
+        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 2 Shorts a day / 1 long a day)"
         type: string
         required: false
       made_for_kids:
@@ -67,8 +67,10 @@ jobs:
       - name: Select review format from trusted workflow event
         run: python youtube-bot/review_workflow_format.py
       - name: Validate queue and publication times before rendering
-        run: |
-          PYTHONPATH=youtube-bot python -c 'import os; from review_batch import plan; print(plan(int(os.environ["REVIEW_BATCH_COUNT"]), os.environ["VIDEO_FORMAT"], os.environ["MANUAL_PUBLISH_AT"]))'
+        # One readable ::error:: line instead of a raw traceback for a bad
+        # batch_count, format or time. Nothing is rendered or uploaded when
+        # this step fails; an empty publish_at is valid and picks slots.
+        run: python youtube-bot/review_batch.py --check
       - name: Require the explicit owner-approved audience value
         run: |
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
