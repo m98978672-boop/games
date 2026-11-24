@@ -28,19 +28,26 @@ on:
           - long
         default: short
         required: true
+      batch_count:
+        description: "Sequential queue size (1–5 Shorts or 1–2 long); requires publish_at when > 1"
+        type: string
+        default: "1"
+        required: true
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: youtube-shorts-autopilot
+  # Separate lanes can run in parallel, but GitHub retains at most one pending
+  # run per group. Submit one batch per lane and wait for it to finish.
+  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || inputs.video_format }}
   cancel-in-progress: false
 
 jobs:
   create-and-schedule:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 360
     env:
       # The channel owner explicitly classified the audience as not made for kids.
       # Manual dispatch exposes the same explicit choice; scheduled runs use it too.
@@ -48,6 +55,7 @@ jobs:
       MANUAL_PUBLISH_AT: ${{ inputs.publish_at || '' }}
       REVIEW_SCHEDULE: ${{ github.event.schedule || '' }}
       MANUAL_VIDEO_FORMAT: ${{ inputs.video_format || '' }}
+      REVIEW_BATCH_COUNT: ${{ inputs.batch_count || '1' }}
       DATA_DIR: youtube-bot/data
     steps:
       - uses: actions/checkout@v7
@@ -58,9 +66,9 @@ jobs:
           cache-dependency-path: youtube-bot/requirements-autopilot.txt
       - name: Select review format from trusted workflow event
         run: python youtube-bot/review_workflow_format.py
-      - name: Validate optional manual publication time
-        if: env.MANUAL_PUBLISH_AT != ''
-        run: python youtube-bot/schedule_policy.py --manual-publish-at "$MANUAL_PUBLISH_AT"
+      - name: Validate queue and publication times before rendering
+        run: |
+          PYTHONPATH=youtube-bot python -c 'import os; from review_batch import plan; print(plan(int(os.environ["REVIEW_BATCH_COUNT"]), os.environ["VIDEO_FORMAT"], os.environ["MANUAL_PUBLISH_AT"]))'
       - name: Require the explicit owner-approved audience value
         run: |
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
@@ -125,25 +133,10 @@ jobs:
             ${{ runner.temp }}/ru_RU-irina-medium.onnx
             ${{ runner.temp }}/ru_RU-irina-medium.onnx.json
           key: piper-ru-irina-medium-v1
-      - name: Generate a Steam-sourced Russian game review with local Qwen
+      - name: Generate and schedule review queue sequentially
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
-        run: |
-          # Retry rendering once only, before the upload step has started.
-          # Never rerun the publisher automatically: a video might already exist.
-          for attempt in 1 2; do
-            if python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4" --format "$VIDEO_FORMAT"; then
-              exit 0
-            fi
-            if [ "$attempt" = 1 ]; then
-              echo "::warning::Review rendering failed; retrying once before any upload."
-              sleep 20
-            fi
-          done
-          echo "::error::Review rendering failed twice; no upload was started."
-          exit 1
-      - name: Start resumable YouTube upload and schedule
-        run: python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
+        run: python youtube-bot/review_batch.py
       - name: Retain only non-sensitive model selection memory
         if: always() && hashFiles('youtube-bot/data/recent-games.json') != ''
         uses: actions/cache/save@v6

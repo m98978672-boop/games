@@ -12,5 +12,7 @@ assert.equal(empty.flat().filter(Boolean).length, 1);
 assert.deepEqual(simulate(123, BASE, 100), simulate(123, BASE, 100));
 const result = train();
 assert.ok(Number.isFinite(result.validationScore));
-assert.ok(!result.accepted || result.validationScore > result.baselineValidationScore);
+assert.ok(!result.accepted || (result.validationScore > result.baselineValidationScore && result.testScore > result.baselineTestScore));
+assert.equal(new Set([...result.trainingSeeds, ...result.validationSeeds, ...result.testSeeds]).size, 12);
+assert.throws(() => train(-1), /uint32/);
 console.log("2048 self-play emulator passed:", JSON.stringify(result));

@@ -39,6 +39,7 @@ jobs:
             youtube-bot/tests/test_run_game_review.py \
             youtube-bot/tests/test_publish_to_supabase.py \
             youtube-bot/tests/test_review_workflow_format.py \
+            youtube-bot/tests/test_review_batch.py \
             youtube-bot/tests/test_speech_policy.py \
             youtube-bot/tests/test_autopilot.py \
             youtube-bot/tests/test_youtube_api.py \
@@ -56,6 +57,7 @@ jobs:
             youtube-bot/tests/test_playthrough_continue.py
           node supabase/functions/youtube-bot/tests/oidc-policy.test.mjs
           node youtube-bot/gameplay/test-solver2048.cjs
+          node youtube-bot/gameplay/test-simulator2048.cjs
           node --check youtube-bot/gameplay/play2048.cjs
       - name: Check that the RatCore browser bundle is up to date (engine is wired into every section)
         run: |
