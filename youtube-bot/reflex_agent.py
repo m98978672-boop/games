@@ -18,6 +18,7 @@ from gameplay.input_profiles import InputProfile, profile_from_name
 from gameplay.screen_recognizer import classify, preferred_intents
 from gameplay.tracker import Tracker, describe as describe_tracks
 from gameplay.world_model import WorldModel
+from stream_director import Director
 from gameplay_qwen import ACTIONS
 from gameplay_qwen_advisor import SlowAdvisor
 from gameplay.reflex_layer import (DECISION_BUDGET_MS, PERCEPTION_BUDGET_MS, Decision,
@@ -35,6 +36,8 @@ class ReflexAgentStats:
     advisor_skipped_for_budget: int = 0
     screen: str | None = None
     tracks: list = field(default_factory=list)
+    line: str | None = None
+    said: int = 0
 
     def summary(self) -> dict:
         data = summarise(self.ticks)
@@ -61,7 +64,8 @@ class ReflexAgent:
                  controller: ReflexController | None = None,
                  pacer: "ActionPacer | None" = None,
                  world_model: WorldModel | None = None,
-                 tracker: Tracker | None = None):
+                 tracker: Tracker | None = None,
+                 director: "Director | None" = None):
         self.profile = profile_from_name(profile) if isinstance(profile, str) else profile
         self.controller = controller or ReflexController(
             default_intent=self._default_intent(),
@@ -75,6 +79,9 @@ class ReflexAgent:
         # them the agent explores and aims, without them it still walks.
         self.world_model = world_model
         self.tracker = tracker if tracker is not None else Tracker()
+        # With a stream plan the agent also decides what to say; without one it
+        # only plays, so nothing changes for the existing autopilot.
+        self.director = director
         self.tracks: list = []
         self.screen = None
         self.pending_bursts: list[dict] = []
@@ -173,6 +180,11 @@ class ReflexAgent:
         # Recomputed per tick on purpose: the summary is small and derived, and
         # caching it would hide cadence changes from the report.
         self.stats.screen = self.screen.label if self.screen else None
+        if self.director is not None:
+            line = self.director.next_line(self._stream_offset(step), perception)
+            if line is not None:
+                self.stats.line = line.text
+                self.stats.said = self.director.stats.lines_spoken
         self.stats.tracks = [t.as_dict() for t in self.tracks[:4]]
         self.stats.pacer = {"windows": stats.windows, "late_windows": stats.late_windows,
                             "stalls": stats.stalls, "bursts": stats.bursts,
@@ -207,6 +219,11 @@ class ReflexAgent:
         if allowed and decision.intent not in allowed:
             return Decision(allowed[0], "screen", decision.latency_ms, decision.target)
         return decision
+
+    def _stream_offset(self, step: int) -> float:
+        """Seconds since the stream started, from the step number and cadence."""
+        cadence = getattr(self.pacer, "cadence_ms", 1000) or 1000
+        return max(0.0, float(step) * float(cadence) / 1000.0)
 
     def learn_transition(self, before_signature: str, intent: str, after_signature: str) -> None:
         """Record one observed screen -> intent -> screen transition."""
