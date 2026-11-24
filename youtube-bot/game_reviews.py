@@ -716,19 +716,36 @@ def youtube_description(review: Mapping[str, Any]) -> str:
     sources = review.get("sources") or []
     if not sources and review.get("public_url"):
         sources = [{"name": "Страница игры", "url": review["public_url"]}]
-    source_lines = [
-        f"- {str(source.get('name', 'Источник'))}: {str(source.get('url', ''))}"
-        for source in sources
-        if isinstance(source, Mapping) and str(source.get("url", "")).startswith("https://")
-    ]
+    # Put the canonical Steam page first so it cannot be lost if the rest of
+    # YouTube's 5,000-character description budget must be truncated.
+    from urllib.parse import urlsplit
+    source_lines = []
+    game_id = str(review.get('game_id', ''))
+    if re.fullmatch(r'[0-9]{1,12}', game_id):
+        source_lines.append(f'- Страница игры в Steam: https://store.steampowered.com/app/{game_id}/')
+    for source in sources:
+        if not isinstance(source, Mapping):
+            continue
+        url = str(source.get('url', '')).strip()
+        try:
+            parsed = urlsplit(url)
+        except ValueError:
+            continue
+        if (len(url) > 300 or parsed.scheme != 'https' or not parsed.hostname
+                or parsed.username or parsed.password or any(c.isspace() for c in url)):
+            continue
+        line = f"- {str(source.get('name', 'Источник'))[:100]}: {url}"
+        if not any(url in existing for existing in source_lines):
+            source_lines.append(line)
+        if len(source_lines) >= 6:
+            break
     provenance = "\n".join(source_lines) if source_lines else "Внешние ссылки на источники не получены."
     return (
-        f"Русскоязычный ИИ-разбор внешней игры {review['game_title']} "
-        f"({review.get('game_version') or 'дата/версия не указана'}).\n"
+        f"Русскоязычный ИИ-разбор внешней игры {str(review['game_title'])[:100]} "
+        f"({str(review.get('game_version') or 'дата/версия не указана')[:80]}).\n\n"
+        f"Ссылки на игру и источники:\n{provenance}\n\n"
         f"Сильные стороны, отмеченные по источникам: {review['pros'][0]}; {review['pros'][1]}.\n"
-        f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus']}.\n"
+        f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus'].rstrip('.!?')}.\n"
         f"{steam_release_note(review)}\n{steam_price_note(review)}\n\n"
-        "Это обзор по опубликованным материалам, а не личное прохождение или независимый тест. "
-        "Ссылки можно скопировать ниже:\n"
-        f"{provenance}"
+        "Это обзор по опубликованным материалам, а не личное прохождение или независимый тест."
     )[:5000]

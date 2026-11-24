@@ -11,6 +11,17 @@ from schedule_policy import next_publish_slot
 
 
 class GameCatalogTests(unittest.TestCase):
+    def test_description_preserves_official_game_link_under_length_limit(self):
+        review = {'game_id': '123456', 'game_title': 'Игра' * 100, 'game_version': 'v' * 300,
+                  'pros': ['факт' * 3000, 'факт' * 3000], 'possible_minus': 'Возможно, не всем.',
+                  'sources': [{'name': 'Steam', 'url': 'https://store.steampowered.com/app/123456/'},
+                              {'name': 'bad', 'url': 'https://[broken'}]}
+        description = youtube_description(review)
+        self.assertLessEqual(len(description), 5000)
+        self.assertIn('https://store.steampowered.com/app/123456/', description)
+        self.assertEqual(description.count('https://store.steampowered.com/app/123456/'), 1)
+        self.assertNotIn('https://[broken', description)
+
     def test_price_note_does_not_invent_free_or_other_region_price(self):
         from game_reviews import steam_price_note
         self.assertIn("не подтверждена", steam_price_note({}))

@@ -130,6 +130,12 @@ class RenderQualityTests(unittest.TestCase):
     def test_platform_name_is_pronounced_in_russian_without_changing_other_words(self):
         self.assertEqual(renderer.pronunciation_text("По данным Steam: Steamworks"), "По данным Стим: Steamworks")
 
+    def test_spoken_score_and_punctuation_leave_other_numbers_and_ellipsis_intact(self):
+        self.assertEqual(renderer.pronunciation_text('Оценка — 7 из 10 .Steam...Далее!'),
+                         'Оценка — семь из десяти. Стим... Далее!')
+        self.assertEqual(renderer.pronunciation_text('Цена 10 евро, версия 1.2.'), 'Цена 10 евро, версия 1.2.')
+        self.assertEqual(renderer.pronunciation_text('10 из 10!'), 'десять из десяти!')
+
     def test_audio_processing_is_bounded_and_does_not_adjust_pitch(self):
         with patch.object(renderer, "ffmpeg_executable", return_value="ffmpeg"), patch.object(renderer.subprocess, "run") as run:
             renderer.normalize_narration(Path("in.wav"), Path("out.wav"))

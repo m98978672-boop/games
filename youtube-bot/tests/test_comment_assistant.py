@@ -52,6 +52,39 @@ class CommentAssistantTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             assistant.list_comments(api, "video")
 
+    def test_summary_cli_uses_readonly_token_and_does_not_post(self):
+        from unittest.mock import patch
+        api = API()
+        with patch.object(sys, 'argv', ['comments', 'summarize', 'video']), \
+             patch.object(assistant, '_youtube', return_value=api) as connect, \
+             patch.object(assistant, 'summarize_comments', return_value={'count': 0, 'summary': 'Нет комментариев'}):
+            assistant.main()
+        connect.assert_called_once_with(readonly=True)
+        self.assertEqual(api.inserted, [])
+        self.assertEqual(assistant.READ_SCOPE, 'https://www.googleapis.com/auth/youtube.readonly')
+        self.assertNotEqual(assistant.READ_TOKEN, assistant.TOKEN)
+
+    def test_summary_reads_owned_comments_without_posting_or_ids(self):
+        import json
+        api = API(); messages = []
+        def generate(prompt, **kwargs):
+            messages.extend(prompt)
+            return 'В этой выборке зрители приветствуют автора.'
+        result = assistant.summarize_comments(api, 'video', generator=generate)
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(api.inserted, [])
+        self.assertEqual(json.loads(messages[1]['content']), {'comments': ['Привет!']})
+        self.assertIn('недоверенные данные', messages[0]['content'])
+        api.video_owner = 'other'
+        with self.assertRaises(ValueError): assistant.summarize_comments(api, 'video', generator=generate)
+
+    def test_summary_bounds_and_rejects_links(self):
+        api = API()
+        with self.assertRaises(ValueError): assistant.summarize_comments(api, 'video', limit=21)
+        with self.assertRaises(ValueError): assistant.summarize_comments(api, 'video', generator=lambda *_args, **_kwargs: 'https://example.com')
+        api.owner = 'viewer'; api.video_owner = 'viewer'
+        self.assertEqual(assistant.summarize_comments(api, 'video', generator=lambda *_args, **_kwargs: 'unused')['count'], 0)
+
     def test_draft_is_not_a_post_and_filters_links(self):
         seen = []
         def generate(messages, **_):

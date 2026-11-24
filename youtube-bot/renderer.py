@@ -70,8 +70,18 @@ def normalize_narration(source: Path, output: Path) -> None:
 
 
 def pronunciation_text(text: str) -> str:
-    """Pronounce common platform name naturally while keeping captions unchanged."""
-    return re.sub(r"(?<![A-Za-z0-9_])Steam(?![A-Za-z0-9_])", "Стим", text, flags=re.IGNORECASE)
+    """Prepare conservative spoken forms; captions and source evidence stay unchanged."""
+    text = re.sub(r"(?<![A-Za-z0-9_])Steam(?![A-Za-z0-9_])", "Стим", text, flags=re.IGNORECASE)
+    # Only the known score construction is expanded; arbitrary numbers, dates,
+    # names and URLs must not be guessed or grammatically transformed.
+    numerals = ('', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять', 'десять')
+    text = re.sub(r'(?<!\d)(10|[1-9])\s+из\s+10(?!\d)',
+                  lambda match: numerals[int(match.group(1))] + ' из десяти', text)
+    text = re.sub(r'\s+([,.!?;:])', r'\1', text)
+    text = re.sub(r'([!?,;:])\1+', r'\1', text)
+    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)
+    text = re.sub(r'([.!?])(?=[А-Яа-яЁё])', r'\1 ', text)
+    return re.sub(r'\s+', ' ', text).strip()
 
 
 def synthesize(text: str, output: Path, voice: str = "ru", *, style: str = "neutral") -> float:
