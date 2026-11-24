@@ -138,6 +138,7 @@ class Perception:
     degraded: bool = False  # target search was skipped to stay in budget
     unfamiliar: bool = False  # no skill memory has ever seen this screen
     cache_hit: bool = False   # button search came from the signature cache
+    changed_area_ratio: float = 0.0  # share of the frame that changed, not just mean
     size: tuple[int, int] = FRAME
 
     def as_dict(self) -> dict:
@@ -147,7 +148,8 @@ class Perception:
                 "targets": [t.as_dict() for t in self.targets],
                 "perception_ms": round(self.elapsed_ms, 2),
                 "degraded": self.degraded, "unfamiliar": self.unfamiliar,
-                "cache_hit": self.cache_hit}
+                "cache_hit": self.cache_hit,
+                "changed_area": round(self.changed_area_ratio, 3)}
 
 
 def _decode(png: bytes):
@@ -199,7 +201,7 @@ def signature(small) -> str:
     return hashlib.blake2b(payload, digest_size=8).hexdigest()
 
 
-def _roi(previous, current) -> tuple[float, tuple[int, int, int, int] | None]:
+def _roi(previous, current):
     """Mean absolute difference and the changed bounding box, in frame pixels.
 
     Two cues are combined because either one alone is easy to fool: a small but
@@ -213,10 +215,10 @@ def _roi(previous, current) -> tuple[float, tuple[int, int, int, int] | None]:
         mean = float(diff.mean())
         changed = diff >= 16
         if not changed.any():
-            return mean, None
+            return mean, None, 0.0
         fraction = float(changed.mean())
         if mean < CHANGE_THRESHOLD and fraction < 0.0015:
-            return mean, None
+            return mean, None, fraction
         rows = np.flatnonzero(changed.any(axis=1))
         cols = np.flatnonzero(changed.any(axis=0))
         box = (int(cols[0]), int(rows[0]), int(cols[-1]) + 1, int(rows[-1]) + 1)
@@ -228,13 +230,13 @@ def _roi(previous, current) -> tuple[float, tuple[int, int, int, int] | None]:
         mask = diff.point(lambda v: 255 if v >= 16 else 0)
         bbox = mask.getbbox()
         if bbox is None:
-            return mean, None
+            return mean, None, 0.0
         fraction = ImageStat.Stat(mask).sum[0] / 255.0 / (current.size[0] * current.size[1])
         if mean < CHANGE_THRESHOLD and fraction < 0.0015:
-            return mean, None
+            return mean, None, fraction
         box = bbox
     return mean, (box[0] * _SMALL_SCALE, box[1] * _SMALL_SCALE,
-                  box[2] * _SMALL_SCALE, box[3] * _SMALL_SCALE)
+                  box[2] * _SMALL_SCALE, box[3] * _SMALL_SCALE), fraction
 
 
 def _label(mask, w: int, h: int) -> list[tuple[int, int, int, int, int]]:
@@ -301,6 +303,43 @@ def _label(mask, w: int, h: int) -> list[tuple[int, int, int, int, int]]:
             box[3] = max(box[3], row)
             box[4] += area
     return [(b[0], b[1], b[2], b[3], b[4]) for b in boxes.values()]
+
+
+def _overlaps_roi(target: "Target", roi) -> bool:
+    """True if the target intersects the changed rectangle."""
+    x0, y0, x1, y1 = roi
+    return not (target.x + target.w < x0 or target.x > x1
+                or target.y + target.h < y0 or target.y > y1)
+
+
+def _shifted(targets, small, roi):
+    """Follow a moved object inside the changed region when the detector misses it.
+
+    A lone sprite inside a small changed rectangle often fails the "outline around
+    a calm interior" test. Rather than dropping the object, its previous box is
+    moved to the centre of the changed region, clamped inside the frame.
+    """
+    if not targets:
+        return []
+    x0, y0, x1, y1 = roi
+    cx, cy = (x0 + x1) // 2, (y0 + y1) // 2
+    out = []
+    for target in targets:
+        nx = max(0, min(FRAME[0] - target.w, cx - target.w // 2))
+        ny = max(0, min(FRAME[1] - target.h, cy - target.h // 2))
+        out.append(Target(nx, ny, target.w, target.h, target.score))
+    return out
+
+
+def _merge_targets(outside, found) -> list[Target]:
+    """Union of untouched previous targets and freshly detected ones."""
+    merged = list(found)
+    for candidate in outside:
+        if any(_contained(candidate, other) or _contained(other, candidate) for other in merged):
+            continue
+        merged.append(candidate)
+    merged.sort(key=lambda t: t.score, reverse=True)
+    return merged
 
 
 def _contained(inner: "Target", outer: "Target", *, threshold: float = 0.8) -> bool:
@@ -584,13 +623,15 @@ def perceive(png: bytes, previous: Perception | None = None, *,
     small = _decode(png)
     sig = signature(small)
     changed, ratio, roi = True, 1.0, (0, 0, FRAME[0], FRAME[1])
+    changed_area = 1.0
     if previous is not None:
         before = getattr(previous, "_small", None)
         if before is not None and before.size == small.size:
-            mean, box = _roi(before, small)
+            mean, box, area_ratio = _roi(before, small)
             changed = box is not None
             ratio = min(1.0, mean / 255.0)
             roi = box
+            changed_area = area_ratio
     targets: list[Target] = []
     degraded = False
     cache_hit = False
@@ -613,10 +654,21 @@ def perceive(png: bytes, previous: Perception | None = None, *,
             targets = list(cached)
             cache_hit = True
         elif (time.perf_counter() - started) * 1000.0 < budget_ms * 0.5:
-            # A localised change only needs the changed rectangle plus a margin.
-            search_roi = roi if (roi is not None and roi[2] - roi[0] < FRAME[0] * 0.6
-                                 and roi[3] - roi[1] < FRAME[1] * 0.6) else None
+            # A localised change only needs the changed rectangle plus a margin;
+            # everything outside it is carried over from the previous frame, so a
+            # fast hybrid (scan what moved, reuse what did not) sees the whole screen.
+            localised = (roi is not None and roi[2] - roi[0] < FRAME[0] * 0.6
+                         and roi[3] - roi[1] < FRAME[1] * 0.6)
+            search_roi = roi if localised else None
             targets = detect_targets(small, roi=search_roi)
+            if localised and previous is not None:
+                # Anything that did not change is still where it was, including
+                # the object that just moved inside the changed region.
+                moved = [t for t in (previous.targets or ())
+                         if _overlaps_roi(t, roi) and t not in targets]
+                outside = [t for t in (previous.targets or ())
+                           if not _overlaps_roi(t, roi)]
+                targets = _merge_targets(outside + _shifted(moved, small, roi), targets)
             if target_cache is not None:
                 target_cache.put(sig, targets)
         else:
@@ -628,7 +680,7 @@ def perceive(png: bytes, previous: Perception | None = None, *,
         degraded = True
     result = Perception(signature=sig, changed=changed, change_ratio=ratio,
                         roi=roi, targets=targets, elapsed_ms=elapsed_ms,
-                        degraded=degraded)
+                        degraded=degraded, changed_area_ratio=changed_area)
     result.cache_hit = cache_hit
     result._small = small  # retained for the next frame compare only
     result._targets_for = {sig: targets} if not cache_hit else {}

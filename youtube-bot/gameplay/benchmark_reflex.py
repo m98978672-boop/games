@@ -196,6 +196,83 @@ def measure_decision(count: int = 60) -> dict:
     return {'frames': count, 'tick': _stats(tick), 'decision_memory': _stats(decided)}
 
 
+def measure_intelligence(count: int = 60, *, steps: int = 150,
+                         screens_total: int = 60) -> dict:
+    """Cost and benefit of the added intelligence: classify, track, plan, explore.
+
+    Cost: milliseconds added per tick by the screen recogniser and the tracker.
+    Benefit: on a deterministic pretend game with 60 screens and 4 intents, how
+    many distinct screens does the agent reach — with the learned world model and
+    with plain random-walk probing — over the same number of steps.
+    """
+    import random
+
+    from gameplay.screen_recognizer import classify, preferred_intents
+    from gameplay.tracker import Tracker
+    from gameplay.world_model import WorldModel
+
+    # --- cost per tick -------------------------------------------------------
+    previous = None
+    perceptions = []
+    for i in range(count):
+        previous = perceive(make_frame(i), previous)
+        perceptions.append(previous)
+    classify_ms, track_ms, plan_ms = [], [], []
+    tracker = Tracker()
+    model = WorldModel(None)
+    for perception in perceptions:
+        started = time.perf_counter()
+        kind = classify(perception)
+        classify_ms.append((time.perf_counter() - started) * 1000.0)
+        started = time.perf_counter()
+        tracker.update(perception.targets)
+        track_ms.append((time.perf_counter() - started) * 1000.0)
+        allowed = preferred_intents(kind, keyboard_profile())
+        model.record(perception.signature, allowed[0], perceptions[0].signature)
+        started = time.perf_counter()
+        model.plan(perception.signature, allowed)
+        plan_ms.append((time.perf_counter() - started) * 1000.0)
+
+    # --- benefit: screens discovered, model vs random walk -------------------
+    intents = ("FORWARD", "JUMP", "INTERACT", "BACK")
+    screens = [f'{"%016x" % (i + 1)}' for i in range(screens_total)]
+    rng = random.Random(20261124)
+    world = {}
+    for name in screens:
+        world[name] = {intent: rng.choice(screens) for intent in intents}
+
+    def explore(use_model: bool) -> dict:
+        local_rng = random.Random(7)
+        brain = WorldModel(None) if use_model else None
+        goal = int(round(len(screens) * 0.8))
+        state, seen = screens[0], {screens[0]}
+        reached_at = None
+        for step in range(1, steps + 1):
+            if brain is not None:
+                intent = brain.plan(state, list(intents)).intent
+            else:
+                intent = local_rng.choice(intents)
+            nxt = world[state][intent]
+            if brain is not None:
+                brain.record(state, intent, nxt)
+            seen.add(nxt)
+            state = nxt
+            if reached_at is None and len(seen) >= goal:
+                reached_at = step
+        return {'discovered': len(seen), 'goal': goal, 'reached_at': reached_at}
+
+    planned = explore(True)
+    random_walk = explore(False)
+    return {
+        'frames': count,
+        'classify': _stats(classify_ms),
+        'tracker': _stats(track_ms),
+        'planner': _stats(plan_ms),
+        'screens': {'total': len(screens), 'steps': steps,
+                    'planned': planned, 'random_walk': random_walk},
+    }
+
+
 def measure_legacy(count: int = 60) -> dict:
     """The frozen first version, timed on the same frames for comparison."""
     from gameplay import _reflex_legacy as legacy
@@ -243,6 +320,18 @@ def main(argv: list[str] | None = None) -> int:
     quality = measure_quality()
     print(f'  target hit rate  legacy {quality["legacy"]["hit_rate"]}   now {quality["now"]["hit_rate"]}'
           f'   mean IoU legacy {quality["legacy"]["mean_iou"]} → now {quality["now"]["mean_iou"]}')
+    smart = measure_intelligence(count)
+    print('\nintelligence added on top of the fast layer — cost per tick')
+    print(_row('screen classify', smart['classify']))
+    print(_row('tracker update', smart['tracker']))
+    print(_row('planner step', smart['planner']))
+    screens = smart['screens']
+    planned, walk = screens['planned'], screens['random_walk']
+    print(f"  screens discovered  planned {planned['discovered']}/{screens['total']}"
+          f"   random walk {walk['discovered']}/{screens['total']}"
+          f"   ({screens['steps']} steps each)")
+    print(f"  steps to {planned['goal']} screens  planned {planned['reached_at']}"
+          f"   random walk {walk['reached_at']}")
     if compare:
         measure_legacy(2)
         legacy = measure_legacy(count)

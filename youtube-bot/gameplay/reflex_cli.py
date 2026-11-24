@@ -90,6 +90,15 @@ def cmd_live(args) -> int:
         return 1
 
 
+def cmd_model(args) -> int:
+    """Show what the agent has learned about the game's screen graph."""
+    from gameplay.world_model import WorldModel
+    path = args.db.with_suffix('.world.json')
+    model = WorldModel(path)
+    _emit({"model": str(path), **model.stats()})
+    return 0
+
+
 def cmd_budget(_args) -> int:
     _emit({"perception_budget_ms": PERCEPTION_BUDGET_MS,
            "decision_budget_ms": DECISION_BUDGET_MS,
@@ -118,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
     imp.add_argument('file', type=Path)
     imp.set_defaults(func=cmd_import)
     sub.add_parser('profiles', help='list control schemes').set_defaults(func=cmd_profiles)
+    sub.add_parser('model', help='what the world model has learned').set_defaults(func=cmd_model)
     sub.add_parser('budget', help='show the timing contract').set_defaults(func=cmd_budget)
     live = sub.add_parser('live', help='play a synthetic game through the Docker bridge '
                                        '(step-sync + real-time pass)')
