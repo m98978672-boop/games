@@ -431,15 +431,29 @@ def main():
     # Отвечает на ВСЕ неотвеченные вопросы в хвосте, а не только на
     # последний: очередь из двух вопросов раньше теряла первый.
     pending = []
+    seen_questions = set()
     for role, body in reversed(turns):
         if role != 'user':
             break
+        # Один и тот же вопрос мог попасть в файл дважды (владелец дописал его
+        # и раньше, и из ветки-дубля): отвечать на копию — терять минуты.
+        key = re.sub(r'\s+', ' ', body).strip().lower()
+        if key in seen_questions:
+            continue
+        seen_questions.add(key)
         pending.append(body)
         if len(pending) >= 3:
             break
     pending.reverse()
     owner_text = '\n'.join(pending)
     answered_turns = turns[:len(turns) - len(pending)]
+    # Последний вопрос уже мог быть задан раньше и остаться без ответа.
+    # Тогда прошлый прогон упал — отвечаем снова, а не молчим.
+    last_question = re.sub(r'\s+', ' ', pending[-1]).strip().lower() if pending else ''
+    asked_before = any(re.sub(r'\s+', ' ', body).strip().lower() == last_question
+                       and role == 'user' for role, body in answered_turns)
+    if asked_before:
+        print('Этот вопрос уже был раньше и остался без ответа — отвечаю снова', flush=True)
     if len(pending) > 1:
         print(f'Без ответа вопросов: {len(pending)} — отвечаю на все разом', flush=True)
     persona = PERSONA.read_text(encoding='utf-8').strip()
