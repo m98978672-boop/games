@@ -49,7 +49,7 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
     sent = 0
     for video_id in comments.recent_public_videos(youtube, limit=50):
         try:
-            recent = comments.list_comments(youtube, video_id)
+            recent = comments.list_comments(youtube, video_id, limit=500)
         except Exception as exc:
             if comments._comments_disabled(exc):
                 continue
@@ -76,7 +76,7 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
             if api('sent', {'parent_id': comment['id'], 'reply_id': reply_id}).get('recorded') is not True:
                 raise RuntimeError('Reply record uncertain; check Studio.')
             sent += 1
-            if sent >= 20:
+            if sent >= 50:
                 return {'videos_analyzed': len(summaries), 'sent': sent}
     return {'videos_analyzed': len(summaries), 'sent': sent}
 

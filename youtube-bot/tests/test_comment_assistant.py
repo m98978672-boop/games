@@ -211,6 +211,17 @@ class CommentAssistantTests(unittest.TestCase):
              patch.object(assistant, "list_comments", side_effect=disabled):
             with self.assertRaises(RuntimeError): assistant.auto_reply_channel(API(), ledger=Path(temp) / "db")
 
+    def test_comment_scan_paginates(self):
+        class PagedAPI(API):
+            def list(self, **kw):
+                if kw.get('videoId') == 'video':
+                    page = kw.get('pageToken', '')
+                    return Request({'items': [{'snippet': {'topLevelComment': {
+                        'id': 'p' + page, 'snippet': {'textDisplay': 'Спасибо', 'authorChannelId': {'value': 'viewer'}}}}}],
+                        **({'nextPageToken': 'next'} if not page else {})})
+                return super().list(**kw)
+        self.assertEqual([c['id'] for c in assistant.list_comments(PagedAPI(), 'video', limit=500)], ['p', 'pnext'])
+
     def test_recent_videos_rejects_private_and_foreign_uploads(self):
         class RecentAPI:
             def channels(self): return self

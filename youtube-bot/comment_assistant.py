@@ -49,22 +49,34 @@ def _plain_display(value: Any, limit: int) -> str:
     return re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", str(value))[:limit]
 
 
-def list_comments(youtube: Any, video_id: str) -> list[dict[str, str]]:
-    """Return at most 100 recent top-level comments from an owned video."""
+def list_comments(youtube: Any, video_id: str, *, limit: int = 100) -> list[dict[str, str]]:
+    """Return up to 500 recent top-level comments, paging safely."""
+    if type(limit) is not int or not 1 <= limit <= 500:
+        raise ValueError("comment limit must be between 1 and 500")
     channel_id = _channel_id(youtube)
     _owned_video(youtube, video_id, channel_id)
-    result = youtube.commentThreads().list(
-        part="snippet", videoId=video_id, maxResults=100, textFormat="plainText", order="time",
-    ).execute()
     output = []
-    for thread in result.get("items", []):
-        comment = thread.get("snippet", {}).get("topLevelComment", {})
-        snippet = comment.get("snippet", {})
-        author = snippet.get("authorChannelId", {}).get("value")
-        if not comment.get("id") or not author or author == channel_id:
-            continue
-        output.append({"id": str(comment["id"]), "text": _plain_display(snippet.get("textDisplay", ""), 2000)})
-    return output
+    token = None
+    seen_tokens = set()
+    for _ in range((limit + 99) // 100):
+        params = dict(part="snippet", videoId=video_id, maxResults=min(100, limit), textFormat="plainText", order="time")
+        if token:
+            params["pageToken"] = token
+        result = youtube.commentThreads().list(**params).execute()
+        for thread in result.get("items", []):
+            comment = thread.get("snippet", {}).get("topLevelComment", {})
+            snippet = comment.get("snippet", {})
+            author = snippet.get("authorChannelId", {}).get("value")
+            if not comment.get("id") or not author or author == channel_id:
+                continue
+            output.append({"id": str(comment["id"]), "text": _plain_display(snippet.get("textDisplay", ""), 2000)})
+        token = result.get("nextPageToken")
+        if not token:
+            break
+        if token in seen_tokens:
+            raise RuntimeError("Repeated comment page token")
+        seen_tokens.add(token)
+    return output[:limit]
 
 
 def draft_reply(comment: str, generator: Any = None) -> str:
