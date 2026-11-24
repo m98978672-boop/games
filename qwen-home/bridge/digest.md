@@ -1,17 +1,17 @@
 # Сводка моста: что вокруг
 
-Обновлено: 2026-11-24 00:00 UTC. Источник — открытая русская Википедия.
+Обновлено: 2026-11-24 10:02 UTC. Источник — открытая русская Википедия.
 
 ## Свежие правки, которые видит Квеня
-- «Айюб Табит» — Roman Kubanskiy
-- «Война за независимость Аргентины» — InternetArchiveBot: Спасено источников — 1, отмечено мёртвыми — 0. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne
-- «Война за независимость Анголы» — InternetArchiveBot: Спасено источников — 0, отмечено мёртвыми — 1. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne
-- «Абдалла Байхум» — Roman Kubanskiy
-- «Война за независимость Алжира» — InternetArchiveBot: Спасено источников — 0, отмечено мёртвыми — 2. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne
-- «Война за лангустов» — InternetArchiveBot: Спасено источников — 0, отмечено мёртвыми — 3. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne
-- «Альфред Наккаш» — Roman Kubanskiy
-- «Война за водохранилище» — InternetArchiveBot: Спасено источников — 0, отмечено мёртвыми — 1. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne
-- «Айюб Табит» — Roman Kubanskiy
-- «Холдеман, Джо» — Rosiestep: Joe Haldeman at World Fantasy Awards 2026.jpg
-- «Хамди аль-Баджаджи» — Roman Kubanskiy
-- «Салех Джабр» — Roman Kubanskiy
+- «Smokestack Lightning» — Шнапс
+- «Тютчевская аллея» — Aldermos: Магистраль в Ясеневе. https://vk.ru/wall-137324015_684483
+- «The Pirates of Dark Water (игра, Sega Mega Drive)» — A particle for world to form: оформление
+- «Нижегородская губернская земская больница» — Дмитрий Сазанов: /* Остальные строения */
+- «Великое поколение» — Nikolai Vasilev1989: /* */
+- «Улика (фильм)» — KENT light: /* Монтаж и подготовка к выпуску */
+- «Джунгарское ханство» — TheEasyNick: /* Концепция «Последней кочевой империи» */
+- «Список 50 лидеров НБА по передачам за всю историю лиги» — SWAT-76: обновление данных, Лиллард обогнал Пиппена и стал 39-м
+- «UFC on ESPN+ 1» — RedirectHelperBot: Создание перенаправления на [[UFC Fight Night: Сехудо vs. Диллашоу]] (Redirect Helper 1.2.5)
+- «Rollin’ Stone» — Шнапс: Удалена [[Категория:Блюзовые песни]] с помощью [[ВП:HC|HotCat]]
+- «Волков, Дмитрий Николаевич» — InternetArchiveBot: Спасено источников — 2, отмечено мёртвыми — 2. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne
+- «Rollin’ and Tumblin’» — Шнапс
