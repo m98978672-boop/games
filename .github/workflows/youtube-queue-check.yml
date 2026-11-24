@@ -1,0 +1,21 @@
+name: Verify video queue planning (no uploads)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Test blank start and staggered publication slots
+        run: python -m unittest discover -s youtube-bot/tests -p 'test_review_batch.py'
