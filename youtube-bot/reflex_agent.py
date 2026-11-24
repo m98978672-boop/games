@@ -56,7 +56,9 @@ class ReflexAgent:
                  controller: ReflexController | None = None,
                  pacer: "ActionPacer | None" = None):
         self.profile = profile_from_name(profile) if isinstance(profile, str) else profile
-        self.controller = controller or ReflexController(default_intent=self._default_intent())
+        self.controller = controller or ReflexController(
+            default_intent=self._default_intent(),
+            interactive=bool(getattr(self.profile, "screen_intents", frozenset())))
         self.advisor = advisor
         self.advisor_budget_ms = min(advisor_budget_ms, DECISION_BUDGET_MS)
         self.stats = ReflexAgentStats()
@@ -151,7 +153,12 @@ class ReflexAgent:
             overlap_ms=round(overlap_ms * 1000.0, 2),
             perception_started_before_action_finished=overlap_ms > 0))
         self._last_perception, self._last_decision = perception, decision
-        self.stats.pacer = self.pacer.stats.summary()
+        stats = self.pacer.stats
+        # Recomputed per tick on purpose: the summary is small and derived, and
+        # caching it would hide cadence changes from the report.
+        self.stats.pacer = {"windows": stats.windows, "late_windows": stats.late_windows,
+                            "stalls": stats.stalls, "bursts": stats.bursts,
+                            "intent_switches_during_window": stats.switches}
         elapsed = time.monotonic() - tick_started
         if elapsed > MAX_STEP_SECONDS:
             raise RuntimeError(f"step {step} took {elapsed:.2f}s, above {MAX_STEP_SECONDS}s")

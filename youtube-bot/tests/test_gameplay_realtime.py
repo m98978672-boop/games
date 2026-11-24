@@ -108,6 +108,22 @@ class RealtimeTests(unittest.TestCase):
         self.assertEqual(report.stopped_by, 'bridge_error')
         self.assertTrue(report.errors)
 
+    def test_memory_works_from_the_worker_thread(self):
+        # Regression: sqlite3 connections cannot cross threads, so the cached
+        # connection broke the real-time loop in CI. Learning must work here.
+        import tempfile
+        from pathlib import Path as _Path
+
+        from gameplay.skill_memory import SkillMemory
+        with tempfile.TemporaryDirectory() as temp:
+            memory = SkillMemory(_Path(temp) / 'skills.sqlite3')
+            agent = SlowAgent(0.01, memory=memory)
+            report = run_realtime(FakeBridge(), agent, max_steps=4, max_seconds=30)
+            self.assertEqual(report.errors, [], report.summary())
+            self.assertGreater(report.summary()['decisions'], 0)
+            self.assertTrue(memory.dump(), 'skills must be written from the worker thread')
+            memory.close()
+
     def test_report_shape_is_json_safe(self):
         import json
         bridge = FakeBridge()

@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install Pillow for frame analysis
-        run: python -m pip install 'Pillow>=10.4,<13.0'
+        run: python -m pip install 'Pillow>=10.4,<13.0' 'numpy>=1.26,<3.0'
       - name: Offline contract tests (budgets, pacing, profiles, memory)
         run: |
           python -m unittest \
@@ -50,7 +50,7 @@ jobs:
             youtube-bot/tests/test_gameplay_help_lookup.py \
             youtube-bot/tests/test_gameplay_bridge.py
       - name: Measure perception speed on the runner
-        run: python youtube-bot/gameplay/benchmark_reflex.py 40
+        run: python youtube-bot/gameplay/benchmark_reflex.py --compare 40
       - name: Build offline browser bridge image
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Play the synthetic game through the real bridge

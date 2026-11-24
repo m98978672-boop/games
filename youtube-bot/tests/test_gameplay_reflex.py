@@ -8,8 +8,8 @@ from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay.reflex_layer import (DECISION_BUDGET_MS, FRAME, PERCEPTION_BUDGET_MS, Perception,
-                                   ReflexController, ReflexRunner, Target, detect_targets,
-                                   perceive, summarise)
+                                   ReflexController, ReflexRunner, Target, TargetCache,
+                                   detect_targets, perceive, summarise)
 from gameplay.input_profiles import (InputProfileError, arrows_profile, keyboard_profile,
                                      validate_action, virtual_joystick_profile)
 from gameplay.skill_memory import SkillMemory
@@ -75,6 +75,70 @@ class PerceptionTests(unittest.TestCase):
         Image.new('RGB', (400, 300), (0, 0, 0)).save(small, format='PNG')
         with self.assertRaises(ValueError):
             perceive(small.getvalue())
+
+
+class SpeedContractTests(unittest.TestCase):
+    """Speed is a feature here: a regression must fail, not just look slower."""
+
+    def _ms_per_frame(self, count=12):
+        frames = [frame(boxes=BUTTONS, arc=1, shift=i * 7) for i in range(count)]
+        perceive(frames[0], None)  # warm the decoders
+        started = time.perf_counter()
+        previous = None
+        for png in frames:
+            previous = perceive(png, previous)
+        return (time.perf_counter() - started) * 1000.0 / count
+
+    def test_target_search_is_sub_millisecond_on_a_small_frame(self):
+        small = perceive(frame(boxes=BUTTONS, arc=1), None)._small
+        detect_targets(small)  # warm numpy
+        started = time.perf_counter()
+        for _ in range(10):
+            detect_targets(small)
+        per_call = (time.perf_counter() - started) * 1000.0 / 10
+        # The old pure-Python scan needed ~10 ms; anything above 5 ms is a regression.
+        self.assertLess(per_call, 5.0, f'{per_call:.2f} ms per target search')
+
+    def test_whole_frame_is_far_below_budget(self):
+        per_frame = self._ms_per_frame()
+        self.assertLess(per_frame, PERCEPTION_BUDGET_MS / 5, f'{per_frame:.2f} ms per frame')
+
+    def test_iou_against_known_rectangles(self):
+        # Quality is pinned too: the speed-up must not come from sloppier boxes.
+        from gameplay.benchmark_reflex import measure_quality
+        quality = measure_quality()['now']
+        self.assertGreaterEqual(quality['hit_rate'], 0.9, quality)
+        self.assertGreaterEqual(quality['mean_iou'], 0.75, quality)
+
+
+class CacheTests(unittest.TestCase):
+    def test_repeated_screen_skips_the_search(self):
+        cache = TargetCache()
+        png = frame(boxes=BUTTONS, arc=1)
+        first = perceive(png, None, target_cache=cache)
+        second = perceive(png, first, target_cache=cache)
+        self.assertFalse(first.cache_hit)
+        self.assertTrue(second.cache_hit)
+        self.assertEqual([t.center for t in first.targets], [t.center for t in second.targets])
+        self.assertGreaterEqual(cache.stats()['hit_rate'], 0.5)
+
+    def test_cache_round_trips_to_disk_and_rejects_junk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'targets.json'
+            cache = TargetCache(path)
+            cache.put('a' * 16, [Target(10, 20, 30, 40, 0.9)])
+            cache.save()
+            reopened = TargetCache(path)
+            self.assertEqual(reopened.get('a' * 16)[0].center, (25, 40))
+            path.write_text('{"version": 1, "entries": {"nope": []}}', encoding='utf-8')
+            self.assertEqual(TargetCache(path).stats()['entries'], 0)
+
+    def test_controller_shares_one_cache_across_frames(self):
+        controller = ReflexController('EXPLORE')
+        png = frame(boxes=BUTTONS, arc=1)
+        controller.observe(png)
+        controller.observe(png)
+        self.assertGreaterEqual(controller.target_cache.hits, 1)
 
 
 class DecisionTests(unittest.TestCase):
