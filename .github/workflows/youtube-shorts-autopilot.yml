@@ -28,17 +28,55 @@ on:
           - long
         default: short
         required: true
+      catalog_video:
+        description: "Optional repository path to a ready MP4 (catalog upload mode)"
+        type: string
+        required: false
+        default: ""
+      catalog_title:
+        description: "Catalog video title (required with catalog_video)"
+        type: string
+        required: false
+        default: ""
+      catalog_description:
+        description: "Catalog video description"
+        type: string
+        required: false
+        default: ""
+      catalog_tags:
+        description: "Comma-separated catalog tags"
+        type: string
+        required: false
+        default: ""
+      catalog_category_id:
+        description: "YouTube category ID for the catalog video"
+        type: string
+        required: false
+        default: "24"
+      catalog_publish_at:
+        description: "Catalog publication time in Moscow, YYYY-MM-DD HH:MM"
+        type: string
+        required: false
+        default: ""
+      catalog_game_id:
+        description: "Stable lowercase catalog item ID"
+        type: string
+        required: false
+        default: "catalog-video"
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: youtube-shorts-autopilot
+  # Catalog runs need separate groups: GitHub replaces pending runs in a shared group.
+  group: ${{ inputs.catalog_video != '' && format('youtube-catalog-{0}', github.run_id) || 'youtube-shorts-autopilot' }}
   cancel-in-progress: false
 
 jobs:
   create-and-schedule:
+    # A catalog run uploads an existing MP4 in the separate job below.
+    if: github.event_name == 'schedule' || inputs.catalog_video == ''
     runs-on: ubuntu-latest
     timeout-minutes: 150
     env:
@@ -150,3 +188,48 @@ jobs:
         with:
           path: youtube-bot/data/recent-games.json
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
+
+  publish-catalog-video:
+    # Upload an existing repository MP4 through the same authorized publisher.
+    if: github.event_name == 'workflow_dispatch' && inputs.catalog_video != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+      CATALOG_VIDEO: ${{ inputs.catalog_video }}
+      CATALOG_TITLE: ${{ inputs.catalog_title }}
+      CATALOG_DESCRIPTION: ${{ inputs.catalog_description }}
+      CATALOG_TAGS: ${{ inputs.catalog_tags }}
+      CATALOG_CATEGORY_ID: ${{ inputs.catalog_category_id }}
+      CATALOG_PUBLISH_AT: ${{ inputs.catalog_publish_at }}
+      CATALOG_GAME_ID: ${{ inputs.catalog_game_id }}
+      VIDEO_FORMAT: ${{ inputs.video_format }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Require complete catalog inputs and owner-approved audience value
+        run: |
+          if [ -z "$CATALOG_TITLE" ] || [ -z "$CATALOG_PUBLISH_AT" ]; then
+            echo "::error::catalog_video, catalog_title and catalog_publish_at are required together."
+            exit 1
+          fi
+          if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
+            echo "::error::Choose the owner-approved audience value true or false in the workflow input."
+            exit 1
+          fi
+      - name: Build catalog upload metadata
+        run: |
+          python youtube-bot/catalog_upload.py \
+            --video "$CATALOG_VIDEO" \
+            --title "$CATALOG_TITLE" \
+            --description "$CATALOG_DESCRIPTION" \
+            --tags "$CATALOG_TAGS" \
+            --category-id "$CATALOG_CATEGORY_ID" \
+            --publish-at "$CATALOG_PUBLISH_AT" \
+            --game-id "$CATALOG_GAME_ID" \
+            --format "$VIDEO_FORMAT" \
+            --output "$RUNNER_TEMP/catalog.result.json"
+      - name: Start resumable YouTube upload and schedule
+        run: python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/catalog.result.json"

@@ -55,6 +55,34 @@ window.VIDEO_CATALOG = [
     format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 1", order: 6
   },
   {
+    id: "ep04-part1-full",
+    title: "Эпизод 4 — Голосование · часть 1 (полная версия)",
+    description: "Голосование по-кошачьи: комментариев ноль, зато голубь уже проголосовал. Полная 16:9-версия первой части.",
+    file: "boris_ep04_part1.mp4", poster: "thumb_ep04_wide1.png", duration: 46,
+    format: "16:9", category: "series", series: "ep04", channel: "Канал Бориса", badge: "ПОЛНЫЙ ВЫПУСК", order: 6.1
+  },
+  {
+    id: "ep04-part2-full",
+    title: "Эпизод 4 — Всё сбылось · часть 2 (полная версия)",
+    description: "Итоги голосования: друг, охота и вторая миска — всё сразу. Полная 16:9-версия второй части.",
+    file: "boris_ep04_part2.mp4", poster: "thumb_ep04_wide2.png", duration: 44,
+    format: "16:9", category: "series", series: "ep04", channel: "Канал Бориса", badge: "ПОЛНЫЙ ВЫПУСК", order: 6.2
+  },
+  {
+    id: "ep04-part3-full",
+    title: "Эпизод 4 — Котов приютили · часть 3 (полная версия)",
+    description: "По комментариям котов приютили. Приют оказался взаимным, голубь стал соседом. Полная 16:9-версия третьей части.",
+    file: "boris_ep04_part3.mp4", poster: "thumb_ep04_wide3.png", duration: 63,
+    format: "16:9", category: "series", series: "ep04", channel: "Канал Бориса", badge: "ПОЛНЫЙ ВЫПУСК", order: 6.3
+  },
+  {
+    id: "ep04-part4-full",
+    title: "Эпизод 4 — Просто жизнь · часть 4 (полная версия)",
+    description: "Финал дня: плед пополам, тихий вечер и Борис с другом-котом. Полная 16:9-версия финальной части.",
+    file: "boris_ep04_part4.mp4", poster: "thumb_ep04_wide4.png", duration: 64,
+    format: "16:9", category: "series", series: "ep04", channel: "Канал Бориса", badge: "ПОЛНЫЙ ВЫПУСК", order: 6.4
+  },
+  {
     id: "ep03-part2-shorts",
     title: "Борис Shorts — Обычная жизнь вдвоём",
     description: "Один плед, две миски и два хвоста — продолжение истории друга-кота.",

@@ -39,6 +39,8 @@ jobs:
             youtube-bot/tests/test_run_game_review.py \
             youtube-bot/tests/test_publish_to_supabase.py \
             youtube-bot/tests/test_review_workflow_format.py \
+            youtube-bot/tests/test_catalog_upload.py \
+            youtube-bot/tests/test_dispatch_catalog_batch.py \
             youtube-bot/tests/test_speech_policy.py \
             youtube-bot/tests/test_autopilot.py \
             youtube-bot/tests/test_youtube_api.py \
