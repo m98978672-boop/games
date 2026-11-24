@@ -357,11 +357,26 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
     # or fabricate a rating. The selection method is disclosed in the result.
     recovered_selection = False
     try:
-        _extract_json(last_raw)
+        draft = _extract_json(last_raw)
     except (TypeError, ValueError):
+        draft = None
+    if draft is None:
         chosen = next((g for g in game_list if str(g['id']) not in recent), game_list[0] if game_list else None)
         if chosen is None or len(chosen.get('features', [])) < 2:
             raise ValueError('No eligible game for score recovery')
+        gid = str(chosen['id'])
+        draft = {'schema_version': 1, 'game_id': gid,
+                 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'], 'minus_feature_id': f'{gid}-f1',
+                 'possible_minus': '', 'hook': 'Что интересного предлагает эта игра?'}
+        recovered_selection = True
+    else:
+        chosen = next((g for g in game_list if str(g['id']) == str(draft.get('game_id', ''))), None)
+        if chosen is not None and str(chosen['id']) in recent and any(str(g['id']) not in recent for g in game_list):
+            chosen = None
+    raw_score = draft.get('idea_score')
+    valid_score = ((type(raw_score) is int and 1 <= raw_score <= 10) or
+                   (isinstance(raw_score, str) and re.fullmatch(r'(?:10|[1-9])', raw_score.strip()) is not None))
+    if not valid_score and chosen is not None:
         score_messages = [
             {'role':'system','content':'Оцени идею игры исключительно по описанию, не утверждая, что играл. Ответь одним целым числом от 1 до 10 без пояснений и знаков.'},
             {'role':'user','content':json.dumps({'game':str(chosen.get('title','')), 'facts':chosen['features'][:6]},ensure_ascii=False)},
@@ -374,11 +389,8 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
                 break
         if score is None:
             raise ValueError('Model could not provide an unambiguous score; no upload')
-        gid = str(chosen['id'])
-        last_raw = json.dumps({'schema_version':1,'game_id':gid,'idea_score':score,
-            'selected_feature_ids':[f'{gid}-f1',f'{gid}-f2'], 'minus_feature_id':f'{gid}-f1',
-            'possible_minus':'', 'hook':'Что интересного предлагает эта игра?'}, ensure_ascii=False)
-        recovered_selection = True
+        draft['idea_score'] = score
+    last_raw = json.dumps(draft, ensure_ascii=False)
     try:
         result = _catalog_only_fallback(last_raw, game_list, recent)
         if recovered_selection: result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'

@@ -361,6 +361,21 @@ class GameCatalogTests(unittest.TestCase):
         with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2):
             with self.assertRaisesRegex(ValueError,'targeted retries'): generate_game_review([game])
 
+    def test_missing_score_is_recovered_for_same_game_only(self):
+        game = dict(load_game_catalog()[0]); gid = game['id']
+        draft = {'schema_version': 1, 'game_id': gid, 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'],
+                 'minus_feature_id': f'{gid}-f1', 'possible_minus': 'Возможно, такой формат подойдёт не всем.',
+                 'hook': 'Что предлагает эта игра?'}
+        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft)] * 2 + ['4']) as generator:
+            review = generate_game_review([game])
+        self.assertEqual(review['idea_score'], 4)
+        self.assertEqual(review['game_id'], gid)
+        self.assertEqual(json.loads(generator.call_args.args[0][1]['content'])['game'], game['title'])
+        for invalid in ('8/10', 'три'):
+            with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft)] * 2 + [invalid] * 2):
+                with self.assertRaisesRegex(ValueError, 'unambiguous score'):
+                    generate_game_review([game])
+
     def test_malformed_json_recovers_only_unambiguous_model_score(self):
         game=dict(load_game_catalog()[0]); gid=game['id']
         game['features']=list(game['features'])+['Карточка Steam не отмечает поддержку Linux']
