@@ -1,6 +1,7 @@
 import json
 import sys
 import tempfile
+import threading
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -56,8 +57,52 @@ class RunReviewTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'generic fallback'):
                 run_game_review.run(Path(temp) / 'long.mp4', video_format='long')
             render.assert_not_called()
-            download.assert_not_called()
+            download.assert_called_once()  # Artwork may start before the quality gate completes.
             self.assertFalse((Path(temp) / 'recent-games.json').exists())
+
+    def test_long_artwork_and_narration_overlap_before_render(self):
+        started = threading.Event()
+        release = threading.Event()
+        review = {'game_id': '1', 'game_title': 'Игра', 'title': 'Обзор', 'idea_score': 7,
+                  'sources': [], 'screenshots': ['https://example.invalid/art'], 'pros': ['x'], 'possible_minus': 'x'}
+        scenes = [{'dialogue': 'текст'} for _ in range(10)]
+        def artwork(*args, **kwargs):
+            started.set()
+            if not release.wait(5):
+                raise AssertionError('narration did not run concurrently')
+            return ['image.jpg']
+        def narration(value):
+            if not started.wait(5):
+                raise AssertionError('artwork was not started')
+            release.set()
+            return scenes
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.object(run_game_review, 'DATA_DIR', Path(temp)), \
+             patch.object(run_game_review, 'load_steam_games', return_value=[]), \
+             patch.object(run_game_review, 'generate_game_review', return_value=review), \
+             patch.object(run_game_review, 'generate_long_narration', side_effect=narration), \
+             patch.object(run_game_review, 'ensure_editorial_quality'), \
+             patch.object(run_game_review, 'download_screenshots', side_effect=artwork), \
+             patch.object(run_game_review, 'render_long_review', return_value={}) as render, \
+             patch.object(run_game_review, 'youtube_description', return_value='описание'):
+            result = run_game_review.run(Path(temp) / 'long.mp4', video_format='long')
+        self.assertEqual(result['review']['scenes'], scenes)
+        self.assertEqual(result['review']['screenshot_paths'], ['image.jpg'])
+        render.assert_called_once()
+
+    def test_artwork_error_stops_before_render(self):
+        review = {'game_id': '1', 'game_title': 'Игра', 'screenshots': []}
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.object(run_game_review, 'DATA_DIR', Path(temp)), \
+             patch.object(run_game_review, 'load_steam_games', return_value=[]), \
+             patch.object(run_game_review, 'generate_game_review', return_value=review), \
+             patch.object(run_game_review, 'generate_long_narration', return_value=[{'dialogue': 'текст'}]), \
+             patch.object(run_game_review, 'ensure_editorial_quality'), \
+             patch.object(run_game_review, 'download_screenshots', side_effect=RuntimeError('artwork error')), \
+             patch.object(run_game_review, 'render_long_review') as render:
+            with self.assertRaisesRegex(RuntimeError, 'artwork error'):
+                run_game_review.run(Path(temp) / 'long.mp4', video_format='long')
+        render.assert_not_called()
 
     def test_manual_choice_is_validated_twice_and_passed_to_metadata(self):
         game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
