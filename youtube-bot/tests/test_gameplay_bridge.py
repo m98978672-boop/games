@@ -59,9 +59,22 @@ class BridgeSafetyTests(unittest.TestCase):
             self.assertNotIn('BRIDGE_BOOTSTRAP=voxel', plain)
             command = docker_command(game, name, telemetry='voxel', bootstrap='voxel')
             self.assertIn('BRIDGE_BOOTSTRAP=voxel', command)
+            fast = docker_command(game, name, telemetry='voxel', bootstrap='voxel', voxel_fast=True)
+            self.assertIn('BRIDGE_VOXEL_FAST=1', fast)
+            self.assertNotIn('BRIDGE_VOXEL_FAST=1', command)
+            with self.assertRaises(ValueError): docker_command(game, name, voxel_fast=True)
+            with self.assertRaises(ValueError): docker_command(game, name, bootstrap='voxel', voxel_fast=1)
             self.assertIn('BRIDGE_TELEMETRY=voxel', command)
             self.assertEqual(command[command.index('--network') + 1], 'none')
             with self.assertRaises(ValueError): docker_command(game, name, bootstrap='other')
+
+    def test_adventure_telemetry_is_explicit_and_isolated(self):
+        with tempfile.TemporaryDirectory() as temp:
+            game = Path(temp) / 'game'; game.mkdir(); (game / 'index.html').write_text('test')
+            name = 'games-bridge-' + 'a' * 32
+            command = docker_command(game, name, telemetry='adventure')
+            self.assertIn('BRIDGE_TELEMETRY=adventure', command)
+            self.assertEqual(command[command.index('--network') + 1], 'none')
 
     def test_rights_are_explicit_and_steps_bounded(self):
         with self.assertRaisesRegex(ValueError, 'rights'):

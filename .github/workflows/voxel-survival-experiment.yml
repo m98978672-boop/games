@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      OMP_NUM_THREADS: '2'
-      MKL_NUM_THREADS: '2'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
     steps:
       - uses: actions/checkout@v7
@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Install video verifier
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install model dependencies
         run: pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
       - name: Prepare hash-pinned game build context
@@ -37,6 +39,15 @@ jobs:
           docker cp "$container:/game/dist/." "$RUNNER_TEMP/voxel-dist/"
       - name: Build offline browser bridge
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Compare browser timing with and without recording (no model)
+        run: python youtube-bot/tests/smoke_browser_performance.py --voxel "$RUNNER_TEMP/voxel-dist" --output "$RUNNER_TEMP/browser-performance.json"
+      - name: Save private browser timing baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-performance-${{ github.run_id }}
+          path: ${{ runner.temp }}/browser-performance.json
+          if-no-files-found: error
+          retention-days: 3
       - name: Fetch pinned Kvenya adapter
         env:
           GH_TOKEN: ${{ github.token }}
@@ -48,9 +59,44 @@ jobs:
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
           VOXEL_GAME_DIST: ${{ runner.temp }}/voxel-dist
+          VOXEL_RECORD_DIR: ${{ runner.temp }}/voxel-recording
         run: |
+          mkdir -p "$VOXEL_RECORD_DIR"
           set +e
-          python -u youtube-bot/tests/smoke_voxel_qwen.py 2>&1 | tee "$RUNNER_TEMP/voxel-probe.log"
+          nice -n 10 python -u youtube-bot/tests/smoke_voxel_qwen.py 2>&1 | tee "$RUNNER_TEMP/voxel-probe.log"
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/voxel-probe.log"; fi
           exit "$result"
+      - name: Verify private recording contains actual video
+        run: |
+          ffprobe -v error -select_streams v:0 -show_entries stream=codec_type -of csv=p=0 "$RUNNER_TEMP/voxel-recording/recording.webm" | grep -x video
+          python -c 'import json, os; from pathlib import Path; p=Path(os.environ["RUNNER_TEMP"])/"voxel-recording"/"trace.json"; d=json.loads(p.read_text()); assert d["recorded"] is True and d["published"] is False and d["trained"] is False; assert all(type(x["recording_elapsed_ms"]) is int and x["recording_elapsed_ms"] >= 0 for x in d["model_actions"])'
+      - name: Save private experimental recording and trace
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxel-private-recording-${{ github.run_id }}
+          path: ${{ runner.temp }}/voxel-recording/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Verify factual narration and caption pipeline
+        run: |
+          python -m unittest discover -s youtube-bot/tests -p 'test_voxel_voiceover.py'
+          python -m unittest discover -s youtube-bot/tests -p 'test_gameplay_review_evidence.py'
+          python -m unittest discover -s youtube-bot/tests -p 'test_voxel_timing.py'
+          python -m unittest discover -s youtube-bot/tests -p 'test_gameplay_bridge.py'
+      - name: Download private Russian voice model
+        run: |
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/voice.onnx" https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 5 --retry-all-errors --connect-timeout 30 --max-time 600 -o "$RUNNER_TEMP/voice.onnx.json" https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json
+      - name: Add factual private narration and subtitles
+        env:
+          PIPER_MODEL_PATH: ${{ runner.temp }}/voice.onnx
+        run: |
+          python youtube-bot/voxel_voiceover.py "$RUNNER_TEMP/voxel-recording/recording.webm" "$RUNNER_TEMP/voxel-recording/trace.json" "$RUNNER_TEMP/voxel-voiced"
+      - name: Save private voiced experiment
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxel-private-voiced-${{ github.run_id }}
+          path: ${{ runner.temp }}/voxel-voiced/
+          if-no-files-found: error
+          retention-days: 3

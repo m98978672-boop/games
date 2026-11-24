@@ -2,7 +2,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance, initial_tree_approach
+from voxel_supervisor import assess, assisted_actions, target_assistance, exploration_assistance, initial_tree_approach, measured_feedback
 
 class SurvivalMonitorTests(unittest.TestCase):
     def setUp(self): self.ok={'screen':'playing','x':0,'y':64,'z':0,'health':20,'hunger':20,'wood':False}
@@ -54,6 +54,15 @@ class SurvivalMonitorTests(unittest.TestCase):
                                        ([{**step, 'game_reported_displacement':0}], 'none', 20),
                                        ([{**step, 'action':'LOOKLEFT'}], 'none', 20)):
             self.assertEqual(initial_tree_approach(actions, recent, target, health=health), (actions, (), None))
+
+    def test_feedback_rewards_milestones_not_mere_motion_and_penalizes_risk(self):
+        state=self.ok
+        self.assertEqual(measured_feedback(state, {**state,'wood':True}, 'MINE')['score'], 10)
+        self.assertEqual(measured_feedback(state, {**state,'health':15}, 'FORWARD')['score'], -2)
+        self.assertEqual(measured_feedback(state, state, 'MINE')['score'], -1)
+        self.assertEqual(measured_feedback(state, {**state,'x':3}, 'FORWARD')['score'], 0)
+        self.assertEqual(measured_feedback(None, state, 'FORWARD')['reason'], 'unknown')
+        self.assertEqual(measured_feedback(state, {**state,'health':float('nan')}, 'FORWARD')['score'], 0)
 
     def test_camera_stall_is_measured_and_bounded(self):
         trace=[{'action':'LOOKUP','game_reported_camera_delta':0.0}]*3

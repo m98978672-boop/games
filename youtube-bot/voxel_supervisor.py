@@ -82,8 +82,7 @@ def target_assistance(allowed, target, *, health):
         return allowed, (), 'Game diagnostic reports a log at the crosshair within reach. Hold MINE to break it.'
     blocked = ('MINE',) if 'MINE' in allowed and len(allowed) > 1 else ()
     rest = tuple(a for a in allowed if a not in blocked)
-    return rest, blocked, ('No log is reported at the crosshair within reach. Look around for a tree, '
-                           'then move close and aim at its trunk before mining.')
+    return rest, blocked, 'No reachable log reported. Find a tree, approach and aim at its trunk.'
 
 
 def exploration_assistance(allowed, recent, target):
@@ -115,3 +114,24 @@ def initial_tree_approach(allowed, recent, target, *, health):
         return allowed, (), None
     return ('FORWARD',), tuple(a for a in allowed if a != 'FORWARD'), (
         'Scripted experiment: cautiously approach the initial view; stop if movement fails or health falls.')
+
+
+def measured_feedback(before, after, action):
+    """Experimental session score; not reinforcement learning or a weight update.
+
+    Reward only a newly reported wood milestone. Penalize measured health loss
+    or repeated mining without reaching a log. Never reward mere movement or
+    a changed image; telemetry is game-reported and may be wrong.
+    """
+    if assess(before, [])['reason'] == 'telemetry_missing_or_invalid' or assess(after, [])['reason'] == 'telemetry_missing_or_invalid':
+        return {'score': 0, 'reason': 'unknown', 'hint': None}
+    if after['health'] < before['health']:
+        return {'score': -2, 'reason': 'health_decreased',
+                'hint': 'Penalty: reported health fell. Avoid the last danger and seek a safer action.'}
+    if not before['wood'] and after['wood']:
+        return {'score': 10, 'reason': 'wood_reported',
+                'hint': 'Bonus: the game reports wood obtained; verify the inventory before crafting.'}
+    if action == 'MINE' and not after['wood']:
+        return {'score': -1, 'reason': 'wood_not_reported',
+                'hint': 'Penalty: this mining attempt did not yield reported wood. Recheck the target.'}
+    return {'score': 0, 'reason': 'no_verified_change', 'hint': None}
