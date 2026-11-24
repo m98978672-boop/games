@@ -47,21 +47,26 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
     if dry_run:
         return {'videos_analyzed': len(summaries), 'sent': 0}
     sent = 0
-    for video_id in comments.recent_public_videos(youtube, limit=50):
+    scanned_videos = scanned_comments = matched = answered = 0
+    for video_id in comments.recent_public_videos(youtube, limit=200):
         try:
             recent = comments.list_comments(youtube, video_id, limit=500)
         except Exception as exc:
             if comments._comments_disabled(exc):
                 continue
             raise
+        scanned_videos += 1
+        scanned_comments += len(recent)
         for comment in recent:
             reply = comments.automatic_reply(comment['text'])
             if not reply:
                 continue
+            matched += 1
             actual_channel, verified_video = comments._verified_thread(youtube, comment['id'])
             if actual_channel != channel or verified_video != video_id:
                 raise RuntimeError('Comment ownership changed; stopping.')
             if comments.has_any_reply(youtube, comment['id']):
+                answered += 1
                 continue
             if api('reserve', {'parent_id': comment['id']}).get('reserved') is not True:
                 continue
@@ -77,8 +82,11 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
                 raise RuntimeError('Reply record uncertain; check Studio.')
             sent += 1
             if sent >= 50:
-                return {'videos_analyzed': len(summaries), 'sent': sent}
-    return {'videos_analyzed': len(summaries), 'sent': sent}
+                break
+        if sent >= 50:
+            break
+    return {'videos_analyzed': len(summaries), 'sent': sent, 'videos_scanned': scanned_videos,
+            'comments_scanned': scanned_comments, 'matched': matched, 'already_answered': answered}
 
 
 def main() -> None:
@@ -94,7 +102,8 @@ def main() -> None:
     if setting not in {'true', 'false'}:
         raise RuntimeError('Invalid dry-run setting.')
     result = run(youtube, channel, dry_run=setting != 'false')
-    print(f"Видео с анализом: {result['videos_analyzed']}; опубликовано ответов: {result['sent']}.")
+    # Only integer counters, never comments, authors, channel IDs or model output.
+    print("::notice title=Comment cycle counts::" + json.dumps(result, ensure_ascii=True))
 
 
 if __name__ == '__main__':
