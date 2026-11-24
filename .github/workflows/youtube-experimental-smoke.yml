@@ -44,8 +44,18 @@ jobs:
         run: python youtube-bot/tests/smoke_gameplay_edit.py
       - name: Render complete ten-chapter long pipeline at reduced test resolution
         run: python youtube-bot/tests/smoke_long_pipeline.py
+      - name: Test frame timing diagnostics
+        run: node youtube-bot/gameplay/test-frame-timing.cjs
       - name: Build isolated recording container
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Compare finite game browser timing with and without recording
+        run: python youtube-bot/tests/smoke_browser_performance.py --output "$RUNNER_TEMP/browser-performance.json"
+      - name: Save private performance baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: finite-browser-performance-${{ github.run_id }}
+          path: ${{ runner.temp }}/browser-performance.json
+          retention-days: 3
       - name: Test vision-action bridge against a sandboxed browser game
         run: python youtube-bot/tests/smoke_browser_bridge.py
 
@@ -163,6 +173,32 @@ jobs:
           fi
           exit "$result"
 
+  private-review-repair:
+    # Real Steam and Qwen, synthetic failed plans; no publishing credentials.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install model dependencies
+        run: pip install -r youtube-bot/requirements-autopilot.txt
+      - name: Test source-linked limitation repair with real Qwen
+        env:
+          OMP_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+        shell: bash
+        run: |
+          set +e
+          python -u youtube-bot/tests/smoke_review_repair_qwen.py > "$RUNNER_TEMP/repair.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/repair.log"
+          if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/repair.log"; fi
+          exit "$result"
+
   minecraft-one-off:
     # Explicit dispatch only: user requested a single Minecraft Classic probe.
     if: ${{ false }} # Previous one-off Minecraft Classic probe is finished.
@@ -176,3 +212,10 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/voxel-survival-experiment.yml
+
+  finite-adventure-one-off:
+    # Private, bounded, finite game; never uploads or pads a short session.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml

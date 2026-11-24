@@ -141,6 +141,11 @@ def _game_from_app(app_id: str, listing: dict[str, Any]) -> dict[str, Any] | Non
         features.append("Жанры, указанные в Steam: " + ", ".join(genres))
     if platforms:
         features.append("Платформы из карточки Steam: " + ", ".join(platform_names[p] for p in platforms))
+    # Explicit false is different from a missing platform field: describe only
+    # what the Steam card marks, not whether a game can run via compatibility tools.
+    platform_not_marked = [platform_names[p] for p in ('mac', 'linux') if raw_platforms.get(p) is False]
+    for name in platform_not_marked:
+        features.append(f"Карточка Steam не отмечает поддержку {name}")
     if release:
         features.append(f"Дата релиза из Steam: {release}")
     if developer_names:
@@ -202,6 +207,7 @@ def _game_from_app(app_id: str, listing: dict[str, Any]) -> dict[str, Any] | Non
             "price": price,
             "genres": genres,
             "platforms": [platform_names[p] for p in platforms],
+            "platforms_not_marked_supported": platform_not_marked,
             "release_date": release,
             "release_coming_soon": release_data.get("coming_soon") if type(release_data.get("coming_soon")) is bool else None,
             "developers": developer_names[:3],
