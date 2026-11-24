@@ -24,6 +24,10 @@ class ReviewWorkflowFormatTests(unittest.TestCase):
         self.assertIn('timeout-minutes: 360', authorized)
         self.assertIn('youtube-bot/review_batch.py', authorized)
         self.assertIn('batch_count:', authorized)
+        # The pre-render check must be the readable one-line validator, not an
+        # inline int() cast that dies with a traceback on a bad batch_count.
+        self.assertIn('youtube-bot/review_batch.py --check', authorized)
+        self.assertNotIn('from review_batch import plan', authorized)
         self.assertIn('github.event.schedule == \'0 22 * * *\'', authorized)
         batch = (root / 'youtube-bot/review_batch.py').read_text()
         self.assertLess(batch.index('run_game_review.py'), batch.index('publish_to_supabase.py'))

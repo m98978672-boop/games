@@ -1,4 +1,7 @@
+import contextlib
+import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -7,7 +10,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from review_batch import plan, run_queue
+from review_batch import main, parse_count, parse_format, plan, run_queue, suggest_start
+from schedule_policy import CHANNEL_TZ
 
 
 class ReviewBatchTests(unittest.TestCase):
@@ -65,6 +69,64 @@ class ReviewBatchTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 run_queue(['a', 'b'], 'long', Path(tmp))
             self.assertEqual(run.call_count, 1)
+
+    def test_queue_without_start_time_says_what_to_fix(self):
+        # The run #45484226931 failure: batch_count > 1 with an empty publish_at.
+        now = datetime(2026, 11, 24, 21, tzinfo=timezone.utc)
+        with self.assertRaises(ValueError) as caught:
+            plan(2, 'short', '', now=now)
+        message = str(caught.exception)
+        self.assertIn('publish_at', message)
+        self.assertIn('batch_count to 1', message)
+        # The hint must be a pasteable Moscow time in the workflow's format.
+        self.assertRegex(message, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}')
+        self.assertIn(suggest_start('short', now=now), message)
+
+    def test_blank_and_whitespace_inputs_are_one_item(self):
+        now = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
+        self.assertEqual(parse_count(''), 1)
+        self.assertEqual(parse_count('  '), 1)
+        self.assertEqual(parse_count('2'), 2)
+        self.assertEqual(plan(1, 'short', '   ', now=now), [''])
+        self.assertEqual(plan(1, 'short', ' 2026-11-25 20:30 ', now=now), ['2026-11-25 20:30'])
+        self.assertEqual(parse_format(' long '), 'long')
+        # Syntax is checked by parse_count, ranges by plan: 0 and 6 are numbers,
+        # but "два" and "1.5" are not whole numbers at all.
+        for bad in ('два', '1.5', 'two'):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                parse_count(bad)
+        for out_of_range in (0, 6, 3):
+            with self.subTest(out_of_range=out_of_range), self.assertRaises(ValueError):
+                plan(out_of_range, 'long' if out_of_range == 3 else 'short', '', now=now)
+        for bad in ('', 'video', None):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                parse_format(bad)
+
+    def test_check_mode_fails_readably_without_rendering(self):
+        # Reproduces the failed run: a Shorts batch of 2 and no publish_at.
+        env = {'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': '2', 'MANUAL_PUBLISH_AT': '', 'RUNNER_TEMP': ''}
+        with patch.dict(os.environ, env, clear=True), patch('review_batch.subprocess.run') as run, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(['--check']), 1)
+            run.assert_not_called()
+        text = output.getvalue()
+        self.assertIn('::error::', text)
+        self.assertIn('publish_at', text)
+        self.assertIn('nothing was rendered or uploaded', text)
+
+    def test_check_mode_accepts_a_valid_queue(self):
+        now = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
+        with patch('review_batch.manual_publish_time', side_effect=lambda value, now=None: datetime.fromisoformat(value).replace(tzinfo=CHANNEL_TZ)), \
+                patch.dict(os.environ, {'VIDEO_FORMAT': 'long', 'REVIEW_BATCH_COUNT': '2', 'MANUAL_PUBLISH_AT': '2026-11-25 20:30'}, clear=True), \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(['--check']), 0)
+        self.assertIn("format=long, count=2", output.getvalue())
+
+    def test_missing_runner_temp_stops_before_rendering(self):
+        with patch('review_batch.run_queue') as queue, patch.dict(os.environ, {'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': '1', 'MANUAL_PUBLISH_AT': '', 'RUNNER_TEMP': ''}, clear=True), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(main([]), 1)
+        queue.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()
