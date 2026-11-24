@@ -283,7 +283,9 @@ check('диалог подтверждения в истории: жмёт «OK�
 
 check('карта истории помнится между прогонами: место — хэш, карта едет в репозиторий',
   expPy.includes('def to_cache') && expPy.includes('def load_cache') && expPy.includes('hashlib.sha1')
-  && expWf.includes('storymap.json') && expWf.includes('--memo'));
+  && expWf.includes('storymap.json') && expWf.includes('--memo')
+  // иначе карта грузится, но до чтения истории не доходит: «name memo_from is not defined»
+  && expPy.includes('runs=6, memo_from=memo_from'));
 
 check('долгая история: окно до 10 минут и до шести заходов, а не 180 секунд',
   expPy.includes('min(600, seconds)') && expPy.includes('runs=6') && !expPy.includes('min(180, seconds)'));
