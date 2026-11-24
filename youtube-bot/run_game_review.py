@@ -6,6 +6,8 @@ import json
 import os
 import sys
 import uuid
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -47,21 +49,36 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     previous = recent_games(history_path)
     # Deliberately source only games listed by Steam's live public shelves; never
     # silently switch back to the repository's own community games.
+    stage_start = time.perf_counter()
     games = load_steam_games(recent_game_ids=previous)
+    print(f"Steam source collection: {time.perf_counter() - stage_start:.1f}s", flush=True)
+    stage_start = time.perf_counter()
     review = generate_game_review(
         games,
         recent_game_ids=previous,
         seed=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
+    print(f"Review planning: {time.perf_counter() - stage_start:.1f}s", flush=True)
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     workdir = output.parent / f"{output.stem}-work"
+    preparation_start = time.perf_counter()
+    screenshot_urls = list(review.get("screenshots", []))
     if video_format == "long":
-        review["scenes"] = generate_long_narration(review)
-        ensure_editorial_quality(review["scenes"])
-    review["screenshot_paths"] = download_screenshots(
-        list(review.get("screenshots", [])), workdir / "steam-assets", limit=6,
-    )
+        # Network-only artwork retrieval does not depend on the narration. Keep
+        # generation and all quality gates unchanged; never render or publish if
+        # either required operation fails. A separate worker cannot mutate review.
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="steam-artwork") as pool:
+            screenshots = pool.submit(download_screenshots, screenshot_urls, workdir / "steam-assets", limit=6)
+            scenes = generate_long_narration(review)
+            ensure_editorial_quality(scenes)
+            screenshot_paths = screenshots.result()
+        review["scenes"] = scenes
+    else:
+        screenshot_paths = download_screenshots(screenshot_urls, workdir / "steam-assets", limit=6)
+    review["screenshot_paths"] = screenshot_paths
+    print(f"Preparation (narration and artwork): {time.perf_counter() - preparation_start:.1f}s", flush=True)
+    render_start = time.perf_counter()
     if video_format == "long":
         review["format"] = "game-review-long"
         rendered = render_long_review(review, output, workdir)
@@ -70,6 +87,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
         title = review["title"][:100]
+    print(f"Video rendering: {time.perf_counter() - render_start:.1f}s", flush=True)
     # Selection memory is updated only by the publisher after confirmed upload.
     # Slow rendering may consume the lead time. Preserve the chosen slot if it
     # still works; otherwise explicitly report a safe one-off delay. Never
