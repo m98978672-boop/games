@@ -4,6 +4,9 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const html = fs.readFileSync(require('node:path').join(__dirname, '../credential-copy.html'), 'utf8');
 assert.match(html, /connect-src 'none'/);
+// Some Android pickers classify downloaded JSON as an unknown MIME type.
+// Leave the picker unrestricted; the script still validates the file contents.
+assert.doesNotMatch(html.match(/<input\s+id="file"[^>]*>/i)[0], /\baccept=/i);
 assert.doesNotMatch(html, /<script[^>]+src=/i);
 const js = html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const elements = Object.fromEntries(['file','copy','status'].map(id => [id, {files:[], value:'', disabled:false, textContent:'', events:{}, addEventListener(event, handler){this.events[event]=handler;}}]));
