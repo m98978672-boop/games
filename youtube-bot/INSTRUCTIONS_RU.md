@@ -56,6 +56,8 @@
 | `gameplay/input_profiles.py` | разные джойстики: профили `keyboard`, `arrows`, `joystick` (виртуальный d-pad); любое действие проверяется по контракту моста до отправки |
 | `gameplay_qwen_advisor.py` | Qwen как «медленный советник»: жёсткий бюджет, порядок ответа ограничен списком интентов, при опоздании ответ отбрасывается, а частота вопросов снижается |
 | `gameplay/help_lookup.py` | «поиск помощи в интернете»: только `en.wikipedia.org`, `ru.wikipedia.org`, `store.steampowered.com` по HTTPS, без редиректов, тело ≤ 200 КБ, таймаут 5 с, кэш на неделю; по умолчанию сеть выключена |
+| `gameplay/action_pacer.py` | непрерывное движение: интент разворачивается в серию действий на окно `cadence_ms ≈ 1000 мс`; при опоздании решения или зависании кадра окно сокращается (до 250 мс), при запасе — растёт обратно |
+| `gameplay/reflex_runner.py` | живой прогон через настоящий мост: сначала отправляются «догоняющие» пачки движения, затем решение; в отчёт идут реальные замеры, включая `browser_frame_timing` |
 | `reflex_agent.py` | сборка: `agent(png, step)` совместим с `run_agent`, шаг дольше `2 с` — ошибка, а не тихое зависание |
 | `gameplay/reflex_cli.py` | команды оператора: `bench`, `skills`, `forget`, `import`, `profiles`, `budget` |
 
@@ -73,11 +75,16 @@
 Проверки:
 
 ```bash
-python3 -m unittest youtube-bot/tests/test_gameplay_reflex.py youtube-bot/tests/test_gameplay_help_lookup.py
+python3 -m unittest youtube-bot/tests/test_gameplay_reflex.py youtube-bot/tests/test_gameplay_help_lookup.py \
+  youtube-bot/tests/test_gameplay_action_pacer.py
 python3 youtube-bot/gameplay/test_reflex_cli.py
 python youtube-bot/gameplay/benchmark_reflex.py 40   # код 1, если p95 восприятия > 300 мс
 python youtube-bot/tests/smoke_reflex_bridge.py       # только там, где есть Docker
 ```
+
+Живой прогон идёт отдельным workflow `.github/workflows/reflex-live-smoke.yml` (только на PR с правками игрового слоя и вручную): он собирает изолированный образ моста, запускает синтетическую игру и требует `perception_max_ms ≤ 300`, `decision_max_ms ≤ 2000` и хотя бы одну «догоняющую» пачку движения на шаг. Отчёт о времени складывается в артефакт `reflex-live-<run_id>`; публикации и обучения нет.
+
+Как читать эти цифры честно: окно движения (`cadence_ms`) — это то, сколько ввода отправлено вперёд. Решение, занявшее 1.4 с, укладывается в это окно, поэтому персонаж продолжает идти; но задержку отрисовки кадра самой игры (`browser_frame_timing`, `stalled_ms`) и время ответа моста на скриншот слой не уменьшает и не выдаёт за своё.
 
 ## Проверки разработчика
 

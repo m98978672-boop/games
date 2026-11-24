@@ -55,7 +55,8 @@ jobs:
             youtube-bot/tests/test_feedback_youtube.py \
             youtube-bot/tests/test_playthrough_continue.py \
             youtube-bot/tests/test_gameplay_reflex.py \
-            youtube-bot/tests/test_gameplay_help_lookup.py
+            youtube-bot/tests/test_gameplay_help_lookup.py \
+            youtube-bot/tests/test_gameplay_action_pacer.py
           python youtube-bot/gameplay/benchmark_reflex.py 40
           python -m unittest youtube-bot/gameplay/test_reflex_cli.py
           node supabase/functions/youtube-bot/tests/oidc-policy.test.mjs

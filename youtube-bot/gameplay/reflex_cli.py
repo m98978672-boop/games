@@ -73,6 +73,21 @@ def cmd_profiles(_args) -> int:
     return 0
 
 
+def cmd_live(args) -> int:
+    """Play the synthetic fixture through the real Docker bridge (needs Docker)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tests"))
+    from smoke_reflex_bridge import main as live_main
+    argv = ['--steps', str(args.steps)]
+    if args.report:
+        argv += ['--report', str(args.report)]
+    try:
+        return live_main(argv)
+    except RuntimeError as error:
+        # Docker missing or the bridge refusing to start: report, never fake a run.
+        _emit({"error": str(error)[:200], "docker_required": True, "published": False})
+        return 1
+
+
 def cmd_budget(_args) -> int:
     _emit({"perception_budget_ms": PERCEPTION_BUDGET_MS,
            "decision_budget_ms": DECISION_BUDGET_MS,
@@ -102,9 +117,15 @@ def main(argv: list[str] | None = None) -> int:
     imp.set_defaults(func=cmd_import)
     sub.add_parser('profiles', help='list control schemes').set_defaults(func=cmd_profiles)
     sub.add_parser('budget', help='show the timing contract').set_defaults(func=cmd_budget)
+    live = sub.add_parser('live', help='play a synthetic game through the Docker bridge')
+    live.add_argument('--steps', type=int, default=16)
+    live.add_argument('--report', type=Path, default=None)
+    live.set_defaults(func=cmd_live)
     args = parser.parse_args(argv)
     if args.command == 'bench' and not 1 <= args.frames <= 2000:
         parser.error('frames must be 1..2000')
+    if args.command == 'live' and not 1 <= args.steps <= 200:
+        parser.error('steps must be 1..200')
     return args.func(args)
 
 

@@ -92,6 +92,16 @@ class CliTests(unittest.TestCase):
         code, _ = run(['--db', str(self.db), 'import', str(bad)])
         self.assertEqual(code, 1)
 
+    def test_live_without_docker_fails_loudly(self):
+        code, out = run(['live', '--steps', '2'])
+        self.assertEqual(code, 1)
+        self.assertIn('Docker', out)
+
+    def test_live_rejects_absurd_step_counts(self):
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                run(['live', '--steps', '9999'])
+
     def test_bench_rejects_absurd_frame_counts(self):
         with contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit):
