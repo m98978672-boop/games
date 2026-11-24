@@ -1,0 +1,50 @@
+name: YouTube comments assistant
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Analyze without reserving or publishing replies'
+        type: boolean
+        default: true
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+# A single workflow cannot overlap itself. Server-side reservations also
+# serialize per-channel and survive runner loss and uncertain POST outcomes.
+concurrency:
+  group: youtube-comments-autopilot
+  cancel-in-progress: false
+
+jobs:
+  analyze-and-reply:
+    # Deliberately disabled until the owner authorizes and both server and repo
+    # switches are explicitly enabled after end-to-end safety verification.
+    if: ${{ vars.YOUTUBE_COMMENTS_AUTO_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HF_HOME: ${{ runner.temp }}/huggingface
+      PYTHONPATH: youtube-bot
+      COMMENTS_DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true') || 'false' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: youtube-bot/requirements-autopilot.txt
+      - name: Restore pinned model cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/huggingface
+          key: qwen-shorts-0-8b-2fc06364715b967f1860aea9cf38778875588b17-v1
+      - name: Install local model and YouTube dependencies
+        run: python -m pip install -r youtube-bot/requirements-autopilot.txt
+      - name: Analyze and answer limited simple reactions
+        run: python youtube-bot/comments_cloud_worker.py
