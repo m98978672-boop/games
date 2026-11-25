@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from gameplay.playbook import (GOAL_PRESETS, Goal, Playbook, PlaybookError, EdgeStats,
                                learned_baseline, naive_baseline)
-from montage import (Event, MontageError, check_montage, events_from_report_file, events_from_run,
+from montage import (Event, Keep, MontagePlan, MontageError, check_montage, events_from_report_file, events_from_run,
                      ffmpeg_available, ffmpeg_binary, main, plan_montage, probe_duration,
                      render_montage)
 
@@ -381,13 +381,36 @@ class MontagePlanTests(unittest.TestCase):
         # Speech (2.0) is cut before the goal (4.0), even though it came first.
         self.assertTrue(all(cut.get("weight", 0) < 4.0 for cut in plan.cuts))
 
-    def test_the_weakest_clip_is_trimmed_first_not_the_last_one(self):
-        events = [Event(5, "goal"), Event(60, "speech"), Event(120, "goal")]
-        plan = plan_montage(200, events, target_seconds=5)
-        trimmed = [cut for cut in plan.cuts if "подрезан" in cut["reason"]]
-        for cut in trimmed:
-            # Only a clip without a reached goal may lose its tail.
-            self.assertLess(cut.get("weight", 0), 4.0)
+    def test_long_merged_clip_selects_window_with_late_goal(self):
+        # Continuous measured activity merges the whole interval into one clip.
+        events = [Event(5 + n * 2, "speech") for n in range(5)] + [Event(15, "goal")]
+        plan = plan_montage(30, events, target_seconds=2)
+        self.assertEqual(len(plan.keeps), 1)
+        keep = plan.keeps[0]
+        self.assertTrue(any(e.kind == "goal" and keep.start <= e.seconds < keep.end
+                            for e in keep.events))
+        self.assertTrue(all(keep.start <= e.seconds < keep.end for e in keep.events))
+        self.assertEqual(plan.summary()["strength"], 4.0)
+        self.assertTrue(plan.cuts)
+        self.assertEqual(check_montage(plan), [])
+
+    def test_checker_rejects_goal_outside_clip(self):
+        plan = MontagePlan(30, 2, [Keep(1, 3, "цель", (Event(15, "goal"),))])
+        problems = check_montage(plan)
+        self.assertTrue(any("outside" in message for message in problems))
+        self.assertTrue(any("no clip shows" in message for message in problems))
+
+    def test_combined_weights_can_outweigh_a_single_goal(self):
+        # A heuristic sum, not a guarantee that every goal survives.
+        events = [Event(5, "goal"), Event(20, "speech"),
+                  Event(21, "speech"), Event(22, "speech")]
+        plan = plan_montage(30, events, target_seconds=3)
+        self.assertTrue(all(e.kind != "goal" for k in plan.keeps for e in k.events))
+        self.assertTrue(any("no clip shows" in msg for msg in check_montage(plan)))
+
+    def test_event_at_recording_end_cannot_be_shown(self):
+        with self.assertRaises(MontageError):
+            plan_montage(10, [Event(10, "goal")])
 
     def test_a_strong_clip_is_never_shaved_below_the_minimum(self):
         for target in (2.0, 3.0, 4.0, 5.0):

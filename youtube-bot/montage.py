@@ -6,8 +6,8 @@ The bot plays for minutes; a Shorts viewer gives it seconds. This module decides
 * **Highlights come from measured events**, not from taste: a frame where the bot
   reached its goal, where the screen changed, where a target was tracked, or where
   the director actually said something. Each event carries the fact it came from.
-* **Silence is cut by measurement**: a stretch with no event and no speech is
-  boring by definition, so it goes. What is kept is bounded by a target length.
+* **Candidate windows come from events**, not audio silence detection. Parts of
+  the recording outside the selected windows are removed to meet a length budget.
 * **Nothing is faked**: no sped-up footage passed off as real time, no reordering
   that invents a sequence that never happened (clips keep their original order),
   and the report states exactly which seconds were removed.
@@ -35,9 +35,8 @@ MAX_KEEP_SECONDS = 59.0   # a Short is under a minute
 PRE_ROLL = 1.2            # lead-in so a reaction is visible, not just the frame
 POST_ROLL = 0.8           # hold after the event so the viewer sees the result
 
-# How much each kind of measurement is worth when the recording has more
-# highlights than fit. This is a declared ranking of evidence, not taste: a
-# reached goal beats a line of speech, which beats a changed frame.
+# Heuristic editorial priorities, not measured quality or viewer preference.
+# Clips are ranked by the sum of the weights of the events they contain.
 KIND_WEIGHT = {"goal": 4.0, "speech": 2.0, "chapter": 2.0, "change": 0.5, "track": 0.1}
 
 
@@ -201,21 +200,22 @@ def plan_montage(duration: float, events: Sequence[Event], *,
     """Choose the clips to keep. Pure function: no files, no FFmpeg.
 
     Rules, in order:
-    1. goal and speech events are the spine — they are never dropped;
-    2. change/track events only *extend* a clip, they never create one alone;
+    1. goal, speech and chapter events form candidate clips;
+    2. change/track events only extend a clip, they never create one alone;
     3. clips merge when they overlap or are closer than ``min_gap``;
-    4. if the total is over ``target_seconds``, the weakest clip goes first —
-       trimmed from its tail, then dropped entirely — and every removal is
-       written down with the reason.
+    4. if the clips exceed the budget, drop the lowest-weight clips first;
+       if one long clip remains, select a window maximizing retained weight.
+       Dropped events are not claimed as retained in the report.
     """
     if not math.isfinite(duration) or duration <= 0:
         raise MontageError("source duration must be finite and positive")
     if not 1.0 <= target_seconds <= MAX_KEEP_SECONDS:
         raise MontageError(f"target length must be 1–{MAX_KEEP_SECONDS:.0f} seconds")
-    if min_gap < 0:
-        raise MontageError("min_gap cannot be negative")
+    if not math.isfinite(min_gap) or min_gap < 0:
+        raise MontageError("min_gap must be finite and non-negative")
 
-    relevant = [event for event in events if 0 <= event.seconds <= duration]
+    # A timestamp at the exclusive end of the recording cannot be shown.
+    relevant = [event for event in events if 0 <= event.seconds < duration]
     spine = [event for event in relevant if event.kind in ("goal", "speech", "chapter")]
     if not spine:
         raise MontageError("nothing measured to keep: the recording has no goals or speech")
@@ -262,28 +262,39 @@ def plan_montage(duration: float, events: Sequence[Event], *,
                      "reason": "не помещается в целевую длину",
                      "weight": keep_strength(removed), "events": len(removed.events)})
 
-    over = sum(keep.seconds for keep in keeps) - target_seconds
-    if over > 0:
-        # Shorten the weakest clip that can give up the time without dropping the
-        # evidence it exists for; the strongest clip is the last thing touched.
-        order = sorted(range(len(keeps)),
-                       key=lambda i: (keep_strength(keeps[i]), -keeps[i].start))
-        for index in order:
-            keep = keeps[index]
-            room = keep.seconds - MIN_CLIP
-            if room <= 0:
-                continue
-            shrink = min(over, room)
-            if shrink <= 0:
-                break
-            new_end = keep.end - shrink
-            cuts.append({"start": round(new_end, 2), "end": round(keep.end, 2),
-                         "reason": "подрезан хвост, чтобы уложиться в длину",
-                         "weight": keep_strength(keep)})
-            keeps[index] = Keep(keep.start, new_end, keep.reason, keep.events)
-            over -= shrink
-            if over <= 0.001:
-                break
+    if sum(keep.seconds for keep in keeps) > target_seconds:
+        # The loop above leaves one oversized clip. Choose the contiguous window
+        # with the highest retained score instead of blindly cutting its tail.
+        keep = keeps[0]
+        length = target_seconds
+        latest_start = keep.end - length
+        candidates = {keep.start, latest_start}
+        for event in keep.events:
+            # Half-open intervals: an event exactly at the end is not shown.
+            for point in (event.seconds, event.seconds - length + 0.01):
+                candidates.add(min(latest_start, max(keep.start, point)))
+
+        def window(start: float) -> tuple[Event, ...]:
+            return tuple(e for e in keep.events if start <= e.seconds < start + length)
+
+        def score(start: float) -> tuple[float, int, float]:
+            members = window(start)
+            return (sum(event_weight(e.kind) for e in members),
+                    sum(e.kind == "goal" for e in members), -start)
+
+        new_start = max(candidates, key=score)
+        new_end = new_start + length
+        members = window(new_start)
+        if not any(e.kind in ("goal", "speech", "chapter") for e in members):
+            raise MontageError("no measured moment fits the target length")
+        for start, end in ((keep.start, new_start), (new_end, keep.end)):
+            if end > start:
+                omitted = tuple(e for e in keep.events if start <= e.seconds < end)
+                cuts.append({"start": round(start, 2), "end": round(end, 2),
+                             "reason": "подрезан клип, чтобы уложиться в длину",
+                             "weight": round(sum(event_weight(e.kind) for e in omitted), 3),
+                             "events": len(omitted)})
+        keeps[0] = Keep(new_start, new_end, _reason(members), members)
 
     keeps.sort(key=lambda keep: keep.start)
     plan = MontagePlan(duration=float(duration), target_seconds=float(target_seconds),
@@ -423,9 +434,12 @@ def check_montage(plan: MontagePlan, *, max_seconds: float = MAX_KEEP_SECONDS) -
         if current.start < previous.start:
             problems.append("clips are out of order, which would invent a sequence")
     for keep in plan.keeps:
-        if keep.seconds < MIN_CLIP:
+        if keep.seconds < MIN_CLIP - 1e-9:
             problems.append(f"clip at {keep.start:.1f}s is shorter than a flash")
-    has_goal = any("goal" in {event.kind for event in keep.events} for keep in plan.keeps)
+        if any(not keep.start <= event.seconds < keep.end for event in keep.events):
+            problems.append(f"clip at {keep.start:.1f}s lists an event outside its bounds")
+    has_goal = any(event.kind == "goal" and keep.start <= event.seconds < keep.end
+                   for keep in plan.keeps for event in keep.events)
     if not has_goal:
         problems.append("no clip shows a reached goal: this is not a highlight")
     return problems
@@ -437,8 +451,7 @@ def _events_from_rows(rows: Sequence) -> list[Event]:
     for row in rows:
         if not isinstance(row, dict):
             raise MontageError("every event row must be an object")
-        # A typo such as "goals" would silently rank as evidence worth nothing and
-        # the best moment of the run would be cut. Refuse it instead.
+        # Give the operator a useful error listing the supported kinds.
         kind = str(row.get("kind", "change"))
         if kind not in KIND_WEIGHT:
             raise MontageError(
