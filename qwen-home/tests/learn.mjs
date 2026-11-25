@@ -312,5 +312,8 @@ check('аудит всех обнов истории: код и данные п�
   expPy.includes('StOP') === false
   && expPy.includes('def remaining') && expWf.includes('storymap.json'));
 
+check('память карты несовместимой схемы не берётся: иначе остаток был бы фальшивым',
+  expPy.includes("SCHEMA = 'text+options-v2'") && expPy.includes("data.get('schema') != self.SCHEMA"));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
