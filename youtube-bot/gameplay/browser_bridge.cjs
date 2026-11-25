@@ -11,6 +11,7 @@ const TYPES = {".html":"text/html", ".js":"text/javascript", ".mjs":"text/javasc
 const KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter", "Escape", "ShiftLeft", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map(k => "Key" + k), ..."0123456789".split("").map(k => "Digit" + k)]);
 const ENTRY = process.env.BRIDGE_ENTRY || "index.html";
 const TELEMETRY = process.env.BRIDGE_TELEMETRY || "";
+const ALLOW_VIEWPORT_RESIZE = process.env.BRIDGE_VIEWPORT_RESIZE === "1";
 const BOOTSTRAP = process.env.BRIDGE_BOOTSTRAP || "";
 const VOXEL_FAST = process.env.BRIDGE_VOXEL_FAST === "1";
 if (VOXEL_FAST && BOOTSTRAP !== "voxel") throw Error("fast quality requires voxel setup");
@@ -33,7 +34,7 @@ const server = http.createServer((req, res) => {
 });
 function checkAction(action) {
   if (!action || typeof action !== "object" || Array.isArray(action)) throw Error("invalid action");
-  const allowed = ["keys", "click", "button", "hold_ms", "look", "duration_ms"];
+  const allowed = ["keys", "click", "button", "hold_ms", "look", "duration_ms", "viewport"];
   if (Object.keys(action).some(key => !allowed.includes(key))) throw Error("unknown action field");
   const keys = action.keys ?? [], click = action.click ?? null, duration = action.duration_ms ?? 250;
   if (!Array.isArray(keys) || keys.length > 4 || new Set(keys).size !== keys.length || keys.some(key => !KEYS.has(key))) throw Error("invalid keys");
@@ -44,7 +45,12 @@ function checkAction(action) {
   if (look !== null && (!Array.isArray(look) || look.length !== 2 || !look.every(Number.isInteger) || look.some(n => n < -100 || n > 100))) throw Error("invalid look");
   const hold = action.hold_ms ?? 0;
   if (!Number.isInteger(hold) || hold < 0 || hold > 4500 || (action.hold_ms !== undefined && click === null)) throw Error("invalid hold duration");
-  return {keys, click, button, look, hold, duration};
+  const viewport = action.viewport;
+  if (viewport !== undefined && (!ALLOW_VIEWPORT_RESIZE || !Array.isArray(viewport)
+      || viewport.length !== 2 || !viewport.every(Number.isInteger)
+      || viewport[0] < 640 || viewport[0] > 1024 || viewport[1] < 480 || viewport[1] > 768
+      || click !== null || look !== null || keys.length)) throw Error("invalid viewport action");
+  return {keys, click, button, look, hold, duration, viewport};
 }
 async function main() {
   await new Promise(resolve => server.listen(PORT, HOST, resolve));
@@ -131,6 +137,15 @@ async function main() {
     }
     await page.mouse.move(mouseX, mouseY);
     const observe = async step => {
+      const viewportHud = ALLOW_VIEWPORT_RESIZE ? await page.evaluate(() => {
+        const panel = document.getElementById("ui-overlay");
+        if (!panel) return null;
+        const {x, y, width, height} = panel.getBoundingClientRect();
+        const message = (document.getElementById("game-message")?.textContent || "").slice(0, 240);
+        const level = document.getElementById("level-status")?.textContent;
+        return {message, rect:[x,y,width,height], viewport:[innerWidth,innerHeight],
+          level: level === "Current Level: 1" ? 1 : level === "Current Level: 2" ? 2 : null};
+      }) : null;
       const screenshotStart = process.hrtime.bigint();
       // Do not fast-forward or cancel games' CSS animations during capture.
       const png = await page.screenshot({type:"png", timeout:10000});
@@ -210,8 +225,9 @@ async function main() {
             return {index, x, y, label: (button.textContent || "").trim().slice(0, 120), enabled: !button.disabled && r.width > 0 && r.height > 0 && x >= 0 && x < 800 && y >= 0 && y < 600};
           });
           const t = document.querySelector('#story-text')?.textContent || '';
-          const ended = !!document.querySelector('#story-text .game-end');
-          const outcome = !ended ? 'playing' : t.includes('Victory! You found the Lost Artifact.') ? 'victory' : t.includes('Defeated.') ? 'death' : 'unknown';
+          const terminal = document.querySelector('#story-text .game-end');
+          const ended = !!terminal;
+          const outcome = !ended ? 'playing' : ['victory','death'].includes(terminal.dataset.outcome) ? terminal.dataset.outcome : t.includes('Victory! You found the Lost Artifact.') ? 'victory' : t.includes('Defeated.') ? 'death' : 'unknown';
           return {choices, outcome};
         } catch { return null; }
       }) : null;
@@ -236,7 +252,7 @@ async function main() {
       }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
         browser_frame_timing:frameTiming, screenshot_ms:Math.round(screenshot_ms * 100) / 100,
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
+        ...(ALLOW_VIEWPORT_RESIZE ? {viewport_hud:viewportHud, viewport_finished:viewportHud?.message === "Game Complete! You are a master Viewport Voyager!"} : {}), ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});
@@ -247,7 +263,8 @@ async function main() {
       if (request && request.type === "close" && Object.keys(request).length === 1) { normalClose = true; break; }
       try {
         if (!request || request.type !== "step" || Object.keys(request).some(k => !["type", "action"].includes(k))) throw Error("invalid request");
-        const {keys, click, button, look, hold, duration} = checkAction(request.action);
+        const {keys, click, button, look, hold, duration, viewport} = checkAction(request.action);
+        if (viewport) await page.setViewportSize({width:viewport[0], height:viewport[1]});
         if (++step > 10000) throw Error("step limit reached");
         try {
           for (const key of keys) await page.keyboard.down(key);

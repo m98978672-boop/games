@@ -8,6 +8,7 @@ import wave
 from pathlib import Path
 
 from gameplay_voiceover import probe_capture
+from viewport_translation import cues as translation_cues, filters as translation_filters
 from adventure_personality import SHORT_SECONDS, short_comment
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
@@ -19,9 +20,35 @@ ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHRE
 
 def plan(trace):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'Viewport Voyager':
+        lines = [(0.0, 'В этой игре окно браузера — часть головоломки.')]
+        previous = 0.0
+        seen = set()
+        for event in trace['actions']:
+            choice = event['choice']
+            if choice.startswith('CHOICE'):
+                w, h = event['viewport']
+                note = f'Проверяю размер {w} на {h}.'
+                if choice not in seen and not seen.intersection({'CHOICEONE', 'CHOICETWO', 'CHOICETHREE'}):
+                    note += ' Наконец-то изменение размера окна считается игровым навыком.'
+                lines.append((previous, note))
+            elif choice not in seen:
+                direction = {'UP':'вверх', 'DOWN':'вниз', 'LEFT':'налево', 'RIGHT':'направо'}[choice]
+                lines.append((previous, f'Пробую двигаться {direction}.'))
+            seen.add(choice)
+            previous = min(duration, max(previous, (event.get('recording_elapsed_ms') or 0) / 1000))
+        won = trace.get('game_reported_victory') is True
+        lines.append((previous, 'Игра подтвердила прохождение.' if won else 'До финала в этой попытке не дошёл.'))
+        spoken = set()
+        for stamp, _, _, message in translation_cues(trace):
+            if message not in spoken and (not won or message != 'Игра пройдена!'):
+                lines.append((stamp, message))
+                spoken.add(message)
+        return duration, sorted(lines, key=lambda line: line[0]), [], won
     puzzle = trace.get('game') == '16 Puzzle'
+    lighthouse = trace.get('game') == 'Последний сигнал'
     events = trace['model_actions'] if puzzle else trace['actions']
-    lines = [(0.0, 'Собираю пятнашки по порядку.' if puzzle else 'Я ищу потерянный артефакт.')]
+    lines = [(0.0, 'Собираю пятнашки по порядку.' if puzzle else 'Шторм погасил маяк. Попробую вывести паром из тумана.' if lighthouse else 'Я ищу потерянный артефакт.')]
     cuts = []
     remaining_cut = duration * MAX_CUT_FRACTION
     prior = 0.0
@@ -57,6 +84,10 @@ def plan(trace):
                 note = 'Ход не сработал. '
             lines.append((prior, f'{note}Плитка {tile}.'))
             previous_source = source
+        elif lighthouse:
+            label = event.get('choice_label')
+            if isinstance(label, str) and label.strip():
+                lines.append((prior, f'Мой выбор: {label.strip()}.'))
         elif trace.get('short'):
             line, reaction = short_comment(event, ORDINAL[event['choice']])
             lines.append((prior, line))
@@ -67,7 +98,7 @@ def plan(trace):
             lines.append((prior, f'{note} Выбираю {ORDINAL[event["choice"]]} вариант.'.strip()))
         prior = stamp
     won = trace['outcome'] == ('game_reported_win' if puzzle else 'game_reported_victory')
-    ending = f'Решено досок: {trace.get("boards_won", 1)}.' if puzzle else 'Артефакт найден.'
+    ending = f'Решено досок: {trace.get("boards_won", 1)}.' if puzzle else 'Паром миновал риф.' if lighthouse else 'Артефакт найден.'
     lines.append((prior, ending if won else 'Финиш не подтверждён. Это первая часть.'))
     return duration, lines, cuts, won
 
@@ -78,15 +109,24 @@ def build(folder):
     trace['duration_seconds'] = probe_capture(raw)
     duration, lines, cuts, won = plan(trace)
     short = trace.get('short') is True
-    base = 'zuza-adventure-short' if short else ('zuza-pilot' if won else 'zuza-part-01')
+    viewport = trace.get('game') == 'Viewport Voyager'
+    base = 'zuza-viewport-beta' if viewport else 'zuza-adventure-short' if short else ('zuza-pilot' if won else 'zuza-part-01')
     puzzle = trace.get('game') == '16 Puzzle'
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'Последний сигнал':
+        url = GAME_URL.replace('adventure-game/', 'lighthouse-relay/')
+        title = 'Последний сигнал'
+        source = 'https://github.com/m98978672-boop/games/tree/arena/7d9fee46-games/collection/lighthouse-relay'
+    if viewport:
+        url = GAME_URL.replace('adventure-game/', 'adventure-game-new/')
+        title = 'Viewport Voyager'
+        source = 'https://github.com/m98978672-boop/games/tree/main/collection/adventure-game-new'
     (folder / 'description.txt').write_text(
         f'{url}\n\n{title} — пробная запись игры Qwen. '
         'Русский закадровый комментарий собран по журналу действий.\n'
-        + ('Игра подтвердила победу.' if won else 'Часть 1: победа не подтверждена; продолжение пока не записано.')
+        + ('Игра подтвердила победу.' if won else 'Победа в этой попытке не подтверждена.')
         + f'\nИсходник игры: {source}\n', encoding='utf-8')
     with tempfile.TemporaryDirectory() as temp:
         wavs = []
@@ -109,7 +149,9 @@ def build(folder):
         if short and max(video_seconds, cursor) > SHORT_SECONDS:
             raise ValueError('Edited Short and narration exceed 180 seconds; no export generated')
         portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
-        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{portrait}[v]']
+        translated = translation_filters(trace, temp) if viewport else ''
+        panel = ',' + translated if translated else ''
+        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{portrait}[v]']
         # The clips never overlap. Assemble one PCM track to avoid opening
         # hundreds of FFmpeg inputs for a multi-board campaign.
         narration = Path(temp) / 'narration.wav'
@@ -139,7 +181,7 @@ def build(folder):
     if short and edited > SHORT_SECONDS:
         raise ValueError('Encoded Short exceeds the three-minute limit')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
-    report = {'short': short, 'draft': f'{base}.mp4', 'needs_continuation': not won,
+    report = {'short': short, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
         'cuts_seconds': cuts, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'boards_won': trace.get('boards_won'),

@@ -25,7 +25,7 @@ on:
         type: boolean
         default: false
       adventure_capture_run:
-        description: "Optional completed private finite-game capture run ID; publish pilot only"
+        description: "Completed private capture run ID, or lighthouse to play and automatically publish"
         type: string
         required: false
       publish_at:
@@ -345,9 +345,46 @@ jobs:
     with:
       adventure_only: true
 
+  record-lighthouse-episode:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_capture_run == 'lighthouse' && !inputs.puzzle_episode && !inputs.review_preview && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      lighthouse: true
+      adventure_only: true
+
+  publish-lighthouse-episode:
+    needs: record-lighthouse-episode
+    if: github.ref == 'refs/heads/main' && needs.record-lighthouse-episode.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TRUSTED_LIGHTHOUSE_CAPTURE: 'true'
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+      PUBLISH_AT: ${{ inputs.publish_at }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: adventure-private-${{ github.run_id }}
+          path: ${{ runner.temp }}/lighthouse
+      - name: Verify completed story and send to YouTube queue
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_adventure_short.py "$RUNNER_TEMP/lighthouse" "$GITHUB_RUN_ID" "$PUBLISH_AT"
+
   publish-adventure-pilot:
     needs: record-puzzle-episode
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '' && inputs.adventure_capture_run != 'lighthouse')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

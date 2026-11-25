@@ -43,7 +43,7 @@ def docker_command(game_dir: Path, container_name: str, entry: str = "index.html
             raise ValueError("Recording directory must be separate from the game")
     if type(voxel_fast) is not bool or (voxel_fast and bootstrap != "voxel"):
         raise ValueError("Fast quality requires voxel setup")
-    if bootstrap not in (None, "voxel"):
+    if bootstrap not in (None, "voxel", "viewport"):
         raise ValueError("Unsupported bootstrap mode")
     if telemetry not in (None, "2048", "voxel", "adventure", "puzzle"):
         raise ValueError("Unsupported telemetry mode")
@@ -56,7 +56,9 @@ def docker_command(game_dir: Path, container_name: str, entry: str = "index.html
         command.extend(["--mount", f"type=bind,src={record},dst=/record", "--env", "BRIDGE_RECORD=1"])
     if telemetry is not None:
         command.extend(["--env", f"BRIDGE_TELEMETRY={telemetry}"])
-    if bootstrap is not None:
+    if bootstrap == "viewport":
+        command.extend(["--env", "BRIDGE_VIEWPORT_RESIZE=1"])
+    elif bootstrap == "voxel":
         command.extend(["--env", "BRIDGE_BOOTSTRAP=voxel"])
     if voxel_fast:
         command.extend(["--env", "BRIDGE_VOXEL_FAST=1"])
