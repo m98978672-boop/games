@@ -25,8 +25,8 @@ def _import_publisher():
 
 
 def planned_slots(*, now: datetime | None = None, days: int = 2) -> list[datetime]:
-    """Regular publication slots for today and tomorrow, Moscow wall time."""
-    from schedule_policy import CHANNEL_TZ, LONG_POST_TIME, SHORT_POST_TIMES
+    """Every regular publication slot for the next `days` Moscow days, in order."""
+    from schedule_policy import CHANNEL_TZ, GAMEPLAY_POST_TIME, LONG_POST_TIMES, SHORT_POST_TIMES
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         raise ValueError("now must include a timezone")
@@ -34,54 +34,105 @@ def planned_slots(*, now: datetime | None = None, days: int = 2) -> list[datetim
     slots = [
         datetime.combine(today + timedelta(days=offset), wall_time, CHANNEL_TZ)
         for offset in range(max(1, days))
-        for wall_time in (LONG_POST_TIME, *SHORT_POST_TIMES)
+        for wall_time in (*LONG_POST_TIMES, *SHORT_POST_TIMES, GAMEPLAY_POST_TIME)
     ]
-    return [slot.astimezone(timezone.utc) for slot in slots]
+    # Sort by the real moment: a 06:00 long review comes before the 09:00 Short.
+    return sorted(slot.astimezone(timezone.utc) for slot in slots)
+
+
+def _video_format(wall_time) -> str:
+    from schedule_policy import slot_format
+    return slot_format(wall_time)
+
+
+# Gameplay is not rendered by the review workflow: it is recorded by the AI
+# playthrough job, so its command is different in kind, not just in wording.
+_LABELS = {"short": "Shorts", "long": "длинный обзор", "gameplay": "игровой обзор"}
+
+
+def _command(slot_local, video_format: str) -> str:
+    """The exact one-line dispatch that fills this slot.
+
+    Gameplay is not a review: it is recorded by the AI playthrough job, so its
+    command names that workflow and the same publish time instead of pretending
+    a review run could produce it.
+    """
+    if video_format == "gameplay":
+        return (f"gh workflow run youtube-playthrough.yml --ref main "
+                f"-f publish_at='{slot_local:%Y-%m-%d %H:%M}'")
+    return (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
+            f"-f video_format={video_format} -f made_for_kids=false -f batch_count=1 "
+            f"-f publish_at='{slot_local:%Y-%m-%d %H:%M}'")
 
 
 def render_report(missing: list[datetime], booked: list[datetime], *, error: str | None,
-                  now: datetime | None = None) -> str:
-    """A short Markdown report; safe to paste into a public issue."""
+                  now: datetime | None = None, days: int = 2) -> str:
+    """A plan for the next days, grouped by day, safe to paste into an issue."""
     from schedule_policy import CHANNEL_TZ
-    lines = ["## Сверка слотов обзоров (только чтение)", ""]
+    current = now or datetime.now(timezone.utc)
+    lines = ["## Что выйдет в ближайшие дни", ""]
     if error:
         lines += [
-            "Состояние очереди неизвестно: очередь публикаций прочитать не удалось или бронирование остаётся неопределённым.",
+            "Состояние очереди **неизвестно**: прочитать её не удалось.",
             f"Причина: {error}",
             "",
-            "Ничего не запущено и не загружено. Пропуск нельзя считать свободным слотом, "
-            "пока очередь не прочитана: иначе один слот получит второе видео.",
+            "Ничего не запущено и не загружено. Пустой слот нельзя считать свободным, "
+            "пока очередь не прочитана: иначе в него уйдёт второе видео.",
             "",
         ]
         return "\n".join(lines)
+
+    booked_set = {moment.astimezone(CHANNEL_TZ) for moment in booked}
+    missing_set = {moment.astimezone(CHANNEL_TZ) for moment in missing}
+    everything = sorted(booked_set | missing_set)
+    ready = sum(1 for slot in everything if slot in booked_set)
+    counts = {"short": 0, "long": 0, "gameplay": 0}
+    for slot in everything:
+        counts[_video_format(slot.time())] += 1
     lines += [
-        f"Сверено слотов: {len(missing) + len(booked)}. Без видео: {len(missing)}. "
-        f"Уже с видео: {len(booked)}.",
+        f"Слотов на {days} дня: **{len(everything)}** — готово **{ready}**, "
+        f"без видео **{len(missing_set)}**.",
+        "",
+        f"Из них: Shorts **{counts['short']}**, длинных обзоров **{counts['long']}**, "
+        f"игровых обзоров **{counts['gameplay']}**.",
         "",
     ]
-    if booked:
-        lines.append("Занятые слоты (видео подтверждено строкой очереди):")
-        for slot in booked:
-            lines.append(f"- {slot.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} МСК — видео уже есть")
+    if not everything:
+        lines += ["Слотов не найдено.", ""]
+        return "\n".join(lines)
+
+    day = None
+    for index, slot in enumerate(everything):
+        if slot.date() != day:
+            day = slot.date()
+            weekday = ("Понедельник", "Вторник", "Среда", "Четверг", "Пятница",
+                       "Суббота", "Воскресенье")[day.weekday()]
+            # The first day follows the summary line directly; later days get a
+            # blank line before the heading.
+            lines += ([f"### {weekday}, {day:%d.%m}"] if index == 0
+                      else ["", f"### {weekday}, {day:%d.%m}"])
+            lines.append("")
+            lines.append("| Время МСК | Формат | Статус |")
+            lines.append("|---|---|---|")
+        video_format = _video_format(slot.time())
+        label = _LABELS[video_format]
+        status = "✅ готово" if slot in booked_set else "❌ нет видео"
+        lines.append(f"| {slot:%H:%M} | {label} | {status} |")
+
+    if missing_set:
+        lines += ["", "### Чем закрыть пропуски", ""]
+        lines.append("Каждая строка — одна команда, копируется целиком.")
         lines.append("")
-    if missing:
-        lines += [
-            "Слоты без видео. Автоматически ничего не повторяется: сначала проверьте YouTube Studio "
-            "и очередь, затем запустите нужный слот вручную.",
-            "",
-        ]
-        from schedule_policy import LONG_POST_TIME
-        for slot in missing:
-            local = slot.astimezone(CHANNEL_TZ)
-            video_format = "long" if local.time() == LONG_POST_TIME else "short"
-            label = "длинный обзор" if video_format == "long" else "Shorts"
-            command = (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
-                       f"-f video_format={video_format} -f made_for_kids=false -f batch_count=1 "
-                       f"-f publish_at='{local:%Y-%m-%d %H:%M}'")
-            lines.append(f"- {local:%Y-%m-%d %H:%M} МСК ({label}) — `{command}`")
-        lines.append("")
+        for slot in sorted(missing_set):
+            video_format = _video_format(slot.time())
+            lines.append(f"- **{slot:%d.%m %H:%M}** ({_LABELS[video_format]}):")
+            lines.append("")
+            lines.append("  ```")
+            lines.append(f"  {_command(slot, video_format)}")
+            lines.append("  ```")
+            lines.append("")
     else:
-        lines += ["Все сверенные слоты уже имеют видео. Ничего запускать не нужно.", ""]
+        lines += ["", "Все слоты на эти дни уже заняты. Ничего запускать не нужно.", ""]
     return "\n".join(lines)
 
 
@@ -95,7 +146,13 @@ def main(argv: list[str] | None = None) -> int:
         jobs = _import_publisher()()
         missing, booked = assess(slots, jobs)
     except Exception as exc:  # noqa: BLE001 - the report must survive every failure
-        print(render_report([], [], error=str(exc)[:200]))
+        reason = str(exc)[:200]
+        # An unresolved reservation is not a free slot: offering a command here
+        # would put a second video next to one that may already be uploading.
+        if type(exc).__name__ == "UncertainSlot":
+            reason = ("слот в неопределённом состоянии — сначала проверьте YouTube Studio "
+                      "и очередь публикаций, повтор не предлагается")
+        print(render_report([], [], error=reason))
         # The report is the deliverable of this step; a read failure must be
         # visible, not hidden behind a green check.
         return 1

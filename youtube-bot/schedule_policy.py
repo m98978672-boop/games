@@ -1,4 +1,15 @@
-"""Timezone-aware minimum cadence: two daily Shorts and one long video every day."""
+"""Timezone-aware cadence for the channel's three categories.
+
+- Shorts: four a day, 09:00/13:00/17:00/21:00 Moscow.
+- Long reviews: four a day, 06:00/11:00/15:00/19:00 Moscow.
+- Gameplay ("video game reviews", the AI playing a game to its end): at most one
+  a day, and that one continues until the playthrough is finished.
+
+The first two categories are fixed slots. Gameplay is not: it depends on whether
+a playthrough is still open, so it is planned by `gameplay_plan`, not by a slot
+table. Nine uploads a day is far inside the separate 100-uploads-per-day
+`videos.insert` allowance.
+"""
 from __future__ import annotations
 
 import argparse
@@ -7,8 +18,22 @@ from typing import Iterable
 from zoneinfo import ZoneInfo
 
 CHANNEL_TZ = ZoneInfo("Europe/Moscow")
-SHORT_POST_TIMES = (time(8, 0), time(12, 0))
-LONG_POST_TIME = time(6, 0)
+# Four Shorts and four long reviews a day: each type doubled from two-per-type,
+# and spread so no two publications land at the same minute. Uploads cost 1 unit
+# from a dedicated bucket of 100 per day, so eight uploads stay far inside the
+# YouTube quota; see the quota calculator Google published for the Data API.
+SHORT_POST_TIMES = (time(9, 0), time(13, 0), time(17, 0), time(21, 0))
+LONG_POST_TIMES = (time(6, 0), time(11, 0), time(15, 0), time(19, 0))
+# Gameplay sits at 18:00 so it never shares a minute with a review or a Short.
+GAMEPLAY_POST_TIME = time(18, 0)
+# A playthrough cut up to this many seconds is a Short; longer is a full video.
+# This mirrors adventure_personality.SHORT_SECONDS, which the renderer already
+# uses, so the render and the upload stamp cannot disagree at exactly 180s.
+GAMEPLAY_SHORT_MAX_SECONDS = 180
+# Kept for callers that still ask for "the" long slot; the first one serves the
+# nightly scheduled run. Anything that must handle all long slots uses
+# LONG_POST_TIMES and all_planned_slots().
+LONG_POST_TIME = LONG_POST_TIMES[0]
 MIN_LEAD = timedelta(minutes=45)
 # A review is rendered before its publication time is fixed, and a run takes
 # from five minutes to over an hour. A slot chosen with less than this headroom
@@ -55,35 +80,59 @@ def resolve_manual_after_render(requested: datetime, *, now: datetime | None = N
     return earliest, True
 
 
+# Each scheduled run fires three hours before the slot it serves, so its own
+# firing time maps to exactly one publication slot and no firing crosses
+# midnight; a late run therefore still knows which slot it was started for.
+CRON_SLOTS: dict[str, tuple[time, time]] = {
+    # Every firing is exactly three hours before the slot it serves, so a slow
+    # run still makes its publication and no firing ever crosses midnight in
+    # Moscow. Times are UTC cron -> (firing, slot) as Moscow wall time.
+    # Shorts: slots 09:00, 13:00, 17:00, 21:00 -> fire at 06:00, 10:00, 14:00, 18:00.
+    "0 3 * * *": (time(6, 0), time(9, 0)),
+    "0 7 * * *": (time(10, 0), time(13, 0)),
+    "0 11 * * *": (time(14, 0), time(17, 0)),
+    "0 15 * * *": (time(18, 0), time(21, 0)),
+    # Long: slots 06:00, 11:00, 15:00, 19:00 -> fire at 03:00, 08:00, 12:00, 16:00.
+    # The 06:00 slot fires at 00:00 UTC, which is 03:00 Moscow the same day, so
+    # even the earliest slot needs no midnight arithmetic.
+    "0 0 * * *": (time(3, 0), time(6, 0)),
+    "0 5 * * *": (time(8, 0), time(11, 0)),
+    "0 9 * * *": (time(12, 0), time(15, 0)),
+    "0 13 * * *": (time(16, 0), time(19, 0)),
+    # Gameplay: one a day, at 18:00, but only while a playthrough is open. The
+    # firing only checks readiness; whether anything publishes is decided by
+    # gameplay_policy, so a finished playthrough simply produces no upload.
+    "0 14 * * *": (time(17, 0), GAMEPLAY_POST_TIME),
+}
+
+
 def served_slot(event_schedule: str, *, now: datetime | None = None) -> datetime:
     """The publication slot a scheduled run is meant to serve.
 
     GitHub reports only the cron literal, not which of its firing times ran, and
     a delayed run must still serve the slot it was started for. So: find the most
-    recent firing time of that cron in Moscow, then take the first regular slot
-    strictly after it. That reproduces the documented intent - 01:00 serves the
-    06:00 long review, 04:00 serves the 08:00 Short, 08:00 serves the 12:00 Short.
+    recent firing of *this* cron in Moscow, then take the slot it was scheduled
+    for. Every firing is three hours before its slot, so no firing crosses
+    midnight and the slot is always on the firing's own Moscow day.
     """
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         raise ValueError("now must include a timezone")
-    if event_schedule == "0 22 * * *":
-        firings, times = (time(1, 0),), (LONG_POST_TIME,)
-    elif event_schedule == "0 1,5 * * *":
-        firings, times = (time(4, 0), time(8, 0)), SHORT_POST_TIMES
-    else:
+    if event_schedule not in CRON_SLOTS:
         raise ValueError("Unknown scheduled review event")
+    fires_at, slot_at = CRON_SLOTS[event_schedule]
     local = current.astimezone(CHANNEL_TZ)
-    candidates = [datetime.combine(local.date() + timedelta(days=offset), moment, CHANNEL_TZ)
-                  for offset in (-1, 0) for moment in firings]
+    # The slot always falls on the same Moscow calendar day as its firing, which
+    # is what makes the delayed-run case below correct without date arithmetic.
+    candidates = [
+        datetime.combine(local.date() + timedelta(days=offset), fires_at, CHANNEL_TZ)
+        for offset in (-1, 0)
+    ]
     fired = max(moment for moment in candidates if moment <= local)
-    for offset in range(3):
-        day = (fired + timedelta(days=offset)).date()
-        for moment in times:
-            slot = datetime.combine(day, moment, CHANNEL_TZ)
-            if slot > fired:
-                return slot.astimezone(timezone.utc)
-    raise RuntimeError("could not match a cron firing to a regular slot")
+    day = fired.date()
+    # A run so late that the slot has passed still belongs to that slot: a
+    # missed publication must never be silently counted as tomorrow's.
+    return datetime.combine(day, slot_at, CHANNEL_TZ).astimezone(timezone.utc)
 
 
 def reserve_slot_before_render(video_format: str, *, now: datetime | None = None,
@@ -127,9 +176,9 @@ def settle_slot_after_render(reserved: datetime, video_format: str, *,
     reserved = reserved.astimezone(timezone.utc)
     if reserved >= current + MIN_LEAD:
         return reserved, False
-    # Base the search on the actual finish time as well as the old slot. A
-    # render delayed by days must never select a regular slot in the past.
-    return next_publish_slot(max(current, reserved), video_format=video_format), True
+    # Search strictly after the reserved slot, so a late run moves to the next
+    # regular slot of the same format instead of reusing the one it missed.
+    return next_publish_slot(reserved, video_format=video_format), True
 
 
 def long_video_is_due(now: datetime | None = None) -> bool:
@@ -137,6 +186,44 @@ def long_video_is_due(now: datetime | None = None) -> bool:
     if current.tzinfo is None:
         raise ValueError("now must include a timezone")
     return True
+
+
+def slot_format(slot_at: time) -> str:
+    """Which category a Moscow publication time belongs to."""
+    if slot_at == GAMEPLAY_POST_TIME:
+        return "gameplay"
+    if slot_at in LONG_POST_TIMES:
+        return "long"
+    if slot_at in SHORT_POST_TIMES:
+        return "short"
+    raise ValueError(f"not a regular publication slot: {slot_at}")
+
+
+def slot_sequence(first: datetime, video_format: str, count: int) -> list[datetime]:
+    """`count` publication slots of one format, starting at `first`.
+
+    Derived from SHORT_POST_TIMES / LONG_POST_TIMES rather than from arithmetic,
+    so doubling the schedule never silently keeps the old two-a-day step. Times
+    are Moscow wall-clock; a slot already equal to `first` is kept, later ones
+    move forward to the next regular slot of the same format.
+    """
+    if video_format not in {"short", "long"}:
+        raise ValueError("video_format must be short or long")
+    if count < 1:
+        raise ValueError("count must be at least 1")
+    times = SHORT_POST_TIMES if video_format == "short" else LONG_POST_TIMES
+    local = first.astimezone(CHANNEL_TZ)
+    slots = [local]
+    probe = local
+    while len(slots) < count:
+        nxt = next_publish_slot(probe, video_format=video_format, min_lead=timedelta(0))
+        if nxt.astimezone(CHANNEL_TZ) <= probe.astimezone(CHANNEL_TZ):
+            # next_publish_slot is inclusive of an exact slot; step past it.
+            probe = probe + timedelta(minutes=1)
+            continue
+        slots.append(nxt.astimezone(CHANNEL_TZ))
+        probe = nxt
+    return slots
 
 
 def next_publish_slot(now: datetime | None = None, *, video_format: str = "short",
@@ -150,10 +237,7 @@ def next_publish_slot(now: datetime | None = None, *, video_format: str = "short
     earliest = local_now + min_lead
     for offset in range(16):
         candidate_date = local_now.date() + timedelta(days=offset)
-        if video_format == "short":
-            times = SHORT_POST_TIMES
-        else:
-            times = (LONG_POST_TIME,)
+        times = SHORT_POST_TIMES if video_format == "short" else LONG_POST_TIMES
         for slot_time in times:
             candidate = datetime.combine(candidate_date, slot_time, CHANNEL_TZ)
             if candidate >= earliest:
