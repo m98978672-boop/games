@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
 from gameplay_captions import render_srt
+from montage import events_from_run as _montage_events
 from stream_director import Director, Line, Reply
 from stream_plan import StreamPlan, issues
 
@@ -93,6 +94,9 @@ class RunReport:
             "overruns": list(self.overruns),
             "errors": list(self.errors),
             "run_wall_ms": round(self.wall_seconds * 1000.0, 2),
+            # Measured highlight candidates, in the same words the montage uses,
+            # so a saved report can be cut into a short clip without replaying.
+            "events": [event.as_dict() for event in _montage_events(self)],
             "on_air": False,
             "published": False,
         }
