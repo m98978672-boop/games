@@ -8,6 +8,10 @@ on:
     - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
+      review_capture_run:
+        description: "Publish the exact completed Steam review preview from this Actions run ID"
+        type: string
+        required: false
       review_preview:
         description: "Render one complete Steam game review without uploading"
         type: boolean
@@ -100,7 +104,7 @@ jobs:
         run: PYTHONPATH=youtube-bot python -c 'from publish_to_supabase import _supabase_post; r = _supabase_post("/autopilot/topic-history", {}); assert r.get("version") == 1 and isinstance(r.get("game_ids"), list); print("History available:", len(r["game_ids"]), "topics")'
 
   create-and-schedule:
-    if: ${{ !inputs.check_topics_only && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview }}
+    if: ${{ !inputs.check_topics_only && !inputs.review_capture_run && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -259,7 +263,7 @@ jobs:
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
 
   check-puzzle-episode:
-    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode && !inputs.adventure_preview && !inputs.check_topics_only
+    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -297,7 +301,7 @@ jobs:
       puzzle_episode: true
 
   record-adventure-preview:
-    if: github.event_name == 'workflow_dispatch' && inputs.adventure_preview && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''
+    if: github.event_name == 'workflow_dispatch' && inputs.adventure_preview && !inputs.review_capture_run && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''
     permissions:
       contents: read
     uses: ./.github/workflows/adventure-experiment.yml
@@ -306,7 +310,7 @@ jobs:
 
   publish-adventure-pilot:
     needs: record-puzzle-episode
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -353,3 +357,39 @@ jobs:
         env:
           DATA_DIR: ${{ runner.temp }}/adventure-history
         run: python youtube-bot/publish_adventure_draft.py "$RUNNER_TEMP/adventure-publish" "$CAPTURE_RUN" "$PUBLISH_AT"
+
+  publish-saved-review:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.review_capture_run != '' && !inputs.review_preview && !inputs.adventure_preview && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      CAPTURE_RUN: ${{ inputs.review_capture_run }}
+      PUBLISH_AT: ${{ inputs.publish_at }}
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Download the selected private review from this repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$CAPTURE_RUN" =~ ^[0-9]+$ && -n "$PUBLISH_AT" ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e --arg repo "$GITHUB_REPOSITORY" '
+            .conclusion == "success" and .event == "workflow_dispatch"
+            and .path == ".github/workflows/youtube-shorts-autopilot.yml"
+            and .head_repository.full_name == $repo
+            and (.head_branch == "main" or .head_branch == "arena/7d9fee46-games")' >/dev/null
+          gh run download "$CAPTURE_RUN" --name "voiced-steam-review-$CAPTURE_RUN" --dir "$RUNNER_TEMP/saved-review"
+      - name: Verify and schedule the exact video through the existing uploader
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_review_preview.py "$RUNNER_TEMP/saved-review" "$CAPTURE_RUN" "$PUBLISH_AT"
