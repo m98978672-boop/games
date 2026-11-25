@@ -391,3 +391,30 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           python youtube-bot/publish_review_preview.py "$RUNNER_TEMP/saved-review" "$CAPTURE_RUN" "$PUBLISH_AT"
+
+  publish-adventure-beta-short:
+    needs: record-adventure-preview
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_preview && vars.ADVENTURE_BETA_AUTOPUBLISH == 'true' && vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+      ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          name: adventure-private-${{ github.run_id }}
+          path: ${{ runner.temp }}/adventure-beta
+      - name: Verify the completed Short and schedule it on YouTube
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_adventure_short.py "$RUNNER_TEMP/adventure-beta" "$GITHUB_RUN_ID"
