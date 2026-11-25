@@ -1,8 +1,5 @@
 name: Viewport Voyager beta recording
-on:
-  push:
-    branches: [arena/7d9fee46-games]
-    paths: [.github/workflows/viewport-beta.yml, youtube-bot/run_viewport_episode.py]
+on: workflow_dispatch
 permissions:
   contents: read
 jobs:

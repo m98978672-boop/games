@@ -19,3 +19,23 @@ class GameTextTranslationTests(unittest.TestCase):
     def test_invalid_output_leaves_original(self):
         self.assertIsNone(russian_game_text('Open settings', lambda *a, **k: 'not JSON'))
         self.assertIsNone(russian_game_text('Open settings', lambda *a, **k: '{"ru":"Settings"}'))
+
+    def test_long_text_is_not_truncated_or_partially_published(self):
+        sentence = ('An ancient inscription. ' * 50).strip()
+        original = sentence + '\n\n' + 'The last line matters.'
+        seen = []
+
+        def generate(messages, **kwargs):
+            seen.append(json.loads(messages[1]['content'])['source_text'])
+            return json.dumps({'ru': 'Перевод.'})
+
+        result = russian_game_text(original, generate)
+        self.assertEqual(' '.join(seen), ' '.join(original.split()))
+        self.assertTrue(result.endswith('\n\nПеревод.'))
+
+        def fail_last(messages, **kwargs):
+            if 'last line' in messages[1]['content']:
+                return 'invalid'
+            return generate(messages, **kwargs)
+
+        self.assertIsNone(russian_game_text(original, fail_last))
