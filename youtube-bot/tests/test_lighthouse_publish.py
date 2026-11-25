@@ -27,3 +27,14 @@ class LighthousePublishTests(unittest.TestCase):
             self.assertTrue(result['title'].startswith('Бета'))
             self.assertIsNotNone(result['publish_at'])
             self.assertIsNone(result['requested_publish_at'])
+            (folder / 'pilot.json').write_text(json.dumps(dict(short=False, needs_continuation=False, draft='zuza-adventure-short.mp4')))
+            probe.return_value = json.dumps(dict(format={'duration': '181'}, streams=[
+                dict(codec_type='video', width=800, height=600), dict(codec_type='audio')]))
+            self.assertEqual(json.loads(prepare(folder, '123', lighthouse=True).read_text())['metadata']['video_format'], 'long')
+
+    def test_decimal_score_is_a_rating_not_a_count_of_tests(self):
+        from game_reviews import parse_idea_score, score_label
+        self.assertEqual(score_label(parse_idea_score('9,9')), '9,9')
+        for invalid in (True, 9.99, 0.9, '10,1', '99/100'):
+            with self.assertRaises(ValueError):
+                parse_idea_score(invalid)

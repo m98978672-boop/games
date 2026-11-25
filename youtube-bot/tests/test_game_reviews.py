@@ -108,14 +108,14 @@ class GameCatalogTests(unittest.TestCase):
     def test_each_valid_rating_is_preserved(self):
         game = load_game_catalog()[0]
         gid = game['id']
-        for score in (1, 4, 7, 10):
+        for score in (1, 1.1, 2.9, 3.8, 4, 5.6, 6.2, 7, 8.4, 9.9, 10):
             data = {'schema_version': 1, 'game_id': gid, 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'],
                     'possible_minus': 'Возможно, этот формат подойдёт не всем.', 'minus_feature_id': f'{gid}-f1',
                     'idea_score': score, 'hook': 'Что интересного предлагает игра?'}
             with self.subTest(score=score):
                 result = validate_review(data, [game])
                 self.assertEqual(result['idea_score'], score)
-                self.assertIn(f'{score} из 10', result['scenes'][-1]['dialogue'])
+                self.assertIn(f'{score:.1f}'.replace('.', ',') + ' из 10', result['scenes'][-1]['dialogue'])
 
     def test_spoken_source_labels_and_foreign_title(self):
         from game_reviews import spoken_feature, review_opening
@@ -142,7 +142,7 @@ class GameCatalogTests(unittest.TestCase):
         data = {'schema_version': 1, 'game_id': game['id'], 'selected_feature_ids': [f"{game['id']}-f1", f"{game['id']}-f2"],
                 'possible_minus': 'Возможно, не подойдёт каждому.', 'minus_feature_id': f"{game['id']}-f1",
                 'hook': 'Что интересного предлагает игра?'}
-        for score in (True, 7.9, None, 11):
+        for score in (True, 7.99, None, 11):
             with self.subTest(score=score), self.assertRaises(ValueError):
                 validate_review({**data, 'idea_score': score}, games)
 
@@ -170,7 +170,7 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn(game["title"], review["scenes"][0]["dialogue"])
         self.assertIn("О чём игра?", review["scenes"][1]["dialogue"])
         self.assertEqual(review["scenes"][-1]["label"], "ИТОГ")
-        self.assertIn("8 из 10", review["scenes"][-1]["dialogue"])
+        self.assertIn("8,0 из 10", review["scenes"][-1]["dialogue"])
         self.assertIn("Я ещё не играла", review["scenes"][-1]["dialogue"])
 
     def test_long_catalog_text_is_bounded_for_narration_without_changing_evidence(self):
@@ -267,9 +267,9 @@ class GameCatalogTests(unittest.TestCase):
         self.assertGreaterEqual(sum(len(scene["dialogue"]) for scene in scenes), 2400)
         self.assertTrue(all("fact_id" in scene for scene in scenes))
         self.assertIn("Итог по источникам:", scenes[-1]["dialogue"])
-        self.assertIn("7 из 10", scenes[-1]["dialogue"])
+        self.assertIn("7,0 из 10", scenes[-1]["dialogue"])
         self.assertIn("Лично я не играл", scenes[-1]["dialogue"])
-        self.assertEqual(scenes[-1]["visual"], "ИТОГ ПО ИСТОЧНИКАМ · 7/10")
+        self.assertEqual(scenes[-1]["visual"], "ИТОГ ПО ИСТОЧНИКАМ · 7,0/10")
 
     def test_long_review_retries_chapters_individually_after_count_error(self):
         games = load_game_catalog()

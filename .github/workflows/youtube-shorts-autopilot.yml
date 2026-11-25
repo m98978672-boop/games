@@ -443,7 +443,7 @@ jobs:
         run: |
           set -euo pipefail
           folder="$RUNNER_TEMP/adventure-publish"
-          if jq -e '.short == true' "$folder/pilot.json" >/dev/null; then
+          if jq -e '.beta_episode == true or (has("beta_episode") | not) and .short == true' "$folder/pilot.json" >/dev/null; then
             python youtube-bot/publish_adventure_short.py "$folder" "$CAPTURE_RUN" "$PUBLISH_AT"
           else
             python youtube-bot/publish_adventure_draft.py "$folder" "$CAPTURE_RUN" "$PUBLISH_AT"
