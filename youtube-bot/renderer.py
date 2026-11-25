@@ -70,8 +70,18 @@ def normalize_narration(source: Path, output: Path) -> None:
 
 
 def pronunciation_text(text: str) -> str:
-    """Pronounce common platform name naturally while keeping captions unchanged."""
-    return re.sub(r"(?<![A-Za-z0-9_])Steam(?![A-Za-z0-9_])", "Стим", text, flags=re.IGNORECASE)
+    """Prepare conservative spoken forms; captions and source evidence stay unchanged."""
+    text = re.sub(r"(?<![A-Za-z0-9_])Steam(?![A-Za-z0-9_])", "Стим", text, flags=re.IGNORECASE)
+    # Only the known score construction is expanded; arbitrary numbers, dates,
+    # names and URLs must not be guessed or grammatically transformed.
+    numerals = ('', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять', 'десять')
+    text = re.sub(r'(?<!\d)(10|[1-9])\s+из\s+10(?!\d)',
+                  lambda match: numerals[int(match.group(1))] + ' из десяти', text)
+    text = re.sub(r'\s+([,.!?;:])', r'\1', text)
+    text = re.sub(r'([!?,;:])\1+', r'\1', text)
+    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)
+    text = re.sub(r'([.!?])(?=[А-Яа-яЁё])', r'\1 ', text)
+    return re.sub(r'\s+', ' ', text).strip()
 
 
 def synthesize(text: str, output: Path, voice: str = "ru", *, style: str = "neutral") -> float:
@@ -287,7 +297,9 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
                 draw.text((60, caption_y), line, font=caption_font, fill="#37445a")
                 caption_y += 24
     out.parent.mkdir(parents=True, exist_ok=True)
-    image.resize((OUTPUT_WIDTH, OUTPUT_HEIGHT), Image.Resampling.LANCZOS).save(out, optimize=True)
+    # These PNGs are temporary FFmpeg inputs. PNG is lossless in either mode;
+    # skipping the extra optimization pass preserves pixels and reduces CPU time.
+    image.resize((OUTPUT_WIDTH, OUTPUT_HEIGHT), Image.Resampling.LANCZOS).save(out, optimize=False)
 
 
 def ffmpeg_executable() -> str:

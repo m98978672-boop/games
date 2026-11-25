@@ -31,7 +31,7 @@ jobs:
           python-version: "3.11"
       - name: Test the Steam-sourced Russian YouTube review pipeline (sources, cadence, speech, FPS)
         run: |
-          python -m pip install 'Pillow>=10.4,<13.0'
+          python -m pip install 'Pillow>=10.4,<13.0' 'numpy>=1.26,<3.0'
           python -m unittest \
             youtube-bot/tests/test_game_reviews.py \
             youtube-bot/tests/test_steam_catalog.py \
@@ -39,13 +39,19 @@ jobs:
             youtube-bot/tests/test_run_game_review.py \
             youtube-bot/tests/test_publish_to_supabase.py \
             youtube-bot/tests/test_review_workflow_format.py \
+            youtube-bot/tests/test_review_batch.py \
+            youtube-bot/tests/test_review_slot_state.py \
+            youtube-bot/tests/test_slot_reservation.py \
+            youtube-bot/tests/test_audit_review_schedule.py \
             youtube-bot/tests/test_speech_policy.py \
             youtube-bot/tests/test_autopilot.py \
             youtube-bot/tests/test_youtube_api.py \
             youtube-bot/tests/test_playthrough_feedback.py \
             youtube-bot/tests/test_comment_assistant.py \
+            youtube-bot/tests/test_comments_cloud_worker.py \
             youtube-bot/tests/test_gameplay_discovery.py \
             youtube-bot/tests/test_gameplay_2048.py \
+            youtube-bot/tests/test_puzzle_supervisor.py \
             youtube-bot/tests/test_gameplay_finalize.py \
             youtube-bot/tests/test_gameplay_qwen.py \
             youtube-bot/tests/test_gameplay_captions.py \
@@ -53,8 +59,21 @@ jobs:
             youtube-bot/tests/test_gameplay_voiceover.py \
             youtube-bot/tests/test_gameplay_release_plan.py \
             youtube-bot/tests/test_feedback_youtube.py \
-            youtube-bot/tests/test_playthrough_continue.py
+            youtube-bot/tests/test_playthrough_continue.py \
+            youtube-bot/tests/test_gameplay_reflex.py \
+            youtube-bot/tests/test_gameplay_help_lookup.py \
+            youtube-bot/tests/test_gameplay_action_pacer.py \
+            youtube-bot/tests/test_gameplay_realtime.py \
+            youtube-bot/tests/test_gameplay_world_model.py \
+            youtube-bot/tests/test_stream_plan_director.py \
+            youtube-bot/tests/test_stream_run.py \
+            qwen-home/tests/test_self_facts.py
+          python youtube-bot/gameplay/benchmark_reflex.py --compare 40
+          python -m unittest youtube-bot/gameplay/test_reflex_cli.py
           node supabase/functions/youtube-bot/tests/oidc-policy.test.mjs
+          node youtube-bot/tests/test-mobile-comments.cjs
+          node youtube-bot/tests/test-credential-copy.cjs
+          node youtube-bot/tests/test-comments-oauth.mjs
           node youtube-bot/gameplay/test-solver2048.cjs
           node --check youtube-bot/gameplay/play2048.cjs
       - name: Check that the RatCore browser bundle is up to date (engine is wired into every section)

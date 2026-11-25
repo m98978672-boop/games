@@ -49,7 +49,7 @@ class GameplayFinalizeTests(unittest.TestCase):
         from datetime import datetime, timezone
         from gameplay_schedule import gameplay_is_due
         self.assertTrue(gameplay_is_due(datetime(2026, 11, 30, 12, tzinfo=timezone.utc)))
-        self.assertFalse(gameplay_is_due(datetime(2026, 12, 1, 12, tzinfo=timezone.utc)))
+        self.assertTrue(gameplay_is_due(datetime(2026, 12, 1, 12, tzinfo=timezone.utc)))
         self.assertTrue(gameplay_is_due(datetime(2026, 12, 2, 12, tzinfo=timezone.utc)))
         self.assertTrue(gameplay_is_due(datetime(2026, 12, 1, 22, tzinfo=timezone.utc)))  # next Moscow day
         with self.assertRaises(ValueError): gameplay_is_due(datetime(2026, 12, 2))

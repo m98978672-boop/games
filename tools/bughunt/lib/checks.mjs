@@ -471,9 +471,13 @@ export function checkSecurity(root, p) {
       }
     }
     for (const m of hits(src, /<script\b[^>]*src\s*=\s*"(https?:[^"]+)"/gi)) {
-      out.push(f('внешний-скрипт', 'критично', p.name, file, lineAt(src, m.index),
+      // The optional YouTube OAuth feature uses Google's official identity
+      // library, which Google serves dynamically and cannot be pinned with SRI.
+      // Keep reporting the supply-chain risk; do not blanket-allow other URLs.
+      const googleIdentity = p.name === 'youtube-bot' && m[1] === 'https://accounts.google.com/gsi/client';
+      out.push(f('внешний-скрипт', googleIdentity ? 'важно' : 'критично', p.name, file, lineAt(src, m.index),
         'скрипт грузится со стороны: ' + m[1].slice(0, 70),
-        'игра перестанет работать без сети — и это готовый канал для чужого кода'));
+        'страница зависит от сети; внешний код получает доступ к странице и требует доверия поставщику'));
     }
   }
   if (p.hasPackage) {
