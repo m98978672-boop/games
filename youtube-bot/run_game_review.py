@@ -81,7 +81,9 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         reserved = reserve_slot_before_render(video_format, occupied=taken)
         # Processing/failed reservations may have an ambiguous YouTube outcome.
         # Do not treat them as free or shift around them without investigation.
-        assess([reserved], jobs)
+        missing, _ = assess([reserved], jobs)
+        if not missing:
+            raise RuntimeError('Automatic publication slot already has a nearby scheduled video; no review was rendered or uploaded.')
     else:
         # A manual request must never reschedule itself, so a taken slot is
         # refused here. Rendering takes minutes and the answer is already known;

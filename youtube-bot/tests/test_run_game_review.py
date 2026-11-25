@@ -45,6 +45,17 @@ class RunReviewTests(unittest.TestCase):
             self.assertIn('Queue state uncertain', process.stderr)
             self.assertFalse(output.exists())
 
+    def test_automatic_slot_with_nearby_confirmed_video_does_not_render(self):
+        chosen = datetime(2026, 11, 26, 5, tzinfo=timezone.utc)
+        jobs = [{'publish_at': '2026-11-26T05:00:30Z', 'status': 'scheduled', 'video_id': 'abc'}]
+        with tempfile.TemporaryDirectory() as temp, patch.dict('os.environ', {'MANUAL_PUBLISH_AT': ''}), \
+             patch('publish_to_supabase.read_queue', return_value=jobs), \
+             patch.object(run_game_review, 'reserve_slot_before_render', return_value=chosen), \
+             patch.object(run_game_review, 'load_steam_games') as load:
+            with self.assertRaisesRegex(RuntimeError, 'nearby scheduled video'):
+                run_game_review.run(Path(temp) / 'review.mp4')
+            load.assert_not_called()
+
     def test_unresolved_manual_and_automatic_slot_stop_before_source_collection(self):
         chosen = datetime(2026, 11, 26, 5, tzinfo=timezone.utc)
         for manual in (True, False):
