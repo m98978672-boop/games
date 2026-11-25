@@ -18,9 +18,12 @@ so a bad run can be explained after the fact instead of averaged away.
 """
 from __future__ import annotations
 
+import json
 import math
+import re
 import threading
 from dataclasses import dataclass, field
+from pathlib import Path
 
 # Weight of an intent that has never been tried on this screen: it must be tried
 # at least once, but not forever.
@@ -31,6 +34,10 @@ GOAL_WEIGHT = 4.0
 LOOP_PENALTY = 1.5
 # A goal probability below this is "not making progress" and triggers the escape.
 PROGRESS_EPSILON = 0.05
+# The learned table is bounded, exactly like the world model: a long stream must
+# not grow the file forever.
+MAX_SCREENS = 4_000
+SIGNATURE = re.compile(r"[0-9a-f]{16}")
 
 
 class PlaybookError(ValueError):
@@ -148,7 +155,7 @@ class Playbook:
     """
 
     def __init__(self, goal: Goal | None = None, *, explore_ratio: float = 0.15,
-                 stuck_after: int = 3, world_model=None):
+                 stuck_after: int = 3, world_model=None, path: Path | str | None = None):
         goal = goal or GOAL_PRESETS["progress"]
         if not isinstance(goal, Goal):
             raise PlaybookError("goal must be a Goal")
@@ -160,6 +167,9 @@ class Playbook:
         self.explore_ratio = explore_ratio
         self.stuck_after = stuck_after
         self.world_model = world_model
+        # A saved table is what lets the bot walk into a game it already learned
+        # instead of exploring from scratch on every session.
+        self.path = Path(path) if path is not None else None
         self.edges: dict[tuple[str, str], EdgeStats] = {}
         self.stats = PlaybookStats()
         self._lock = threading.Lock()
@@ -167,6 +177,52 @@ class Playbook:
         self._last_screen: str | None = None
         self._recent_screens: list[str] = []
         self._last_choice: Choice | None = None
+        if self.path is not None and self.path.exists():
+            self._load()
+
+    # -- persistence ---------------------------------------------------------
+    def _load(self) -> None:
+        """Read a saved table, skipping anything that is not a sane measurement.
+
+        An unreadable file is not an error: the bot simply starts with an empty
+        table, which is the same state as a first session, never a wrong one.
+        """
+        try:
+            payload = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        if not isinstance(payload, dict) or payload.get("version") != 1:
+            return
+        rows = payload.get("edges")
+        if not isinstance(rows, list):
+            return
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            screen, intent = row.get("screen"), row.get("intent")
+            if (not isinstance(screen, str) or not SIGNATURE.fullmatch(screen)
+                    or not isinstance(intent, str) or not intent or len(intent) > 32):
+                continue
+            tries, hits, loops = row.get("tries"), row.get("goal_hits"), row.get("loops")
+            if not all(type(value) is int and value >= 0 for value in (tries, hits, loops)):
+                continue
+            if hits > tries or loops > tries:
+                continue          # a counter that cannot exist means a corrupt row
+            if len(self.edges) >= MAX_SCREENS:
+                break
+            self.edges[(screen, intent)] = EdgeStats(tries=tries, goal_hits=hits, loops=loops)
+
+    def save(self) -> None:
+        """Write the learned table so the next session starts smarter."""
+        if self.path is None:
+            return
+        with self._lock:
+            payload = {"version": 1,
+                       "goal": self.goal.as_dict(),
+                       "edges": [{"screen": screen, "intent": intent, **edge.as_dict()}
+                                 for (screen, intent), edge in sorted(self.edges.items())]}
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
     # -- learning ------------------------------------------------------------
     def _edge(self, screen: str, intent: str) -> EdgeStats:
