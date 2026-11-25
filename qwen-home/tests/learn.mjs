@@ -315,5 +315,25 @@ check('аудит всех обнов истории: код и данные п�
 check('память карты несовместимой схемы не берётся: иначе остаток был бы фальшивым',
   expPy.includes("SCHEMA = 'text+options-v2'") && expPy.includes("data.get('schema') != self.SCHEMA"));
 
+// Чужой merge из отставшей ветки уже стирал работу: PR #611 вернул старые
+// версии 54 файлов (kvenya/live.js, youtube-bot, workflows, экспедицию).
+// Эти проверки держат отличительные признаки тех правок — если merge снова
+// принесёт старьё, признаки исчезнут и сторож загорится.
+const liveJsNow = await readFile(path.join(home, '..', 'kvenya', 'live.js'), 'utf8');
+check('живой Квеня не откачена: факты о себе из дома, проверка выдуманных чисел, защита с ИИ',
+  liveJsNow.includes('loadSelfFacts') && liveJsNow.includes('selfFactsBlock')
+  && liveJsNow.includes('inventedNumbers') && liveJsNow.includes('detectAiSpeaker'));
+const schedPolicy = await readFile(path.join(home, '..', 'youtube-bot', 'schedule_policy.py'), 'utf8');
+check('расписание ютуба не откачено: политика тайм-слотов на месте',
+  schedPolicy.includes('def ') && schedPolicy.length > 500);
+const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8');
+check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
+  expNow.includes('remaining') && expNow.includes('routeKey')
+  && expNow.includes('memo_from') && expNow.includes('план захода')
+  && expNow.includes("SCHEMA = 'text+options-v2'"));
+const expWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-expedition.yml'), 'utf8');
+check('уборка пыли в workflow не откачена: keep по dir, до выхода «Отчёта нет»',
+  expWorkflow.includes("e.get('dir')") && expWorkflow.indexOf("e.get('dir')") < expWorkflow.indexOf('Отчёта нет — складывать нечего'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
