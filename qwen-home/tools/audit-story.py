@@ -58,7 +58,7 @@ def audit(src=None):
             ('место — хэш всего текста', "hashlib.sha1(norm.encode('utf-8'))" in e),
         ]),
         ('идёт по НЕнажатым выборам (главный фикс цикла)', [
-            ('критерий — пара место+выбор', 'def not_tried' in e and "not in story_map.tried" in e),
+            ('критерий — пара место+выбор', 'def not_tried' in e and 'story_map.tried_here' in e),
         ]),
         ('петли не считаются новыми', [
             ('петля по came_from', 'def is_loop' in e and 'came_from' in e),
@@ -91,6 +91,9 @@ def audit(src=None):
             ('ребро берёт готовый ключ места', 'src_key=None' in e and 'from_key' in e),
             ('при малом остатке — в непройденное, не в петлю', 'leads_to_new' in e),
             ('есть маршрут к остатку', 'def route_to_open' in e),
+            ('висячие рёбра не берутся из памяти', "e.get('from') in self.nodes" in e),
+            ('тот же текст — одно место', 'def text_key_index' in e),
+            ('нажатие не теряется между наборами', 'def tried_here' in e),
             ('отдых не перебивает непройденное', 'rest_fresh' in e),
             ('память доходит до чтения истории', 'memo_from=memo_from' in e),
             ('workflow передаёт карту', '--memo' in w and 'storymap.json' in w),
