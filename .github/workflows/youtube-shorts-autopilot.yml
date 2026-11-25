@@ -45,6 +45,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Reads one input to know which job name to keep, so a change to the
+  # reconciliation logic updates this job instead of silently never running.
+  reconcile-scheduled-slots:
+    if: github.event_name == 'schedule' && github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      REVIEW_SCHEDULE: ${{ github.event.schedule || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Check which planned slots still have no video
+        run: |
+          set -euo pipefail
+          # Read-only: lists planned slots, their state and the exact start
+          # command for every missing one. It never renders or uploads.
+          python youtube-bot/reconcile_schedule.py | tee "$RUNNER_TEMP/slots.md"
+          cat "$RUNNER_TEMP/slots.md" >> "$GITHUB_STEP_SUMMARY"
+
   create-and-schedule:
     runs-on: ubuntu-latest
     timeout-minutes: 360
@@ -135,7 +156,14 @@ jobs:
             ${{ runner.temp }}/ru_RU-irina-medium.onnx
             ${{ runner.temp }}/ru_RU-irina-medium.onnx.json
           key: piper-ru-irina-medium-v1
+      - name: Check whether this scheduled slot already has a video
+        id: slot-state
+        # A scheduled run asks the private queue first: reading is cheap,
+        # rendering is not. A manual dispatch keeps its explicit plan and is
+        # never skipped. An unreadable queue stops the run (no blind duplicate).
+        run: python youtube-bot/review_batch.py --check-queue
       - name: Generate and schedule review queue sequentially
+        if: steps.slot-state.outputs.skip != 'true'
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
         run: python youtube-bot/review_batch.py

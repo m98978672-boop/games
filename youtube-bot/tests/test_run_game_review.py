@@ -33,7 +33,9 @@ class RunReviewTests(unittest.TestCase):
                  patch.object(run_game_review, "download_screenshots", return_value=[]), \
                  patch.object(run_game_review, "ensure_editorial_quality") as quality, \
                  patch.object(run_game_review, "render_long_review", return_value={"fps": 50, "resolution": "1920x1080", "duration_seconds": 210}) as render, \
-                 patch.object(run_game_review, "next_publish_slot", return_value=datetime(2026, 11, 24, 13, tzinfo=timezone.utc)):
+                 patch.object(run_game_review, "reserve_slot_before_render", return_value=datetime(2026, 11, 24, 13, tzinfo=timezone.utc)), \
+                 patch.object(run_game_review, "settle_slot_after_render",
+                              side_effect=lambda slot, kind: (slot, False)):
                 result = run_game_review.run(root / "long.mp4", video_format="long")
             self.assertEqual(result["format"], "long")
             self.assertEqual(result["metadata"]["video_format"], "long")
@@ -114,7 +116,7 @@ class RunReviewTests(unittest.TestCase):
              patch.object(run_game_review, "DATA_DIR", Path(temp)), \
              patch.object(run_game_review, "manual_publish_time", return_value=chosen) as validate, \
              patch.object(run_game_review, "resolve_manual_after_render", return_value=(chosen, False)) as resolve, \
-             patch.object(run_game_review, "next_publish_slot") as default_slot, \
+             patch.object(run_game_review, "reserve_slot_before_render") as default_slot, \
              patch.object(run_game_review, "load_steam_games", return_value=[game]), \
              patch.object(run_game_review, "generate_game_review", return_value=review), \
              patch.object(run_game_review, "download_screenshots", return_value=[]), \
@@ -125,6 +127,48 @@ class RunReviewTests(unittest.TestCase):
         resolve.assert_called_once_with(chosen)
         default_slot.assert_not_called()
         self.assertEqual(result["metadata"]["publish_at"], "2026-11-25T07:00:00Z")
+
+    def test_automatic_slot_is_reserved_before_rendering_and_reused(self):
+        game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
+        review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7,
+                  "sources": [], "screenshots": [], "pros": game["features"], "possible_minus": "Возможно, не всем."}
+        reserved = datetime(2026, 11, 25, 5, tzinfo=timezone.utc)
+        order = []
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict("os.environ", {"MANUAL_PUBLISH_AT": ""}), \
+             patch.object(run_game_review, "DATA_DIR", Path(temp)), \
+             patch.object(run_game_review, "reserve_slot_before_render",
+                         side_effect=lambda *a, **k: order.append("reserve") or reserved) as reserve, \
+             patch.object(run_game_review, "settle_slot_after_render", side_effect=lambda slot, kind: (slot, False)), \
+             patch.object(run_game_review, "load_steam_games", return_value=[game]), \
+             patch.object(run_game_review, "generate_game_review", side_effect=lambda *a, **k: order.append("generate") or review), \
+             patch.object(run_game_review, "download_screenshots", return_value=[]), \
+             patch.object(run_game_review, "youtube_description", return_value="Описание"), \
+             patch.object(run_game_review, "render_short", return_value={}):
+            result = run_game_review.run(Path(temp) / "short.mp4")
+        self.assertEqual(order, ["reserve", "generate"])
+        reserve.assert_called_once()
+        self.assertFalse(result["metadata"]["manual_time_adjusted"])
+        self.assertEqual(result["metadata"]["publish_at"], "2026-11-25T05:00:00Z")
+
+    def test_slot_that_passed_during_rendering_is_reported_once(self):
+        game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
+        review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7,
+                  "sources": [], "screenshots": [], "pros": game["features"], "possible_minus": "Возможно, не всем."}
+        delayed = datetime(2026, 11, 25, 9, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict("os.environ", {"MANUAL_PUBLISH_AT": ""}), \
+             patch.object(run_game_review, "DATA_DIR", Path(temp)), \
+             patch.object(run_game_review, "reserve_slot_before_render", return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+             patch.object(run_game_review, "settle_slot_after_render", return_value=(delayed, True)), \
+             patch.object(run_game_review, "load_steam_games", return_value=[game]), \
+             patch.object(run_game_review, "generate_game_review", return_value=review), \
+             patch.object(run_game_review, "download_screenshots", return_value=[]), \
+             patch.object(run_game_review, "youtube_description", return_value="Описание"), \
+             patch.object(run_game_review, "render_short", return_value={}):
+            result = run_game_review.run(Path(temp) / "short.mp4")
+        self.assertTrue(result["metadata"]["manual_time_adjusted"])
+        self.assertEqual(result["metadata"]["publish_at"], "2026-11-25T09:00:00Z")
 
     def test_delayed_manual_time_after_render_is_reported(self):
         game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}

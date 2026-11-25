@@ -10,7 +10,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from review_batch import main, parse_count, parse_format, plan, run_queue, suggest_start, validate_inputs
+from review_batch import (main, parse_count, parse_format, plan, run_queue, scheduled_plan,
+                          suggest_start, validate_inputs)
 from schedule_policy import CHANNEL_TZ
 
 
@@ -46,6 +47,67 @@ class ReviewBatchTests(unittest.TestCase):
                 run_queue(['a', 'b'], 'short', Path(tmp))
             self.assertEqual(run.call_count, 2)
 
+    def test_generation_failure_skips_that_item_and_keeps_the_next(self):
+        # A single bad Steam/Qwen draw used to kill the whole scheduled run.
+        with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, \
+                patch('review_batch.manual_publish_time'), patch('review_batch.time.sleep'):
+            failed = type('R', (), {'returncode': 1})()
+            success = type('R', (), {'returncode': 0})()
+            run.side_effect = [failed, failed, success, success]
+            Path(tmp, 'games-review-2.result.json').write_text(json.dumps({'metadata': {'manual_time_adjusted': False}}))
+            with contextlib.redirect_stdout(io.StringIO()):
+                published, skipped = run_queue(['a', 'b'], 'short', Path(tmp))
+        self.assertEqual(published, 1)
+        self.assertEqual(len(skipped), 1)
+        self.assertIn('a', skipped[0])
+        # The second item really was rendered and uploaded afterwards.
+        self.assertTrue(any('games-review-2.mp4' in arg for call in run.call_args_list for arg in call.args[0]))
+        self.assertTrue(any('publish_to_supabase.py' in arg for arg in run.call_args_list[-1].args[0]))
+
+    def test_overdue_batch_slot_is_skipped_not_shifted(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, \
+                patch('review_batch.manual_publish_time', side_effect=ValueError('too close')), \
+                contextlib.redirect_stdout(io.StringIO()):
+            published, skipped = run_queue(['a', 'b'], 'short', Path(tmp))
+        self.assertEqual((published, skipped), (0, ['a: too close', 'b: too close']))
+        run.assert_not_called()
+
+    def test_scheduled_plan_renders_nothing_when_the_slot_has_a_video(self):
+        slot = '2026-11-25T05:00:00Z'
+        with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
+                patch('publish_to_supabase.read_queue', return_value=[{'publish_at': slot, 'status': 'scheduled', 'video_id': 'abc'}]), \
+                patch('schedule_policy.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(scheduled_plan(), [])
+        self.assertIn('already has', output.getvalue())
+
+    def test_scheduled_plan_targets_the_served_slot_when_it_is_empty(self):
+        with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
+                patch('publish_to_supabase.read_queue', return_value=[]), \
+                patch('schedule_policy.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(scheduled_plan(), ['2026-11-25 08:00'])
+
+    def test_unreadable_queue_stops_a_scheduled_run_before_rendering(self):
+        with patch.dict(os.environ, {'GITHUB_EVENT_NAME': 'schedule', 'REVIEW_SCHEDULE': '0 1,5 * * *',
+                                     'VIDEO_FORMAT': 'short', 'REVIEW_BATCH_COUNT': '1', 'MANUAL_PUBLISH_AT': '',
+                                     'RUNNER_TEMP': '/tmp'}, clear=True), \
+                patch('publish_to_supabase.read_queue', side_effect=RuntimeError('publisher unreachable')), \
+                patch('review_batch.run_queue') as queue, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(['--check-queue']), 1)
+        queue.assert_not_called()
+        self.assertIn('Could not confirm scheduled slot state', output.getvalue())
+
+    def test_manual_run_is_never_skipped_by_the_queue_check(self):
+        with patch.dict(os.environ, {'GITHUB_EVENT_NAME': 'workflow_dispatch', 'VIDEO_FORMAT': 'short',
+                                     'REVIEW_BATCH_COUNT': '1', 'MANUAL_PUBLISH_AT': ''}, clear=True), \
+                patch('publish_to_supabase.read_queue') as read, \
+                contextlib.redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(main(['--check-queue']), 0)
+        read.assert_not_called()
+        self.assertIn('Not a scheduled run', output.getvalue())
+
     def test_renderer_retry_occurs_only_before_upload(self):
         with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, patch('review_batch.time.sleep'):
             failed = type('R', (), {'returncode': 1})()
@@ -60,18 +122,25 @@ class ReviewBatchTests(unittest.TestCase):
     def test_missing_adjustment_flag_never_uploads_batch(self):
         with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, patch('review_batch.manual_publish_time'):
             run.return_value.returncode = 0
-            Path(tmp, 'games-review-1.result.json').write_text(json.dumps({'metadata': {}}))
-            with self.assertRaises(RuntimeError):
-                run_queue(['a', 'b'], 'short', Path(tmp))
-            self.assertEqual(run.call_count, 1)
+            for index in (1, 2):
+                Path(tmp, f'games-review-{index}.result.json').write_text(json.dumps({'metadata': {}}))
+            with contextlib.redirect_stdout(io.StringIO()):
+                published, skipped = run_queue(['a', 'b'], 'short', Path(tmp))
+            self.assertEqual(published, 0)
+            # Both items stay unpublished; each is reported, nothing is uploaded.
+            self.assertEqual(len(skipped), 2)
+            self.assertFalse(any('publish_to_supabase.py' in arg for call in run.call_args_list for arg in call.args[0]))
 
     def test_adjusted_batch_slot_never_uploads(self):
         with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, patch('review_batch.manual_publish_time'):
             run.return_value.returncode = 0
-            Path(tmp, 'games-review-1.result.json').write_text(json.dumps({'metadata': {'manual_time_adjusted': True}}))
-            with self.assertRaises(RuntimeError):
-                run_queue(['a', 'b'], 'long', Path(tmp))
-            self.assertEqual(run.call_count, 1)
+            for index in (1, 2):
+                Path(tmp, f'games-review-{index}.result.json').write_text(json.dumps({'metadata': {'manual_time_adjusted': True}}))
+            with contextlib.redirect_stdout(io.StringIO()):
+                published, skipped = run_queue(['a', 'b'], 'long', Path(tmp))
+            self.assertEqual(published, 0)
+            self.assertEqual(len(skipped), 2)
+            self.assertFalse(any('publish_to_supabase.py' in arg for call in run.call_args_list for arg in call.args[0]))
 
     def test_empty_start_uses_regular_cadence_for_a_batch(self):
         # main's staggered plan: an empty publish_at is not a mistake any more,

@@ -40,6 +40,9 @@ jobs:
             youtube-bot/tests/test_publish_to_supabase.py \
             youtube-bot/tests/test_review_workflow_format.py \
             youtube-bot/tests/test_review_batch.py \
+            youtube-bot/tests/test_review_slot_state.py \
+            youtube-bot/tests/test_slot_reservation.py \
+            youtube-bot/tests/test_audit_review_schedule.py \
             youtube-bot/tests/test_speech_policy.py \
             youtube-bot/tests/test_autopilot.py \
             youtube-bot/tests/test_youtube_api.py \
