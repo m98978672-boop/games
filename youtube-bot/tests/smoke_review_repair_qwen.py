@@ -41,6 +41,6 @@ def inject_bad_json(messages, **kwargs):
 game_reviews.generate_with_qwen = inject_bad_json
 recovered = game_reviews.generate_game_review(games)
 assert recovered['selection_method'] == 'first_eligible_catalog_candidate_after_invalid_json'
-assert type(recovered['idea_score']) is int and 1 <= recovered['idea_score'] <= 10
+assert type(recovered['idea_score']) in (int, float) and 1 <= recovered['idea_score'] <= 10
 print(json.dumps({'malformed_fixture_only':True, 'uploaded':False,
                   'score_from_model':recovered['idea_score'], 'game_id':recovered['game_id']},ensure_ascii=False))

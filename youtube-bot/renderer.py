@@ -448,8 +448,8 @@ def prepare_all_scenes(scenes: list[dict[str, Any]], audio_dir: Path, *,
         fallback = "Короткий разбор игрового проекта."
         if is_review:
             fallback = None
-            if index == len(scenes) - 1 and type(review_score) is int and 1 <= review_score <= 10:
-                fallback = f"Оценка идеи по описанию — {review_score} из 10. Я не играла."
+            if index == len(scenes) - 1 and type(review_score) in (int, float) and 1 <= review_score <= 10:
+                fallback = f"Оценка идеи по описанию — {str(review_score).replace('.', ',')} из 10. Я не играла."
         return prepare_scene_narration(scenes[index], index, audio_dir, is_review=is_review, fallback=fallback)
     if len(scenes) == 1:
         return [prepare(0)]
