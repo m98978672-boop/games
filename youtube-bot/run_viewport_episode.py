@@ -52,7 +52,7 @@ def record(folder):
                     break
         finally:
             video = bridge.finish_recording()
-            report = dict(game='Viewport Voyager', short=True, initial_hud=initial_hud, duration_seconds=probe_capture(video), actions=events,
+            report = dict(game='Viewport Voyager', short=True, auto_translate=True, initial_hud=initial_hud, duration_seconds=probe_capture(video), actions=events,
                           game_reported_victory=obs.get('viewport_finished') is True, published=False)
             (folder / 'trace.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
             print('::notice title=Viewport recording::' + json.dumps({k: v for k, v in report.items() if k != 'actions'}))

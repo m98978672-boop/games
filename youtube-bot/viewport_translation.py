@@ -3,6 +3,8 @@ import re
 import textwrap
 from pathlib import Path
 
+from game_text_translation import russian_game_text
+
 TRANSLATIONS = {
     'Resize to 800x600 to align the hidden platform and reach the Goal!': 'Выставь 800 × 600, чтобы открыть скрытую платформу и добраться до цели.',
     'Level 2: The Ratio Riser. Resize the window until the Aspect Ratio (W/H) is exactly 1.50!': 'Измени размер окна: отношение ширины к высоте должно быть ровно 1,50.',
@@ -33,7 +35,10 @@ def cues(trace):
         end = rows[i+1][0] if i+1 < len(rows) else None
         if not hud or not 0 <= start <= duration or end is not None and end <= start:
             continue
-        message = translated_message(hud.get('message'))
+        source = hud.get('message')
+        message = translated_message(source)
+        if message is None and trace.get('auto_translate') and isinstance(source, str):
+            message = russian_game_text(source)
         if message is not None:
             result.append((start, end, hud, message))
     return result
