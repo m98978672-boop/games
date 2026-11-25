@@ -510,6 +510,11 @@ def diagnostic_category(error: Exception) -> tuple[str, str]:
         return "identity", "GitHub identity or OIDC failed. Check workflow, branch, claims and publisher configuration."
     if "youtube accepted" in text or "check studio before" in text or "without a video id" in text:
         return "ambiguous-upload", "Upload result may be ambiguous. Check YouTube Studio before retrying."
+    # A slot that is already taken is refused before any upload starts. Saying
+    # "check Studio" there would invent doubt about an upload that never ran;
+    # the owner only has to choose a different time.
+    if "slot is occupied" in text or "already has a video" in text or "slots were occupied" in text:
+        return "slot-taken", "The publication slot already has a video; no upload was started. Choose another time; Studio needs no check."
     if "reservation" in text or "different job" in text or "same slot" in text:
         return "reservation", "Upload reservation or publish slot conflicted. Check publisher records and YouTube Studio."
     if "publisher" in text:

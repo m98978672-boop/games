@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
 from gameplay.skill_memory import SkillMemory
 from collections import deque
-from puzzle_planner import recovery_route, solve
+from puzzle_planner import solve
 from puzzle_learning import learn_win, recall_move
 from gameplay_qwen import QwenVisionAgent, _vision_runtime, qwen_observe
 from puzzle_supervisor import validate_board, legal_indices, distance, feedback, avoid_immediate_undo, avoid_recent_states, verify_transition, board_hint
@@ -50,7 +50,6 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
         removed_seconds = 0.0
         last_stamp = 0.0
         before = validate_board(obs.get('puzzle_telemetry'))
-        initial_solution = solve(before, max_nodes=8_000_000)
         best = distance(before)
         start = time.monotonic()
         hint = ''
@@ -72,13 +71,7 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
             remaining = int(os.getenv('FINITE_GAME_SECONDS', '1800')) - (time.monotonic() - start)
             if not planned and (no_progress >= 6 or remaining < 120) and planner_attempts < 12:
                 planner_attempts += 1
-                direct = solve(before)
-                fallback = recovery_route(route, initial_solution) if direct is None else None
-                candidate = direct if direct is not None else fallback
-                if candidate is not None and len(candidate) <= 600 - len(trace):
-                    planned.extend(candidate)
-                    if fallback:
-                        print(f'PUZZLE_RECOVERY: undo verified moves, then follow the saved solution ({len(fallback)} clicks)', flush=True)
+                planned.extend(solve(before) or [])
             index = planned.popleft() if planned else None
             source = 'planner' if index is not None else 'verified_memory'
             if index is None:
@@ -138,10 +131,9 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
                 before = validate_board(obs.get('puzzle_telemetry'))
                 route, history, previous = [], [], None
                 planned.clear()
-                initial_solution = solve(before, max_nodes=8_000_000)
                 best, no_progress, planner_attempts, hint = distance(before), 0, 0, ''
                 continue
-            if no_progress >= 40 and not planned:
+            if no_progress >= 40:
                 outcome='no_measured_progress'; break
         video = bridge.finish_recording()
     info = json.loads(subprocess.run(['ffprobe','-v','error','-show_entries','format=duration:stream=codec_type',

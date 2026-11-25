@@ -25,6 +25,32 @@ class PublisherNetworkTests(unittest.TestCase):
                 self.assertEqual(actual, category)
                 self.assertNotIn("secret123", safe)
 
+    def test_occupied_slot_is_not_reported_as_a_failed_upload(self):
+        """A taken slot never started an upload, so Studio must not be blamed.
+
+        Regression: "…slot is occupied; no upload was started" matched the word
+        "upload" and was labelled youtube-upload, telling the owner to check
+        Studio for an upload that had never been attempted.
+        """
+        messages = (
+            "Requested publication slot is occupied; no upload was started. Choose another time after checking Studio.",
+            "Four regular publication slots were occupied; no upload was started.",
+            "Requested publication slot 2026-11-26 08:00 Moscow already has a video; no review was rendered or uploaded.",
+        )
+        for message in messages:
+            with self.subTest(message=message):
+                category, safe = publisher.diagnostic_category(publisher.PublishError(message))
+                self.assertEqual(category, "slot-taken")
+                self.assertIn("no upload was started", safe)
+                self.assertNotIn("Studio before", safe)
+
+    def test_real_upload_failures_keep_their_own_category(self):
+        for message, category in (("YouTube accepted the video but confirmation failed", "ambiguous-upload"),
+                                  ("Upload reservation processing failed", "reservation"),
+                                  ("YouTube could not start the upload (HTTP 500)", "youtube-upload")):
+            with self.subTest(message=message):
+                self.assertEqual(publisher.diagnostic_category(publisher.PublishError(message))[0], category)
+
     def test_github_oidc_endpoint_allows_github_actions_subdomains_only(self):
         allowed = (
             "https://pipelines.actions.githubusercontent.com/runner/token?api-version=2.0",

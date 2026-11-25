@@ -48,14 +48,3 @@ def solve(board, *, max_nodes=2_000_000):
             break
         bound = found
     return None
-
-
-def recovery_route(transitions, initial_solution):
-    """Undo observed legal moves, then solve the original board.
-
-    A missing initial solution is not treated as a usable recovery. Each
-    reverse click targets the cell which was blank before that move.
-    """
-    if initial_solution is None:
-        return None
-    return [before.index(0) for before, _, _ in reversed(transitions)] + list(initial_solution)

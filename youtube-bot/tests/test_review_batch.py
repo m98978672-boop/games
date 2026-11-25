@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import review_batch
 from review_batch import (main, parse_count, parse_format, plan, run_queue, scheduled_plan,
                           suggest_start, validate_inputs)
 from schedule_policy import CHANNEL_TZ
