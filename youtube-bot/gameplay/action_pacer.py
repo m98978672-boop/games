@@ -65,6 +65,11 @@ class ActionPacer:
         self.stats = PaceStats()
         self._window_started = 0.0
 
+    def reset_session(self) -> None:
+        self.cadence = self.cadence_ms
+        self.stats = PaceStats()
+        self._window_started = 0.0
+
     # -- planning --------------------------------------------------------
     def split(self, action: dict, *, remaining_ms: int | None = None) -> list[dict]:
         """Split one bridge action into bursts that stay legal for the bridge."""

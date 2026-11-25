@@ -36,7 +36,8 @@ LOOP_PENALTY = 1.5
 PROGRESS_EPSILON = 0.05
 # The learned table is bounded, exactly like the world model: a long stream must
 # not grow the file forever.
-MAX_SCREENS = 4_000
+MAX_SCREENS = 4_000  # maximum (screen, intent) edges, including during a session
+MAX_PLAYBOOK_BYTES = 8 * 1024 * 1024
 SIGNATURE = re.compile(r"[0-9a-f]{16}")
 
 
@@ -133,6 +134,7 @@ class PlaybookStats:
     escape_choices: int = 0
     loops_seen: int = 0
     stalled_ticks: int = 0
+    edges_not_recorded: int = 0
 
     def summary(self) -> dict:
         return {
@@ -142,6 +144,7 @@ class PlaybookStats:
             "escape_choices": self.escape_choices,
             "loops_seen": self.loops_seen,
             "stalled_ticks": self.stalled_ticks,
+            "edges_not_recorded": self.edges_not_recorded,
             "share_towards_goal": round(self.goal_choices / self.choices, 3) if self.choices else 0.0,
         }
 
@@ -182,22 +185,25 @@ class Playbook:
 
     # -- persistence ---------------------------------------------------------
     def _load(self) -> None:
-        """Read a saved table, skipping anything that is not a sane measurement.
-
-        An unreadable file is not an error: the bot simply starts with an empty
-        table, which is the same state as a first session, never a wrong one.
-        """
+        """Read valid rows; reject unreadable or unsupported files without overwriting them."""
         try:
-            payload = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return
+            with self.path.open("rb") as source:
+                raw = source.read(MAX_PLAYBOOK_BYTES + 1)
+        except OSError as exc:
+            raise PlaybookError("saved playbook is unreadable; file was not changed") from exc
+        if len(raw) > MAX_PLAYBOOK_BYTES:
+            raise PlaybookError("saved playbook exceeds size limit")
+        try:
+            payload = json.loads(raw)
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise PlaybookError("saved playbook is unreadable; file was not changed") from exc
         if not isinstance(payload, dict) or payload.get("version") != 1:
-            return
+            raise PlaybookError("unsupported saved playbook format; file was not changed")
         if payload.get("goal") != self.goal.as_dict():
             raise PlaybookError("saved playbook goal does not match the selected goal")
         rows = payload.get("edges")
         if not isinstance(rows, list):
-            return
+            raise PlaybookError("saved playbook has invalid edges; file was not changed")
         for row in rows:
             if not isinstance(row, dict):
                 continue
@@ -240,8 +246,17 @@ class Playbook:
                 temporary.unlink(missing_ok=True)
 
     # -- learning ------------------------------------------------------------
+    def reset_session(self) -> None:
+        """Forget transient frame history, retaining only measured edge statistics."""
+        with self._lock:
+            self._streak = 0
+            self._last_screen = None
+            self._recent_screens.clear()
+            self._last_choice = None
+
     def _edge(self, screen: str, intent: str) -> EdgeStats:
-        return self.edges.setdefault((screen, intent), EdgeStats())
+        # Called under the lock; an unknown read is not a learned transition.
+        return self.edges.get((screen, intent), EdgeStats())
 
     def observe(self, before_signature: str, intent: str, facts: dict, *,
                 after_signature: str | None = None) -> bool:
@@ -252,10 +267,23 @@ class Playbook:
         """
         if not isinstance(facts, dict):
             raise PlaybookError("facts must be a measured dictionary")
+        if not isinstance(before_signature, str) or not SIGNATURE.fullmatch(before_signature):
+            raise PlaybookError("invalid screen signature")
+        if not isinstance(intent, str) or not intent or len(intent) > 32:
+            raise PlaybookError("invalid intent")
+        if after_signature is not None and (not isinstance(after_signature, str) or not SIGNATURE.fullmatch(after_signature)):
+            raise PlaybookError("invalid resulting screen signature")
         hit = self.goal.reached(facts)
         looped = after_signature is not None and after_signature in self._recent_screens[:-1]
         with self._lock:
-            edge = self._edge(before_signature, intent)
+            key = (before_signature, intent)
+            edge = self.edges.get(key)
+            if edge is None:
+                if len(self.edges) < MAX_SCREENS:
+                    edge = self.edges[key] = EdgeStats()
+                else:
+                    self.stats.edges_not_recorded += 1
+                    edge = EdgeStats()  # retain session feedback, but not a false stored result
             edge.tries += 1
             if hit:
                 edge.goal_hits += 1

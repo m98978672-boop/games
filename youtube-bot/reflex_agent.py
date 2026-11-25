@@ -108,6 +108,23 @@ class ReflexAgent:
         if memory is not None:
             self.controller.memory = memory
 
+    def start_session(self) -> None:
+        """Reset transient observations and counters without discarding learned edges."""
+        self.stats = ReflexAgentStats()
+        self._action_window_ends = 0.0
+        self._recording_offset = None
+        self.tracks = []
+        self.screen = None
+        self.pending_bursts = []
+        self._intent = None
+        self._last_perception = None
+        self._last_decision = None
+        self.windows = 0
+        for component in (self.controller, self.pacer, self.tracker, self.playbook):
+            reset = getattr(component, "reset_session", None)
+            if callable(reset):
+                reset()
+
     def _default_intent(self) -> str:
         intents = self.profile.intents()
         for candidate in ("EXPLORE", "FORWARD", "UP"):
@@ -293,8 +310,12 @@ class ReflexAgent:
         if self.playbook is None or self._last_perception is None:
             return
         try:
+            facts = self._facts(perception)
+            # _plan has not classified this frame yet: self.screen still belongs
+            # to the previous frame and must not determine the outcome's goal.
+            facts["kind"] = classify(perception).label
             self.playbook.observe(self._last_perception.signature, self._last_decision.intent,
-                                  self._facts(perception), after_signature=perception.signature)
+                                  facts, after_signature=perception.signature)
         except ValueError:
             return
 

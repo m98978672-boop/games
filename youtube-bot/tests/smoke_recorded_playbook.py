@@ -26,17 +26,20 @@ def main():
         # This predicate deliberately means only that a frame was observed.
         goal = Goal('fixture: an observed frame')
         old_tries = 0
-        for index in range(2):
+        agent = None
+        for index in range(3):
             recording = root / f'record-{index}'
             recording.mkdir()
-            agent = build_agent(objective='fixture', use_advisor=False,
-                                playbook_goal=goal, playbook_path=book_path)
+            # Session two loads from disk; session three reuses the same object.
+            if index < 2:
+                agent = build_agent(objective='fixture', use_advisor=False,
+                                    playbook_goal=goal, playbook_path=book_path)
             if index:
                 assert sum(edge.tries for edge in agent.playbook.edges.values()) == old_tries
             result = run_agent(game, agent, rights_acknowledged=True,
                                max_steps=8, record_dir=recording)
             old_tries = sum(edge.tries for edge in agent.playbook.edges.values())
-            assert old_tries > 0
+            assert old_tries == (index + 1) * 7  # no cross-session transition
             report = json.loads(Path(result['report']).read_text(encoding='utf-8'))
             assert len(report['events']) == 8 and all(e['kind'] == 'goal' for e in report['events'])
             times = [e['seconds'] for e in report['events']]

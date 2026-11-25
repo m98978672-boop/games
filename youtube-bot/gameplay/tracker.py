@@ -75,6 +75,12 @@ class Tracker:
         self.matches = 0
         self.misses = 0
 
+    def reset_session(self) -> None:
+        self.tracks.clear()
+        self._next_id = 1
+        self.matches = 0
+        self.misses = 0
+
     # -- update -----------------------------------------------------------
     def update(self, targets, *, now: float | None = None) -> list[Track]:
         """Feed one frame's targets; returns tracks with enough history."""

@@ -25,6 +25,7 @@ network-isolated Docker container and writes a recording, report and playbook.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import sys
 from pathlib import Path
@@ -100,6 +101,30 @@ def cmd_live(args) -> int:
         return 1
 
 
+@contextmanager
+def _exclusive_playbook(path: Path):
+    """Lock before loading, holding the lock through the final save (POSIX)."""
+    import fcntl
+    import os
+
+    path = path.resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = path.with_name(path.name + ".lock")
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(lock_path, flags, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise ValueError("playbook is in use by another run") from exc
+        try:
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
 def cmd_run(args) -> int:
     """Run a prepared local HTML game in Docker and save recording + events."""
     import hashlib
@@ -112,10 +137,16 @@ def cmd_run(args) -> int:
     key = hashlib.sha256(identity.encode()).hexdigest()[:24]
     book_path = args.playbook or (args.db.parent / "playbooks" / (key + ".json"))
     try:
-        agent = build_agent(args.profile, objective=goal.name, use_advisor=False,
-                            playbook_goal=goal, playbook_path=book_path)
-        result = run_agent(args.game_dir, agent, rights_acknowledged=args.rights_acknowledged,
-                           max_steps=args.steps, entry=args.entry, record_dir=args.record_dir)
+        record_root = args.record_dir.resolve()
+        resolved_book = book_path.resolve()
+        if record_root == resolved_book or record_root in resolved_book.parents:
+            raise ValueError("playbook must be outside the recording directory")
+        with _exclusive_playbook(book_path):
+            agent = build_agent(args.profile, objective=goal.name, use_advisor=False,
+                                playbook_goal=goal, playbook_path=book_path)
+            result = run_agent(args.game_dir, agent, rights_acknowledged=args.rights_acknowledged,
+                               max_steps=args.steps, entry=args.entry, record_dir=args.record_dir)
+            result["playbook_summary"] = agent.playbook.summary()
         result["playbook"] = str(book_path)
         result["published"] = False
         _emit(result)

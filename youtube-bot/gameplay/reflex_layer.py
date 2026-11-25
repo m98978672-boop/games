@@ -725,6 +725,13 @@ class ReflexController:
         self.decisions: list[Decision] = []
         self.advisor_timeouts = 0
 
+    def reset_session(self) -> None:
+        """Drop previous-frame context, keeping learned memory and target cache."""
+        self.last_perception = None
+        self.last_decision = None
+        self.decisions.clear()
+        self.advisor_timeouts = 0
+
     def observe(self, png: bytes, *, find_targets: bool = True) -> Perception:
         perception = perceive(png, self.last_perception, find_targets=find_targets,
                               budget_ms=self.perception_budget_ms,

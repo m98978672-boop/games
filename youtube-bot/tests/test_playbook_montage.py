@@ -150,7 +150,26 @@ class AgentUsesPlaybookTests(unittest.TestCase):
             self.assertIn(intent, ("FORWARD", "JUMP", "BACK", "INTERACT", "EXPLORE", "MINE"))
             self.assertTrue(source in ("reflex", "fallback") or source.startswith("play:"))
         summary = book.summary()
-        self.assertGreaterEqual(summary["edges_learned"], len(seen))
+        self.assertEqual(sum(edge.tries for edge in book.edges.values()), len(seen) - 1)
+        self.assertLessEqual(summary["edges_learned"], len(seen) - 1)
+
+    def test_payoff_checks_the_new_frame_not_the_previous_screen_label(self):
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from reflex_agent import ReflexAgent
+        book = Playbook(GOAL_PRESETS["explore"])
+        agent = ReflexAgent("keyboard", playbook=book)
+        agent.screen = SimpleNamespace(label="menu")  # stale previous frame
+        agent._last_perception = SimpleNamespace(signature="a" * 16)
+        agent._last_decision = SimpleNamespace(intent="FORWARD")
+        current = SimpleNamespace(signature="b" * 16, targets=[], changed=True)
+        with patch("reflex_agent.classify", return_value=SimpleNamespace(label="gameplay")):
+            agent._learn_payoff(current)
+        self.assertEqual(book.edges[("a" * 16, "FORWARD")].goal_hits, 0)
+        agent.screen = SimpleNamespace(label="gameplay")  # stale again, opposite direction
+        with patch("reflex_agent.classify", return_value=SimpleNamespace(label="menu")):
+            agent._learn_payoff(current)
+        self.assertEqual(book.edges[("a" * 16, "FORWARD")].goal_hits, 1)
 
     def test_agent_without_a_playbook_is_unchanged(self):
         from reflex_agent import ReflexAgent
@@ -212,11 +231,15 @@ class PlaybookMemoryTests(unittest.TestCase):
             for name, text in cases.items():
                 path = root / name
                 path.write_text(text, encoding="utf-8")
-                book = Playbook(GOAL_PRESETS["explore"], path=path)
                 with self.subTest(name=name):
-                    # Only the one sane row survives; a wrong row is never a fact.
-                    self.assertEqual(len(book.edges), 1 if name == "bad_rows.json" else 0)
-                    self.assertFalse(book.stalled)
+                    if name != "bad_rows.json":
+                        with self.assertRaises(PlaybookError):
+                            Playbook(GOAL_PRESETS["explore"], path=path)
+                        self.assertEqual(path.read_text(encoding="utf-8"), text)
+                    else:
+                        book = Playbook(GOAL_PRESETS["explore"], path=path)
+                        self.assertEqual(len(book.edges), 1)
+                        self.assertFalse(book.stalled)
 
     def test_different_goal_cannot_reuse_old_success_counts(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -224,6 +247,57 @@ class PlaybookMemoryTests(unittest.TestCase):
             Playbook(GOAL_PRESETS["explore"], path=path).save()
             with self.assertRaisesRegex(PlaybookError, "goal does not match"):
                 Playbook(GOAL_PRESETS["progress"], path=path)
+
+    def test_limit_is_enforced_during_learning_and_reads_do_not_fill_it(self):
+        from unittest.mock import patch
+        book = Playbook(GOAL_PRESETS["explore"])
+        facts = {"targets": 2, "kind": "menu"}
+        with patch("gameplay.playbook.MAX_SCREENS", 3):
+            for i in range(10):
+                signature = f"{i:016x}"
+                book.choose(signature, ("FORWARD", "JUMP"), tick=i)
+                self.assertEqual(len(book.edges), min(i, 3))
+                book.observe(signature, "FORWARD", facts)
+            self.assertEqual(len(book.edges), 3)
+            self.assertEqual(book.stats.edges_not_recorded, 7)
+            book.observe(f"{0:016x}", "FORWARD", facts)
+            self.assertEqual(book.edges[(f"{0:016x}", "FORWARD")].tries, 2)
+            self.assertEqual(len(book.edges), 3)
+
+    def test_long_session_stays_bounded_and_round_trips(self):
+        from gameplay.playbook import MAX_SCREENS
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "book.json"
+            book = Playbook(GOAL_PRESETS["explore"], path=path)
+            for step in range(20_000):
+                signature = f"{step:016x}"
+                book.choose(signature, ("FORWARD", "JUMP"), tick=step)
+                book.observe(signature, "FORWARD", {"targets": 1, "kind": "menu"})
+            self.assertEqual(len(book.edges), MAX_SCREENS)
+            self.assertEqual(book.stats.edges_not_recorded, 20_000 - MAX_SCREENS)
+            book.save()
+            loaded = Playbook(GOAL_PRESETS["explore"], path=path)
+            self.assertEqual(len(loaded.edges), MAX_SCREENS)
+            self.assertTrue(all(edge.tries == 1 and edge.goal_hits == 1 for edge in loaded.edges.values()))
+
+    def test_oversized_playbook_is_rejected_without_writing(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "book.json"
+            path.write_text("x" * 20)
+            with patch("gameplay.playbook.MAX_PLAYBOOK_BYTES", 10):
+                with self.assertRaisesRegex(PlaybookError, "size limit"):
+                    Playbook(GOAL_PRESETS["explore"], path=path)
+            self.assertEqual(path.read_text(), "x" * 20)
+
+    def test_invalid_runtime_keys_are_rejected(self):
+        book = Playbook(GOAL_PRESETS["explore"])
+        for signature, intent, after in (("bad", "FORWARD", None),
+                                          ("a" * 16, "", None),
+                                          ("a" * 16, "FORWARD", "bad")):
+            with self.subTest(signature=signature, intent=intent, after=after), self.assertRaises(PlaybookError):
+                book.observe(signature, intent, {"targets": 1}, after_signature=after)
+        self.assertEqual(len(book.edges), 0)
 
     def test_save_without_a_path_is_a_no_op(self):
         book = Playbook(GOAL_PRESETS["explore"])
@@ -343,6 +417,39 @@ class CliTests(unittest.TestCase):
             self.assertTrue(captured["rights_acknowledged"])
             self.assertTrue(Path(result["playbook"]).is_relative_to(root / "playbooks"))
             self.assertFalse(result["published"])
+
+    def test_concurrent_run_refuses_same_playbook_before_start(self):
+        from gameplay.reflex_cli import _exclusive_playbook
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            book = root / "book.json"
+            record = root / "record"
+            record.mkdir()
+            with _exclusive_playbook(book):
+                code, result = self._cli(["run", str(root), "--record-dir", str(record),
+                                          "--playbook", str(book), "--rights-acknowledged"])
+            self.assertEqual(code, 2)
+            self.assertIn("in use", result["error"])
+            self.assertFalse(book.exists())
+            self.assertEqual(list(record.iterdir()), [])
+
+    def test_another_process_cannot_enter_a_locked_playbook(self):
+        from gameplay.reflex_cli import _exclusive_playbook
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            book = root / "book.json"
+            record = root / "record"
+            record.mkdir()
+            with _exclusive_playbook(book):
+                process = subprocess.run([sys.executable, "-m", "gameplay.reflex_cli", "run",
+                                          str(root), "--record-dir", str(record), "--playbook", str(book),
+                                          "--rights-acknowledged"],
+                                         cwd=str(Path(__file__).resolve().parents[1]),
+                                         capture_output=True, text=True, timeout=30)
+            self.assertEqual(process.returncode, 2)
+            self.assertIn("in use", json.loads(process.stdout)["error"])
+            self.assertFalse(book.exists())
+            self.assertEqual(list(record.iterdir()), [])
 
     def test_montage_plan_only_cuts_nothing(self):
         import json
@@ -469,6 +576,33 @@ class MontagePlanTests(unittest.TestCase):
                          round(sum(keep["strength"] for keep in summary["keeps"]), 3))
         for keep in summary["keeps"]:
             self.assertGreaterEqual(keep["strength"], 0)
+
+    def test_many_seeded_event_sequences_preserve_montage_invariants(self):
+        import random
+        for seed in range(500):
+            rng = random.Random(seed)
+            duration = rng.uniform(4, 300)
+            target = rng.uniform(1, min(59, duration))
+            events = [Event(rng.uniform(0, duration - 0.001),
+                            rng.choice(("goal", "speech", "chapter", "change", "track")))
+                      for _ in range(rng.randint(1, 50))]
+            try:
+                plan = plan_montage(duration, events, target_seconds=target)
+            except MontageError as exc:
+                self.assertTrue("nothing measured" in str(exc) or "shorter than one second" in str(exc),
+                                f"seed {seed}: {exc}")
+                continue
+            self.assertLessEqual(plan.kept_seconds, target + 1e-8, f"seed {seed}")
+            self.assertEqual(plan.keeps, sorted(plan.keeps, key=lambda clip: clip.start))
+            for i, clip in enumerate(plan.keeps):
+                self.assertGreaterEqual(clip.seconds, 1 - 1e-8, f"seed {seed}")
+                self.assertTrue(0 <= clip.start < clip.end <= duration, f"seed {seed}")
+                self.assertTrue(all(clip.start <= e.seconds < clip.end for e in clip.events), f"seed {seed}")
+                if i:
+                    self.assertLessEqual(plan.keeps[i - 1].end, clip.start, f"seed {seed}")
+                self.assertEqual(clip.as_dict()["strength"], round(sum(
+                    {"goal": 4, "speech": 2, "chapter": 2, "change": .5, "track": .1}[e.kind]
+                    for e in clip.events), 3))
 
     def test_cuts_are_written_down_with_reasons(self):
         plan = plan_montage(60, [Event(seconds, "goal") for seconds in (5, 15, 25, 35, 45)],
@@ -744,6 +878,44 @@ class RecordedSessionTests(unittest.TestCase):
                 run_agent(root, agent, rights_acknowledged=True, max_steps=3, record_dir=record)
             self.assertGreater(sum(e.tries for e in Playbook(goal, path=path).edges.values()), 0)
             self.assertFalse((record / "events.json").exists())
+
+    def test_reusing_agent_does_not_mix_sessions_or_invent_transition(self):
+        import base64
+        import io
+        from unittest.mock import patch
+        from PIL import Image
+        from gameplay_bridge import run_agent
+        from reflex_agent import build_agent
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            data = io.BytesIO()
+            Image.new("RGB", (800, 600), (30, 40, 50)).save(data, format="PNG")
+            png = base64.b64encode(data.getvalue()).decode()
+            class FakeBridge:
+                def __init__(self, *args, record_dir, **kwargs):
+                    self.record_dir, self.i = record_dir, 0
+                def __enter__(self): return self
+                def __exit__(self, *args): pass
+                def receive(self):
+                    return {"type": "observation", "step": self.i,
+                            "screenshot_png_base64": png, "recording_capture_ms": self.i * 700 + 200}
+                def step(self, action):
+                    self.i += 1
+                    return self.receive()
+                def finish_recording(self):
+                    path = self.record_dir / "recording.webm"
+                    path.write_bytes(b"mock video")
+                    return path
+            agent = build_agent(objective="fixture", use_advisor=False, playbook_goal=Goal("frame"),
+                                playbook_path=root / "book.json")
+            for session in range(2):
+                record = root / f"record-{session}"
+                record.mkdir()
+                with patch("gameplay_bridge.BrowserBridge", FakeBridge):
+                    result = run_agent(root, agent, rights_acknowledged=True, max_steps=3, record_dir=record)
+                self.assertEqual([row["seconds"] for row in result["events"]], [0.2, 0.9, 1.6])
+                self.assertEqual(len(agent.stats.ticks), 3)
+                self.assertEqual(sum(e.tries for e in agent.playbook.edges.values()), (session + 1) * 2)
 
     def test_playbook_cannot_be_inside_recording_directory(self):
         from gameplay_bridge import run_agent

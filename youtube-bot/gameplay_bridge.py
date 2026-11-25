@@ -176,6 +176,10 @@ def run_agent(game_dir: Path, agent, *, rights_acknowledged: bool = False,
     try:
         with BrowserBridge(game_dir, rights_acknowledged=rights_acknowledged, entry=entry,
                            record_dir=record_dir) as bridge:
+            start_session = getattr(agent, "start_session", None)
+            if callable(start_session):
+                start_session()
+            event_start = len(agent.stats.events) if record_dir is not None else 0
             observation = bridge.receive()
             steps = 0
             status = "step_limit"
@@ -207,7 +211,7 @@ def run_agent(game_dir: Path, agent, *, rights_acknowledged: bool = False,
             result = {"steps": steps, "status": status, "uploaded": False}
             if record_dir is not None:
                 video = bridge.finish_recording()
-                result.update({"video": str(video), "events": list(agent.stats.events),
+                result.update({"video": str(video), "events": list(agent.stats.events[event_start:]),
                                "timing": "approximate browser clock relative to page creation; not video PTS"})
                 report = record_dir / "events.json"
                 with report.open("x", encoding="utf-8") as output:

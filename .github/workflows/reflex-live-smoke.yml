@@ -62,7 +62,7 @@ jobs:
           status=${PIPESTATUS[0]}
           cat "$RUNNER_TEMP/reflex-live.log" | grep -E 'REFLEX_LIVE_REPORT|::notice' || true
           exit "$status"
-      - name: Record two sessions with playbook and render a montage
+      - name: Record sessions with persistent and reused playbook agent
         run: python -u youtube-bot/tests/smoke_recorded_playbook.py
       - name: Save the live timing report
         if: always()
