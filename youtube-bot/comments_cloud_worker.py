@@ -44,9 +44,8 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
     # AI sees bounded untrusted text without author identifiers. Do not print
     # summaries: they may accidentally contain private or identifying details.
     summaries = comments.summarize_channel(youtube, generator=generator, video_limit=5)
-    if dry_run:
-        return {'videos_analyzed': len(summaries), 'sent': 0}
     sent = 0
+    eligible = 0
     scanned_videos = scanned_comments = matched = answered = 0
     topics = {'question': 0, 'continuation': 0, 'production': 0, 'other': 0}
     for video_id in comments.recent_public_videos(youtube, limit=200):
@@ -70,6 +69,11 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
             if comments.has_any_reply(youtube, comment['id']):
                 answered += 1
                 continue
+            eligible += 1
+            if dry_run:
+                # This is only a candidate: the durable ledger and concurrent
+                # replies are not checked or reserved during a read-only run.
+                continue
             if api('reserve', {'parent_id': comment['id']}).get('reserved') is not True:
                 continue
             # A timeout may mean YouTube accepted it. The server reservation is
@@ -87,9 +91,12 @@ def run(youtube: Any, channel: str, *, api: Callable = service, generator: Any =
                 break
         if sent >= 50:
             break
-    return {'videos_analyzed': len(summaries), 'sent': sent, 'videos_scanned': scanned_videos,
-            'comments_scanned': scanned_comments, 'matched': matched, 'already_answered': answered,
-            **{f'topic_{name}': count for name, count in topics.items()}}
+    result = {'videos_analyzed': len(summaries), 'sent': sent, 'videos_scanned': scanned_videos,
+              'comments_scanned': scanned_comments, 'matched': matched, 'already_answered': answered,
+              **{f'topic_{name}': count for name, count in topics.items()}}
+    if dry_run:
+        result['candidate_replies_unreserved'] = eligible
+    return result
 
 
 def main() -> None:

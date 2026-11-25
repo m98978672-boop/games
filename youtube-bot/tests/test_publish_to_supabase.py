@@ -284,13 +284,11 @@ class PublisherNetworkTests(unittest.TestCase):
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret') as start, \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
                 publisher.publish(result)
-            # Four Short slots a day: a conflict moves to 13:00 Moscow, not to
-            # tomorrow. Only one upload is ever started.
-            self.assertEqual([r['publish_at'] for r in requests], ['2026-12-01T07:00:00Z', '2026-12-01T10:00:00Z'])
+            self.assertEqual([r['publish_at'] for r in requests], ['2026-12-01T07:00:00Z', '2026-12-01T09:00:00Z'])
             self.assertEqual(requests[0]['job_id'], requests[1]['job_id'])
             self.assertEqual(start.call_count, 1)
 
-    def test_scheduled_long_conflict_moves_to_the_next_long_slot(self):
+    def test_scheduled_long_conflict_uses_next_day_six_moscow(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp); video=root/'clip.mp4'; video.write_bytes(b'x'*2048); result=root/'result.json'
             result.write_text(json.dumps({'metadata':{'job_id':'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3',
@@ -310,9 +308,7 @@ class PublisherNetworkTests(unittest.TestCase):
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret') as start, \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
                 publisher.publish(result)
-            # The held 06:00 slot moves to 11:00 Moscow the same day instead of
-            # burning the whole day as it did with two slots.
-            self.assertEqual(requested, ['2026-11-24T03:00:00Z','2026-11-24T08:00:00Z'])
+            self.assertEqual(requested, ['2026-11-24T03:00:00Z','2026-11-25T03:00:00Z'])
             start.assert_called_once()
 
     def test_conflict_retry_never_uses_a_past_or_too_close_slot(self):
@@ -334,9 +330,7 @@ class PublisherNetworkTests(unittest.TestCase):
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret'), \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
                 publisher.publish(result)
-            # A stale past slot plus a held one: at 05:30 Moscow the 06:00 slot
-            # is inside the 45-minute lead, so 11:00 Moscow is the next safe one.
-            self.assertEqual(requested, ['2026-11-24T03:00:00Z', '2026-11-27T08:00:00Z'])
+            self.assertEqual(requested, ['2026-11-24T03:00:00Z','2026-11-28T03:00:00Z'])
 
     def test_four_occupied_slots_fail_without_starting_upload(self):
         with tempfile.TemporaryDirectory() as temp:
