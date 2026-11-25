@@ -263,7 +263,7 @@ check('в истории она ДОБЫВАЕТ новое: после фина
   && expPy.includes('RESTART_JS') && expPy.includes('sessionStorage') && expPy.includes("store.removeItem(k)"));
 
 check('карта честная: переход записывается, когда видно, куда он привёл',
-  expPy.includes("story_map.link(pending['from'], pending['choice'], text, here_ctx, labels)"));
+  expPy.includes("story_map.link(pending['from'], pending['choice'], text, here_ctx, labels,"));
 
 check('находки только настоящие: «рука в кармане» за добычу не считается',
   expPy.includes('you scour the shelves') && !expPy.includes("'in your pocket', 'you grab'"));
@@ -334,6 +334,14 @@ check('экспедиция не откачена: остаток, концов�
 const expWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-expedition.yml'), 'utf8');
 check('уборка пыли в workflow не откачена: keep по dir, до выхода «Отчёта нет»',
   expWorkflow.includes("e.get('dir')") && expWorkflow.indexOf("e.get('dir')") < expWorkflow.indexOf('Отчёта нет — складывать нечего'));
+
+// Два бага, из-за которых заходы 3–6 давали по 0 новых мест при остатке 13.
+check('карта: ребро берёт ГОТОВЫЙ ключ места, а не пересчитывает его из текста',
+  expNow.includes('src_key=None') && expNow.includes("fr = src_key or self.key(src_text)")
+  && expNow.includes("'from_key': my_key"));
+check('карта: при малом остатке идёт туда, где непройденное, а не по петле',
+  expNow.includes('leads_to_new') && expNow.includes("if e['to'] == k:\n                return False")
+  && !expNow.includes("known_here = [c for c in fresh if story_map.is_loop"));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

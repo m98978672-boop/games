@@ -53,7 +53,7 @@ def audit(src=None):
         # --- анализировать ---
         ('ведёт карту мест и переходов', [
             ('класс карты', 'class StoryMap' in e),
-            ('переход пишется, когда видно, куда привёл', "story_map.link(pending['from'], pending['choice'], text, here_ctx, labels)" in e),
+            ('переход пишется, когда видно, куда привёл', "story_map.link(pending['from'], pending['choice'], text, here_ctx, labels," in e),
             ('место различается набором вариантов, а не путём', 'options' in e and "'\\u241f' + '|'.join(sorted" in e),
             ('место — хэш всего текста', "hashlib.sha1(norm.encode('utf-8'))" in e),
         ]),
@@ -88,6 +88,8 @@ def audit(src=None):
             ('сохранение карты', 'def to_cache' in e),
             ('загрузка карты', 'def load_cache' in e),
             ('старая схема карты не берётся', "data.get('schema') != self.SCHEMA" in e),
+            ('ребро берёт готовый ключ места', 'src_key=None' in e and 'from_key' in e),
+            ('при малом остатке — в непройденное, не в петлю', 'leads_to_new' in e),
             ('память доходит до чтения истории', 'memo_from=memo_from' in e),
             ('workflow передаёт карту', '--memo' in w and 'storymap.json' in w),
         ]),

@@ -974,6 +974,10 @@ class StoryMap:
             norm += '\u241f' + context
         return hashlib.sha1(norm.encode('utf-8')).hexdigest()[:16]
 
+    def _is_key(self, s):
+        """Похоже ли на готовый ключ места (16 hex-символов), а не на текст."""
+        return isinstance(s, str) and len(s) == 16 and all(c in '0123456789abcdef' for c in s)
+
     def see(self, text, context=None, options=None):
         """Записать место в карту и вернуть, что в нём видно."""
         k = self.key(text, context, options)
@@ -987,7 +991,7 @@ class StoryMap:
 
     def is_loop(self, text, choice, came_from=None):
         """Петля: вариант возвращает туда, откуда пришли, или в это же место."""
-        k = self.key(text)
+        k = text if self._is_key(text) else self.key(text)
         for e in self.edges:
             if e['from'] != k or e['choice'] != choice:
                 continue
@@ -996,6 +1000,20 @@ class StoryMap:
             if came_from and e['to'] == self.key(came_from):
                 return True          # обратный ход: «back», «Leave quietly!»
         return False
+
+    def leads_to_new(self, text, choice):
+        """Ведёт ли вариант в место, которого в карте ещё нет (или где есть остаток)?"""
+        k = text if self._is_key(text) else self.key(text)
+        for e in self.edges:
+            if e['from'] != k or e['choice'] != choice:
+                continue
+            if e['to'] == k:
+                return False        # петля в это же место: нового не приносит
+            to = self.nodes.get(e['to'])
+            if to is None:
+                return True         # место, которого в карте ещё нет
+            return bool(to.get('open'))
+        return False            # куда ведёт — неизвестно, значит не «новое»
 
     def mark_open(self, text, choices, context=None):
         """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
@@ -1006,8 +1024,11 @@ class StoryMap:
         node['open'] = any((kw, c.get('label')) not in self.tried for c in choices)
         node['options'] = [c.get('label') for c in choices][:8]
 
-    def link(self, src_text, choice, dst_text, context=None, dst_options=None):
-        fr, to = self.key(src_text), self.key(dst_text, context, dst_options)
+    def link(self, src_text, choice, dst_text, context=None, dst_options=None, src_key=None):
+        """Ребро карты. src_key — готовый ключ места: текст в ключ не превратить
+        повторно (набор вариантов уже в нём), иначе связь повиснет в воздухе."""
+        fr = src_key or self.key(src_text)
+        to = self.key(dst_text, context, dst_options)
         edge = {'from': fr, 'choice': choice, 'to': to}
         if edge not in self.edges:
             self.edges.append(edge)
@@ -1123,12 +1144,15 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     fresh = [c for c in choices if not_tried(c)]
     pool = fresh or choices
 
-    # Когда она уже знает почти всю историю (мало остатка), незачем каждый раз
-    # заново идти в незнакомое: важнее закрыть непройденное в известных местах.
+    # Когда остаток мал, добираем его, а не бегаем наугад: сначала варианты,
+    # из которых карта уже знает, что они ведут в НОВОЕ место. Раньше здесь
+    # стоял is_loop — и она предпочитала как раз обратные ходы («back»,
+    # «go home»), заходы 3–6 давали по 0 новых мест.
     if story_map is not None and passage and fresh and len(fresh) > 1:
-        known_here = [c for c in fresh if story_map.is_loop(passage, c.get('label'), came_from)]
-        if known_here and story_map.remaining() <= 8:
-            pool = known_here
+        if story_map.remaining() <= 8:
+            leads_new = [c for c in fresh if story_map.leads_to_new(passage, c.get('label'))]
+            if leads_new:
+                pool = leads_new
 
     # Петля (ведёт туда же, откуда пришла) — в самом конце.
     if passage and len(pool) > 1:
@@ -1332,7 +1356,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             if pending.get('from') and not pending.get('done'):
                 # пришли из предыдущего пассажа: записываем ребро карты, зная
                 # уже и текст, и набор вариантов
-                story_map.link(pending['from'], pending['choice'], text, here_ctx, labels)
+                story_map.link(pending['from'], pending['choice'], text, here_ctx, labels,
+                               src_key=pending.get('from_key'))
                 pending['done'] = True
             # Сначала варианты, потом место в карту: набор вариантов — часть
             # ключа (по нему различаются пассажи с одинаковым текстом).
@@ -1371,7 +1396,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                     page.wait_for_timeout(500)
                     continue
                 moves += 1
-                pending = {'from': text, 'choice': pick['label'], 'done': False}
+                pending = {'from': text, 'choice': pick['label'], 'done': False, 'from_key': my_key}
                 if fresh:
                     fresh_moves += 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
