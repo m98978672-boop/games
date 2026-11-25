@@ -238,8 +238,12 @@ check('сюжетную игру она ПРОХОДИТ чтением: пас�
 check('сюжетная история видна на её странице: сколько выборов, где закончила — одной строкой',
   expPy.includes('storyLine') && expWf.includes("report.get('storyLine')") && bridgeJs.includes('kv-story'));
 
-check('пыль экспедиций не копится: старые каталоги чистятся после записи списка',
-  expWf.includes('shutil.rmtree') && expWf.indexOf("bridge_path.write_text") < expWf.indexOf('shutil.rmtree'));
+check('пыль экспедиций не копится: каталоги чистятся по списку страницы и до выхода «отчёта нет»',
+  expWf.includes('shutil.rmtree') && expWf.includes("keep = {e.get('dir')")
+  // уборка по списку обязана быть и до выхода: иначе каталоги копятся без новых экспедиций
+  && expWf.indexOf('убрала старый каталог') < expWf.indexOf('Отчёта нет — складывать нечего')
+  // и не сносить свежую: список считается уже вместе с ней
+  && expWf.includes("bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]"));
 
 check('уборка доезжает до main: удаления каталогов тоже записываются в коммит',
   expWf.includes('git add -A qwen-home/bridge/expeditions'));
