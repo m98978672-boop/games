@@ -104,6 +104,7 @@ jobs:
       - name: Record finite puzzle without padding
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+          PUZZLE_CAMPAIGN_ROUNDS: ${{ github.event_name == 'push' && '4' || '1' }}
           PUZZLE_RECORD_DIR: ${{ runner.temp }}/puzzle-recording
           PUZZLE_SKILL_DB: ${{ runner.temp }}/puzzle-skill-memory/skills.sqlite3
         shell: bash

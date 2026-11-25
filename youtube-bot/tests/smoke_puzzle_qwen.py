@@ -34,12 +34,21 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
         shutil.copyfile(root / name, game / name)
     with BrowserBridge(game, rights_acknowledged=True, record_dir=record, telemetry='puzzle') as bridge:
         obs = bridge.receive(timeout=120)
-        setup = (obs.get('puzzle_telemetry') or {}).get('setup')
-        if (not isinstance(setup,dict) or type(setup.get('x')) is not int or type(setup.get('y')) is not int
-            or not 0 <= setup['x'] < 800 or not 0 <= setup['y'] < 600):
-            raise RuntimeError('Play button is not available')
-        # One scripted setup click starts a random solvable game, not a model move.
-        obs = bridge.step({'click':[setup['x'],setup['y']], 'duration_ms':250})
+        def new_board(observation):
+            setup = (observation.get('puzzle_telemetry') or {}).get('setup')
+            if (not isinstance(setup, dict) or type(setup.get('x')) is not int or type(setup.get('y')) is not int
+                    or not 0 <= setup['x'] < 800 or not 0 <= setup['y'] < 600):
+                raise RuntimeError('Play button is not available')
+            return bridge.step({'click': [setup['x'], setup['y']], 'duration_ms': 250})
+
+        obs = new_board(obs)
+        expected_step = 1
+        wins, learned = 0, 0
+        rounds = int(os.getenv('PUZZLE_CAMPAIGN_ROUNDS', '1'))
+        if not 1 <= rounds <= 4:
+            raise ValueError('Puzzle campaign must contain 1–4 boards')
+        removed_seconds = 0.0
+        last_stamp = 0.0
         before = validate_board(obs.get('puzzle_telemetry'))
         best = distance(before)
         start = time.monotonic()
@@ -80,7 +89,8 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
             tile_value = before[index]
             cell = diag['cells'][index]
             obs = bridge.step({'click':[cell['x'],cell['y']], 'duration_ms':250})
-            if obs.get('type') != 'observation' or obs.get('step') != len(trace)+2:
+            expected_step += 1
+            if obs.get('type') != 'observation' or obs.get('step') != expected_step:
                 raise RuntimeError('Invalid action observation')
             after = validate_board(obs.get('puzzle_telemetry'))
             moved = verify_transition(before, after, index)
@@ -97,14 +107,32 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
             else:
                 no_progress += 1
             trace.append({'browser_frame_timing':obs.get('browser_frame_timing'), 'screenshot_ms':obs.get('screenshot_ms'),
-                          'model_inference_seconds':round(inference_seconds, 3), 'step':len(trace)+1,'action':actions[index], 'action_source':source, 'tile':tile_value, 'game_reported_distance':now,
+                          'model_inference_seconds':round(inference_seconds, 3), 'step':len(trace)+1,'action':actions[index], 'action_source':source, 'round':wins + 1, 'tile':tile_value, 'game_reported_distance':now,
                           'feedback_score':points, 'move_verified':moved, 'blocked_immediate_undo':blocked, 'blocked_recent_states':recent_blocked, 'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
                           'game_reported_win':obs['puzzle_telemetry']['won']})
             print('PUZZLE_STEP='+json.dumps(trace[-1]),flush=True)
             history = (history + [before])[-16:]
             previous, before = before, after
+            stamp = max(last_stamp, (obs.get('recording_elapsed_ms') or 0) / 1000)
+            if not moved and stamp - last_stamp > 6:
+                removed_seconds += stamp - last_stamp - 4
+            last_stamp = stamp
             if obs['puzzle_telemetry']['won']:
-                outcome='game_reported_win'; break
+                wins += 1
+                learned += learn_win(memory, route, reported_win=True)
+                if wins >= rounds or (wins >= 2 and stamp - removed_seconds > 615):
+                    outcome = 'game_reported_win'
+                    break
+                if remaining < 120 or len(trace) >= 599:
+                    outcome = 'game_reported_win'
+                    break
+                obs = new_board(obs)
+                expected_step += 1
+                before = validate_board(obs.get('puzzle_telemetry'))
+                route, history, previous = [], [], None
+                planned.clear()
+                best, no_progress, planner_attempts, hint = distance(before), 0, 0, ''
+                continue
             if no_progress >= 40:
                 outcome='no_measured_progress'; break
         video = bridge.finish_recording()
@@ -113,10 +141,9 @@ with tempfile.TemporaryDirectory(prefix='finite-puzzle-') as temp:
     seconds = float(info['format']['duration'])
     if seconds <= 0 or not any(s.get('codec_type') == 'video' for s in info['streams']):
         raise RuntimeError('Invalid actual recording')
-    learned = learn_win(memory, route, reported_win=outcome == 'game_reported_win')
     memory.export(record / 'skills.json')
     memory.close()
-    result = {'learned_positions':learned, 'memory_actions':sum(row['action_source'] == 'verified_memory' for row in trace), 'game':'16 Puzzle', 'source':'https://github.com/kunjgit/GameZone',
+    result = {'boards_won':wins, 'learned_positions':learned, 'memory_actions':sum(row['action_source'] == 'verified_memory' for row in trace), 'game':'16 Puzzle', 'source':'https://github.com/kunjgit/GameZone',
               'author':'Kunj Git contributors','game_code_license':'Apache-2.0',
               'asset_and_recording_rights_verified':False, 'outcome':outcome, 'duration_seconds':round(seconds,2),
               'duration_at_least_20_minutes':seconds>=1200,'qualifies_for_release':False,

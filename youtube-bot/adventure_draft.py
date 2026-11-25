@@ -22,6 +22,7 @@ def plan(trace):
     cuts = []
     prior = 0.0
     previous_source = None
+    current_round = 1
     for event in events:
         stamp_ms = event.get('recording_elapsed_ms')
         stamp = min(duration, max(prior, (stamp_ms or 0) / 1000))
@@ -35,6 +36,10 @@ def plan(trace):
             if type(tile) is not int or not 1 <= tile <= 15:
                 raise ValueError('Invalid puzzle tile in trace')
             note = ''
+            round_number = event.get('round', 1)
+            if round_number != current_round:
+                lines.append((prior, 'Доска собрана. Перехожу к следующей.'))
+                current_round, previous_source = round_number, None
             if source == 'planner' and previous_source != source:
                 note = 'Подключаю поиск маршрута. '
             elif stalled:
@@ -46,7 +51,7 @@ def plan(trace):
             lines.append((prior, f'{note} Выбираю {ORDINAL[event["choice"]]} вариант.'.strip()))
         prior = stamp
     won = trace['outcome'] == ('game_reported_win' if puzzle else 'game_reported_victory')
-    ending = 'Головоломка решена.' if puzzle else 'Артефакт найден.'
+    ending = f'Решено досок: {trace.get("boards_won", 1)}.' if puzzle else 'Артефакт найден.'
     lines.append((prior, ending if won else 'Финиш не подтверждён. Это первая часть.'))
     return duration, lines, cuts, won
 
@@ -95,9 +100,12 @@ def build(folder):
                        '-shortest', '-movflags', '+faststart', str(folder / f'{base}.mp4')], check=True, timeout=300)
     edited = probe_capture(folder / f'{base}.mp4')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
-    (folder / 'pilot.json').write_text(json.dumps({'draft': f'{base}.mp4', 'needs_continuation': not won,
+    report = {'draft': f'{base}.mp4', 'needs_continuation': not won,
         'cuts_seconds': cuts, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
-        'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay >= MIN_EDITED_GAMEPLAY_SECONDS, 'commentary': [text for _, text in lines], 'published': False}, ensure_ascii=False, indent=2), encoding='utf-8')
+        'boards_won': trace.get('boards_won'),
+        'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay > MIN_EDITED_GAMEPLAY_SECONDS, 'commentary': [text for _, text in lines], 'published': False}
+    (folder / 'pilot.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+    print('::notice title=Edited pilot::' + json.dumps({k: v for k, v in report.items() if k not in {'commentary', 'cuts_seconds'}}), flush=True)
 
 
 if __name__ == '__main__':
