@@ -8,6 +8,10 @@ on:
     - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
+      adventure_capture_run:
+        description: "Optional completed private adventure capture run ID; publish pilot only"
+        type: string
+        required: false
       publish_at:
         description: "Moscow time YYYY-MM-DD HH:MM; if rendering runs late, publish later once"
         type: string
@@ -46,6 +50,7 @@ concurrency:
 
 jobs:
   create-and-schedule:
+    if: ${{ !inputs.adventure_capture_run }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -143,3 +148,36 @@ jobs:
         with:
           path: youtube-bot/data/recent-games.json
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
+
+  publish-adventure-pilot:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_capture_run != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      CAPTURE_RUN: ${{ inputs.adventure_capture_run }}
+      PUBLISH_AT: ${{ inputs.publish_at }}
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+      ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
+      DATA_DIR: ${{ runner.temp }}/adventure-history
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Verify capture provenance and fetch the private artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$ADVENTURE_RECORDING_RIGHTS_VERIFIED" == true && -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || exit 1
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e '
+            .conclusion == "success" and .path == ".github/workflows/adventure-experiment.yml"
+            and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null
+          gh run download "$CAPTURE_RUN" --name "adventure-private-$CAPTURE_RUN" --dir "$RUNNER_TEMP/adventure-publish"
+      - name: Publish through the existing authorized uploader
+        run: python youtube-bot/publish_adventure_draft.py "$RUNNER_TEMP/adventure-publish" "$CAPTURE_RUN" "$PUBLISH_AT"
