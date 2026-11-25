@@ -1350,7 +1350,11 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         if run > 1:
             # Заново идём только если есть что искать: непройденные переходы
             # уже известных мест и места, до которых не добрались.
-            unopened = [n for n in story_map.nodes.values() if n.get('visits', 0) and n.get('open')]
+            # Считаем по-настоящему непройденное (место, вариант), а не по
+            # устаревшему флагу open: он застывает с прошлых прогонов.
+            unopened = [k for k, n in story_map.nodes.items()
+                        if n.get('visits', 0)
+                        and any((k, label) not in story_map.tried for label in (n.get('options') or []))]
             if not unopened:
                 report.step('добор веток', 'непройденных вариантов не осталось — второй заход не нужен')
                 break
@@ -1419,9 +1423,15 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 last_place[0] = prev_place[0]
                 if len(trail) > 18:
                     trail.pop(0)
-                if len(trail) >= 18 and len(set(trail[-8:])) <= 2:
+                # Стоп-кран: прекращаем, только если заход реально ничего не
+                # принёс. Раньше хватало «два места за 18 шагов» — и маршрут к
+                # остатку рубился на 17-м шаге, не дойдя: 6 заходов подряд по
+                # 0 финалов. Петля через два места — это нормальный проход по
+                # дому, а не топтание.
+                if (len(trail) >= 18 and len(set(trail[-8:])) <= 1
+                        and new_places == 0):
                     report.step('стоп-кран',
-                                f'топчется на месте (последние {len(trail)} шагов — два места) — прекращаю заход')
+                                f'топчется в одном месте {len(trail)} шагов и новых мест нет — прекращаю заход')
                     break
                 pick, fresh = pick_choice(choices, visited, rng,
                                           my_key, sight['visits'],

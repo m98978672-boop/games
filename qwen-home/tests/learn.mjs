@@ -284,7 +284,7 @@ check('идёт по НЕнажатым выборам, а не по «ново�
   && expPy.includes('no_loops'));
 
 check('стоп-кран мягче 18 шагов: успевает обойти дом, но не жжёт время',
-  expPy.includes('len(trail) > 18') && expPy.includes('len(set(trail[-8:])) <= 2'));
+  expPy.includes('len(trail) > 18') && expPy.includes('len(set(trail[-8:])) <= 1'));
 
 check('диалог подтверждения в истории: жмёт «OK», а не «Cancel»',
   expPy.includes("('ok', 'okay', 'yes', 'да'") && expPy.includes('affirm'));
@@ -349,6 +349,12 @@ check('отдых один раз в месте: не перебивает не�
   expNow.includes('rest_fresh') && expNow.includes('if rest and (rest_fresh or not fresh)'));
 check('когда здесь всё пройдено — идём по маршруту к остатку, а не наугад',
   expNow.includes('step = story_map.route_to_open(passage)'));
+
+check('стоп-кран не рубит маршрут к остатку: только одно место и ноль новых',
+  expNow.includes("len(set(trail[-8:])) <= 1") && expNow.includes('and new_places == 0'));
+check('места с остатком считаются по непройденному, а не по застывшему флагу open',
+  expNow.includes("for label in (n.get('options') or [])")
+  && expNow.includes('unopened = [k for k, n in story_map.nodes.items()'));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
