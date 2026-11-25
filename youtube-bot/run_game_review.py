@@ -150,6 +150,17 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
             print("The reserved slot passed during rendering; moved once to the next regular "
                   f"{video_format} slot {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow. "
                   "No recurring times changed.", file=sys.stderr)
+    if not preview:
+        # Rendering may take hours. Re-read the queue for the final slot, which
+        # may have changed or been booked meanwhile. This is advisory, not an
+        # atomic reservation: the publisher must still enforce its uniqueness.
+        try:
+            latest_jobs = read_queue()
+        except Exception as exc:  # noqa: BLE001 - never guess after rendering
+            raise QueueStateUnknown("Could not recheck the publication queue after rendering; no upload was started.") from exc
+        missing, _ = assess([scheduled], latest_jobs)
+        if not missing:
+            raise RuntimeError("Final publication slot already has a nearby scheduled video; no upload was started.")
     source_description = youtube_description(review)
     description = (
         source_description

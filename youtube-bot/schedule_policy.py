@@ -127,9 +127,9 @@ def settle_slot_after_render(reserved: datetime, video_format: str, *,
     reserved = reserved.astimezone(timezone.utc)
     if reserved >= current + MIN_LEAD:
         return reserved, False
-    # Search strictly after the reserved slot, so a late run moves to the next
-    # regular slot of the same format instead of reusing the one it missed.
-    return next_publish_slot(reserved, video_format=video_format), True
+    # Base the search on the actual finish time as well as the old slot. A
+    # render delayed by days must never select a regular slot in the past.
+    return next_publish_slot(max(current, reserved), video_format=video_format), True
 
 
 def long_video_is_due(now: datetime | None = None) -> bool:
