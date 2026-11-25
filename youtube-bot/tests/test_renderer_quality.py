@@ -82,6 +82,38 @@ class RenderQualityTests(unittest.TestCase):
                     renderer.render_short(script, root / 'out.mp4', root / 'work')
         self.assertIn('Оценка идеи по описанию — 7 из 10. Я не играла.', heard)
 
+    def test_long_review_batches_both_stages_without_reordering(self):
+        from threading import Barrier
+        voice_pair, encode_pair = Barrier(2), Barrier(2)
+
+        def fake_speech(text, path, **_kwargs):
+            if path.stem in {'chapter-00', 'chapter-01'}:
+                voice_pair.wait(timeout=3)
+            with wave.open(str(path), 'wb') as audio:
+                audio.setparams((1, 2, 1000, 0, 'NONE', 'not compressed'))
+                audio.writeframes(b'\0\0' * 18000)
+            return 18.0
+
+        def fake_encode(command, **_kwargs):
+            self.assertEqual(len(list((work / 'audio').glob('*.wav'))), 10)
+            if Path(command[-1]).stem in {'chapter-00', 'chapter-01'}:
+                encode_pair.wait(timeout=3)
+
+        script = {'scenes': [{'dialogue': f'Глава {index}.'} for index in range(10)]}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            work, output = root / 'work', root / 'out.mp4'
+            with patch.object(renderer, '_scene_worker_count', return_value=2), \
+                 patch.object(renderer, 'ffmpeg_executable', return_value='ffmpeg'), \
+                 patch.object(renderer, 'synthesize', side_effect=fake_speech), \
+                 patch.object(renderer, '_render_long_card'), \
+                 patch.object(renderer.subprocess, 'run', side_effect=fake_encode), \
+                 patch.object(renderer, 'concat_long_segments') as concat, \
+                 patch.object(renderer, 'verify_video_profile', return_value={'fps': 50}):
+                renderer.render_long_review(script, output, work)
+            self.assertEqual(concat.call_args.args[1],
+                             [work / 'segments' / f'chapter-{index:02d}.mp4' for index in range(10)])
+
     def test_short_long_narration_fails_before_any_video_encoding(self):
         def fake_speech(_text, path, **_kwargs):
             with wave.open(str(path), "wb") as target:
