@@ -2,10 +2,19 @@ name: YouTube reviews autopilot (Shorts and long)
 
 on:
   schedule:
-    # Start at 04:00 and 08:00 Moscow, ahead of 08:00 and 12:00 publication.
-    - cron: "0 1,5 * * *"
-    # Start at 01:00 Moscow, ahead of 06:00 long-review publication.
-    - cron: "0 22 * * *"
+    # Four Shorts and four long reviews a day. Each run fires exactly three
+    # hours before the slot it serves, so a slow run still makes its slot and
+    # no firing crosses midnight in Moscow.
+    # Shorts: 09:00, 13:00, 17:00, 21:00 Moscow -> 06:00, 10:00, 14:00, 18:00.
+    - cron: "0 3 * * *"
+    - cron: "0 7 * * *"
+    - cron: "0 11 * * *"
+    - cron: "0 15 * * *"
+    # Long: 06:00, 11:00, 15:00, 19:00 Moscow -> 03:00, 08:00, 12:00, 16:00.
+    - cron: "0 0 * * *"
+    - cron: "0 5 * * *"
+    - cron: "0 9 * * *"
+    - cron: "0 13 * * *"
   workflow_dispatch:
     inputs:
       review_capture_run:
@@ -29,7 +38,7 @@ on:
         type: string
         required: false
       publish_at:
-        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 2 Shorts a day / 1 long a day)"
+        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 4 Shorts a day / 4 long a day)"
         type: string
         required: false
       made_for_kids:
@@ -66,7 +75,10 @@ permissions:
 concurrency:
   # Separate lanes can run in parallel, but GitHub retains at most one pending
   # run per group. Submit one batch per lane and wait for it to finish.
-  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.review_preview && 'review-preview') || (inputs.adventure_preview && 'adventure-preview') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
+  # One lane per format, so a long review never waits behind a Short. GitHub
+  # keeps at most one pending run per group, which is why the batch input is
+  # capped; separate firing times never share a lane at the same moment.
+  group: youtube-review-${{ (github.event_name == 'schedule' && contains(fromJSON('["0 0 * * *","0 5 * * *","0 9 * * *","0 13 * * *"]'), github.event.schedule) && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.review_preview && 'review-preview') || (inputs.adventure_preview && 'adventure-preview') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
   cancel-in-progress: false
 
 jobs:
