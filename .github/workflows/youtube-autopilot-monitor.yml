@@ -36,14 +36,33 @@ jobs:
           # access), so the exact failed step and GitHub's short annotations are
           # copied here. They are fixed step names and short messages, never
           # secrets or full logs. Reading them is best-effort only.
-          job_id=$(gh api "repos/${GH_REPO}/actions/runs/${RUN_ID}/jobs" --jq '.jobs[0].id' 2>/dev/null || true)
+          # The job that actually failed, not jobs[0]: the autopilot workflow
+          # also has a read-only reconciliation job that usually succeeds.
+          job_id=$(gh api "repos/${GH_REPO}/actions/runs/${RUN_ID}/jobs" \
+            --jq '[.jobs[] | select(.conclusion == "failure")][0].id // empty' 2>/dev/null || true)
+          [ -n "${job_id}" ] || job_id=$(gh api "repos/${GH_REPO}/actions/runs/${RUN_ID}/jobs" \
+            --jq '.jobs[0].id // empty' 2>/dev/null || true)
           failed_step=""
           annotations=""
           if [ -n "${job_id}" ]; then
             failed_step=$(gh api "repos/${GH_REPO}/actions/jobs/${job_id}" \
               --jq '[.steps[] | select(.conclusion == "failure") | .name] | join(", ")' 2>/dev/null || true)
-            annotations=$(gh api "repos/${GH_REPO}/actions/jobs/${job_id}/annotations" \
-              --jq '.[] | select(.annotation_level == "failure") | "- " + ((.title // "") | if . == "" then "" else . + ": " end) + .message' 2>/dev/null || true)
+            # Annotations live on the check run, not on the Actions job: the
+            # jobs endpoint returns 404 here and used to put a raw "Not Found"
+            # JSON blob into the issue. Both share the same numeric id, so try
+            # the check run first and keep the old path only as a fallback.
+            # The 404 body is valid JSON but not an array, so `gh --jq` prints
+            # it to stdout as-is; require an array before accepting the result.
+            read_annotations() {
+              gh api "repos/${GH_REPO}/$1/${job_id}/annotations" 2>/dev/null \
+                | jq -r 'if type == "array" then [.[] | select(.annotation_level == "failure")
+                    | "- " + ((.title // "") | if . == "" then "" else . + ": " end) + .message]
+                    | join("\n") else empty end' 2>/dev/null || true
+            }
+            annotations=$(read_annotations check-runs)
+            if [ -z "${annotations}" ]; then
+              annotations=$(read_annotations actions/jobs)
+            fi
           fi
           {
             echo "Автопилот завершился со статусом ${CONCLUSION}: ${RUN_URL}"

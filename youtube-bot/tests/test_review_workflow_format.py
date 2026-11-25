@@ -46,5 +46,16 @@ class ReviewWorkflowFormatTests(unittest.TestCase):
         self.assertNotIn('publish_to_supabase.py', monitor)
         self.assertNotIn('gh run rerun', monitor)
         self.assertNotIn('gh workflow run', monitor)
+        # Annotations must be read from the check run: the Actions job endpoint
+        # answers 404, which used to put a raw "Not Found" JSON blob into the
+        # issue instead of the failed step's message.
+        self.assertIn('/$1/${job_id}/annotations', monitor)
+        self.assertIn('read_annotations check-runs', monitor)
+        # The 404 body is valid JSON but not an array; the reader must require
+        # an array, otherwise the fallback never runs and the blob is kept.
+        self.assertIn('if type == "array"', monitor)
+        # Report the job that actually failed, not jobs[0]: the workflow also
+        # has a read-only reconciliation job that normally succeeds.
+        self.assertIn('select(.conclusion == "failure")][0].id', monitor)
 
 if __name__ == '__main__': unittest.main()
