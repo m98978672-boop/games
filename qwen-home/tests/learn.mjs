@@ -143,6 +143,10 @@ check('ответы не теряются на гонке коммитов: ко
 check('страница сама дожидается ответа: разговор перепроверяется каждые 30 секунд, отвеченный вопрос уходит из ожидания', appJs.includes('loadDialogue') && appJs.includes('pruneAnsweredOutbox') && appJs.includes('30000') && appJs.includes('перезагружать не нужно'));
 check('очередь вопросов не теряется: отвечает на все неотвеченные в хвосте', talkGen.includes('Без ответа вопросов') && talkGen.includes('answered_turns'));
 const liveJs = await readFile(path.join(home, '..', 'kvenya', 'live.js'), 'utf8');
+check('сайт знает её настоящие факты: те же файлы дома, что читает дом, и проверка чисел в ответе',
+  liveJs.includes('loadSelfFacts') && liveJs.includes('selfFactsBlock') && liveJs.includes('inventedNumbers')
+  && liveJs.includes("state.json") && liveJs.includes("bridge/games.json") && liveJs.includes("bridge/wants.json")
+  && liveJs.includes('шагов обучения') && liveJs.includes('счёт в шахматах'));
 check('живой разговор через сайт: браузерная модель, её персона из дома, живой поиск', liveJs.includes('@huggingface/transformers') && liveJs.includes('persona.md') && liveJs.includes('ru.wikipedia.org/w/api.php') && liveJs.includes('Qwen2.5-0.5B-Instruct'));
 const rootSw = await readFile(path.join(home, '..', 'sw.js'), 'utf8');
 check('скачанная Квеня остаётся в браузере: постоянное хранение, проверка кэша и продолжение после перерыва', liveJs.includes('navigator.storage.persist') && liveJs.includes('transformers-cache') && liveJs.includes('kvenya.liveModel.saved.v1') && liveJs.includes('Продолжить загрузку Квени') && liveJs.includes('useBrowserCache') && rootSw.includes("'transformers-cache'") && rootSw.includes('PRESERVED_CACHES'));
