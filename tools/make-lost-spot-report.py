@@ -54,6 +54,13 @@ milestones = ''.join('<li><b>%s</b> — заход %s, ход %s: %s</li>' % (
     t, v.get('run', 1), v.get('n', 0), (v.get('text') or '')[:110].replace('<', '&lt;'))
     for t, v in seen.items())
 
+# Чем кончались заходы: у этой игры экран финала один, поэтому различаем пути.
+ends_html = ''
+for e in (story.get('endings') or []):
+    ends_html += '<li>заход %s, %s выборов — путь: <b>%s</b><br><span class="lead">%s</span></li>' % (
+        e.get('run', 1), e.get('n', 0), (e.get('route') or '')[:120].replace('<', '&lt;'),
+        (e.get('text') or '')[:200].replace('<', '&lt;'))
+
 rows = '\n'.join(
     '<tr><td>%s·%s</td><td>%s</td><td class="%s">%s</td><td>%s</td><td>%s</td></tr>' % (
         p.get('run', 1), p.get('n', 0), p.get('choice', ''),
@@ -95,11 +102,12 @@ th{color:#9ecbff;position:sticky;top:0;background:#0d1117} .new{color:#3fb950} .
 Она читает текст, видит силы и находки, ведёт карту мест и после финала начинает заново, чтобы добрать непройденные ветки.</p>
 <div class="kpi">
 <div><b>{{moves}}</b>выборов</div><div><b>{{nruns}}</b>захода</div><div><b>{{places}}</b>мест в карте</div>
-<div><b>{{links}}</b>переходов</div><div><b>{{finds}}</b>находок</div>
+<div><b>{{links}}</b>переходов</div><div><b>{{finds}}</b>находок</div><div><b>{{nends}}</b>путей к финалу</div>
 </div>
 <h2>Заходы</h2><ul>{{runs}}</ul>
 <h2>Что было на экране</h2>
 <div class="grid">{{figs}}</div>
+<h2>Чем кончались заходы</h2><ul>{{ends}}</ul>
 <h2>Что она нашла по дороге</h2><ul>{{milestones}}</ul>
 <h2>Что она поняла про игру (карта)</h2>
 <p>Мест <b>{{places}}</b>, переходов <b>{{links}}</b>, нажато вариантов {{tried}}.
@@ -114,8 +122,8 @@ values = {
     'moves': story.get('moves', 0), 'nruns': len(runs), 'places': m.get('places', 0),
     'links': m.get('links', 0), 'finds': len(m.get('finds') or []), 'runs': runs_html,
     'figs': figs, 'tried': m.get('tried', 0), 'tired': m.get('tired', 0),
-    'energetic': m.get('energetic', 0), 'finds_list': ', '.join(m.get('finds') or []) or '—',
-    'rows': rows, 'milestones': milestones,
+    'energetic': m.get('energetic', 0), 'nends': len({e.get('routeKey') or e.get('text','')[:60] for e in (story.get('endings') or [])}), 'finds_list': ', '.join(m.get('finds') or []) or '—',
+    'rows': rows, 'milestones': milestones, 'ends': ends_html,
 }
 
 for k, v in values.items():
