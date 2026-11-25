@@ -1101,6 +1101,13 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     fresh = [c for c in choices if not_tried(c)]
     pool = fresh or choices
 
+    # Когда она уже знает почти всю историю (мало остатка), незачем каждый раз
+    # заново идти в незнакомое: важнее закрыть непройденное в известных местах.
+    if story_map is not None and passage and fresh and len(fresh) > 1:
+        known_here = [c for c in fresh if story_map.is_loop(passage, c.get('label'), came_from)]
+        if known_here and story_map.remaining() <= 8:
+            pool = known_here
+
     # Петля (ведёт туда же, откуда пришла) — в самом конце.
     if passage and len(pool) > 1:
         no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)] if story_map else pool
@@ -1267,6 +1274,13 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         moves = 0
         stuck = 0
         fresh_moves = 0
+        # План захода: сначала называем, что именно ищем. Если известных мест
+        # с непройденными вариантами мало, а незнакомых много — идём исследовать;
+        # если наоборот — целенаправленно закрываем известные.
+        left_now = story_map.remaining()
+        if run > 1:
+            report.step('план захода',
+                        f'осталось непройденных вариантов {left_now} в {len(story_map.nodes)} местах — иду закрывать их')
         pending = {'from': '', 'choice': '', 'done': True}
         trail = []        # последние места: ловим хождение по кругу
         last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
