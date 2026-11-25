@@ -954,16 +954,23 @@ class StoryMap:
         self.tried = set()  # (место, выбор) — что уже нажимали
 
     @staticmethod
-    def key(text):
+    def key(text, context=None):
         # Ключ — хэш ВСЕГО текста пассажа: у Lost Spot общее начало («You at in
         # front of your house…»), и по обрезку все места дома сливались в одно.
-        # Хэш ещё и компактен — карту можно хранить между прогонами.
+        #
+        # context — предыдущий пассаж: в Harlowe один и тот же текст бывает у
+        # РАЗНЫХ пассажей («дом» и «первый этаж» пишут одно и то же), и без
+        # контекста их варианты смешивались: открытые в одном месте «homework»
+        # и «kitchen» приписывались другому, и они «оставались непройденными»
+        # навсегда. Теперь «тот же текст, но после другого шага» — другое место.
         norm = ' '.join((text or '').split()).lower()
+        if context:
+            norm = context + '\u241f' + norm
         return hashlib.sha1(norm.encode('utf-8')).hexdigest()[:16]
 
-    def see(self, text):
+    def see(self, text, context=None):
         """Записать место в карту и вернуть, что в нём видно."""
-        k = self.key(text)
+        k = self.key(text, context)
         node = self.nodes.get(k)
         if node is None:
             node = {'text': (text or '')[:220], 'visits': 0}
@@ -984,16 +991,17 @@ class StoryMap:
                 return True          # обратный ход: «back», «Leave quietly!»
         return False
 
-    def mark_open(self, text, choices):
+    def mark_open(self, text, choices, context=None):
         """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
-        node = self.nodes.get(self.key(text))
+        kw = self.key(text, context)
+        node = self.nodes.get(kw)
         if node is None:
             return
-        node['open'] = any((self.key(text), c.get('label')) not in self.tried for c in choices)
+        node['open'] = any((kw, c.get('label')) not in self.tried for c in choices)
         node['options'] = [c.get('label') for c in choices][:8]
 
-    def link(self, src_text, choice, dst_text):
-        fr, to = self.key(src_text), self.key(dst_text)
+    def link(self, src_text, choice, dst_text, context=None):
+        fr, to = self.key(src_text), self.key(dst_text, context)
         edge = {'from': fr, 'choice': choice, 'to': to}
         if edge not in self.edges:
             self.edges.append(edge)
@@ -1299,23 +1307,24 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 report.step('чтение', 'не нашла ни текста, ни вариантов — останавливаюсь честно')
                 break
             text = state.get('text', '')
+            here_ctx = prev_place[0]             # откуда пришли — часть ключа места
             if pending.get('from') and not pending.get('done'):
                 # пришли из предыдущего пассажа: записываем ребро карты
-                story_map.link(pending['from'], pending['choice'], text)
+                story_map.link(pending['from'], pending['choice'], text, here_ctx)
                 pending['done'] = True
             if text and last_text[0] and text[:120] == last_text[0][:120] and moves > 0:
                 same_text[0] += 1
             last_text[0] = text
-            sight = story_map.see(text)          # зрение: силы, находки, следы
+            sight = story_map.see(text, here_ctx)   # зрение: силы, находки, следы
             if sight['visits'] == 1:
                 new_places += 1
             choices = state.get('choices') or []
             for c in choices:
                 c['key'] = c.get('label', '')
-            story_map.mark_open(text, choices)
+            story_map.mark_open(text, choices, here_ctx)
             if choices:
                 # след последних мест: если ходит по кругу, дальше не жмём
-                trail.append(story_map.key(text))
+                trail.append(story_map.key(text, here_ctx))
                 last_place[0] = prev_place[0]
                 if len(trail) > 18:
                     trail.pop(0)
@@ -1324,11 +1333,11 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                 f'топчется на месте (последние {len(trail)} шагов — два места) — прекращаю заход')
                     break
                 pick, fresh = pick_choice(choices, visited, rng,
-                                          story_map.key(text), sight['visits'],
+                                          story_map.key(text, here_ctx), sight['visits'],
                                           story_map=story_map, energy=sight.get('energy', 0),
                                           came_from=last_place[0])
-                story_map.tried.add((story_map.key(text), pick['label']))
-                visited.add((story_map.key(text), pick['label']))
+                story_map.tried.add((story_map.key(text, here_ctx), pick['label']))
+                visited.add((story_map.key(text, here_ctx), pick['label']))
                 try:
                     el = page.query_selector(f'[data-kv-choice="{pick["i"]}"]')
                     if el is None:
@@ -1360,7 +1369,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                             break
                         page.wait_for_timeout(160)
                     shot(f'0{min(9, 3 + moves // 8)}-story-{moves:02d}.png')
-                prev_place[0] = story_map.key(text)   # для следующего шага: откуда пришли
+                prev_place[0] = story_map.key(text, here_ctx)   # следующий шаг: откуда пришли
                 page.wait_for_timeout(1300)
                 stuck = 0
             else:

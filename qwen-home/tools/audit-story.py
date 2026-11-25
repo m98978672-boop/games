@@ -53,7 +53,8 @@ def audit(src=None):
         # --- анализировать ---
         ('ведёт карту мест и переходов', [
             ('класс карты', 'class StoryMap' in e),
-            ('переход пишется, когда видно, куда привёл', "story_map.link(pending['from'], pending['choice'], text)" in e),
+            ('переход пишется, когда видно, куда привёл', "story_map.link(pending['from'], pending['choice'], text, here_ctx)" in e),
+            ('одно и то же название в разных местах — разные места', 'context' in e and "'\\u241f'" in e),
             ('место — хэш всего текста', "hashlib.sha1(norm.encode('utf-8'))" in e),
         ]),
         ('идёт по НЕнажатым выборам (главный фикс цикла)', [
