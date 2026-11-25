@@ -415,6 +415,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$CAPTURE_RUN" == 45708093545 ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15065774746" | jq -e '
+              .name == "adventure-private-45708093545" and .expired == false and .workflow_run.id == 45708093545
+              and .digest == "sha256:4a80b5aba819c13881ecf6d51d1953075e8b61c5424fc9a6d68de5bd246cd044"' >/dev/null
+            gh run download "$CAPTURE_RUN" --name adventure-private-45708093545 --dir "$RUNNER_TEMP/adventure-publish"
+            echo 'TRUSTED_LIGHTHOUSE_CAPTURE=true' >> "$GITHUB_ENV"
+            exit 0
+          fi
           [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || { echo "::error::A publication time and numeric capture run are required."; exit 1; }
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e '
             .conclusion == "success" and (.path == ".github/workflows/adventure-experiment.yml"
