@@ -9,10 +9,10 @@ from pathlib import Path
 
 from adventure_draft import GAME_URL
 from publish_to_supabase import publish
-from schedule_policy import next_publish_slot
+from schedule_policy import manual_publish_time, next_publish_slot
 
 
-def prepare(folder, run_id):
+def prepare(folder, run_id, requested_slot=None):
     if os.getenv('ADVENTURE_RECORDING_RIGHTS_VERIFIED') != 'true':
         raise ValueError('Recording and asset rights are not confirmed')
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
@@ -30,7 +30,8 @@ def prepare(folder, run_id):
             or not any(s.get('codec_type') == 'video' and (s.get('width'), s.get('height')) == (1080, 1920) for s in info['streams'])
             or not any(s.get('codec_type') == 'audio' for s in info['streams'])):
         raise ValueError('Short must have vertical 1080×1920 video and audio and be at most 180 seconds')
-    slot = next_publish_slot(video_format='short').isoformat().replace('+00:00', 'Z')
+    scheduled = manual_publish_time(requested_slot) if requested_slot else next_publish_slot(video_format='short')
+    slot = scheduled.isoformat().replace('+00:00', 'Z')
     result = folder / 'publish-short.result.json'
     result.write_text(json.dumps({'metadata': {
         'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{GAME_URL}#beta-short-{run_id}')),
@@ -40,9 +41,10 @@ def prepare(folder, run_id):
                        'Исходник: https://github.com/ritaban06/mini-js-games-hub',
         'tags': ['games', 'Qwen', 'The Lost Artifact', 'Shorts'], 'category_id': '20',
         'video_format': 'short', 'video_path': str(video.resolve()), 'publish_at': slot,
+        'requested_publish_at': slot if requested_slot else None,
     }}, ensure_ascii=False), encoding='utf-8')
     return result
 
 
 if __name__ == '__main__':
-    publish(prepare(Path(sys.argv[1]), sys.argv[2]))
+    publish(prepare(Path(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None))

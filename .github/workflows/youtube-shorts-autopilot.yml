@@ -341,7 +341,8 @@ jobs:
         run: |
           [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || exit 1
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e '
-            .conclusion == "success" and .path == ".github/workflows/adventure-experiment.yml"
+            .conclusion == "success" and (.path == ".github/workflows/adventure-experiment.yml"
+              or (.path == ".github/workflows/youtube-shorts-autopilot.yml" and .event == "workflow_dispatch"))
             and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null
           artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN/artifacts" | jq -er --arg id "$CAPTURE_RUN" '[.artifacts[] | select(.expired == false and (.name == ("puzzle-private-" + $id) or .name == ("adventure-private-" + $id))) | .name] | select(length == 1) | .[0]')"
           case "$artifact" in
@@ -354,7 +355,14 @@ jobs:
       - name: Publish through the existing authorized uploader
         env:
           DATA_DIR: ${{ runner.temp }}/adventure-history
-        run: python youtube-bot/publish_adventure_draft.py "$RUNNER_TEMP/adventure-publish" "$CAPTURE_RUN" "$PUBLISH_AT"
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/adventure-publish"
+          if jq -e '.short == true' "$folder/pilot.json" >/dev/null; then
+            python youtube-bot/publish_adventure_short.py "$folder" "$CAPTURE_RUN" "$PUBLISH_AT"
+          else
+            python youtube-bot/publish_adventure_draft.py "$folder" "$CAPTURE_RUN" "$PUBLISH_AT"
+          fi
 
   publish-saved-review:
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.review_capture_run != '' && !inputs.review_preview && !inputs.adventure_preview && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''
