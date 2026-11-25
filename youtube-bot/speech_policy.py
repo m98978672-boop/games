@@ -13,11 +13,9 @@ def speech_excerpt(text: str, char_budget: int) -> str:
     if len(clean) <= char_budget:
         return clean
 
-    # Use actual sentence boundaries in the original text, not an artificial
-    # end-of-slice or a semicolon that may introduce an essential qualification.
+    # Prefer a complete sentence/clause when it uses most of the available budget.
     prefix = clean[:char_budget]
-    sentence_ends = [match.end() for match in re.finditer(r"[.!?](?=\s|$)", clean)
-                     if match.end() <= char_budget]
+    sentence_ends = [match.end() for match in re.finditer(r"[.!?;](?:\s|$)", prefix)]
     if sentence_ends and sentence_ends[-1] >= int(char_budget * 0.55):
         return clean[:sentence_ends[-1]].strip()
 
@@ -33,8 +31,7 @@ def fit_speech_text(
     *,
     max_seconds: float = 12.0,
     attempts: int = 5,
-    fallback: str | None = "Короткий разбор игрового проекта.",
-    preserve_full: bool = False,
+    fallback: str = "Короткий разбор игрового проекта.",
 ) -> tuple[str, float]:
     """Measure TTS output, shorten safely until it fits, then use a neutral fallback.
 
@@ -46,9 +43,7 @@ def fit_speech_text(
         seconds = float(measure_seconds(candidate))
         if seconds <= max_seconds:
             return candidate, seconds
-        # Dropping even a complete sentence may remove a qualification or an
-        # explicit disclaimer. Reviews must keep their complete narration.
-        if preserve_full or len(candidate) <= 24:
+        if len(candidate) <= 24:
             break
         # Leave a margin for prosody and punctuation; do not optimize right up to the hard cap.
         ratio = min(0.78, max(0.4, (max_seconds / seconds) * 0.78))
@@ -62,8 +57,6 @@ def fit_speech_text(
             break
         candidate = shorter
 
-    if fallback is None:
-        raise ValueError("Complete narration exceeds the scene time budget; refusing to omit context.")
     fallback_text = re.sub(r"\s+", " ", fallback).strip()
     fallback_seconds = float(measure_seconds(fallback_text))
     if fallback_seconds <= max_seconds:

@@ -19,6 +19,26 @@ ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHRE
 
 def plan(trace):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'Viewport Voyager':
+        lines = [(0.0, 'В этой игре окно браузера — часть головоломки.')]
+        previous = 0.0
+        seen = set()
+        for event in trace['actions']:
+            choice = event['choice']
+            if choice.startswith('CHOICE'):
+                w, h = event['viewport']
+                note = f'Проверяю размер {w} на {h}.'
+                if choice not in seen and not seen.intersection({'CHOICEONE', 'CHOICETWO', 'CHOICETHREE'}):
+                    note += ' Наконец-то изменение размера окна считается игровым навыком.'
+                lines.append((previous, note))
+            elif choice not in seen:
+                direction = {'UP':'вверх', 'DOWN':'вниз', 'LEFT':'налево', 'RIGHT':'направо'}[choice]
+                lines.append((previous, f'Пробую двигаться {direction}.'))
+            seen.add(choice)
+            previous = min(duration, max(previous, (event.get('recording_elapsed_ms') or 0) / 1000))
+        won = trace.get('game_reported_victory') is True
+        lines.append((previous, 'Игра подтвердила прохождение.' if won else 'До финала в этой попытке не дошёл.'))
+        return duration, lines, [], won
     puzzle = trace.get('game') == '16 Puzzle'
     events = trace['model_actions'] if puzzle else trace['actions']
     lines = [(0.0, 'Собираю пятнашки по порядку.' if puzzle else 'Я ищу потерянный артефакт.')]
@@ -78,15 +98,20 @@ def build(folder):
     trace['duration_seconds'] = probe_capture(raw)
     duration, lines, cuts, won = plan(trace)
     short = trace.get('short') is True
-    base = 'zuza-adventure-short' if short else ('zuza-pilot' if won else 'zuza-part-01')
+    viewport = trace.get('game') == 'Viewport Voyager'
+    base = 'zuza-viewport-beta' if viewport else 'zuza-adventure-short' if short else ('zuza-pilot' if won else 'zuza-part-01')
     puzzle = trace.get('game') == '16 Puzzle'
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if viewport:
+        url = GAME_URL.replace('adventure-game/', 'adventure-game-new/')
+        title = 'Viewport Voyager'
+        source = 'https://github.com/m98978672-boop/games/tree/main/collection/adventure-game-new'
     (folder / 'description.txt').write_text(
         f'{url}\n\n{title} — пробная запись игры Qwen. '
         'Русский закадровый комментарий собран по журналу действий.\n'
-        + ('Игра подтвердила победу.' if won else 'Часть 1: победа не подтверждена; продолжение пока не записано.')
+        + ('Игра подтвердила победу.' if won else 'Победа в этой попытке не подтверждена.')
         + f'\nИсходник игры: {source}\n', encoding='utf-8')
     with tempfile.TemporaryDirectory() as temp:
         wavs = []

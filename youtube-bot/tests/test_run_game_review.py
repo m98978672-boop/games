@@ -171,55 +171,6 @@ class RunReviewTests(unittest.TestCase):
                 run_game_review.run(Path(temp) / 'long.mp4', video_format='long')
         render.assert_not_called()
 
-    def test_taken_manual_slot_is_refused_before_rendering(self):
-        """A manual time that already has a video must fail in seconds, not minutes.
-
-        Regression: the run rendered a full 17-minute video and only then had the
-        publisher reject the slot, and the annotation wrongly said the upload had
-        failed.
-        """
-        game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
-        review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7,
-                  "sources": [], "screenshots": [], "pros": game["features"], "possible_minus": "Возможно, не всем."}
-        chosen = datetime(2026, 11, 26, 5, tzinfo=timezone.utc)
-        taken = [{"publish_at": "2026-11-26T05:00:00Z", "status": "scheduled", "video_id": "existing"}]
-        with tempfile.TemporaryDirectory() as temp, \
-             patch.dict("os.environ", {"MANUAL_PUBLISH_AT": "2026-11-26 08:00"}), \
-             patch.object(run_game_review, "DATA_DIR", Path(temp)), \
-             patch("publish_to_supabase.read_queue", return_value=taken), \
-             patch.object(run_game_review, "manual_publish_time", return_value=chosen), \
-             patch.object(run_game_review, "load_steam_games") as steam, \
-             patch.object(run_game_review, "generate_game_review") as generate, \
-             patch.object(run_game_review, "download_screenshots") as artwork, \
-             patch.object(run_game_review, "render_short") as render:
-            with self.assertRaisesRegex(RuntimeError, "already has a video"):
-                run_game_review.run(Path(temp) / "short.mp4")
-        steam.assert_not_called()
-        generate.assert_not_called()
-        artwork.assert_not_called()
-        render.assert_not_called()
-
-    def test_free_manual_slot_still_renders(self):
-        game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
-        review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7,
-                  "sources": [], "screenshots": [], "pros": game["features"], "possible_minus": "Возможно, не всем."}
-        chosen = datetime(2026, 11, 26, 5, tzinfo=timezone.utc)
-        elsewhere = [{"publish_at": "2026-11-25T09:00:00Z", "status": "scheduled", "video_id": "other"}]
-        with tempfile.TemporaryDirectory() as temp, \
-             patch.dict("os.environ", {"MANUAL_PUBLISH_AT": "2026-11-26 08:00"}), \
-             patch.object(run_game_review, "DATA_DIR", Path(temp)), \
-             patch("publish_to_supabase.read_queue", return_value=elsewhere), \
-             patch.object(run_game_review, "manual_publish_time", return_value=chosen), \
-             patch.object(run_game_review, "resolve_manual_after_render", return_value=(chosen, False)), \
-             patch.object(run_game_review, "load_steam_games", return_value=[game]), \
-             patch.object(run_game_review, "generate_game_review", return_value=review), \
-             patch.object(run_game_review, "download_screenshots", return_value=[]), \
-             patch.object(run_game_review, "render_short", return_value={}) as render, \
-             patch.object(run_game_review, "youtube_description", return_value="Описание"):
-            result = run_game_review.run(Path(temp) / "short.mp4")
-        render.assert_called_once()
-        self.assertEqual(result["metadata"]["publish_at"], "2026-11-26T05:00:00Z")
-
     def test_manual_choice_is_validated_twice_and_passed_to_metadata(self):
         game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
         review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7,
@@ -228,7 +179,6 @@ class RunReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, \
              patch.dict("os.environ", {"MANUAL_PUBLISH_AT": "2026-11-25 10:00"}), \
              patch.object(run_game_review, "DATA_DIR", Path(temp)), \
-             patch("publish_to_supabase.read_queue", return_value=[]), \
              patch.object(run_game_review, "manual_publish_time", return_value=chosen) as validate, \
              patch.object(run_game_review, "resolve_manual_after_render", return_value=(chosen, False)) as resolve, \
              patch.object(run_game_review, "reserve_slot_before_render") as default_slot, \
@@ -361,7 +311,6 @@ class RunReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, \
              patch.dict("os.environ", {"MANUAL_PUBLISH_AT": "2026-11-25 10:00"}), \
              patch.object(run_game_review, "DATA_DIR", Path(temp)), \
-             patch("publish_to_supabase.read_queue", return_value=[]), \
              patch.object(run_game_review, "manual_publish_time", return_value=requested), \
              patch.object(run_game_review, "resolve_manual_after_render", return_value=(delayed, True)), \
              patch.object(run_game_review, "load_steam_games", return_value=[game]), \

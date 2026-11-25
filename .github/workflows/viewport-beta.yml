@@ -1,0 +1,43 @@
+name: Viewport Voyager beta recording
+on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/viewport-beta.yml, youtube-bot/run_viewport_episode.py]
+permissions:
+  contents: read
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      HF_HUB_DISABLE_XET: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
+          pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
+          docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Record real gameplay
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+        run: |
+          mkdir -p "$RUNNER_TEMP/kvenya-release" "$RUNNER_TEMP/viewport"
+          gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
+          python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$QWEN_GAME_ADAPTER_PATH"
+          python -u youtube-bot/run_viewport_episode.py "$RUNNER_TEMP/viewport"
+      - name: Edit vertical beta without cutting gameplay
+        run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/viewport"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: viewport-beta-${{ github.run_id }}
+          path: ${{ runner.temp }}/viewport/
+          if-no-files-found: error

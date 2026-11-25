@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from puzzle_planner import solve
+from puzzle_planner import recovery_route, solve
 from puzzle_learning import GOAL
 from puzzle_supervisor import legal_indices, verify_transition
 
@@ -31,6 +31,16 @@ class PuzzlePlannerTests(unittest.TestCase):
             for move in route:
                 board = apply(board, move)
             self.assertEqual(board, GOAL)
+
+    def test_recovery_undoes_real_moves_then_finishes_original_board(self):
+        start = apply(GOAL, 14)
+        detour = apply(start, 10)
+        steps = recovery_route([(start, 10, detour)], solve(start))
+        self.assertEqual(steps, [14, 15])
+        for move in steps:
+            detour = apply(detour, move)
+        self.assertEqual(detour, GOAL)
+        self.assertIsNone(recovery_route([], None))
 
     def test_rejects_unsolvable_and_honors_search_budget(self):
         self.assertIsNone(solve([2, 1, *GOAL[2:]]))
