@@ -21,7 +21,7 @@ class GameTextTranslationTests(unittest.TestCase):
         self.assertIsNone(russian_game_text('Open settings', lambda *a, **k: '{"ru":"Settings"}'))
 
     def test_long_text_is_not_truncated_or_partially_published(self):
-        sentence = ('An ancient inscription. ' * 50).strip()
+        sentence = ' '.join(f'Ancient inscription {i}.' for i in range(50))
         original = sentence + '\n\n' + 'The last line matters.'
         seen = []
 
