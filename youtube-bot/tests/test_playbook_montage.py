@@ -371,6 +371,41 @@ class MontagePlanTests(unittest.TestCase):
         with self.assertRaises(MontageError):
             plan_montage(30, self.EVENTS, target_seconds=90)
 
+    def test_the_strongest_evidence_survives_a_tight_budget(self):
+        """The best moment of a long run must not be lost for being late."""
+        events = [Event(5, "speech"), Event(40, "speech"), Event(90, "speech"),
+                  Event(200, "goal")]
+        plan = plan_montage(300, events, target_seconds=6)
+        kinds = [{event.kind for event in keep.events} for keep in plan.keeps]
+        self.assertTrue(any("goal" in kinds_here for kinds_here in kinds))
+        # Speech (2.0) is cut before the goal (4.0), even though it came first.
+        self.assertTrue(all(cut.get("weight", 0) < 4.0 for cut in plan.cuts))
+
+    def test_the_weakest_clip_is_trimmed_first_not_the_last_one(self):
+        events = [Event(5, "goal"), Event(60, "speech"), Event(120, "goal")]
+        plan = plan_montage(200, events, target_seconds=5)
+        trimmed = [cut for cut in plan.cuts if "подрезан" in cut["reason"]]
+        for cut in trimmed:
+            # Only a clip without a reached goal may lose its tail.
+            self.assertLess(cut.get("weight", 0), 4.0)
+
+    def test_a_strong_clip_is_never_shaved_below_the_minimum(self):
+        for target in (2.0, 3.0, 4.0, 5.0):
+            plan = plan_montage(60, [Event(10, "goal"), Event(30, "goal"),
+                                     Event(50, "goal")], target_seconds=target)
+            for keep in plan.keeps:
+                self.assertGreaterEqual(keep.seconds, 1.0)
+            self.assertEqual(check_montage(plan, max_seconds=59.0), [])
+
+    def test_the_report_states_how_much_evidence_was_kept(self):
+        plan = plan_montage(30, self.EVENTS, target_seconds=20)
+        summary = plan.summary()
+        self.assertGreater(summary["strength"], 0)
+        self.assertEqual(summary["strength"],
+                         round(sum(keep["strength"] for keep in summary["keeps"]), 3))
+        for keep in summary["keeps"]:
+            self.assertGreaterEqual(keep["strength"], 0)
+
     def test_cuts_are_written_down_with_reasons(self):
         plan = plan_montage(60, [Event(seconds, "goal") for seconds in (5, 15, 25, 35, 45)],
                             target_seconds=6)
@@ -496,6 +531,20 @@ class MontageFromArtifactsTests(unittest.TestCase):
             broken.write_text("{not json", encoding="utf-8")
             with self.assertRaises(MontageError):
                 events_from_report_file(broken)
+
+
+    def test_a_misspelled_event_kind_is_refused(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            rows = root / "events.json"
+            rows.write_text(json.dumps([{"seconds": 3, "kind": "goals", "reason": "опечатка"}]),
+                            encoding="utf-8")
+            # "goals" would rank as evidence worth nothing and cut the best moment.
+            with self.assertRaises(MontageError):
+                events_from_report_file(rows)
 
 
 class MontageRenderTests(unittest.TestCase):

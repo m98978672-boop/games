@@ -35,6 +35,21 @@ MAX_KEEP_SECONDS = 59.0   # a Short is under a minute
 PRE_ROLL = 1.2            # lead-in so a reaction is visible, not just the frame
 POST_ROLL = 0.8           # hold after the event so the viewer sees the result
 
+# How much each kind of measurement is worth when the recording has more
+# highlights than fit. This is a declared ranking of evidence, not taste: a
+# reached goal beats a line of speech, which beats a changed frame.
+KIND_WEIGHT = {"goal": 4.0, "speech": 2.0, "chapter": 2.0, "change": 0.5, "track": 0.1}
+
+
+def event_weight(kind: str) -> float:
+    """How strong a piece of evidence is; unknown kinds are worth nothing."""
+    return KIND_WEIGHT.get(kind, 0.0)
+
+
+def keep_strength(keep: "Keep") -> float:
+    """Sum of the measured evidence inside a clip, so clips can be ranked."""
+    return round(sum(event_weight(event.kind) for event in keep.events), 3)
+
 
 class MontageError(ValueError):
     """The montage cannot be built honestly from what was measured."""
@@ -74,6 +89,7 @@ class Keep:
     def as_dict(self) -> dict:
         return {"start": round(self.start, 2), "end": round(self.end, 2),
                 "seconds": round(self.seconds, 2), "reason": self.reason,
+                "strength": keep_strength(self),
                 "events": [event.as_dict() for event in self.events]}
 
 
@@ -95,6 +111,8 @@ class MontagePlan:
     def summary(self) -> dict:
         return {
             "schema": 1,
+            # Total measured evidence kept, so two cuts can be compared honestly.
+            "strength": round(sum(keep_strength(keep) for keep in self.keeps), 3),
             "source_seconds": round(self.duration, 2),
             "target_seconds": round(self.target_seconds, 2),
             "kept_seconds": round(self.kept_seconds, 2),
@@ -233,21 +251,39 @@ def plan_montage(duration: float, events: Sequence[Event], *,
         raise MontageError("every measured moment was shorter than one second")
 
     cuts: list[dict] = []
+    # Which clips survive is decided by the evidence they carry, not by where they
+    # happen to sit in the recording: trimming from the top would throw away the
+    # best moment of a long run simply for being late.
     while sum(keep.seconds for keep in keeps) > target_seconds and len(keeps) > 1:
         weakest = min(range(len(keeps)),
-                      key=lambda i: (sum(e.kind == "goal" for e in keeps[i].events), keeps[i].seconds))
+                      key=lambda i: (keep_strength(keeps[i]), -keeps[i].start, keeps[i].seconds))
         removed = keeps.pop(weakest)
         cuts.append({"start": round(removed.start, 2), "end": round(removed.end, 2),
-                     "reason": "не помещается в целевую длину", "events": len(removed.events)})
+                     "reason": "не помещается в целевую длину",
+                     "weight": keep_strength(removed), "events": len(removed.events)})
 
     over = sum(keep.seconds for keep in keeps) - target_seconds
     if over > 0:
-        last = keeps[-1]
-        new_end = last.start + max(MIN_CLIP, last.seconds - over)
-        if new_end < last.end:
-            cuts.append({"start": round(new_end, 2), "end": round(last.end, 2),
-                         "reason": "подрезан хвост, чтобы уложиться в длину"})
-            keeps[-1] = Keep(last.start, new_end, last.reason, last.events)
+        # Shorten the weakest clip that can give up the time without dropping the
+        # evidence it exists for; the strongest clip is the last thing touched.
+        order = sorted(range(len(keeps)),
+                       key=lambda i: (keep_strength(keeps[i]), -keeps[i].start))
+        for index in order:
+            keep = keeps[index]
+            room = keep.seconds - MIN_CLIP
+            if room <= 0:
+                continue
+            shrink = min(over, room)
+            if shrink <= 0:
+                break
+            new_end = keep.end - shrink
+            cuts.append({"start": round(new_end, 2), "end": round(keep.end, 2),
+                         "reason": "подрезан хвост, чтобы уложиться в длину",
+                         "weight": keep_strength(keep)})
+            keeps[index] = Keep(keep.start, new_end, keep.reason, keep.events)
+            over -= shrink
+            if over <= 0.001:
+                break
 
     keeps.sort(key=lambda keep: keep.start)
     plan = MontagePlan(duration=float(duration), target_seconds=float(target_seconds),
@@ -389,7 +425,8 @@ def check_montage(plan: MontagePlan, *, max_seconds: float = MAX_KEEP_SECONDS) -
     for keep in plan.keeps:
         if keep.seconds < MIN_CLIP:
             problems.append(f"clip at {keep.start:.1f}s is shorter than a flash")
-    if not any("goal" in {event.kind for event in keep.events} for keep in plan.keeps):
+    has_goal = any("goal" in {event.kind for event in keep.events} for keep in plan.keeps)
+    if not has_goal:
         problems.append("no clip shows a reached goal: this is not a highlight")
     return problems
 
@@ -400,10 +437,15 @@ def _events_from_rows(rows: Sequence) -> list[Event]:
     for row in rows:
         if not isinstance(row, dict):
             raise MontageError("every event row must be an object")
+        # A typo such as "goals" would silently rank as evidence worth nothing and
+        # the best moment of the run would be cut. Refuse it instead.
+        kind = str(row.get("kind", "change"))
+        if kind not in KIND_WEIGHT:
+            raise MontageError(
+                f"unknown event kind {kind!r}; expected one of {sorted(KIND_WEIGHT)}")
         reason = row.get("reason", row.get("detail", ""))
         try:
-            events.append(Event(float(row["seconds"]), str(row.get("kind", "change")),
-                                str(reason)[:120]))
+            events.append(Event(float(row["seconds"]), kind, str(reason)[:120]))
         except (KeyError, TypeError, ValueError) as exc:
             raise MontageError("every event row needs numeric seconds") from exc
     return events
