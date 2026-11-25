@@ -70,3 +70,17 @@ class GameTextTranslationTests(unittest.TestCase):
         self.assertEqual(russian_game_text(source,
             lambda *a, **k: '{"ru":"Нажми [E], чтобы отдать {player} ключ."}'),
             'Нажми [E], чтобы отдать {player} ключ.')
+
+    def test_language_specific_notes_and_unknown_language_fallback(self):
+        cases = [('pt-BR', 'Se ele vier amanhã, abra o portão.', 'futuro do subjuntivo'),
+                 ('ja', 'まだ扉を開けていない。', '～ている'),
+                 ('uk', 'Ти вже відімкнув браму?', 'Не принимай кириллицу'),
+                 ('is', 'Hliðið var opnað.', 'не применяй к нему правила английского')]
+        for language, original, clue in cases:
+            with self.subTest(language=language):
+                def translate(messages, **kwargs):
+                    self.assertIn(clue, messages[0]['content'])
+                    self.assertNotIn('Perfect Continuous', messages[0]['content'])
+                    self.assertEqual(json.loads(messages[1]['content'])['source_text'], original)
+                    return '{"ru":"Проверочный перевод."}'
+                self.assertIsNotNone(russian_game_text(original, translate, source_language=language))
