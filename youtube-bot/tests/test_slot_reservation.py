@@ -5,11 +5,18 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from schedule_policy import (CHANNEL_TZ, MIN_LEAD, SCHEDULE_LEAD, reserve_slot_before_render,
-                             served_slot, settle_slot_after_render)
+from schedule_policy import (CHANNEL_TZ, LONG_POST_TIME, MIN_LEAD, SHORT_POST_TIMES, SCHEDULE_LEAD,
+                             reserve_slot_before_render, served_slot, settle_slot_after_render)
 
 
 class SlotReservationTests(unittest.TestCase):
+    def test_review_cadence_stays_within_owner_requested_schedule(self):
+        # Reviews only; actual gameplay releases have their own requirements.
+        # This tests the regular plan, not an atomic cross-run daily quota.
+        self.assertEqual(len(SHORT_POST_TIMES), 2)
+        self.assertEqual(len(set(SHORT_POST_TIMES)), 2)
+        self.assertNotIn(LONG_POST_TIME, SHORT_POST_TIMES)
+
     def test_automatic_slot_reserves_at_least_the_lead_before_render(self):
         # 01:05 Moscow: the 06:00 long review and the 08:00 Short are both far
         # enough ahead to be fixed before rendering starts.
