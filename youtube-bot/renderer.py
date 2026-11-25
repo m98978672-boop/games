@@ -386,7 +386,8 @@ def _scene_worker_count(scenes: int) -> int:
     return max(1, min(scenes, max(2, cores), 4))
 
 
-def prepare_scene_narration(scene: dict[str, Any], scene_index: int, audio_dir: Path) -> tuple[str, float]:
+def prepare_scene_narration(scene: dict[str, Any], scene_index: int, audio_dir: Path, *,
+                            is_review: bool = False, fallback: str | None = "Короткий разбор игрового проекта.") -> tuple[str, float]:
     """Synthesize one scene's line and pad it; safe to run for several scenes at once.
 
     Each call owns its own wav path and Piper/espeak process, so concurrent
@@ -397,7 +398,7 @@ def prepare_scene_narration(scene: dict[str, Any], scene_index: int, audio_dir: 
     dialogue, seconds = fit_speech_text(
         str(scene["dialogue"]),
         lambda candidate: synthesize(candidate, audio_path, style=style),
-        max_seconds=12.0,
+        max_seconds=12.0, preserve_full=is_review, fallback=fallback,
     )
     # Hold each card long enough to read the speech bubble. Silence is appended
     # after the spoken line rather than stretching or speeding up speech.
@@ -413,7 +414,8 @@ def prepare_scene_narration(scene: dict[str, Any], scene_index: int, audio_dir: 
     return dialogue, scene_seconds
 
 
-def prepare_all_scenes(scenes: list[dict[str, Any]], audio_dir: Path) -> list[tuple[str, float]]:
+def prepare_all_scenes(scenes: list[dict[str, Any]], audio_dir: Path, *,
+                       is_review: bool = False, review_score: Any = None) -> list[tuple[str, float]]:
     """Synthesize every scene's narration, several at once, in scene order.
 
     Each scene is an independent external process, so running them together
@@ -422,12 +424,18 @@ def prepare_all_scenes(scenes: list[dict[str, Any]], audio_dir: Path) -> list[tu
     """
     if not scenes:
         return []
+    def prepare(index: int) -> tuple[str, float]:
+        fallback = "Короткий разбор игрового проекта."
+        if is_review:
+            fallback = None
+            if index == len(scenes) - 1 and type(review_score) is int and 1 <= review_score <= 10:
+                fallback = f"Оценка идеи по описанию — {review_score} из 10. Я не играла."
+        return prepare_scene_narration(scenes[index], index, audio_dir, is_review=is_review, fallback=fallback)
     if len(scenes) == 1:
-        return [prepare_scene_narration(scenes[0], 0, audio_dir)]
+        return [prepare(0)]
     with ThreadPoolExecutor(max_workers=_scene_worker_count(len(scenes)),
                             thread_name_prefix="narration") as pool:
-        futures = [pool.submit(prepare_scene_narration, scene, index, audio_dir)
-                   for index, scene in enumerate(scenes)]
+        futures = [pool.submit(prepare, index) for index in range(len(scenes))]
         return [future.result() for future in futures]
 
 
@@ -473,7 +481,8 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
     # all of them start at once instead of waiting for their turn. Results are
     # consumed in scene order, which keeps the audio and frame order unchanged.
     narrate_start = time.perf_counter()
-    prepared = prepare_all_scenes(scenes, audio_dir)
+    prepared = prepare_all_scenes(scenes, audio_dir, is_review=script.get("format") == "game-review",
+                                  review_score=script.get("idea_score"))
     wavs: list[Path] = []
     scene_seconds_list: list[float] = []
     for scene_index, (dialogue, scene_seconds) in enumerate(prepared):
@@ -627,7 +636,7 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
         style = ("bright", "neutral", "neutral", "reflective")[scene_index % 4]
         dialogue, seconds = fit_speech_text(
             str(scene["dialogue"]), lambda candidate: synthesize(candidate, wav, style=style),
-            max_seconds=40.0, attempts=6,
+            max_seconds=40.0, attempts=6, preserve_full=True, fallback=None,
         )
         scene["dialogue"] = dialogue
         with wave.open(str(wav), "rb") as source:
