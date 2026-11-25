@@ -304,5 +304,9 @@ check('видно, сколько осталось непройденного: �
   expPy.includes('def remaining') && expPy.includes("'options': (v.get('options') or [])[:8]")
   && expPy.includes('непройденных вариантов'));
 
+check('аудит всех обнов истории: код и данные проверены списком, а не на глаз',
+  expPy.includes('StOP') === false
+  && expPy.includes('def remaining') && expWf.includes('storymap.json'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
