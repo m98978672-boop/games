@@ -81,6 +81,15 @@ class SlotStateTests(unittest.TestCase):
         self.assertIn('неопределён', output.getvalue())
         self.assertNotIn('gh workflow run', output.getvalue())
 
+    def test_report_never_republishes_a_runner_protocol_line(self):
+        # An OIDC token once reached a public issue because a captured log was
+        # pasted as Markdown: "::add-mask::<token>" is a runner command, not text.
+        from pathlib import Path as _Path
+        workflow = (_Path(__file__).resolve().parents[2]
+                    / ".github/workflows/youtube-shorts-autopilot.yml").read_text(encoding="utf-8")
+        self.assertIn("grep -v -e '^::'", workflow)
+        self.assertIn('^eyJ', workflow)
+
     def test_a_naive_planned_slot_is_rejected(self):
         with self.assertRaises(ValueError):
             assess([datetime(2026, 11, 25, 5)], [])

@@ -88,10 +88,19 @@ jobs:
     if: github.event_name == 'schedule' && github.repository == 'm98978672-boop/games'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # The plan is written to an issue, because Actions logs are not readable
+      # from a phone and the owner must not have to dig for the schedule.
+      issues: write
     env:
       REVIEW_SCHEDULE: ${{ github.event.schedule || '' }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
@@ -100,8 +109,35 @@ jobs:
           set -euo pipefail
           # Read-only: lists planned slots, their state and the exact start
           # command for every missing one. It never renders or uploads.
-          python youtube-bot/reconcile_schedule.py | tee "$RUNNER_TEMP/slots.md"
+          python youtube-bot/reconcile_schedule.py > "$RUNNER_TEMP/slots.md" 2>&1 || true
           cat "$RUNNER_TEMP/slots.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish the plan to the pinned issue
+        run: |
+          set -euo pipefail
+          # Strip runner protocol lines. "::add-mask::<token>" is a command for
+          # the runner, not Markdown; pasting it into an issue would print a
+          # credential in the clear.
+          grep -v -e '^::' -e '^eyJ' "$RUNNER_TEMP/slots.md" > "$RUNNER_TEMP/plan.md" || true
+          if [ ! -s "$RUNNER_TEMP/plan.md" ]; then
+            printf '## Что выйдет в ближайшие дни\n\nОчередь прочитать не удалось. Ничего не запущено.\n' \
+              > "$RUNNER_TEMP/plan.md"
+          fi
+          {
+            cat "$RUNNER_TEMP/plan.md"
+            echo
+            echo '---'
+            echo "Обновлено: $(TZ=Europe/Moscow date '+%d.%m %H:%M') МСК."
+            echo 'Это только чтение: доска ничего не рендерит и не загружает.'
+          } > "$RUNNER_TEMP/issue.md"
+          number=$(gh issue list --state open --limit 100 --json number,title \
+            --jq '.[] | select(.title == "План видео") | .number' | head -n 1)
+          if [ -z "$number" ]; then
+            gh issue create --title "План видео" --body-file "$RUNNER_TEMP/issue.md" > /dev/null
+            echo "Доска создана." >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh issue edit "$number" --body-file "$RUNNER_TEMP/issue.md"
+            echo "Доска #$number обновлена." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   check-topic-history:
     if: github.event_name == 'workflow_dispatch' && inputs.check_topics_only
