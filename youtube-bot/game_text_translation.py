@@ -5,6 +5,9 @@ import textwrap
 from collections import Counter
 from functools import lru_cache
 
+# Markup and engine substitutions are not natural-language words.
+PROTECTED = re.compile(r'<[/!a-zA-Z][^<>]*>|\{\{[^{}]+\}\}|\{[\w.]+\}|%[sdif]|%\d+\$[sdif]|\[[A-Z][A-Z0-9_+-]*\]')
+
 
 def russian_game_text(text, generate=None, *, context=""):
     """Translate every segment in order; never hide the original on partial failure."""
@@ -38,7 +41,11 @@ def _translate_segment(text, generate, context, previous, following, retry):
     payload = {'source_text': text, 'scene_context': context, 'previous_text': previous, 'following_text': following}
     instruction = ('Учитывай соседние реплики для рода, обращений и игровых терминов. '
                    'Переводи только source_text, не добавляй соседние реплики. '
-                   'Сохраняй смысл отрицаний, имена, условия и порядок действий.')
+                   'Сохраняй смысл отрицаний, имена, условия и порядок действий. '
+                   'Отличай should, must, may и can, факты от предположений, уже выполненное от предстоящего. '
+                   'Учитывай фразовые глаголы, идиомы, сарказм и регистр речи; не переводи их пословно. '
+                   'Не меняй единицы измерения, названия клавиш, теги и подстановки вроде {player} или %s. '
+                   'Проверь, что ни одно ограничение, исключение или действие не исчезло.')
     if retry:
         instruction += ' Проверь каждое число в source_text: не меняй и не добавляй числа.'
     try:
@@ -58,6 +65,6 @@ def _translate_segment(text, generate, context, previous, following, retry):
         return None
     # Reject obvious gameplay-changing errors such as a dropped timer or quantity.
     numbers = lambda value: Counter(n.replace(',', '.') for n in re.findall(r'(?<!\w)[+-]?\d+(?:[.,]\d+)?', value))
-    if numbers(text) != numbers(result):
+    if numbers(text) != numbers(result) or PROTECTED.findall(text) != PROTECTED.findall(result):
         return None
     return result.strip()

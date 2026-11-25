@@ -62,3 +62,11 @@ class GameTextTranslationTests(unittest.TestCase):
         self.assertEqual(calls[1]['scene_context'], 'Dungeon escape')
         self.assertEqual(calls[1]['previous_text'], 'The guard is injured.')
         self.assertEqual(len(calls), 3)
+
+    def test_ui_placeholders_and_key_labels_must_survive(self):
+        source = 'Press [E] to give {player} a key.'
+        self.assertIsNone(russian_game_text(source,
+            lambda *a, **k: '{"ru":"Нажми [F], чтобы отдать игроку ключ."}'))
+        self.assertEqual(russian_game_text(source,
+            lambda *a, **k: '{"ru":"Нажми [E], чтобы отдать {player} ключ."}'),
+            'Нажми [E], чтобы отдать {player} ключ.')
