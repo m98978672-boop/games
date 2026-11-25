@@ -149,31 +149,71 @@ class BrowserBridge:
         self.close()
 
 
-def run_agent(game_dir: Path, agent, *, rights_acknowledged: bool = False, max_steps: int = 100, entry: str = "index.html"):
-    """Call agent(png_bytes, step) outside the container; return None to stop.
+def run_agent(game_dir: Path, agent, *, rights_acknowledged: bool = False,
+              max_steps: int = 100, entry: str = "index.html", record_dir: Path | None = None):
+    """Run a step-synchronous agent, optionally recording a video and its events.
 
-    No game-provided text is passed as instructions and no model is supplied.
-    The caller must isolate its model, credentials and all untrusted screenshots.
+    Recording timestamps are estimates from the browser bridge's monotonic clock,
+    not video presentation timestamps. Save the playbook even on an interrupted
+    run; emit an event report only after the recording is finalized successfully.
+    The final observation at the step limit is not processed as another decision.
     """
     import base64
+    import math
     if type(max_steps) is not int or not 1 <= max_steps <= 10000:
         raise ValueError("max_steps must be 1..10000")
-    with BrowserBridge(game_dir, rights_acknowledged=rights_acknowledged, entry=entry) as bridge:
-        observation = bridge.receive()
-        steps = 0
-        while steps < max_steps:
-            if observation.get("type") != "observation" or observation.get("step") != steps:
-                raise RuntimeError("Game bridge returned an error or out-of-order frame")
-            png = base64.b64decode(observation["screenshot_png_base64"], validate=True)
-            if not png.startswith(b"\x89PNG\r\n\x1a\n"):
-                raise ValueError("Invalid screenshot")
-            action = agent(png, steps)
-            if action is None:
-                return {"steps": steps, "status": "agent_stopped", "uploaded": False}
-            if not isinstance(action, dict):
-                raise ValueError("Agent action must be an object or None")
-            observation = bridge.step(action)
-            steps += 1
-            if observation.get("type") != "observation" or observation.get("step") != steps:
-                raise RuntimeError("Game bridge returned an error or out-of-order frame")
-        return {"steps": steps, "status": "step_limit", "uploaded": False}
+    if record_dir is not None:
+        record_dir = Path(record_dir)
+        if not callable(getattr(agent, "set_recording_offset", None)) or not hasattr(getattr(agent, "stats", None), "events"):
+            raise ValueError("recording requires an agent that accepts recording timestamps and exposes events")
+    book = getattr(agent, "playbook", None)
+    if record_dir is not None and book is not None and book.path is not None:
+        record_root = record_dir.resolve()
+        book_path = book.path.resolve()
+        if book_path == record_root or record_root in book_path.parents:
+            raise ValueError("playbook must be outside the recording directory")
+    processed = False
+    try:
+        with BrowserBridge(game_dir, rights_acknowledged=rights_acknowledged, entry=entry,
+                           record_dir=record_dir) as bridge:
+            observation = bridge.receive()
+            steps = 0
+            status = "step_limit"
+            last_timestamp = -1.0
+            while steps < max_steps:
+                if observation.get("type") != "observation" or observation.get("step") != steps:
+                    raise RuntimeError("Game bridge returned an error or out-of-order frame")
+                png = base64.b64decode(observation["screenshot_png_base64"], validate=True)
+                if not png.startswith(b"\x89PNG\r\n\x1a\n"):
+                    raise ValueError("Invalid screenshot")
+                if record_dir is not None:
+                    ms = observation.get("recording_capture_ms")
+                    if (isinstance(ms, bool) or not isinstance(ms, (int, float))
+                            or not math.isfinite(ms) or not last_timestamp <= ms <= 3600000):
+                        raise RuntimeError("Bridge did not supply a valid recording timestamp")
+                    last_timestamp = ms
+                    agent.set_recording_offset(ms / 1000.0)
+                processed = True
+                action = agent(png, steps)
+                if action is None:
+                    status = "agent_stopped"
+                    break
+                if not isinstance(action, dict):
+                    raise ValueError("Agent action must be an object or None")
+                observation = bridge.step(action)
+                steps += 1
+                if observation.get("type") != "observation" or observation.get("step") != steps:
+                    raise RuntimeError("Game bridge returned an error or out-of-order frame")
+            result = {"steps": steps, "status": status, "uploaded": False}
+            if record_dir is not None:
+                video = bridge.finish_recording()
+                result.update({"video": str(video), "events": list(agent.stats.events),
+                               "timing": "approximate browser clock relative to page creation; not video PTS"})
+                report = record_dir / "events.json"
+                with report.open("x", encoding="utf-8") as output:
+                    json.dump(result, output, ensure_ascii=False, indent=2)
+                result["report"] = str(report)
+            return result
+    finally:
+        if book is not None and processed:
+            book.save()

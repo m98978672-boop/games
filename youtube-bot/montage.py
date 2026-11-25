@@ -344,8 +344,11 @@ def probe_duration(path: Path) -> float:
     binary = ffmpeg_binary()
     if binary is None:
         raise MontageError("ffmpeg is not installed")
-    result = subprocess.run([binary, "-hide_banner", "-i", str(path)],
-                            capture_output=True, text=True, timeout=120)
+    try:
+        result = subprocess.run([binary, "-hide_banner", "-i", str(path)],
+                                capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise MontageError(f"ffmpeg could not inspect the recording: {exc}") from exc
     text = result.stderr or ""
     match = re.search(r"Duration:\s*(\d+):(\d{2}):(\d{2}\.\d+)", text)
     if not match:
@@ -367,8 +370,13 @@ def render_montage(source: Path, plan: MontagePlan, destination: Path, *,
     source, destination = Path(source), Path(destination)
     if source.is_symlink() or not source.is_file():
         raise MontageError("source must be an existing regular file")
+    report_path = destination.with_suffix(".montage.json")
+    if report_path == destination:
+        raise MontageError("destination must differ from its report")
     if destination.exists() or destination.is_symlink():
         raise MontageError("destination already exists")
+    if report_path.exists() or report_path.is_symlink():
+        raise MontageError("montage report already exists")
     if not destination.parent.is_dir():
         raise MontageError("destination directory must exist")
     binary = ffmpeg_binary()
@@ -378,19 +386,33 @@ def render_montage(source: Path, plan: MontagePlan, destination: Path, *,
         raise MontageError("crf must be 0–40")
     if not plan.keeps:
         raise MontageError("the plan has no clips")
+    for index, keep in enumerate(plan.keeps):
+        if (not math.isfinite(keep.start) or not math.isfinite(keep.end)
+                or keep.start < 0 or keep.end > plan.duration or keep.end <= keep.start
+                or (index and keep.start < plan.keeps[index - 1].end)
+                or any(not keep.start <= event.seconds < keep.end for event in keep.events)):
+            raise MontageError("invalid clip bounds, order or events")
+
+    def encode(command):
+        try:
+            subprocess.run(command, check=True, timeout=3600, capture_output=True, text=True)
+        except subprocess.CalledProcessError as exc:
+            raise MontageError(f"ffmpeg failed: {(exc.stderr or str(exc))[-500:]}") from exc
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise MontageError(f"ffmpeg could not render: {exc}") from exc
 
     with tempfile.TemporaryDirectory(prefix=".montage-", dir=destination.parent) as temp:
         tmp = Path(temp)
         pieces = []
         for index, keep in enumerate(plan.keeps, 1):
             piece = tmp / f"clip-{index:02d}.mp4"
-            subprocess.run([
+            encode([
                 binary, "-nostdin", "-v", "error", "-n",
                 "-ss", f"{keep.start:.3f}", "-i", str(source), "-t", f"{keep.seconds:.3f}",
                 "-map", "0:v:0", "-map", "0:a?",
                 "-c:v", "libx264", "-preset", preset, "-crf", str(crf), "-pix_fmt", "yuv420p",
                 "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
-                str(piece)], check=True, timeout=3600)
+                str(piece)])
             actual = probe_duration(piece)
             if abs(actual - keep.seconds) > 0.5:
                 raise MontageError(f"clip {index} came out {actual:.2f}s instead of {keep.seconds:.2f}s")
@@ -400,26 +422,34 @@ def render_montage(source: Path, plan: MontagePlan, destination: Path, *,
         joined = tmp / "montage.mp4"
         # Re-encode on join: stream copying different cuts of the same source can
         # drift, and a drifting montage is a lie about timing.
-        subprocess.run([binary, "-nostdin", "-v", "error", "-n", "-f", "concat", "-safe", "0",
+        encode([binary, "-nostdin", "-v", "error", "-n", "-f", "concat", "-safe", "0",
                         "-i", str(listing), "-c:v", "libx264", "-preset", preset,
                         "-crf", str(crf), "-pix_fmt", "yuv420p", "-c:a", "aac",
-                        "-b:a", "128k", "-movflags", "+faststart", str(joined)],
-                       check=True, timeout=3600)
+                        "-b:a", "128k", "-movflags", "+faststart", str(joined)])
         actual = probe_duration(joined)
         expected = plan.kept_seconds
         if abs(actual - expected) > max(1.0, expected * 0.02):
             raise MontageError(f"montage is {actual:.2f}s but the plan promised {expected:.2f}s")
-        if destination.exists():
-            raise MontageError("destination appeared while rendering")
+        report = plan.summary()
+        report.update({"output": str(destination), "output_seconds": round(actual, 2),
+                       "crf": crf, "preset": preset, "report": str(report_path),
+                       "problems": check_montage(plan)})
+        staged_report = tmp / "report.json"
+        staged_report.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Linking within the same filesystem creates each final path only if it
+        # does not already exist; neither an old video nor an old report is replaced.
         import os
-        os.rename(joined, destination)
-
-    report = plan.summary()
-    report.update({"output": str(destination), "output_seconds": round(probe_duration(destination), 2),
-                   "crf": crf, "preset": preset})
-    report_path = destination.with_suffix(".montage.json")
-    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    report["report"] = str(report_path)
+        try:
+            os.link(staged_report, report_path)
+            try:
+                os.link(joined, destination)
+            except OSError:
+                # Roll back only the report we just created, if still unchanged.
+                if report_path.exists() and os.path.samestat(os.stat(staged_report), os.stat(report_path)):
+                    report_path.unlink()
+                raise
+        except OSError as exc:
+            raise MontageError(f"cannot create output and report: {exc}") from exc
     return report
 
 

@@ -128,7 +128,10 @@ async function main() {
       const screenshotStart = process.hrtime.bigint();
       // Do not fast-forward or cancel games' CSS animations during capture.
       const png = await page.screenshot({type:"png", timeout:10000});
-      const screenshot_ms = Number(process.hrtime.bigint() - screenshotStart) / 1e6;
+      const screenshotEnd = process.hrtime.bigint();
+      const screenshot_ms = Number(screenshotEnd - screenshotStart) / 1e6;
+      // Estimated screenshot midpoint relative to page creation, not video PTS.
+      const recording_capture_ms = recording ? Number((screenshotStart + (screenshotEnd - screenshotStart) / 2n - recordingOrigin) / 1000000n) : null;
       const frameTiming = await page.evaluate(() => {
         try {
           const x = window.__bridgeFrameTiming();
@@ -228,7 +231,7 @@ async function main() {
       }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
         browser_frame_timing:frameTiming, screenshot_ms:Math.round(screenshot_ms * 100) / 100,
-        ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
+        ...(recording ? {recording_elapsed_ms, recording_capture_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});

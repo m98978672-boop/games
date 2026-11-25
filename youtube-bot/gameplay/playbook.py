@@ -193,6 +193,8 @@ class Playbook:
             return
         if not isinstance(payload, dict) or payload.get("version") != 1:
             return
+        if payload.get("goal") != self.goal.as_dict():
+            raise PlaybookError("saved playbook goal does not match the selected goal")
         rows = payload.get("edges")
         if not isinstance(rows, list):
             return
@@ -221,8 +223,21 @@ class Playbook:
                        "goal": self.goal.as_dict(),
                        "edges": [{"screen": screen, "intent": intent, **edge.as_dict()}
                                  for (screen, intent), edge in sorted(self.edges.items())]}
+        import os
+        import tempfile
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=self.path.parent,
+                                             prefix=".playbook-", delete=False) as output:
+                temporary = Path(output.name)
+                json.dump(payload, output, ensure_ascii=False)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(temporary, self.path)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     # -- learning ------------------------------------------------------------
     def _edge(self, screen: str, intent: str) -> EdgeStats:
@@ -423,8 +438,8 @@ def naive_baseline(goal: Goal, screens: int = 40, steps: int = 200, seed: int = 
     hits = 0
     for step in range(steps):
         intent = intents[step % len(intents)]
+        hits += goal.reached(_goal_facts(kinds[state] == "goal"))
         state, state_kind = world[state][intent]
-        hits += goal.reached(_goal_facts(state_kind == "goal"))
     return {"steps": steps, "goal_hits": hits, "goal_rate": round(hits / steps, 3)}
 
 
