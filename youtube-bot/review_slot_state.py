@@ -9,6 +9,10 @@ from typing import Any, Iterable
 QUEUE_ROW_LIMIT = 100
 
 
+class QueueStateUnknown(RuntimeError):
+    """The private publisher queue cannot be trusted for planning."""
+
+
 class UncertainSlot(ValueError):
     """The slot has a reservation without a confirmed scheduled video."""
 

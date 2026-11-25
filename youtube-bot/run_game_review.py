@@ -20,6 +20,7 @@ from schedule_policy import (
     settle_slot_after_render,
 )
 from steam_catalog import download_screenshots, load_steam_games
+from review_slot_state import QueueStateUnknown, UncertainSlot
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data"))).resolve()
@@ -72,7 +73,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         jobs = read_queue()
         taken = booked_slots(jobs)
     except Exception as exc:  # noqa: BLE001 - never guess a free slot
-        raise RuntimeError(
+        raise QueueStateUnknown(
             f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
         ) from exc
     reserved = None
@@ -203,6 +204,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         run(args.output, video_format=args.format)
+    except (QueueStateUnknown, UncertainSlot) as exc:
+        print(f"Queue state uncertain; stop and check YouTube Studio: {exc}", file=sys.stderr)
+        raise SystemExit(75)
     except Exception as exc:
         print(f"Game-review cycle stopped safely: {exc}", file=sys.stderr)
         raise SystemExit(1)

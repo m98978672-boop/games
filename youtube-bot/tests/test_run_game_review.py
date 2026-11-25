@@ -30,6 +30,21 @@ class RunReviewTests(unittest.TestCase):
                 run_game_review.run(Path(temp) / 'review.mp4')
             load.assert_not_called()
 
+    def test_cli_uses_distinct_exit_code_when_queue_cannot_be_verified(self):
+        import os
+        import subprocess
+        env = os.environ.copy()
+        env.pop('ACTIONS_ID_TOKEN_REQUEST_URL', None)
+        env.pop('ACTIONS_ID_TOKEN_REQUEST_TOKEN', None)
+        env.pop('MANUAL_PUBLISH_AT', None)
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / 'episode.mp4'
+            process = subprocess.run([sys.executable, str(Path(run_game_review.__file__)), str(output)],
+                                     env=env, capture_output=True, text=True, timeout=15)
+            self.assertEqual(process.returncode, 75, process.stderr)
+            self.assertIn('Queue state uncertain', process.stderr)
+            self.assertFalse(output.exists())
+
     def test_unresolved_manual_and_automatic_slot_stop_before_source_collection(self):
         chosen = datetime(2026, 11, 26, 5, tzinfo=timezone.utc)
         for manual in (True, False):

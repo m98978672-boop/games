@@ -48,6 +48,16 @@ class ReviewBatchTests(unittest.TestCase):
                 run_queue(['a', 'b'], 'short', Path(tmp))
             self.assertEqual(run.call_count, 2)
 
+    def test_uncertain_queue_stops_entire_batch_without_retry_or_upload(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, \
+             patch('review_batch.manual_publish_time'), patch('review_batch.time.sleep') as sleep:
+            run.return_value.returncode = 75
+            with self.assertRaisesRegex(RuntimeError, 'queue state is uncertain'):
+                run_queue(['a', 'b'], 'short', Path(tmp))
+            self.assertEqual(run.call_count, 1)
+            self.assertIn('run_game_review.py', run.call_args.args[0][1])
+            sleep.assert_not_called()
+
     def test_generation_failure_skips_that_item_and_keeps_the_next(self):
         # A single bad Steam/Qwen draw used to kill the whole scheduled run.
         with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, \

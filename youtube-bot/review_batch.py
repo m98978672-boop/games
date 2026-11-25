@@ -104,6 +104,8 @@ def run_queue(times: list[str], video_format: str, output_dir: Path) -> tuple[in
             result = subprocess.run([sys.executable, "youtube-bot/run_game_review.py", str(output), "--format", video_format], env=env)
             if result.returncode == 0:
                 break
+            if result.returncode == 75:
+                raise RuntimeError('Publication queue state is uncertain; stop the batch and check YouTube Studio before retrying.')
             if attempt == 0:
                 print("::warning::Review generation failed; retrying once before any upload.", flush=True)
                 time.sleep(20)
