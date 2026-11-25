@@ -179,5 +179,7 @@ jobs:
             .conclusion == "success" and .path == ".github/workflows/adventure-experiment.yml"
             and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null
           gh run download "$CAPTURE_RUN" --name "adventure-private-$CAPTURE_RUN" --dir "$RUNNER_TEMP/adventure-publish"
+      - name: Install media verifier
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Publish through the existing authorized uploader
         run: python youtube-bot/publish_adventure_draft.py "$RUNNER_TEMP/adventure-publish" "$CAPTURE_RUN" "$PUBLISH_AT"

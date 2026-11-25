@@ -6,39 +6,66 @@ import tempfile
 import wave
 from pathlib import Path
 
+from gameplay_voiceover import probe_capture
+
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
+PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
+MIN_EDITED_GAMEPLAY_SECONDS = 600
 ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHREE': 'третий'}
 
 
 def plan(trace):
     duration = float(trace['duration_seconds'])
-    lines = [(0.0, 'Я ищу потерянный артефакт.')]
+    puzzle = trace.get('game') == '16 Puzzle'
+    events = trace['model_actions'] if puzzle else trace['actions']
+    lines = [(0.0, 'Собираю пятнашки по порядку.' if puzzle else 'Я ищу потерянный артефакт.')]
     cuts = []
     prior = 0.0
-    for event in trace['actions']:
+    previous_source = None
+    for event in events:
         stamp_ms = event.get('recording_elapsed_ms')
         stamp = min(duration, max(prior, (stamp_ms or 0) / 1000))
-        if event['screen_unchanged']:
+        stalled = not event['move_verified'] if puzzle else event['screen_unchanged']
+        if stalled:
             if stamp - prior > 6:
                 cuts.append((prior + 3, stamp - 1))
-        note = 'Экран не менялся. Пробую иначе.' if event.get('analyzing_stall') else ''
-        action = ORDINAL[event['choice']]
-        lines.append((prior, f'{note} Выбираю {action} вариант.'.strip()))
+        if puzzle:
+            source = event['action_source']
+            tile = event['tile']
+            if type(tile) is not int or not 1 <= tile <= 15:
+                raise ValueError('Invalid puzzle tile in trace')
+            note = ''
+            if source == 'planner' and previous_source != source:
+                note = 'Подключаю поиск маршрута. '
+            elif stalled:
+                note = 'Ход не сработал. '
+            lines.append((prior, f'{note}Плитка {tile}.'))
+            previous_source = source
+        else:
+            note = 'Экран не менялся. Пробую иначе.' if event.get('analyzing_stall') else ''
+            lines.append((prior, f'{note} Выбираю {ORDINAL[event["choice"]]} вариант.'.strip()))
         prior = stamp
-    won = trace['outcome'] == 'game_reported_victory'
-    lines.append((prior, 'Артефакт найден.' if won else 'Финиш не подтверждён. Это первая часть.'))
+    won = trace['outcome'] == ('game_reported_win' if puzzle else 'game_reported_victory')
+    ending = 'Головоломка решена.' if puzzle else 'Артефакт найден.'
+    lines.append((prior, ending if won else 'Финиш не подтверждён. Это первая часть.'))
     return duration, lines, cuts, won
 
 
 def build(folder):
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
+    raw = folder / 'recording.webm'
+    trace['duration_seconds'] = probe_capture(raw)
     duration, lines, cuts, won = plan(trace)
     base = 'zuza-pilot' if won else 'zuza-part-01'
+    puzzle = trace.get('game') == '16 Puzzle'
+    url = PUZZLE_URL if puzzle else GAME_URL
+    title = 'Пятнашки' if puzzle else 'The Lost Artifact'
+    source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
     (folder / 'description.txt').write_text(
-        f'{GAME_URL}\n\nThe Lost Artifact — пробная запись игры Qwen. '
-        'Русский закадровый комментарий собран по журналу действий, а не выдаётся за мысли или чувства модели.\n'
+        f'{url}\n\n{title} — пробная запись игры Qwen. '
+        'Русский закадровый комментарий собран по журналу действий.\n'
         + ('Игра подтвердила победу.' if won else 'Часть 1: победа не подтверждена; продолжение пока не записано.')
-        + '\nИсходник игры: https://github.com/ritaban06/mini-js-games-hub\n', encoding='utf-8')
+        + f'\nИсходник игры: {source}\n', encoding='utf-8')
     with tempfile.TemporaryDirectory() as temp:
         wavs = []
         cursor = 0.0
@@ -56,17 +83,21 @@ def build(folder):
         discard = '+'.join(f'between(t,{start:.3f},{end:.3f})' for start, end in cuts)
         select = f"select='not({discard})',setpts=N/(25*TB)," if cuts else ''
         # A closing hold, if needed, is for narration only; the raw footage is untouched.
-        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={max(0, cursor-video_seconds):.3f}[v]']
+        closing_hold = max(0, cursor - video_seconds)
+        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}[v]']
         filters += [f'[{i+1}:a]adelay={ms}:all=1[a{i}]' for i, (_, ms) in enumerate(wavs)]
         filters += [''.join(f'[a{i}]' for i in range(len(wavs))) + f'amix=inputs={len(wavs)}:normalize=0,apad[a]']
-        cmd = ['ffmpeg', '-nostdin', '-v', 'error', '-y', '-i', str(folder / 'recording.webm')]
+        cmd = ['ffmpeg', '-nostdin', '-v', 'error', '-y', '-i', str(raw)]
         for wav, _ in wavs:
             cmd += ['-i', str(wav)]
         subprocess.run(cmd + ['-filter_complex', ';'.join(filters), '-map', '[v]', '-map', '[a]',
                        '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac',
                        '-shortest', '-movflags', '+faststart', str(folder / f'{base}.mp4')], check=True, timeout=300)
+    edited = probe_capture(folder / f'{base}.mp4')
+    gameplay = min(video_seconds, max(0.0, edited - closing_hold))
     (folder / 'pilot.json').write_text(json.dumps({'draft': f'{base}.mp4', 'needs_continuation': not won,
-        'cuts_seconds': cuts, 'commentary': [text for _, text in lines], 'published': False}, ensure_ascii=False, indent=2), encoding='utf-8')
+        'cuts_seconds': cuts, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
+        'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay >= MIN_EDITED_GAMEPLAY_SECONDS, 'commentary': [text for _, text in lines], 'published': False}, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
 if __name__ == '__main__':

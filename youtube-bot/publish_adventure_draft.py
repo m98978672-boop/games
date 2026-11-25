@@ -5,7 +5,9 @@ import sys
 import uuid
 from pathlib import Path
 
-from adventure_draft import GAME_URL
+from adventure_draft import GAME_URL, MIN_EDITED_GAMEPLAY_SECONDS
+from gameplay_voiceover import probe_capture
+import math
 from publish_to_supabase import publish
 from schedule_policy import manual_publish_time
 
@@ -22,6 +24,11 @@ def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool
     video = folder / 'zuza-pilot.mp4'
     if not video.is_file() or video.is_symlink():
         raise ValueError('Missing regular pilot video.')
+    gameplay = draft.get('edited_gameplay_seconds')
+    if (type(gameplay) not in (float, int) or not math.isfinite(gameplay)
+            or gameplay < MIN_EDITED_GAMEPLAY_SECONDS
+            or probe_capture(video) < MIN_EDITED_GAMEPLAY_SECONDS):
+        raise ValueError('Upload blocked: at least 10 minutes of edited gameplay are required; closing holds do not count.')
     scheduled = manual_publish_time(publish_at).isoformat().replace('+00:00', 'Z')
     result = folder / 'publish.result.json'
     result.write_text(json.dumps({'metadata': {

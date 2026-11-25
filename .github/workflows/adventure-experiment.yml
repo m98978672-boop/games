@@ -8,13 +8,14 @@ permissions:
   contents: read
 jobs:
   adventure:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
-      FINITE_GAME_SECONDS: ${{ github.event_name == 'push' && '600' || '1800' }}
+      FINITE_GAME_SECONDS: "1800"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -56,9 +57,6 @@ jobs:
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/adventure.log"; fi
           exit "$result"
-      - name: Make one narrated draft for Zuza
-        if: github.event_name == 'push'
-        run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-recording"
       - name: Save private recording and observed trace
         if: always()
         uses: actions/upload-artifact@v4
@@ -68,14 +66,13 @@ jobs:
           if-no-files-found: error
           retention-days: 3
   finite-puzzle:
-    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 65
     env:
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
-      FINITE_GAME_SECONDS: ${{ github.event_name == 'push' && '600' || '1800' }}
+      FINITE_GAME_SECONDS: "1800"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -85,7 +82,7 @@ jobs:
           python-version: '3.11'
       - name: Install video verifier and local model
         run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
           pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
       - name: Verify bounded progress feedback
         run: python -m unittest discover -s youtube-bot/tests -p 'test_puzzle*.py'
@@ -117,7 +114,11 @@ jobs:
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/puzzle.log"; fi
           exit "$result"
+      - name: Build narrated puzzle draft and measure edited gameplay
+        if: github.event_name == 'push'
+        run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/puzzle-recording"
       - name: Save private recording and observed trace
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: puzzle-private-${{ github.run_id }}
