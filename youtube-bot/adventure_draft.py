@@ -8,6 +8,7 @@ import wave
 from pathlib import Path
 
 from gameplay_voiceover import probe_capture
+from viewport_translation import cues as translation_cues, filters as translation_filters
 from adventure_personality import SHORT_SECONDS, short_comment
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
@@ -38,7 +39,12 @@ def plan(trace):
             previous = min(duration, max(previous, (event.get('recording_elapsed_ms') or 0) / 1000))
         won = trace.get('game_reported_victory') is True
         lines.append((previous, 'Игра подтвердила прохождение.' if won else 'До финала в этой попытке не дошёл.'))
-        return duration, lines, [], won
+        spoken = set()
+        for stamp, _, _, message in translation_cues(trace):
+            if message not in spoken and (not won or message != 'Игра пройдена!'):
+                lines.append((stamp, message))
+                spoken.add(message)
+        return duration, sorted(lines, key=lambda line: line[0]), [], won
     puzzle = trace.get('game') == '16 Puzzle'
     events = trace['model_actions'] if puzzle else trace['actions']
     lines = [(0.0, 'Собираю пятнашки по порядку.' if puzzle else 'Я ищу потерянный артефакт.')]
@@ -134,7 +140,9 @@ def build(folder):
         if short and max(video_seconds, cursor) > SHORT_SECONDS:
             raise ValueError('Edited Short and narration exceed 180 seconds; no export generated')
         portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
-        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{portrait}[v]']
+        translated = translation_filters(trace, temp) if viewport else ''
+        panel = ',' + translated if translated else ''
+        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{portrait}[v]']
         # The clips never overlap. Assemble one PCM track to avoid opening
         # hundreds of FFmpeg inputs for a multi-board campaign.
         narration = Path(temp) / 'narration.wav'

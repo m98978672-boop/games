@@ -22,6 +22,7 @@ def record(folder):
     events = []
     with BrowserBridge(GAME, rights_acknowledged=True, record_dir=folder, bootstrap='viewport') as bridge:
         obs = bridge.receive(timeout=120)
+        initial_hud = obs.get('viewport_hud')
         start = time.monotonic()
         size = [800, 600]
         try:
@@ -45,13 +46,13 @@ def record(folder):
                             break
                 if obs.get('type') != 'observation':
                     raise RuntimeError('Invalid browser response')
-                events.append(dict(choice=choice, recording_elapsed_ms=obs.get('recording_elapsed_ms'), viewport=size))
+                events.append(dict(choice=choice, recording_elapsed_ms=obs.get('recording_elapsed_ms'), viewport=size, hud=obs.get('viewport_hud')))
                 print(json.dumps(events[-1]), flush=True)
                 if obs.get('viewport_finished'):
                     break
         finally:
             video = bridge.finish_recording()
-            report = dict(game='Viewport Voyager', short=True, duration_seconds=probe_capture(video), actions=events,
+            report = dict(game='Viewport Voyager', short=True, initial_hud=initial_hud, duration_seconds=probe_capture(video), actions=events,
                           game_reported_victory=obs.get('viewport_finished') is True, published=False)
             (folder / 'trace.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
             print('::notice title=Viewport recording::' + json.dumps({k: v for k, v in report.items() if k != 'actions'}))

@@ -137,7 +137,15 @@ async function main() {
     }
     await page.mouse.move(mouseX, mouseY);
     const observe = async step => {
-      const viewportFinished = ALLOW_VIEWPORT_RESIZE && await page.locator("#game-message").textContent({timeout:1000}).then(text => text.startsWith("Game Complete!"));
+      const viewportHud = ALLOW_VIEWPORT_RESIZE ? await page.evaluate(() => {
+        const panel = document.getElementById("ui-overlay");
+        if (!panel) return null;
+        const {x, y, width, height} = panel.getBoundingClientRect();
+        const message = (document.getElementById("game-message")?.textContent || "").slice(0, 240);
+        const level = document.getElementById("level-status")?.textContent;
+        return {message, rect:[x,y,width,height], viewport:[innerWidth,innerHeight],
+          level: level === "Current Level: 1" ? 1 : level === "Current Level: 2" ? 2 : null};
+      }) : null;
       const screenshotStart = process.hrtime.bigint();
       // Do not fast-forward or cancel games' CSS animations during capture.
       const png = await page.screenshot({type:"png", timeout:10000});
@@ -243,7 +251,7 @@ async function main() {
       }) : null;
       emit({type:"observation", step, width:800, height:600, screenshot_png_base64:png.toString("base64"),
         browser_frame_timing:frameTiming, screenshot_ms:Math.round(screenshot_ms * 100) / 100,
-        ...(ALLOW_VIEWPORT_RESIZE ? {viewport_finished:viewportFinished} : {}), ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
+        ...(ALLOW_VIEWPORT_RESIZE ? {viewport_hud:viewportHud, viewport_finished:viewportHud?.message === "Game Complete! You are a master Viewport Voyager!"} : {}), ...(recording ? {recording_elapsed_ms} : {}), ...(TELEMETRY === "puzzle" ? {puzzle_telemetry:puzzle} : {}), ...(TELEMETRY === "adventure" ? {adventure_telemetry:adventure} : {}), ...(TELEMETRY === "2048" ? {game_telemetry:telemetry} : {}), ...(TELEMETRY === "voxel" ? {voxel_telemetry:voxel, voxel_orientation:orientation, voxel_target:voxelTarget, voxel_performance:voxelPerformance} : {})});
     };
     await observe(0);
     const lines = readline.createInterface({input:process.stdin, crlfDelay:Infinity});
