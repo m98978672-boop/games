@@ -69,6 +69,15 @@ figs = ''.join(
                    ('05-story-16.png', 'Дом: «You are well rested» — можно идти искать'),
                    ('07-story-32.png', 'Город: школа, магазин, больница, парк')))
 
+endings = story.get('endings') or []
+endings_html = ''.join(
+    '<div class="end"><b>заход %s</b> · %s<br><span class="lead">%s</span></div>' % (
+        e.get('run', '?'),
+        ' → '.join(str(x) for x in (e.get('route') or []) if x) if isinstance(e.get('route'), list)
+        else (e.get('route') or '—'),
+        (e.get('text') or '').replace('<', '&lt;'))
+    for e in endings)
+
 runs = story.get('runs') or []
 runs_html = ''.join(
     '<li>заход %s: <b>%s</b> выборов, новых мест %s</li>' % (r['run'], r['moves'], r['newPlaces'])
@@ -97,6 +106,7 @@ th{color:#9ecbff;position:sticky;top:0;background:#0d1117} .new{color:#3fb950} .
 <div><b>{{moves}}</b>выборов</div><div><b>{{nruns}}</b>захода</div><div><b>{{places}}</b>мест в карте</div>
 <div><b>{{links}}</b>переходов</div><div><b>{{finds}}</b>находок</div>
 </div>
+<h2>Найденные финалы ({{nend}})</h2>{{endings}}
 <h2>Заходы</h2><ul>{{runs}}</ul>
 <h2>Что было на экране</h2>
 <div class="grid">{{figs}}</div>
@@ -115,7 +125,8 @@ values = {
     'links': m.get('links', 0), 'finds': len(m.get('finds') or []), 'runs': runs_html,
     'figs': figs, 'tried': m.get('tried', 0), 'tired': m.get('tired', 0),
     'energetic': m.get('energetic', 0), 'finds_list': ', '.join(m.get('finds') or []) or '—',
-    'rows': rows, 'milestones': milestones,
+    'rows': rows, 'milestones': milestones, 'endings': endings_html or '<p class="lead">финалов не было</p>',
+    'nend': len(endings),
 }
 
 for k, v in values.items():

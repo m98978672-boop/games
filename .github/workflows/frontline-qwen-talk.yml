@@ -59,7 +59,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/kvenya-venv
-          key: kvenya-venv-${{ runner.os }}-py311-torch280-v1
+          # v2: в окружении появился pypdf для чтения её собственного PDF.
+          key: kvenya-venv-${{ runner.os }}-py311-torch280-v2
       - name: Install CPU inference dependencies (only on cold cache)
         run: |
           VENV="$HOME/.cache/kvenya-venv"
@@ -78,7 +79,7 @@ jobs:
             rm -rf "$VENV"
             python -m venv "$VENV"
             "$VENV/bin/pip" install 'torch==2.8.0' --index-url https://download.pytorch.org/whl/cpu
-            "$VENV/bin/pip" install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0'
+            "$VENV/bin/pip" install 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0' 'safetensors==0.7.0' 'pypdf==6.4.0'
             python -V 2>&1 > "$VENV/kvenya-py.txt"
           fi
           echo "PY=$VENV/bin/python" >> "$GITHUB_ENV"
@@ -92,6 +93,16 @@ jobs:
             echo "ADAPTER=$RUNNER_TEMP/home-adapter/adapter" >> "$GITHUB_ENV"
           fi
           exit 0
+      # Загрузку адаптера не слышно в логе, если релиз не скачался, а
+      # отвечает база: тогда про факты из дома она «не помнит». Печатаем
+      # это громко и отдельной строкой, а не молча.
+      - name: Say out loud whether the home adapter is in place
+        run: |
+          if [ -n "${ADAPTER:-}" ] && [ -d "$ADAPTER" ]; then
+            echo "::notice::Квеня отвечает с домашним адаптером: $ADAPTER"
+          else
+            echo "::warning::Адаптер не скачался — отвечает базовая модель без её обучения"
+          fi
       - name: Kvenya answers
         run: |
           if [ -n "${ADAPTER:-}" ]; then

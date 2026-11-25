@@ -297,7 +297,9 @@ def render_frame(script: dict[str, Any], scene: dict[str, Any], scene_index: int
                 draw.text((60, caption_y), line, font=caption_font, fill="#37445a")
                 caption_y += 24
     out.parent.mkdir(parents=True, exist_ok=True)
-    image.resize((OUTPUT_WIDTH, OUTPUT_HEIGHT), Image.Resampling.LANCZOS).save(out, optimize=True)
+    # These PNGs are temporary FFmpeg inputs. PNG is lossless in either mode;
+    # skipping the extra optimization pass preserves pixels and reduces CPU time.
+    image.resize((OUTPUT_WIDTH, OUTPUT_HEIGHT), Image.Resampling.LANCZOS).save(out, optimize=False)
 
 
 def ffmpeg_executable() -> str:

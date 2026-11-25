@@ -40,6 +40,9 @@ jobs:
             youtube-bot/tests/test_publish_to_supabase.py \
             youtube-bot/tests/test_review_workflow_format.py \
             youtube-bot/tests/test_review_batch.py \
+            youtube-bot/tests/test_review_slot_state.py \
+            youtube-bot/tests/test_slot_reservation.py \
+            youtube-bot/tests/test_audit_review_schedule.py \
             youtube-bot/tests/test_speech_policy.py \
             youtube-bot/tests/test_autopilot.py \
             youtube-bot/tests/test_youtube_api.py \
@@ -63,7 +66,8 @@ jobs:
             youtube-bot/tests/test_gameplay_realtime.py \
             youtube-bot/tests/test_gameplay_world_model.py \
             youtube-bot/tests/test_stream_plan_director.py \
-            youtube-bot/tests/test_stream_run.py
+            youtube-bot/tests/test_stream_run.py \
+            qwen-home/tests/test_self_facts.py
           python youtube-bot/gameplay/benchmark_reflex.py --compare 40
           python -m unittest youtube-bot/gameplay/test_reflex_cli.py
           node supabase/functions/youtube-bot/tests/oidc-policy.test.mjs

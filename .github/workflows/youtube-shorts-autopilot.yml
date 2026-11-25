@@ -21,7 +21,7 @@ on:
         type: string
         required: false
       publish_at:
-        description: "Moscow time YYYY-MM-DD HH:MM; if rendering runs late, publish later once"
+        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 2 Shorts a day / 1 long a day)"
         type: string
         required: false
       made_for_kids:
@@ -45,6 +45,11 @@ on:
         type: string
         default: "1"
         required: true
+      check_topics_only:
+        description: "Read-only topic ledger check; never render or upload"
+        type: boolean
+        default: false
+        required: false
 
 permissions:
   contents: read
@@ -57,8 +62,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Reads one input to know which job name to keep, so a change to the
+  # reconciliation logic updates this job instead of silently never running.
+  reconcile-scheduled-slots:
+    if: github.event_name == 'schedule' && github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      REVIEW_SCHEDULE: ${{ github.event.schedule || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Check which planned slots still have no video
+        run: |
+          set -euo pipefail
+          # Read-only: lists planned slots, their state and the exact start
+          # command for every missing one. It never renders or uploads.
+          python youtube-bot/reconcile_schedule.py | tee "$RUNNER_TEMP/slots.md"
+          cat "$RUNNER_TEMP/slots.md" >> "$GITHUB_STEP_SUMMARY"
+
+  check-topic-history:
+    if: github.event_name == 'workflow_dispatch' && inputs.check_topics_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Verify the shared topic ledger without rendering or uploading
+        run: PYTHONPATH=youtube-bot python -c 'from publish_to_supabase import _supabase_post; r = _supabase_post("/autopilot/topic-history", {}); assert r.get("version") == 1 and isinstance(r.get("game_ids"), list); print("History available:", len(r["game_ids"]), "topics")'
+
   create-and-schedule:
-    if: ${{ !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview }}
+    if: ${{ !inputs.check_topics_only && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -70,6 +108,8 @@ jobs:
       MANUAL_VIDEO_FORMAT: ${{ inputs.video_format || '' }}
       REVIEW_BATCH_COUNT: ${{ inputs.batch_count || '1' }}
       DATA_DIR: youtube-bot/data
+      # Never render with an unavailable or incomplete shared topic ledger.
+      REQUIRE_SHARED_TOPIC_HISTORY: "true"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -80,8 +120,10 @@ jobs:
       - name: Select review format from trusted workflow event
         run: python youtube-bot/review_workflow_format.py
       - name: Validate queue and publication times before rendering
-        run: |
-          PYTHONPATH=youtube-bot python -c 'import os; from review_batch import plan; print(plan(int(os.environ["REVIEW_BATCH_COUNT"]), os.environ["VIDEO_FORMAT"], os.environ["MANUAL_PUBLISH_AT"]))'
+        # One readable ::error:: line instead of a raw traceback for a bad
+        # batch_count, format or time. Nothing is rendered or uploaded when
+        # this step fails; an empty publish_at is valid and picks slots.
+        run: python youtube-bot/review_batch.py --check
       - name: Require the explicit owner-approved audience value
         run: |
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
@@ -146,7 +188,14 @@ jobs:
             ${{ runner.temp }}/ru_RU-irina-medium.onnx
             ${{ runner.temp }}/ru_RU-irina-medium.onnx.json
           key: piper-ru-irina-medium-v1
+      - name: Check whether this scheduled slot already has a video
+        id: slot-state
+        # A scheduled run asks the private queue first: reading is cheap,
+        # rendering is not. A manual dispatch keeps its explicit plan and is
+        # never skipped. An unreadable queue stops the run (no blind duplicate).
+        run: python youtube-bot/review_batch.py --check-queue
       - name: Generate and schedule review queue sequentially
+        if: steps.slot-state.outputs.skip != 'true'
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
         run: python youtube-bot/review_batch.py
@@ -158,7 +207,7 @@ jobs:
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
 
   check-puzzle-episode:
-    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode && !inputs.adventure_preview
+    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode && !inputs.adventure_preview && !inputs.check_topics_only
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -196,7 +245,7 @@ jobs:
       puzzle_episode: true
 
   record-adventure-preview:
-    if: github.event_name == 'workflow_dispatch' && inputs.adventure_preview && !inputs.puzzle_episode && inputs.adventure_capture_run == ''
+    if: github.event_name == 'workflow_dispatch' && inputs.adventure_preview && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''
     permissions:
       contents: read
     uses: ./.github/workflows/adventure-experiment.yml
@@ -205,7 +254,7 @@ jobs:
 
   publish-adventure-pilot:
     needs: record-puzzle-episode
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.adventure_preview && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

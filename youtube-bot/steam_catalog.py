@@ -229,19 +229,16 @@ def load_steam_games(*, recent_game_ids: tuple[str, ...] | list[str] = (), limit
     if not listings:
         raise SteamSourceError("Steam returned no games in its public feature shelves.")
     recent = set(map(str, recent_game_ids))
-    fresh = [item for item in listings if str(item["id"]) not in recent] or listings
+    fresh = [item for item in listings if str(item["id"]) not in recent]
+    if not fresh:
+        raise SteamSourceError("All Steam candidates were already used; wait for a new game instead of repeating a topic.")
     seed = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
     start = int(hashlib.sha256(seed.encode()).hexdigest()[:8], 16) % len(fresh)
     ordered = fresh[start:] + fresh[:start]
-    # If fresh candidates are unavailable, try previously used games rather than
-    # discarding an otherwise valid Steam catalogue entirely.
-    ordered += [item for item in listings if str(item["id"]) in recent and item not in ordered]
     games: list[dict[str, Any]] = []
     errors: list[str] = []
     rejected = 0
     for listing in ordered:
-        if games and str(listing["id"]) in recent and listing not in fresh:
-            break
         try:
             game = _game_from_app(str(listing["id"]), listing)
         except SteamSourceError as exc:
