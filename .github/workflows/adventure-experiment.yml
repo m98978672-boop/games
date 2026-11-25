@@ -2,6 +2,9 @@ name: Private finite adventure experiment (no upload)
 on:
   workflow_call:
     inputs:
+      adventure_only:
+        type: boolean
+        default: false
       puzzle_episode:
         type: boolean
         default: false
@@ -61,6 +64,9 @@ jobs:
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/adventure.log"; fi
           exit "$result"
+      - name: Build narrated adventure draft and measure edited gameplay
+        if: inputs.adventure_only
+        run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-recording"
       - name: Save private recording and observed trace
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,6 +76,7 @@ jobs:
           if-no-files-found: error
           retention-days: 3
   finite-puzzle:
+    if: ${{ !inputs.adventure_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 95
     env:

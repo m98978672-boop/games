@@ -8,6 +8,10 @@ on:
     - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
+      adventure_preview:
+        description: "Record a finite story adventure instead of reviews (private draft)"
+        type: boolean
+        default: false
       puzzle_episode:
         description: "Record, edit and schedule a new independent Zuza puzzle episode"
         type: boolean
@@ -49,12 +53,12 @@ permissions:
 concurrency:
   # Separate lanes can run in parallel, but GitHub retains at most one pending
   # run per group. Submit one batch per lane and wait for it to finish.
-  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
+  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.adventure_preview && 'adventure-preview') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
   cancel-in-progress: false
 
 jobs:
   create-and-schedule:
-    if: ${{ !inputs.adventure_capture_run && !inputs.puzzle_episode }}
+    if: ${{ !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -154,7 +158,7 @@ jobs:
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
 
   check-puzzle-episode:
-    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode
+    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode && !inputs.adventure_preview
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -191,9 +195,17 @@ jobs:
     with:
       puzzle_episode: true
 
+  record-adventure-preview:
+    if: github.event_name == 'workflow_dispatch' && inputs.adventure_preview && !inputs.puzzle_episode && inputs.adventure_capture_run == ''
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      adventure_only: true
+
   publish-adventure-pilot:
     needs: record-puzzle-episode
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.adventure_preview && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
