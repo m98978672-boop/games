@@ -46,3 +46,19 @@ class GameTextTranslationTests(unittest.TestCase):
             lambda *a, **k: '{"ru":"Собери 2 ключа за 4 минуты."}'))
         self.assertEqual(russian_game_text('Collect 12 keys in 4 minutes.',
             lambda *a, **k: '{"ru":"Собери 12 ключей за 4 минуты."}'), 'Собери 12 ключей за 4 минуты.')
+
+    def test_adjacent_lines_inform_translation_and_numeric_error_retries(self):
+        calls = []
+
+        def generate(messages, **kwargs):
+            payload = json.loads(messages[1]['content'])
+            calls.append(payload)
+            if payload['source_text'] == 'The guard is injured.':
+                return '{"ru":"Страж ранен."}'
+            return '{"ru":"У него 3 ключа."}' if len(calls) == 2 else '{"ru":"У него 4 ключа."}'
+
+        result = russian_game_text('The guard is injured. He has 4 keys.', generate, context='Dungeon escape')
+        self.assertEqual(result, 'Страж ранен. У него 4 ключа.')
+        self.assertEqual(calls[1]['scene_context'], 'Dungeon escape')
+        self.assertEqual(calls[1]['previous_text'], 'The guard is injured.')
+        self.assertEqual(len(calls), 3)
