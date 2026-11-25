@@ -146,10 +146,8 @@ def build(folder):
         select = f"select='not({discard})',setpts=N/(25*TB)," if cuts else ''
         # A closing hold, if needed, is for narration only; the raw footage is untouched.
         closing_hold = max(0, cursor - video_seconds)
-        if trace.get('game') == 'Последний сигнал' and short and max(video_seconds, cursor) > SHORT_SECONDS:
-            short = False  # Keep gameplay intact and use the ordinary video format.
-        if short and max(video_seconds, cursor) > SHORT_SECONDS:
-            raise ValueError('Edited Short and narration exceed 180 seconds; no export generated')
+        # All gameplay drafts use the same cutoff, irrespective of the game.
+        short = max(video_seconds, cursor) <= SHORT_SECONDS
         portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
         translated = translation_filters(trace, temp) if viewport else ''
         panel = ',' + translated if translated else ''
@@ -183,7 +181,7 @@ def build(folder):
     if short and edited > SHORT_SECONDS:
         raise ValueError('Encoded Short exceeds the three-minute limit')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
-    report = {'short': short, 'video_format': 'short' if short else 'long', 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
+    report = {'short': short, 'video_format': 'short' if short else 'long', 'beta_episode': trace.get('short') is True and not puzzle and not viewport, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
         'cuts_seconds': cuts, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'boards_won': trace.get('boards_won'),

@@ -22,7 +22,7 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False):
     if lighthouse:
         completed = completed and isinstance(trace.get('actions'), list) and len(trace['actions']) == 12
     if (trace.get('game') != game or not completed
-            or trace.get('short') is not True or (not lighthouse and draft.get('short') is not True)
+            or trace.get('short') is not True
             or draft.get('needs_continuation') is not False or draft.get('draft') != 'zuza-adventure-short.mp4'):
         raise ValueError('Expected a completed adventure Short')
     video = folder / 'zuza-adventure-short.mp4'

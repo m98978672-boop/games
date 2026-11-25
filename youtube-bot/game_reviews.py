@@ -46,7 +46,7 @@ def parse_idea_score(raw):
 
 
 def score_label(raw):
-    return str(raw).replace('.', ',')
+    return f'{parse_idea_score(raw):.1f}'.replace('.', ',')
 
 
 def _russian_ratio(text: str) -> float:
