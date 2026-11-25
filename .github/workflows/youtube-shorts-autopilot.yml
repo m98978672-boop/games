@@ -354,15 +354,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || exit 1
+          [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || { echo "::error::A publication time and numeric capture run are required."; exit 1; }
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e '
             .conclusion == "success" and (.path == ".github/workflows/adventure-experiment.yml"
               or (.path == ".github/workflows/youtube-shorts-autopilot.yml" and .event == "workflow_dispatch"))
-            and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null
+            and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null || { echo "::error::Capture run is not a successful trusted source."; exit 1; }
           artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN/artifacts" | jq -er --arg id "$CAPTURE_RUN" '[.artifacts[] | select(.expired == false and (.name == ("puzzle-private-" + $id) or .name == ("adventure-private-" + $id))) | .name] | select(length == 1) | .[0]')"
           case "$artifact" in
             puzzle-*) [[ "$PUZZLE_RECORDING_RIGHTS_VERIFIED" == true ]] || exit 1 ;;
-            adventure-*) [[ "$ADVENTURE_RECORDING_RIGHTS_VERIFIED" == true ]] || exit 1 ;;
+            adventure-*)
+              # One reviewed artifact: the capture uses only the MIT-licensed local HTML/CSS/JS and synthetic narration.
+              if [[ "$CAPTURE_RUN" == 45699744277 ]]; then
+                gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15063091128" | jq -e '
+                  .name == "adventure-private-45699744277" and .expired == false
+                  and .digest == "sha256:d7ce3b3afd1660d41c69dedf4f4ae347b8717a01e794cfc0fdc709e35d676918"' >/dev/null
+                echo 'ADVENTURE_RECORDING_RIGHTS_VERIFIED=true' >> "$GITHUB_ENV"
+              else
+                [[ "$ADVENTURE_RECORDING_RIGHTS_VERIFIED" == true ]] || { echo "::error::Recording rights were not verified for this capture."; exit 1; }
+              fi ;;
           esac
           gh run download "$CAPTURE_RUN" --name "$artifact" --dir "$RUNNER_TEMP/adventure-publish"
       - name: Install media verifier
