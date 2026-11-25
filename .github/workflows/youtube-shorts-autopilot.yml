@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_at:
-        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 2 Shorts a day / 1 long a day)"
+        description: "Moscow time YYYY-MM-DD HH:MM; if rendering runs late, publish later once"
         type: string
         required: false
       made_for_kids:
@@ -28,47 +28,19 @@ on:
           - long
         default: short
         required: true
-      batch_count:
-        description: "Sequential queue size (1–5 Shorts or 1–2 long); blank publish_at picks a regular slot"
-        type: string
-        default: "1"
-        required: true
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  # Separate lanes can run in parallel, but GitHub retains at most one pending
-  # run per group. Submit one batch per lane and wait for it to finish.
-  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || inputs.video_format }}
+  group: youtube-shorts-autopilot
   cancel-in-progress: false
 
 jobs:
-  # Reads one input to know which job name to keep, so a change to the
-  # reconciliation logic updates this job instead of silently never running.
-  reconcile-scheduled-slots:
-    if: github.event_name == 'schedule' && github.repository == 'm98978672-boop/games'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      REVIEW_SCHEDULE: ${{ github.event.schedule || '' }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.11"
-      - name: Check which planned slots still have no video
-        run: |
-          set -euo pipefail
-          # Read-only: lists planned slots, their state and the exact start
-          # command for every missing one. It never renders or uploads.
-          python youtube-bot/reconcile_schedule.py | tee "$RUNNER_TEMP/slots.md"
-          cat "$RUNNER_TEMP/slots.md" >> "$GITHUB_STEP_SUMMARY"
-
   create-and-schedule:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 150
     env:
       # The channel owner explicitly classified the audience as not made for kids.
       # Manual dispatch exposes the same explicit choice; scheduled runs use it too.
@@ -76,7 +48,6 @@ jobs:
       MANUAL_PUBLISH_AT: ${{ inputs.publish_at || '' }}
       REVIEW_SCHEDULE: ${{ github.event.schedule || '' }}
       MANUAL_VIDEO_FORMAT: ${{ inputs.video_format || '' }}
-      REVIEW_BATCH_COUNT: ${{ inputs.batch_count || '1' }}
       DATA_DIR: youtube-bot/data
     steps:
       - uses: actions/checkout@v7
@@ -87,11 +58,9 @@ jobs:
           cache-dependency-path: youtube-bot/requirements-autopilot.txt
       - name: Select review format from trusted workflow event
         run: python youtube-bot/review_workflow_format.py
-      - name: Validate queue and publication times before rendering
-        # One readable ::error:: line instead of a raw traceback for a bad
-        # batch_count, format or time. Nothing is rendered or uploaded when
-        # this step fails; an empty publish_at is valid and picks slots.
-        run: python youtube-bot/review_batch.py --check
+      - name: Validate optional manual publication time
+        if: env.MANUAL_PUBLISH_AT != ''
+        run: python youtube-bot/schedule_policy.py --manual-publish-at "$MANUAL_PUBLISH_AT"
       - name: Require the explicit owner-approved audience value
         run: |
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
@@ -156,17 +125,25 @@ jobs:
             ${{ runner.temp }}/ru_RU-irina-medium.onnx
             ${{ runner.temp }}/ru_RU-irina-medium.onnx.json
           key: piper-ru-irina-medium-v1
-      - name: Check whether this scheduled slot already has a video
-        id: slot-state
-        # A scheduled run asks the private queue first: reading is cheap,
-        # rendering is not. A manual dispatch keeps its explicit plan and is
-        # never skipped. An unreadable queue stops the run (no blind duplicate).
-        run: python youtube-bot/review_batch.py --check-queue
-      - name: Generate and schedule review queue sequentially
-        if: steps.slot-state.outputs.skip != 'true'
+      - name: Generate a Steam-sourced Russian game review with local Qwen
         env:
           HF_HOME: ${{ runner.temp }}/huggingface
-        run: python youtube-bot/review_batch.py
+        run: |
+          # Retry rendering once only, before the upload step has started.
+          # Never rerun the publisher automatically: a video might already exist.
+          for attempt in 1 2; do
+            if python youtube-bot/run_game_review.py "$RUNNER_TEMP/games-review.mp4" --format "$VIDEO_FORMAT"; then
+              exit 0
+            fi
+            if [ "$attempt" = 1 ]; then
+              echo "::warning::Review rendering failed; retrying once before any upload."
+              sleep 20
+            fi
+          done
+          echo "::error::Review rendering failed twice; no upload was started."
+          exit 1
+      - name: Start resumable YouTube upload and schedule
+        run: python youtube-bot/publish_to_supabase.py "$RUNNER_TEMP/games-review.result.json"
       - name: Retain only non-sensitive model selection memory
         if: always() && hashFiles('youtube-bot/data/recent-games.json') != ''
         uses: actions/cache/save@v6

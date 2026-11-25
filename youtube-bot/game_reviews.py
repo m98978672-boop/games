@@ -20,16 +20,13 @@ SYSTEM_PROMPT = """Ты — редактор русскоязычного кан
 Выбери одну реальную игру из переданного списка Steam и ровно две особенности (только точные
 feature_id из внешних источников). Не выдумывай игровой процесс, отзывы, производительность,
 доступность, цены, платформы, сюжет или другие факты, которых нет в источниках. Оценка —
-субъективная оценка по опубликованным данным, а не результат личного прохождения. Перед выбором
-оценки сопоставь конкретные сильные стороны, возможные ограничения и полноту сведений. Используй
-весь диапазон целых чисел от 1 до 10, не выбирай одну и ту же оценку по шаблону. Не делай выводы
-о качестве игры, если источников недостаточно; не выдумывай отсутствующий личный опыт. Укажи
+субъективная оценка по опубликованным данным, а не результат личного прохождения. Укажи
 возможный минус только как гипотезу («может не подойти…») и привяжи к одному feature_id.
 Озвучиваемый текст напиши естественным русским языком кириллицей; английское название игры
 не вставляй в реплики, если можно произнести его русским описанием. Не заявляй, что ты лично
 играл. Пиши без оскорблений и кликбейта. Ссылки на источники добавит программа отдельно.
 Не выбирай игру из recent_game_ids, если есть другие варианты. Верни только JSON по схеме:
-{"schema_version":1,"game_id":"id из списка Steam","selected_feature_ids":["точные feature-id","точные feature-id"],"possible_minus":"короткая осторожная гипотеза до 100 символов","minus_feature_id":"точный feature-id","idea_score":"целое число от 1 до 10","hook":"короткий крючок до 100 символов"}
+{"schema_version":1,"game_id":"id из списка Steam","selected_feature_ids":["точные feature-id","точные feature-id"],"possible_minus":"короткая осторожная гипотеза до 100 символов","minus_feature_id":"точный feature-id","idea_score":7,"hook":"короткий крючок до 100 символов"}
 """
 
 
@@ -119,29 +116,13 @@ def build_review_messages(
     ]
 
 
-def spoken_feature(text: str) -> str:
-    """Remove machine-readable source labels from speech, not from evidence."""
-    text = re.sub(r'\s+', ' ', str(text)).strip()
-    replacements = (
-        (r'^Описание Steam:\s*', ''),
-        (r'^Жанры, указанные в Steam:\s*', 'Жанры игры: '),
-        (r'^Платформы из карточки Steam:\s*', 'Указанные платформы: '),
-        (r'^Отзывы Steam:\s*', 'Отзывы игроков в Стиме: '),
-        (r'^Дата релиза из Steam:\s*', 'Указанная дата выхода: '),
-        (r'^Разработчик в карточке Steam:\s*', 'Разработчик: '),
-    )
-    for pattern, replacement in replacements:
-        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    return text
-
-
 def review_opening(title: str) -> str:
     """A short host introduction; game name is a source-provided title, not a claim."""
     title = re.sub(r'\s+', ' ', str(title)).strip()
     if not title:
         raise ValueError('A game title is required for the introduction')
-    spoken_title = speech_excerpt(title, 45) if _russian_ratio(title) >= 0.5 else 'эту игру'
-    return f'Привет! Сегодня разбираем {spoken_title}: что это за игра и кому она может подойти.'
+    title = speech_excerpt(title, 45)
+    return f'Привет! Сегодня разбираем {title}: что это за игра и кому она может подойти.'
 
 
 def ensure_editorial_quality(scenes: list[dict[str, str]]) -> None:
@@ -214,7 +195,7 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     scenes = [
         {"speaker": "Games AI", "dialogue": review_opening(game['title']), "visual": f"Обзор: {game['title']}", "emotion": "happy", "label": "ПРИВЕТ!"},
         {"speaker": "Games AI", "dialogue": f"О чём игра? По описанию авторов: {speech_excerpt(description, 90)}", "visual": description, "emotion": "curious", "label": "О ЧЁМ ИГРА"},
-        {"speaker": "Games AI", "dialogue": f"Ещё одна деталь: {speech_excerpt(spoken_feature(pros[1]), 76)}", "visual": pros[1], "emotion": "happy", "label": "ОСОБЕННОСТИ"},
+        {"speaker": "Games AI", "dialogue": f"Ещё одна деталь: {speech_excerpt(pros[1], 76)}", "visual": pros[1], "emotion": "happy", "label": "ОСОБЕННОСТИ"},
         {"speaker": "Games AI", "dialogue": f"А что может не понравиться? {speech_excerpt(possible_minus, 76)}", "visual": f"Основание: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
         {"speaker": "Games AI", "dialogue": f"Итог: по описанию оценка идеи — {score} из 10. Я ещё не играла, поэтому оценка предварительная.", "visual": f"ИТОГ ПО ИСТОЧНИКАМ · {score}/10 · НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", "emotion": "calm", "label": "ИТОГ"},
     ]
@@ -357,26 +338,11 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
     # or fabricate a rating. The selection method is disclosed in the result.
     recovered_selection = False
     try:
-        draft = _extract_json(last_raw)
+        _extract_json(last_raw)
     except (TypeError, ValueError):
-        draft = None
-    if draft is None:
         chosen = next((g for g in game_list if str(g['id']) not in recent), game_list[0] if game_list else None)
         if chosen is None or len(chosen.get('features', [])) < 2:
             raise ValueError('No eligible game for score recovery')
-        gid = str(chosen['id'])
-        draft = {'schema_version': 1, 'game_id': gid,
-                 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'], 'minus_feature_id': f'{gid}-f1',
-                 'possible_minus': '', 'hook': 'Что интересного предлагает эта игра?'}
-        recovered_selection = True
-    else:
-        chosen = next((g for g in game_list if str(g['id']) == str(draft.get('game_id', ''))), None)
-        if chosen is not None and str(chosen['id']) in recent and any(str(g['id']) not in recent for g in game_list):
-            chosen = None
-    raw_score = draft.get('idea_score')
-    valid_score = ((type(raw_score) is int and 1 <= raw_score <= 10) or
-                   (isinstance(raw_score, str) and re.fullmatch(r'(?:10|[1-9])', raw_score.strip()) is not None))
-    if not valid_score and chosen is not None:
         score_messages = [
             {'role':'system','content':'Оцени идею игры исключительно по описанию, не утверждая, что играл. Ответь одним целым числом от 1 до 10 без пояснений и знаков.'},
             {'role':'user','content':json.dumps({'game':str(chosen.get('title','')), 'facts':chosen['features'][:6]},ensure_ascii=False)},
@@ -389,8 +355,11 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
                 break
         if score is None:
             raise ValueError('Model could not provide an unambiguous score; no upload')
-        draft['idea_score'] = score
-    last_raw = json.dumps(draft, ensure_ascii=False)
+        gid = str(chosen['id'])
+        last_raw = json.dumps({'schema_version':1,'game_id':gid,'idea_score':score,
+            'selected_feature_ids':[f'{gid}-f1',f'{gid}-f2'], 'minus_feature_id':f'{gid}-f1',
+            'possible_minus':'', 'hook':'Что интересного предлагает эта игра?'}, ensure_ascii=False)
+        recovered_selection = True
     try:
         result = _catalog_only_fallback(last_raw, game_list, recent)
         if recovered_selection: result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
@@ -431,30 +400,6 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
                 return result
             except (TypeError, ValueError) as repair_error:
                 print(f"Possible limitation repair rejected ({repair_error}); not publishing unsupported claims.", file=sys.stderr)
-        # A smaller, single-fact prompt avoids having the model invent feature
-        # identifiers. We bind the exact ID ourselves and still validate the
-        # hypothesis and all narration; provenance is not a proof of entailment.
-        for feature_id, fact in list(facts.items())[:3]:
-            one_fact_messages = [
-                {'role': 'system', 'content': (
-                    'На основе единственного факта предложи конкретную возможную причину, '
-                    'почему идея может не подойти определённому игроку. Не выдумывай свойства '
-                    'игры и не утверждай, что играл. Только одно короткое русское предложение '
-                    'от 10 до 100 символов со словом «возможно» или «может», без ссылок и кавычек.')},
-                {'role': 'user', 'content': json.dumps({'факт': fact}, ensure_ascii=False)},
-            ]
-            try:
-                hypothesis = generate_with_qwen(one_fact_messages, max_new_tokens=100).strip().strip('"«»')
-                if re.search(r'[{}<>`\n]', hypothesis):
-                    raise ValueError('Repair must be one plain-text sentence')
-                fixed = dict(draft, possible_minus=hypothesis, minus_feature_id=feature_id)
-                result = _catalog_only_fallback(json.dumps(fixed, ensure_ascii=False), game_list, recent)
-                result['limitation_generation'] = 'single_fact_model_repair'
-                if recovered_selection:
-                    result['selection_method'] = 'first_eligible_catalog_candidate_after_invalid_json'
-                return result
-            except (TypeError, ValueError) as repair_error:
-                print(f"Single-fact limitation repair rejected ({repair_error}); no unsupported fallback.", file=sys.stderr)
         # A deterministic fallback is allowed only for an explicit negative
         # platform flag from Steam, not absence of a field or inferred bugs.
         # The wording describes the store card and a relevant player preference.
@@ -608,11 +553,8 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
             }, ensure_ascii=False)},
         ]
         last_error: ValueError | None = None
-        for _ in range(4):
-            # A long completion often wanders into 800+ characters or runs out
-            # of punctuation. Leave enough room for Russian tokens, but avoid
-            # asking the small model to generate an entire essay for one chapter.
-            raw = generate_with_qwen(messages, max_new_tokens=400)
+        for _ in range(2):
+            raw = generate_with_qwen(messages, max_new_tokens=700)
             try:
                 if '{' in str(raw) or '}' in str(raw):
                     scene = _extract_json(raw)
@@ -638,12 +580,7 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
                 break
             except ValueError as exc:
                 last_error = exc
-                messages.append({"role": "user", "content": (
-                    f"Предыдущий ответ не подошёл: {exc}. Напиши новый абзац целиком. "
-                    "Используй 4 коротких законченных предложения с точками, каждое примерно "
-                    "по 55–70 символов. Только данный факт и осторожные выводы, без новых фактов. "
-                    "Всего 220–320 символов, только готовый текст без пояснений."
-                )})
+                messages.append({"role": "user", "content": f"Предыдущий ответ не подошёл: {exc}. Верни только один абзац из 220–320 символов."})
         else:
             print(f"Qwen could not produce chapter {index + 1}: {last_error}; using clearly labelled source-based template.", file=sys.stderr)
             return _source_template_long_narration(review, reason=f"chapter {index + 1}: {last_error}")
@@ -748,36 +685,19 @@ def youtube_description(review: Mapping[str, Any]) -> str:
     sources = review.get("sources") or []
     if not sources and review.get("public_url"):
         sources = [{"name": "Страница игры", "url": review["public_url"]}]
-    # Put the canonical Steam page first so it cannot be lost if the rest of
-    # YouTube's 5,000-character description budget must be truncated.
-    from urllib.parse import urlsplit
-    source_lines = []
-    game_id = str(review.get('game_id', ''))
-    if re.fullmatch(r'[0-9]{1,12}', game_id):
-        source_lines.append(f'- Страница игры в Steam: https://store.steampowered.com/app/{game_id}/')
-    for source in sources:
-        if not isinstance(source, Mapping):
-            continue
-        url = str(source.get('url', '')).strip()
-        try:
-            parsed = urlsplit(url)
-        except ValueError:
-            continue
-        if (len(url) > 300 or parsed.scheme != 'https' or not parsed.hostname
-                or parsed.username or parsed.password or any(c.isspace() for c in url)):
-            continue
-        line = f"- {str(source.get('name', 'Источник'))[:100]}: {url}"
-        if not any(url in existing for existing in source_lines):
-            source_lines.append(line)
-        if len(source_lines) >= 6:
-            break
+    source_lines = [
+        f"- {str(source.get('name', 'Источник'))}: {str(source.get('url', ''))}"
+        for source in sources
+        if isinstance(source, Mapping) and str(source.get("url", "")).startswith("https://")
+    ]
     provenance = "\n".join(source_lines) if source_lines else "Внешние ссылки на источники не получены."
     return (
-        f"Русскоязычный ИИ-разбор внешней игры {str(review['game_title'])[:100]} "
-        f"({str(review.get('game_version') or 'дата/версия не указана')[:80]}).\n\n"
-        f"Ссылки на игру и источники:\n{provenance}\n\n"
+        f"Русскоязычный ИИ-разбор внешней игры {review['game_title']} "
+        f"({review.get('game_version') or 'дата/версия не указана'}).\n"
         f"Сильные стороны, отмеченные по источникам: {review['pros'][0]}; {review['pros'][1]}.\n"
-        f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus'].rstrip('.!?')}.\n"
+        f"Возможный минус — гипотеза ИИ, не результат личного тестирования: {review['possible_minus']}.\n"
         f"{steam_release_note(review)}\n{steam_price_note(review)}\n\n"
-        "Это обзор по опубликованным материалам, а не личное прохождение или независимый тест."
+        "Это обзор по опубликованным материалам, а не личное прохождение или независимый тест. "
+        "Ссылки можно скопировать ниже:\n"
+        f"{provenance}"
     )[:5000]
