@@ -25,7 +25,8 @@ script = validate_review({
     'hook':'Коротко о том, как устроена эта игра.',
 }, [game])
 script['screenshot_paths'] = []
-assert script['scenes'][0]['dialogue'].startswith('Привет! Сегодня разбираем')
+assert script['scenes'][0]['dialogue'].startswith('Привет! Сегодня в обзоре')
+assert 'Проверочный проект' in script['scenes'][0]['dialogue']
 assert 'О чём игра?' in script['scenes'][1]['dialogue']
 assert 'Итог' in script['scenes'][-1]['dialogue']
 
