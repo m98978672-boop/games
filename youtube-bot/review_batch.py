@@ -12,6 +12,7 @@ Nothing is rendered or uploaded in that case.
 from __future__ import annotations
 
 import argparse
+from review_slot_state import OCCUPIED_SLOT_EXIT, OccupiedReviewSlot
 import json
 import os
 import subprocess
@@ -99,6 +100,8 @@ def _render(index: int, publish_at: str, video_format: str, output_dir: Path) ->
                                  "--format", video_format], env=env)
         if result.returncode == 0:
             return output
+        if result.returncode == OCCUPIED_SLOT_EXIT:
+            raise OccupiedReviewSlot(publish_at)
         if attempt == 0:
             print("::warning::Review generation failed; retrying once before any upload.", flush=True)
             time.sleep(20)
@@ -158,6 +161,10 @@ def run_queue(times: list[str], video_format: str, output_dir: Path) -> tuple[in
               f"requested MSK {publish_at or 'automatic'}", flush=True)
         try:
             output = _render(index, publish_at, video_format, output_dir)
+        except OccupiedReviewSlot:
+            skipped.append(f"{publish_at}: publication slot already occupied")
+            print(f"::warning::Slot {publish_at} is occupied; skipped without retry or upload.", flush=True)
+            continue
         except RuntimeError:
             skipped.append(f"{publish_at or 'automatic'}: review generation failed twice")
             print(f"::warning::Review generation failed twice for slot "
@@ -275,6 +282,11 @@ def main(argv: list[str] | None = None) -> int:
                     output.write(f"- skipped before upload: {item}\n")
         except OSError:
             pass
+    if not published and times and len(skipped) == len(times) and all(
+        item.endswith(": publication slot already occupied") for item in skipped
+    ):
+        print("All requested slots already have videos. Nothing new was uploaded; choose other times for new videos.", flush=True)
+        return 0
     if not published and times:
         print("::error::No review from this queue was uploaded; every item was skipped before upload.", flush=True)
         return 1

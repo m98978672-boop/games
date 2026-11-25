@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from review_slot_state import OCCUPIED_SLOT_EXIT, OccupiedReviewSlot
 import json
 import os
 import re
@@ -86,7 +87,7 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
             # failing now replaces a wasted render with an immediate, honest stop.
             missing, _ = assess([requested], jobs)
             if not missing:
-                raise RuntimeError(
+                raise OccupiedReviewSlot(
                     f"Requested publication slot {requested.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow "
                     "already has a video; no review was rendered or uploaded. Choose another time. "
                     "Nothing was uploaded, so YouTube Studio does not need checking."
@@ -213,6 +214,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         run(args.output, video_format=args.format, preview=args.preview)
+    except OccupiedReviewSlot as exc:
+        print(f"Game-review cycle stopped safely: {exc}", file=sys.stderr)
+        raise SystemExit(OCCUPIED_SLOT_EXIT) from None
     except Exception as exc:
         print(f"Game-review cycle stopped safely: {exc}", file=sys.stderr)
         raise SystemExit(1)

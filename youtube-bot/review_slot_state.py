@@ -88,3 +88,10 @@ def assess(slots: Iterable[Any], jobs: Iterable[dict[str, Any]], *,
         else:
             missing.append(slot)
     return missing, already
+
+
+OCCUPIED_SLOT_EXIT = 3
+
+
+class OccupiedReviewSlot(RuntimeError):
+    """An explicit publication time already has a video."""
