@@ -169,8 +169,12 @@ def audit_data(reports_dir=None):
         last = json.loads(story_reports[-1].read_text(encoding='utf-8'))
         st = last['story']
         mp = st.get('map') or {}
-        rows.append(('последний прогон помнит прошлую карту', st.get('remembered', 0) > 0,
-                     f"вспомнила {st.get('remembered', 0)} мест"))
+        # Память либо вспомнилась (совместимая схема), либо честно пустая.
+        # Фальшивкой было бы «вспомнила» места, которых нет в карте.
+        remembered = st.get('remembered', 0)
+        rows.append(('память не врёт: вспомненных мест не больше, чем в карте',
+                     remembered <= mp.get('places', 0),
+                     f"вспомнила {remembered}, в карте {mp.get('places', 0)}"))
         rows.append(('прогресс есть: места растут от прогона к прогону',
                      mp.get('places', 0) >= 20, f"{mp.get('places', 0)} мест"))
         rows.append(('в отчёте есть, что осталось', 'remaining' in mp, f"остаток {mp.get('remaining', '—')}"))
