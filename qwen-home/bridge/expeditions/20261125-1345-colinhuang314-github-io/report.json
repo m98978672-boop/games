@@ -1,177 +1,177 @@
 {
   "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
-  "startedAt": "2026-11-25 12:28 UTC",
+  "startedAt": "2026-11-25 13:38 UTC",
   "status": "played",
   "steps": [
     {
-      "t": 53.2,
+      "t": 60.4,
       "action": "вежливый гость: проверка robots.txt",
       "result": "robots.txt прочитан"
     },
     {
-      "t": 58.3,
+      "t": 66.0,
       "action": "открыла страницу",
       "result": "Lost Spot (Draft)"
     },
     {
-      "t": 58.5,
+      "t": 66.1,
       "action": "кнопка игры",
       "result": "не нашлась — пробую играть прямо на открытой странице"
     },
     {
-      "t": 62.5,
+      "t": 70.2,
       "action": "это сюжетная игра, а не полёт",
       "result": "история «Lost Spot (Draft)»: текст и варианты выбора, играю чтением, а не кадрами"
     },
     {
-      "t": 62.5,
+      "t": 70.2,
       "action": "читаю историю",
       "result": "сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки"
     },
     {
-      "t": 145.1,
+      "t": 152.9,
       "action": "финал",
-      "result": "заход 1: 57 выборов, новых мест 0 — ↶ Congratulations ! You finished the game! The End"
+      "result": "заход 1: 57 выборов, новых мест 2 — ↶ Congratulations ! You finished the game! The End"
     },
     {
-      "t": 145.1,
+      "t": 152.9,
       "action": "разбор захода",
-      "result": "заход 1: мест в карте 100, нажато вариантов 160; есть куда идти — начинаю заново"
+      "result": "заход 1: мест в карте 101, нажато вариантов 153; есть куда идти — начинаю заново"
     },
     {
-      "t": 145.1,
+      "t": 152.9,
       "action": "добор веток",
-      "result": "осталось мест с непройденными вариантами: 25 — иду заново"
+      "result": "осталось мест с непройденными вариантами: 29 — иду заново"
     },
     {
-      "t": 147.5,
+      "t": 155.3,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 147.5,
+      "t": 155.3,
       "action": "план захода",
-      "result": "осталось непройденных вариантов 6 в 100 местах — иду закрывать их"
+      "result": "осталось непройденных вариантов 12 в 101 местах — иду закрывать их"
     },
     {
-      "t": 200.5,
+      "t": 208.5,
       "action": "стоп-кран",
       "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
     },
     {
-      "t": 200.5,
+      "t": 208.5,
       "action": "разбор захода",
-      "result": "заход 2: мест в карте 100, нажато вариантов 160; есть куда идти — начинаю заново"
+      "result": "заход 2: мест в карте 101, нажато вариантов 153; есть куда идти — начинаю заново"
     },
     {
-      "t": 200.5,
+      "t": 208.5,
       "action": "добор веток",
-      "result": "осталось мест с непройденными вариантами: 25 — иду заново"
+      "result": "осталось мест с непройденными вариантами: 26 — иду заново"
     },
     {
-      "t": 202.8,
+      "t": 210.8,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 202.8,
+      "t": 210.8,
       "action": "план захода",
-      "result": "осталось непройденных вариантов 6 в 100 местах — иду закрывать их"
+      "result": "осталось непройденных вариантов 12 в 101 местах — иду закрывать их"
     },
     {
-      "t": 350.8,
+      "t": 359.0,
       "action": "финал",
-      "result": "заход 3: 104 выборов, новых мест 0 — ↶ Congratulations ! You finished the game! The End"
+      "result": "заход 3: 104 выборов, новых мест 3 — ↶ Congratulations ! You finished the game! The End"
     },
     {
-      "t": 350.8,
+      "t": 359.0,
       "action": "разбор захода",
-      "result": "заход 3: мест в карте 100, нажато вариантов 160; есть куда идти — начинаю заново"
+      "result": "заход 3: мест в карте 104, нажато вариантов 156; есть куда идти — начинаю заново"
     },
     {
-      "t": 350.8,
+      "t": 359.0,
       "action": "добор веток",
-      "result": "осталось мест с непройденными вариантами: 25 — иду заново"
+      "result": "осталось мест с непройденными вариантами: 26 — иду заново"
     },
     {
-      "t": 353.0,
+      "t": 361.3,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 353.0,
+      "t": 361.3,
       "action": "план захода",
-      "result": "осталось непройденных вариантов 6 в 100 местах — иду закрывать их"
+      "result": "осталось непройденных вариантов 11 в 104 местах — иду закрывать их"
     },
     {
-      "t": 395.0,
+      "t": 403.3,
       "action": "стоп-кран",
       "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
     },
     {
-      "t": 395.0,
+      "t": 403.3,
       "action": "разбор захода",
-      "result": "заход 4: мест в карте 100, нажато вариантов 160; есть куда идти — начинаю заново"
+      "result": "заход 4: мест в карте 104, нажато вариантов 156; есть куда идти — начинаю заново"
     },
     {
-      "t": 395.0,
+      "t": 403.3,
       "action": "добор веток",
-      "result": "осталось мест с непройденными вариантами: 25 — иду заново"
+      "result": "осталось мест с непройденными вариантами: 26 — иду заново"
     },
     {
-      "t": 397.2,
+      "t": 405.6,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 397.2,
+      "t": 405.6,
       "action": "план захода",
-      "result": "осталось непройденных вариантов 6 в 100 местах — иду закрывать их"
+      "result": "осталось непройденных вариантов 11 в 104 местах — иду закрывать их"
     },
     {
-      "t": 435.1,
+      "t": 443.6,
       "action": "стоп-кран",
       "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
     },
     {
-      "t": 435.1,
+      "t": 443.6,
       "action": "разбор захода",
-      "result": "заход 5: мест в карте 100, нажато вариантов 160; есть куда идти — начинаю заново"
+      "result": "заход 5: мест в карте 104, нажато вариантов 156; есть куда идти — начинаю заново"
     },
     {
-      "t": 435.1,
+      "t": 443.6,
       "action": "добор веток",
-      "result": "осталось мест с непройденными вариантами: 25 — иду заново"
+      "result": "осталось мест с непройденными вариантами: 26 — иду заново"
     },
     {
-      "t": 437.4,
+      "t": 445.8,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 437.4,
+      "t": 445.8,
       "action": "план захода",
-      "result": "осталось непройденных вариантов 6 в 100 местах — иду закрывать их"
+      "result": "осталось непройденных вариантов 11 в 104 местах — иду закрывать их"
     },
     {
-      "t": 468.1,
+      "t": 476.7,
       "action": "финал",
       "result": "заход 6: 20 выборов, новых мест 0 — ↶ Congratulations ! You finished the game! The End"
     },
     {
-      "t": 468.1,
+      "t": 476.7,
       "action": "разбор захода",
-      "result": "заход 6: мест в карте 100, нажато вариантов 160; заходов хватит"
+      "result": "заход 6: мест в карте 104, нажато вариантов 156; заходов хватит"
     },
     {
-      "t": 468.1,
+      "t": 476.7,
       "action": "карта сохранена",
-      "result": "100 мест для следующего прогона"
+      "result": "104 мест для следующего прогона"
     },
     {
-      "t": 468.1,
+      "t": 476.7,
       "action": "итог истории",
-      "result": "выборов 270 за 6 заход(ов); мест в карте 100, связей 185, нажато вариантов 160; концовок видела 3; находки: chips on the bottom, find your favorite, you found, you grab"
+      "result": "выборов 270 за 6 заход(ов); мест в карте 104, связей 284, нажато вариантов 156; концовок видела 3; находки: chips on the bottom, find your favorite, you found, you grab"
     }
   ],
   "screenshots": [
@@ -239,10 +239,10 @@
       {
         "run": 1,
         "moves": 57,
-        "fresh": 3,
-        "newPlaces": 0,
+        "fresh": 5,
+        "newPlaces": 2,
         "end": "↶ Congratulations ! You finished the game! The End",
-        "placesByNow": 100
+        "placesByNow": 101
       },
       {
         "run": 2,
@@ -250,15 +250,15 @@
         "fresh": 3,
         "newPlaces": 0,
         "end": "",
-        "placesByNow": 100
+        "placesByNow": 101
       },
       {
         "run": 3,
         "moves": 104,
-        "fresh": 3,
-        "newPlaces": 0,
+        "fresh": 6,
+        "newPlaces": 3,
         "end": "↶ Congratulations ! You finished the game! The End",
-        "placesByNow": 100
+        "placesByNow": 104
       },
       {
         "run": 4,
@@ -266,7 +266,7 @@
         "fresh": 3,
         "newPlaces": 0,
         "end": "",
-        "placesByNow": 100
+        "placesByNow": 104
       },
       {
         "run": 5,
@@ -274,7 +274,7 @@
         "fresh": 2,
         "newPlaces": 0,
         "end": "",
-        "placesByNow": 100
+        "placesByNow": 104
       },
       {
         "run": 6,
@@ -282,7 +282,7 @@
         "fresh": 3,
         "newPlaces": 0,
         "end": "↶ Congratulations ! You finished the game! The End",
-        "placesByNow": 100
+        "placesByNow": 104
       }
     ],
     "path": [
@@ -843,8 +843,8 @@
       {
         "run": 1,
         "n": 56,
-        "choice": "Say nothing and go to your room",
-        "fresh": false,
+        "choice": "\"But I was trying to find Spot!\"",
+        "fresh": true,
         "energy": 0,
         "finds": [],
         "clues": 1,
@@ -854,11 +854,11 @@
         "run": 1,
         "n": 57,
         "choice": "Game Over",
-        "fresh": false,
+        "fresh": true,
         "energy": 0,
         "finds": [],
-        "clues": 0,
-        "text": "↶ You walk to your room, defeated. Game Over"
+        "clues": 2,
+        "text": "↶ \"You lost spot?!\" Mom said furiously. \"You are super-grounded!\" Game Over"
       },
       {
         "run": 2,
@@ -2239,8 +2239,8 @@
       {
         "run": 3,
         "n": 102,
-        "choice": "\"for pets\" aisle",
-        "fresh": false,
+        "choice": "wine aisle",
+        "fresh": true,
         "energy": 0,
         "finds": [],
         "clues": 0,
@@ -2249,24 +2249,22 @@
       {
         "run": 3,
         "n": 103,
-        "choice": "home!",
-        "fresh": false,
+        "choice": "invisible barrier",
+        "fresh": true,
         "energy": 0,
         "finds": [],
-        "clues": 2,
-        "text": "↶ The pets aisle! Of course! And as you expected, you see Spot wagging his tail and playing with a buch of toys. \"There you are, Spot! You had me so worried. I got to get you home!\""
+        "clues": 1,
+        "text": "↶ Kids aren't allowed in the wine aisle, but you need to be sure Spot isn't here. You walk in and look at the shelves. As you take a closer look, you notice that all the glasses look 2-dimentional. You reach your hand ou"
       },
       {
         "run": 3,
         "n": 104,
-        "choice": "You found Spot!",
-        "fresh": false,
+        "choice": "You escaped the simulation",
+        "fresh": true,
         "energy": 0,
-        "finds": [
-          "you found"
-        ],
-        "clues": 1,
-        "text": "↶ You take Spot home and are greeted by an upset Mom. \"You are grounded! You know you are supposed to be doing homework at this time!\" You go to your room, relieved you found Spot. Although... something felt off about to"
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You awaken with a gasp. You hear a familiar voice. \"Dang it! I didn't think a kid would actually go in there!\" You suddenly remember everything that is going on. You were testing a simulation created by your friend, an"
       },
       {
         "run": 4,
@@ -3016,15 +3014,15 @@
         "run": 1,
         "n": 57,
         "text": "↶ Congratulations ! You finished the game! The End",
-        "route": "home → house → Say nothing and go to your room → Game Over",
-        "routeKey": "70729408f195"
+        "route": "home → house → \"But I was trying to find Spot!\" → Game Over",
+        "routeKey": "1035431bbec0"
       },
       {
         "run": 3,
         "n": 104,
         "text": "↶ Congratulations ! You finished the game! The End",
-        "route": "aisles → \"for pets\" aisle → home! → You found Spot!",
-        "routeKey": "a663cf90469a"
+        "route": "aisles → wine aisle → invisible barrier → You escaped the simulation",
+        "routeKey": "1321fc7455c2"
       },
       {
         "run": 6,
@@ -3046,10 +3044,10 @@
       "text": "↶ It's a police officer. \"You'll have to come with us,\" the officer said as they dragged you into the police car. You are taken into the police station for questioning. Your Mom arrives and is furious. \"You are so ground"
     },
     "map": {
-      "places": 100,
-      "links": 185,
-      "remaining": 6,
-      "tried": 160,
+      "places": 104,
+      "links": 284,
+      "remaining": 11,
+      "tried": 156,
       "energetic": 6,
       "tired": 5,
       "finds": [
@@ -3114,28 +3112,30 @@
         "text": "↶ There are all kinds of bread here, some that you've never heard of before. You don't see spot right away, but you are persistant and look behind the loaves. As your sift through the bread, deafening screeching noises c"
       },
       {
-        "run": 3,
-        "n": 104,
-        "choice": "You found Spot!",
+        "run": 5,
+        "n": 20,
+        "choice": "Go back",
         "fresh": false,
         "energy": 0,
         "finds": [
-          "you found"
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
         ],
         "clues": 1,
-        "text": "↶ You take Spot home and are greeted by an upset Mom. \"You are grounded! You know you are supposed to be doing homework at this time!\" You go to your room, relieved you found Spot. Although... something felt off about to"
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
       }
     ],
-    "freshPlaces": 0,
-    "remembered": 100
+    "freshPlaces": 5,
+    "remembered": 99
   },
   "endingsSeen": [
     {
-      "route": "home → house → Say nothing and go to your room → Game Over",
+      "route": "home → house → \"But I was trying to find Spot!\" → Game Over",
       "run": 1
     },
     {
-      "route": "aisles → \"for pets\" aisle → home! → You found Spot!",
+      "route": "aisles → wine aisle → invisible barrier → You escaped the simulation",
       "run": 3
     },
     {
@@ -3144,9 +3144,9 @@
     }
   ],
   "storyMap": {
-    "places": 100,
-    "links": 185,
-    "tried": 160,
+    "places": 104,
+    "links": 284,
+    "tried": 156,
     "finds": [
       "chips on the bottom",
       "find your favorite",
@@ -3157,5 +3157,5 @@
     "tired": 5,
     "energetic": 6
   },
-  "storyLine": "прошла историю: 270 выборов, 6 захода(ов), 100 мест в карте, путей к финалу 3, непройденных вариантов 6, нашла: chips on the bottom, find your favorite, you found · финал: ↶ Congratulations ! You finished the game! The End"
+  "storyLine": "прошла историю: 270 выборов, 6 захода(ов), 104 мест в карте, путей к финалу 3, непройденных вариантов 11, нашла: chips on the bottom, find your favorite, you found · финал: ↶ Congratulations ! You finished the game! The End"
 }
