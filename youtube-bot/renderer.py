@@ -79,9 +79,25 @@ def normalize_narration(source: Path, output: Path) -> None:
 
 
 
+# Speech-only aliases: do not transliterate unknown game titles or rewrite evidence.
+SPOKEN_ALIASES = {
+    'Steam Deck': 'Стим Дек', 'Steam': 'Стим', 'Early Access': 'ранний доступ',
+    'Xbox': 'Иксбокс', 'PlayStation': 'Плейстейшен', 'Windows': 'Виндоус',
+    'Linux': 'Линукс', 'Unreal Engine': 'Анрил Энджин', 'Unity': 'Юнити',
+    'DLC': 'ди эл си', 'RPG': 'эр пэ гэ', 'MMORPG': 'эм эм оу эр пи джи',
+    'PvP': 'пэ вэ пэ', 'PvE': 'пэ вэ е', 'FPS': 'эф пэ эс', 'ИИ': 'и и',
+}
+_SPOKEN_PATTERN = re.compile(
+    r'https?://[^\s]+|www\.[^\s]+|`[^`]+`|(?<![\w])(?:'
+    + '|'.join(re.escape(key) for key in sorted(SPOKEN_ALIASES, key=len, reverse=True))
+    + r')(?![\w])', re.IGNORECASE,
+)
+_SPOKEN_LOOKUP = {key.casefold(): value for key, value in SPOKEN_ALIASES.items()}
+
+
 def pronunciation_text(text: str) -> str:
     """Prepare conservative spoken forms; captions and source evidence stay unchanged."""
-    text = re.sub(r"(?<![A-Za-z0-9_])Steam(?![A-Za-z0-9_])", "Стим", text, flags=re.IGNORECASE)
+    text = _SPOKEN_PATTERN.sub(lambda match: _SPOKEN_LOOKUP.get(match[0].casefold(), match[0]), text)
     # Only the known score construction is expanded; arbitrary numbers, dates,
     # names and URLs must not be guessed or grammatically transformed.
     numerals = ('', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять', 'десять')
@@ -630,11 +646,10 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
     segments = workdir / "segments"
     for directory in (cards, audio_dir, segments):
         directory.mkdir(parents=True, exist_ok=True)
-    segment_paths: list[Path] = []
-    chapter_seconds: list[float] = []
-    total_seconds = 0.0
-    # Synthesize and validate the entire narration before encoding expensive video.
-    for scene_index, scene in enumerate(script["scenes"]):
+    scenes = script['scenes']
+
+    def prepare_chapter(scene_index: int) -> tuple[str, float]:
+        scene = scenes[scene_index]
         wav = audio_dir / f"chapter-{scene_index:02d}.wav"
         # Gentle chapter-level cadence variation, not a claim of human expression.
         style = ("bright", "neutral", "neutral", "reflective")[scene_index % 4]
@@ -642,7 +657,6 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
             str(scene["dialogue"]), lambda candidate: synthesize(candidate, wav, style=style),
             max_seconds=40.0, attempts=6, preserve_full=True, fallback=None,
         )
-        scene["dialogue"] = dialogue
         with wave.open(str(wav), "rb") as source:
             params = source.getparams()
             speech = source.readframes(source.getnframes())
@@ -652,14 +666,21 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
             target.setparams(params)
             target.writeframes(speech)
             target.writeframes(b"\0" * pad_frames * params.sampwidth * params.nchannels)
-        chapter_seconds.append(scene_seconds)
-        total_seconds += scene_seconds
+        return dialogue, scene_seconds
+
+    # Submit the whole stage together. Validate all audio before any video encoding.
+    with ThreadPoolExecutor(max_workers=_scene_worker_count(len(scenes)), thread_name_prefix='long-voice') as pool:
+        prepared = list(pool.map(prepare_chapter, range(len(scenes))))
+    total_seconds = sum(seconds for _, seconds in prepared)
     if not 180 <= total_seconds <= 600:
         raise ValueError(f"Long review must be 3–10 minutes; generated duration is {total_seconds:.1f}s.")
+    for scene, (dialogue, _) in zip(scenes, prepared):
+        scene['dialogue'] = dialogue
 
-    for scene_index, scene in enumerate(script["scenes"]):
+    def encode_chapter(scene_index: int) -> Path:
+        scene = scenes[scene_index]
         wav = audio_dir / f"chapter-{scene_index:02d}.wav"
-        scene_seconds = chapter_seconds[scene_index]
+        scene_seconds = prepared[scene_index][1]
         card = cards / f"chapter-{scene_index:02d}.png"
         _render_long_card(script, scene, scene_index, card)
         segment = segments / f"chapter-{scene_index:02d}.mp4"
@@ -671,7 +692,13 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
             "-r", str(OUTPUT_FPS), "-fps_mode", "cfr", "-c:a", "aac", "-b:a", "192k", "-shortest",
             "-movflags", "+faststart", str(segment),
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-        segment_paths.append(segment)
+        return segment
+
+    # FFmpeg already uses multiple threads. Two independent encodes are enough
+    # to overlap work without launching ten encoders on the same runner.
+    encode_workers = min(2, _scene_worker_count(len(scenes)))
+    with ThreadPoolExecutor(max_workers=encode_workers, thread_name_prefix='long-video') as pool:
+        segment_paths = list(pool.map(encode_chapter, range(len(scenes))))
     concat_long_segments(ffmpeg, segment_paths, output, workdir)
     profile = verify_video_profile(output)
     return {

@@ -58,46 +58,38 @@ def remember_game(path: Path, game_id: str) -> list[str]:
     return updated
 
 
-def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
+def run(output: Path, *, video_format: str = "short", preview: bool = False) -> dict[str, Any]:
     if video_format not in {"short", "long"}:
         raise ValueError("video_format must be short or long")
     manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
-    requested = manual_publish_time(manual_time) if manual_time else None  # Validate before rendering.
-    # Fix the automatic slot before the expensive work. Deciding it afterwards
-    # let two runs that finished minutes apart compete for the same wall time.
-    # The queue is read once, so several runs started together take different
-    # regular slots instead of all aiming at the same one.
-    from publish_to_supabase import read_queue
-    from review_slot_state import assess, booked_slots
-    try:
-        jobs = read_queue()
-        taken = booked_slots(jobs)
-    except Exception as exc:  # noqa: BLE001 - never guess a free slot
-        raise QueueStateUnknown(
-            f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
-        ) from exc
+    requested = manual_publish_time(manual_time) if manual_time and not preview else None
     reserved = None
-    if requested is None:
-        reserved = reserve_slot_before_render(video_format, occupied=taken)
-        # Processing/failed reservations may have an ambiguous YouTube outcome.
-        # Do not treat them as free or shift around them without investigation.
-        missing, _ = assess([reserved], jobs)
-        if not missing:
-            raise RuntimeError('Automatic publication slot already has a nearby scheduled video; no review was rendered or uploaded.')
-    else:
-        # A manual request must never reschedule itself, so a taken slot is
-        # refused here. Rendering takes minutes and the answer is already known;
-        # failing now replaces a wasted render with an immediate, honest stop.
-        missing, _ = assess([requested], jobs)
-        if not missing:
-            raise RuntimeError(
-                f"Requested publication slot {requested.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow "
-                "already has a video; no review was rendered or uploaded. Choose another time. "
-                "Nothing was uploaded, so YouTube Studio does not need checking."
-            )
+    if not preview:
+        from publish_to_supabase import read_queue
+        from review_slot_state import assess, booked_slots
+        try:
+            jobs = read_queue()
+            taken = booked_slots(jobs)
+        except Exception as exc:  # Never guess a free slot.
+            raise QueueStateUnknown(
+                f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
+            ) from exc
+        if requested is None:
+            reserved = reserve_slot_before_render(video_format, occupied=taken)
+            missing, _ = assess([reserved], jobs)
+            if not missing:
+                raise RuntimeError('Automatic publication slot already has a nearby scheduled video; no review was rendered or uploaded.')
+        else:
+            missing, _ = assess([requested], jobs)
+            if not missing:
+                raise RuntimeError(
+                    f"Requested publication slot {requested.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow "
+                    "already has a video; no review was rendered or uploaded. Choose another time. "
+                    "Nothing was uploaded, so YouTube Studio does not need checking."
+                )
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
-    if os.getenv('REQUIRE_SHARED_TOPIC_HISTORY') == 'true':
+    if not preview and os.getenv('REQUIRE_SHARED_TOPIC_HISTORY') == 'true':
         previous = list(set(previous) | set(authoritative_topic_history()))
     # Deliberately source only games listed by Steam's live public shelves; never
     # silently switch back to the repository's own community games.
@@ -145,7 +137,9 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     # still works; otherwise explicitly report a safe one-off delay. Never
     # change the recurring cadence.
     adjusted = False
-    if requested is not None:
+    if preview:
+        scheduled = None
+    elif requested is not None:
         scheduled, adjusted = resolve_manual_after_render(requested)
         if adjusted:
             print(f"Requested Moscow time {manual_time} became too close during rendering; "
@@ -173,7 +167,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         "description": description[:5000],
         "tags": ["games", "steam", "game-review", f"bot-topic:game-review", f"steam-app:{review['game_id']}", video_format],
         "category_id": "20",
-        "publish_at": scheduled.isoformat().replace("+00:00", "Z"),
+        "publish_at": scheduled.isoformat().replace("+00:00", "Z") if scheduled else None,
         "video_format": video_format,
         "requested_publish_at": requested.isoformat().replace("+00:00", "Z") if requested else None,
         "manual_time_adjusted": adjusted,
@@ -190,8 +184,16 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         "review": review,
         "metadata": metadata,
         "video": rendered,
-        "status": "rendered_waiting_for_explicit_audience_setting",
+        "status": "private_preview" if preview else "rendered_waiting_for_explicit_audience_setting",
     }
+    if preview:
+        from renderer import pronunciation_text
+        result['speech_aliases_applied'] = [
+            {'scene': index, 'original': dialogue, 'spoken': spoken}
+            for index, scene in enumerate(review.get('scenes', []), 1)
+            if isinstance(dialogue := scene.get('dialogue'), str)
+            and (spoken := pronunciation_text(dialogue)) != dialogue
+        ]
     result_path = output.with_suffix(".result.json")
     result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     result["result_path"] = str(result_path)
@@ -203,9 +205,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a locally inferred Steam game review.")
     parser.add_argument("output", nargs="?", type=Path, default=DATA_DIR / "episodes" / "game-review.mp4")
     parser.add_argument("--format", choices=("short", "long"), default="short")
+    parser.add_argument("--preview", action="store_true", help="Render without reserving or checking a publication slot.")
     args = parser.parse_args()
     try:
-        run(args.output, video_format=args.format)
+        run(args.output, video_format=args.format, preview=args.preview)
     except (QueueStateUnknown, UncertainSlot) as exc:
         print(f"Queue state uncertain; stop and check YouTube Studio: {exc}", file=sys.stderr)
         raise SystemExit(75)
