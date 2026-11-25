@@ -9,6 +9,21 @@ from functools import lru_cache
 PROTECTED = re.compile(r'<[/!a-zA-Z][^<>]*>|\{\{[^{}]+\}\}|\{[\w.]+\}|%[sdif]|%\d+\$[sdif]|\[[A-Z][A-Z0-9_+-]*\]')
 
 
+ENGLISH_GRAMMAR = (
+    'Сначала установи момент отсчёта и последовательность событий. '
+    'Simple — факт или привычка; Continuous — процесс в конкретный момент; '
+    'Perfect — завершённость, результат или предшествование; Perfect Continuous — длительность до момента отсчёта. '
+    'В русском передавай это естественным временем, видом и маркерами уже, ещё, пока, к тому моменту; '
+    'не добавляй маркеры, если их смысл не подтверждён оригиналом. '
+    'Не путай used to (раньше делал) с be used to (привык к); '
+    'must not (запрещено) с do not have to (необязательно); '
+    'could have done (мог бы сделать) с did (сделал). '
+    'Различай реальное условие и контрфактическое, сохраняй активного участника и объект действия. '
+    'Например: I had opened it before she arrived — Я открыл это до того, как она пришла; '
+    'I was opening it when she arrived — Я открывал это, когда она пришла.'
+)
+
+
 def russian_game_text(text, generate=None, *, context=""):
     """Translate every segment in order; never hide the original on partial failure."""
     if not isinstance(text, str) or not text.strip():
@@ -45,7 +60,7 @@ def _translate_segment(text, generate, context, previous, following, retry):
                    'Отличай should, must, may и can, факты от предположений, уже выполненное от предстоящего. '
                    'Учитывай фразовые глаголы, идиомы, сарказм и регистр речи; не переводи их пословно. '
                    'Не меняй единицы измерения, названия клавиш, теги и подстановки вроде {player} или %s. '
-                   'Проверь, что ни одно ограничение, исключение или действие не исчезло.')
+                   'Проверь, что ни одно ограничение, исключение или действие не исчезло. ' + ENGLISH_GRAMMAR)
     if retry:
         instruction += ' Проверь каждое число в source_text: не меняй и не добавляй числа.'
     try:
