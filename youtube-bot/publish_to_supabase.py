@@ -31,7 +31,7 @@ API_ATTEMPTS = 4
 CHUNK_ATTEMPTS = 5
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 OIDC_HOST_SUFFIX = ".actions.githubusercontent.com"
-SUPABASE_PATHS = {"/autopilot/prepare", "/autopilot/complete", "/autopilot/fail"}
+SUPABASE_PATHS = {"/autopilot/prepare", "/autopilot/complete", "/autopilot/fail", "/autopilot/topic-history"}
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):

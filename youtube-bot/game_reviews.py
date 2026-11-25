@@ -5,6 +5,7 @@ rendered description carries the URLs so viewers can copy and inspect them.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -28,7 +29,7 @@ feature_id из внешних источников). Не выдумывай и
 Озвучиваемый текст напиши естественным русским языком кириллицей; английское название игры
 не вставляй в реплики, если можно произнести его русским описанием. Не заявляй, что ты лично
 играл. Пиши без оскорблений и кликбейта. Ссылки на источники добавит программа отдельно.
-Не выбирай игру из recent_game_ids, если есть другие варианты. Верни только JSON по схеме:
+Никогда не выбирай игру из recent_game_ids. Верни только JSON по схеме:
 {"schema_version":1,"game_id":"id из списка Steam","selected_feature_ids":["точные feature-id","точные feature-id"],"possible_minus":"короткая осторожная гипотеза до 100 символов","minus_feature_id":"точный feature-id","idea_score":"целое число от 1 до 10","hook":"короткий крючок до 100 символов"}
 """
 
@@ -135,13 +136,54 @@ def spoken_feature(text: str) -> str:
     return text
 
 
+def make_review_title(game_title: str, *, video_format: str = 'short') -> str:
+    """Build a clear bounded title without invented claims or cut-off suffixes."""
+    if video_format not in {'short', 'long'}:
+        raise ValueError('Unknown review format')
+    title = re.sub(r'[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]', ' ', str(game_title))
+    title = re.sub(r'\s+', ' ', title).strip()
+    if not title or re.search(r'https?://|www\.', title, re.I):
+        raise ValueError('Game title is empty or contains a link')
+    prefix = 'ИИ-обзор: ' if video_format == 'short' else 'Полный обзор: '
+    budget = 100 - len(prefix)
+    if len(title.encode('utf-16-le')) // 2 > budget:
+        head = ''
+        for char in title:
+            if len((head + char).encode('utf-16-le')) // 2 > budget - 1:
+                break
+            head += char
+        head = head.rstrip()
+        if ' ' in head and head.rfind(' ') >= budget // 2:
+            head = head.rsplit(' ', 1)[0]
+        title = head.rstrip(' —–-.,:;') + '…'
+    return prefix + title
+
+
+def occasionally_ask_viewers(game_id: str) -> bool:
+    """Deterministic sparse invitation, not generated instructions from viewers."""
+    value = str(game_id).encode('utf-8')
+    return int.from_bytes(hashlib.sha256(value).digest()[:4], 'big') % 10 == 0
+
+
 def review_opening(title: str) -> str:
     """A short host introduction; game name is a source-provided title, not a claim."""
     title = re.sub(r'\s+', ' ', str(title)).strip()
     if not title:
         raise ValueError('A game title is required for the introduction')
-    spoken_title = speech_excerpt(title, 45) if _russian_ratio(title) >= 0.5 else 'эту игру'
-    return f'Привет! Сегодня разбираем {spoken_title}: что это за игра и кому она может подойти.'
+    spoken_title = title if len(title) <= 45 and _russian_ratio(title) >= 0.5 else ''
+    if spoken_title:
+        return f'Привет! Сегодня в обзоре — {spoken_title}. Разберём, что предлагает игра и кому она может подойти.'
+    return 'Привет! Сегодня разбираем игру: что она предлагает и кому может подойти.'
+
+
+def spoken_source_excerpt(text: str, budget: int, fallback: str) -> str:
+    """Never read an arbitrary cut-off clause; substitute a complete safe sentence."""
+    excerpt = speech_excerpt(text, budget)
+    if not excerpt or excerpt.endswith('…'):
+        return fallback
+    if excerpt[-1] not in '.!?':
+        excerpt = excerpt.rstrip(' ,;:—–-') + '.'
+    return excerpt
 
 
 def ensure_editorial_quality(scenes: list[dict[str, str]]) -> None:
@@ -204,8 +246,8 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     if _russian_ratio(possible_minus) < 0.5:
         raise ValueError("possible_minus must be Russian narration")
     recent = set(recent_game_ids)
-    if game_id in recent and (set(catalog) - recent):
-        raise ValueError("Qwen repeated a recently reviewed game while alternatives remain")
+    if game_id in recent:
+        raise ValueError("Qwen repeated a recently reviewed game")
 
     pros = [feature_ids[str(item)] for item in selected]
     minus_evidence = feature_ids[minus_feature_id]
@@ -213,9 +255,9 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     description = re.sub(r'^Описание Steam:\s*', '', description, flags=re.I)
     scenes = [
         {"speaker": "Games AI", "dialogue": review_opening(game['title']), "visual": f"Обзор: {game['title']}", "emotion": "happy", "label": "ПРИВЕТ!"},
-        {"speaker": "Games AI", "dialogue": f"О чём игра? По описанию авторов: {speech_excerpt(description, 90)}", "visual": description, "emotion": "curious", "label": "О ЧЁМ ИГРА"},
-        {"speaker": "Games AI", "dialogue": f"Ещё одна деталь: {speech_excerpt(spoken_feature(pros[1]), 76)}", "visual": pros[1], "emotion": "happy", "label": "ОСОБЕННОСТИ"},
-        {"speaker": "Games AI", "dialogue": f"А что может не понравиться? {speech_excerpt(possible_minus, 76)}", "visual": f"Основание: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
+        {"speaker": "Games AI", "dialogue": f"О чём игра? {spoken_source_excerpt(description, 90, 'Описание игры доступно на странице в Стиме.')}", "visual": description, "emotion": "curious", "label": "О ЧЁМ ИГРА"},
+        {"speaker": "Games AI", "dialogue": f"Ещё одна деталь. {spoken_source_excerpt(spoken_feature(pros[1]), 76, 'Подробности доступны на странице игры.')}", "visual": pros[1], "emotion": "happy", "label": "ОСОБЕННОСТИ"},
+        {"speaker": "Games AI", "dialogue": f"А что может не понравиться? {spoken_source_excerpt(possible_minus, 100, 'Возможно, игра подойдёт не всем. Изучите подробности в источнике.')}", "visual": f"Основание: {minus_evidence}", "emotion": "curious", "label": "ВОЗМОЖНЫЙ МИНУС"},
         {"speaker": "Games AI", "dialogue": f"Итог: по описанию оценка идеи — {score} из 10. Я ещё не играла, поэтому оценка предварительная.", "visual": f"ИТОГ ПО ИСТОЧНИКАМ · {score}/10 · НЕ ЛИЧНОЕ ПРОХОЖДЕНИЕ", "emotion": "calm", "label": "ИТОГ"},
     ]
     if any(_russian_ratio(scene["dialogue"]) < 0.45 for scene in scenes):
@@ -232,7 +274,7 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
         "screenshots": list(game.get("screenshots", [])),
         "source_facts": dict(game.get("source_facts", {})),
         "evidence": {f"{game_id}-f{i + 1}": str(feature) for i, feature in enumerate(game["features"][:12])},
-        "title": f"ИИ-разбор: {game['title']} — плюс и возможный минус"[:100],
+        "title": make_review_title(game["title"]),
         "hook": hook,
         "pros": pros,
         "possible_minus": possible_minus,
@@ -254,9 +296,11 @@ def _catalog_only_fallback(
         data = {}
     catalog = {str(game["id"]): game for game in games}
     recent = set(recent_game_ids)
-    fallback_game = next((game for game in games if str(game["id"]) not in recent), games[0])
+    fallback_game = next((game for game in games if str(game["id"]) not in recent), None)
+    if fallback_game is None:
+        raise ValueError("No unused game available")
     game = catalog.get(str(data.get("game_id", "")), fallback_game)
-    if str(game["id"]) in recent and any(str(item["id"]) not in recent for item in games):
+    if str(game["id"]) in recent:
         game = fallback_game
     game_id = str(game["id"])
     features = [str(feature) for feature in game.get("features", [])[:12]]
@@ -361,7 +405,7 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
     except (TypeError, ValueError):
         draft = None
     if draft is None:
-        chosen = next((g for g in game_list if str(g['id']) not in recent), game_list[0] if game_list else None)
+        chosen = next((g for g in game_list if str(g['id']) not in recent), None)
         if chosen is None or len(chosen.get('features', [])) < 2:
             raise ValueError('No eligible game for score recovery')
         gid = str(chosen['id'])
@@ -371,7 +415,7 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
         recovered_selection = True
     else:
         chosen = next((g for g in game_list if str(g['id']) == str(draft.get('game_id', ''))), None)
-        if chosen is not None and str(chosen['id']) in recent and any(str(g['id']) not in recent for g in game_list):
+        if chosen is not None and str(chosen['id']) in recent:
             chosen = None
     raw_score = draft.get('idea_score')
     valid_score = ((type(raw_score) is int and 1 <= raw_score <= 10) or
@@ -489,7 +533,8 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 "Ты пишешь длинный русскоязычный видеообзор игры только по предоставленным фактам Steam. "
                 "Ведущий уже поздоровался и назвал игру: не повторяй приветствие, сразу переходи к сути. "
                 "Затем объясни, что игра предлагает и что в ней нужно делать только по описанию источника. "
-                "Разнообразь длину фраз и переходы; избегай канцелярита и повторяющихся оговорок. "
+                "Пиши грамотно, с естественной пунктуацией и законченными предложениями, чтобы синтезатор мог выразительно читать с уместными паузами и интонацией. Незнакомые названия не искажай. Не обрывай мысль. "
+                "Разнообразь длину фраз и переходы; избегай канцелярита и повторяющихся оговорок. Не задавай зрителю навязчивых вопросов. "
                 "Далее обсуждай конкретные особенности и возможные ограничения, затем итог. "
                 "Не говори, что играл, не выдумывай механику, сюжет, производительность или отзывы. "
                 "Отделяй факты из источника от субъективного мнения словами «по моему впечатлению от описания». "
@@ -722,7 +767,9 @@ def steam_release_note(review: Mapping[str, Any]) -> str:
     if (not isinstance(value, str) or not value.strip() or len(value) > 80
             or re.search(r"https?://|www\.|[<>\r\n]", value, re.I)):
         return "Дата выхода не подтверждена; проверьте страницу игры."
-    date = speech_excerpt(value.strip(), 60)
+    date = value.strip()
+    if len(date) > 60:
+        return "Дата выхода не подтверждена; проверьте страницу игры."
     if coming is True:
         return f"По Steam, выход ожидается: {date}. Дата может измениться."
     if coming is False:

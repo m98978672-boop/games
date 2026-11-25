@@ -51,6 +51,10 @@ def fit_speech_text(
         shorter = speech_excerpt(candidate, budget)
         if shorter == candidate:
             shorter = speech_excerpt(candidate, max(8, len(candidate) - 12))
+        # A clipped clause can sound unfinished or change the meaning.
+        # Use the complete neutral fallback instead of speaking an ellipsis.
+        if shorter.endswith("…"):
+            break
         candidate = shorter
 
     fallback_text = re.sub(r"\s+", " ", fallback).strip()

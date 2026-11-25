@@ -57,6 +57,8 @@ jobs:
       MANUAL_VIDEO_FORMAT: ${{ inputs.video_format || '' }}
       REVIEW_BATCH_COUNT: ${{ inputs.batch_count || '1' }}
       DATA_DIR: youtube-bot/data
+      # Never render with an unavailable or incomplete shared topic ledger.
+      REQUIRE_SHARED_TOPIC_HISTORY: "true"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

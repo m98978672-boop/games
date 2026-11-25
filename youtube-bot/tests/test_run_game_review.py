@@ -12,6 +12,23 @@ import run_game_review
 
 
 class RunReviewTests(unittest.TestCase):
+    def test_shared_history_is_validated_and_never_silently_ignored(self):
+        from publish_to_supabase import PublishError
+        with patch('publish_to_supabase._supabase_post', return_value={'version': 1, 'game_ids': ['1', '2']}):
+            self.assertEqual(run_game_review.authoritative_topic_history(), ['1', '2'])
+        for value in ({}, {'version': 1, 'game_ids': ['1', '1']},
+                      {'version': 1, 'game_ids': [None]}, {'version': True, 'game_ids': []}):
+            with self.subTest(value=value), patch('publish_to_supabase._supabase_post', return_value=value):
+                with self.assertRaises(ValueError):
+                    run_game_review.authoritative_topic_history()
+        with tempfile.TemporaryDirectory() as temp, patch.dict('os.environ', {'REQUIRE_SHARED_TOPIC_HISTORY': 'true'}), \
+             patch.object(run_game_review, 'DATA_DIR', Path(temp)), \
+             patch.object(run_game_review, 'authoritative_topic_history', side_effect=PublishError('offline')), \
+             patch.object(run_game_review, 'load_steam_games') as load:
+            with self.assertRaises(PublishError):
+                run_game_review.run(Path(temp) / 'review.mp4')
+            load.assert_not_called()
+
     def test_long_external_review_keeps_copyable_sources_and_uses_long_renderer(self):
         game = {
             "id": "12345", "title": "Внешняя игра", "features": ["Описание Steam: Русское описание игры", "Отзывы Steam: в основном положительные"],

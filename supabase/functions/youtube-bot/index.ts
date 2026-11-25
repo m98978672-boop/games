@@ -314,6 +314,22 @@ async function issueAutopilotAccessToken(jobId: string): Promise<Response> {
   }
 }
 
+async function autopilotTopicHistory(request: Request): Promise<Response> {
+  try { await verifyGitHubActionsOidc(request); }
+  catch { return Response.json({ error: "GitHub Actions identity was not accepted." }, { status: 401 }); }
+  // A single SQL aggregate avoids silently truncated PostgREST result pages.
+  const response = await dbRequest("rpc/youtube_bot_review_topic_history", "", {
+    method: "POST", body: "{}",
+  });
+  const history = await response.json();
+  if (!history || history.version !== 1 || !Array.isArray(history.game_ids) ||
+      history.game_ids.length > 20000 ||
+      history.game_ids.some((id: unknown) => typeof id !== "string" || !/^[a-z0-9-]{1,60}$/.test(id))) {
+    throw new Error("Review topic history is malformed; refusing selection.");
+  }
+  return Response.json(history);
+}
+
 async function prepareAutopilotReview(request: Request): Promise<Response> {
   try { await verifyGitHubActionsOidc(request); }
   catch (error) {
@@ -502,6 +518,7 @@ Deno.serve(async (request: Request) => {
     if (request.method === "GET" && route === "/auth/start") return await startOAuth(request);
     if (request.method === "GET" && route === "/oauth/callback") return await oauthCallback(request);
     if (request.method === "GET" && route === "/health") return Response.json({ ok: true, service: "youtube-bot" }, { headers: cors(request.headers.get("origin")) });
+    if (request.method === "POST" && route === "/autopilot/topic-history") return await autopilotTopicHistory(request);
     if (request.method === "POST" && route === "/autopilot/prepare") return await prepareAutopilotReview(request);
     if (request.method === "POST" && route === "/autopilot/complete") return await completeAutopilotReview(request);
     if (request.method === "POST" && route === "/autopilot/fail") return await failAutopilotReview(request);
