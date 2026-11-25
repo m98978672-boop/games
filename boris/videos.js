@@ -1,5 +1,12 @@
 window.VIDEO_CATALOG = [
   {
+    id: "ep05-part1",
+    title: "Эпизод 5 — Обзор ИИ-игры · часть 1",
+    description: "Голубь-курьер привёз диск с игрой нейросети: студия собрана, обзор начинается.",
+    file: "boris_ep05_part1_shorts.mp4", poster: "thumb_ep05a.png", duration: 53,
+    format: "9:16", category: "shorts", series: "ep05", channel: "Канал Бориса", badge: "НОВОЕ · ЧАСТЬ 1", order: 0
+  },
+  {
     id: "baltika-0-prologue",
     title: "Похождения Балтики 0 — пролог",
     description: "Ожившая банка Балтики 0, поиски пропавшего холодильника и ТЦК в мемной вселенной. Фантастическая мульт-сатира, не репортаж.",
