@@ -126,25 +126,21 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: youtube-bot/requirements-autopilot.txt
-      # These four checks are the entry contract of stage 1 and stay separate:
-      # each fails closed on its own, and each is named in the tests that guard
-      # the workflow. They run before caches and FFmpeg, so a typo fails in
-      # seconds. An empty publish_at is valid and picks regular slots.
-      - name: Select review format from trusted workflow event
-        run: python youtube-bot/review_workflow_format.py
-      - name: Validate queue and publication times before rendering
-        # One readable ::error:: line instead of a raw traceback for a bad
-        # batch_count, format or time. Nothing is rendered or uploaded when
-        # this step fails.
-        run: python youtube-bot/review_batch.py --check
-      - name: Require the explicit owner-approved audience value
+      # Entry contract of stage 1: format, queue times, audience and the voice
+      # path are checked in one step, before caches and FFmpeg, so a typo fails
+      # in seconds. Each check still fails closed on its own and prints one
+      # readable ::error:: line; nothing is rendered or uploaded when it fails.
+      # An empty publish_at is valid and picks regular slots.
+      - name: "Stage 1: validate inputs and set the voice model path"
         run: |
+          set -euo pipefail
+          python youtube-bot/review_workflow_format.py
+          python youtube-bot/review_batch.py --check
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
             echo "::error::Choose the owner-approved audience value true or false in the workflow input."
             exit 1
           fi
-      - name: Set the Russian Piper model path
-        run: echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
+          echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
       - name: Restore the local Qwen model cache
         uses: actions/cache@v6
         with:
