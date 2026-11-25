@@ -6,9 +6,11 @@ import subprocess
 import sys
 import uuid
 from pathlib import Path
+from datetime import datetime, timedelta, timezone
 
 from adventure_draft import GAME_URL
-from publish_to_supabase import publish
+from publish_to_supabase import publish, read_queue, diagnostic_category, PublishError
+from review_slot_state import planned_slots
 from schedule_policy import manual_publish_time, next_publish_slot
 
 
@@ -57,6 +59,43 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False):
     return result
 
 
+def publish_checked(result, *, lighthouse=False, now=None):
+    if lighthouse:
+        payload = json.loads(result.read_text(encoding='utf-8'))
+        metadata = payload['metadata']
+        jobs = read_queue()
+        existing = [job for job in jobs if job.get('id') == metadata['job_id']]
+        if existing:
+            if len(existing) == 1 and existing[0]['status'] == 'scheduled' and existing[0].get('video_id'):
+                job = existing[0]
+                video = job['video_id']
+                print(f"::notice title=Lighthouse already scheduled::https://www.youtube.com/watch?v={video} at {job['publish_at']}")
+                return job
+            raise PublishError('Existing reservation for this artifact is unresolved; check Studio before retrying.')
+        if not metadata.get('requested_publish_at'):
+            reference = now or datetime.now(timezone.utc)
+            occupied = planned_slots(job['publish_at'] for job in jobs)
+            for _ in range(28):
+                slot = next_publish_slot(reference, video_format=metadata['video_format'])
+                if all(abs(slot - time) > timedelta(minutes=1) for time in occupied):
+                    metadata['publish_at'] = slot.isoformat().replace('+00:00', 'Z')
+                    result.write_text(json.dumps(payload, ensure_ascii=False), encoding='utf-8')
+                    break
+                reference = slot
+            else:
+                raise PublishError('No free regular slot found in the next 28 slots; no upload started.')
+    return publish(result)
+
+
 if __name__ == '__main__':
-    publish(prepare(Path(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None,
-                    lighthouse=os.getenv('TRUSTED_LIGHTHOUSE_CAPTURE') == 'true'))
+    lighthouse = os.getenv('TRUSTED_LIGHTHOUSE_CAPTURE') == 'true'
+    try:
+        result = prepare(Path(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None,
+                         lighthouse=lighthouse)
+        status = publish_checked(result, lighthouse=lighthouse)
+        if status.get('video_id'):
+            print(f"::notice title=YouTube upload confirmed::https://www.youtube.com/watch?v={status['video_id']} at {status.get('publish_at') or 'unconfirmed time'}")
+    except Exception as exc:
+        category, message = diagnostic_category(exc)
+        print(f'::error title=Publish diagnostic {category}::{message}')
+        raise SystemExit(str(exc)) from None
