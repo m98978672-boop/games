@@ -26,7 +26,7 @@ def _import_publisher():
 
 def planned_slots(*, now: datetime | None = None, days: int = 2) -> list[datetime]:
     """Every regular publication slot for the next `days` Moscow days, in order."""
-    from schedule_policy import CHANNEL_TZ, LONG_POST_TIMES, SHORT_POST_TIMES
+    from schedule_policy import CHANNEL_TZ, GAMEPLAY_POST_TIME, LONG_POST_TIMES, SHORT_POST_TIMES
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         raise ValueError("now must include a timezone")
@@ -34,19 +34,32 @@ def planned_slots(*, now: datetime | None = None, days: int = 2) -> list[datetim
     slots = [
         datetime.combine(today + timedelta(days=offset), wall_time, CHANNEL_TZ)
         for offset in range(max(1, days))
-        for wall_time in (*LONG_POST_TIMES, *SHORT_POST_TIMES)
+        for wall_time in (*LONG_POST_TIMES, *SHORT_POST_TIMES, GAMEPLAY_POST_TIME)
     ]
     # Sort by the real moment: a 06:00 long review comes before the 09:00 Short.
     return sorted(slot.astimezone(timezone.utc) for slot in slots)
 
 
 def _video_format(wall_time) -> str:
-    from schedule_policy import LONG_POST_TIMES
-    return "long" if wall_time in LONG_POST_TIMES else "short"
+    from schedule_policy import slot_format
+    return slot_format(wall_time)
+
+
+# Gameplay is not rendered by the review workflow: it is recorded by the AI
+# playthrough job, so its command is different in kind, not just in wording.
+_LABELS = {"short": "Shorts", "long": "длинный обзор", "gameplay": "игровой обзор"}
 
 
 def _command(slot_local, video_format: str) -> str:
-    """The exact one-line dispatch that fills this slot."""
+    """The exact one-line dispatch that fills this slot.
+
+    Gameplay is not a review: it is recorded by the AI playthrough job, so its
+    command names that workflow and the same publish time instead of pretending
+    a review run could produce it.
+    """
+    if video_format == "gameplay":
+        return (f"gh workflow run youtube-playthrough.yml --ref main "
+                f"-f publish_at='{slot_local:%Y-%m-%d %H:%M}'")
     return (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
             f"-f video_format={video_format} -f made_for_kids=false -f batch_count=1 "
             f"-f publish_at='{slot_local:%Y-%m-%d %H:%M}'")
@@ -73,9 +86,15 @@ def render_report(missing: list[datetime], booked: list[datetime], *, error: str
     missing_set = {moment.astimezone(CHANNEL_TZ) for moment in missing}
     everything = sorted(booked_set | missing_set)
     ready = sum(1 for slot in everything if slot in booked_set)
+    counts = {"short": 0, "long": 0, "gameplay": 0}
+    for slot in everything:
+        counts[_video_format(slot.time())] += 1
     lines += [
         f"Слотов на {days} дня: **{len(everything)}** — готово **{ready}**, "
         f"без видео **{len(missing_set)}**.",
+        "",
+        f"Из них: Shorts **{counts['short']}**, длинных обзоров **{counts['long']}**, "
+        f"игровых обзоров **{counts['gameplay']}**.",
         "",
     ]
     if not everything:
@@ -96,7 +115,7 @@ def render_report(missing: list[datetime], booked: list[datetime], *, error: str
             lines.append("| Время МСК | Формат | Статус |")
             lines.append("|---|---|---|")
         video_format = _video_format(slot.time())
-        label = "длинный" if video_format == "long" else "Shorts"
+        label = _LABELS[video_format]
         status = "✅ готово" if slot in booked_set else "❌ нет видео"
         lines.append(f"| {slot:%H:%M} | {label} | {status} |")
 
@@ -106,7 +125,7 @@ def render_report(missing: list[datetime], booked: list[datetime], *, error: str
         lines.append("")
         for slot in sorted(missing_set):
             video_format = _video_format(slot.time())
-            lines.append(f"- **{slot:%d.%m %H:%M}** ({'длинный' if video_format == 'long' else 'Shorts'}):")
+            lines.append(f"- **{slot:%d.%m %H:%M}** ({_LABELS[video_format]}):")
             lines.append("")
             lines.append("  ```")
             lines.append(f"  {_command(slot, video_format)}")

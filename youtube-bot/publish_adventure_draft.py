@@ -9,6 +9,7 @@ from adventure_draft import GAME_URL, PUZZLE_URL, MIN_EDITED_GAMEPLAY_SECONDS
 from gameplay_voiceover import probe_capture
 import math
 from publish_to_supabase import publish
+from gameplay_policy import video_kind_for_duration
 from schedule_policy import manual_publish_time
 
 
@@ -27,10 +28,15 @@ def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool
     if not video.is_file() or video.is_symlink():
         raise ValueError('Missing regular pilot video.')
     gameplay = draft.get('edited_gameplay_seconds')
-    if (type(gameplay) not in (float, int) or not math.isfinite(gameplay)
-            or gameplay <= MIN_EDITED_GAMEPLAY_SECONDS
-            or probe_capture(video) <= MIN_EDITED_GAMEPLAY_SECONDS):
-        raise ValueError('Upload blocked: more than 10 minutes of edited gameplay are required; closing holds do not count.')
+    if type(gameplay) not in (float, int) or not math.isfinite(gameplay) or gameplay <= 0:
+        raise ValueError('Upload blocked: edited gameplay length is missing or invalid.')
+    measured = probe_capture(video)
+    if not math.isfinite(measured) or measured <= 0:
+        raise ValueError('Upload blocked: recorded video length is unreadable.')
+    # The owner's rule: a cut shorter than three minutes is a Short, anything
+    # longer is a full video. This replaced a hard "must exceed ten minutes",
+    # which would have blocked every short playthrough from publishing at all.
+    video_format = video_kind_for_duration(measured)
     scheduled = manual_publish_time(publish_at).isoformat().replace('+00:00', 'Z')
     url = PUZZLE_URL if puzzle else GAME_URL
     description = (f'{url}\n\nПятнашки: решено досок — {trace["boards_won"]}. Qwen и планировщик; комментарий по журналу ходов.\n'
@@ -43,7 +49,7 @@ def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool
         'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{url}#capture-{run_id}')),
         'game_id': '16-puzzle' if puzzle else 'the-lost-artifact',
         'title': 'Qwen решает «Пятнашки» — игровая кампания' if puzzle else 'Qwen ищет потерянный артефакт — пробное прохождение',
-        'description': description, 'tags': ['games', 'Qwen', '15-puzzle' if puzzle else 'The Lost Artifact'], 'category_id': '20', 'video_format': 'long',
+        'description': description, 'tags': ['games', 'Qwen', '15-puzzle' if puzzle else 'The Lost Artifact'], 'category_id': '20', 'video_format': video_format,
         'video_path': str(video.resolve()), 'publish_at': scheduled, 'requested_publish_at': scheduled,
     }}, ensure_ascii=False), encoding='utf-8')
     return result
