@@ -142,7 +142,7 @@ class GameCatalogTests(unittest.TestCase):
         data = {'schema_version': 1, 'game_id': game['id'], 'selected_feature_ids': [f"{game['id']}-f1", f"{game['id']}-f2"],
                 'possible_minus': 'Возможно, не подойдёт каждому.', 'minus_feature_id': f"{game['id']}-f1",
                 'hook': 'Что интересного предлагает игра?'}
-        for score in (True, 7.9, None, 11):
+        for score in (True, 7.99, None, 11):
             with self.subTest(score=score), self.assertRaises(ValueError):
                 validate_review({**data, 'idea_score': score}, games)
 
