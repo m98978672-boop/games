@@ -31,7 +31,7 @@ API_ATTEMPTS = 4
 CHUNK_ATTEMPTS = 5
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 OIDC_HOST_SUFFIX = ".actions.githubusercontent.com"
-SUPABASE_PATHS = {"/autopilot/prepare", "/autopilot/complete", "/autopilot/fail"}
+SUPABASE_PATHS = {"/autopilot/prepare", "/autopilot/complete", "/autopilot/fail", "/autopilot/queue"}
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -151,8 +151,10 @@ def _read_http_error(exc: urllib.error.HTTPError) -> tuple[int, Any, bytes]:
     return exc.code, exc.headers or {}, body
 
 
-def _supabase_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
+def _supabase_post(path: str, payload: dict[str, Any], *, method: str = "POST") -> dict[str, Any]:
     """Call only the fixed publisher origin; safely retry idempotent job operations."""
+    if method not in {"GET", "POST"}:
+        raise PublishError("Publisher request method failed the allowlist.")
     url = f"{SUPABASE_BASE}{path}"
     parsed = urllib.parse.urlsplit(url)
     route = parsed.path.removeprefix("/functions/v1/youtube-bot")
@@ -163,9 +165,9 @@ def _supabase_post(path: str, payload: dict[str, Any]) -> dict[str, Any]:
     for attempt in range(API_ATTEMPTS):
         oidc = github_oidc_token()
         request = urllib.request.Request(
-            url, data=body,
+            url, data=body if method == "POST" else None,
             headers={"Authorization": f"Bearer {oidc}", "Content-Type": "application/json"},
-            method="POST",
+            method=method,
         )
         try:
             with _safe_urlopen(request, timeout=45) as response:
@@ -527,3 +529,16 @@ if __name__ == "__main__":
         print(f"::error title=Publish diagnostic {category}::{message}")
         print(f"Safe publish stop: {exc}", file=sys.stderr)
         raise SystemExit(1)
+
+
+def read_queue() -> list[dict[str, Any]]:
+    """Read the private publication queue; never reserves, uploads or changes it.
+
+    Used by the scheduled autopilot to skip a slot that already has a video.
+    The table is not publicly readable, so the same OIDC identity check as the
+    publisher applies, and a failure is raised instead of being treated as an
+    empty queue (an empty queue would trigger a duplicate render).
+    """
+    from review_slot_state import queue_rows
+    result = _supabase_post("/autopilot/queue", {}, method="GET")
+    return queue_rows(result)
