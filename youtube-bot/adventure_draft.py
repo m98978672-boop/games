@@ -1,5 +1,6 @@
 """Build a private, trace-based Russian pilot; keep its raw footage unchanged."""
 import json
+import math
 import subprocess
 import sys
 import tempfile
@@ -12,6 +13,7 @@ from adventure_personality import SHORT_SECONDS, short_comment
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
 PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
 MIN_EDITED_GAMEPLAY_SECONDS = 600
+MAX_CUT_FRACTION = 0.25
 ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHREE': 'третий'}
 
 
@@ -21,6 +23,7 @@ def plan(trace):
     events = trace['model_actions'] if puzzle else trace['actions']
     lines = [(0.0, 'Собираю пятнашки по порядку.' if puzzle else 'Я ищу потерянный артефакт.')]
     cuts = []
+    remaining_cut = duration * MAX_CUT_FRACTION
     prior = 0.0
     previous_source = None
     current_round = 1
@@ -28,9 +31,16 @@ def plan(trace):
         stamp_ms = event.get('recording_elapsed_ms')
         stamp = min(duration, max(prior, (stamp_ms or 0) / 1000))
         stalled = not event['move_verified'] if puzzle else event['screen_unchanged']
-        if stalled:
-            if stamp - prior > 6:
-                cuts.append((prior + 3, stamp - 1))
+        # An unchanged action result does not prove the interval was idle.
+        # Only accept explicitly verified, input-free thinking windows.
+        idle = event.get('verified_thinking_only_ms')
+        if (isinstance(idle, list) and len(idle) == 2
+                and all(type(t) in (int, float) and math.isfinite(t) for t in idle)):
+            start, end = (t / 1000 for t in idle)
+            if prior <= start < end <= stamp and remaining_cut > 0:
+                cut = min(end - start, remaining_cut)
+                cuts.append((start, start + cut))
+                remaining_cut -= cut
         if puzzle:
             source = event['action_source']
             tile = event['tile']
@@ -130,7 +140,8 @@ def build(folder):
         raise ValueError('Encoded Short exceeds the three-minute limit')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
     report = {'short': short, 'draft': f'{base}.mp4', 'needs_continuation': not won,
-        'cuts_seconds': cuts, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
+        'cuts_seconds': cuts, 'raw_duration_seconds': duration,
+        'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'boards_won': trace.get('boards_won'),
         'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay > MIN_EDITED_GAMEPLAY_SECONDS, 'commentary': [text for _, text in lines], 'published': False}
     (folder / 'pilot.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')

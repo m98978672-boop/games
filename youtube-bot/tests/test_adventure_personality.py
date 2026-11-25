@@ -21,3 +21,12 @@ class AdventurePersonalityTests(unittest.TestCase):
     def test_unknown_text_does_not_become_narration(self):
         self.assertEqual(short_comment({'choice_label': 'unknown', 'game_dialog': 'unknown'}, 'первый'),
                          ('Выбираю первый вариант.', ''))
+
+    def test_unchanged_screen_is_not_proof_of_thinking_only(self):
+        event = dict(choice='CHOICEONE', screen_unchanged=True, recording_elapsed_ms=20000)
+        trace = dict(duration_seconds=20, actions=[event], outcome='time_limit')
+        self.assertEqual(plan(trace)[2], [])
+        event['verified_thinking_only_ms'] = [1000, 17000]
+        self.assertEqual(plan(trace)[2], [(1, 6)])
+        event['verified_thinking_only_ms'] = [1000, 21000]
+        self.assertEqual(plan(trace)[2], [])
