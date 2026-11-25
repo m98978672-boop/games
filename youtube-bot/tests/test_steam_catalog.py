@@ -109,12 +109,14 @@ class SteamCatalogTests(unittest.TestCase):
             with self.assertRaisesRegex(steam_catalog.SteamSourceError, "HTTP 429"):
                 steam_catalog.load_steam_games(featured_payload=featured)
 
-    def test_tries_recent_games_when_fresh_games_are_unusable(self):
+    def test_never_reuses_recent_games_when_fresh_games_are_unusable(self):
         featured = {"top_sellers": {"items": [{"id": 123, "name": "Recent"}, {"id": 456, "name": "Fresh"}]}}
-        with patch.object(steam_catalog, "_game_from_app", side_effect=[None, {"id": "123"}]) as get:
-            games = steam_catalog.load_steam_games(featured_payload=featured, recent_game_ids=("123",), limit=1)
-        self.assertEqual(games, [{"id": "123"}])
-        self.assertEqual(get.call_args_list[1].args[0], "123")
+        with patch.object(steam_catalog, "_game_from_app", return_value=None) as get:
+            with self.assertRaises(steam_catalog.SteamSourceError):
+                steam_catalog.load_steam_games(featured_payload=featured, recent_game_ids=("123",), limit=1)
+        self.assertEqual([call.args[0] for call in get.call_args_list], ['456'])
+        with self.assertRaisesRegex(steam_catalog.SteamSourceError, 'already used'):
+            steam_catalog.load_steam_games(featured_payload=featured, recent_game_ids=("123", "456"))
 
     def test_price_requires_explicit_regional_data(self):
         for data_updates, expected in (({"price_overview": {"currency": "EUR", "final": 1999}}, "paid"),

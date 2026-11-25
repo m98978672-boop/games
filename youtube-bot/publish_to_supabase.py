@@ -31,7 +31,7 @@ API_ATTEMPTS = 4
 CHUNK_ATTEMPTS = 5
 TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 OIDC_HOST_SUFFIX = ".actions.githubusercontent.com"
-SUPABASE_PATHS = {"/autopilot/prepare", "/autopilot/complete", "/autopilot/fail", "/autopilot/queue"}
+SUPABASE_PATHS = {"/autopilot/prepare", "/autopilot/complete", "/autopilot/fail", "/autopilot/queue", "/autopilot/topic-history"}
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -155,9 +155,11 @@ def _supabase_post(path: str, payload: dict[str, Any], *, method: str = "POST") 
     """Call only the fixed publisher origin; safely retry idempotent job operations."""
     if method not in {"GET", "POST"}:
         raise PublishError("Publisher request method failed the allowlist.")
-    url = f"{SUPABASE_BASE}{path}"
+    url = (f"https://{SUPABASE_HOST}/functions/v1/youtube-topic-history"
+           if path == "/autopilot/topic-history" else f"{SUPABASE_BASE}{path}")
     parsed = urllib.parse.urlsplit(url)
-    route = parsed.path.removeprefix("/functions/v1/youtube-bot")
+    route = ("/autopilot/topic-history" if parsed.path == "/functions/v1/youtube-topic-history"
+             else parsed.path.removeprefix("/functions/v1/youtube-bot"))
     if parsed.scheme != "https" or parsed.hostname != SUPABASE_HOST or route not in SUPABASE_PATHS:
         raise PublishError("Publisher URL failed the network allowlist.")
     body = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -508,6 +510,11 @@ def diagnostic_category(error: Exception) -> tuple[str, str]:
         return "identity", "GitHub identity or OIDC failed. Check workflow, branch, claims and publisher configuration."
     if "youtube accepted" in text or "check studio before" in text or "without a video id" in text:
         return "ambiguous-upload", "Upload result may be ambiguous. Check YouTube Studio before retrying."
+    # A slot that is already taken is refused before any upload starts. Saying
+    # "check Studio" there would invent doubt about an upload that never ran;
+    # the owner only has to choose a different time.
+    if "slot is occupied" in text or "already has a video" in text or "slots were occupied" in text:
+        return "slot-taken", "The publication slot already has a video; no upload was started. Choose another time; Studio needs no check."
     if "reservation" in text or "different job" in text or "same slot" in text:
         return "reservation", "Upload reservation or publish slot conflicted. Check publisher records and YouTube Studio."
     if "publisher" in text:

@@ -280,7 +280,7 @@ check('не топчется: петли и обратные ходы в ист�
   && expPy.includes('два места') && expPy.includes("hashlib.sha1(norm.encode('utf-8'))"));
 
 check('идёт по НЕнажатым выборам, а не по «новому месту»: цикла дом→кухня→дом нет',
-  expPy.includes('def not_tried') && expPy.includes('return (k, c.get(\'label\')) not in story_map.tried')
+  expPy.includes('def not_tried') && expPy.includes('return not story_map.tried_here(k, c.get(\'label\'))')
   && expPy.includes('no_loops'));
 
 check('стоп-кран мягче 18 шагов: успевает обойти дом, но не жжёт время',
@@ -313,7 +313,7 @@ check('аудит всех обнов истории: код и данные п�
   && expPy.includes('def remaining') && expWf.includes('storymap.json'));
 
 check('память карты несовместимой схемы не берётся: иначе остаток был бы фальшивым',
-  expPy.includes("SCHEMA = 'text+options-v2'") && expPy.includes("data.get('schema') != self.SCHEMA"));
+  expPy.includes("SCHEMA = 'text+options-v3'") && expPy.includes("data.get('schema') != self.SCHEMA"));
 
 // Чужой merge из отставшей ветки уже стирал работу: PR #611 вернул старые
 // версии 54 файлов (kvenya/live.js, youtube-bot, workflows, экспедицию).
@@ -330,7 +330,7 @@ const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8')
 check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
   expNow.includes('remaining') && expNow.includes('routeKey')
   && expNow.includes('memo_from') && expNow.includes('план захода')
-  && expNow.includes("SCHEMA = 'text+options-v2'"));
+  && expNow.includes("SCHEMA = 'text+options-v3'"));
 const expWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-expedition.yml'), 'utf8');
 check('уборка пыли в workflow не откачена: keep по dir, до выхода «Отчёта нет»',
   expWorkflow.includes("e.get('dir')") && expWorkflow.indexOf("e.get('dir')") < expWorkflow.indexOf('Отчёта нет — складывать нечего'));
@@ -355,6 +355,14 @@ check('стоп-кран не рубит маршрут к остатку: то�
 check('места с остатком считаются по непройденному, а не по застывшему флагу open',
   expNow.includes("for label in (n.get('options') or [])")
   && expNow.includes('unopened = [k for k, n in story_map.nodes.items()'));
+
+check('карта: тот же текст с другим набором вариантов — ОДНО место, варианты дописываются',
+  expNow.includes('def text_key_index') && expNow.includes('already = self.text_key_index().get(self.key(text))')
+  && expNow.includes("merged = node.setdefault('options', [])"));
+check('карта: висячие рёбра не берутся из памяти (было 174 из 311 — половина графа)',
+  expNow.includes("if e.get('from') in self.nodes and e.get('to') in self.nodes"));
+check('карта: нажатие не теряется между разными наборами одного места',
+  expNow.includes('def tried_here') && expNow.includes("return (tk, label) in self.tried"));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
