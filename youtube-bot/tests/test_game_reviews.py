@@ -477,13 +477,18 @@ class GameCatalogTests(unittest.TestCase):
 
 
 class ScheduleTests(unittest.TestCase):
-    def test_shorts_have_two_daily_moscow_slots_in_winter_and_summer(self):
+    def test_shorts_have_four_daily_moscow_slots_in_winter_and_summer(self):
         from datetime import datetime, timezone
+        # Moscow has no DST, so the same UTC instants hold in January, July and
+        # November. Four slots a day, each three hours apart from the one before.
         for month in (1, 7, 11):
-            morning = next_publish_slot(datetime(2026, month, 23, 1, 0, tzinfo=timezone.utc))
-            noon = next_publish_slot(datetime(2026, month, 23, 5, 0, tzinfo=timezone.utc))
-            self.assertEqual(morning.isoformat(), f"2026-{month:02d}-23T05:00:00+00:00")
-            self.assertEqual(noon.isoformat(), f"2026-{month:02d}-23T09:00:00+00:00")
+            # Probe between slots, with the 45-minute lead already satisfied:
+            # 06:00 UTC is 09:00 Moscow, so the next slot is the following one.
+            cases = ((5, 6), (9, 10), (13, 14), (17, 18))
+            for hour, slot_utc in cases:
+                with self.subTest(month=month, hour=hour):
+                    got = next_publish_slot(datetime(2026, month, 23, hour, 0, tzinfo=timezone.utc))
+                    self.assertEqual(got.isoformat(), f"2026-{month:02d}-23T{slot_utc:02d}:00:00+00:00")
 
     def test_long_video_schedule_is_daily_at_06_moscow(self):
         from datetime import datetime, timezone
@@ -498,17 +503,21 @@ class ScheduleTests(unittest.TestCase):
 
     def test_schedule_moves_forward_when_slot_is_too_close(self):
         from datetime import datetime, timezone
+        # 07:30 Moscow: the 09:00 slot is still far enough ahead to be used.
         now = datetime(2026, 11, 24, 4, 30, tzinfo=timezone.utc)
-        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-24T09:00:00+00:00")
+        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-24T06:00:00+00:00")
+        # 12:00 Moscow: 13:00 is the next slot, not tomorrow morning.
         now = datetime(2026, 11, 24, 9, 0, tzinfo=timezone.utc)
-        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-25T05:00:00+00:00")
+        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-24T10:00:00+00:00")
 
     def test_manual_moscow_time_is_converted_and_does_not_change_schedule(self):
         from datetime import datetime, timezone
         from schedule_policy import manual_publish_time
         now = datetime(2026, 11, 22, 12, 0, tzinfo=timezone.utc)
         self.assertEqual(manual_publish_time("2026-11-22 18:30", now=now).isoformat(), "2026-11-22T15:30:00+00:00")
-        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-23T05:00:00+00:00")
+        # 12:00 UTC is 15:00 Moscow; the next Short slot is 17:00 the same day,
+        # which is 14:00 UTC. Four slots a day means no wait until tomorrow.
+        self.assertEqual(next_publish_slot(now).isoformat(), "2026-11-22T14:00:00+00:00")
 
     def test_manual_time_rejects_past_near_invalid_and_timezone_suffix(self):
         from datetime import datetime, timezone
