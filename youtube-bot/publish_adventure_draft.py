@@ -5,7 +5,7 @@ import sys
 import uuid
 from pathlib import Path
 
-from adventure_draft import GAME_URL, MIN_EDITED_GAMEPLAY_SECONDS
+from adventure_draft import GAME_URL, PUZZLE_URL, MIN_EDITED_GAMEPLAY_SECONDS
 from gameplay_voiceover import probe_capture
 import math
 from publish_to_supabase import publish
@@ -19,7 +19,9 @@ def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool
         raise ValueError('Expected a numeric capture run ID.')
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
     draft = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
-    if trace.get('game') != 'The Lost Artifact' or trace.get('outcome') != 'game_reported_victory' or draft.get('needs_continuation') is not False or draft.get('draft') != 'zuza-pilot.mp4':
+    puzzle = trace.get('game') == '16 Puzzle'
+    game_finished = (trace.get('outcome') == 'game_reported_win' and type(trace.get('boards_won')) is int and trace['boards_won'] >= 1) if puzzle else (trace.get('game') == 'The Lost Artifact' and trace.get('outcome') == 'game_reported_victory')
+    if not game_finished or draft.get('needs_continuation') is not False or draft.get('draft') != 'zuza-pilot.mp4':
         raise ValueError('This uploader accepts only the completed pilot, not an unfinished part.')
     video = folder / 'zuza-pilot.mp4'
     if not video.is_file() or video.is_symlink():
@@ -30,14 +32,18 @@ def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool
             or probe_capture(video) <= MIN_EDITED_GAMEPLAY_SECONDS):
         raise ValueError('Upload blocked: more than 10 minutes of edited gameplay are required; closing holds do not count.')
     scheduled = manual_publish_time(publish_at).isoformat().replace('+00:00', 'Z')
+    url = PUZZLE_URL if puzzle else GAME_URL
+    description = (f'{url}\n\nПятнашки: решено досок — {trace["boards_won"]}. Qwen и планировщик; комментарий по журналу ходов.\n'
+                   'Исходник: https://github.com/kunjgit/GameZone' if puzzle else
+                   f'{url}\n\nThe Lost Artifact: прохождение Qwen. Русский комментарий по журналу ходов.\n'
+                   'Авторы игры: Ritaban Ghosh и участники mini-js-games-hub.\n'
+                   'Исходник: https://github.com/ritaban06/mini-js-games-hub')
     result = folder / 'publish.result.json'
     result.write_text(json.dumps({'metadata': {
-        'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{GAME_URL}#capture-{run_id}')),
-        'game_id': 'the-lost-artifact', 'title': 'Qwen ищет потерянный артефакт — пробное прохождение',
-        'description': f'{GAME_URL}\n\nThe Lost Artifact: прохождение Qwen. Русский комментарий по журналу ходов.\n'
-                       'Авторы игры: Ritaban Ghosh и участники mini-js-games-hub.\n'
-                       'Исходник: https://github.com/ritaban06/mini-js-games-hub',
-        'tags': ['games', 'Qwen', 'The Lost Artifact'], 'category_id': '20', 'video_format': 'long',
+        'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{url}#capture-{run_id}')),
+        'game_id': '16-puzzle' if puzzle else 'the-lost-artifact',
+        'title': 'Qwen решает «Пятнашки» — игровая кампания' if puzzle else 'Qwen ищет потерянный артефакт — пробное прохождение',
+        'description': description, 'tags': ['games', 'Qwen', '15-puzzle' if puzzle else 'The Lost Artifact'], 'category_id': '20', 'video_format': 'long',
         'video_path': str(video.resolve()), 'publish_at': scheduled, 'requested_publish_at': scheduled,
     }}, ensure_ascii=False), encoding='utf-8')
     return result
@@ -45,4 +51,6 @@ def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool
 
 if __name__ == '__main__':
     folder, run_id, slot = sys.argv[1:]
-    publish(prepare(Path(folder), run_id, slot, rights_verified=os.environ.get('ADVENTURE_RECORDING_RIGHTS_VERIFIED') == 'true'))
+    trace = json.loads((Path(folder) / 'trace.json').read_text(encoding='utf-8'))
+    rights = 'PUZZLE_RECORDING_RIGHTS_VERIFIED' if trace.get('game') == '16 Puzzle' else 'ADVENTURE_RECORDING_RIGHTS_VERIFIED'
+    publish(prepare(Path(folder), run_id, slot, rights_verified=os.environ.get(rights) == 'true'))

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       adventure_capture_run:
-        description: "Optional completed private adventure capture run ID; publish pilot only"
+        description: "Optional completed private finite-game capture run ID; publish pilot only"
         type: string
         required: false
       publish_at:
@@ -162,7 +162,7 @@ jobs:
       PUBLISH_AT: ${{ inputs.publish_at }}
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
       ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
-      DATA_DIR: ${{ runner.temp }}/adventure-history
+      PUZZLE_RECORDING_RIGHTS_VERIFIED: ${{ vars.PUZZLE_RECORDING_RIGHTS_VERIFIED }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -174,12 +174,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          [[ "$ADVENTURE_RECORDING_RIGHTS_VERIFIED" == true && -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || exit 1
+          [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || exit 1
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e '
             .conclusion == "success" and .path == ".github/workflows/adventure-experiment.yml"
             and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null
-          gh run download "$CAPTURE_RUN" --name "adventure-private-$CAPTURE_RUN" --dir "$RUNNER_TEMP/adventure-publish"
+          artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN/artifacts" | jq -er --arg id "$CAPTURE_RUN" '[.artifacts[] | select(.expired == false and (.name == ("puzzle-private-" + $id) or .name == ("adventure-private-" + $id))) | .name] | select(length == 1) | .[0]')"
+          case "$artifact" in
+            puzzle-*) [[ "$PUZZLE_RECORDING_RIGHTS_VERIFIED" == true ]] || exit 1 ;;
+            adventure-*) [[ "$ADVENTURE_RECORDING_RIGHTS_VERIFIED" == true ]] || exit 1 ;;
+          esac
+          gh run download "$CAPTURE_RUN" --name "$artifact" --dir "$RUNNER_TEMP/adventure-publish"
       - name: Install media verifier
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Publish through the existing authorized uploader
+        env:
+          DATA_DIR: ${{ runner.temp }}/adventure-history
         run: python youtube-bot/publish_adventure_draft.py "$RUNNER_TEMP/adventure-publish" "$CAPTURE_RUN" "$PUBLISH_AT"
