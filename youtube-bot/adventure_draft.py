@@ -181,7 +181,7 @@ def build(folder):
     if short and edited > SHORT_SECONDS:
         raise ValueError('Encoded Short exceeds the three-minute limit')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
-    report = {'short': short, 'draft': f'{base}.mp4', 'needs_continuation': not won,
+    report = {'short': short, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
         'cuts_seconds': cuts, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'boards_won': trace.get('boards_won'),
