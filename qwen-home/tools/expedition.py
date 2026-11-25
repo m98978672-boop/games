@@ -528,7 +528,14 @@ def run(url, seconds, out, task_keys='', interval_ms=0, memo_from=None):
                 mp = story.get('map') or {}
                 fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
                 runs = story.get('runs') or []
-                ends = {e['text'][:120] for e in (story.get('endings') or [])}
+                # Концовки считаем по ПУТИ (routeKey), а не по экрану: у этой
+                # игры финальный экран один и тот же у всех концовок.
+                ends = {}
+                for e in (story.get('endings') or []):
+                    ends[e.get('routeKey') or e['text'][:120]] = e.get('route', '')
+                report.data['endingsSeen'] = [{'route': v, 'run': e.get('run')}
+                                              for k, v in list(ends.items())
+                                              for e in story['endings'] if (e.get('routeKey') or e['text'][:120]) == k][:10]
                 report.data['storyMap'] = {
                     'places': mp.get('places', 0), 'links': mp.get('links', 0),
                     'tried': mp.get('tried', 0), 'finds': mp.get('finds', [])[:5],
@@ -536,7 +543,8 @@ def run(url, seconds, out, task_keys='', interval_ms=0, memo_from=None):
                 }
                 report.data['storyLine'] = (
                     f"прошла историю: {story['moves']} выборов, {len(runs)} захода(ов), "
-                    f"{mp.get('places', 0)} мест в карте, концовок видела {len(ends)}"
+                    f"{mp.get('places', 0)} мест в карте, путей к финалу {len(ends)}, "
+                    f"непройденных вариантов {mp.get('remaining', 0)}"
                     + (f", нашла: {', '.join(mp.get('finds', [])[:3])}" if mp.get('finds') else '')
                     + ((' · финал: ' + (story['endings'][-1].get('text') or '')[:70].strip())
                        if story.get('endings') else ' · до финала не дошла — история не отпустила'))
@@ -1007,8 +1015,17 @@ class StoryMap:
                 out.append(c)
         return out
 
+    def remaining(self):
+        """Сколько вариантов в известных местах ещё не нажато."""
+        left = 0
+        for k, node in self.nodes.items():
+            for label in (node.get('options') or []):
+                if (k, label) not in self.tried:
+                    left += 1
+        return left
+
     def summary(self):
-        return {'places': len(self.nodes), 'links': len(self.edges),
+        return {'remaining': self.remaining(), 'places': len(self.nodes), 'links': len(self.edges),
                 'tried': len(self.tried),
                 'energetic': sum(1 for n in self.nodes.values() if n.get('energy', 0) > 0),
                 'tired': sum(1 for n in self.nodes.values() if n.get('energy', 0) < 0),
@@ -1018,7 +1035,8 @@ class StoryMap:
         """Слепок карты для следующего прогона: места, переходы, что нажато."""
         places = {k: {'text': v.get('text', '')[:160], 'visits': v.get('visits', 0),
                       'energy': v.get('energy', 0), 'finds': v.get('finds', []),
-                      'clues': v.get('clues', 0), 'open': bool(v.get('open'))}
+                      'clues': v.get('clues', 0), 'open': bool(v.get('open')),
+                      'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
         return {'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
@@ -1347,7 +1365,12 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                     page.wait_for_timeout(900)
                     continue
                 run_end = text[:400]
-                endings.append({'run': run, 'n': moves, 'text': run_end})
+                # Чем кончился заход: последние выборы перед финалом. Экран у
+                # всех концовок один, поэтому путь и есть различитель.
+                tail = [p2['choice'] for p2 in path[-4:]]
+                endings.append({'run': run, 'n': moves, 'text': run_end,
+                                'route': ' → '.join(tail),
+                                'routeKey': hashlib.sha1('|'.join(tail).encode('utf-8')).hexdigest()[:12]})
                 report.step('финал' if text else 'пусто',
                             f'заход {run}: {moves} выборов, новых мест {new_places} — {text[:170] or "пусто"}')
                 break

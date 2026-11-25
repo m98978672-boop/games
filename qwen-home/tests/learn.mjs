@@ -293,5 +293,12 @@ check('долгая история: окно до 10 минут и до шест
 check('длинный прогон доносит отчёт: причина падения видна, видео не больше 8 МБ',
   expWf.includes('trap ') && expWf.includes('scale=640:-2,fps=12') && expWf.includes('Пережатое видео всё ещё'));
 
+check('концовки считаются по ПУТИ, а не по одинаковому экрану «The End»',
+  expPy.includes('routeKey') && expPy.includes("'route': ' → '.join(tail)") && expPy.includes('endingsSeen'));
+
+check('видно, сколько осталось непройденного: карта помнит варианты мест',
+  expPy.includes('def remaining') && expPy.includes("'options': (v.get('options') or [])[:8]")
+  && expPy.includes('непройденных вариантов'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
