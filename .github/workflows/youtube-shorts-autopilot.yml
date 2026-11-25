@@ -144,8 +144,11 @@ jobs:
         run: |
           set -euo pipefail
           python youtube-bot/review_workflow_format.py
+          # A value written to $GITHUB_ENV reaches only later steps, so pass the
+          # format to the same-step validator explicitly.
           if [ "$REVIEW_PREVIEW" != "true" ]; then
-            python youtube-bot/review_batch.py --check
+            VIDEO_FORMAT=$(grep -m1 '^VIDEO_FORMAT=' "$GITHUB_ENV" | cut -d= -f2-)
+            VIDEO_FORMAT="$VIDEO_FORMAT" python youtube-bot/review_batch.py --check
           fi
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
             echo "::error::Choose the owner-approved audience value true or false in the workflow input."
