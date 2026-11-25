@@ -72,11 +72,18 @@ class ReviewBatchTests(unittest.TestCase):
         self.assertEqual((published, skipped), (0, ['a: too close', 'b: too close']))
         run.assert_not_called()
 
+    # scheduled_plan() calls served_slot(), so the name is bound inside review_batch.
+    # Patching schedule_policy itself never took effect: the job list parser in
+    # review_batch read the cron literal as a row instead of the served slot, and
+    # the test kept agreeing with the clock instead of the code.
+    def _served_slot(self, moment):
+        return datetime(2026, 11, 25, moment, tzinfo=timezone.utc)
+
     def test_scheduled_plan_renders_nothing_when_the_slot_has_a_video(self):
-        slot = '2026-11-25T05:00:00Z'
+        slot = (self._served_slot(5)).isoformat().replace('+00:00', 'Z')
         with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
                 patch('publish_to_supabase.read_queue', return_value=[{'publish_at': slot, 'status': 'scheduled', 'video_id': 'abc'}]), \
-                patch('schedule_policy.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+                patch('review_batch.served_slot', return_value=self._served_slot(5)), \
                 contextlib.redirect_stdout(io.StringIO()) as output:
             self.assertEqual(scheduled_plan(), [])
         self.assertIn('already has', output.getvalue())
@@ -84,7 +91,7 @@ class ReviewBatchTests(unittest.TestCase):
     def test_scheduled_plan_targets_the_served_slot_when_it_is_empty(self):
         with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
                 patch('publish_to_supabase.read_queue', return_value=[]), \
-                patch('schedule_policy.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+                patch('review_batch.served_slot', return_value=self._served_slot(5)), \
                 contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(scheduled_plan(), ['2026-11-25 08:00'])
 
