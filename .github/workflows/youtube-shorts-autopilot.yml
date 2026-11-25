@@ -8,6 +8,10 @@ on:
     - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
+      puzzle_episode:
+        description: "Record, edit and schedule a new independent Zuza puzzle episode"
+        type: boolean
+        default: false
       adventure_capture_run:
         description: "Optional completed private finite-game capture run ID; publish pilot only"
         type: string
@@ -45,12 +49,12 @@ permissions:
 concurrency:
   # Separate lanes can run in parallel, but GitHub retains at most one pending
   # run per group. Submit one batch per lane and wait for it to finish.
-  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || inputs.video_format }}
+  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
   cancel-in-progress: false
 
 jobs:
   create-and-schedule:
-    if: ${{ !inputs.adventure_capture_run }}
+    if: ${{ !inputs.adventure_capture_run && !inputs.puzzle_episode }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -149,8 +153,47 @@ jobs:
           path: youtube-bot/data/recent-games.json
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
 
+  check-puzzle-episode:
+    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      CAPTURE_RUN: ${{ inputs.adventure_capture_run }}
+      PUBLISH_AT: ${{ inputs.publish_at }}
+      PUZZLE_RECORDING_RIGHTS_VERIFIED: ${{ vars.PUZZLE_RECORDING_RIGHTS_VERIFIED }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Check publishing prerequisites before starting the recording
+        run: |
+          [[ "$GITHUB_REF" == refs/heads/main && -z "$CAPTURE_RUN" ]] || { echo '::error::Select main and do not set a previous capture run.'; exit 1; }
+          [[ "$PUZZLE_RECORDING_RIGHTS_VERIFIED" == true ]] || { echo '::error::Verify recording and asset rights, then set PUZZLE_RECORDING_RIGHTS_VERIFIED=true.'; exit 1; }
+          PYTHONPATH=youtube-bot python - <<'PYCODE'
+          import os
+          from datetime import datetime, timedelta, timezone
+          from schedule_policy import manual_publish_time
+          now = datetime.now(timezone.utc)
+          if manual_publish_time(os.environ['PUBLISH_AT'], now=now) < now + timedelta(hours=3):
+              raise SystemExit('Choose a Moscow publication slot at least 3 hours ahead for recording, retry and upload.')
+          PYCODE
+
+  record-puzzle-episode:
+    needs: check-puzzle-episode
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      puzzle_episode: true
+
   publish-adventure-pilot:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_capture_run != ''
+    needs: record-puzzle-episode
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -158,7 +201,7 @@ jobs:
       actions: read
       id-token: write
     env:
-      CAPTURE_RUN: ${{ inputs.adventure_capture_run }}
+      CAPTURE_RUN: ${{ inputs.puzzle_episode && github.run_id || inputs.adventure_capture_run }}
       PUBLISH_AT: ${{ inputs.publish_at }}
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
       ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
@@ -170,7 +213,14 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Fetch this episode from the same run
+        if: inputs.puzzle_episode
+        uses: actions/download-artifact@v4
+        with:
+          name: puzzle-private-${{ github.run_id }}
+          path: ${{ runner.temp }}/adventure-publish
       - name: Verify capture provenance and fetch the private artifact
+        if: ${{ !inputs.puzzle_episode }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

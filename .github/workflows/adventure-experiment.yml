@@ -1,6 +1,10 @@
 name: Private finite adventure experiment (no upload)
 on:
   workflow_call:
+    inputs:
+      puzzle_episode:
+        type: boolean
+        default: false
   push:
     branches: [arena/7d9fee46-games]
     paths: [.github/workflows/adventure-experiment.yml]
@@ -8,7 +12,7 @@ permissions:
   contents: read
 jobs:
   adventure:
-    if: github.event_name != 'push'
+    if: github.event_name != 'push' && !inputs.puzzle_episode
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -67,7 +71,7 @@ jobs:
           retention-days: 3
   finite-puzzle:
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 95
     env:
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
@@ -102,9 +106,10 @@ jobs:
           key: puzzle-skills-v1-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: puzzle-skills-v1-
       - name: Record finite puzzle without padding
+        if: ${{ !inputs.puzzle_episode }}
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
-          PUZZLE_CAMPAIGN_ROUNDS: ${{ github.event_name == 'push' && '4' || '1' }}
+          PUZZLE_CAMPAIGN_ROUNDS: ${{ (github.event_name == 'push' || inputs.puzzle_episode) && '4' || '1' }}
           PUZZLE_RECORD_DIR: ${{ runner.temp }}/puzzle-recording
           PUZZLE_SKILL_DB: ${{ runner.temp }}/puzzle-skill-memory/skills.sqlite3
         shell: bash
@@ -116,8 +121,30 @@ jobs:
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/puzzle.log"; fi
           exit "$result"
       - name: Build narrated puzzle draft and measure edited gameplay
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && !inputs.puzzle_episode
         run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/puzzle-recording"
+      - name: Automatically record and qualify an episode (up to two attempts)
+        if: inputs.puzzle_episode
+        env:
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+          PUZZLE_CAMPAIGN_ROUNDS: '4'
+          PUZZLE_SKILL_DB: ${{ runner.temp }}/puzzle-skill-memory/skills.sqlite3
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            export PUZZLE_RECORD_DIR="$RUNNER_TEMP/puzzle-attempt-$attempt"
+            mkdir -p "$PUZZLE_RECORD_DIR"
+            if python -u youtube-bot/tests/smoke_puzzle_qwen.py 2>&1 | tee "$PUZZLE_RECORD_DIR/session.log" &&
+               python youtube-bot/adventure_draft.py "$PUZZLE_RECORD_DIR" &&
+               jq -e '.duration_eligible == true and .needs_continuation == false and .boards_won >= 1' "$PUZZLE_RECORD_DIR/pilot.json"; then
+              mv "$PUZZLE_RECORD_DIR" "$RUNNER_TEMP/puzzle-recording"
+              exit 0
+            fi
+            echo "::warning::Attempt $attempt did not qualify. No upload started."
+          done
+          mv "$PUZZLE_RECORD_DIR" "$RUNNER_TEMP/puzzle-recording"
+          echo '::error::No completed episode longer than 10 minutes after editing; private draft only.'
+          exit 1
       - name: Save private recording and observed trace
         if: always()
         uses: actions/upload-artifact@v4

@@ -90,11 +90,28 @@ def build(folder):
         # A closing hold, if needed, is for narration only; the raw footage is untouched.
         closing_hold = max(0, cursor - video_seconds)
         filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}[v]']
-        filters += [f'[{i+1}:a]adelay={ms}:all=1[a{i}]' for i, (_, ms) in enumerate(wavs)]
-        filters += [''.join(f'[a{i}]' for i in range(len(wavs))) + f'amix=inputs={len(wavs)}:normalize=0,apad[a]']
-        cmd = ['ffmpeg', '-nostdin', '-v', 'error', '-y', '-i', str(raw)]
-        for wav, _ in wavs:
-            cmd += ['-i', str(wav)]
+        # The clips never overlap. Assemble one PCM track to avoid opening
+        # hundreds of FFmpeg inputs for a multi-board campaign.
+        narration = Path(temp) / 'narration.wav'
+        with wave.open(str(narration), 'wb') as target:
+            output_format = None
+            written = 0
+            for wav, offset_ms in wavs:
+                with wave.open(str(wav), 'rb') as clip:
+                    fmt = (clip.getnchannels(), clip.getsampwidth(), clip.getframerate())
+                    if output_format is None:
+                        output_format = fmt
+                        target.setnchannels(fmt[0])
+                        target.setsampwidth(fmt[1])
+                        target.setframerate(fmt[2])
+                    if fmt != output_format or fmt[1] != 2:
+                        raise ValueError('Unexpected voice format')
+                    silence = max(0, round(offset_ms * fmt[2] / 1000) - written)
+                    target.writeframesraw(b'\0' * silence * fmt[0] * fmt[1])
+                    target.writeframesraw(clip.readframes(clip.getnframes()))
+                    written += silence + clip.getnframes()
+        filters.append('[1:a]apad[a]')
+        cmd = ['ffmpeg', '-nostdin', '-v', 'error', '-y', '-i', str(raw), '-i', str(narration)]
         subprocess.run(cmd + ['-filter_complex', ';'.join(filters), '-map', '[v]', '-map', '[a]',
                        '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac',
                        '-shortest', '-movflags', '+faststart', str(folder / f'{base}.mp4')], check=True, timeout=300)
