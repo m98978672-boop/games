@@ -24,7 +24,7 @@ jobs:
           python-version: '3.11'
       - name: Install verifier and local model
         run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
           pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
       - name: Verify adventure memory
         run: python -m unittest discover -s youtube-bot/tests -p test_adventure_learning.py
@@ -56,7 +56,11 @@ jobs:
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/adventure.log"; fi
           exit "$result"
+      - name: Make one narrated draft for Zuza
+        if: github.event_name == 'push'
+        run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-recording"
       - name: Save private recording and observed trace
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: adventure-private-${{ github.run_id }}
@@ -64,6 +68,7 @@ jobs:
           if-no-files-found: error
           retention-days: 3
   finite-puzzle:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 65
     env:

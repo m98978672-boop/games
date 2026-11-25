@@ -28,7 +28,7 @@ choices = CHOICES
 build = hashlib.sha256(b''.join((source / name).read_bytes() for name in ('index.html', 'style.css', 'script.js'))).digest()
 memory = SkillMemory(os.environ.get('ADVENTURE_SKILL_DB') or record_dir / 'skills.sqlite3')
 route = []
-agent = QwenVisionAgent('Play the finite text adventure. Read the story; choose the first, second, or third visible enabled button from top to bottom to seek the lost artifact.', choices)
+agent = QwenVisionAgent('Play the finite text adventure. Read the story; choose the first, second, or third visible enabled button from top to bottom to seek the lost artifact.', choices, avoid_stalled_actions=True)
 # Do not leave the game active while weights are downloaded and initialized.
 _vision_runtime()
 trace = []
@@ -63,7 +63,12 @@ with tempfile.TemporaryDirectory(prefix='adventure-game-') as temp:
             agent.allowed = tuple(allowed)
             before = base64.b64decode(obs['screenshot_png_base64'], validate=True)
             key = screen_key(build, before)
-            choice = recall_choice(memory, key, allowed)
+            analyzing = same_screen > 0
+            if analyzing:
+                agent.objective = 'The previous choice did not change the screen. Review the story and enabled buttons; try a different action to reach the artifact.'
+            else:
+                agent.objective = 'Read the story and choose an enabled button to reach the lost artifact.'
+            choice = None if analyzing else recall_choice(memory, key, allowed)
             recalled = choice is not None
             inference_seconds = 0.0
             if choice is None:
@@ -83,7 +88,7 @@ with tempfile.TemporaryDirectory(prefix='adventure-game-') as temp:
             trace.append({'browser_frame_timing':obs.get('browser_frame_timing'), 'screenshot_ms':obs.get('screenshot_ms'),
                           'model_inference_seconds':round(inference_seconds, 3), 'step':len(trace)+1,'choice':choice, 'action_source':'verified_memory' if recalled else 'model',
                           'recording_elapsed_ms':obs.get('recording_elapsed_ms'),
-                          'screen_unchanged':unchanged, 'game_reported_outcome':(obs.get('adventure_telemetry') or {}).get('outcome')})
+                          'analyzing_stall':analyzing, 'screen_unchanged':unchanged, 'game_reported_outcome':(obs.get('adventure_telemetry') or {}).get('outcome')})
             print('ADVENTURE_STEP='+json.dumps(trace[-1]), flush=True)
             if trace[-1]['game_reported_outcome'] in ('victory','death'):
                 outcome = 'game_reported_' + trace[-1]['game_reported_outcome']; break
