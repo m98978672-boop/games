@@ -82,6 +82,13 @@ class ReviewBatchTests(unittest.TestCase):
             self.assertEqual(scheduled_plan(), [])
         self.assertIn('already has', output.getvalue())
 
+    def test_scheduled_plan_refuses_an_unresolved_reservation(self):
+        with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
+                patch('publish_to_supabase.read_queue', return_value=[{'publish_at': '2026-11-25T05:00:00Z', 'status': 'processing', 'video_id': None}]), \
+                patch('review_batch.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)):
+            with self.assertRaisesRegex(ValueError, 'unresolved reservation'):
+                scheduled_plan()
+
     def test_scheduled_plan_targets_the_served_slot_when_it_is_empty(self):
         with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
                 patch('publish_to_supabase.read_queue', return_value=[]), \

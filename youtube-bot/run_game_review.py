@@ -78,6 +78,9 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     reserved = None
     if requested is None:
         reserved = reserve_slot_before_render(video_format, occupied=taken)
+        # Processing/failed reservations may have an ambiguous YouTube outcome.
+        # Do not treat them as free or shift around them without investigation.
+        assess([reserved], jobs)
     else:
         # A manual request must never reschedule itself, so a taken slot is
         # refused here. Rendering takes minutes and the answer is already known;
