@@ -58,6 +58,29 @@ class RenderQualityTests(unittest.TestCase):
             result = renderer.verify_video_profile(Path(temp) / "clip.mp4")
         self.assertEqual(result, {"fps": 50.0, "width": 1920, "height": 1080})
 
+    def test_review_verdict_fallback_never_drops_personal_experience_disclaimer(self):
+        from unittest.mock import patch
+        heard = []
+        def fake_speech(text, path, **_kwargs):
+            heard.append(text)
+            with wave.open(str(path), 'wb') as target:
+                target.setnchannels(1); target.setsampwidth(2); target.setframerate(1000)
+                target.writeframes(b'\0\0' * 1000)
+            return 13.0 if 'Оценка' in text or 'Итог' in text else 1.0
+        script = {'format': 'game-review', 'idea_score': 7,
+                  'scenes': [{'dialogue': 'Первая сцена.'} for _ in range(4)] +
+                            [{'dialogue': 'Итог: оценка идеи — 7 из 10. Я ещё не играла.'}]}
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); model = root / 'voice.onnx'; model.write_bytes(b'model')
+            with patch.dict('os.environ', {'PIPER_MODEL_PATH': str(model)}), \
+                 patch.object(renderer, 'ffmpeg_executable', return_value='ffmpeg'), \
+                 patch.object(renderer, 'synthesize', side_effect=fake_speech), \
+                 patch.object(renderer, 'render_frame'), patch.object(renderer, 'SOURCE_FPS', 1):
+                with self.assertRaisesRegex(ValueError, 'fallback exceeds'):
+                    renderer.render_short(script, root / 'out.mp4', root / 'work')
+        self.assertEqual(heard[-1], 'Оценка идеи по описанию — 7 из 10. Я не играла.')
+        self.assertIn('не играла', heard[-1])
+
     def test_short_long_narration_fails_before_any_video_encoding(self):
         def fake_speech(_text, path, **_kwargs):
             with wave.open(str(path), "wb") as target:

@@ -383,10 +383,20 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
     for scene_index, scene in enumerate(script["scenes"]):
         audio_path = audio_dir / f"line-{scene_index:02d}.wav"
         style = {"happy":"bright", "curious":"neutral", "calm":"reflective"}.get(scene.get("emotion"), "neutral")
+        is_review = script.get("format") == "game-review"
+        # Never shorten a review by dropping a qualifying sentence. The final
+        # verdict has a compact, truthful alternative that retains both score
+        # and the fact that there was no personal playthrough.
+        fallback = "Короткий разбор игрового проекта."
+        if is_review:
+            fallback = None
+            score = script.get("idea_score")
+            if scene_index == len(script["scenes"]) - 1 and type(score) is int and 1 <= score <= 10:
+                fallback = f"Оценка идеи по описанию — {score} из 10. Я не играла."
         dialogue, seconds = fit_speech_text(
             str(scene["dialogue"]),
             lambda candidate: synthesize(candidate, audio_path, style=style),
-            max_seconds=12.0,
+            max_seconds=12.0, preserve_full=is_review, fallback=fallback,
         )
         # Keep the bubble, recorded review, and final audio in sync after any safe shortening.
         scene["dialogue"] = dialogue
@@ -525,7 +535,7 @@ def render_long_review(script: dict[str, Any], output: Path, workdir: Path) -> d
         style = ("bright", "neutral", "neutral", "reflective")[scene_index % 4]
         dialogue, seconds = fit_speech_text(
             str(scene["dialogue"]), lambda candidate: synthesize(candidate, wav, style=style),
-            max_seconds=40.0, attempts=6,
+            max_seconds=40.0, attempts=6, preserve_full=True, fallback=None,
         )
         scene["dialogue"] = dialogue
         with wave.open(str(wav), "rb") as source:
