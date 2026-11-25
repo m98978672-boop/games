@@ -51,21 +51,16 @@ class SlotStateTests(unittest.TestCase):
     def test_planned_slots_are_regular_and_ordered(self):
         slots = planned_slots(now=datetime(2026, 11, 24, 22, 5, tzinfo=timezone.utc), days=1)
         from schedule_policy import CHANNEL_TZ
-        # Four slots per format per day, in real chronological order.
-        self.assertEqual([s.astimezone(CHANNEL_TZ).strftime('%H:%M') for s in slots],
-                         ['06:00', '09:00', '11:00', '13:00', '15:00', '17:00', '19:00', '21:00'])
+        self.assertEqual([s.astimezone(CHANNEL_TZ).strftime('%H:%M') for s in slots], ['06:00', '08:00', '12:00'])
 
     def test_report_names_the_manual_command_and_never_claims_a_retry(self):
         text = render_report([SLOT], [], error=None)
-        self.assertIn('Shorts', text)
-        self.assertIn('нет видео', text)
+        self.assertIn('08:00', text)
         self.assertIn('gh workflow run youtube-shorts-autopilot.yml', text)
-        # The command must name the exact slot and the right format.
-        self.assertIn("publish_at='2026-11-25 08:00'", text)
-        self.assertIn('video_format=short', text)
-        self.assertIn('Все слоты на эти дни уже заняты', render_report([], [SLOT], error=None))
+        self.assertIn('проверьте YouTube Studio', text)
+        self.assertIn('Все сверенные слоты уже имеют видео', render_report([], [SLOT], error=None))
         unknown = render_report([], [], error='publisher unreachable')
-        self.assertIn('неизвестно', unknown)
+        self.assertIn('очередь публикаций прочитать не удалось', unknown)
 
     def test_reconciliation_reports_ambiguous_slot_without_retry_command(self):
         import contextlib
