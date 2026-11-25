@@ -263,7 +263,7 @@ check('в истории она ДОБЫВАЕТ новое: после фина
   && expPy.includes('RESTART_JS') && expPy.includes('sessionStorage') && expPy.includes("store.removeItem(k)"));
 
 check('карта честная: переход записывается, когда видно, куда он привёл',
-  expPy.includes("story_map.link(pending['from'], pending['choice'], text, here_ctx)"));
+  expPy.includes("story_map.link(pending['from'], pending['choice'], text, here_ctx, labels)"));
 
 check('находки только настоящие: «рука в кармане» за добычу не считается',
   expPy.includes('you scour the shelves') && !expPy.includes("'in your pocket', 'you grab'"));
