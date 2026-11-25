@@ -1,6 +1,9 @@
 name: Private finite adventure experiment (no upload)
 on:
   workflow_call:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/adventure-experiment.yml]
 permissions:
   contents: read
 jobs:
@@ -11,6 +14,7 @@ jobs:
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
+      FINITE_GAME_SECONDS: ${{ github.event_name == 'push' && '600' || '1800' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -22,6 +26,8 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
+      - name: Verify adventure memory
+        run: python -m unittest discover -s youtube-bot/tests -p test_adventure_learning.py
       - name: Build offline bridge
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Fetch pinned home adapter
@@ -31,10 +37,17 @@ jobs:
           mkdir -p "$RUNNER_TEMP/kvenya-release"
           gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
           python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Restore verified adventure memory
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/adventure-skill-memory
+          key: adventure-skills-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: adventure-skills-v1-
       - name: Record real model choices without padding
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
           ADVENTURE_RECORD_DIR: ${{ runner.temp }}/adventure-recording
+          ADVENTURE_SKILL_DB: ${{ runner.temp }}/adventure-skill-memory/skills.sqlite3
         shell: bash
         run: |
           mkdir -p "$ADVENTURE_RECORD_DIR"
@@ -57,6 +70,7 @@ jobs:
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
+      FINITE_GAME_SECONDS: ${{ github.event_name == 'push' && '600' || '1800' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -69,7 +83,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y ffmpeg
           pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
       - name: Verify bounded progress feedback
-        run: python -m unittest discover -s youtube-bot/tests -p 'test_puzzle_supervisor.py'
+        run: python -m unittest discover -s youtube-bot/tests -p 'test_puzzle*.py'
       - name: Build isolated browser
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Fetch pinned home adapter
@@ -79,10 +93,17 @@ jobs:
           mkdir -p "$RUNNER_TEMP/kvenya-release"
           gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
           python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Restore verified puzzle memory
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/puzzle-skill-memory
+          key: puzzle-skills-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: puzzle-skills-v1-
       - name: Record finite puzzle without padding
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
           PUZZLE_RECORD_DIR: ${{ runner.temp }}/puzzle-recording
+          PUZZLE_SKILL_DB: ${{ runner.temp }}/puzzle-skill-memory/skills.sqlite3
         shell: bash
         run: |
           mkdir -p "$PUZZLE_RECORD_DIR"
