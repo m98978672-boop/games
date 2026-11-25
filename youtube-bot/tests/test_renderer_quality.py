@@ -146,6 +146,28 @@ class RenderQualityTests(unittest.TestCase):
         self.assertNotIn("atempo", audio_filter)
         self.assertNotIn("asetrate", audio_filter)
 
+    def test_temporary_png_compression_keeps_exact_frame_pixels(self):
+        from PIL import Image
+        original_save = Image.Image.save
+        script = {'format': 'game-review', 'game_title': 'Проверочная игра',
+                  'idea_score': 7, 'scenes': [{}] * 5, 'screenshot_paths': []}
+        scene = {'label': 'ФАКТ ИЗ STEAM', 'visual': 'Сведения об игре',
+                 'dialogue': 'Русская проверочная фраза.'}
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            for frame in (0, 13):
+                baseline = root / f'baseline-{frame}.png'
+                new = root / f'new-{frame}.png'
+                def force_old_compression(image, path, *args, **kwargs):
+                    kwargs['optimize'] = True
+                    return original_save(image, path, *args, **kwargs)
+                with patch.object(Image.Image, 'save', force_old_compression):
+                    renderer.render_frame(script, scene, 1, frame, baseline)
+                renderer.render_frame(script, scene, 1, frame, new)
+                with Image.open(baseline) as old_image, Image.open(new) as new_image:
+                    self.assertEqual(old_image.size, new_image.size)
+                    self.assertEqual(old_image.convert('RGB').tobytes(), new_image.convert('RGB').tobytes())
+
     def test_review_layouts_render_at_required_dimensions_and_fit_long_words(self):
         from PIL import Image, ImageDraw
         with tempfile.TemporaryDirectory() as temp:
