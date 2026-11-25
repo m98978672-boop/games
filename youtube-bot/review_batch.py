@@ -20,7 +20,7 @@ import time
 from datetime import timedelta
 from pathlib import Path
 
-from schedule_policy import CHANNEL_TZ, manual_publish_time, next_publish_slot, served_slot
+from schedule_policy import CHANNEL_TZ, manual_publish_time, next_publish_slot, served_slot, slot_sequence
 LIMITS = {"short": 5, "long": 2}
 # Batch rendering can take hours; the first automatic slot keeps this much lead.
 BATCH_LEAD = timedelta(hours=8)
@@ -66,10 +66,7 @@ def plan(count: int, video_format: str, start: str, *, now=None) -> list[str]:
     # generous lead, but never assume it is free: the publisher must reserve it.
     first = (manual_publish_time(text, now=now) if text else
              next_publish_slot(now, video_format=video_format, min_lead=BATCH_LEAD)).astimezone(CHANNEL_TZ)
-    if video_format == 'short':
-        times = (first + timedelta(days=index // 2, hours=4 * (index % 2)) for index in range(count))
-    else:
-        times = (first + timedelta(days=index) for index in range(count))
+    times = slot_sequence(first, video_format, count)
     return [slot.strftime("%Y-%m-%d %H:%M") for slot in times]
 
 
