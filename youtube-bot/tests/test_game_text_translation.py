@@ -27,7 +27,8 @@ class GameTextTranslationTests(unittest.TestCase):
 
         def generate(messages, **kwargs):
             seen.append(json.loads(messages[1]['content'])['source_text'])
-            return json.dumps({'ru': 'Перевод.'})
+            number = ''.join(c for c in seen[-1] if c.isdecimal())
+            return json.dumps({'ru': f'Перевод {number}.' if number else 'Перевод.'})
 
         result = russian_game_text(original, generate)
         self.assertEqual(' '.join(seen), ' '.join(original.split()))
@@ -39,3 +40,9 @@ class GameTextTranslationTests(unittest.TestCase):
             return generate(messages, **kwargs)
 
         self.assertIsNone(russian_game_text(original, fail_last))
+
+    def test_changed_quest_quantities_rejected(self):
+        self.assertIsNone(russian_game_text('Collect 12 keys in 4 minutes.',
+            lambda *a, **k: '{"ru":"Собери 2 ключа за 4 минуты."}'))
+        self.assertEqual(russian_game_text('Collect 12 keys in 4 minutes.',
+            lambda *a, **k: '{"ru":"Собери 12 ключей за 4 минуты."}'), 'Собери 12 ключей за 4 минуты.')

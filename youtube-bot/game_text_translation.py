@@ -2,6 +2,7 @@
 import json
 import re
 import textwrap
+from collections import Counter
 from functools import lru_cache
 
 
@@ -40,5 +41,9 @@ def _translate_segment(text, generate):
     if not isinstance(result, str) or not 1 <= len(result.strip()) <= 1400 or not re.search('[А-Яа-яЁё]', result):
         return None
     if any(ord(ch) < 32 for ch in result) or result.strip() == text.strip():
+        return None
+    # Reject obvious gameplay-changing errors such as a dropped timer or quantity.
+    numbers = lambda value: Counter(n.replace(',', '.') for n in re.findall(r'(?<!\w)[+-]?\d+(?:[.,]\d+)?', value))
+    if numbers(text) != numbers(result):
         return None
     return result.strip()
