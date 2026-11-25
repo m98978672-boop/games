@@ -24,6 +24,8 @@ jobs:
           sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
           pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
           docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Test Russian overlay and narration
+        run: python -m unittest discover -s youtube-bot/tests -p test_viewport_translation.py
       - name: Record real gameplay
         env:
           GH_TOKEN: ${{ github.token }}

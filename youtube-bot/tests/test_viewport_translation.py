@@ -17,7 +17,7 @@ class ViewportTranslationTests(unittest.TestCase):
         self.assertEqual(plan(trace)[2], [])
         with tempfile.TemporaryDirectory() as temp:
             self.assertIn('drawbox=x=10:y=10', filters(trace, temp))
-            self.assertIn(russian, (Path(temp) / 'hud-ru-0.txt').read_text())
+            self.assertIn(russian, ' '.join((Path(temp) / 'hud-ru-0.txt').read_text().split()))
 
     def test_unknown_message_is_neither_hidden_nor_read(self):
         self.assertIsNone(translated_message('Unknown message'))
