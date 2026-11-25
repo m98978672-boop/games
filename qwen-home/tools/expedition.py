@@ -1168,11 +1168,14 @@ class StoryMap:
                       'clues': v.get('clues', 0), 'open': bool(v.get('open')),
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
-        return {'schema': 'text+options-v2', 'places': places,
+        return {'schema': 'text+options-v3', 'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
                 'tried': sorted([list(t) for t in self.tried])}
 
-    SCHEMA = 'text+options-v2'
+    # v3: место — один текст (набор вариантов меняется прямо в пассаже),
+    # висячие рёбра отброшены, нажатия сверяются по тексту. Карты v2 собраны
+    # на сломанной схеме: половина рёбер вела из несуществующих мест.
+    SCHEMA = 'text+options-v3'
 
     def load_cache(self, data):
         """Вспомнить карту прошлого прогона: там уже есть места и переходы.

@@ -313,7 +313,7 @@ check('аудит всех обнов истории: код и данные п�
   && expPy.includes('def remaining') && expWf.includes('storymap.json'));
 
 check('память карты несовместимой схемы не берётся: иначе остаток был бы фальшивым',
-  expPy.includes("SCHEMA = 'text+options-v2'") && expPy.includes("data.get('schema') != self.SCHEMA"));
+  expPy.includes("SCHEMA = 'text+options-v3'") && expPy.includes("data.get('schema') != self.SCHEMA"));
 
 // Чужой merge из отставшей ветки уже стирал работу: PR #611 вернул старые
 // версии 54 файлов (kvenya/live.js, youtube-bot, workflows, экспедицию).
@@ -330,7 +330,7 @@ const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8')
 check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
   expNow.includes('remaining') && expNow.includes('routeKey')
   && expNow.includes('memo_from') && expNow.includes('план захода')
-  && expNow.includes("SCHEMA = 'text+options-v2'"));
+  && expNow.includes("SCHEMA = 'text+options-v3'"));
 const expWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-expedition.yml'), 'utf8');
 check('уборка пыли в workflow не откачена: keep по dir, до выхода «Отчёта нет»',
   expWorkflow.includes("e.get('dir')") && expWorkflow.indexOf("e.get('dir')") < expWorkflow.indexOf('Отчёта нет — складывать нечего'));
