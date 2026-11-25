@@ -50,7 +50,19 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     requested = manual_publish_time(manual_time) if manual_time else None  # Validate before rendering.
     # Fix the automatic slot before the expensive work. Deciding it afterwards
     # let two runs that finished minutes apart compete for the same wall time.
-    reserved = None if requested is not None else reserve_slot_before_render(video_format)
+    # The queue is read once, so several runs started together take different
+    # regular slots instead of all aiming at the same one.
+    reserved = None
+    if requested is None:
+        from publish_to_supabase import read_queue
+        from review_slot_state import booked_slots
+        try:
+            taken = booked_slots(read_queue())
+        except Exception as exc:  # noqa: BLE001 - never guess a free slot
+            raise RuntimeError(
+                f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
+            ) from exc
+        reserved = reserve_slot_before_render(video_format, occupied=taken)
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
     # Deliberately source only games listed by Steam's live public shelves; never

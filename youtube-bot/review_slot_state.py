@@ -63,6 +63,11 @@ def _confirmed(job: dict[str, Any]) -> datetime | None:
     return moment.astimezone(timezone.utc) if moment.tzinfo else None
 
 
+def booked_slots(jobs: Iterable[dict[str, Any]]) -> list[datetime]:
+    """Every publish time that already has a real video."""
+    return [moment for moment in (_confirmed(job) for job in jobs) if moment is not None]
+
+
 def assess(slots: Iterable[Any], jobs: Iterable[dict[str, Any]], *,
            tolerance_minutes: int = 1) -> tuple[list[datetime], list[datetime]]:
     """Split the planned slots into (missing, already_booked).
@@ -74,7 +79,7 @@ def assess(slots: Iterable[Any], jobs: Iterable[dict[str, Any]], *,
     if tolerance_minutes < 0:
         raise ValueError("tolerance_minutes must not be negative")
     tolerance = tolerance_minutes * 60
-    booked = [moment for moment in (_confirmed(job) for job in jobs) if moment is not None]
+    booked = booked_slots(jobs)
     missing: list[datetime] = []
     already: list[datetime] = []
     for slot in planned_slots(slots):

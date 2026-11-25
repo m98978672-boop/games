@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, time, timedelta, timezone
+from typing import Iterable
 from zoneinfo import ZoneInfo
 
 CHANNEL_TZ = ZoneInfo("Europe/Moscow")
@@ -85,16 +86,27 @@ def served_slot(event_schedule: str, *, now: datetime | None = None) -> datetime
     raise RuntimeError("could not match a cron firing to a regular slot")
 
 
-def reserve_slot_before_render(video_format: str, *, now: datetime | None = None) -> datetime:
+def reserve_slot_before_render(video_format: str, *, now: datetime | None = None,
+                               occupied: Iterable[datetime] = ()) -> datetime:
     """Pick the slot a review will target *before* the long rendering starts.
 
     A slot fixed before rendering cannot be double-booked by two runs that both
     finish at a different moment. SCHEDULE_LEAD keeps the usual short render
-    from overrunning the slot.
+    from overrunning the slot. ``occupied`` lets an owner who starts several
+    runs at once let each one take a different regular slot instead of all of
+    them aiming at the same time and failing after the render.
     """
     if video_format not in {"short", "long"}:
         raise ValueError("video_format must be short or long")
-    return next_publish_slot(now, video_format=video_format, min_lead=SCHEDULE_LEAD)
+    taken = {moment.astimezone(timezone.utc) for moment in occupied}
+    probe = now
+    for _ in range(16):
+        slot = next_publish_slot(probe, video_format=video_format, min_lead=SCHEDULE_LEAD)
+        if slot.astimezone(timezone.utc) not in taken:
+            return slot
+        # Search again strictly after the slot that is already taken.
+        probe = slot
+    raise RuntimeError("every regular slot in the next days is already booked")
 
 
 def settle_slot_after_render(reserved: datetime, video_format: str, *,

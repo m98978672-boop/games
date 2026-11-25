@@ -18,6 +18,14 @@ class SlotReservationTests(unittest.TestCase):
         self.assertEqual(reserve_slot_before_render('short', now=now).astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), '25.11 08:00')
         self.assertGreaterEqual(SCHEDULE_LEAD, timedelta(hours=1))
 
+    def test_a_taken_slot_is_skipped_before_rendering(self):
+        # Two runs started an hour apart used to aim at the same 08:00 slot and
+        # the second one failed after rendering. Now each takes a free slot.
+        taken = [datetime(2026, 11, 25, 5, tzinfo=timezone.utc)]
+        now = datetime(2026, 11, 24, 14, 1, tzinfo=timezone.utc)
+        self.assertEqual(reserve_slot_before_render('short', now=now).astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), '25.11 08:00')
+        self.assertEqual(reserve_slot_before_render('short', now=now, occupied=taken).astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), '25.11 12:00')
+
     def test_reserved_slot_is_reused_when_rendering_finishes_in_time(self):
         reserved = datetime(2026, 11, 25, 5, tzinfo=timezone.utc)  # 08:00 Moscow
         kept, adjusted = settle_slot_after_render(reserved, 'short', now=datetime(2026, 11, 25, 3, tzinfo=timezone.utc))
