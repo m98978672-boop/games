@@ -15,7 +15,10 @@ from typing import Any
 
 from game_reviews import generate_game_review, generate_long_narration, youtube_description, ensure_editorial_quality, make_review_title, occasionally_ask_viewers
 from renderer import render_long_review, render_short
-from schedule_policy import manual_publish_time, next_publish_slot, resolve_manual_after_render, CHANNEL_TZ
+from schedule_policy import (
+    CHANNEL_TZ, manual_publish_time, reserve_slot_before_render, resolve_manual_after_render,
+    settle_slot_after_render,
+)
 from steam_catalog import download_screenshots, load_steam_games
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -59,6 +62,21 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         raise ValueError("video_format must be short or long")
     manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
     requested = manual_publish_time(manual_time) if manual_time else None  # Validate before rendering.
+    # Fix the automatic slot before the expensive work. Deciding it afterwards
+    # let two runs that finished minutes apart compete for the same wall time.
+    # The queue is read once, so several runs started together take different
+    # regular slots instead of all aiming at the same one.
+    reserved = None
+    if requested is None:
+        from publish_to_supabase import read_queue
+        from review_slot_state import booked_slots
+        try:
+            taken = booked_slots(read_queue())
+        except Exception as exc:  # noqa: BLE001 - never guess a free slot
+            raise RuntimeError(
+                f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
+            ) from exc
+        reserved = reserve_slot_before_render(video_format, occupied=taken)
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
     if os.getenv('REQUIRE_SHARED_TOPIC_HISTORY') == 'true':
@@ -115,7 +133,11 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
             print(f"Requested Moscow time {manual_time} became too close during rendering; "
                   f"rescheduled once to {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow.", file=sys.stderr)
     else:
-        scheduled = next_publish_slot(video_format=video_format)
+        scheduled, adjusted = settle_slot_after_render(reserved, video_format)
+        if adjusted:
+            print("The reserved slot passed during rendering; moved once to the next regular "
+                  f"{video_format} slot {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow. "
+                  "No recurring times changed.", file=sys.stderr)
     source_description = youtube_description(review)
     description = (
         source_description

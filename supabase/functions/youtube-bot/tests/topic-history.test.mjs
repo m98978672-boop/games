@@ -20,7 +20,7 @@ globalThis.fetch = async (url, options) => {
   dbCalls++;
   return Response.json(history);
 };
-await import('../index.ts');
+await import('../../youtube-topic-history/index.ts');
 const b64 = value => Buffer.from(JSON.stringify(value)).toString('base64url');
 const now = Math.floor(Date.now()/1000);
 const claims = {iss:'https://token.actions.githubusercontent.com', aud:'youtube-bot', repository:'m98978672-boop/games', ref:'refs/heads/main', workflow_ref:'m98978672-boop/games/.github/workflows/youtube-shorts-autopilot.yml@refs/heads/main', event_name:'schedule', iat:now, exp:now+300};
@@ -30,7 +30,7 @@ async function jwt(data) {
   return `${message}.${Buffer.from(signature).toString('base64url')}`;
 }
 async function request(token) {
-  return handler(new Request('https://test.invalid/functions/v1/youtube-bot/autopilot/topic-history', {method:'POST', headers:{Authorization:`Bearer ${token}`}}));
+  return handler(new Request('https://test.invalid/functions/v1/youtube-topic-history', {method:'POST', headers:{Authorization:`Bearer ${token}`}}));
 }
 let response = await request(await jwt(claims));
 assert.equal(response.status, 200);
