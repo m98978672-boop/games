@@ -1,0 +1,72 @@
+name: Reflex gameplay layer (live bridge, no publication)
+
+# Проверка быстрого слоя на настоящем мосте: собирается изолированный
+# Playwright-контейнер, в него кладётся синтетическая игра, и агент играет
+# 16 шагов. Ничего не публикуется и не обучается. Пороговые значения
+# (300 мс на восприятие, 2 с на решение) проверяются в самом скрипте.
+on:
+  pull_request:
+    paths:
+      - 'youtube-bot/gameplay/*.py'
+      - 'youtube-bot/gameplay/*.cjs'
+      - 'youtube-bot/gameplay_bridge.py'
+      - 'youtube-bot/reflex_agent.py'
+      - 'youtube-bot/gameplay_qwen_advisor.py'
+      - 'youtube-bot/tests/smoke_reflex_bridge.py'
+      - 'youtube-bot/tests/test_gameplay_reflex.py'
+      - 'youtube-bot/tests/test_gameplay_action_pacer.py'
+      - 'youtube-bot/tests/test_gameplay_realtime.py'
+      - 'youtube-bot/gameplay/realtime_loop.py'
+      - '.github/workflows/reflex-live-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reflex-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    if: github.repository == 'm98978672-boop/games'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install Pillow for frame analysis
+        run: python -m pip install 'Pillow>=10.4,<13.0' 'numpy>=1.26,<3.0'
+      - name: Offline contract tests (budgets, pacing, profiles, memory)
+        run: |
+          python -m unittest \
+            youtube-bot/tests/test_gameplay_reflex.py \
+            youtube-bot/tests/test_gameplay_action_pacer.py \
+            youtube-bot/tests/test_gameplay_realtime.py \
+            youtube-bot/tests/test_gameplay_help_lookup.py \
+            youtube-bot/tests/test_gameplay_bridge.py
+      - name: Measure perception speed on the runner
+        run: python youtube-bot/gameplay/benchmark_reflex.py --compare 40
+      - name: Build offline browser bridge image
+        run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+      - name: Play the synthetic game through the real bridge
+        run: |
+          set +e
+          python -u youtube-bot/tests/smoke_reflex_bridge.py --steps 16 --report "$RUNNER_TEMP/reflex-live.json" 2>&1 | tee "$RUNNER_TEMP/reflex-live.log"
+          status=${PIPESTATUS[0]}
+          cat "$RUNNER_TEMP/reflex-live.log" | grep -E 'REFLEX_LIVE_REPORT|::notice' || true
+          exit "$status"
+      - name: Save the live timing report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reflex-live-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/reflex-live.json
+            ${{ runner.temp }}/reflex-live.log
+          if-no-files-found: warn
+          retention-days: 7
