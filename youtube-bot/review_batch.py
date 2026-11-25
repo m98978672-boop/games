@@ -21,7 +21,7 @@ import time
 from datetime import timedelta
 from pathlib import Path
 
-from schedule_policy import CHANNEL_TZ, manual_publish_time, next_publish_slot, served_slot
+from schedule_policy import CHANNEL_TZ, manual_publish_time, next_publish_slot, served_slot, slot_sequence
 LIMITS = {"short": 5, "long": 2}
 # Batch rendering can take hours; the first automatic slot keeps this much lead.
 BATCH_LEAD = timedelta(hours=8)
@@ -67,10 +67,7 @@ def plan(count: int, video_format: str, start: str, *, now=None) -> list[str]:
     # generous lead, but never assume it is free: the publisher must reserve it.
     first = (manual_publish_time(text, now=now) if text else
              next_publish_slot(now, video_format=video_format, min_lead=BATCH_LEAD)).astimezone(CHANNEL_TZ)
-    if video_format == 'short':
-        times = (first + timedelta(days=index // 2, hours=4 * (index % 2)) for index in range(count))
-    else:
-        times = (first + timedelta(days=index) for index in range(count))
+    times = slot_sequence(first, video_format, count)
     return [slot.strftime("%Y-%m-%d %H:%M") for slot in times]
 
 
@@ -90,6 +87,10 @@ def _usable_slot(publish_at: str) -> str:
     return ""
 
 
+class UncertainBatchQueue(RuntimeError):
+    """Stop the whole batch when queue state cannot be trusted."""
+
+
 def _render(index: int, publish_at: str, video_format: str, output_dir: Path) -> Path:
     """Render one queued review; retried once, always before any upload."""
     env = os.environ.copy()
@@ -102,6 +103,8 @@ def _render(index: int, publish_at: str, video_format: str, output_dir: Path) ->
             return output
         if result.returncode == OCCUPIED_SLOT_EXIT:
             raise OccupiedReviewSlot(publish_at)
+        if result.returncode == 75:
+            raise UncertainBatchQueue("Publication queue state is uncertain; stop the batch and check YouTube Studio before retrying.")
         if attempt == 0:
             print("::warning::Review generation failed; retrying once before any upload.", flush=True)
             time.sleep(20)
@@ -165,7 +168,10 @@ def run_queue(times: list[str], video_format: str, output_dir: Path) -> tuple[in
             skipped.append(f"{publish_at}: publication slot already occupied")
             print(f"::warning::Slot {publish_at} is occupied; skipped without retry or upload.", flush=True)
             continue
+        except UncertainBatchQueue:
+            raise
         except RuntimeError:
+
             skipped.append(f"{publish_at or 'automatic'}: review generation failed twice")
             print(f"::warning::Review generation failed twice for slot "
                   f"{publish_at or 'automatic'}; nothing was uploaded for it. "
