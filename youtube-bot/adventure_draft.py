@@ -7,6 +7,7 @@ import wave
 from pathlib import Path
 
 from gameplay_voiceover import probe_capture
+from adventure_personality import SHORT_SECONDS, short_comment
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
 PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
@@ -46,6 +47,11 @@ def plan(trace):
                 note = 'Ход не сработал. '
             lines.append((prior, f'{note}Плитка {tile}.'))
             previous_source = source
+        elif trace.get('short'):
+            line, reaction = short_comment(event, ORDINAL[event['choice']])
+            lines.append((prior, line))
+            if reaction:
+                lines.append((stamp, reaction))
         else:
             note = 'Экран не менялся. Пробую иначе.' if event.get('analyzing_stall') else ''
             lines.append((prior, f'{note} Выбираю {ORDINAL[event["choice"]]} вариант.'.strip()))
@@ -61,7 +67,8 @@ def build(folder):
     raw = folder / 'recording.webm'
     trace['duration_seconds'] = probe_capture(raw)
     duration, lines, cuts, won = plan(trace)
-    base = 'zuza-pilot' if won else 'zuza-part-01'
+    short = trace.get('short') is True
+    base = 'zuza-adventure-short' if short else ('zuza-pilot' if won else 'zuza-part-01')
     puzzle = trace.get('game') == '16 Puzzle'
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
@@ -89,7 +96,10 @@ def build(folder):
         select = f"select='not({discard})',setpts=N/(25*TB)," if cuts else ''
         # A closing hold, if needed, is for narration only; the raw footage is untouched.
         closing_hold = max(0, cursor - video_seconds)
-        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}[v]']
+        if short and max(video_seconds, cursor) > SHORT_SECONDS:
+            raise ValueError('Edited Short and narration exceed 180 seconds; no export generated')
+        portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
+        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{portrait}[v]']
         # The clips never overlap. Assemble one PCM track to avoid opening
         # hundreds of FFmpeg inputs for a multi-board campaign.
         narration = Path(temp) / 'narration.wav'
@@ -116,8 +126,10 @@ def build(folder):
                        '-c:v', 'libx264', '-crf', '18', '-pix_fmt', 'yuv420p', '-c:a', 'aac',
                        '-shortest', '-movflags', '+faststart', str(folder / f'{base}.mp4')], check=True, timeout=300)
     edited = probe_capture(folder / f'{base}.mp4')
+    if short and edited > SHORT_SECONDS:
+        raise ValueError('Encoded Short exceeds the three-minute limit')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
-    report = {'draft': f'{base}.mp4', 'needs_continuation': not won,
+    report = {'short': short, 'draft': f'{base}.mp4', 'needs_continuation': not won,
         'cuts_seconds': cuts, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'boards_won': trace.get('boards_won'),
         'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay > MIN_EDITED_GAMEPLAY_SECONDS, 'commentary': [text for _, text in lines], 'published': False}

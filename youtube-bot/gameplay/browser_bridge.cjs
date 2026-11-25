@@ -65,7 +65,13 @@ async function main() {
   let step = 0;
   let mouseX = 400, mouseY = 300;
   page.on("popup", popup => popup.close().catch(() => {}));
-  page.on("dialog", dialog => dialog.dismiss().catch(() => {}));
+  let adventureDialog = null;
+  page.on("dialog", dialog => {
+    if (TELEMETRY === "adventure" && dialog.message() === "You find nothing but lint and despair.") {
+      adventureDialog = dialog.message();
+    }
+    return dialog.dismiss().catch(() => {});
+  });
   try {
     // Browser-delivered animation callback intervals, not necessarily actual game
     // render rate or distinct recorded frames. The page is untrusted; values are
@@ -201,7 +207,7 @@ async function main() {
           const choices = buttons.map((button, index) => {
             const r = button.getBoundingClientRect();
             const x = Math.round(r.left + r.width / 2), y = Math.round(r.top + r.height / 2);
-            return {index, x, y, enabled: !button.disabled && r.width > 0 && r.height > 0 && x >= 0 && x < 800 && y >= 0 && y < 600};
+            return {index, x, y, label: (button.textContent || "").trim().slice(0, 120), enabled: !button.disabled && r.width > 0 && r.height > 0 && x >= 0 && x < 800 && y >= 0 && y < 600};
           });
           const t = document.querySelector('#story-text')?.textContent || '';
           const ended = !!document.querySelector('#story-text .game-end');
@@ -209,6 +215,8 @@ async function main() {
           return {choices, outcome};
         } catch { return null; }
       }) : null;
+      if (adventure) adventure.dialog = adventureDialog;
+      adventureDialog = null;
       // Pinned finite 15-puzzle DOM diagnostics: values/centres are untrusted
       // external help. No state mutations or arbitrary selectors are exposed.
       const puzzle = TELEMETRY === "puzzle" ? await page.evaluate(() => {
