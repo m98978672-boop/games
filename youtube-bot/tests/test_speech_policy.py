@@ -25,6 +25,12 @@ class SpeechPolicyTests(unittest.TestCase):
         self.assertLess(len(final_text), len(measured[0]))
         self.assertEqual(final_text, measured[-1])
 
+    def test_fit_never_speaks_a_truncated_clause(self):
+        def duration(text):
+            return 2 if text == "Короткий разбор игрового проекта." else 30
+        final_text, _ = fit_speech_text("Длинное предложение без завершения " * 12, duration)
+        self.assertEqual(final_text, "Короткий разбор игрового проекта.")
+
     def test_fit_uses_neutral_fallback_if_truncation_cannot_fit(self):
         measured = []
 

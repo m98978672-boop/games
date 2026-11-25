@@ -76,7 +76,7 @@ class ReviewBatchTests(unittest.TestCase):
         slot = '2026-11-25T05:00:00Z'
         with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
                 patch('publish_to_supabase.read_queue', return_value=[{'publish_at': slot, 'status': 'scheduled', 'video_id': 'abc'}]), \
-                patch('schedule_policy.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+                patch('review_batch.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
                 contextlib.redirect_stdout(io.StringIO()) as output:
             self.assertEqual(scheduled_plan(), [])
         self.assertIn('already has', output.getvalue())
@@ -84,7 +84,7 @@ class ReviewBatchTests(unittest.TestCase):
     def test_scheduled_plan_targets_the_served_slot_when_it_is_empty(self):
         with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
                 patch('publish_to_supabase.read_queue', return_value=[]), \
-                patch('schedule_policy.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+                patch('review_batch.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
                 contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(scheduled_plan(), ['2026-11-25 08:00'])
 

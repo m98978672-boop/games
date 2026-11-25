@@ -11,6 +11,28 @@ from schedule_policy import next_publish_slot
 
 
 class GameCatalogTests(unittest.TestCase):
+    def test_spoken_source_excerpt_does_not_read_an_incomplete_cutoff(self):
+        from game_reviews import spoken_source_excerpt, review_opening, steam_release_note
+        self.assertEqual(spoken_source_excerpt('Слово ' * 50, 40, 'Полный запасной текст.'), 'Полный запасной текст.')
+        self.assertEqual(spoken_source_excerpt('Первое полное предложение. Следующее длинное предложение.', 35, 'Запасной текст.'), 'Первое полное предложение.')
+        self.assertIn('Сегодня в обзоре', review_opening('Игра'))
+        self.assertNotIn('…', steam_release_note({'source_facts': {'release_date': 'а' * 70, 'release_coming_soon': True}}))
+
+    def test_titles_are_bounded_sanitized_and_not_cut_mid_suffix(self):
+        from game_reviews import make_review_title
+        title = make_review_title('Игра 😀 ' * 50, video_format='long')
+        self.assertLessEqual(len(title.encode('utf-16-le')) // 2, 100)
+        self.assertTrue(title.endswith('…'))
+        self.assertNotIn('\n', make_review_title('Первая\nВторая'))
+        with self.assertRaises(ValueError):
+            make_review_title('https://example.com')
+
+    def test_rare_question_is_stable(self):
+        from game_reviews import occasionally_ask_viewers
+        results = [occasionally_ask_viewers(str(i)) for i in range(1000)]
+        self.assertTrue(50 < sum(results) < 150)
+        self.assertEqual(results, [occasionally_ask_viewers(str(i)) for i in range(1000)])
+
     def test_description_preserves_official_game_link_under_length_limit(self):
         review = {'game_id': '123456', 'game_title': 'Игра' * 100, 'game_version': 'v' * 300,
                   'pros': ['факт' * 3000, 'факт' * 3000], 'possible_minus': 'Возможно, не всем.',
@@ -74,6 +96,15 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn('весь диапазон', prompt)
         self.assertNotIn('"idea_score":7', prompt)
 
+    def test_review_rejects_repeat_even_without_alternatives(self):
+        game = load_game_catalog()[0]
+        gid = game['id']
+        data = {'schema_version': 1, 'game_id': gid, 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'],
+                'possible_minus': 'Возможно, этот формат подойдёт не всем.', 'minus_feature_id': f'{gid}-f1',
+                'idea_score': 7, 'hook': 'Что интересного предлагает игра?'}
+        with self.assertRaisesRegex(ValueError, 'repeated'):
+            validate_review(data, [game], recent_game_ids=[gid])
+
     def test_each_valid_rating_is_preserved(self):
         game = load_game_catalog()[0]
         gid = game['id']
@@ -90,7 +121,7 @@ class GameCatalogTests(unittest.TestCase):
         from game_reviews import spoken_feature, review_opening
         self.assertEqual(spoken_feature('Описание Steam: Кооперативная игра.'), 'Кооперативная игра.')
         self.assertEqual(spoken_feature('Жанры, указанные в Steam: Головоломки'), 'Жанры игры: Головоломки')
-        self.assertIn('эту игру', review_opening('PERI.CO'))
+        self.assertIn('разбираем игру', review_opening('PERI.CO'))
         self.assertIn('Борис', review_opening('Борис'))
 
     def test_review_prompt_supplies_source_price_and_date_without_inventing_them(self):
@@ -135,7 +166,7 @@ class GameCatalogTests(unittest.TestCase):
         self.assertIn("не личное прохождение", youtube_description(review))
         self.assertIn("https://m98978672-boop.github.io/games/", youtube_description(review))
         self.assertEqual(len(review["scenes"]), 5)
-        self.assertTrue(review["scenes"][0]["dialogue"].startswith("Привет! Сегодня разбираем"))
+        self.assertTrue(review["scenes"][0]["dialogue"].startswith("Привет! Сегодня в обзоре"))
         self.assertIn(game["title"], review["scenes"][0]["dialogue"])
         self.assertIn("О чём игра?", review["scenes"][1]["dialogue"])
         self.assertEqual(review["scenes"][-1]["label"], "ИТОГ")

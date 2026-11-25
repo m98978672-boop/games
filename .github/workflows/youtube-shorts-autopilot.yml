@@ -33,6 +33,11 @@ on:
         type: string
         default: "1"
         required: true
+      check_topics_only:
+        description: "Read-only topic ledger check; never render or upload"
+        type: boolean
+        default: false
+        required: false
 
 permissions:
   contents: read
@@ -66,7 +71,20 @@ jobs:
           python youtube-bot/reconcile_schedule.py | tee "$RUNNER_TEMP/slots.md"
           cat "$RUNNER_TEMP/slots.md" >> "$GITHUB_STEP_SUMMARY"
 
+  check-topic-history:
+    if: github.event_name == 'workflow_dispatch' && inputs.check_topics_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Verify the shared topic ledger without rendering or uploading
+        run: PYTHONPATH=youtube-bot python -c 'from publish_to_supabase import _supabase_post; r = _supabase_post("/autopilot/topic-history", {}); assert r.get("version") == 1 and isinstance(r.get("game_ids"), list); print("History available:", len(r["game_ids"]), "topics")'
+
   create-and-schedule:
+    if: github.event_name != 'workflow_dispatch' || !inputs.check_topics_only
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -78,6 +96,8 @@ jobs:
       MANUAL_VIDEO_FORMAT: ${{ inputs.video_format || '' }}
       REVIEW_BATCH_COUNT: ${{ inputs.batch_count || '1' }}
       DATA_DIR: youtube-bot/data
+      # Never render with an unavailable or incomplete shared topic ledger.
+      REQUIRE_SHARED_TOPIC_HISTORY: "true"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
