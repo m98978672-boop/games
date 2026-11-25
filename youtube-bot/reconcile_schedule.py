@@ -46,7 +46,7 @@ def render_report(missing: list[datetime], booked: list[datetime], *, error: str
     lines = ["## Сверка слотов обзоров (только чтение)", ""]
     if error:
         lines += [
-            "Состояние очереди неизвестно: очередь публикаций прочитать не удалось.",
+            "Состояние очереди неизвестно: очередь публикаций прочитать не удалось или бронирование остаётся неопределённым.",
             f"Причина: {error}",
             "",
             "Ничего не запущено и не загружено. Пропуск нельзя считать свободным слотом, "
@@ -93,12 +93,12 @@ def main(argv: list[str] | None = None) -> int:
     slots = planned_slots(days=args.days)
     try:
         jobs = _import_publisher()()
+        missing, booked = assess(slots, jobs)
     except Exception as exc:  # noqa: BLE001 - the report must survive every failure
         print(render_report([], [], error=str(exc)[:200]))
         # The report is the deliverable of this step; a read failure must be
         # visible, not hidden behind a green check.
         return 1
-    missing, booked = assess(slots, jobs)
     print(render_report(missing, booked, error=None))
     return 0
 

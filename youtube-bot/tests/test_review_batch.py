@@ -48,6 +48,16 @@ class ReviewBatchTests(unittest.TestCase):
                 run_queue(['a', 'b'], 'short', Path(tmp))
             self.assertEqual(run.call_count, 2)
 
+    def test_uncertain_queue_stops_entire_batch_without_retry_or_upload(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, \
+             patch('review_batch.manual_publish_time'), patch('review_batch.time.sleep') as sleep:
+            run.return_value.returncode = 75
+            with self.assertRaisesRegex(RuntimeError, 'queue state is uncertain'):
+                run_queue(['a', 'b'], 'short', Path(tmp))
+            self.assertEqual(run.call_count, 1)
+            self.assertIn('run_game_review.py', run.call_args.args[0][1])
+            sleep.assert_not_called()
+
     def test_generation_failure_skips_that_item_and_keeps_the_next(self):
         # A single bad Steam/Qwen draw used to kill the whole scheduled run.
         with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, \
@@ -81,6 +91,13 @@ class ReviewBatchTests(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()) as output:
             self.assertEqual(scheduled_plan(), [])
         self.assertIn('already has', output.getvalue())
+
+    def test_scheduled_plan_refuses_an_unresolved_reservation(self):
+        with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
+                patch('publish_to_supabase.read_queue', return_value=[{'publish_at': '2026-11-25T05:00:00Z', 'status': 'processing', 'video_id': None}]), \
+                patch('review_batch.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)):
+            with self.assertRaisesRegex(ValueError, 'unresolved reservation'):
+                scheduled_plan()
 
     def test_scheduled_plan_targets_the_served_slot_when_it_is_empty(self):
         with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \

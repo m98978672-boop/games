@@ -89,6 +89,10 @@ def _usable_slot(publish_at: str) -> str:
     return ""
 
 
+class UncertainBatchQueue(RuntimeError):
+    """Stop the whole batch when queue state cannot be trusted."""
+
+
 def _render(index: int, publish_at: str, video_format: str, output_dir: Path) -> Path:
     """Render one queued review; retried once, always before any upload."""
     env = os.environ.copy()
@@ -99,6 +103,8 @@ def _render(index: int, publish_at: str, video_format: str, output_dir: Path) ->
                                  "--format", video_format], env=env)
         if result.returncode == 0:
             return output
+        if result.returncode == 75:
+            raise UncertainBatchQueue("Publication queue state is uncertain; stop the batch and check YouTube Studio before retrying.")
         if attempt == 0:
             print("::warning::Review generation failed; retrying once before any upload.", flush=True)
             time.sleep(20)
@@ -158,7 +164,10 @@ def run_queue(times: list[str], video_format: str, output_dir: Path) -> tuple[in
               f"requested MSK {publish_at or 'automatic'}", flush=True)
         try:
             output = _render(index, publish_at, video_format, output_dir)
+        except UncertainBatchQueue:
+            raise
         except RuntimeError:
+
             skipped.append(f"{publish_at or 'automatic'}: review generation failed twice")
             print(f"::warning::Review generation failed twice for slot "
                   f"{publish_at or 'automatic'}; nothing was uploaded for it. "

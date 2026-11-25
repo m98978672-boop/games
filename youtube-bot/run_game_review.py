@@ -20,6 +20,7 @@ from schedule_policy import (
     settle_slot_after_render,
 )
 from steam_catalog import download_screenshots, load_steam_games
+from review_slot_state import QueueStateUnknown, UncertainSlot
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data"))).resolve()
@@ -61,29 +62,24 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
     if video_format not in {"short", "long"}:
         raise ValueError("video_format must be short or long")
     manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
-    requested = manual_publish_time(manual_time) if manual_time and not preview else None  # Validate before rendering.
+    requested = manual_publish_time(manual_time) if manual_time and not preview else None
     reserved = None
     if not preview:
-        # Fix the automatic slot before the expensive work. Deciding it afterwards
-        # let two runs that finished minutes apart compete for the same wall time.
-        # The queue is read once, so several runs started together take different
-        # regular slots instead of all aiming at the same one.
         from publish_to_supabase import read_queue
         from review_slot_state import assess, booked_slots
         try:
             jobs = read_queue()
             taken = booked_slots(jobs)
-        except Exception as exc:  # noqa: BLE001 - never guess a free slot
-            raise RuntimeError(
+        except Exception as exc:  # Never guess a free slot.
+            raise QueueStateUnknown(
                 f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
             ) from exc
-        reserved = None
         if requested is None:
             reserved = reserve_slot_before_render(video_format, occupied=taken)
+            missing, _ = assess([reserved], jobs)
+            if not missing:
+                raise RuntimeError('Automatic publication slot already has a nearby scheduled video; no review was rendered or uploaded.')
         else:
-            # A manual request must never reschedule itself, so a taken slot is
-            # refused here. Rendering takes minutes and the answer is already known;
-            # failing now replaces a wasted render with an immediate, honest stop.
             missing, _ = assess([requested], jobs)
             if not missing:
                 raise RuntimeError(
@@ -213,6 +209,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         run(args.output, video_format=args.format, preview=args.preview)
+    except (QueueStateUnknown, UncertainSlot) as exc:
+        print(f"Queue state uncertain; stop and check YouTube Studio: {exc}", file=sys.stderr)
+        raise SystemExit(75)
     except Exception as exc:
         print(f"Game-review cycle stopped safely: {exc}", file=sys.stderr)
         raise SystemExit(1)
