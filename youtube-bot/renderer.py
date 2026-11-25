@@ -79,9 +79,25 @@ def normalize_narration(source: Path, output: Path) -> None:
 
 
 
+# Speech-only aliases: do not transliterate unknown game titles or rewrite evidence.
+SPOKEN_ALIASES = {
+    'Steam Deck': 'Стим Дек', 'Steam': 'Стим', 'Early Access': 'ранний доступ',
+    'Xbox': 'Иксбокс', 'PlayStation': 'Плейстейшен', 'Windows': 'Виндоус',
+    'Linux': 'Линукс', 'Unreal Engine': 'Анрил Энджин', 'Unity': 'Юнити',
+    'DLC': 'ди эл си', 'RPG': 'эр пэ гэ', 'MMORPG': 'эм эм оу эр пи джи',
+    'PvP': 'пэ вэ пэ', 'PvE': 'пэ вэ е', 'FPS': 'эф пэ эс', 'ИИ': 'и и',
+}
+_SPOKEN_PATTERN = re.compile(
+    r'https?://[^\s]+|www\.[^\s]+|`[^`]+`|(?<![\w])(?:'
+    + '|'.join(re.escape(key) for key in sorted(SPOKEN_ALIASES, key=len, reverse=True))
+    + r')(?![\w])', re.IGNORECASE,
+)
+_SPOKEN_LOOKUP = {key.casefold(): value for key, value in SPOKEN_ALIASES.items()}
+
+
 def pronunciation_text(text: str) -> str:
     """Prepare conservative spoken forms; captions and source evidence stay unchanged."""
-    text = re.sub(r"(?<![A-Za-z0-9_])Steam(?![A-Za-z0-9_])", "Стим", text, flags=re.IGNORECASE)
+    text = _SPOKEN_PATTERN.sub(lambda match: _SPOKEN_LOOKUP.get(match[0].casefold(), match[0]), text)
     # Only the known score construction is expanded; arbitrary numbers, dates,
     # names and URLs must not be guessed or grammatically transformed.
     numerals = ('', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять', 'десять')

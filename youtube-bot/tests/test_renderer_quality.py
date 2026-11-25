@@ -154,6 +154,12 @@ class RenderQualityTests(unittest.TestCase):
     def test_platform_name_is_pronounced_in_russian_without_changing_other_words(self):
         self.assertEqual(renderer.pronunciation_text("По данным Steam: Steamworks"), "По данным Стим: Steamworks")
 
+    def test_speech_aliases_prefer_full_terms_and_preserve_unknown_names(self):
+        self.assertEqual(renderer.pronunciation_text('Steam Deck, RPG и DLC. Steamworks и XUnity.'),
+                         'Стим Дек, эр пэ гэ и ди эл си. Steamworks и XUnity.')
+        self.assertEqual(renderer.pronunciation_text('Тест: `Steam` и https://example.com/Steam.'),
+                         'Тест: `Steam` и https://example.com/Steam.')
+
     def test_spoken_score_and_punctuation_leave_other_numbers_and_ellipsis_intact(self):
         self.assertEqual(renderer.pronunciation_text('Оценка — 7 из 10 .Steam...Далее!'),
                          'Оценка — семь из десяти. Стим... Далее!')
