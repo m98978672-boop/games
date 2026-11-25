@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import uuid
 import time
@@ -12,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from game_reviews import generate_game_review, generate_long_narration, youtube_description, ensure_editorial_quality
+from game_reviews import generate_game_review, generate_long_narration, youtube_description, ensure_editorial_quality, make_review_title, occasionally_ask_viewers
 from renderer import render_long_review, render_short
 from schedule_policy import (
     CHANNEL_TZ, manual_publish_time, reserve_slot_before_render, resolve_manual_after_render,
@@ -30,6 +31,19 @@ def recent_games(path: Path) -> list[str]:
     except (OSError, json.JSONDecodeError):
         return []
     return [str(item) for item in value if isinstance(item, str)][-24:] if isinstance(value, list) else []
+
+
+def authoritative_topic_history() -> list[str]:
+    """Fetch the complete shared ledger; fail closed on malformed/unavailable data."""
+    from publish_to_supabase import _supabase_post
+    result = _supabase_post('/autopilot/topic-history', {})
+    ids = result.get('game_ids')
+    if (type(result.get('version')) is not int or result['version'] != 1 or
+            not isinstance(ids, list) or len(ids) > 20000 or
+            any(not isinstance(item, str) or not re.fullmatch(r'[a-z0-9-]{1,60}', item) for item in ids) or
+            len(set(ids)) != len(ids)):
+        raise ValueError('Shared topic history is incomplete or malformed; refusing to render.')
+    return ids
 
 
 def remember_game(path: Path, game_id: str) -> list[str]:
@@ -65,6 +79,8 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         reserved = reserve_slot_before_render(video_format, occupied=taken)
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
+    if os.getenv('REQUIRE_SHARED_TOPIC_HISTORY') == 'true':
+        previous = list(set(previous) | set(authoritative_topic_history()))
     # Deliberately source only games listed by Steam's live public shelves; never
     # silently switch back to the repository's own community games.
     stage_start = time.perf_counter()
@@ -100,11 +116,11 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     if video_format == "long":
         review["format"] = "game-review-long"
         rendered = render_long_review(review, output, workdir)
-        title = f"Полный обзор: {review['game_title']} — разбор по источникам"[:100]
+        title = make_review_title(review["game_title"], video_format="long")
     else:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
-        title = review["title"][:100]
+        title = make_review_title(review["game_title"])
     print(f"Video rendering: {time.perf_counter() - render_start:.1f}s", flush=True)
     # Selection memory is updated only by the publisher after confirmed upload.
     # Slow rendering may consume the lead time. Preserve the chosen slot if it
@@ -130,6 +146,8 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         + ("\nСценарий создан по шаблону из открытых источников: ИИ не смог подготовить корректный текст."
            if any(scene.get("generation") == "source-template" for scene in review.get("scenes", [])) else "")
     )
+    if occasionally_ask_viewers(str(review["game_id"])):
+        description += "\n\nА вам интересен такой формат игры? Поделитесь мнением, если хотите."
     metadata = {
         "job_id": str(uuid.uuid4()),
         "game_id": review["game_id"],
