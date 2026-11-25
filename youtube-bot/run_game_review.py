@@ -61,7 +61,7 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
     if video_format not in {"short", "long"}:
         raise ValueError("video_format must be short or long")
     manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
-    requested = manual_publish_time(manual_time) if manual_time else None  # Validate before rendering.
+    requested = manual_publish_time(manual_time) if manual_time and not preview else None  # Validate before rendering.
     reserved = None
     if not preview:
         # Fix the automatic slot before the expensive work. Deciding it afterwards
@@ -190,6 +190,14 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
         "video": rendered,
         "status": "private_preview" if preview else "rendered_waiting_for_explicit_audience_setting",
     }
+    if preview:
+        from renderer import pronunciation_text
+        result['speech_aliases_applied'] = [
+            {'scene': index, 'original': dialogue, 'spoken': spoken}
+            for index, scene in enumerate(review.get('scenes', []), 1)
+            if isinstance(dialogue := scene.get('dialogue'), str)
+            and (spoken := pronunciation_text(dialogue)) != dialogue
+        ]
     result_path = output.with_suffix(".result.json")
     result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     result["result_path"] = str(result_path)
