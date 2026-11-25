@@ -238,8 +238,12 @@ check('сюжетную игру она ПРОХОДИТ чтением: пас�
 check('сюжетная история видна на её странице: сколько выборов, где закончила — одной строкой',
   expPy.includes('storyLine') && expWf.includes("report.get('storyLine')") && bridgeJs.includes('kv-story'));
 
-check('пыль экспедиций не копится: старые каталоги чистятся после записи списка',
-  expWf.includes('shutil.rmtree') && expWf.indexOf("bridge_path.write_text") < expWf.indexOf('shutil.rmtree'));
+check('пыль экспедиций не копится: каталоги чистятся по списку страницы и до выхода «отчёта нет»',
+  expWf.includes('shutil.rmtree') && expWf.includes("keep = {e.get('dir')")
+  // уборка по списку обязана быть и до выхода: иначе каталоги копятся без новых экспедиций
+  && expWf.indexOf('убрала старый каталог') < expWf.indexOf('Отчёта нет — складывать нечего')
+  // и не сносить свежую: список считается уже вместе с ней
+  && expWf.includes("bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]"));
 
 check('уборка доезжает до main: удаления каталогов тоже записываются в коммит',
   expWf.includes('git add -A qwen-home/bridge/expeditions'));
@@ -259,7 +263,7 @@ check('в истории она ДОБЫВАЕТ новое: после фина
   && expPy.includes('RESTART_JS') && expPy.includes('sessionStorage') && expPy.includes("store.removeItem(k)"));
 
 check('карта честная: переход записывается, когда видно, куда он привёл',
-  expPy.includes("story_map.link(pending['from'], pending['choice'], text)"));
+  expPy.includes("story_map.link(pending['from'], pending['choice'], text, here_ctx, labels,"));
 
 check('находки только настоящие: «рука в кармане» за добычу не считается',
   expPy.includes('you scour the shelves') && !expPy.includes("'in your pocket', 'you grab'"));
@@ -280,7 +284,7 @@ check('идёт по НЕнажатым выборам, а не по «ново�
   && expPy.includes('no_loops'));
 
 check('стоп-кран мягче 18 шагов: успевает обойти дом, но не жжёт время',
-  expPy.includes('len(trail) > 18') && expPy.includes('len(set(trail[-8:])) <= 2'));
+  expPy.includes('len(trail) > 18') && expPy.includes('len(set(trail[-8:])) <= 1'));
 
 check('диалог подтверждения в истории: жмёт «OK», а не «Cancel»',
   expPy.includes("('ok', 'okay', 'yes', 'да'") && expPy.includes('affirm'));
@@ -296,6 +300,61 @@ check('долгая история: окно до 10 минут и до шест
 
 check('длинный прогон доносит отчёт: причина падения видна, видео не больше 8 МБ',
   expWf.includes('trap ') && expWf.includes('scale=640:-2,fps=12') && expWf.includes('Пережатое видео всё ещё'));
+
+check('концовки считаются по ПУТИ, а не по одинаковому экрану «The End»',
+  expPy.includes('routeKey') && expPy.includes("'route': ' → '.join(tail)") && expPy.includes('endingsSeen'));
+
+check('видно, сколько осталось непройденного: карта помнит варианты мест',
+  expPy.includes('def remaining') && expPy.includes("'options': (v.get('options') or [])[:8]")
+  && expPy.includes('непройденных вариантов'));
+
+check('аудит всех обнов истории: код и данные проверены списком, а не на глаз',
+  expPy.includes('StOP') === false
+  && expPy.includes('def remaining') && expWf.includes('storymap.json'));
+
+check('память карты несовместимой схемы не берётся: иначе остаток был бы фальшивым',
+  expPy.includes("SCHEMA = 'text+options-v2'") && expPy.includes("data.get('schema') != self.SCHEMA"));
+
+// Чужой merge из отставшей ветки уже стирал работу: PR #611 вернул старые
+// версии 54 файлов (kvenya/live.js, youtube-bot, workflows, экспедицию).
+// Эти проверки держат отличительные признаки тех правок — если merge снова
+// принесёт старьё, признаки исчезнут и сторож загорится.
+const liveJsNow = await readFile(path.join(home, '..', 'kvenya', 'live.js'), 'utf8');
+check('живой Квеня не откачена: факты о себе из дома, проверка выдуманных чисел, защита с ИИ',
+  liveJsNow.includes('loadSelfFacts') && liveJsNow.includes('selfFactsBlock')
+  && liveJsNow.includes('inventedNumbers') && liveJsNow.includes('detectAiSpeaker'));
+const schedPolicy = await readFile(path.join(home, '..', 'youtube-bot', 'schedule_policy.py'), 'utf8');
+check('расписание ютуба не откачено: политика тайм-слотов на месте',
+  schedPolicy.includes('def ') && schedPolicy.length > 500);
+const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8');
+check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
+  expNow.includes('remaining') && expNow.includes('routeKey')
+  && expNow.includes('memo_from') && expNow.includes('план захода')
+  && expNow.includes("SCHEMA = 'text+options-v2'"));
+const expWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-expedition.yml'), 'utf8');
+check('уборка пыли в workflow не откачена: keep по dir, до выхода «Отчёта нет»',
+  expWorkflow.includes("e.get('dir')") && expWorkflow.indexOf("e.get('dir')") < expWorkflow.indexOf('Отчёта нет — складывать нечего'));
+
+// Два бага, из-за которых заходы 3–6 давали по 0 новых мест при остатке 13.
+check('карта: ребро берёт ГОТОВЫЙ ключ места, а не пересчитывает его из текста',
+  expNow.includes('src_key=None') && expNow.includes("fr = src_key or self.key(src_text)")
+  && expNow.includes("'from_key': my_key"));
+check('карта: при малом остатке идёт туда, где непройденное, а не по петле',
+  expNow.includes('leads_to_new') && expNow.includes("if e['to'] == k:\n                return False")
+  && !expNow.includes("known_here = [c for c in fresh if story_map.is_loop"));
+
+check('карта: маршрут к остатку — первый шаг кратчайшего пути по записанным рёбрам',
+  expNow.includes('def route_to_open') && expNow.includes('deque') && expNow.includes('return step'));
+check('отдых один раз в месте: не перебивает непройденное навсегда',
+  expNow.includes('rest_fresh') && expNow.includes('if rest and (rest_fresh or not fresh)'));
+check('когда здесь всё пройдено — идём по маршруту к остатку, а не наугад',
+  expNow.includes('step = story_map.route_to_open(passage)'));
+
+check('стоп-кран не рубит маршрут к остатку: только одно место и ноль новых',
+  expNow.includes("len(set(trail[-8:])) <= 1") && expNow.includes('and new_places == 0'));
+check('места с остатком считаются по непройденному, а не по застывшему флагу open',
+  expNow.includes("for label in (n.get('options') or [])")
+  && expNow.includes('unopened = [k for k, n in story_map.nodes.items()'));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

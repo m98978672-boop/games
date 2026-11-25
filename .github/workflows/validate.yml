@@ -39,13 +39,19 @@ jobs:
             youtube-bot/tests/test_run_game_review.py \
             youtube-bot/tests/test_publish_to_supabase.py \
             youtube-bot/tests/test_review_workflow_format.py \
+            youtube-bot/tests/test_review_batch.py \
+            youtube-bot/tests/test_review_slot_state.py \
+            youtube-bot/tests/test_slot_reservation.py \
+            youtube-bot/tests/test_audit_review_schedule.py \
             youtube-bot/tests/test_speech_policy.py \
             youtube-bot/tests/test_autopilot.py \
             youtube-bot/tests/test_youtube_api.py \
             youtube-bot/tests/test_playthrough_feedback.py \
             youtube-bot/tests/test_comment_assistant.py \
+            youtube-bot/tests/test_comments_cloud_worker.py \
             youtube-bot/tests/test_gameplay_discovery.py \
             youtube-bot/tests/test_gameplay_2048.py \
+            youtube-bot/tests/test_puzzle_supervisor.py \
             youtube-bot/tests/test_gameplay_finalize.py \
             youtube-bot/tests/test_gameplay_qwen.py \
             youtube-bot/tests/test_gameplay_captions.py \
@@ -66,6 +72,9 @@ jobs:
           python youtube-bot/gameplay/benchmark_reflex.py --compare 40
           python -m unittest youtube-bot/gameplay/test_reflex_cli.py
           node supabase/functions/youtube-bot/tests/oidc-policy.test.mjs
+          node youtube-bot/tests/test-mobile-comments.cjs
+          node youtube-bot/tests/test-credential-copy.cjs
+          node youtube-bot/tests/test-comments-oauth.mjs
           node youtube-bot/gameplay/test-solver2048.cjs
           node --check youtube-bot/gameplay/play2048.cjs
       - name: Check that the RatCore browser bundle is up to date (engine is wired into every section)

@@ -6,13 +6,18 @@ import json
 import os
 import sys
 import uuid
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from game_reviews import generate_game_review, generate_long_narration, youtube_description, ensure_editorial_quality
 from renderer import render_long_review, render_short
-from schedule_policy import manual_publish_time, next_publish_slot, resolve_manual_after_render, CHANNEL_TZ
+from schedule_policy import (
+    CHANNEL_TZ, manual_publish_time, reserve_slot_before_render, resolve_manual_after_render,
+    settle_slot_after_render,
+)
 from steam_catalog import download_screenshots, load_steam_games
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -43,25 +48,55 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         raise ValueError("video_format must be short or long")
     manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
     requested = manual_publish_time(manual_time) if manual_time else None  # Validate before rendering.
+    # Fix the automatic slot before the expensive work. Deciding it afterwards
+    # let two runs that finished minutes apart compete for the same wall time.
+    # The queue is read once, so several runs started together take different
+    # regular slots instead of all aiming at the same one.
+    reserved = None
+    if requested is None:
+        from publish_to_supabase import read_queue
+        from review_slot_state import booked_slots
+        try:
+            taken = booked_slots(read_queue())
+        except Exception as exc:  # noqa: BLE001 - never guess a free slot
+            raise RuntimeError(
+                f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
+            ) from exc
+        reserved = reserve_slot_before_render(video_format, occupied=taken)
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
     # Deliberately source only games listed by Steam's live public shelves; never
     # silently switch back to the repository's own community games.
+    stage_start = time.perf_counter()
     games = load_steam_games(recent_game_ids=previous)
+    print(f"Steam source collection: {time.perf_counter() - stage_start:.1f}s", flush=True)
+    stage_start = time.perf_counter()
     review = generate_game_review(
         games,
         recent_game_ids=previous,
         seed=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
+    print(f"Review planning: {time.perf_counter() - stage_start:.1f}s", flush=True)
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     workdir = output.parent / f"{output.stem}-work"
+    preparation_start = time.perf_counter()
+    screenshot_urls = list(review.get("screenshots", []))
     if video_format == "long":
-        review["scenes"] = generate_long_narration(review)
-        ensure_editorial_quality(review["scenes"])
-    review["screenshot_paths"] = download_screenshots(
-        list(review.get("screenshots", [])), workdir / "steam-assets", limit=6,
-    )
+        # Network-only artwork retrieval does not depend on the narration. Keep
+        # generation and all quality gates unchanged; never render or publish if
+        # either required operation fails. A separate worker cannot mutate review.
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="steam-artwork") as pool:
+            screenshots = pool.submit(download_screenshots, screenshot_urls, workdir / "steam-assets", limit=6)
+            scenes = generate_long_narration(review)
+            ensure_editorial_quality(scenes)
+            screenshot_paths = screenshots.result()
+        review["scenes"] = scenes
+    else:
+        screenshot_paths = download_screenshots(screenshot_urls, workdir / "steam-assets", limit=6)
+    review["screenshot_paths"] = screenshot_paths
+    print(f"Preparation (narration and artwork): {time.perf_counter() - preparation_start:.1f}s", flush=True)
+    render_start = time.perf_counter()
     if video_format == "long":
         review["format"] = "game-review-long"
         rendered = render_long_review(review, output, workdir)
@@ -70,6 +105,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
         title = review["title"][:100]
+    print(f"Video rendering: {time.perf_counter() - render_start:.1f}s", flush=True)
     # Selection memory is updated only by the publisher after confirmed upload.
     # Slow rendering may consume the lead time. Preserve the chosen slot if it
     # still works; otherwise explicitly report a safe one-off delay. Never
@@ -81,7 +117,11 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
             print(f"Requested Moscow time {manual_time} became too close during rendering; "
                   f"rescheduled once to {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow.", file=sys.stderr)
     else:
-        scheduled = next_publish_slot(video_format=video_format)
+        scheduled, adjusted = settle_slot_after_render(reserved, video_format)
+        if adjusted:
+            print("The reserved slot passed during rendering; moved once to the next regular "
+                  f"{video_format} slot {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow. "
+                  "No recurring times changed.", file=sys.stderr)
     source_description = youtube_description(review)
     description = (
         source_description

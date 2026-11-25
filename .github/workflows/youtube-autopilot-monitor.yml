@@ -32,11 +32,35 @@ jobs:
         run: |
           set -euo pipefail
           title="YouTube autopilot failed: run ${RUN_ID} attempt ${ATTEMPT}"
+          # Remote run logs are not always readable (the blob storage may deny
+          # access), so the exact failed step and GitHub's short annotations are
+          # copied here. They are fixed step names and short messages, never
+          # secrets or full logs. Reading them is best-effort only.
+          job_id=$(gh api "repos/${GH_REPO}/actions/runs/${RUN_ID}/jobs" --jq '.jobs[0].id' 2>/dev/null || true)
+          failed_step=""
+          annotations=""
+          if [ -n "${job_id}" ]; then
+            failed_step=$(gh api "repos/${GH_REPO}/actions/jobs/${job_id}" \
+              --jq '[.steps[] | select(.conclusion == "failure") | .name] | join(", ")' 2>/dev/null || true)
+            annotations=$(gh api "repos/${GH_REPO}/actions/jobs/${job_id}/annotations" \
+              --jq '.[] | select(.annotation_level == "failure") | "- " + ((.title // "") | if . == "" then "" else . + ": " end) + .message' 2>/dev/null || true)
+          fi
           {
             echo "Автопилот завершился со статусом ${CONCLUSION}: ${RUN_URL}"
             echo
+            if [ -n "${failed_step}" ]; then
+              echo "Шаг, который остановил запуск: ${failed_step}"
+            else
+              echo 'Шаг не удалось прочитать удалённо; он виден в журнале запуска.'
+            fi
+            echo
             echo 'Публикация автоматически не повторена: проверьте YouTube Studio и состояние задания, прежде чем запускать её снова.'
-            echo 'Ошибки и этапы доступны в журнале запуска; секреты и полные логи в это сообщение не копируются.'
+            echo 'Полные журналы здесь не копируются; ниже только короткие пометки GitHub, без секретов.'
+            if [ -n "${annotations}" ]; then
+              echo
+              echo 'Пометки:'
+              echo "${annotations}"
+            fi
           } > "$RUNNER_TEMP/failure-report.md"
           cat "$RUNNER_TEMP/failure-report.md" >> "$GITHUB_STEP_SUMMARY"
           gh issue create --title "$title" --body-file "$RUNNER_TEMP/failure-report.md"
