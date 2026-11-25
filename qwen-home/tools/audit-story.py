@@ -90,6 +90,8 @@ def audit(src=None):
             ('старая схема карты не берётся', "data.get('schema') != self.SCHEMA" in e),
             ('ребро берёт готовый ключ места', 'src_key=None' in e and 'from_key' in e),
             ('при малом остатке — в непройденное, не в петлю', 'leads_to_new' in e),
+            ('есть маршрут к остатку', 'def route_to_open' in e),
+            ('отдых не перебивает непройденное', 'rest_fresh' in e),
             ('память доходит до чтения истории', 'memo_from=memo_from' in e),
             ('workflow передаёт карту', '--memo' in w and 'storymap.json' in w),
         ]),

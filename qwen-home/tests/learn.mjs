@@ -343,5 +343,12 @@ check('карта: при малом остатке идёт туда, где н
   expNow.includes('leads_to_new') && expNow.includes("if e['to'] == k:\n                return False")
   && !expNow.includes("known_here = [c for c in fresh if story_map.is_loop"));
 
+check('карта: маршрут к остатку — первый шаг кратчайшего пути по записанным рёбрам',
+  expNow.includes('def route_to_open') && expNow.includes('deque') && expNow.includes('return step'));
+check('отдых один раз в месте: не перебивает непройденное навсегда',
+  expNow.includes('rest_fresh') && expNow.includes('if rest and (rest_fresh or not fresh)'));
+check('когда здесь всё пройдено — идём по маршруту к остатку, а не наугад',
+  expNow.includes('step = story_map.route_to_open(passage)'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

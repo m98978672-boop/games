@@ -1015,6 +1015,38 @@ class StoryMap:
             return bool(to.get('open'))
         return False            # куда ведёт — неизвестно, значит не «новое»
 
+    def route_to_open(self, start_key):
+        """Куда идти, чтобы добрать непройденное: первый шаг кратчайшего пути.
+
+        Без этого она, стоя в известном месте, перебирала тамошние варианты и
+        никогда не доходила до дальних мест с остатком (11 вариантов висели,
+        хотя путь к ним был). Путь ищется по уже записанным рёбрам — то есть
+        только там, где она правда ходила.
+        """
+        from collections import deque
+        if not start_key or start_key not in self.nodes:
+            return None
+
+        def has_left(k):
+            n = self.nodes.get(k) or {}
+            return any((k, label) not in self.tried for label in (n.get('options') or []))
+
+        if has_left(start_key):
+            return None                     # остаток прямо здесь — никуда идти не надо
+        seen = {start_key}
+        q = deque([(start_key, None)])
+        while q:
+            cur, first = q.popleft()
+            for e in self.edges:
+                if e.get('from') != cur or e.get('to') in seen:
+                    continue
+                step = first if first is not None else e.get('choice')
+                if has_left(e['to']):
+                    return step
+                seen.add(e['to'])
+                q.append((e['to'], step))
+        return None                         # остатка в достижимой части карты нет
+
     def mark_open(self, text, choices, context=None):
         """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
         kw = self.key(text, context, [c.get('label') for c in choices])
@@ -1154,6 +1186,15 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             if leads_new:
                 pool = leads_new
 
+    # Здесь всё нажато, а в карте ещё есть остаток — идём к нему по маршруту,
+    # а не тычем первый попавшийся вариант.
+    if story_map is not None and passage and not fresh:
+        step = story_map.route_to_open(passage)
+        if step:
+            for c in choices:
+                if (c.get('label') or '') == step:
+                    return c, False
+
     # Петля (ведёт туда же, откуда пришла) — в самом конце.
     if passage and len(pool) > 1:
         no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)] if story_map else pool
@@ -1165,8 +1206,14 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     # важнее новизны — иначе она уходит вымотанной и теряет заход.
     if energy < 0:
         rest = [c for c in choices if is_rest(c.get('label', ''))]
-        if rest:
-            pool = rest
+        # Отдых — ОДИН раз в месте. Раньше он перебивал всё: в узле «ты дома»
+        # было 18 визитов и нажат только «couch», а «homework» и «kitchen» так
+        # и остались непройденными навсегда. Если отдохнуть тут уже пробовала,
+        # а непройденное есть — идём по делу.
+        rest_fresh = [c for c in rest
+                      if story_map is None or (k, c.get('label')) not in story_map.tried]
+        if rest and (rest_fresh or not fresh):
+            pool = rest_fresh or rest
         else:
             far = [c for c in pool if not is_far(c.get('label', ''))]
             if far:
