@@ -5,7 +5,7 @@ import sys
 import uuid
 from pathlib import Path
 
-from adventure_draft import GAME_URL, PUZZLE_URL, MIN_EDITED_GAMEPLAY_SECONDS
+from adventure_draft import GAME_URL, PUZZLE_URL
 from gameplay_voiceover import probe_capture
 import math
 from publish_to_supabase import publish

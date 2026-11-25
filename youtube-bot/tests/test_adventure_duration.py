@@ -45,7 +45,7 @@ class GameplayShelfTests(unittest.TestCase):
         self.assertEqual(metadata['video_format'], 'long')
 
     def test_the_boundary_is_three_minutes(self):
-        for measured, expected in ((179.9, 'short'), (180, 'long')):
+        for measured, expected in ((179.9, 'short'), (180, 'short'), (180.1, 'long')):
             with self.subTest(measured=measured), tempfile.TemporaryDirectory() as temp:
                 metadata = self._prepare(_folder(temp, gameplay=measured), measured=measured)
                 self.assertEqual(metadata['video_format'], expected)

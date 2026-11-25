@@ -5,17 +5,17 @@ on:
       adventure_only:
         type: boolean
         default: false
+      lighthouse:
+        type: boolean
+        default: false
       puzzle_episode:
         type: boolean
         default: false
-  push:
-    branches: [arena/7d9fee46-games]
-    paths: [.github/workflows/adventure-experiment.yml]
 permissions:
   contents: read
 jobs:
   adventure:
-    if: github.event_name != 'push' && !inputs.puzzle_episode
+    if: ${{ !inputs.puzzle_episode && (github.event_name != 'push' || inputs.lighthouse) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -54,6 +54,8 @@ jobs:
       - name: Record real model choices without padding
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+          LIGHTHOUSE_EPISODE: ${{ inputs.lighthouse && '1' || '0' }}
+          ADVENTURE_SHORT: ${{ inputs.adventure_only && '1' || '0' }}
           ADVENTURE_RECORD_DIR: ${{ runner.temp }}/adventure-recording
           ADVENTURE_SKILL_DB: ${{ runner.temp }}/adventure-skill-memory/skills.sqlite3
         shell: bash

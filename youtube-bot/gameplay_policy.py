@@ -32,12 +32,17 @@ SHORT_MAX_SECONDS = GAMEPLAY_SHORT_MAX_SECONDS
 
 
 def video_kind_for_duration(duration_seconds: float) -> str:
-    """`short` below three minutes, `long` at three minutes or more."""
+    """`short` up to three minutes, `long` above it.
+
+    Matches adventure_personality.SHORT_SECONDS (`<= 180` is a Short), which the
+    renderer already applies. Defining it once here and mirroring there would
+    still allow drift, so the value is pinned by a test that reads both.
+    """
     if isinstance(duration_seconds, bool) or not isinstance(duration_seconds, (int, float)):
         raise ValueError("duration_seconds must be a number")
     if duration_seconds <= 0:
         raise ValueError("duration_seconds must be greater than zero")
-    return "short" if duration_seconds < SHORT_MAX_SECONDS else "long"
+    return "short" if duration_seconds <= SHORT_MAX_SECONDS else "long"
 
 
 @dataclass(frozen=True)

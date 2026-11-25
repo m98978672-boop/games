@@ -33,6 +33,9 @@ MAX_PACED_BURSTS = 4
 @dataclass
 class ReflexAgentStats:
     ticks: list = field(default_factory=list)
+    # Measured highlights, in the words the montage understands. Only events the
+    # agent actually observed are added: a reached goal, a frame that changed.
+    events: list = field(default_factory=list)
     advisor_calls: int = 0
     advisor_skipped_for_budget: int = 0
     screen: str | None = None
@@ -67,7 +70,8 @@ class ReflexAgent:
                  world_model: WorldModel | None = None,
                  tracker: Tracker | None = None,
                  director: "Director | None" = None,
-                 playbook: Playbook | None = None):
+                 playbook: Playbook | None = None,
+                 cadence_seconds: float = 1.0):
         self.profile = profile_from_name(profile) if isinstance(profile, str) else profile
         self.controller = controller or ReflexController(
             default_intent=self._default_intent(),
@@ -87,6 +91,9 @@ class ReflexAgent:
         # Scoring what actually paid off on each screen: this is what makes the
         # bot play *better*, not just faster. Optional, so old callers are intact.
         self.playbook = playbook
+        # How many seconds one step of this agent stands for. Frames are the only
+        # clock a recording offers, so offsets come from the step number and this.
+        self.cadence_seconds = float(cadence_seconds)
         self.tracks: list = []
         self.screen = None
         self.pending_bursts: list[dict] = []
@@ -181,6 +188,7 @@ class ReflexAgent:
             intent=decision.intent, action=action, source=decision.source,
             overlap_ms=round(overlap_ms * 1000.0, 2),
             perception_started_before_action_finished=overlap_ms > 0))
+        self._record_event(step, perception)
         self._last_perception, self._last_decision = perception, decision
         stats = self.pacer.stats
         # Recomputed per tick on purpose: the summary is small and derived, and
@@ -235,6 +243,26 @@ class ReflexAgent:
         if allowed and decision.intent not in allowed:
             return Decision(allowed[0], "screen", decision.latency_ms, decision.target)
         return decision
+
+    def _record_event(self, step: int, perception) -> None:
+        """Keep a measured highlight with its real offset in the recording.
+
+        A **goal** is a claim and needs a goal to be reached against; without one
+        the agent has no right to say anything was achieved. A **change** is only
+        an observation: the frame was different, which is a fact on its own. The
+        montage keeps goals as its spine and lets changes only extend a clip.
+        """
+        facts = self._facts(perception)
+        if self.playbook is not None and self.playbook.goal.reached(facts):
+            kind = "goal"
+            detail = f"targets={facts['targets']} kind={facts['kind']}"
+        elif facts.get("changed"):
+            kind = "change"
+            detail = f"kind={facts['kind']} changed"
+        else:
+            return
+        self.stats.events.append({"seconds": round(step * self.cadence_seconds, 2),
+                                  "kind": kind, "reason": detail})
 
     def _facts(self, perception) -> dict:
         """Measured facts about a frame: the only input the playbook trusts."""

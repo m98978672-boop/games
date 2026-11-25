@@ -170,6 +170,177 @@ def _make_video(path: Path, seconds: int = 20) -> bool:
     return True
 
 
+class PlaybookMemoryTests(unittest.TestCase):
+    """Knowledge must survive a restart: that is the difference between a bot
+    that learns and a bot that starts from scratch every session."""
+
+    def test_what_was_learned_is_there_next_session(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "playbook.json"
+            first = Playbook(GOAL_PRESETS["explore"], explore_ratio=0.0, path=path)
+            for _ in range(3):
+                first.observe("a" * 16, "FORWARD", {"targets": 3, "kind": "menu"})
+                first.observe("a" * 16, "JUMP", {"targets": 1, "kind": "gameplay"})
+            first.save()
+
+            second = Playbook(GOAL_PRESETS["explore"], explore_ratio=0.0, path=path)
+            self.assertEqual(second.edges_learned if hasattr(second, "edges_learned") else len(second.edges), 2)
+            # The same screen now answers immediately: it exploits, it does not re-probe.
+            choice = second.choose("a" * 16, ("FORWARD", "JUMP"), tick=1)
+            self.assertEqual(choice.intent, "FORWARD")
+            self.assertEqual(choice.reason, "goal")
+            self.assertEqual(second.summary()["edges_learned"], 2)
+
+    def test_a_corrupt_or_hostile_file_is_ignored_not_trusted(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            cases = {
+                "garbage.json": "not json at all",
+                "wrong.json": json.dumps({"version": 99, "edges": []}),
+                "bad_rows.json": json.dumps({"version": 1, "edges": [
+                    {"screen": "not-a-signature", "intent": "FORWARD", "tries": 5},
+                    {"screen": "b" * 16, "intent": "JUMP", "tries": 1, "goal_hits": 9, "loops": 0},
+                    {"screen": "c" * 16, "intent": "BACK", "tries": "many", "goal_hits": 0, "loops": 0},
+                    {"screen": "d" * 16, "intent": "FORWARD", "tries": 2, "goal_hits": 1, "loops": 0},
+                ]}),
+            }
+            for name, text in cases.items():
+                path = root / name
+                path.write_text(text, encoding="utf-8")
+                book = Playbook(GOAL_PRESETS["explore"], path=path)
+                with self.subTest(name=name):
+                    # Only the one sane row survives; a wrong row is never a fact.
+                    self.assertEqual(len(book.edges), 1 if name == "bad_rows.json" else 0)
+                    self.assertFalse(book.stalled)
+
+    def test_save_without_a_path_is_a_no_op(self):
+        book = Playbook(GOAL_PRESETS["explore"])
+        book.observe("e" * 16, "FORWARD", {"targets": 3, "kind": "menu"})
+        book.save()  # must not raise, must not create anything
+        self.assertEqual(len(book.edges), 1)
+
+
+class AgentEventTests(unittest.TestCase):
+    """The montage needs offsets from the recording the agent actually drove."""
+
+    def _agent(self, **kwargs):
+        import io
+
+        from PIL import Image
+
+        from reflex_agent import ReflexAgent
+
+        def frame(step):
+            image = Image.new("RGB", (800, 600), (28, 30, 36))
+            for index in range(3 if step % 4 == 0 else 1):
+                image.paste(Image.new("RGB", (90, 40), (200, 200, 210)), (40 + index * 120, 400))
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+            return buffer.getvalue()
+
+        return ReflexAgent("keyboard", **kwargs), frame
+
+    def test_events_carry_measured_offsets_in_seconds(self):
+        from montage import Event
+
+        agent, frame = self._agent(playbook=Playbook(GOAL_PRESETS["any-action"]),
+                                   cadence_seconds=2.0)
+        for step in range(12):
+            agent(frame(step), step)
+        events = agent.stats.events
+        self.assertTrue(events)
+        seconds = [event["seconds"] for event in events]
+        self.assertEqual(seconds, sorted(seconds))
+        # A step is 2s in this run, so offsets are even and inside the recording.
+        self.assertTrue(all(value % 2 == 0 for value in seconds))
+        self.assertLessEqual(max(seconds), 11 * 2.0)
+        # They are real events the montage accepts, not free-form notes.
+        plan = plan_montage(24.0, [Event(**{("detail" if k == "reason" else k): v
+                                            for k, v in event.items()}) for event in events],
+                            target_seconds=20)
+        self.assertTrue(plan.keeps)
+
+    def test_no_playbook_means_no_claimed_goals(self):
+        agent, frame = self._agent()
+        for step in range(4):
+            agent(frame(step), step)
+        kinds = {event["kind"] for event in agent.stats.events}
+        # Without a goal to check against, a reached goal cannot be claimed; a
+        # changed frame is still a fact and may be recorded as an observation.
+        self.assertNotIn("goal", kinds)
+        self.assertTrue(kinds <= {"change"})
+
+
+class CliTests(unittest.TestCase):
+    """The operator path has to work, not just the library."""
+
+    def _cli(self, argv):
+        import contextlib
+        import io
+        import json
+
+        from gameplay import reflex_cli
+
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            code = reflex_cli.main(argv)
+        return code, json.loads(buffer.getvalue())
+
+    def test_play_reports_a_measured_difference(self):
+        code, payload = self._cli(["play", "--goal", "explore", "--steps", "200"])
+        self.assertEqual(code, 0)
+        self.assertTrue(payload["better"])
+        self.assertGreater(payload["learned"]["goal_hits"], payload["naive"]["goal_hits"])
+        self.assertFalse(payload["published"])
+
+    def test_play_rejects_an_unknown_goal(self):
+        code, payload = self._cli(["play", "--goal", "teleport"])
+        self.assertEqual(code, 2)
+        self.assertIn("error", payload)
+
+    def test_montage_plan_only_cuts_nothing(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "run.mp4"
+            if not _make_video(source, 12):
+                self.skipTest("ffmpeg is not available in this environment")
+            rows = root / "events.json"
+            rows.write_text(json.dumps([{"seconds": 3, "kind": "goal", "reason": "цель"}],
+                                       ensure_ascii=False), encoding="utf-8")
+            out = root / "short.mp4"
+            code, payload = self._cli(["montage", str(source), str(out),
+                                       "--report", str(rows), "--plan-only"])
+            self.assertEqual(code, 0)
+            self.assertFalse(payload["rendered"])
+            self.assertFalse(out.exists())
+
+    def test_montage_without_events_is_a_clean_error(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "run.mp4"
+            if not _make_video(source, 8):
+                self.skipTest("ffmpeg is not available in this environment")
+            rows = root / "events.json"
+            rows.write_text(json.dumps([{"seconds": 3, "kind": "change", "reason": "кадр"}],
+                                       ensure_ascii=False), encoding="utf-8")
+            code, payload = self._cli(["montage", str(source), str(root / "out.mp4"),
+                                       "--report", str(rows)])
+            self.assertEqual(code, 2)
+            self.assertFalse(payload["published"])
+            self.assertIn("error", payload)
+
+
 class MontagePlanTests(unittest.TestCase):
     EVENTS = [Event(4, "goal", "цель"), Event(12, "speech", "реплика"),
               Event(22, "goal", "цель2"), Event(23, "change", "изменение")]

@@ -26,8 +26,9 @@ SHORT_POST_TIMES = (time(9, 0), time(13, 0), time(17, 0), time(21, 0))
 LONG_POST_TIMES = (time(6, 0), time(11, 0), time(15, 0), time(19, 0))
 # Gameplay sits at 18:00 so it never shares a minute with a review or a Short.
 GAMEPLAY_POST_TIME = time(18, 0)
-# A playthrough cut shorter than this is a Short; anything longer is a full
-# video. 180 seconds is the boundary the owner set.
+# A playthrough cut up to this many seconds is a Short; longer is a full video.
+# This mirrors adventure_personality.SHORT_SECONDS, which the renderer already
+# uses, so the render and the upload stamp cannot disagree at exactly 180s.
 GAMEPLAY_SHORT_MAX_SECONDS = 180
 # Kept for callers that still ask for "the" long slot; the first one serves the
 # nightly scheduled run. Anything that must handle all long slots uses

@@ -15,14 +15,22 @@ NOW = datetime(2026, 11, 26, 10, 0, tzinfo=timezone.utc)  # 13:00 Moscow
 
 class DurationTests(unittest.TestCase):
     def test_three_minutes_is_the_boundary(self):
-        # "меньше 3 минут -> шортсы, больше -> видео". Exactly three minutes is
-        # not "less", so it is a full video; this is the one arguable case and it
-        # is pinned so it cannot drift silently.
+        # At or under three minutes is a Short, over is a full video. This is
+        # the boundary the renderer already applies (adventure_personality.
+        # SHORT_SECONDS), and it is pinned here so the two cannot drift apart.
         self.assertEqual(video_kind_for_duration(179), 'short')
         self.assertEqual(video_kind_for_duration(60), 'short')
-        self.assertEqual(video_kind_for_duration(180), 'long')
+        self.assertEqual(video_kind_for_duration(180), 'short')
         self.assertEqual(video_kind_for_duration(181), 'long')
         self.assertEqual(video_kind_for_duration(1800), 'long')
+
+    def test_the_cutoff_matches_the_renderer(self):
+        # Two constants, one meaning. If either moves, this fails.
+        from adventure_personality import SHORT_SECONDS
+        from schedule_policy import GAMEPLAY_SHORT_MAX_SECONDS
+        self.assertEqual(SHORT_SECONDS, GAMEPLAY_SHORT_MAX_SECONDS)
+        self.assertEqual(video_kind_for_duration(SHORT_SECONDS), 'short')
+        self.assertEqual(video_kind_for_duration(SHORT_SECONDS + 1), 'long')
 
     def test_impossible_durations_are_rejected(self):
         for value in (0, -1, True, '120', None):

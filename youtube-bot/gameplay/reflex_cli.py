@@ -12,6 +12,10 @@
                                                    # plan a stream ahead of time
     python -m gameplay.reflex_cli stream --game ... --author ... --minutes 30 --out DIR
                                                    # run the plan, write report + SRT
+    python -m gameplay.reflex_cli play --goal explore --steps 200
+                                                   # score the learned play, no game needed
+    python -m gameplay.reflex_cli montage RUN.mp4 SHORT.mp4 --report REPORT.json
+                                                   # cut a short out of a recording, no upload
 
 Everything writes plain JSON to stdout and never touches the network. The
 commands are read-only except ``forget`` and ``import``, which only modify the
@@ -93,6 +97,56 @@ def cmd_live(args) -> int:
         # Docker missing or the bridge refusing to start: report, never fake a run.
         _emit({"error": str(error)[:200], "docker_required": True, "published": False})
         return 1
+
+
+def cmd_play(args) -> int:
+    """Compare the learned playbook against blind cycling on the same game.
+
+    This is the honest way to answer "does it play better": both bots get the
+    same number of steps on the same pretend game, and only one of them learns.
+    """
+    from gameplay.playbook import GOAL_PRESETS, learned_baseline, naive_baseline
+
+    goal = GOAL_PRESETS.get(args.goal)
+    if goal is None:
+        _emit({"error": f"unknown goal; choose from {sorted(GOAL_PRESETS)}"})
+        return 2
+    naive = naive_baseline(goal)
+    learned = learned_baseline(goal, steps=args.steps)
+    book = learned["playbook"]
+    _emit({"goal": goal.as_dict(), "steps": args.steps,
+           "naive": {"goal_hits": naive["goal_hits"], "goal_rate": naive["goal_rate"]},
+           "learned": {"goal_hits": learned["goal_hits"], "goal_rate": learned["goal_rate"]},
+           "decisions": {"goal": book["goal_choices"], "explore": book["explore_choices"],
+                         "escape": book["escape_choices"]},
+           "better": learned["goal_hits"] > naive["goal_hits"],
+           "published": False})
+    return 0
+
+
+def cmd_montage(args) -> int:
+    """Cut a short clip out of a recording, decided by measured events only."""
+    from montage import (MontageError, check_montage, events_from_report_file, main as montage_main,
+                         plan_montage, probe_duration, render_montage)
+
+    try:
+        duration = probe_duration(args.video)
+        events = events_from_report_file(args.report)
+        plan = plan_montage(duration, events, target_seconds=args.target_seconds)
+        if args.plan_only:
+            report = plan.summary()
+            report.update({"events_considered": len(events),
+                           "problems": check_montage(plan), "rendered": False})
+            _emit(report)
+            return 0 if not report["problems"] else 1
+        payload = render_montage(args.video, plan, args.destination,
+                                 crf=args.crf, preset=args.preset)
+        payload["problems"] = check_montage(plan)
+        _emit(payload)
+        return 0 if not payload["problems"] else 1
+    except MontageError as error:
+        _emit({"error": str(error), "rendered": False, "published": False})
+        return 2
 
 
 def cmd_model(args) -> int:
@@ -227,6 +281,21 @@ def main(argv: list[str] | None = None) -> int:
     imp.add_argument('file', type=Path)
     imp.set_defaults(func=cmd_import)
     sub.add_parser('profiles', help='list control schemes').set_defaults(func=cmd_profiles)
+    play = sub.add_parser('play', help='score the learned play against blind cycling')
+    play.add_argument('--goal', default='explore',
+                      help='goal preset: progress | explore | engage | any-action')
+    play.add_argument('--steps', type=int, default=200)
+    play.set_defaults(func=cmd_play)
+    mont = sub.add_parser('montage', help='cut a short montage from a recording; no upload')
+    mont.add_argument('video', type=Path)
+    mont.add_argument('destination', type=Path)
+    mont.add_argument('--report', type=Path, required=True,
+                      help='stream/agent report whose measured events decide the cuts')
+    mont.add_argument('--target-seconds', type=float, default=45.0)
+    mont.add_argument('--crf', type=int, default=20)
+    mont.add_argument('--preset', default='veryfast')
+    mont.add_argument('--plan-only', action='store_true', help='decide, render nothing')
+    mont.set_defaults(func=cmd_montage)
     sub.add_parser('model', help='what the world model has learned').set_defaults(func=cmd_model)
     sub.add_parser('budget', help='show the timing contract').set_defaults(func=cmd_budget)
     plan = sub.add_parser('plan', help='plan a stream ahead: run of show and talk track')
