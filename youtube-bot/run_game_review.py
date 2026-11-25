@@ -66,17 +66,29 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     # let two runs that finished minutes apart compete for the same wall time.
     # The queue is read once, so several runs started together take different
     # regular slots instead of all aiming at the same one.
+    from publish_to_supabase import read_queue
+    from review_slot_state import assess, booked_slots
+    try:
+        jobs = read_queue()
+        taken = booked_slots(jobs)
+    except Exception as exc:  # noqa: BLE001 - never guess a free slot
+        raise RuntimeError(
+            f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
+        ) from exc
     reserved = None
     if requested is None:
-        from publish_to_supabase import read_queue
-        from review_slot_state import booked_slots
-        try:
-            taken = booked_slots(read_queue())
-        except Exception as exc:  # noqa: BLE001 - never guess a free slot
-            raise RuntimeError(
-                f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
-            ) from exc
         reserved = reserve_slot_before_render(video_format, occupied=taken)
+    else:
+        # A manual request must never reschedule itself, so a taken slot is
+        # refused here. Rendering takes minutes and the answer is already known;
+        # failing now replaces a wasted render with an immediate, honest stop.
+        missing, _ = assess([requested], jobs)
+        if not missing:
+            raise RuntimeError(
+                f"Requested publication slot {requested.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow "
+                "already has a video; no review was rendered or uploaded. Choose another time. "
+                "Nothing was uploaded, so YouTube Studio does not need checking."
+            )
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
     if os.getenv('REQUIRE_SHARED_TOPIC_HISTORY') == 'true':

@@ -36,6 +36,7 @@ jobs:
             youtube-bot/tests/test_game_reviews.py \
             youtube-bot/tests/test_steam_catalog.py \
             youtube-bot/tests/test_renderer_quality.py \
+            youtube-bot/tests/test_render_speedups.py \
             youtube-bot/tests/test_run_game_review.py \
             youtube-bot/tests/test_publish_to_supabase.py \
             youtube-bot/tests/test_review_workflow_format.py \

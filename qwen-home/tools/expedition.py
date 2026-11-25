@@ -974,6 +974,14 @@ class StoryMap:
             norm += '\u241f' + context
         return hashlib.sha1(norm.encode('utf-8')).hexdigest()[:16]
 
+    def text_key_index(self):
+        """Какой узел отвечает за этот текст (набор вариантов не в счёт)."""
+        idx = {}
+        for k, n in self.nodes.items():
+            tk = n.get('text_key') or k
+            idx.setdefault(tk, k)
+        return idx
+
     def _is_key(self, s):
         """Похоже ли на готовый ключ места (16 hex-символов), а не на текст."""
         return isinstance(s, str) and len(s) == 16 and all(c in '0123456789abcdef' for c in s)
@@ -981,12 +989,29 @@ class StoryMap:
     def see(self, text, context=None, options=None):
         """Записать место в карту и вернуть, что в нём видно."""
         k = self.key(text, context, options)
+        # Ключ, под которым живёт узел: если текст уже известен — прежний,
+        # иначе отметки «нажато» повисли бы на несуществующем ключе.
+        if self.nodes.get(k) is None:
+            already = self.text_key_index().get(self.key(text))
+            if already:
+                k = already
         node = self.nodes.get(k)
         if node is None:
+            # Тот же текст, но другой набор вариантов. В Harlowe набор меняется
+            # прямо в пассаже (после «OK» пропадает «Cancel»; после «door»
+            # появляется «You go back inside»), и без этого один пассаж
+            # делился на несколько мест: рёбра теряли источник и половина
+            # карты становилась недостижимой. Дописываем варианты в живой узел.
+            tk = self.key(text)
             node = {'text': (text or '')[:220], 'visits': 0}
             node.update(read_signal(text))
             self.nodes[k] = node
         node['visits'] += 1
+        node['text_key'] = self.key(text)
+        merged = node.setdefault('options', [])
+        for o in (options or []):
+            if o and o not in merged:
+                merged.append(o)
         return node
 
     def is_loop(self, text, choice, came_from=None):
@@ -1029,7 +1054,7 @@ class StoryMap:
 
         def has_left(k):
             n = self.nodes.get(k) or {}
-            return any((k, label) not in self.tried for label in (n.get('options') or []))
+            return any(not self.tried_here(k, label) for label in (n.get('options') or []))
 
         if has_left(start_key):
             return None                     # остаток прямо здесь — никуда идти не надо
@@ -1053,14 +1078,21 @@ class StoryMap:
         node = self.nodes.get(kw)
         if node is None:
             return
-        node['open'] = any((kw, c.get('label')) not in self.tried for c in choices)
+        node['open'] = any(not self.tried_here(kw, c.get('label')) for c in choices)
         node['options'] = [c.get('label') for c in choices][:8]
 
-    def link(self, src_text, choice, dst_text, context=None, dst_options=None, src_key=None):
-        """Ребро карты. src_key — готовый ключ места: текст в ключ не превратить
-        повторно (набор вариантов уже в нём), иначе связь повиснет в воздухе."""
+    def link(self, src_text, choice, dst_text, context=None, dst_options=None,
+             src_key=None, dst_key=None):
+        """Ребро карты. src_key/dst_key — готовые ключи мест: текст в ключ не
+        превратить повторно (набор вариантов уже в нём), иначе связь повиснет
+        в воздухе. Если ключа цели нет в карте — берём узел с тем же текстом.
+        """
         fr = src_key or self.key(src_text)
-        to = self.key(dst_text, context, dst_options)
+        to = dst_key or self.key(dst_text, context, dst_options)
+        if to not in self.nodes:
+            same = self.text_key_index().get(self.key(dst_text))
+            if same:
+                to = same
         edge = {'from': fr, 'choice': choice, 'to': to}
         if edge not in self.edges:
             self.edges.append(edge)
@@ -1068,7 +1100,7 @@ class StoryMap:
     def fresh_choices(self, text, choices):
         """Варианты, которых в этом месте ещё не нажимали."""
         k = self.key(text)
-        return [c for c in choices if (k, c.get('label')) not in self.tried]
+        return [c for c in choices if not self.tried_here(k, c.get('label'))]
 
     def untried_targets(self, text, choices):
         """Куда ведёт неизведанное: места, которых в карте ещё нет."""
@@ -1082,13 +1114,44 @@ class StoryMap:
                 out.append(c)
         return out
 
+    def tried_here(self, k, label):
+        """Нажимали ли этот вариант в этом месте — с оглядкой на тот же текст.
+
+        Отметки пишутся под ключом с набором вариантов, а спрашивают иногда под
+        другим набором. Поэтому сверяем и по одному тексту (а если узла ещё нет
+        — по ключу, который и есть текст).
+        """
+        if (k, label) in self.tried:
+            return True
+        node = self.nodes.get(k)
+        tk = node.get('text_key') if node else k
+        if not (tk or '').strip():
+            return False
+        return (tk, label) in self.tried
+
     def remaining(self):
-        """Сколько вариантов в известных местах ещё не нажато."""
-        left = 0
+        """Сколько вариантов в известных местах ещё не нажато.
+
+        Считаем по паре (место, вариант), но один и тот же текст не считаем
+        дважды: иначе «Cancel» с экрана ввода имени висел в остатке вечно,
+        хотя пассаж давно ушёл дальше.
+        """
+        groups = {}
         for k, node in self.nodes.items():
+            tk = node.get('text_key') or k
+            labels = groups.setdefault(tk, [])
             for label in (node.get('options') or []):
-                if (k, label) not in self.tried:
-                    left += 1
+                if label not in labels:
+                    labels.append(label)
+        left = 0
+        for tk, labels in groups.items():
+            for label in labels:
+                if (tk, label) in self.tried:
+                    continue
+                if any(self.tried_here(k, label) for k, n in self.nodes.items()
+                       if (n.get('text_key') or k) == tk):
+                    continue
+                left += 1
         return left
 
     def summary(self):
@@ -1105,11 +1168,14 @@ class StoryMap:
                       'clues': v.get('clues', 0), 'open': bool(v.get('open')),
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
-        return {'schema': 'text+options-v2', 'places': places,
+        return {'schema': 'text+options-v3', 'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
                 'tried': sorted([list(t) for t in self.tried])}
 
-    SCHEMA = 'text+options-v2'
+    # v3: место — один текст (набор вариантов меняется прямо в пассаже),
+    # висячие рёбра отброшены, нажатия сверяются по тексту. Карты v2 собраны
+    # на сломанной схеме: половина рёбер вела из несуществующих мест.
+    SCHEMA = 'text+options-v3'
 
     def load_cache(self, data):
         """Вспомнить карту прошлого прогона: там уже есть места и переходы.
@@ -1123,8 +1189,11 @@ class StoryMap:
             return 0
         for k, v in (data.get('places') or {}).items():
             self.nodes[k] = dict(v)
+        # Рёбра, которые ведут из мест, которых в карте нет, — мусор прошлых
+        # прогонов (накопилось 174 из 311, и половина графа была нерабочей:
+        # маршрут к остатку не находился). Такие рёбра не берём.
         for e in (data.get('links') or []):
-            if e not in self.edges:
+            if e.get('from') in self.nodes and e.get('to') in self.nodes and e not in self.edges:
                 self.edges.append(e)
         for pair in (data.get('tried') or []):
             if len(pair) == 2:
@@ -1157,7 +1226,7 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     def not_tried(c):
         """Этот выбор в этом месте ещё не нажимали?"""
         if story_map is not None and passage:
-            return (k, c.get('label')) not in story_map.tried
+            return not story_map.tried_here(k, c.get('label'))
         return here_key(c) not in visited
 
     def here_key(c):
@@ -1211,7 +1280,7 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
         # и остались непройденными навсегда. Если отдохнуть тут уже пробовала,
         # а непройденное есть — идём по делу.
         rest_fresh = [c for c in rest
-                      if story_map is None or (k, c.get('label')) not in story_map.tried]
+                      if story_map is None or not story_map.tried_here(k, c.get('label'))]
         if rest and (rest_fresh or not fresh):
             pool = rest_fresh or rest
         else:
@@ -1350,7 +1419,11 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         if run > 1:
             # Заново идём только если есть что искать: непройденные переходы
             # уже известных мест и места, до которых не добрались.
-            unopened = [n for n in story_map.nodes.values() if n.get('visits', 0) and n.get('open')]
+            # Считаем по-настоящему непройденное (место, вариант), а не по
+            # устаревшему флагу open: он застывает с прошлых прогонов.
+            unopened = [k for k, n in story_map.nodes.items()
+                        if n.get('visits', 0)
+                        and any(not story_map.tried_here(k, label) for label in (n.get('options') or []))]
             if not unopened:
                 report.step('добор веток', 'непройденных вариантов не осталось — второй заход не нужен')
                 break
@@ -1402,9 +1475,12 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             labels = [c.get('label') for c in choices]
             if pending.get('from') and not pending.get('done'):
                 # пришли из предыдущего пассажа: записываем ребро карты, зная
-                # уже и текст, и набор вариантов
+                # уже и текст, и набор вариантов. Цель ищем по набору вариантов,
+                # а если такого узла нет — по самому тексту (контекст не даём:
+                # он не должен дробить место).
                 story_map.link(pending['from'], pending['choice'], text, here_ctx, labels,
-                               src_key=pending.get('from_key'))
+                               src_key=pending.get('from_key'),
+                               dst_key=story_map.key(text, None, labels))
                 pending['done'] = True
             # Сначала варианты, потом место в карту: набор вариантов — часть
             # ключа (по нему различаются пассажи с одинаковым текстом).
@@ -1419,9 +1495,15 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 last_place[0] = prev_place[0]
                 if len(trail) > 18:
                     trail.pop(0)
-                if len(trail) >= 18 and len(set(trail[-8:])) <= 2:
+                # Стоп-кран: прекращаем, только если заход реально ничего не
+                # принёс. Раньше хватало «два места за 18 шагов» — и маршрут к
+                # остатку рубился на 17-м шаге, не дойдя: 6 заходов подряд по
+                # 0 финалов. Петля через два места — это нормальный проход по
+                # дому, а не топтание.
+                if (len(trail) >= 18 and len(set(trail[-8:])) <= 1
+                        and new_places == 0):
                     report.step('стоп-кран',
-                                f'топчется на месте (последние {len(trail)} шагов — два места) — прекращаю заход')
+                                f'топчется в одном месте {len(trail)} шагов и новых мест нет — прекращаю заход')
                     break
                 pick, fresh = pick_choice(choices, visited, rng,
                                           my_key, sight['visits'],

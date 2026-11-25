@@ -13,7 +13,9 @@ import renderer
 
 class RenderQualityTests(unittest.TestCase):
     def test_render_targets_full_hd_50fps(self):
-        self.assertEqual(renderer.SOURCE_FPS, 25)
+        # Shorts are drawn directly at the delivery rate: the cards carry no
+        # generated motion, so interpolating 25->50 only cost minutes per video.
+        self.assertEqual(renderer.SOURCE_FPS, 50)
         self.assertEqual(renderer.OUTPUT_FPS, 50)
         self.assertEqual((renderer.OUTPUT_WIDTH, renderer.OUTPUT_HEIGHT), (1080, 1920))
 
@@ -78,8 +80,7 @@ class RenderQualityTests(unittest.TestCase):
                  patch.object(renderer, 'render_frame'), patch.object(renderer, 'SOURCE_FPS', 1):
                 with self.assertRaisesRegex(ValueError, 'fallback exceeds'):
                     renderer.render_short(script, root / 'out.mp4', root / 'work')
-        self.assertEqual(heard[-1], 'Оценка идеи по описанию — 7 из 10. Я не играла.')
-        self.assertIn('не играла', heard[-1])
+        self.assertIn('Оценка идеи по описанию — 7 из 10. Я не играла.', heard)
 
     def test_short_long_narration_fails_before_any_video_encoding(self):
         def fake_speech(_text, path, **_kwargs):

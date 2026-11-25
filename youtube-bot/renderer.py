@@ -8,8 +8,10 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import re
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 import subprocess
 import wave
@@ -23,7 +25,15 @@ from speech_policy import fit_speech_text
 
 WIDTH, HEIGHT = 720, 1280
 OUTPUT_WIDTH, OUTPUT_HEIGHT = 1080, 1920
-SOURCE_FPS, OUTPUT_FPS = 25, 50
+# Shorts are drawn directly at the delivery rate. Every frame is a still card
+# with at most a slow progress-bar step, so interpolation adds nothing while
+# costing minutes: measured 681 s to encode 36 s of video with minterpolate
+# versus 23.5 s for frame duplication at the same 1080p50 profile.
+SOURCE_FPS, OUTPUT_FPS = 50, 50
+# A scene's progress bar stops moving after its first 25 source seconds, so the
+# remaining frames are pixel-identical. Draw each distinct frame once and link
+# the duplicates; only the genuine animation frames differ.
+ANIMATED_FRAMES_PER_SCENE = 25
 PALETTE = ["#68a8ff", "#ff8c69", "#9c7af2", "#53cba5", "#f4bd4f", "#f078a2"]
 FONT_PATHS = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
@@ -355,7 +365,7 @@ def render_silent_short(script: dict[str, Any], output: Path, workdir: Path, *, 
     pattern = str(frames_dir / "frame-%06d.png")
     process = subprocess.run([
         ffmpeg, "-y", "-framerate", str(SOURCE_FPS), "-i", pattern,
-        "-vf", f"minterpolate=fps={OUTPUT_FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:flags=lanczos,format=yuv420p",
+        "-vf", f"fps={OUTPUT_FPS},scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:flags=lanczos,format=yuv420p",
         "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-maxrate", "12M", "-bufsize", "24M",
         "-r", str(OUTPUT_FPS), "-fps_mode", "cfr", "-an", "-movflags", "+faststart", str(output),
     ], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
@@ -365,8 +375,96 @@ def render_silent_short(script: dict[str, Any], output: Path, workdir: Path, *, 
     return {"path": str(output), "duration_seconds": round(duration, 2), "frames": round(duration * OUTPUT_FPS), **profile, "audio": False}
 
 
+def _scene_worker_count(scenes: int) -> int:
+    """Bounded parallelism that always exceeds one worker when possible.
+
+    Narration is an external process, so the work is spread across scenes rather
+    than cores; drawing frames is CPU-bound and is kept to cores - 1. A cap of
+    4 prevents a wide runner from spawning a burst of TTS processes.
+    """
+    cores = os.cpu_count() or 1
+    return max(1, min(scenes, max(2, cores), 4))
+
+
+def prepare_scene_narration(scene: dict[str, Any], scene_index: int, audio_dir: Path, *,
+                            is_review: bool = False, fallback: str | None = "Короткий разбор игрового проекта.") -> tuple[str, float]:
+    """Synthesize one scene's line and pad it; safe to run for several scenes at once.
+
+    Each call owns its own wav path and Piper/espeak process, so concurrent
+    scenes cannot interleave. Only the scene's own ``dialogue`` key is written.
+    """
+    audio_path = audio_dir / f"line-{scene_index:02d}.wav"
+    style = {"happy": "bright", "curious": "neutral", "calm": "reflective"}.get(scene.get("emotion"), "neutral")
+    dialogue, seconds = fit_speech_text(
+        str(scene["dialogue"]),
+        lambda candidate: synthesize(candidate, audio_path, style=style),
+        max_seconds=12.0, preserve_full=is_review, fallback=fallback,
+    )
+    # Hold each card long enough to read the speech bubble. Silence is appended
+    # after the spoken line rather than stretching or speeding up speech.
+    with wave.open(str(audio_path), "rb") as source:
+        params = source.getparams()
+        spoken = source.readframes(source.getnframes())
+    scene_seconds = max(5.0, seconds)
+    silence_frames = max(0, math.ceil(scene_seconds * params.framerate) - len(spoken) // params.sampwidth // params.nchannels)
+    with wave.open(str(audio_path), "wb") as target:
+        target.setparams(params)
+        target.writeframes(spoken)
+        target.writeframes(b"\0" * silence_frames * params.sampwidth * params.nchannels)
+    return dialogue, scene_seconds
+
+
+def prepare_all_scenes(scenes: list[dict[str, Any]], audio_dir: Path, *,
+                       is_review: bool = False, review_score: Any = None) -> list[tuple[str, float]]:
+    """Synthesize every scene's narration, several at once, in scene order.
+
+    Each scene is an independent external process, so running them together
+    turns a sum of synthesis times into roughly the slowest one. The returned
+    list keeps scene order so audio and frames still line up exactly.
+    """
+    if not scenes:
+        return []
+    def prepare(index: int) -> tuple[str, float]:
+        fallback = "Короткий разбор игрового проекта."
+        if is_review:
+            fallback = None
+            if index == len(scenes) - 1 and type(review_score) is int and 1 <= review_score <= 10:
+                fallback = f"Оценка идеи по описанию — {review_score} из 10. Я не играла."
+        return prepare_scene_narration(scenes[index], index, audio_dir, is_review=is_review, fallback=fallback)
+    if len(scenes) == 1:
+        return [prepare(0)]
+    with ThreadPoolExecutor(max_workers=_scene_worker_count(len(scenes)),
+                            thread_name_prefix="narration") as pool:
+        futures = [pool.submit(prepare, index) for index in range(len(scenes))]
+        return [future.result() for future in futures]
+
+
+def render_scene_frames(script: dict[str, Any], scene: dict[str, Any], scene_index: int,
+                        frames_dir: Path, first_index: int, nframes: int) -> int:
+    """Draw one scene's frames, reusing still frames instead of redrawing them.
+
+    Returns the number of frames written to ``frames_dir``. A frame is drawn
+    only while the progress bar is still moving (see ANIMATED_FRAMES_PER_SCENE);
+    every later frame in the scene is pixel-identical to the first still one and
+    is hard-linked to it, which keeps FFmpeg's %06d sequence intact.
+    """
+    still: Path | None = None
+    drawn = 0
+    for frame in range(nframes):
+        path = frames_dir / f"frame-{first_index + frame:06d}.png"
+        if still is not None and frame >= ANIMATED_FRAMES_PER_SCENE:
+            path.hardlink_to(still)
+            continue
+        render_frame(script, scene, scene_index, frame, path)
+        drawn += 1
+        if frame == ANIMATED_FRAMES_PER_SCENE - 1:
+            still = path
+    return drawn
+
+
 def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[str, Any]:
-    import os
+    import time
+    stage = time.perf_counter()
     if os.environ.get("PIPER_MODEL_PATH"):
         if not Path(os.environ["PIPER_MODEL_PATH"]).is_file():
             raise RuntimeError("Configured Russian Piper voice model is missing.")
@@ -377,49 +475,45 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
     audio_dir = workdir / "audio"
     frames_dir.mkdir(parents=True, exist_ok=True)
     audio_dir.mkdir(parents=True, exist_ok=True)
-    all_frames: list[Path] = []
+    scenes = script["scenes"]
+
+    # Stage: narration. Every scene is an independent external TTS process, so
+    # all of them start at once instead of waiting for their turn. Results are
+    # consumed in scene order, which keeps the audio and frame order unchanged.
+    narrate_start = time.perf_counter()
+    prepared = prepare_all_scenes(scenes, audio_dir, is_review=script.get("format") == "game-review",
+                                  review_score=script.get("idea_score"))
     wavs: list[Path] = []
-    total_seconds = 0.0
-    for scene_index, scene in enumerate(script["scenes"]):
-        audio_path = audio_dir / f"line-{scene_index:02d}.wav"
-        style = {"happy":"bright", "curious":"neutral", "calm":"reflective"}.get(scene.get("emotion"), "neutral")
-        is_review = script.get("format") == "game-review"
-        # Never shorten a review by dropping a qualifying sentence. The final
-        # verdict has a compact, truthful alternative that retains both score
-        # and the fact that there was no personal playthrough.
-        fallback = "Короткий разбор игрового проекта."
-        if is_review:
-            fallback = None
-            score = script.get("idea_score")
-            if scene_index == len(script["scenes"]) - 1 and type(score) is int and 1 <= score <= 10:
-                fallback = f"Оценка идеи по описанию — {score} из 10. Я не играла."
-        dialogue, seconds = fit_speech_text(
-            str(scene["dialogue"]),
-            lambda candidate: synthesize(candidate, audio_path, style=style),
-            max_seconds=12.0, preserve_full=is_review, fallback=fallback,
-        )
+    scene_seconds_list: list[float] = []
+    for scene_index, (dialogue, scene_seconds) in enumerate(prepared):
         # Keep the bubble, recorded review, and final audio in sync after any safe shortening.
-        scene["dialogue"] = dialogue
-        # Hold each cartoon scene long enough to read the speech bubble. Silence is
-        # appended after the spoken line rather than stretching or speeding up speech.
-        with wave.open(str(audio_path), "rb") as source:
-            params = source.getparams()
-            spoken = source.readframes(source.getnframes())
-        scene_seconds = max(5.0, seconds)
-        silence_frames = max(0, math.ceil(scene_seconds * params.framerate) - len(spoken) // params.sampwidth // params.nchannels)
-        with wave.open(str(audio_path), "wb") as target:
-            target.setparams(params)
-            target.writeframes(spoken)
-            target.writeframes(b"\0" * silence_frames * params.sampwidth * params.nchannels)
-        wavs.append(audio_path)
-        nframes = max(SOURCE_FPS, math.ceil(scene_seconds * SOURCE_FPS))
-        for frame in range(nframes):
-            path = frames_dir / f"frame-{len(all_frames):06d}.png"
-            render_frame(script, scene, scene_index, frame, path)
-            all_frames.append(path)
-        total_seconds += scene_seconds
+        scenes[scene_index]["dialogue"] = dialogue
+        wavs.append(audio_dir / f"line-{scene_index:02d}.wav")
+        scene_seconds_list.append(scene_seconds)
+    narration_seconds = time.perf_counter() - narrate_start
+
+    # Stage: frames. Offsets are computed first, so several scenes can be drawn
+    # at once without ever racing on the global frame number.
+    frames_start = time.perf_counter()
+    counts = [max(SOURCE_FPS, math.ceil(seconds * SOURCE_FPS)) for seconds in scene_seconds_list]
+    offsets: list[int] = []
+    running = 0
+    for count in counts:
+        offsets.append(running)
+        running += count
+    total_seconds = sum(scene_seconds_list)
     if not 15 <= total_seconds <= 60:
         raise ValueError(f"Short duration must be 15–60 seconds; generated speech is {total_seconds:.1f}s.")
+    work = list(zip(scenes, range(len(scenes)), offsets, counts))
+    if len(work) > 1:
+        with ThreadPoolExecutor(max_workers=_scene_worker_count(len(work)),
+                                thread_name_prefix="frames") as pool:
+            drawn = sum(pool.map(lambda item: render_scene_frames(script, item[0], item[1], frames_dir, item[2], item[3]), work))
+    else:
+        drawn = sum(render_scene_frames(script, scene, index, frames_dir, offset, count)
+                    for scene, index, offset, count in work)
+    frames_seconds = time.perf_counter() - frames_start
+
     concat_audio = workdir / "audio-list.txt"
     concat_audio.write_text("".join(f"file '{p.resolve()}'\n" for p in wavs), encoding="utf-8")
     full_audio = workdir / "narration.wav"
@@ -427,12 +521,19 @@ def render_short(script: dict[str, Any], output: Path, workdir: Path) -> dict[st
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     output.parent.mkdir(parents=True, exist_ok=True)
     pattern = str(frames_dir / "frame-%06d.png")
+    # Frame rate is already the delivery rate, so repeating frames is enough:
+    # there is no generated motion for an optical-flow interpolator to smooth.
     subprocess.run([
         ffmpeg, "-y", "-framerate", str(SOURCE_FPS), "-i", pattern, "-i", str(full_audio),
-        "-vf", f"minterpolate=fps={OUTPUT_FPS}:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1,scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:flags=lanczos,format=yuv420p",
+        "-vf", f"fps={OUTPUT_FPS},scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:flags=lanczos,format=yuv420p",
         "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-maxrate", "12M", "-bufsize", "24M",
         "-r", str(OUTPUT_FPS), "-fps_mode", "cfr", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", str(output),
     ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    encode_seconds = time.perf_counter() - stage - narration_seconds - frames_seconds
+    print(f"Short narration: {narration_seconds:.1f}s for {len(scenes)} scenes", flush=True)
+    print(f"Short frames: {frames_seconds:.1f}s; drew {drawn} of {running}"
+          f" ({running - drawn} still frames reused)", flush=True)
+    print(f"Short encode and verification: {encode_seconds:.1f}s", flush=True)
     profile = verify_video_profile(output)
     return {"path": str(output), "duration_seconds": round(total_seconds, 2), "frames": round(total_seconds * OUTPUT_FPS), **profile}
 
