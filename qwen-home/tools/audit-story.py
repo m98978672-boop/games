@@ -87,6 +87,7 @@ def audit(src=None):
         ('помнит карту между прогонами', [
             ('сохранение карты', 'def to_cache' in e),
             ('загрузка карты', 'def load_cache' in e),
+            ('старая схема карты не берётся', "data.get('schema') != self.SCHEMA" in e),
             ('память доходит до чтения истории', 'memo_from=memo_from' in e),
             ('workflow передаёт карту', '--memo' in w and 'storymap.json' in w),
         ]),

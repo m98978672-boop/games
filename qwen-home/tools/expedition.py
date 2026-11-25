@@ -1052,13 +1052,21 @@ class StoryMap:
                       'clues': v.get('clues', 0), 'open': bool(v.get('open')),
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
-        return {'places': places,
+        return {'schema': 'text+options-v2', 'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
                 'tried': sorted([list(t) for t in self.tried])}
 
+    SCHEMA = 'text+options-v2'
+
     def load_cache(self, data):
-        """Вспомнить карту прошлого прогона: там уже есть места и переходы."""
+        """Вспомнить карту прошлого прогона: там уже есть места и переходы.
+
+        Карта старой схемы (когда местом считался только текст) не годится:
+        ключи другие, и остаток был бы фальшивым. Такую память не берём.
+        """
         if not data:
+            return 0
+        if data.get('schema') != self.SCHEMA:
             return 0
         for k, v in (data.get('places') or {}).items():
             self.nodes[k] = dict(v)
