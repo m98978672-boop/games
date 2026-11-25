@@ -23,7 +23,8 @@ from gameplay.skill_memory import SkillMemory
 from gameplay_bridge import BrowserBridge
 from gameplay_qwen import QwenVisionAgent, _vision_runtime
 
-source = Path(__file__).resolve().parents[2] / 'collection' / 'adventure-game'
+lighthouse = os.getenv('LIGHTHOUSE_EPISODE') == '1'
+source = Path(__file__).resolve().parents[2] / 'collection' / ('lighthouse-relay' if lighthouse else 'adventure-game')
 record_dir = Path(os.environ['ADVENTURE_RECORD_DIR'])
 choices = CHOICES
 build = hashlib.sha256(b''.join((source / name).read_bytes() for name in ('index.html', 'style.css', 'script.js'))).digest()
@@ -45,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix='adventure-game-') as temp:
         obs = bridge.receive(timeout=120)
         started = time.monotonic()
         same_screen = 0
-        while time.monotonic() - started < (120 if short else int(os.getenv("FINITE_GAME_SECONDS", "1800"))) and len(trace) < (12 if short else 180):
+        while time.monotonic() - started < (150 if lighthouse else 120 if short else int(os.getenv("FINITE_GAME_SECONDS", "1800"))) and len(trace) < (16 if lighthouse else 12 if short else 180):
             diag = obs.get('adventure_telemetry')
             if not isinstance(diag, dict) or diag.get('outcome') not in ('playing','victory','death','unknown'):
                 outcome = 'invalid_game_telemetry'; break
@@ -73,6 +74,10 @@ with tempfile.TemporaryDirectory(prefix='adventure-game-') as temp:
                 agent.objective = 'The previous choice did not change the screen. Review the story and enabled buttons; try a different action to reach the artifact.'
             else:
                 agent.objective = CURIOUS_OBJECTIVE if short else 'Read the story and choose an enabled button to reach the lost artifact.'
+            if lighthouse:
+                agent.objective = ('Play the Russian story and help the ferry avoid the reef. '
+                                   'Read the current scene. Choose the safer action based on clues; '
+                                   f'recent choices: {", ".join(row["choice"] for row in trace[-5:])}.')
             choice = None if analyzing or short else recall_choice(memory, key, allowed)
             recalled = choice is not None
             inference_seconds = 0.0
@@ -116,8 +121,8 @@ with tempfile.TemporaryDirectory(prefix='adventure-game-') as temp:
     learned = learn_choices(memory, route, outcome=outcome)
     memory.export(record_dir / 'skills.json')
     memory.close()
-    result = {'short':short, 'learned_positions':learned, 'memory_actions':sum(row['action_source'] == 'verified_memory' for row in trace),'game':'The Lost Artifact', 'source':'https://github.com/ritaban06/mini-js-games-hub',
-              'author':'Ritaban Ghosh / mini-js-games-hub contributors', 'game_code_license':'MIT',
+    result = {'short':short, 'learned_positions':learned, 'memory_actions':sum(row['action_source'] == 'verified_memory' for row in trace),'game':'Последний сигнал' if lighthouse else 'The Lost Artifact', 'source':'local original lighthouse-relay' if lighthouse else 'https://github.com/ritaban06/mini-js-games-hub',
+              'author':'Original project story' if lighthouse else 'Ritaban Ghosh / mini-js-games-hub contributors', 'game_code_license':None if lighthouse else 'MIT',
               'asset_and_recording_rights_verified':False, 'outcome':outcome, 'duration_seconds':round(duration,2),
               'duration_at_least_20_minutes':duration >= 1200, 'qualifies_for_release':False,
               'actions':trace, 'ui_coordinate_assistance':True,

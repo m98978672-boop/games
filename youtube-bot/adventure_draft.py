@@ -46,8 +46,9 @@ def plan(trace):
                 spoken.add(message)
         return duration, sorted(lines, key=lambda line: line[0]), [], won
     puzzle = trace.get('game') == '16 Puzzle'
+    lighthouse = trace.get('game') == 'Последний сигнал'
     events = trace['model_actions'] if puzzle else trace['actions']
-    lines = [(0.0, 'Собираю пятнашки по порядку.' if puzzle else 'Я ищу потерянный артефакт.')]
+    lines = [(0.0, 'Собираю пятнашки по порядку.' if puzzle else 'Шторм погасил маяк. Попробую вывести паром из тумана.' if lighthouse else 'Я ищу потерянный артефакт.')]
     cuts = []
     remaining_cut = duration * MAX_CUT_FRACTION
     prior = 0.0
@@ -83,6 +84,10 @@ def plan(trace):
                 note = 'Ход не сработал. '
             lines.append((prior, f'{note}Плитка {tile}.'))
             previous_source = source
+        elif lighthouse:
+            label = event.get('choice_label')
+            if isinstance(label, str) and label.strip():
+                lines.append((prior, f'Мой выбор: {label.strip()}.'))
         elif trace.get('short'):
             line, reaction = short_comment(event, ORDINAL[event['choice']])
             lines.append((prior, line))
@@ -93,7 +98,7 @@ def plan(trace):
             lines.append((prior, f'{note} Выбираю {ORDINAL[event["choice"]]} вариант.'.strip()))
         prior = stamp
     won = trace['outcome'] == ('game_reported_win' if puzzle else 'game_reported_victory')
-    ending = f'Решено досок: {trace.get("boards_won", 1)}.' if puzzle else 'Артефакт найден.'
+    ending = f'Решено досок: {trace.get("boards_won", 1)}.' if puzzle else 'Паром миновал риф.' if lighthouse else 'Артефакт найден.'
     lines.append((prior, ending if won else 'Финиш не подтверждён. Это первая часть.'))
     return duration, lines, cuts, won
 
@@ -110,6 +115,10 @@ def build(folder):
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'Последний сигнал':
+        url = GAME_URL.replace('adventure-game/', 'lighthouse-relay/')
+        title = 'Последний сигнал'
+        source = 'https://github.com/m98978672-boop/games/tree/arena/7d9fee46-games/collection/lighthouse-relay'
     if viewport:
         url = GAME_URL.replace('adventure-game/', 'adventure-game-new/')
         title = 'Viewport Voyager'

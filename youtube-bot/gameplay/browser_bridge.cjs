@@ -225,8 +225,9 @@ async function main() {
             return {index, x, y, label: (button.textContent || "").trim().slice(0, 120), enabled: !button.disabled && r.width > 0 && r.height > 0 && x >= 0 && x < 800 && y >= 0 && y < 600};
           });
           const t = document.querySelector('#story-text')?.textContent || '';
-          const ended = !!document.querySelector('#story-text .game-end');
-          const outcome = !ended ? 'playing' : t.includes('Victory! You found the Lost Artifact.') ? 'victory' : t.includes('Defeated.') ? 'death' : 'unknown';
+          const terminal = document.querySelector('#story-text .game-end');
+          const ended = !!terminal;
+          const outcome = !ended ? 'playing' : ['victory','death'].includes(terminal.dataset.outcome) ? terminal.dataset.outcome : t.includes('Victory! You found the Lost Artifact.') ? 'victory' : t.includes('Defeated.') ? 'death' : 'unknown';
           return {choices, outcome};
         } catch { return null; }
       }) : null;
