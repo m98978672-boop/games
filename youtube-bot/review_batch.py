@@ -73,57 +73,113 @@ def plan(count: int, video_format: str, start: str, *, now=None) -> list[str]:
     return [slot.strftime("%Y-%m-%d %H:%M") for slot in times]
 
 
+def _usable_slot(publish_at: str) -> str:
+    """Return an empty string when the slot is still usable, or the reason it is not.
+
+    A queued wall time that has already gone by (a slow previous item, a delayed
+    runner) cannot be published at its slot, so it is reported instead of being
+    shifted blindly.
+    """
+    if not publish_at:
+        return ""
+    try:
+        manual_publish_time(publish_at)
+    except ValueError as exc:
+        return str(exc)
+    return ""
+
+
+class UncertainBatchQueue(RuntimeError):
+    """Stop the whole batch when queue state cannot be trusted."""
+
+
+def _render(index: int, publish_at: str, video_format: str, output_dir: Path) -> Path:
+    """Render one queued review; retried once, always before any upload."""
+    env = os.environ.copy()
+    env["MANUAL_PUBLISH_AT"] = publish_at
+    output = output_dir / f"games-review-{index}.mp4"
+    for attempt in range(2):
+        result = subprocess.run([sys.executable, "youtube-bot/run_game_review.py", str(output),
+                                 "--format", video_format], env=env)
+        if result.returncode == 0:
+            return output
+        if result.returncode == 75:
+            raise UncertainBatchQueue("Publication queue state is uncertain; stop the batch and check YouTube Studio before retrying.")
+        if attempt == 0:
+            print("::warning::Review generation failed; retrying once before any upload.", flush=True)
+            time.sleep(20)
+    raise RuntimeError("review generation failed twice")
+
+
+class SlotUnverifiable(RuntimeError):
+    """The batch slot cannot be verified, so this item must not be uploaded."""
+
+
+def _publish(index: int, publish_at: str, output: Path, batch: bool) -> None:
+    """Upload exactly once; any failure or interruption requires Studio inspection.
+
+    Only an unverifiable slot is reported as a skip. Every other failure - an
+    ambiguous upload above all - propagates, because only a human can clear it.
+    """
+    env = os.environ.copy()
+    env["MANUAL_PUBLISH_AT"] = publish_at
+    result_path = output.with_suffix(".result.json")
+    if batch:
+        metadata = json.loads(result_path.read_text(encoding="utf-8"))["metadata"]
+        if metadata.get("manual_time_adjusted") is not False:
+            raise SlotUnverifiable("slot was adjusted or cannot be verified")
+    subprocess.run([sys.executable, "youtube-bot/publish_to_supabase.py", str(result_path)],
+                   env=env, check=True)
+
+
 def run_queue(times: list[str], video_format: str, output_dir: Path) -> tuple[int, list[str]]:
-    """Render and upload each queued review in order; never retry an upload.
+    """Render and upload each queued review; never retry an upload.
 
     Returns (published_count, skipped). A review that fails before any upload
     is skipped and reported, so one bad Steam/Qwen draw cannot kill the whole
     run and the remaining slots still publish. A failed or ambiguous upload
     stops the queue immediately, because only a human can clear the doubt.
+
+    The queue stays strictly sequential. An upload waits for its render, and the
+    next render waits for that upload to confirm, so a doubtful upload never has
+    a second review rendering behind it and no two uploads can interleave.
+    Rendering is now minutes rather than tens of minutes, so the sequential cost
+    is small compared with the risk the server-side slot reservation removes.
     """
     published = 0
     skipped: list[str] = []
+    batch = len(times) > 1
     for index, publish_at in enumerate(times, 1):
         # Validate before doing expensive work; never silently reschedule an
         # overdue batch item. If the queued wall time has already gone by (a
         # slow previous item, a delayed runner), this item cannot be published
         # at its slot, so it is skipped and reported instead of shifted blindly.
-        if publish_at:
-            try:
-                manual_publish_time(publish_at)
-            except ValueError as exc:
-                skipped.append(f"{publish_at}: {exc}")
-                print(f"::warning::Queued slot {publish_at} is no longer usable ({exc}); "
-                      "this review is skipped before rendering.", flush=True)
-                continue
-        env = os.environ.copy()
-        env["MANUAL_PUBLISH_AT"] = publish_at
-        output = output_dir / f"games-review-{index}.mp4"
-        print(f"Queue {video_format}: {index}/{len(times)}, requested MSK {publish_at or 'automatic'}", flush=True)
-        for attempt in range(2):
-            result = subprocess.run([sys.executable, "youtube-bot/run_game_review.py", str(output), "--format", video_format], env=env)
-            if result.returncode == 0:
-                break
-            if result.returncode == 75:
-                raise RuntimeError('Publication queue state is uncertain; stop the batch and check YouTube Studio before retrying.')
-            if attempt == 0:
-                print("::warning::Review generation failed; retrying once before any upload.", flush=True)
-                time.sleep(20)
-        else:
+        reason = _usable_slot(publish_at)
+        if reason:
+            skipped.append(f"{publish_at}: {reason}")
+            print(f"::warning::Queued slot {publish_at} is no longer usable ({reason}); "
+                  "this review is skipped before rendering.", flush=True)
+            continue
+        print(f"Queue {video_format}: {index}/{len(times)}, "
+              f"requested MSK {publish_at or 'automatic'}", flush=True)
+        try:
+            output = _render(index, publish_at, video_format, output_dir)
+        except UncertainBatchQueue:
+            raise
+        except RuntimeError:
+
             skipped.append(f"{publish_at or 'automatic'}: review generation failed twice")
-            print(f"::warning::Review generation failed twice for slot {publish_at or 'automatic'}; "
+            print(f"::warning::Review generation failed twice for slot "
+                  f"{publish_at or 'automatic'}; nothing was uploaded for it. "
+                  "Continuing with the next queued review.", flush=True)
+            continue
+        try:
+            _publish(index, publish_at, output, batch)
+        except SlotUnverifiable:
+            skipped.append(f"{publish_at}: slot was adjusted or cannot be verified")
+            print("::warning::Batch slot was adjusted or cannot be verified; "
                   "nothing was uploaded for it. Continuing with the next queued review.", flush=True)
             continue
-        result_path = output.with_suffix('.result.json')
-        if len(times) > 1:
-            metadata = json.loads(result_path.read_text(encoding='utf-8'))['metadata']
-            if metadata.get('manual_time_adjusted') is not False:
-                skipped.append(f"{publish_at}: slot was adjusted or cannot be verified")
-                print("::warning::Batch slot was adjusted or cannot be verified; "
-                      "nothing was uploaded for it. Continuing with the next queued review.", flush=True)
-                continue
-        # Upload exactly once; any failure or interruption requires Studio inspection.
-        subprocess.run([sys.executable, "youtube-bot/publish_to_supabase.py", str(result_path)], env=env, check=True)
         published += 1
     return published, skipped
 

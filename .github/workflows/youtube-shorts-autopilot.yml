@@ -8,6 +8,18 @@ on:
     - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
+      adventure_preview:
+        description: "Record a finite story adventure instead of reviews (private draft)"
+        type: boolean
+        default: false
+      puzzle_episode:
+        description: "Record, edit and schedule a new independent Zuza puzzle episode"
+        type: boolean
+        default: false
+      adventure_capture_run:
+        description: "Optional completed private finite-game capture run ID; publish pilot only"
+        type: string
+        required: false
       publish_at:
         description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 2 Shorts a day / 1 long a day)"
         type: string
@@ -46,7 +58,7 @@ permissions:
 concurrency:
   # Separate lanes can run in parallel, but GitHub retains at most one pending
   # run per group. Submit one batch per lane and wait for it to finish.
-  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || inputs.video_format }}
+  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.adventure_preview && 'adventure-preview') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
   cancel-in-progress: false
 
 jobs:
@@ -84,7 +96,7 @@ jobs:
         run: PYTHONPATH=youtube-bot python -c 'from publish_to_supabase import _supabase_post; r = _supabase_post("/autopilot/topic-history", {}); assert r.get("version") == 1 and isinstance(r.get("game_ids"), list); print("History available:", len(r["game_ids"]), "topics")'
 
   create-and-schedule:
-    if: github.event_name != 'workflow_dispatch' || !inputs.check_topics_only
+    if: ${{ !inputs.check_topics_only && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -114,25 +126,21 @@ jobs:
           python-version: "3.11"
           cache: pip
           cache-dependency-path: youtube-bot/requirements-autopilot.txt
-      # These four checks are the entry contract of stage 1 and stay separate:
-      # each fails closed on its own, and each is named in the tests that guard
-      # the workflow. They run before caches and FFmpeg, so a typo fails in
-      # seconds. An empty publish_at is valid and picks regular slots.
-      - name: Select review format from trusted workflow event
-        run: python youtube-bot/review_workflow_format.py
-      - name: Validate queue and publication times before rendering
-        # One readable ::error:: line instead of a raw traceback for a bad
-        # batch_count, format or time. Nothing is rendered or uploaded when
-        # this step fails.
-        run: python youtube-bot/review_batch.py --check
-      - name: Require the explicit owner-approved audience value
+      # Entry contract of stage 1: format, queue times, audience and the voice
+      # path are checked in one step, before caches and FFmpeg, so a typo fails
+      # in seconds. Each check still fails closed on its own and prints one
+      # readable ::error:: line; nothing is rendered or uploaded when it fails.
+      # An empty publish_at is valid and picks regular slots.
+      - name: "Stage 1: validate inputs and set the voice model path"
         run: |
+          set -euo pipefail
+          python youtube-bot/review_workflow_format.py
+          python youtube-bot/review_batch.py --check
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
             echo "::error::Choose the owner-approved audience value true or false in the workflow input."
             exit 1
           fi
-      - name: Set the Russian Piper model path
-        run: echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
+          echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
       - name: Restore the local Qwen model cache
         uses: actions/cache@v6
         with:
@@ -217,3 +225,99 @@ jobs:
         with:
           path: youtube-bot/data/recent-games.json
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
+
+  check-puzzle-episode:
+    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode && !inputs.adventure_preview && !inputs.check_topics_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      CAPTURE_RUN: ${{ inputs.adventure_capture_run }}
+      PUBLISH_AT: ${{ inputs.publish_at }}
+      PUZZLE_RECORDING_RIGHTS_VERIFIED: ${{ vars.PUZZLE_RECORDING_RIGHTS_VERIFIED }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Check publishing prerequisites before starting the recording
+        run: |
+          [[ "$GITHUB_REF" == refs/heads/main && -z "$CAPTURE_RUN" ]] || { echo '::error::Select main and do not set a previous capture run.'; exit 1; }
+          [[ "$PUZZLE_RECORDING_RIGHTS_VERIFIED" == true ]] || { echo '::error::Verify recording and asset rights, then set PUZZLE_RECORDING_RIGHTS_VERIFIED=true.'; exit 1; }
+          PYTHONPATH=youtube-bot python - <<'PYCODE'
+          import os
+          from datetime import datetime, timedelta, timezone
+          from schedule_policy import manual_publish_time
+          now = datetime.now(timezone.utc)
+          if manual_publish_time(os.environ['PUBLISH_AT'], now=now) < now + timedelta(hours=3):
+              raise SystemExit('Choose a Moscow publication slot at least 3 hours ahead for recording, retry and upload.')
+          PYCODE
+
+  record-puzzle-episode:
+    needs: check-puzzle-episode
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      puzzle_episode: true
+
+  record-adventure-preview:
+    if: github.event_name == 'workflow_dispatch' && inputs.adventure_preview && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      adventure_only: true
+
+  publish-adventure-pilot:
+    needs: record-puzzle-episode
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      CAPTURE_RUN: ${{ inputs.puzzle_episode && github.run_id || inputs.adventure_capture_run }}
+      PUBLISH_AT: ${{ inputs.publish_at }}
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+      ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
+      PUZZLE_RECORDING_RIGHTS_VERIFIED: ${{ vars.PUZZLE_RECORDING_RIGHTS_VERIFIED }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Fetch this episode from the same run
+        if: inputs.puzzle_episode
+        uses: actions/download-artifact@v4
+        with:
+          name: puzzle-private-${{ github.run_id }}
+          path: ${{ runner.temp }}/adventure-publish
+      - name: Verify capture provenance and fetch the private artifact
+        if: ${{ !inputs.puzzle_episode }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || exit 1
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e '
+            .conclusion == "success" and .path == ".github/workflows/adventure-experiment.yml"
+            and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null
+          artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN/artifacts" | jq -er --arg id "$CAPTURE_RUN" '[.artifacts[] | select(.expired == false and (.name == ("puzzle-private-" + $id) or .name == ("adventure-private-" + $id))) | .name] | select(length == 1) | .[0]')"
+          case "$artifact" in
+            puzzle-*) [[ "$PUZZLE_RECORDING_RIGHTS_VERIFIED" == true ]] || exit 1 ;;
+            adventure-*) [[ "$ADVENTURE_RECORDING_RIGHTS_VERIFIED" == true ]] || exit 1 ;;
+          esac
+          gh run download "$CAPTURE_RUN" --name "$artifact" --dir "$RUNNER_TEMP/adventure-publish"
+      - name: Install media verifier
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Publish through the existing authorized uploader
+        env:
+          DATA_DIR: ${{ runner.temp }}/adventure-history
+        run: python youtube-bot/publish_adventure_draft.py "$RUNNER_TEMP/adventure-publish" "$CAPTURE_RUN" "$PUBLISH_AT"
