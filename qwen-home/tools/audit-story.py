@@ -95,6 +95,8 @@ def audit(src=None):
             ('тот же текст — одно место', 'def text_key_index' in e),
             ('названия ссылок вычищаются из текста', 'def bare(' in e),
             ('память хранит text_key', "'text_key': v.get('text_key') or k" in e),
+            ('ребро — ключом предыдущего места', "prev_key[0] = my_key" in e),
+            ('флаг open пересчитывается', "node['open'] = any(not self.tried_here" in e),
             ('нажатие не теряется между наборами', 'def tried_here' in e),
             ('отдых не перебивает непройденное', 'rest_fresh' in e),
             ('память доходит до чтения истории', 'memo_from=memo_from' in e),

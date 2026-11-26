@@ -1054,16 +1054,28 @@ class StoryMap:
                 merged.append(o)
         return node
 
-    def is_loop(self, text, choice, came_from=None):
-        """Петля: вариант возвращает туда, откуда пришли, или в это же место."""
+    def is_loop(self, text, choice, came_from=None, came_from_key=None):
+        """Петля: вариант возвращает туда, откуда пришли, или в это же место.
+
+        Сравниваем ПО КАРТЕ: раньше «откуда пришла» приходило текстом и
+        превращалось в ключ по одному тексту — не совпадало с ключом места, и
+        «back to park» не считался обратным ходом: 185 кругов подряд.
+        """
         k = text if self._is_key(text) else self.key(text)
+        back_key = came_from_key or (came_from if came_from and self._is_key(came_from) else None)
         for e in self.edges:
             if e['from'] != k or e['choice'] != choice:
                 continue
             if e['to'] == k:
                 return True          # «Nothing has changed» — то же место
-            if came_from and e['to'] == self.key(came_from):
-                return True          # обратный ход: «back», «Leave quietly!»
+            if back_key and e['to'] == back_key:
+                return True          # обратный ход: «back», «Leave this place!»
+        # Обратный ход узнаём и по названию: «back», «go back», «return».
+        low = (choice or '').strip().lower()
+        if low.startswith(('back', 'go back', 'return')) or low in ('назад', 'вернуться'):
+            for e in self.edges:
+                if e['from'] == k and e['choice'] == choice and back_key and e['to'] == back_key:
+                    return True
         return False
 
     def leads_to_new(self, text, choice):
@@ -1077,7 +1089,9 @@ class StoryMap:
             to = self.nodes.get(e['to'])
             if to is None:
                 return True         # место, которого в карте ещё нет
-            return bool(to.get('open'))
+            # Флаг open застывает с прошлых прогонов — считаем по-настоящему.
+            return any(not self.tried_here(e['to'], label)
+                       for label in (to.get('options') or []))
         return False            # куда ведёт — неизвестно, значит не «новое»
 
     def route_to_open(self, start_key):
@@ -1259,6 +1273,7 @@ class StoryMap:
             node = dict(v)
             if not node.get('text_key'):
                 node['text_key'] = self.bare_key(node.get('text'), node.get('options'))
+            node['key'] = k
             self.nodes[k] = node
         # Рёбра, которые ведут из мест, которых в карте нет, — мусор прошлых
         # прогонов (накопилось 174 из 311, и половина графа была нерабочей:
@@ -1269,6 +1284,11 @@ class StoryMap:
         for pair in (data.get('tried') or []):
             if len(pair) == 2:
                 self.tried.add((pair[0], pair[1]))
+        # Флаг open застывает: после загрузки пересчитываем его по нажатиям,
+        # иначе маршрут к остатку считает закрытые места открытыми.
+        for k, node in self.nodes.items():
+            node['open'] = any(not self.tried_here(k, label)
+                               for label in (node.get('options') or []))
         return len(self.nodes)
 
     def as_report(self):
@@ -1280,7 +1300,7 @@ class StoryMap:
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
-                story_map=None, energy=0, came_from=None):
+                story_map=None, energy=0, came_from=None, came_from_key=None):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
     visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
@@ -1337,7 +1357,8 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
 
     # Петля (ведёт туда же, откуда пришла) — в самом конце.
     if passage and len(pool) > 1:
-        no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)] if story_map else pool
+        no_loops = [c for c in pool
+                    if not story_map.is_loop(passage, c.get('label'), came_from, came_from_key)] if story_map else pool
         if no_loops:
             pool = no_loops
 
@@ -1527,6 +1548,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         pending = {'from': '', 'choice': '', 'done': True}
         trail = []        # последние места: ловим хождение по кругу
         last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
+        prev_key = ['']    # ключ предыдущего места: ребро пишем ИМ
+        text_key_full = ['']  # текст текущего места (для записи ребра)
         last_text = ['']   # прошлый текст: ловим «страница не сменилась»
         same_text = [0]
         prev_place = ['']  # место предыдущего шага
@@ -1542,6 +1565,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 report.step('чтение', 'не нашла ни текста, ни вариантов — останавливаюсь честно')
                 break
             text = state.get('text', '')
+            text_key_full[0] = text
             here_ctx = prev_place[0]             # откуда пришли (запасной различитель)
             if text and last_text[0] and text[:120] == last_text[0][:120] and moves > 0:
                 same_text[0] += 1
@@ -1550,26 +1574,25 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             for c in choices:
                 c['key'] = c.get('label', '')
             labels = [c.get('label') for c in choices]
-            if pending.get('from') and not pending.get('done'):
-                # пришли из предыдущего пассажа: записываем ребро карты, зная
-                # уже и текст, и набор вариантов. Цель ищем по набору вариантов,
-                # а если такого узла нет — по самому тексту (контекст не даём:
-                # он не должен дробить место).
-                story_map.link(pending['from'], pending['choice'], text, here_ctx, labels,
-                               src_key=pending.get('from_key'),
-                               dst_key=story_map.key(text, None, labels))
-                pending['done'] = True
             # Сначала варианты, потом место в карту: набор вариантов — часть
             # ключа (по нему различаются пассажи с одинаковым текстом).
             sight = story_map.see(text, here_ctx, labels)   # зрение: силы, находки, следы
+            my_key = sight.get('key') or story_map.key(text, here_ctx, labels)
+            if pending.get('from') and not pending.get('done'):
+                # пришли из предыдущего пассажа: записываем ребро карты, зная
+                # уже и текст, и набор вариантов. Источник — ключ ПРЕДЫДУЩЕГО
+                # места, цель — ключ этого. Раньше источник брался из «see» этого
+                # шага, и рёбра «back to park» вешались от самого тупика: 185
+                # кругов подряд, потому что петля не распознавалась.
+                story_map.link(pending['from'], pending['choice'], text, here_ctx, labels,
+                               src_key=pending.get('from_key') or prev_key[0],
+                               dst_key=my_key)
+                pending['done'] = True
             if sight['visits'] == 1:
                 new_places += 1
             story_map.mark_open(text, choices, here_ctx)
             if choices:
                 # след последних мест: если ходит по кругу, дальше не жмём
-                # Настоящий ключ места (см. see): иначе отметки «нажато»
-                # ложатся мимо узла и один вариант жмётся сотни раз.
-                my_key = sight.get('key') or story_map.key(text, here_ctx, labels)
                 trail.append(my_key)
                 last_place[0] = prev_place[0]
                 if len(trail) > 18:
@@ -1587,7 +1610,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 pick, fresh = pick_choice(choices, visited, rng,
                                           my_key, sight['visits'],
                                           story_map=story_map, energy=sight.get('energy', 0),
-                                          came_from=last_place[0])
+                                          came_from=last_place[0],
+                                          came_from_key=prev_place[0])
                 story_map.mark_tried(my_key, pick['label'])
                 visited.add((my_key, pick['label']))
                 try:
@@ -1604,7 +1628,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                     page.wait_for_timeout(500)
                     continue
                 moves += 1
-                pending = {'from': text, 'choice': pick['label'], 'done': False, 'from_key': my_key}
+                pending = {'from': text_key_full[0], 'choice': pick['label'], 'done': False, 'from_key': my_key}
+                prev_key[0] = my_key
                 if fresh:
                     fresh_moves += 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
