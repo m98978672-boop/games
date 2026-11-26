@@ -224,7 +224,18 @@ jobs:
             if git push origin HEAD:main; then pushed=1; break; fi
             echo "push отклонён (попытка $attempt): сливаюсь со свежим main"
             git fetch origin main
-            git merge --no-edit origin/main || { git merge --abort; exit 1; }
+            # Конфликт в отчётах/данных не должен терять саму экспедицию:
+            # в споре берём свою свежую версию — она только что снята.
+            if ! git merge --no-edit origin/main; then
+              echo "конфликт при слиянии — беру свою версию отчёта и данных"
+              git checkout --ours qwen-home/bridge/expeditions kvenya/bridge.json qwen-home/state.json 2>/dev/null || true
+              git add -A qwen-home/bridge/expeditions kvenya/bridge.json qwen-home/state.json 2>/dev/null || true
+              git commit -m "Экспедиция Квени: конфликт слияния — своя версия" || git merge --abort
+            fi
           done
-          if [ -z "$pushed" ]; then echo "Не удалось доставить отчёт за 5 попыток" >&2; exit 1; fi
+          if [ -z "$pushed" ]; then
+            echo "Не удалось доставить отчёт за 5 попыток; коммит остаётся в ветке запуска" >&2
+            git log --oneline -2 >&2
+            exit 1
+          fi
           gh api -X POST "repos/${{ github.repository }}/pages/builds" || true
