@@ -1,5 +1,10 @@
+import sys
 import unittest
+from pathlib import Path
 
+# Every other test in this directory puts the package on the path itself; this
+# one did not, so it only ran where PYTHONPATH happened to be set.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from youtube_api import _comment_requests, parse_duration_seconds
 
 

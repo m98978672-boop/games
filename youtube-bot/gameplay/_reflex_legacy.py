@@ -336,8 +336,6 @@ class ReflexController:
         the tick is never blocked beyond the budget.
         """
         
-        from concurrent.futures import TimeoutError as FutureTimeout
-
         # Reserve a slice of the remaining budget for thread start-up, the
         # reflex fallback itself and dataclass bookkeeping, so the *measured*
         # latency (not just the watchdog) stays inside the deadline.

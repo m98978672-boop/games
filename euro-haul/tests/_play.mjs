@@ -1,7 +1,7 @@
 // Скриншоты реального WebGL-рендера: меню → гараж → рейс (кабина, трасса, телефон).
 import { createRequire } from 'node:module';
 const require2 = createRequire(import.meta.url);
-const puppeteer = require2('/tmp/node_modules/puppeteer-core');
+const puppeteer = require2('puppeteer-core');
 
 const base = process.argv[2] || 'http://127.0.0.1:8123/euro-haul/index.html';
 const prefix = process.argv[3] || '/home/user/games/euro-haul/tests/_shot';

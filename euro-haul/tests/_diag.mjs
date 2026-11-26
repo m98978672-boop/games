@@ -1,7 +1,7 @@
 // Диагностика сцены в реальном WebGL. node tests/_diag.mjs
 import { createRequire } from 'node:module';
 const require2 = createRequire(import.meta.url);
-const puppeteer = require2('/tmp/node_modules/puppeteer-core');
+const puppeteer = require2('puppeteer-core');
 const base = process.env.URL || 'http://127.0.0.1:8123/euro-haul/index.html';
 const browser = await puppeteer.launch({
   args: ['--no-sandbox', '--no-zygote', '--disable-gpu', '--enable-unsafe-swiftshader', '--use-gl=angle',

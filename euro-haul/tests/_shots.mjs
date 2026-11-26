@@ -2,7 +2,7 @@
 // Переменные: WEATHER=clear HOUR=11 MODES=chase,cab W=1440 H=810
 import { createRequire } from 'node:module';
 const require2 = createRequire(import.meta.url);
-const puppeteer = require2('/tmp/node_modules/puppeteer-core');
+const puppeteer = require2('puppeteer-core');
 const prefix = process.argv[2] || '/home/user/games/euro-haul/tests/_s';
 const weather = process.env.WEATHER || 'clear';
 const hour = +(process.env.HOUR || 11);

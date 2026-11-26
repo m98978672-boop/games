@@ -1,7 +1,7 @@
 import { createRequire } from 'node:module';
 const require2 = createRequire(import.meta.url);
-const puppeteer = require2('/tmp/node_modules/puppeteer-core');
-const chromium = require2('/tmp/node_modules/@sparticuz/chromium');
+const puppeteer = require2('puppeteer-core');
+const chromium = require2('@sparticuz/chromium');
 
 const url = process.argv[2] || 'http://127.0.0.1:8123/index.html';
 const out = process.argv[3] || '/tmp/shot.png';

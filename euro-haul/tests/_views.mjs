@@ -3,7 +3,12 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', { pretendToBe
 global.window = dom.window; global.document = dom.window.document;
 const grad = { addColorStop() {} };
 dom.window.HTMLCanvasElement.prototype.getContext = () => new Proxy({ canvas:{width:256,height:256}, createLinearGradient:()=>grad, createRadialGradient:()=>grad }, {
-  get(o,k){ if(k in o) return o[k]; if(typeof k==='string'){ o[k]=()=>undefined; return o[k]; } },
+  get(o,k){
+    if(k in o) return o[k];
+    if(k === 'getImageData') return (x,y,w,h)=>({ data:new Uint8ClampedArray(Math.max(1,w*h*4)) });
+    if(k === 'createImageData') return (w,h)=>({ data:new Uint8ClampedArray(Math.max(1,w*h*4)) });
+    if(typeof k==='string'){ o[k]=()=>undefined; return o[k]; }
+  },
   set(o,k,v){ o[k]=v; return true; }
 });
 import fs from 'node:fs';
