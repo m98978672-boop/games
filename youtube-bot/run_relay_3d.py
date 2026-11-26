@@ -12,7 +12,7 @@ from gameplay_voiceover import probe_capture
 
 SOURCE = Path(__file__).resolve().parents[1] / 'collection' / 'relay-3d'
 DIRS = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-COLORS = {'wall': (86, 112, 140), 'beacon': (255, 166, 52), 'exit': (72, 223, 203), 'player': (255, 255, 255)}
+COLORS = {'wall': (86, 110, 140), 'beacon': (255, 166, 52), 'exit': (72, 223, 203), 'player': (255, 255, 255)}
 
 
 def radar(png):

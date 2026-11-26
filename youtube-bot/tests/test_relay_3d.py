@@ -14,7 +14,7 @@ class Relay3DTests(unittest.TestCase):
         picture = Image.new('RGB', (800, 600))
         border = {(x, y) for x in range(9) for y in range(9) if x in (0, 8) or y in (0, 8)}
         for x, y in border | {(2, 1)}:
-            picture.putpixel((615+18*x, 13+18*y), COLORS['wall'])
+            picture.putpixel((615+18*x, 13+18*y), (86, 110, 140))
         picture.putpixel((639, 37), COLORS['player'])
         picture.putpixel((675, 37), COLORS['beacon'])
         data = io.BytesIO()
