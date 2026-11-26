@@ -541,7 +541,7 @@ jobs:
 
   publish-adventure-pilot:
     needs: record-puzzle-episode
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '' && inputs.adventure_capture_run != '45857021167' && inputs.adventure_capture_run != '45866506191')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -571,6 +571,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$CAPTURE_RUN" == 45841604660 ]]; then
+            echo '::error::This SuperTuxKart recording was withdrawn: it contains no verified gameplay. Nothing was uploaded.'
+            exit 1
+          fi
           if [[ "$CAPTURE_RUN" == 45835569880 ]]; then
             gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15124642887" | jq -e '
               .name == "relay-3d-beta-45835569880" and .expired == false and .workflow_run.id == 45835569880
@@ -668,3 +672,41 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           python youtube-bot/publish_review_preview.py "$RUNNER_TEMP/saved-review" "$CAPTURE_RUN" "$PUBLISH_AT"
+
+  publish-verified-stk:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_capture_run == '45866506191' && !inputs.puzzle_episode && !inputs.adventure_preview && !inputs.review_preview && !inputs.review_capture_run && !inputs.check_topics_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      YOUTUBE_MADE_FOR_KIDS: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Verify the finished race archive provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45866506191" | jq -e '
+            .head_sha == "bae342209915206960a1bfafe054806dd80ec52c"
+            and .path == ".github/workflows/supertuxkart-revoice.yml"
+            and .conclusion == "success" and .head_repository.full_name == .repository.full_name' >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45866506191/artifacts" | jq -e '
+            [.artifacts[] | select(.name == "supertuxkart-race-revoice-45866506191" and .expired == false)] | length == 1' >/dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45866506191
+          name: supertuxkart-race-revoice-45866506191
+          path: ${{ runner.temp }}/stk-verified
+      - name: Recheck the race and queue publication
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_verified_stk.py "$RUNNER_TEMP/stk-verified" "45866506191"

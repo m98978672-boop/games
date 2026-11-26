@@ -1,0 +1,46 @@
+name: SuperTuxKart race revoice
+on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/supertuxkart-revoice.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45857021167
+          name: supertuxkart-race-45857021167
+          path: ${{ runner.temp }}/stk
+      - name: Install narration tools and verify the original race
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
+          python -m pip install 'piper-tts==1.3.0'
+          python youtube-bot/verify_stk_race.py "$RUNNER_TEMP/stk"
+          rm -f "$RUNNER_TEMP/stk/zuza-pilot.mp4" "$RUNNER_TEMP/stk/zuza-pilot.ru.srt" "$RUNNER_TEMP/stk/pilot.json"
+      - name: Build a private voiced race cut with frame-aligned intro
+        run: |
+          set -euo pipefail
+          export PIPER_MODEL_PATH="$RUNNER_TEMP/ru_RU-irina-medium.onnx"
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 4 --max-time 180 "$base" -o "$PIPER_MODEL_PATH"
+          curl --fail --location --retry 4 --max-time 180 "$base.json" -o "$PIPER_MODEL_PATH.json"
+          python youtube-bot/adventure_draft.py "$RUNNER_TEMP/stk"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: supertuxkart-race-revoice-${{ github.run_id }}
+          path: ${{ runner.temp }}/stk/
+          if-no-files-found: error

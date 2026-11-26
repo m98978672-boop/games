@@ -1,0 +1,81 @@
+name: SuperTuxKart race capture
+on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/supertuxkart-capture.yml, youtube-bot/adventure_draft.py, youtube-bot/verify_stk_race.py]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install race and capture tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y supertuxkart xvfb x11-utils xauth xdotool ffmpeg espeak-ng mesa-utils fonts-dejavu-core
+          python -m pip install 'piper-tts==1.3.0'
+      - name: Record an AI-only race, no cuts
+        run: |
+          set -euo pipefail
+          export DISPLAY=:93 LIBGL_ALWAYS_SOFTWARE=1
+          export PATH="/usr/games:$PATH"
+          command -v supertuxkart Xvfb xdpyinfo ffmpeg
+          folder="$RUNNER_TEMP/stk"
+          mkdir -p "$folder"
+          Xvfb "$DISPLAY" -screen 0 800x600x24 +extension GLX -nolisten tcp >"$folder/xvfb.log" 2>&1 &
+          xvfb_pid=$!
+          race_pid=''
+          capture_pid=''
+          trap 'for pid in "$race_pid" "$capture_pid" "$xvfb_pid"; do if [[ -n "$pid" ]]; then kill "$pid" 2>/dev/null || true; fi; done' EXIT
+          for _ in $(seq 1 15); do xdpyinfo >/dev/null 2>&1 && break; sleep 1; done
+          xdpyinfo >/dev/null
+          supertuxkart --version >"$folder/version.txt" 2>&1
+          track_dir=$(find /usr/share/games/supertuxkart /usr/share/supertuxkart -name track.xml 2>/dev/null | grep -im1 '/zengarden/track.xml$' || true)
+          if [[ -z "$track_dir" ]]; then echo '::error::Zen Garden assets not installed.'; exit 1; fi
+          track=$(basename "$(dirname "$track_dir")")
+          ffmpeg -v error -nostdin -y -f x11grab -video_size 800x600 -framerate 25 -i "$DISPLAY" -t 495 \
+            -c:v libvpx -deadline realtime -cpu-used 8 -threads 2 -crf 10 -b:v 0 "$folder/recording.webm" &
+          capture_pid=$!
+          timeout --signal=TERM --kill-after=10s 480s supertuxkart --track="$track" --profile-laps=2 --numkarts=3 --shadows=0 \
+            --fullscreen --screensize=800x600 --no-sound >"$folder/race.log" 2>&1 &
+          race_pid=$!
+          race_status=0
+          wait "$race_pid" || race_status=$?
+          race_pid=''
+          kill -INT "$capture_pid" 2>/dev/null || true
+          wait "$capture_pid" || true
+          capture_pid=''
+          if [[ -s "$folder/recording.webm" ]]; then
+            ffmpeg -v error -nostdin -y -sseof -1 -i "$folder/recording.webm" -frames:v 1 "$folder/finish-check.png" || true
+          fi
+          if [[ "$race_status" != 0 ]]; then
+            if [[ "$race_status" == 124 ]]; then
+              echo '::error::Race did not report a finish within 480 seconds; capture is private and will not be published.'
+            else
+              echo "::error::SuperTuxKart exited with code $race_status before verification."
+            fi
+            grep -Ei 'profil|warning|error|fatal' "$folder/race.log" | tail -40 || true
+            exit "$race_status"
+          fi
+          python youtube-bot/verify_stk_race.py "$folder"
+      - name: Build a private voiced race cut with frame-aligned intro
+        run: |
+          set -euo pipefail
+          export PIPER_MODEL_PATH="$RUNNER_TEMP/ru_RU-irina-medium.onnx"
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 4 --max-time 180 "$base" -o "$PIPER_MODEL_PATH"
+          curl --fail --location --retry 4 --max-time 180 "$base.json" -o "$PIPER_MODEL_PATH.json"
+          python youtube-bot/adventure_draft.py "$RUNNER_TEMP/stk"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: supertuxkart-race-${{ github.run_id }}
+          path: ${{ runner.temp }}/stk/
+          if-no-files-found: error
