@@ -1147,7 +1147,12 @@ class StoryMap:
         node = self.nodes.get(k)
         if node is not None:
             # Спрашивают про это место: нажатие помним и по ключу текста.
-            return (node.get('text_key') or '', label) in self.tried
+            if (node.get('text_key') or '', label) in self.tried:
+                return True
+            # Ключа текста может не быть (карта из старой памяти) — сверяем
+            # по самому тексту: он у пассажа один.
+            bare = self.bare_key(node.get('text'), node.get('options'))
+            return (bare, label) in self.tried
         # Спрашивают под ключом, которого в карте нет: это тот же пассаж,
         # если совпадает текст без вариантов (набор мог смениться).
         return any(tk == k and label == lb for tk, lb in self.tried)
@@ -1159,10 +1164,11 @@ class StoryMap:
         первый раз, а спрашивают про него иногда под другим набором вариантов.
         """
         self.tried.add((k, label))
-        node = self.nodes.get(k)
-        tk = (node or {}).get('text_key')
-        if tk and tk != k:
-            self.tried.add((tk, label))
+        node = self.nodes.get(k) or {}
+        for extra in ((node.get('text_key'),
+                       self.bare_key(node.get('text'), node.get('options')))):
+            if extra and extra != k:
+                self.tried.add((extra, label))
 
     def remaining(self):
         """Сколько вариантов в известных местах ещё не нажато.
@@ -1201,6 +1207,10 @@ class StoryMap:
         places = {k: {'text': v.get('text', '')[:160], 'visits': v.get('visits', 0),
                       'energy': v.get('energy', 0), 'finds': v.get('finds', []),
                       'clues': v.get('clues', 0), 'open': bool(v.get('open')),
+                      # text_key обязателен: по нему видно, что уже нажато.
+                      # Без него после загрузки памяти отметки «нажато»
+                      # терялись, и один и тот же выбор жался 68 раз подряд.
+                      'text_key': v.get('text_key') or k,
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
         return {'schema': 'text+options-v4', 'places': places,
@@ -1224,7 +1234,10 @@ class StoryMap:
         if data.get('schema') != self.SCHEMA:
             return 0
         for k, v in (data.get('places') or {}).items():
-            self.nodes[k] = dict(v)
+            node = dict(v)
+            if not node.get('text_key'):
+                node['text_key'] = self.bare_key(node.get('text'), node.get('options'))
+            self.nodes[k] = node
         # Рёбра, которые ведут из мест, которых в карте нет, — мусор прошлых
         # прогонов (накопилось 174 из 311, и половина графа была нерабочей:
         # маршрут к остатку не находился). Такие рёбра не берём.
