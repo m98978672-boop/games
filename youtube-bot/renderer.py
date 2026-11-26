@@ -22,6 +22,8 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from speech_policy import fit_speech_text
+from speech_pronunciation import pronunciation_text, SPOKEN_ALIASES
+from speech_synthesis import validate_spoken_text
 
 WIDTH, HEIGHT = 720, 1280
 OUTPUT_WIDTH, OUTPUT_HEIGHT = 1080, 1920
@@ -79,36 +81,6 @@ def normalize_narration(source: Path, output: Path) -> None:
 
 
 
-# Speech-only aliases: do not transliterate unknown game titles or rewrite evidence.
-SPOKEN_ALIASES = {
-    'Steam Deck': 'Стим Дек', 'Steam': 'Стим', 'Early Access': 'ранний доступ',
-    'Xbox': 'Иксбокс', 'PlayStation': 'Плейстейшен', 'Windows': 'Виндоус',
-    'Linux': 'Линукс', 'Unreal Engine': 'Анрил Энджин', 'Unity': 'Юнити',
-    'DLC': 'ди эл си', 'RPG': 'эр пэ гэ', 'MMORPG': 'эм эм оу эр пи джи',
-    'PvP': 'пэ вэ пэ', 'PvE': 'пэ вэ е', 'FPS': 'эф пэ эс', 'ИИ': 'и и',
-}
-_SPOKEN_PATTERN = re.compile(
-    r'https?://[^\s]+|www\.[^\s]+|`[^`]+`|(?<![\w])(?:'
-    + '|'.join(re.escape(key) for key in sorted(SPOKEN_ALIASES, key=len, reverse=True))
-    + r')(?![\w])', re.IGNORECASE,
-)
-_SPOKEN_LOOKUP = {key.casefold(): value for key, value in SPOKEN_ALIASES.items()}
-
-
-def pronunciation_text(text: str) -> str:
-    """Prepare conservative spoken forms; captions and source evidence stay unchanged."""
-    text = _SPOKEN_PATTERN.sub(lambda match: _SPOKEN_LOOKUP.get(match[0].casefold(), match[0]), text)
-    # Only the known score construction is expanded; arbitrary numbers, dates,
-    # names and URLs must not be guessed or grammatically transformed.
-    numerals = ('', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять', 'десять')
-    text = re.sub(r'(?<!\d)(10|[1-9])\s+из\s+10(?!\d)',
-                  lambda match: numerals[int(match.group(1))] + ' из десяти', text)
-    text = re.sub(r'\s+([,.!?;:])', r'\1', text)
-    text = re.sub(r'([!?,;:])\1+', r'\1', text)
-    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)
-    text = re.sub(r'([.!?])(?=[А-Яа-яЁё])', r'\1 ', text)
-    return re.sub(r'\s+', ' ', text).strip()
-
 
 def synthesize(text: str, output: Path, voice: str = "ru", *, style: str = "neutral") -> float:
     """Produce locally synthesized Russian speech with consistent voice dynamics."""
@@ -125,7 +97,7 @@ def synthesize(text: str, output: Path, voice: str = "ru", *, style: str = "neut
     configured_model = os.environ.get("PIPER_MODEL_PATH", "").strip()
     with tempfile.TemporaryDirectory(prefix="voice-", dir=output.parent) as temp:
         raw, processed = Path(temp) / "raw.wav", Path(temp) / "processed.wav"
-        spoken_text = pronunciation_text(text)
+        spoken_text = validate_spoken_text(pronunciation_text(text))
         if configured_model:
             model_path = Path(configured_model)
             if not model_path.is_file():
@@ -137,8 +109,8 @@ def synthesize(text: str, output: Path, voice: str = "ru", *, style: str = "neut
             )
         else:
             subprocess.run(
-                ["espeak-ng", "-v", voice, "-s", "145", "-a", "165", "-w", str(raw), spoken_text],
-                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                ["espeak-ng", "-v", voice, "-s", "145", "-a", "165", "-w", str(raw), "--stdin"],
+                input=spoken_text, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
             )
         normalize_narration(raw, processed)
         with wave.open(str(processed), "rb") as stream:

@@ -13,6 +13,8 @@ on:
       - 'youtube-bot/reflex_agent.py'
       - 'youtube-bot/gameplay_qwen_advisor.py'
       - 'youtube-bot/tests/smoke_reflex_bridge.py'
+      - 'youtube-bot/tests/smoke_recorded_playbook.py'
+      - 'youtube-bot/montage.py'
       - 'youtube-bot/tests/test_gameplay_reflex.py'
       - 'youtube-bot/tests/test_gameplay_action_pacer.py'
       - 'youtube-bot/tests/test_gameplay_realtime.py'
@@ -40,7 +42,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install Pillow for frame analysis
-        run: python -m pip install 'Pillow>=10.4,<13.0' 'numpy>=1.26,<3.0'
+        run: python -m pip install 'Pillow>=10.4,<13.0' 'numpy>=1.26,<3.0' 'imageio-ffmpeg>=0.5,<1.0'
       - name: Offline contract tests (budgets, pacing, profiles, memory)
         run: |
           python -m unittest \
@@ -60,6 +62,8 @@ jobs:
           status=${PIPESTATUS[0]}
           cat "$RUNNER_TEMP/reflex-live.log" | grep -E 'REFLEX_LIVE_REPORT|::notice' || true
           exit "$status"
+      - name: Record sessions with persistent and reused playbook agent
+        run: python -u youtube-bot/tests/smoke_recorded_playbook.py
       - name: Save the live timing report
         if: always()
         uses: actions/upload-artifact@v4

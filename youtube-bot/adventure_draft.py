@@ -10,8 +10,10 @@ from pathlib import Path
 
 from gameplay_voiceover import probe_capture
 from gameplay_captions import render_srt
-from viewport_translation import cues as translation_cues, filters as translation_filters
+from viewport_translation import cues as translation_cues, filters as translation_filters, prepare as prepare_translation
 from adventure_personality import SHORT_SECONDS, short_comment
+from speech_pronunciation import speech_cadence
+from speech_synthesis import synthesize_narration
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
 # Games that live in this repository: their code and art are ours, so there is
@@ -29,15 +31,7 @@ ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHRE
 
 
 def narrate(text, wav):
-    model = os.environ.get('PIPER_MODEL_PATH')
-    if model:
-        if not Path(model).is_file() or not Path(model + '.json').is_file():
-            raise RuntimeError('Russian neural voice is missing; refusing fallback audio')
-        subprocess.run(['piper', '--model', model, '--output_file', str(wav),
-                        '--length_scale', '1.10', '--sentence_silence', '0.22'],
-                       input=text, text=True, check=True, timeout=60)
-    else:
-        subprocess.run(['espeak-ng', '-v', 'ru', '-s', '145', '-w', str(wav), text], check=True, timeout=30)
+    synthesize_narration(text, wav)
 
 
 def split_parts(folder, draft, edited, gameplay, *, short, game, author, repository_url):
@@ -172,7 +166,7 @@ def scene_cues(lines, cuts):
     return [(stamp / 1000, ' '.join(messages)) for stamp, messages in grouped.items()]
 
 
-def plan(trace):
+def plan(trace, *, translation_intervals=None):
     duration = float(trace['duration_seconds'])
     if trace.get('game') == 'SuperTuxKart':
         return duration, [(0.0, 'Сегодня на трассе Зен-Гарден. Пилоты — встроенные соперники самой игры. Проверяю запись гонки и монтаж.')], [], False
@@ -213,7 +207,7 @@ def plan(trace):
         won = trace.get('game_reported_victory') is True
         lines.append((previous, 'Игра подтвердила прохождение.' if won else 'До финала в этой попытке не дошёл.'))
         spoken = set()
-        for stamp, _, _, message in translation_cues(trace):
+        for stamp, _, _, message in (translation_cues(trace) if translation_intervals is None else translation_intervals):
             if message not in spoken and (not won or message != 'Игра пройдена!'):
                 lines.append((stamp, message))
                 spoken.add(message)
@@ -260,7 +254,9 @@ def plan(trace):
         elif lighthouse:
             label = event.get('choice_label')
             if isinstance(label, str) and label.strip():
-                lines.append((prior, f'Решаю {label.strip()[:1].lower()}{label.strip()[1:]}.'))
+                label = label.strip()
+                punctuation = '' if label.rstrip('»”\"\')]}').endswith(('.', '!', '?', '…')) else '.'
+                lines.append((prior, f'Мой выбор: {label}{punctuation}'))
         elif trace.get('short'):
             line, reaction = short_comment(event, ORDINAL[event['choice']])
             lines.append((prior, line))
@@ -280,9 +276,10 @@ def build(folder):
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
     raw = folder / 'recording.webm'
     trace['duration_seconds'] = probe_capture(raw)
-    duration, lines, cuts, won = plan(trace)
-    short = trace.get('short') is True
     viewport = trace.get('game') == 'Viewport Voyager'
+    intervals, translation_stats = prepare_translation(trace) if viewport else (None, None)
+    duration, lines, cuts, won = plan(trace, translation_intervals=intervals)
+    short = trace.get('short') is True
     base = 'zuza-viewport-beta' if viewport else 'zuza-adventure-short' if short else ('zuza-pilot' if won else 'zuza-part-01')
     puzzle = trace.get('game') == '16 Puzzle'
     url = PUZZLE_URL if puzzle else GAME_URL
@@ -320,11 +317,11 @@ def build(folder):
             with wave.open(str(wav), 'rb') as reader:
                 seconds = reader.getnframes() / reader.getframerate()
             if index + 1 < len(cues) and stamp + seconds + .06 > cues[index + 1][0]:
-                # Avoid drift or overlapping speech. Keep the later event on its own frame.
+                # Do not drift into the next scene or omit a later event silently.
                 skipped_cues.append(stamp)
                 continue
             wavs.append((wav, round(stamp * 1000), text))
-            cursor = stamp + seconds + .12
+            cursor = stamp + seconds + speech_cadence(text)[2]
         # Remove only redundant waiting on unchanged screens and keep the full raw recording.
         video_seconds = duration - sum(end - start for start, end in cuts)
         discard = '+'.join(f'between(t,{start:.3f},{end:.3f})' for start, end in cuts)
@@ -334,7 +331,7 @@ def build(folder):
         # All gameplay drafts use the same cutoff, irrespective of the game.
         short = max(video_seconds, cursor) <= SHORT_SECONDS
         portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
-        translated = translation_filters(trace, temp) if viewport else ''
+        translated = translation_filters(trace, temp, intervals=intervals, stats=translation_stats) if viewport else ''
         panel = ',' + translated if translated else ''
         intro = Path(temp) / 'opening-title.txt'
         intro.write_text(f'ЗУЗА  /  {title}', encoding='utf-8')
@@ -398,7 +395,7 @@ def build(folder):
     report = {'short': short, 'video_format': 'short' if short else 'long', 'beta_episode': trace.get('short') is True and not puzzle and not viewport, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
         'cuts_seconds': cuts, 'voices_skipped_to_preserve_sync': skipped_cues, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
-        'boards_won': trace.get('boards_won'),
+        'translation': translation_stats, 'boards_won': trace.get('boards_won'),
         'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay >= MIN_EDITED_GAMEPLAY_SECONDS,
         'captions': captions_path.name, 'captions_scope': 'synthesized_narration_only',
         'commentary': [text for _, text in lines], 'published': False}

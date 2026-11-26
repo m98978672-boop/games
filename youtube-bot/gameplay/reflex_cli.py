@@ -12,18 +12,20 @@
                                                    # plan a stream ahead of time
     python -m gameplay.reflex_cli stream --game ... --author ... --minutes 30 --out DIR
                                                    # run the plan, write report + SRT
+    python -m gameplay.reflex_cli run GAME --record-dir DIR --rights-acknowledged
+                                                   # sandboxed recorded game + playbook
     python -m gameplay.reflex_cli play --goal explore --steps 200
                                                    # score the learned play, no game needed
     python -m gameplay.reflex_cli montage RUN.mp4 SHORT.mp4 --report REPORT.json
                                                    # cut a short out of a recording, no upload
 
-Everything writes plain JSON to stdout and never touches the network. The
-commands are read-only except ``forget`` and ``import``, which only modify the
-local skill database given by ``--db`` (default ``data/reflex-skills.sqlite3``).
+Commands produce local artifacts and do not publish. The run command starts a
+network-isolated Docker container and writes a recording, report and playbook.
 """
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import sys
 from pathlib import Path
@@ -99,6 +101,61 @@ def cmd_live(args) -> int:
         return 1
 
 
+@contextmanager
+def _exclusive_playbook(path: Path):
+    """Lock before loading, holding the lock through the final save (POSIX)."""
+    import fcntl
+    import os
+
+    path = path.resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = path.with_name(path.name + ".lock")
+    flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(lock_path, flags, 0o600)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise ValueError("playbook is in use by another run") from exc
+        try:
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
+def cmd_run(args) -> int:
+    """Run a prepared local HTML game in Docker and save recording + events."""
+    import hashlib
+    from gameplay.playbook import GOAL_PRESETS
+    from gameplay_bridge import run_agent
+    from reflex_agent import build_agent
+
+    goal = GOAL_PRESETS[args.goal]
+    identity = f"{args.game_dir.resolve()}|{args.entry}|{args.profile}|{args.goal}"
+    key = hashlib.sha256(identity.encode()).hexdigest()[:24]
+    book_path = args.playbook or (args.db.parent / "playbooks" / (key + ".json"))
+    try:
+        record_root = args.record_dir.resolve()
+        resolved_book = book_path.resolve()
+        if record_root == resolved_book or record_root in resolved_book.parents:
+            raise ValueError("playbook must be outside the recording directory")
+        with _exclusive_playbook(book_path):
+            agent = build_agent(args.profile, objective=goal.name, use_advisor=False,
+                                playbook_goal=goal, playbook_path=book_path)
+            result = run_agent(args.game_dir, agent, rights_acknowledged=args.rights_acknowledged,
+                               max_steps=args.steps, entry=args.entry, record_dir=args.record_dir)
+            result["playbook_summary"] = agent.playbook.summary()
+        result["playbook"] = str(book_path)
+        result["published"] = False
+        _emit(result)
+        return 0
+    except (ValueError, RuntimeError, OSError) as error:
+        _emit({"error": str(error)[:300], "published": False})
+        return 2
+
+
 def cmd_play(args) -> int:
     """Compare the learned playbook against blind cycling on the same game.
 
@@ -111,7 +168,7 @@ def cmd_play(args) -> int:
     if goal is None:
         _emit({"error": f"unknown goal; choose from {sorted(GOAL_PRESETS)}"})
         return 2
-    naive = naive_baseline(goal)
+    naive = naive_baseline(goal, steps=args.steps)
     learned = learned_baseline(goal, steps=args.steps)
     book = learned["playbook"]
     _emit({"goal": goal.as_dict(), "steps": args.steps,
@@ -126,7 +183,7 @@ def cmd_play(args) -> int:
 
 def cmd_montage(args) -> int:
     """Cut a short clip out of a recording, decided by measured events only."""
-    from montage import (MontageError, check_montage, events_from_report_file, main as montage_main,
+    from montage import (MontageError, check_montage, events_from_report_file,
                          plan_montage, probe_duration, render_montage)
 
     try:
@@ -144,7 +201,7 @@ def cmd_montage(args) -> int:
         payload["problems"] = check_montage(plan)
         _emit(payload)
         return 0 if not payload["problems"] else 1
-    except MontageError as error:
+    except (MontageError, OSError) as error:
         _emit({"error": str(error), "rendered": False, "published": False})
         return 2
 
@@ -281,6 +338,16 @@ def main(argv: list[str] | None = None) -> int:
     imp.add_argument('file', type=Path)
     imp.set_defaults(func=cmd_import)
     sub.add_parser('profiles', help='list control schemes').set_defaults(func=cmd_profiles)
+    run = sub.add_parser('run', help='play a local game in Docker, record video and events')
+    run.add_argument('game_dir', type=Path)
+    run.add_argument('--record-dir', required=True, type=Path, help='existing empty directory')
+    run.add_argument('--rights-acknowledged', action='store_true', required=True)
+    run.add_argument('--goal', choices=('progress', 'explore', 'engage', 'any-action'), default='progress')
+    run.add_argument('--profile', choices=tuple(PROFILES), default='keyboard')
+    run.add_argument('--steps', type=int, default=100)
+    run.add_argument('--entry', default='index.html')
+    run.add_argument('--playbook', type=Path, default=None, help='optional explicit playbook file')
+    run.set_defaults(func=cmd_run)
     play = sub.add_parser('play', help='score the learned play against blind cycling')
     play.add_argument('--goal', default='explore',
                       help='goal preset: progress | explore | engage | any-action')
@@ -335,6 +402,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == 'bench' and not 1 <= args.frames <= 2000:
         parser.error('frames must be 1..2000')
+    if args.command in ('play', 'run') and not 1 <= args.steps <= 10000:
+        parser.error('steps must be 1..10000')
     if args.command == 'live' and not 1 <= args.steps <= 200:
         parser.error('steps must be 1..200')
     if args.command == 'live' and not 0 <= args.advisor_delay <= 5:

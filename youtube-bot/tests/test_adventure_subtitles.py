@@ -41,13 +41,57 @@ class AdventureSubtitleTests(unittest.TestCase):
                 adventure_draft.build(folder)
             report = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
             captions = (folder / report['captions']).read_text(encoding='utf-8')
-            self.assertIn('00:00:00,000 --> 00:00:01,000\nЯ ищу потерянный артефакт.', captions)
-            self.assertIn('00:00:01,120 --> 00:00:02,120\nВыбираю первый вариант.', captions)
+            self.assertIn('00:00:00,000 --> 00:00:01,000\nЯ ищу потерянный артефакт. Выбираю первый вариант.', captions)
             self.assertIn('00:00:03,000 --> 00:00:04,000\nАртефакт найден.', captions)
             self.assertEqual(report['captions_scope'], 'synthesized_narration_only')
             self.assertEqual(report['minimum_gameplay_seconds'], 1200)
             self.assertFalse(report['duration_eligible'])
             self.assertFalse(report['published'])
+
+    def test_spoken_aliases_do_not_rewrite_captions_or_shift_sample_timings(self):
+        trace = {'game': 'The Lost Artifact', 'outcome': 'time_limit', 'actions': []}
+        lines = [(0.0, 'Нажми [E] в Steam?'), (2.0, 'Размер 800x600.')]
+        spoken = []
+        def fake_process(command, **kwargs):
+            if command[0] == 'espeak-ng':
+                spoken.append(kwargs['input'])
+                fake_voice(kwargs['input'], Path(command[command.index('-w') + 1]))
+            else:
+                Path(command[-1]).write_bytes(b'encoded video')
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            (folder / 'trace.json').write_text(json.dumps(trace), encoding='utf-8')
+            (folder / 'recording.webm').touch()
+            with patch.dict('os.environ', {'PIPER_MODEL_PATH': '', 'SPEECH_PRONUNCIATION_PATH': ''}), \
+                 patch.object(adventure_draft, 'plan', return_value=(10.0, lines, [], False)), \
+                 patch.object(adventure_draft, 'probe_capture', side_effect=[10.0, 10.0]), \
+                 patch.object(adventure_draft.subprocess, 'run', side_effect=fake_process):
+                adventure_draft.build(folder)
+            report = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
+            captions = (folder / report['captions']).read_text(encoding='utf-8')
+            self.assertEqual(spoken, ['Нажми клавишу и в Стим?', 'Размер 800 на 600.'])
+            self.assertIn('00:00:00,000 --> 00:00:01,000\nНажми [E] в Steam?', captions)
+            self.assertIn('00:00:02,000 --> 00:00:03,000\nРазмер 800x600.', captions)
+
+    def test_overlapping_scene_speech_is_reported_not_delayed(self):
+        trace = {'game': 'The Lost Artifact', 'outcome': 'time_limit', 'actions': []}
+        lines = [(0.0, 'Первый кадр.'), (0.5, 'Второй кадр.')]
+        def fake_ffmpeg(*args, **kwargs):
+            Path(args[0][-1]).write_bytes(b'video')
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            (folder / 'trace.json').write_text(json.dumps(trace), encoding='utf-8')
+            (folder / 'recording.webm').touch()
+            with patch.object(adventure_draft, 'narrate', side_effect=fake_voice), \
+                 patch.object(adventure_draft, 'plan', return_value=(10.0, lines, [], False)), \
+                 patch.object(adventure_draft, 'probe_capture', side_effect=[10.0, 10.0]), \
+                 patch.object(adventure_draft.subprocess, 'run', side_effect=fake_ffmpeg):
+                adventure_draft.build(folder)
+            report = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
+            captions = (folder / report['captions']).read_text(encoding='utf-8')
+            self.assertEqual(report['voices_skipped_to_preserve_sync'], [0.0])
+            self.assertNotIn('Первый кадр.', captions)
+            self.assertIn('00:00:00,500 --> 00:00:01,500\nВторой кадр.', captions)
 
     def test_empty_voice_clip_never_yields_captions(self):
         def silent_file(text, wav):

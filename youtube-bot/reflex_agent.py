@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Callable  # noqa: F401  (kept for the public signature)
 
 import time
+import math
 
 from gameplay.action_pacer import ActionPacer
 from gameplay.input_profiles import InputProfile, profile_from_name
@@ -94,6 +95,9 @@ class ReflexAgent:
         # How many seconds one step of this agent stands for. Frames are the only
         # clock a recording offers, so offsets come from the step number and this.
         self.cadence_seconds = float(cadence_seconds)
+        if not math.isfinite(self.cadence_seconds) or self.cadence_seconds <= 0:
+            raise ValueError("cadence_seconds must be finite and positive")
+        self._recording_offset = None
         self.tracks: list = []
         self.screen = None
         self.pending_bursts: list[dict] = []
@@ -103,6 +107,23 @@ class ReflexAgent:
         self.windows = 0
         if memory is not None:
             self.controller.memory = memory
+
+    def start_session(self) -> None:
+        """Reset transient observations and counters without discarding learned edges."""
+        self.stats = ReflexAgentStats()
+        self._action_window_ends = 0.0
+        self._recording_offset = None
+        self.tracks = []
+        self.screen = None
+        self.pending_bursts = []
+        self._intent = None
+        self._last_perception = None
+        self._last_decision = None
+        self.windows = 0
+        for component in (self.controller, self.pacer, self.tracker, self.playbook):
+            reset = getattr(component, "reset_session", None)
+            if callable(reset):
+                reset()
 
     def _default_intent(self) -> str:
         intents = self.profile.intents()
@@ -244,8 +265,14 @@ class ReflexAgent:
             return Decision(allowed[0], "screen", decision.latency_ms, decision.target)
         return decision
 
+    def set_recording_offset(self, seconds: float) -> None:
+        """Set the approximate recording-relative timestamp for the next frame."""
+        if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not math.isfinite(seconds) or seconds < 0:
+            raise ValueError("recording offset must be finite and non-negative")
+        self._recording_offset = float(seconds)
+
     def _record_event(self, step: int, perception) -> None:
-        """Keep a measured highlight with its real offset in the recording.
+        """Keep a measured highlight with its supplied or estimated offset.
 
         A **goal** is a claim and needs a goal to be reached against; without one
         the agent has no right to say anything was achieved. A **change** is only
@@ -260,8 +287,11 @@ class ReflexAgent:
             kind = "change"
             detail = f"kind={facts['kind']} changed"
         else:
+            self._recording_offset = None
             return
-        self.stats.events.append({"seconds": round(step * self.cadence_seconds, 2),
+        offset = self._recording_offset
+        self._recording_offset = None
+        self.stats.events.append({"seconds": round(offset if offset is not None else step * self.cadence_seconds, 3),
                                   "kind": kind, "reason": detail})
 
     def _facts(self, perception) -> dict:
@@ -280,8 +310,12 @@ class ReflexAgent:
         if self.playbook is None or self._last_perception is None:
             return
         try:
+            facts = self._facts(perception)
+            # _plan has not classified this frame yet: self.screen still belongs
+            # to the previous frame and must not determine the outcome's goal.
+            facts["kind"] = classify(perception).label
             self.playbook.observe(self._last_perception.signature, self._last_decision.intent,
-                                  self._facts(perception), after_signature=perception.signature)
+                                  facts, after_signature=perception.signature)
         except ValueError:
             return
 
@@ -307,7 +341,8 @@ class ReflexAgent:
 
 def build_agent(profile: str = "keyboard", *, objective: str, game: str = "",
                 allowed: tuple[str, ...] | None = None, help_desk=None,
-                memory=None, generator=None, use_advisor: bool = True) -> ReflexAgent:
+                memory=None, generator=None, use_advisor: bool = True,
+                playbook_goal=None, playbook_path=None) -> ReflexAgent:
     """Assemble the full brain: reflex layer + optional slow Qwen advisor."""
     resolved = profile_from_name(profile) if isinstance(profile, str) else profile
     advisor_allowed = allowed or tuple(
@@ -316,7 +351,10 @@ def build_agent(profile: str = "keyboard", *, objective: str, game: str = "",
     if use_advisor:
         advisor = SlowAdvisor(objective, advisor_allowed, generator=generator,
                              help_desk=help_desk, game=game)
-    return ReflexAgent(resolved, memory=memory, advisor=advisor)
+    if playbook_path is not None and playbook_goal is None:
+        raise ValueError("a playbook path requires an explicit goal")
+    playbook = Playbook(playbook_goal, path=playbook_path) if playbook_goal is not None else None
+    return ReflexAgent(resolved, memory=memory, advisor=advisor, playbook=playbook)
 
 
 def describe_budget() -> dict:
