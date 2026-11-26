@@ -174,18 +174,47 @@ def scene_cues(lines, cuts):
 
 def plan(trace):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'Lost in the Maze 3D':
+        lines = [(0, 'Я в лабиринте. Смотрю на схему проходов и ищу путь к порталу.')]
+        spoken = 0
+        previous_direction = None
+        for event in trace['events']:
+            stamp = min(duration, event['ms'] / 1000)
+            kind = event['kind']
+            if kind == 'portal':
+                lines.append((stamp, f'Портал сработал. Теперь уровень {event["level"]}. Маршрут нужно искать заново.'))
+                spoken = stamp
+                previous_direction = None
+            elif stamp - spoken >= 5:
+                if kind == 'retry':
+                    text = 'Эту попытку не пережил. Игра перезапускает уровень, придётся перестроить маршрут.'
+                elif kind == 'blocked':
+                    text = 'Движение не сработало. Проверю, к какой клетке я сейчас прижат.'
+                elif kind == 'route_choice' and event['direction'] != previous_direction:
+                    direction = {'влево': 'на запад карты', 'вправо': 'на восток карты', 'назад': 'в сторону увеличения глубины', 'вперёд': 'в сторону уменьшения глубины'}[event['direction']]
+                    text = f'Меняю направление. По схеме следующий открытый проход ведёт {direction}.'
+                    previous_direction = event['direction']
+                else:
+                    continue
+                lines.append((stamp, text))
+                spoken = stamp
+        return duration, lines, [], trace['furthest'] >= 4
     if trace.get('game') == 'SuperTuxKart':
         won = trace.get('outcome') == 'game_reported_victory'
         lines = [(0.0, 'Сегодня на трассе Зен-Гарден. За рулём — встроенные пилоты Супер Такс Карт.')]
         observations = [
-            'Здесь камера за картом. Так проще следить за направлением движения.',
-            'На этой трассе мне нравится контраст между дорожкой и зеленью: границы хорошо видны.',
-            'В одиночку такую трассу удобно учить по ориентирам, а не по секундомеру.',
-            'Для меня самый интересный вопрос тут — сколько скорости можно сохранить в повороте.',
-            'Из минусов: с этой камеры сложно оценить, что происходит позади карта.',
-            'Встроенные пилоты ведут заезд сами. Это не проверка того, как я умею рулить.',
-            'Мне нравится, что оформление трассы помогает запоминать маршрут, а не просто украшает фон.',
-            'Короткий заезд хорош для знакомства с трассой. Хочется отдельно сравнить управление разными картами.',
+            'Сначала о плюсах. Камера идёт за картом, и следующий поворот видно ещё до того, как надо рулить.',
+            'На Зен-Гарден мне нравится читаемость маршрута. Дорожка выделяется на фоне зелени даже на скорости.',
+            'У трассы есть характер. Сад здесь не просто фон: по нему удобно запоминать, где меняется направление.',
+            'Формат тоже удачный: два круга дают сравнить первое знакомство с трассой и повторный проезд.',
+            'У гонки понятная цель: ориентируешься по дороге и соперникам. Не нужно постоянно смотреть на цифры.',
+            'Теперь о минусах. Камера хорошо показывает дорогу вперёд, но от неё мало пользы, если соперник уже позади.',
+            'Зелень помогает ориентироваться, но мелкие детали по краям могут отвлекать от линии поворота.',
+            'Ещё ограничение этой записи: в заезде три карта. По нему нельзя судить, как читается трасса в плотной группе.',
+            'Тут я бы смотрел не на максимальную скорость, а на выход из поворота. Он задаёт темп следующему участку.',
+            'Если учить трассу, я бы сначала запомнил её по ориентирам и только потом пытался срезать время.',
+            'По этой записи можно оценить видимость маршрута. Но отзывчивость руля и занос без ручного заезда не оценю.',
+            'Итог: плюс — выразительная и читаемая трасса. Минус — с этой камеры трудно следить за угрозой сзади.',
         ]
         # These are observations about the track and camera, not claims about
         # unsighted overtakes or lap boundaries at manufactured timestamps.
@@ -308,6 +337,10 @@ def build(folder):
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'Lost in the Maze 3D':
+        url = GAME_URL.replace('adventure-game/', 'lost-in-the-maze-3d/')
+        title = 'Lost in the Maze 3D'
+        source = 'https://github.com/m98978672-boop/games/tree/main/collection/lost-in-the-maze-3d'
     if trace.get('game') == 'SuperTuxKart':
         url = 'https://supertuxkart.net/'
         title = 'SuperTuxKart'
@@ -404,7 +437,7 @@ def build(folder):
     # after cuts and scheduling, then are clipped to the actual encoded video.
     if trace.get('game') == 'SuperTuxKart' and edited >= 90:
         edges = [0.0, *(stamp for stamp, _, _ in spoken_cues), edited]
-        if len(spoken_cues) < 5 or max(b - a for a, b in zip(edges, edges[1:])) > max(32, edited / 8):
+        if len(spoken_cues) < 8 or max(b - a for a, b in zip(edges, edges[1:])) > max(24, edited / 10):
             raise ValueError('Race commentary is missing from part of the rendered timeline')
     captions = render_srt(spoken_cues, end=edited)
     if not captions:

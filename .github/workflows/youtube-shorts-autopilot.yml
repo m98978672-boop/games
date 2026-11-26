@@ -541,7 +541,7 @@ jobs:
 
   publish-adventure-pilot:
     needs: record-puzzle-episode
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '' && inputs.adventure_capture_run != '45857021167' && inputs.adventure_capture_run != '45866506191')) }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '' && inputs.adventure_capture_run != '45857021167' && inputs.adventure_capture_run != '45866506191' && inputs.adventure_capture_run != '45884136453')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -710,3 +710,41 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           python youtube-bot/publish_verified_stk.py "$RUNNER_TEMP/stk-verified" "45866506191"
+
+  publish-verified-maze:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_capture_run == '45884136453' && !inputs.puzzle_episode && !inputs.adventure_preview && !inputs.review_preview && !inputs.review_capture_run && !inputs.check_topics_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      YOUTUBE_MADE_FOR_KIDS: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Verify the finished race archive provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45884136453" | jq -e '
+            .head_sha == "20ceb97247eca7873f90d38ba6feeb12632ffe87"
+            and .path == ".github/workflows/lost-maze-3d.yml"
+            and .conclusion == "success" and .head_repository.full_name == .repository.full_name' >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45884136453/artifacts" | jq -e '
+            [.artifacts[] | select(.name == "lost-maze-3d-45884136453" and .expired == false and .id == 15148608293 and .digest == "sha256:65d84dc09d67681eb744cae92bb11a3385549b97bc4cb65ef5f104f030d8a660")] | length == 1' >/dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45884136453
+          name: lost-maze-3d-45884136453
+          path: ${{ runner.temp }}/maze-verified
+      - name: Recheck the race and queue publication
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_verified_maze.py "$RUNNER_TEMP/maze-verified"
