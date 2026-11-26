@@ -5,20 +5,10 @@ name: YouTube reviews autopilot (Shorts and long)
 
 on:
   schedule:
-    # Three categories. Shorts and long reviews each publish four times a day;
-    # gameplay publishes at most once, and only while a playthrough is open.
-    # Each review run fires exactly three hours before its slot, so a slow run
-    # still makes the slot and no firing crosses midnight in Moscow.
-    # Shorts: 09:00, 13:00, 17:00, 21:00 Moscow -> 06:00, 10:00, 14:00, 18:00.
-    - cron: "0 3 * * *"
-    - cron: "0 7 * * *"
-    - cron: "0 11 * * *"
-    - cron: "0 15 * * *"
-    # Long: 06:00, 11:00, 15:00, 19:00 Moscow -> 03:00, 08:00, 12:00, 16:00.
-    - cron: "0 0 * * *"
-    - cron: "0 5 * * *"
-    - cron: "0 9 * * *"
-    - cron: "0 13 * * *"
+    # Owner-approved review cadence: two Shorts and one long per day.
+    - cron: "0 3 * * *" # Short at 09:00 Moscow
+    - cron: "0 7 * * *" # Short at 13:00 Moscow
+    - cron: "0 0 * * *" # Long review at 06:00 Moscow
     # Gameplay: one a day at 18:00 Moscow, and only while a playthrough is open.
     # The run checks readiness; a finished playthrough uploads nothing.
     - cron: "0 14 * * *"
@@ -49,7 +39,7 @@ on:
         type: boolean
         default: false
       publish_at:
-        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 4 Shorts a day / 4 long a day)"
+        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 2 Shorts a day / 1 long a day)"
         type: string
         required: false
       made_for_kids:
@@ -89,7 +79,7 @@ concurrency:
   # One lane per format, so a long review never waits behind a Short. GitHub
   # keeps at most one pending run per group, which is why the batch input is
   # capped; separate firing times never share a lane at the same moment.
-  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 14 * * *' && 'gameplay') || (github.event_name == 'schedule' && contains(fromJSON('["0 0 * * *","0 5 * * *","0 9 * * *","0 13 * * *"]'), github.event.schedule) && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.review_preview && 'review-preview') || (inputs.adventure_preview && 'adventure-preview') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
+  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 14 * * *' && 'gameplay') || (github.event_name == 'schedule' && github.event.schedule == '0 0 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.review_preview && 'review-preview') || (inputs.adventure_preview && 'adventure-preview') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
   cancel-in-progress: false
 
 jobs:
@@ -216,9 +206,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   record-gameplay:
-    # The gameplay category, executed. Before this job existed the gate decided
-    # that today's gameplay video should happen and nothing recorded it, so the
-    # 18:00 slot could never be filled - neither on schedule nor by hand.
+    # The gameplay category, executed as far as publication is currently
+    # permitted: the gate decides, this job records and assembles the private
+    # artifact. Publishing stays blocked by gameplay_release_gate until timed
+    # subtitles, proven real play and safe same-day splitting exist, so this job
+    # must not promise that a video will appear.
     #
     # One a day is enforced twice: the gate skips a closed playthrough or a day
     # that already published, and this job only runs for the gameplay firing or
@@ -263,7 +255,9 @@ jobs:
             slot=$(PYTHONPATH=youtube-bot python -c 'from datetime import datetime, timezone; from schedule_policy import CHANNEL_TZ; from gameplay_policy import next_gameplay_slot; print(next_gameplay_slot(datetime.now(timezone.utc)).astimezone(CHANNEL_TZ).strftime("%Y-%m-%d %H:%M"))')
           fi
           echo "publish_at=$slot" >> "$GITHUB_OUTPUT"
-          echo "Игровое видео выйдет в $slot МСК." >> "$GITHUB_STEP_SUMMARY"
+          # Not "will be released": publication is blocked until the release
+          # requirements are verifiable, so promising a release would be false.
+          echo "Запись для слота $slot МСК будет подготовлена; публикация ждёт проверки требований." >> "$GITHUB_STEP_SUMMARY"
 
   capture-gameplay:
     # The recording itself, split out because a reusable workflow cannot be a
@@ -563,6 +557,15 @@ jobs:
           curl --fail --location --retry 4 --max-time 180 "$base" -o "$PIPER_MODEL_PATH"
           curl --fail --location --retry 4 --max-time 180 "$base.json" -o "$PIPER_MODEL_PATH.json"
           python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-publish"
+      - name: Save the corrected edition before the upload
+        if: env.LIGHTHOUSE_REVOICE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-russian-voice-v2-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/adventure-publish/zuza-adventure-short.mp4
+            ${{ runner.temp }}/adventure-publish/pilot.json
+          if-no-files-found: error
       - name: Publish through the existing authorized uploader
         env:
           DATA_DIR: ${{ runner.temp }}/adventure-history

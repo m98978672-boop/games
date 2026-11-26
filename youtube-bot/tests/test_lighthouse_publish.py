@@ -10,27 +10,19 @@ from publish_adventure_short import prepare
 
 
 class LighthousePublishTests(unittest.TestCase):
-    def test_only_terminal_twelve_action_episode_can_enter_queue(self):
-        with tempfile.TemporaryDirectory() as root, patch('publish_adventure_short.subprocess.check_output') as probe:
+    def test_lighthouse_and_short_publication_are_blocked(self):
+        from publish_adventure_short import publish_checked
+        with tempfile.TemporaryDirectory() as root, \
+             patch('publish_adventure_short.publish') as upload, \
+             patch('publish_adventure_short.read_queue') as queue:
             folder = Path(root)
-            trace = dict(game='Последний сигнал', short=True, outcome='time_limit', actions=[{}] * 12)
-            (folder / 'pilot.json').write_text(json.dumps(dict(short=True, needs_continuation=False, draft='zuza-adventure-short.mp4')))
-            (folder / 'zuza-adventure-short.mp4').touch()
-            probe.return_value = json.dumps(dict(format={'duration': '125'}, streams=[
-                dict(codec_type='video', width=1080, height=1920), dict(codec_type='audio')]))
-            (folder / 'trace.json').write_text(json.dumps(trace))
-            with self.assertRaises(ValueError):
-                prepare(folder, '123', lighthouse=True)
-            trace['outcome'] = 'game_reported_victory'
-            (folder / 'trace.json').write_text(json.dumps(trace))
-            result = json.loads(prepare(folder, '123', lighthouse=True).read_text())['metadata']
-            self.assertTrue(result['title'].startswith('Бета'))
-            self.assertIsNotNone(result['publish_at'])
-            self.assertIsNone(result['requested_publish_at'])
-            (folder / 'pilot.json').write_text(json.dumps(dict(short=False, needs_continuation=False, draft='zuza-adventure-short.mp4')))
-            probe.return_value = json.dumps(dict(format={'duration': '181'}, streams=[
-                dict(codec_type='video', width=800, height=600), dict(codec_type='audio')]))
-            self.assertEqual(json.loads(prepare(folder, '123', lighthouse=True).read_text())['metadata']['video_format'], 'long')
+            for lighthouse in (True, False):
+                with self.subTest(lighthouse=lighthouse), self.assertRaisesRegex(ValueError, 'Gameplay publication blocked'):
+                    prepare(folder, '123', lighthouse=lighthouse)
+                with self.subTest(checked=lighthouse), self.assertRaisesRegex(ValueError, 'Gameplay publication blocked'):
+                    publish_checked(folder / 'metadata.json', lighthouse=lighthouse)
+            upload.assert_not_called()
+            queue.assert_not_called()
 
     def test_decimal_score_is_a_rating_not_a_count_of_tests(self):
         from game_reviews import parse_idea_score, score_label
@@ -52,12 +44,12 @@ class LighthousePublishTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             path = Path(root) / 'result.json'
             path.write_text(json.dumps({'metadata': {'job_id': 'ours', 'video_format': 'short'}}))
-            with patch('publish_adventure_short.read_queue', return_value=busy), patch('publish_adventure_short.publish') as upload:
+            with patch('gameplay_release_gate.require_verified_gameplay_release'), patch('publish_adventure_short.read_queue', return_value=busy), patch('publish_adventure_short.publish') as upload:
                 publish_checked(path, lighthouse=True, now=now)
                 upload.assert_called_once_with(path)
                 expected = next_publish_slot(probe, video_format='short').isoformat().replace('+00:00', 'Z')
                 self.assertEqual(json.loads(path.read_text())['metadata']['publish_at'], expected)
-            with patch('publish_adventure_short.read_queue', return_value=[dict(id='ours', status='processing')]), patch('publish_adventure_short.publish') as upload:
+            with patch('gameplay_release_gate.require_verified_gameplay_release'), patch('publish_adventure_short.read_queue', return_value=[dict(id='ours', status='processing')]), patch('publish_adventure_short.publish') as upload:
                 with self.assertRaises(PublishError):
                     publish_checked(path, lighthouse=True, now=now)
                 upload.assert_not_called()

@@ -136,6 +136,16 @@ class WiringTests(unittest.TestCase):
         self.assertIn('GATE_PUBLISH', tail)
         self.assertIn('record=false', tail)
 
+    def test_the_workflow_does_not_promise_a_release_that_is_blocked(self):
+        # Publication is blocked until the release requirements are verifiable.
+        # A summary line saying a video "will be released at 18:00" would be a
+        # promise the pipeline cannot keep.
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / '.github/workflows/youtube-shorts-autopilot.yml').read_text(encoding='utf-8')
+        tail = workflow[workflow.index('  record-gameplay:'):workflow.index('  capture-gameplay:')]
+        self.assertNotIn('выйдет в', tail)
+        self.assertIn('публикация ждёт проверки', tail)
+
     def test_a_manual_gameplay_run_exists(self):
         # Nothing could fill the 18:00 slot by hand before this input existed.
         import yaml
@@ -144,18 +154,25 @@ class WiringTests(unittest.TestCase):
         self.assertIn('gameplay_episode', parsed[True]['workflow_dispatch']['inputs'])
 
     def test_the_suggested_command_points_at_a_real_workflow(self):
+        # Gameplay publication is deliberately blocked, so the honest report
+        # offers no command rather than one pointing at a workflow that does not
+        # exist. If a command appears, it must name a real workflow file.
         from datetime import datetime, timezone
         import reconcile_schedule
         root = Path(__file__).resolve().parents[2]
         workflows = {path.name for path in (root / '.github/workflows').glob('*.yml')}
         report = reconcile_schedule.render_report(
             [datetime(2026, 11, 26, 15, tzinfo=timezone.utc)], [], error=None, days=1)
-        command = [line for line in report.splitlines() if 'gh workflow run' in line][0]
-        named = command.split('gh workflow run ')[1].split()[0]
+        commands = [line for line in report.splitlines() if 'gh workflow run' in line]
+        if not commands:
+            self.assertIn('заблокирована', report)
+            return
+        named = commands[0].split('gh workflow run ')[1].split()[0]
         self.assertIn(named, workflows)
 
 
-class RecallTests(unittest.TestCase):
+class PublicationTests(unittest.TestCase):
+
     def test_state_survives_a_restart(self):
         from gameplay_policy import states_from_rows
         rows = [{'game_id': 'adventure', 'finished': True},
