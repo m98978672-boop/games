@@ -43,7 +43,7 @@ def m2m_russian_text(text, *, source_language='en', context='', glossary=None):
             return ''
         with torch.inference_mode():
             tokens = model.generate(**encoded, forced_bos_token_id=tokenizer.get_lang_id('ru'),
-                                    num_beams=4, max_new_tokens=512)
+                                    num_beams=4, max_new_tokens=512, forced_eos_token_id=None)
         if tokens[0, -1].item() != tokenizer.eos_token_id:
             return ''
         return json.dumps({'ru': tokenizer.decode(tokens[0], skip_special_tokens=True)}, ensure_ascii=False)

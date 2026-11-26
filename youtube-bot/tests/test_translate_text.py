@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from translate_text import translate_content, translate_file, load_glossary
+from translate_text import translate_content, translate_file, load_glossary, translation_engine
 
 
 def fake(text, **kwargs):
@@ -68,6 +68,14 @@ class TranslateTextTests(unittest.TestCase):
             path.write_text(json.dumps({'word': 123}))
             with self.assertRaises(ValueError):
                 load_glossary(path)
+
+    def test_m2m_engine_routes_source_and_ignores_automatic_neighbor_context(self):
+        from unittest.mock import patch
+        with patch('multilingual_translation.m2m_russian_text', return_value='Привет!') as translator:
+            result = translate_content('Hello!', '.txt', translation_engine('m2m'),
+                                       source_language='en', context='neighbors')
+            self.assertEqual(result, 'Привет!')
+            translator.assert_called_once_with('Hello!', source_language='en')
 
     def test_plain_text(self):
         self.assertEqual(translate_content('Hello world\n', '.txt', fake), 'Привет мир\n')

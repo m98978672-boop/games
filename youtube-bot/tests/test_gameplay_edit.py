@@ -69,6 +69,21 @@ class GameplayEditTests(unittest.TestCase):
             self.assertTrue(parts[0]['translation_requires_review'])
             self.assertIn('Open the door.', cues.read_text())
 
+    def test_m2m_option_in_edit_routes_language(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); video = root / 'v.mp4'; video.write_bytes(b'x')
+            cues = root / 'c.json'; cues.write_text(json.dumps([[0, 1, 'Open.']]))
+            def fake_run(command, **kwargs):
+                Path(command[-1]).write_bytes(b'encoded')
+            with patch.object(gameplay_edit, 'probe', side_effect=[2, 2]), \
+                 patch.object(gameplay_edit.subprocess, 'run', side_effect=fake_run), \
+                 patch('multilingual_translation.m2m_russian_text', return_value='Открой.') as translate:
+                result = gameplay_edit.edit(video, cues, root / 'out', game='Игра', author='Автор',
+                    repository_url='https://github.com/a/b', translate_from='en', translation_model='m2m')
+            translate.assert_called_once_with('Open.', source_language='en')
+            self.assertEqual(result[0]['caption_translation_model'], 'm2m')
+            self.assertIn('Открой.', (root / 'out/part-1.ru.srt').read_text())
+
     def test_translation_failure_does_not_render_or_create_output(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp); video = root / 'v.mp4'; video.write_bytes(b'x')

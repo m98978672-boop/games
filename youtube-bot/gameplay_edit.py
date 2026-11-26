@@ -16,7 +16,7 @@ import tempfile
 from gameplay_captions import render_srt
 from gameplay_release_plan import make_plan
 from game_text_translation import russian_game_text
-from translate_text import translate_content, load_glossary
+from translate_text import translate_content, load_glossary, translation_engine
 
 
 def probe(path: Path) -> float:
@@ -35,7 +35,7 @@ def probe(path: Path) -> float:
 
 def edit(video: Path, cues_file: Path, destination: Path, *, game: str, author: str, repository_url: str,
          translate_from: str | None = None, translation_context: str = "",
-         translation_glossary: dict[str, str] | None = None) -> list[dict]:
+         translation_glossary: dict[str, str] | None = None, translation_model: str = "qwen") -> list[dict]:
     video, cues_file, destination = Path(video), Path(cues_file), Path(destination)
     if video.is_symlink() or cues_file.is_symlink() or not video.is_file() or not cues_file.is_file():
         raise ValueError('Video and captions must be existing regular files, not symlinks')
@@ -58,7 +58,10 @@ def edit(video: Path, cues_file: Path, destination: Path, *, game: str, author: 
     if any(cue[1] > duration + 0.05 for cue in cues):
         raise ValueError('Caption extends beyond the recording')
     if translate_from is not None:
-        translated = translate_content(json.dumps(raw, ensure_ascii=False), '.json', russian_game_text,
+        if translation_model == 'm2m' and (translation_context or translation_glossary):
+            raise ValueError('M2M cannot use translation context or glossary')
+        translator = russian_game_text if translation_model == 'qwen' else translation_engine(translation_model)
+        translated = translate_content(json.dumps(raw, ensure_ascii=False), '.json', translator,
                                        source_language=translate_from, context=translation_context, glossary=translation_glossary)
         cues = [tuple(cue) for cue in json.loads(translated)]
         render_srt(cues, end=duration)
@@ -82,6 +85,7 @@ def edit(video: Path, cues_file: Path, destination: Path, *, game: str, author: 
                              'end_seconds': part.end_seconds, 'uploaded': False,
                              'captions_auto_translated': translate_from is not None,
                              'caption_source_language': translate_from,
+                             'caption_translation_model': translation_model if translate_from is not None else None,
                              'translation_requires_review': translate_from is not None})
         (tmp / 'release-plan.json').write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
         # Caller gets the full set or no output directory. Never overwrite existing output.
@@ -102,13 +106,17 @@ def main() -> None:
     parser.add_argument('--translate-from', help='translate supplied captions from this language to Russian before editing')
     parser.add_argument('--translation-context', default='', help='brief context for the local translation model')
     parser.add_argument('--translation-glossary', type=Path, help='JSON map of source terms to Russian terms')
+    parser.add_argument('--translation-engine', choices=['qwen', 'm2m'], default='qwen')
     args = parser.parse_args()
-    if args.translation_glossary and not args.translate_from:
-        parser.error('--translation-glossary requires --translate-from')
+    if (args.translation_glossary or args.translation_context or args.translation_engine != 'qwen') and not args.translate_from:
+        parser.error('Translation settings require --translate-from')
+    if args.translation_engine == 'm2m' and (args.translation_glossary or args.translation_context):
+        parser.error('M2M translates each cue in isolation; context and glossary require Qwen')
     glossary = load_glossary(args.translation_glossary) if args.translation_glossary else None
     print(json.dumps(edit(args.video, args.cues, args.destination, game=args.game, author=args.author,
                           repository_url=args.repository_url, translate_from=args.translate_from,
-                          translation_context=args.translation_context, translation_glossary=glossary), ensure_ascii=False, indent=2))
+                          translation_context=args.translation_context, translation_glossary=glossary,
+                          translation_model=args.translation_engine), ensure_ascii=False, indent=2))
 
 
 if __name__ == '__main__':

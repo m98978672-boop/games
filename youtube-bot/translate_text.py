@@ -42,7 +42,7 @@ def translate_content(content, kind, translate, *, source_language=None, context
                 options['glossary'] = glossary
             result = translate(text, **options)
             if not isinstance(result, str) or not result.strip():
-                raise ValueError('Translation failed; no output was written')
+                raise ValueError('Translation failed or the model is unavailable; no output was written')
             cache[key] = result
         return cache[key]
 
@@ -130,6 +130,19 @@ def translate_file(source, destination, *, source_language='en', context='', glo
         raise
 
 
+def translation_engine(name):
+    if name == 'qwen':
+        return russian_game_text
+    if name == 'm2m':
+        from multilingual_translation import m2m_russian_text
+        def translate(text, *, source_language, context='', **kwargs):
+            # Adjacent cues are supplied as context by translate_content, but
+            # this MT model only translates the current cue in isolation.
+            return m2m_russian_text(text, source_language=source_language)
+        return translate
+    raise ValueError('Unknown translation engine')
+
+
 def load_glossary(path):
     """Load a small source-to-Russian terminology map before model inference."""
     path = Path(path)
@@ -152,9 +165,13 @@ def main():
     parser.add_argument('--target-language', default='ru', choices=['ru'])
     parser.add_argument('--context', default='', help='brief scene context (local model input)')
     parser.add_argument('--glossary', type=Path, help='JSON map of source terms to Russian terms')
+    parser.add_argument('--engine', choices=['qwen', 'm2m'], default='qwen')
     args = parser.parse_args()
+    if args.engine == 'm2m' and (args.glossary or args.context):
+        parser.error('M2M translates each cue in isolation; --glossary and --context require Qwen')
     glossary = load_glossary(args.glossary) if args.glossary else None
-    translate_file(args.source, args.destination, source_language=args.source_language, context=args.context, glossary=glossary)
+    translate_file(args.source, args.destination, source_language=args.source_language, context=args.context,
+                   glossary=glossary, translate=translation_engine(args.engine))
     print(f'Created {args.destination}; review the translation before use.')
 
 
