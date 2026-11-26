@@ -152,7 +152,7 @@ jobs:
             echo "::warning::Attempt $attempt did not qualify. No upload started."
           done
           mv "$PUZZLE_RECORD_DIR" "$RUNNER_TEMP/puzzle-recording"
-          echo '::error::No completed episode longer than 10 minutes after editing; private draft only.'
+          echo '::error::No completed episode with 20 minutes of real play after editing; private draft only.'
           exit 1
       - name: Save private recording and observed trace
         if: always()

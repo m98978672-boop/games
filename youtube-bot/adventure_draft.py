@@ -9,12 +9,16 @@ import wave
 from pathlib import Path
 
 from gameplay_voiceover import probe_capture
+from gameplay_captions import render_srt
 from viewport_translation import cues as translation_cues, filters as translation_filters
 from adventure_personality import SHORT_SECONDS, short_comment
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
 PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
-MIN_EDITED_GAMEPLAY_SECONDS = 600
+# The owner's rule is twenty minutes of real play. This used to be 600, which
+# let a ten-minute episode satisfy a twenty-minute requirement - the workflow
+# published on this flag alone. It is the same number the release gate checks.
+MIN_EDITED_GAMEPLAY_SECONDS = 20 * 60
 MAX_CUT_FRACTION = 0.25
 ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHREE': 'третий'}
 
@@ -29,6 +33,94 @@ def narrate(text, wav):
                        input=text, text=True, check=True, timeout=60)
     else:
         subprocess.run(['espeak-ng', '-v', 'ru', '-s', '145', '-w', str(wav), text], check=True, timeout=30)
+
+
+def split_parts(folder, draft, edited, gameplay, *, short, game, author, repository_url):
+    """Split a long recording into the parts that will actually be published.
+
+    A Short and anything up to thirty minutes stay a single video. Beyond that
+    the release plan divides the recording, and this cuts the real files with
+    FFmpeg, so each part's measured length is its own - not a claim in JSON.
+    """
+    from gameplay_release_plan import make_plan
+
+    if short:
+        return [(1, 0.0, edited, gameplay, draft)]
+    plan = make_plan(duration_seconds=edited, game=game, author=author,
+                     repository_url=repository_url)
+    if len(plan) == 1:
+        return [(1, 0.0, edited, gameplay, draft)]
+    result = []
+    play_per_second = gameplay / edited if edited else 0.0
+    for part in plan:
+        length = part.end_seconds - part.start_seconds
+        name = f'{Path(draft).stem}-part-{part.number}.mp4'
+        target = folder / name
+        subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', '-ss', f'{part.start_seconds:.3f}',
+                        '-i', str(folder / draft), '-t', f'{length:.3f}', '-c', 'copy',
+                        '-movflags', '+faststart', str(target)], check=True, timeout=300)
+        measured = probe_capture(target)
+        if abs(measured - length) > 1.5:
+            raise ValueError(f'Part {part.number} does not match its planned length')
+        result.append((part.number, part.start_seconds, part.end_seconds,
+                       play_per_second * measured, name))
+    return result
+
+
+def rights_from_environment(trace):
+    """Collect the rights record from the owner, or leave it empty.
+
+    An empty record blocks publication, which is the correct outcome: nobody has
+    checked. This function must never guess a date or a licence, because the gate
+    treats a dated approval as proof that a human verified the source.
+    """
+    approval = os.environ.get('GAMEPLAY_RIGHTS_APPROVED_ON', '').strip()
+    checked = os.environ.get('GAMEPLAY_RIGHTS_CHECKED_ON', '').strip()
+    licence = os.environ.get('GAMEPLAY_SOURCE_LICENSE', '').strip()
+    source = str(trace.get('source') or '').strip()
+    if not (approval and checked and licence and source):
+        return {'sources': [], 'owner_approval': ''}
+    return {'sources': [{'name': source, 'license': licence, 'checked': checked}],
+            'owner_approval': approval}
+
+
+def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, parts, subtitle):
+    """Record what was produced, with hashes, so the gate can re-derive it.
+
+    Counts come from the recorded action log, never from the size of the file:
+    padding a recording adds minutes but no actions, and that difference is the
+    whole point of the check.
+    """
+    import hashlib
+    from gameplay_release_evidence import measure_srt
+
+    def digest(path):
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+    srt_path = folder / subtitle
+    cues, spoken = measure_srt(srt_path.read_text(encoding='utf-8'))
+    actions = [row for row in trace.get('actions') or [] if isinstance(row, dict)]
+    screen_changes = sum(1 for row in actions if row.get('screen_unchanged') is False)
+    evidence = {
+        'capture_seconds': round(float(capture_seconds), 3),
+        'play_seconds': round(float(play_seconds), 3),
+        'subtitle_tracks': [{'name': subtitle, 'sha256': digest(srt_path),
+                             'cues': cues, 'spoken_seconds': round(spoken, 3)}],
+        'evidence': [{'kind': 'actions', 'count': len(actions)},
+                     {'kind': 'screen_changes', 'count': max(1, screen_changes)}],
+        'parts': [{'number': number, 'start_seconds': round(start, 3), 'end_seconds': round(end, 3),
+                   'play_seconds': round(play, 3), 'video': name,
+                   'sha256': digest(folder / name)}
+                  for number, start, end, play, name in parts],
+        # Rights stay a human decision, so they are never filled in here. A
+        # builder that invents an approval date would be bypassing the very gate
+        # that reads it. The owner supplies them through the environment once
+        # they have actually checked the source and cleared the recording.
+        'rights': rights_from_environment(trace),
+    }
+    (folder / 'release.evidence.json').write_text(
+        json.dumps(evidence, ensure_ascii=False, indent=2), encoding='utf-8')
+    return evidence
 
 
 def plan(trace):
@@ -143,6 +235,8 @@ def build(folder):
         + f'\nИсходник игры: {source}\n', encoding='utf-8')
     with tempfile.TemporaryDirectory() as temp:
         wavs = []
+        cue_ends = []
+        cue_texts = []
         cursor = 0.0
         for index, (stamp, text) in enumerate(lines):
             wav = Path(temp) / f'{index}.wav'
@@ -152,6 +246,10 @@ def build(folder):
             stamp -= sum(max(0, min(stamp, end) - start) for start, end in cuts)
             start = max(cursor, stamp)
             wavs.append((wav, round(start * 1000)))
+            # The cue is built from the measured clip length, not from a guess,
+            # so the subtitle file can be checked against what was spoken.
+            cue_ends.append(start + seconds)
+            cue_texts.append((start, text))
             cursor = start + seconds + 0.12
         # Remove only redundant waiting on unchanged screens and keep the full raw recording.
         video_seconds = duration - sum(end - start for start, end in cuts)
@@ -194,6 +292,22 @@ def build(folder):
     if short and edited > SHORT_SECONDS:
         raise ValueError('Encoded Short exceeds the three-minute limit')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
+    # The subtitles were burned into the video but never written beside it, so
+    # nothing downstream could check that the narration really is timed. Writing
+    # the track is what turns "we have subtitles" into evidence.
+    subtitle = f'{base}.ru.srt'
+    (folder / subtitle).write_text(
+        render_srt([(start, end, text) for (start, text), end in zip(cue_texts, cue_ends)],
+                   end=max(edited, max(cue_ends) if cue_ends else edited)),
+        encoding='utf-8')
+    # A recording over thirty minutes cannot go out as one video, and the plan
+    # module already refuses anything needing a third part. Splitting here means
+    # the evidence describes the videos that actually exist.
+    parts = split_parts(folder, f'{base}.mp4', edited, gameplay, short=short,
+                        game=title, author=str(trace.get('author') or 'unknown'),
+                        repository_url=url)
+    write_release_evidence(folder, trace, capture_seconds=duration, play_seconds=gameplay,
+                           parts=parts, subtitle=subtitle)
     report = {'short': short, 'video_format': 'short' if short else 'long', 'beta_episode': trace.get('short') is True and not puzzle and not viewport, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
         'cuts_seconds': cuts, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,

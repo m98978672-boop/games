@@ -17,9 +17,11 @@ class LighthousePublishTests(unittest.TestCase):
              patch('publish_adventure_short.read_queue') as queue:
             folder = Path(root)
             for lighthouse in (True, False):
-                with self.subTest(lighthouse=lighthouse), self.assertRaisesRegex(ValueError, 'Gameplay publication blocked'):
+                # The gate names the missing proof now, but an empty folder is
+                # still refused: its refusal never depended on the message.
+                with self.subTest(lighthouse=lighthouse), self.assertRaisesRegex(ValueError, 'nothing is proven'):
                     prepare(folder, '123', lighthouse=lighthouse)
-                with self.subTest(checked=lighthouse), self.assertRaisesRegex(ValueError, 'Gameplay publication blocked'):
+                with self.subTest(checked=lighthouse), self.assertRaisesRegex(ValueError, 'nothing is proven'):
                     publish_checked(folder / 'metadata.json', lighthouse=lighthouse)
             upload.assert_not_called()
             queue.assert_not_called()
