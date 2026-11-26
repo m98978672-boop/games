@@ -1,26 +1,8 @@
-"""Check the release requirements against artifacts, not against a claim.
+"""Check internal consistency of gameplay artifacts; not proof of release readiness.
 
-The release gate used to refuse every publication because four properties were
-unproven. Refusing for ever is not a policy, but neither is flipping a flag: the
-gate's own docstring says a duration counter or a rights flag alone cannot
-establish that twenty minutes are genuine play.
-
-This module supplies the missing half. The builder that produces the draft
-writes a ``release.evidence.json`` describing what it actually produced; the gate
-re-derives every number from the files on disk and compares. So the JSON cannot
-make a padded recording pass: the subtitle file must exist and its measured
-timings must match, the play log must contain real actions at a plausible rate,
-and each published part must be a byte-identical file that the plan accounts for.
-
-What this can prove:
-  * the subtitles are timed and complete for the narration actually recorded;
-  * the gameplay log shows sustained real activity rather than padding;
-  * parts cover the recording exactly once, within the platform length limit.
-
-What this cannot prove: that the person operating the agent was honest, or that
-the sources really are licensed. Those stay human decisions, so the gate requires
-them to be *documented* with names and dates that a later reader can audit -
-still a claim, but a falsifiable one, unlike a bare ``true``.
+Hashes, timing, the action counts and rights records are useful diagnostics,
+not independent proof of gameplay, training, video continuity or actual rights.
+YouTube subtitle delivery and same-day multipart publication are not implemented.
 """
 from __future__ import annotations
 
@@ -36,8 +18,8 @@ MIN_REAL_PLAY_SECONDS = 20 * 60      # "20 минут реальной игры"
 MAX_PART_SECONDS = 30 * 60           # a part longer than this cannot be split safely
 MAX_PARTS = 2                        # one recording becomes at most two videos
 MIN_PART_PLAY_RATIO = 0.5            # no part may be mostly padding
-# Licences that permit a commercial YouTube upload with attribution as its only
-# obligation. Copyleft and non-commercial licences are excluded on purpose.
+# A narrow list of code licence identifiers for diagnostics, not a grant
+# of rights to video, assets, music or trademarks.
 ALLOWED_LICENSES = frozenset({'MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'ISC'})
 MIN_ACTION_RATE = 4.0                # deliberate inputs per minute of play
 MIN_CAPTION_COVERAGE = 0.25          # narration measured against the recording
@@ -60,7 +42,17 @@ def _number(value: Any, *, name: str, maximum: float) -> float:
 
 
 def _digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with path.open('rb') as source:
+        for block in iter(lambda: source.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _probe_part(path: Path) -> float:
+    """Measure a real audio/video file independently of the evidence JSON."""
+    from gameplay_edit import probe
+    return probe(path)
 
 
 def _seconds(stamp: str) -> float:
@@ -73,7 +65,7 @@ def _seconds(stamp: str) -> float:
     return hours * 3600 + minutes * 60 + seconds + millis / 1000
 
 
-def measure_srt(text: str) -> tuple[int, float]:
+def measure_srt(text: str, *, max_end: float | None = None) -> tuple[int, float]:
     """Count cues and total spoken seconds in an SRT, refusing anything broken.
 
     The gate calls this on the file rather than trusting a number in the
@@ -97,6 +89,8 @@ def measure_srt(text: str) -> tuple[int, float]:
         start, end = _seconds(bounds[0].strip()), _seconds(bounds[1].strip())
         if start >= end:
             raise ValueError('a caption ends before it starts')
+        if max_end is not None and end > max_end + 0.05:
+            raise ValueError('caption exceeds the recording')
         if previous_end is not None and start < previous_end - 1e-6:
             raise ValueError('captions overlap')
         if not ' '.join(lines[2:]).strip():
@@ -120,7 +114,7 @@ def _check_captions(entry: Any, folder: Path, capture_seconds: float) -> None:
         _fail('subtitle evidence must carry a sha256')
     if _digest(track) != digest:
         _fail(f'subtitle track {name} changed after it was measured')
-    cues, spoken = measure_srt(track.read_text(encoding='utf-8'))
+    cues, spoken = measure_srt(track.read_text(encoding='utf-8'), max_end=capture_seconds)
     if cues < MIN_CUES:
         _fail(f'subtitle track {name} has too few cues to be a real transcription')
     declared_cues = entry.get('cues')
@@ -170,6 +164,8 @@ def _check_parts(evidence: Any, folder: Path, capture_seconds: float, play_secon
         start = _number(part.get('start_seconds'), name='part start', maximum=2 * MAX_PART_SECONDS * MAX_PARTS)
         end = _number(part.get('end_seconds'), name='part end', maximum=2 * MAX_PART_SECONDS * MAX_PARTS)
         length = end - start
+        if abs(start - covered) > 0.05:
+            _fail(f'part {index} does not start where the previous part ended')
         if length <= 0 or length > MAX_PART_SECONDS:
             _fail(f'part {index} is not a usable length')
         part_play = _number(part.get('play_seconds'), name='part play', maximum=MAX_PART_SECONDS)
@@ -190,6 +186,12 @@ def _check_parts(evidence: Any, folder: Path, capture_seconds: float, play_secon
             _fail(f'part {index} must carry a sha256')
         if _digest(video) != digest:
             _fail(f'part {index} video changed after it was measured')
+        try:
+            actual = _probe_part(video)
+        except Exception as exc:
+            raise ValueError(f'Gameplay release blocked: part {index} is not a verifiable audio/video file') from exc
+        if not math.isfinite(actual) or abs(actual - length) > 0.25:
+            _fail(f'part {index} actual duration does not match its interval')
     if abs(covered - capture_seconds) > 0.5:
         _fail('the parts do not cover the recording exactly once')
     if play_covered < play_seconds - 1e-6:
@@ -197,13 +199,7 @@ def _check_parts(evidence: Any, folder: Path, capture_seconds: float, play_secon
 
 
 def _check_rights(rights: Any) -> None:
-    """Check that every recorded asset source is ours or openly licensed.
-
-    The owner should not have to retype a licence into a repository variable for
-    a game we wrote ourselves. What actually needs checking is whether the code
-    and art belong to this repository, and if not, what their licence says. That
-    is a fact about a file, so it is checked here rather than asserted.
-    """
+    """Validate recorded license metadata only, not actual ownership or rights."""
     if not isinstance(rights, dict):
         _fail('rights must be documented, not assumed')
     sources = rights.get('sources')
@@ -216,7 +212,7 @@ def _check_rights(rights: Any) -> None:
         if not isinstance(name, str) or not name.strip() or len(name) > 200:
             _fail('an asset source is unnamed')
         if source.get('ownership') == 'own':
-            # Our own game: nothing external to license, nothing to click.
+            # This is an unverified claim, not proof of ownership or asset rights.
             continue
         license_id = source.get('license')
         if not isinstance(license_id, str) or license_id not in ALLOWED_LICENSES:

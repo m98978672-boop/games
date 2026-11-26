@@ -20,15 +20,11 @@ REVIEWED_RELAY_RUN = '45835569880'
 def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=False, relay=False):
     if relay and str(run_id) != REVIEWED_RELAY_RUN:
         raise ValueError('Only the explicitly requested Relay 3D experiment can use this release path')
-    if not relay:
-        from gameplay_release_gate import require_verified_gameplay_release
-        require_verified_gameplay_release(folder)
+    from gameplay_release_gate import require_verified_gameplay_release
+    require_verified_gameplay_release(folder)
     if revoice and not lighthouse:
         raise ValueError('Voice revision is only permitted for the reviewed Lighthouse capture')
-    # Rights are read from the evidence the gate checks: our own game is marked
-    # "own", an external one must carry a verified open licence. A separate
-    # environment flag would be a second key to the same door. The reviewed relay
-    # run above skips the gate deliberately, so it needs no rights record either.
+    # License metadata is not independent clearance for the game and assets.
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
     draft = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
     game = 'Ретранслятор 3D' if relay else 'Последний сигнал' if lighthouse else 'The Lost Artifact'
@@ -76,8 +72,7 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=Fa
 def publish_checked(result, *, lighthouse=False, relay=False, now=None):
     from gameplay_release_gate import require_verified_gameplay_release
     # The result file sits in the artifact folder that holds the evidence.
-    if not relay:
-        require_verified_gameplay_release(Path(result).parent)
+    require_verified_gameplay_release(Path(result).parent)
     if lighthouse or relay:
         payload = json.loads(result.read_text(encoding='utf-8'))
         metadata = payload['metadata']

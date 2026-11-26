@@ -1,10 +1,4 @@
-"""The release gate must check proof, not accept a claim.
-
-Each test builds a real artifact folder - a subtitle file with measured timings,
-a part video, hashes and the rights record - and then breaks exactly one thing.
-If the gate still passed, a padded or fabricated recording could reach the
-channel under the owner's rules, which is what the gate exists to prevent.
-"""
+"""Artifact consistency tests. Mock media probes do not prove real gameplay."""
 from __future__ import annotations
 
 import hashlib
@@ -13,6 +7,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -28,7 +23,7 @@ def digest(path: Path) -> str:
 
 def build(folder: Path, *, capture=1200.0, play=1200.0, actions=400,
           parts=((1, 0.0, 1200.0, 1200.0),), rights=None) -> Path:
-    """Write a folder that satisfies every requirement, as the builder would."""
+    """Write synthetic data for structural tests, not a real video."""
     cues, cursor = [], 0.0
     index = 0
     while cursor < capture - 40:
@@ -61,6 +56,9 @@ class ReleaseEvidenceTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix='release-'))
         self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        self.probe = patch('gameplay_release_evidence._probe_part', side_effect=lambda p: json.loads((p.parent / 'release.evidence.json').read_text())['parts'][int(p.stem[4:]) - 1]['end_seconds'] - json.loads((p.parent / 'release.evidence.json').read_text())['parts'][int(p.stem[4:]) - 1]['start_seconds'])
+        self.probe.start()
+        self.addCleanup(self.probe.stop)
 
     def folder(self) -> Path:
         path = self.root / 'episode'
@@ -78,7 +76,7 @@ class ReleaseEvidenceTests(unittest.TestCase):
             verify(folder)
         self.assertIn(fragment, str(caught.exception))
 
-    # A complete artifact passes, so the gate is not a wall.
+    # Structural validation alone is not a publication authorization.
 
     def test_a_complete_artifact_passes_and_reports_its_numbers(self):
         result = verify(self.folder())
@@ -203,8 +201,23 @@ class ReleaseEvidenceTests(unittest.TestCase):
             require_verified_gameplay_release(None)
         self.assertIn('cannot', str(caught.exception))
 
-    def test_the_gate_accepts_a_folder_that_proves_everything(self):
-        self.assertEqual(require_verified_gameplay_release(self.folder())['parts'], 1)
+    def test_the_gate_still_blocks_after_diagnostics_pass(self):
+        with self.assertRaisesRegex(ValueError, 'not implemented'):
+            require_verified_gameplay_release(self.folder())
+
+    def test_fake_mp4_is_rejected_by_real_probe(self):
+        folder = self.folder()
+        self.probe.stop()
+        self.assert_blocked(folder, 'not a verifiable audio/video file')
+
+    def test_mismatched_media_duration_is_rejected(self):
+        self.probe.stop()
+        with patch('gameplay_release_evidence._probe_part', return_value=30.0):
+            self.assert_blocked(self.folder(), 'actual duration')
+
+    def test_caption_cannot_extend_past_recording(self):
+        with self.assertRaisesRegex(ValueError, 'exceeds'):
+            measure_srt('1\n00:19:59,000 --> 00:20:01,000\nText\n', max_end=1200)
 
 
 class SplitTests(unittest.TestCase):
@@ -213,6 +226,9 @@ class SplitTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix='split-'))
         self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        probe = patch('gameplay_release_evidence._probe_part', return_value=1200.0)
+        self.mock_probe = probe.start()
+        self.addCleanup(probe.stop)
 
     def test_a_forty_minute_recording_splits_into_two_twenty_minute_parts(self):
         folder = self.root / 'forty'
@@ -222,11 +238,20 @@ class SplitTests(unittest.TestCase):
         self.assertEqual(verify(folder)['parts'], 2)
 
     def test_exactly_thirty_minutes_stays_one_part(self):
+        self.mock_probe.return_value = 1800.0
         folder = self.root / 'thirty'
         folder.mkdir()
         build(folder, capture=1800.0, play=1800.0, actions=600,
               parts=((1, 0.0, 1800.0, 1800.0),))
         self.assertEqual(verify(folder)['parts'], 1)
+
+    def test_overlapping_parts_are_refused(self):
+        folder = self.root / 'overlap'
+        folder.mkdir()
+        build(folder, capture=2400.0, play=2400.0, actions=800,
+              parts=((1, 0.0, 1200.0, 1200.0), (2, 1190.0, 2390.0, 1200.0)))
+        with self.assertRaisesRegex(ValueError, 'previous part ended'):
+            verify(folder)
 
     def test_beyond_two_parts_is_refused_rather_than_split_unsafely(self):
         folder = self.root / 'seventy'
@@ -360,6 +385,16 @@ class BuilderSplitTests(unittest.TestCase):
             self.root, 'zuza-pilot.mp4', edited, edited, short=False,
             game='The Lost Artifact', author='Ritaban Ghosh',
             repository_url='https://github.com/ritaban06/mini-js-games-hub')
+
+    def test_builder_keeps_zero_screen_changes(self):
+        (self.root / 'episode.ru.srt').write_text(
+            '1\n00:00:00,000 --> 00:00:01,000\nПривет.\n', encoding='utf-8')
+        (self.root / 'video.mp4').write_bytes(b'fixture')
+        result = self.draft.write_release_evidence(
+            self.root, {'actions': [{'screen_unchanged': True}]},
+            capture_seconds=1, play_seconds=1,
+            parts=[(1, 0, 1, 1, 'video.mp4')], subtitle='episode.ru.srt')
+        self.assertEqual(result['evidence'][1]['count'], 0)
 
     def test_a_short_recording_is_not_split(self):
         parts = self.parts(1200.0, {'zuza-pilot.mp4': 1200.0})

@@ -71,7 +71,8 @@ class LighthousePublishTests(unittest.TestCase):
                 self.assertEqual(run.call_args.kwargs['input'], 'Проверяю питание.')
 
     def test_relay_publish_requires_keyed_game_and_finished_capture(self):
-        with tempfile.TemporaryDirectory() as root, patch('publish_adventure_short.subprocess.check_output') as probe:
+        with tempfile.TemporaryDirectory() as root, patch('publish_adventure_short.subprocess.check_output') as probe, \
+             patch('gameplay_release_gate.require_verified_gameplay_release'):
             folder = Path(root)
             (folder / 'pilot.json').write_text(json.dumps(dict(short=True, needs_continuation=False, draft='zuza-adventure-short.mp4')))
             (folder / 'zuza-adventure-short.mp4').touch()
@@ -85,3 +86,16 @@ class LighthousePublishTests(unittest.TestCase):
             result = json.loads(prepare(folder, '45835569880', relay=True).read_text())['metadata']
             self.assertIn('Ретранслятор 3D', result['title'])
             self.assertIn('/relay-3d/', result['description'].splitlines()[0])
+
+    def test_relay_cannot_bypass_gate_at_prepare_or_publish(self):
+        from publish_adventure_short import publish_checked
+        with tempfile.TemporaryDirectory() as root, \
+             patch('publish_adventure_short.publish') as upload, \
+             patch('publish_adventure_short.read_queue') as queue:
+            folder = Path(root)
+            with self.assertRaisesRegex(ValueError, 'nothing is proven'):
+                prepare(folder, '45835569880', relay=True)
+            with self.assertRaisesRegex(ValueError, 'nothing is proven'):
+                publish_checked(folder / 'metadata.json', relay=True)
+            upload.assert_not_called()
+            queue.assert_not_called()

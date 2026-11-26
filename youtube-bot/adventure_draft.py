@@ -125,17 +125,11 @@ def verified_license(repository_url):
 
 
 def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, parts, subtitle):
-    """Record what was produced, with hashes, so the gate can re-derive it.
-
-    Counts come from the recorded action log, never from the size of the file:
-    padding a recording adds minutes but no actions, and that difference is the
-    whole point of the check.
-    """
-    import hashlib
-    from gameplay_release_evidence import measure_srt
+    """Record diagnostic claims and hashes, not proof of genuine gameplay."""
+    from gameplay_release_evidence import measure_srt, _digest
 
     def digest(path):
-        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        return _digest(Path(path))
 
     srt_path = folder / subtitle
     cues, spoken = measure_srt(srt_path.read_text(encoding='utf-8'))
@@ -147,15 +141,12 @@ def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, part
         'subtitle_tracks': [{'name': subtitle, 'sha256': digest(srt_path),
                              'cues': cues, 'spoken_seconds': round(spoken, 3)}],
         'evidence': [{'kind': 'actions', 'count': len(actions)},
-                     {'kind': 'screen_changes', 'count': max(1, screen_changes)}],
+                     {'kind': 'screen_changes', 'count': screen_changes}],
         'parts': [{'number': number, 'start_seconds': round(start, 3), 'end_seconds': round(end, 3),
                    'play_seconds': round(play, 3), 'video': name,
                    'sha256': digest(folder / name)}
                   for number, start, end, play, name in parts],
-        # Rights stay a human decision, so they are never filled in here. A
-        # builder that invents an approval date would be bypassing the very gate
-        # that reads it. The owner supplies them through the environment once
-        # they have actually checked the source and cleared the recording.
+        # License metadata alone is not rights clearance for a recording.
         'rights': rights_from_environment(trace),
     }
     (folder / 'release.evidence.json').write_text(

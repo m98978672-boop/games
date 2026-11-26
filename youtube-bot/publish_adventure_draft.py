@@ -15,10 +15,7 @@ from schedule_policy import manual_publish_time
 
 def prepare(folder: Path, run_id: str, publish_at: str) -> Path:
     from gameplay_release_gate import require_verified_gameplay_release
-    # The gate re-derives every number from the files in this folder, and it
-    # checks the rights record too: our own games carry "own", an external game
-    # must carry a verified open licence. Asking for a second flag on top would
-    # only mean somebody has to tick a box that proves nothing new.
+    # Artifact diagnostics cannot establish rights or complete delivery.
     require_verified_gameplay_release(folder)
     if not run_id.isascii() or not run_id.isdecimal():
         raise ValueError('Expected a numeric capture run ID.')
