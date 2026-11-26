@@ -68,6 +68,13 @@ jobs:
           exit "$result"
       - name: Build narrated adventure draft and measure edited gameplay
         if: inputs.adventure_only
+        env:
+          # The builder never invents rights, so the owner's record has to reach
+          # it from here. Absent values leave the record empty and the gate
+          # blocks the upload, which is the honest outcome.
+          GAMEPLAY_RIGHTS_APPROVED_ON: ${{ vars.GAMEPLAY_RIGHTS_APPROVED_ON }}
+          GAMEPLAY_RIGHTS_CHECKED_ON: ${{ vars.GAMEPLAY_RIGHTS_CHECKED_ON }}
+          GAMEPLAY_SOURCE_LICENSE: ${{ vars.GAMEPLAY_SOURCE_LICENSE }}
         run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-recording"
       - name: Save private recording and observed trace
         if: always()

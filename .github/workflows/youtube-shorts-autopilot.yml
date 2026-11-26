@@ -288,6 +288,9 @@ jobs:
       CAPTURE_RUN: ${{ github.run_id }}
       PUBLISH_AT: ${{ needs.record-gameplay.outputs.publish_at }}
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
+      # The uploader checks this too, so it has to be present here or the job
+      # would fail after the recording was already made.
+      ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
     steps:
       - uses: actions/checkout@v7
         with:

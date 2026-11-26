@@ -261,6 +261,44 @@ class RightsTests(unittest.TestCase):
         self.assertEqual(rights['sources'][0]['license'], 'MIT')
 
 
+class WorkflowRightsTests(unittest.TestCase):
+    """A rights rule that never reaches the builder is a rule that never applies."""
+
+    def root(self) -> Path:
+        return Path(__file__).resolve().parents[2]
+
+    def test_the_builder_receives_the_owner_rights_record(self):
+        import yaml
+        parsed = yaml.safe_load((self.root() / '.github/workflows/adventure-experiment.yml')
+                                .read_text(encoding='utf-8'))
+        steps = parsed['jobs']['adventure']['steps']
+        build = [s for s in steps if 'adventure_draft.py' in str(s.get('run', ''))]
+        self.assertTrue(build)
+        env = build[0].get('env') or {}
+        # Without these the record stays empty and every upload is refused, so
+        # the gate would look broken rather than strict.
+        for name in ('GAMEPLAY_RIGHTS_APPROVED_ON', 'GAMEPLAY_RIGHTS_CHECKED_ON',
+                     'GAMEPLAY_SOURCE_LICENSE'):
+            self.assertIn(name, env)
+
+    def test_the_uploader_job_carries_the_rights_flag(self):
+        import yaml
+        parsed = yaml.safe_load((self.root() / '.github/workflows/youtube-shorts-autopilot.yml')
+                                .read_text(encoding='utf-8'))
+        job = parsed['jobs']['publish-gameplay']
+        # The uploader checks this flag itself, so a missing value fails the job
+        # after the recording has already been paid for.
+        self.assertIn('ADVENTURE_RECORDING_RIGHTS_VERIFIED', job['env'])
+
+    def test_both_uploaders_hand_the_gate_a_folder(self):
+        #  A gate called without a folder can only refuse, which is how the
+        #  pipeline looked "blocked" while nothing was actually wrong.
+        for name in ('publish_adventure_draft.py', 'publish_adventure_short.py'):
+            source = (self.root() / 'youtube-bot' / name).read_text(encoding='utf-8')
+            self.assertNotIn('require_verified_gameplay_release()', source)
+            self.assertIn('require_verified_gameplay_release(', source)
+
+
 class BuilderSplitTests(unittest.TestCase):
     """The builder must cut the files the evidence describes, not just claim them."""
 
