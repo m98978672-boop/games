@@ -36,7 +36,12 @@ def plan(trace):
     if trace.get('game') == 'Ретранслятор 3D':
         lines = [(0, 'Эксперимент в три дэ. Ищу два маяка по карте в углу экрана, потом попробую выйти из лабиринта.')]
         last = 2
+        explained_wall = False
         for event in trace['actions']:
+            if event.get('hit_wall') and not explained_wall:
+                stamp = min(duration, (event.get('recording_elapsed_ms') or 0)/1000)
+                lines.append((stamp, 'Вперёд не пройти. Проверю другой проход.'))
+                explained_wall = True
             remaining = event['remaining_beacons']
             if remaining < last:
                 stamp = min(duration, (event.get('recording_elapsed_ms') or 0)/1000)

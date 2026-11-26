@@ -27,9 +27,9 @@ function draw(){
  });
  // In-world navigation aid: only visited orientation and the schematic are shown, not a route.
  ctx.fillStyle='#121a28';ctx.fillRect(306,5,89,89);
- map.forEach((row,j)=>[...row].forEach((cell,i)=>{ctx.fillStyle=cell==='#'?'#566e8c':'#182a41';ctx.fillRect(307+i*9,6+j*9,8,8);}));
- beacons.forEach(([i,j],n)=>{if(!found.has(n)){ctx.fillStyle='#ffa634';ctx.fillRect(309+i*9,8+j*9,4,4);}});
- ctx.fillStyle='#48dfcb';ctx.fillRect(309+exit[0]*9,8+exit[1]*9,4,4);
+ map.forEach((row,j)=>[...row].forEach((cell,i)=>{ctx.fillStyle=cell==='#'?'#879ab0':'#182a41';ctx.fillRect(307+i*9,6+j*9,8,8);if(cell==='#'){ctx.fillStyle='#b5c2d0';ctx.fillRect(307+i*9,6+j*9,8,1);}}));
+ beacons.forEach(([i,j],n)=>{if(!found.has(n)){ctx.fillStyle='#ffa634';ctx.fillRect(308+i*9,9+j*9,6,2);ctx.fillRect(310+i*9,7+j*9,2,6);}});
+ ctx.fillStyle='#48dfcb';ctx.fillRect(308+exit[0]*9,7+exit[1]*9,6,6);ctx.fillStyle='#182a41';ctx.fillRect(310+exit[0]*9,9+exit[1]*9,2,2);
  ctx.fillStyle='#fff';ctx.fillRect(309+x*9,8+y*9,4,4);ctx.fillRect(310+x*9+dx*3,9+y*9+dy*3,2,2);
 }
 addEventListener('keydown',event=>{
