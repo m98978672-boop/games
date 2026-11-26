@@ -2,7 +2,7 @@ name: SuperTuxKart race capture
 on:
   push:
     branches: [arena/7d9fee46-games]
-    paths: [.github/workflows/supertuxkart-capture.yml]
+    paths: [.github/workflows/supertuxkart-capture.yml, youtube-bot/adventure_draft.py]
 permissions:
   contents: read
 jobs:
