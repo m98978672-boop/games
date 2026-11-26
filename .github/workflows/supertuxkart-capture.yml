@@ -19,12 +19,14 @@ jobs:
       - name: Install race and capture tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y supertuxkart xvfb xdotool ffmpeg espeak-ng mesa-utils fonts-dejavu-core
+          sudo apt-get install -y supertuxkart xvfb x11-utils xauth xdotool ffmpeg espeak-ng mesa-utils fonts-dejavu-core
           python -m pip install 'piper-tts==1.3.0'
       - name: Record an AI-only race, no cuts
         run: |
           set -euo pipefail
           export DISPLAY=:93 LIBGL_ALWAYS_SOFTWARE=1
+          export PATH="/usr/games:$PATH"
+          command -v supertuxkart Xvfb xdpyinfo ffmpeg
           folder="$RUNNER_TEMP/stk"
           mkdir -p "$folder"
           Xvfb "$DISPLAY" -screen 0 800x600x24 +extension GLX -nolisten tcp >"$folder/xvfb.log" 2>&1 &
