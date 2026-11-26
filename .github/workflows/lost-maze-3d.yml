@@ -1,0 +1,26 @@
+name: Lost in the Maze 3D - first recorded attempt
+on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/lost-maze-3d.yml, youtube-bot/experiments/play_lost_maze.cjs]
+permissions:
+  contents: read
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v7
+      - name: Record genuine browser play and verify progress
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/maze" "$RUNNER_TEMP/maze-deps"
+          npm install --prefix "$RUNNER_TEMP/maze-deps" --no-audit --no-fund playwright@1.51.1
+          "$RUNNER_TEMP/maze-deps/node_modules/.bin/playwright" install --with-deps chromium
+          python -m http.server 8765 --bind 127.0.0.1 &
+          NODE_PATH="$RUNNER_TEMP/maze-deps/node_modules" node youtube-bot/experiments/play_lost_maze.cjs "$RUNNER_TEMP/maze"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lost-maze-3d-${{ github.run_id }}
+          path: ${{ runner.temp }}/maze/
