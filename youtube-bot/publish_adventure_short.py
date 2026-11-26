@@ -67,7 +67,11 @@ def publish_checked(result, *, lighthouse=False, now=None):
     if lighthouse:
         payload = json.loads(result.read_text(encoding='utf-8'))
         metadata = payload['metadata']
-        jobs = read_queue()
+        try:
+            jobs = read_queue()
+        except ValueError as exc:
+            print('::error title=Queue preflight failed::The publication queue is incomplete or malformed; no upload was attempted.')
+            raise PublishError('Read-only queue preflight failed; no upload was attempted.') from exc
         existing = [job for job in jobs if job.get('id') == metadata['job_id']]
         if existing:
             if len(existing) == 1 and existing[0]['status'] == 'scheduled' and existing[0].get('video_id'):
@@ -88,6 +92,7 @@ def publish_checked(result, *, lighthouse=False, now=None):
                 reference = slot
             else:
                 raise PublishError('No free regular slot found in the next 28 slots; no upload started.')
+    print('::notice title=Queue preflight passed::Handing the verified video to the uploader.')
     return publish(result)
 
 
