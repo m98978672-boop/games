@@ -1,0 +1,943 @@
+{
+  "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+  "startedAt": "2026-11-26 22:49 UTC",
+  "status": "played",
+  "steps": [
+    {
+      "t": 680.3,
+      "action": "вежливый гость: проверка robots.txt",
+      "result": "robots.txt прочитан"
+    },
+    {
+      "t": 684.5,
+      "action": "открыла страницу",
+      "result": "Lost Spot (Draft)"
+    },
+    {
+      "t": 684.6,
+      "action": "кнопка игры",
+      "result": "не нашлась — пробую играть прямо на открытой странице"
+    },
+    {
+      "t": 688.6,
+      "action": "это сюжетная игра, а не полёт",
+      "result": "история «Lost Spot (Draft)»: текст и варианты выбора, играю чтением, а не кадрами"
+    },
+    {
+      "t": 688.7,
+      "action": "читаю историю",
+      "result": "сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки"
+    },
+    {
+      "t": 711.0,
+      "action": "идти некуда",
+      "result": "заход 1: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 711.0,
+      "action": "разбор захода",
+      "result": "заход 1: мест в карте 59, нажато вариантов 261; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 711.0,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 2 — иду заново"
+    },
+    {
+      "t": 713.4,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 713.4,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 4 в 59 местах — иду закрывать их"
+    },
+    {
+      "t": 730.3,
+      "action": "идти некуда",
+      "result": "заход 2: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 730.3,
+      "action": "разбор захода",
+      "result": "заход 2: мест в карте 59, нажато вариантов 261; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 730.3,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 2 — иду заново"
+    },
+    {
+      "t": 732.6,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 732.6,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 4 в 59 местах — иду закрывать их"
+    },
+    {
+      "t": 749.5,
+      "action": "идти некуда",
+      "result": "заход 3: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 749.5,
+      "action": "разбор захода",
+      "result": "заход 3: мест в карте 59, нажато вариантов 261; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 749.5,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 2 — иду заново"
+    },
+    {
+      "t": 751.7,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 751.7,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 4 в 59 местах — иду закрывать их"
+    },
+    {
+      "t": 768.6,
+      "action": "идти некуда",
+      "result": "заход 4: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 768.6,
+      "action": "разбор захода",
+      "result": "заход 4: мест в карте 59, нажато вариантов 261; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 768.6,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 2 — иду заново"
+    },
+    {
+      "t": 770.9,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 770.9,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 4 в 59 местах — иду закрывать их"
+    },
+    {
+      "t": 787.8,
+      "action": "идти некуда",
+      "result": "заход 5: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 787.8,
+      "action": "разбор захода",
+      "result": "заход 5: мест в карте 59, нажато вариантов 261; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 787.8,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 2 — иду заново"
+    },
+    {
+      "t": 790.0,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 790.0,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 4 в 59 местах — иду закрывать их"
+    },
+    {
+      "t": 806.9,
+      "action": "идти некуда",
+      "result": "заход 6: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 806.9,
+      "action": "разбор захода",
+      "result": "заход 6: мест в карте 59, нажато вариантов 261; заходов хватит"
+    },
+    {
+      "t": 806.9,
+      "action": "карта сохранена",
+      "result": "59 мест для следующего прогона"
+    },
+    {
+      "t": 806.9,
+      "action": "итог истории",
+      "result": "выборов 64 за 6 заход(ов); мест в карте 59, связей 99, нажато вариантов 261; концовок видела 0; находки: you pick up"
+    }
+  ],
+  "screenshots": [
+    "01-open.png",
+    "02-after-play.png",
+    "03-story.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "09-story-end.png"
+  ],
+  "kind": "story",
+  "hasVideo": true,
+  "textSample": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel",
+  "story": {
+    "moves": 64,
+    "runs": [
+      {
+        "run": 1,
+        "moves": 14,
+        "fresh": 3,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 59
+      },
+      {
+        "run": 2,
+        "moves": 10,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 59
+      },
+      {
+        "run": 3,
+        "moves": 10,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 59
+      },
+      {
+        "run": 4,
+        "moves": 10,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 59
+      },
+      {
+        "run": 5,
+        "moves": 10,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 59
+      },
+      {
+        "run": 6,
+        "moves": 10,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 59
+      }
+    ],
+    "path": [
+      {
+        "run": 1,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 1,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 1,
+        "n": 3,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 1,
+        "n": 4,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 1,
+        "n": 5,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 6,
+        "choice": "door",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are very tired."
+      },
+      {
+        "run": 1,
+        "n": 7,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 8,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 1,
+        "n": 9,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 10,
+        "choice": "homework",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are very tired."
+      },
+      {
+        "run": 1,
+        "n": 11,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 1,
+        "n": 12,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+      },
+      {
+        "run": 1,
+        "n": 13,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are tired. You yell after him, \"Spot!\" You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 14,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+      },
+      {
+        "run": 2,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 2,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 2,
+        "n": 3,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 2,
+        "n": 4,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 2,
+        "n": 5,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 6,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 2,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 8,
+        "choice": "homework",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are very tired."
+      },
+      {
+        "run": 2,
+        "n": 9,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 10,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+      },
+      {
+        "run": 3,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 3,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 3,
+        "n": 3,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 3,
+        "n": 4,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 3,
+        "n": 5,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 6,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 3,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 8,
+        "choice": "homework",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are very tired."
+      },
+      {
+        "run": 3,
+        "n": 9,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 10,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+      },
+      {
+        "run": 4,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 4,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 4,
+        "n": 3,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 4,
+        "n": 4,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 4,
+        "n": 5,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 6,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 4,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 8,
+        "choice": "homework",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are very tired."
+      },
+      {
+        "run": 4,
+        "n": 9,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 10,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+      },
+      {
+        "run": 5,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 5,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 5,
+        "n": 3,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 5,
+        "n": 4,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 5,
+        "n": 5,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 6,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 5,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 8,
+        "choice": "homework",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are very tired."
+      },
+      {
+        "run": 5,
+        "n": 9,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 10,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+      },
+      {
+        "run": 6,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 6,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 6,
+        "n": 3,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 6,
+        "n": 4,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 6,
+        "n": 5,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 6,
+        "n": 6,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 6,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You go back inside"
+      },
+      {
+        "run": 6,
+        "n": 8,
+        "choice": "homework",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are very tired."
+      },
+      {
+        "run": 6,
+        "n": 9,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 6,
+        "n": 10,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+      }
+    ],
+    "endings": [],
+    "reachedEnd": false,
+    "last": {
+      "run": 6,
+      "n": 10,
+      "choice": "door",
+      "fresh": false,
+      "energy": -2,
+      "finds": [],
+      "clues": 0,
+      "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+    },
+    "map": {
+      "places": 59,
+      "links": 99,
+      "remaining": 4,
+      "tried": 261,
+      "energetic": 4,
+      "tired": 7,
+      "finds": [
+        "you pick up"
+      ]
+    },
+    "sawFinds": [],
+    "freshPlaces": 0,
+    "remembered": 59
+  },
+  "endingsSeen": [],
+  "storyMap": {
+    "places": 59,
+    "links": 99,
+    "tried": 261,
+    "finds": [
+      "you pick up"
+    ],
+    "tired": 7,
+    "energetic": 4
+  },
+  "storyLine": "прошла историю: 64 выборов, 6 захода(ов), 59 мест в карте, путей к финалу 0, непройденных вариантов 4, нашла: you pick up · до финала не дошла — история не отпустила"
+}
