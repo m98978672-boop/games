@@ -11,13 +11,15 @@ import publish_adventure_draft as uploader
 
 class GameplayReleaseTests(unittest.TestCase):
     def test_draft_upload_is_blocked_before_metadata_or_network(self):
-        # No pipeline currently proves real 20-minute gameplay, subtitles and
-        # same-day splitting. Even a rights flag cannot bypass this guard.
+        # A folder with no release evidence proves nothing about real
+        # 20-minute gameplay, subtitles or same-day splitting, so even a rights
+        # flag cannot carry it. The gate now names what is missing instead of
+        # refusing unconditionally; the refusal itself is unchanged.
         with tempfile.TemporaryDirectory() as temp, \
              patch.object(uploader, 'probe_capture') as probe, \
              patch.object(uploader, 'publish') as publish:
             folder = Path(temp)
-            with self.assertRaisesRegex(ValueError, 'Gameplay publication blocked'):
+            with self.assertRaisesRegex(ValueError, 'nothing is proven'):
                 uploader.prepare(folder, '123', '2026-11-26 18:00', rights_verified=True)
             probe.assert_not_called()
             publish.assert_not_called()

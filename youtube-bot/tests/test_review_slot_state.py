@@ -66,11 +66,15 @@ class SlotStateTests(unittest.TestCase):
         self.assertIn("publish_at='2026-11-25 09:00'", text)
         self.assertIn('video_format=short', text)
         self.assertIn('Все слоты на эти дни уже заняты', render_report([], [SLOT], error=None))
-        # Gameplay is blocked until the full release requirements are verified.
+        # Gameplay has its own lane. The gate now checks release evidence
+        # instead of refusing outright, so the plan offers the command that
+        # really starts a recording - and names the two conditions that can
+        # still stop it at upload time.
         gameplay = render_report([datetime(2026, 11, 25, 15, tzinfo=timezone.utc)], [], error=None, now=now)
         self.assertIn('игровой обзор', gameplay)
-        self.assertIn('заблокирована', gameplay)
-        self.assertNotIn('gh workflow run', gameplay)
+        self.assertIn('20 минут', gameplay)
+        self.assertIn('gameplay_episode=true', gameplay)
+        self.assertIn('youtube-shorts-autopilot.yml', gameplay)
         past = render_report([SLOT], [], error=None, now=datetime(2026, 11, 25, 7, tzinfo=timezone.utc))
         self.assertNotIn('gh workflow run', past)
         self.assertIn('YouTube Studio', past)

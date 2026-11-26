@@ -31,9 +31,13 @@ class AdventureSubtitleTests(unittest.TestCase):
             folder = Path(temp)
             (folder / 'trace.json').write_text(json.dumps(trace), encoding='utf-8')
             (folder / 'recording.webm').touch()
+            # FFmpeg is mocked, so the encode step has to leave the file that a
+            # real run would produce: the builder now hashes its outputs.
+            def fake_ffmpeg(*args, **kwargs):
+                Path(args[0][-1]).write_bytes(b'\x00' * 1024)
             with patch.object(adventure_draft, 'narrate', side_effect=fake_voice), \
                  patch.object(adventure_draft, 'probe_capture', side_effect=[10.0, 8.0]), \
-                 patch.object(adventure_draft.subprocess, 'run'):
+                 patch.object(adventure_draft.subprocess, 'run', side_effect=fake_ffmpeg):
                 adventure_draft.build(folder)
             report = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
             captions = (folder / report['captions']).read_text(encoding='utf-8')

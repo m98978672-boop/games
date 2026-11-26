@@ -132,6 +132,15 @@ class WiringTests(unittest.TestCase):
         self.assertEqual(capture['needs'], 'record-gameplay')
         self.assertTrue(capture['uses'].startswith('./.github/workflows/'))
         self.assertIn('record', recorder['outputs'])
+        # And the recording must reach the channel, or the lane ends at a file
+        # nobody watches. The gate inside the publisher decides whether it may.
+        publish = parsed['jobs']['publish-gameplay']
+        self.assertEqual(sorted(publish['needs']), ['capture-gameplay', 'record-gameplay'])
+        text = workflow[workflow.index('  publish-gameplay:'):]
+        text = text[:text.index('\n  check-topic-history:')]
+        self.assertIn('release.evidence.json', text)
+        for uploader in ('publish_adventure_short.py', 'publish_adventure_draft.py'):
+            self.assertIn(uploader, text)
         tail = workflow[workflow.index('  record-gameplay:'):]
         self.assertIn('GATE_PUBLISH', tail)
         self.assertIn('record=false', tail)
