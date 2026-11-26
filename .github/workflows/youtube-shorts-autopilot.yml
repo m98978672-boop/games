@@ -571,6 +571,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$CAPTURE_RUN" == 45841604660 ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15127728538" | jq -e '
+              .name == "supertuxkart-race-45841604660" and .expired == false and .workflow_run.id == 45841604660
+              and .digest == "sha256:dafbde43a4a3f560e38d89ae1426bcc1b4e6be14c58c51df1f38f8dec0656c9b"' >/dev/null
+            gh run download "$CAPTURE_RUN" --name supertuxkart-race-45841604660 --dir "$RUNNER_TEMP/adventure-publish"
+            echo 'TRUSTED_STK_CAPTURE=true' >> "$GITHUB_ENV"
+            exit 0
+          fi
           if [[ "$CAPTURE_RUN" == 45835569880 ]]; then
             gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15124642887" | jq -e '
               .name == "relay-3d-beta-45835569880" and .expired == false and .workflow_run.id == 45835569880
@@ -625,7 +633,7 @@ jobs:
         run: |
           set -euo pipefail
           folder="$RUNNER_TEMP/adventure-publish"
-          if jq -e '.beta_episode == true or (has("beta_episode") | not) and .short == true' "$folder/pilot.json" >/dev/null; then
+          if [[ "$CAPTURE_RUN" == 45841604660 ]] || jq -e '.beta_episode == true or (has("beta_episode") | not) and .short == true' "$folder/pilot.json" >/dev/null; then
             source_run="$CAPTURE_RUN"
             if [[ "$CAPTURE_RUN" == lighthouse-revoice ]]; then source_run=45708093545; fi
             python youtube-bot/publish_adventure_short.py "$folder" "$source_run" "$PUBLISH_AT"

@@ -163,8 +163,19 @@ def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, part
     return evidence
 
 
+def scene_cues(lines, cuts):
+    """Group simultaneous lines; leave later cues anchored to their own frames."""
+    grouped = {}
+    for stamp, message in sorted(lines, key=lambda line: line[0]):
+        start = round(1000 * (stamp - sum(max(0, min(stamp, end) - begin) for begin, end in cuts)))
+        grouped.setdefault(max(0, start), []).append(message)
+    return [(stamp / 1000, ' '.join(messages)) for stamp, messages in grouped.items()]
+
+
 def plan(trace):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'SuperTuxKart':
+        return duration, [(0.0, 'Сегодня на трассе Зен-Гарден. Пилоты — встроенные соперники самой игры. Проверяю запись гонки и монтаж.')], [], False
     if trace.get('game') == 'Ретранслятор 3D':
         lines = [(0, 'Эксперимент в три дэ. Ищу два маяка по карте в углу экрана, потом попробую выйти из лабиринта.')]
         last = 2
@@ -277,6 +288,10 @@ def build(folder):
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'SuperTuxKart':
+        url = 'https://supertuxkart.net/'
+        title = 'SuperTuxKart'
+        source = 'https://github.com/supertuxkart/stk-code'
     if trace.get('game') == 'Ретранслятор 3D':
         url = GAME_URL.replace('adventure-game/', 'relay-3d/')
         title = 'Ретранслятор 3D'
@@ -297,15 +312,19 @@ def build(folder):
     with tempfile.TemporaryDirectory() as temp:
         wavs = []
         cursor = 0.0
-        for index, (stamp, text) in enumerate(lines):
+        cues = scene_cues(lines, cuts)
+        skipped_cues = []
+        for index, (stamp, text) in enumerate(cues):
             wav = Path(temp) / f'{index}.wav'
             narrate(text, wav)
             with wave.open(str(wav), 'rb') as reader:
                 seconds = reader.getnframes() / reader.getframerate()
-            stamp -= sum(max(0, min(stamp, end) - start) for start, end in cuts)
-            start = max(cursor, stamp)
-            wavs.append((wav, round(start * 1000), text))
-            cursor = start + seconds + 0.12
+            if index + 1 < len(cues) and stamp + seconds + .06 > cues[index + 1][0]:
+                # Avoid drift or overlapping speech. Keep the later event on its own frame.
+                skipped_cues.append(stamp)
+                continue
+            wavs.append((wav, round(stamp * 1000), text))
+            cursor = stamp + seconds + .12
         # Remove only redundant waiting on unchanged screens and keep the full raw recording.
         video_seconds = duration - sum(end - start for start, end in cuts)
         discard = '+'.join(f'between(t,{start:.3f},{end:.3f})' for start, end in cuts)
@@ -317,7 +336,12 @@ def build(folder):
         portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
         translated = translation_filters(trace, temp) if viewport else ''
         panel = ',' + translated if translated else ''
-        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{portrait}[v]']
+        intro = Path(temp) / 'opening-title.txt'
+        intro.write_text(f'ЗУЗА  /  {title}', encoding='utf-8')
+        # Put the intro on the first gameplay shot, not in front of it.
+        opening = (",drawbox=x=14:y=ih-56:w=iw-28:h=42:color=0x0b1425@0.84:t=fill:enable='lt(t,2.2)'"
+                   f",drawtext=textfile={intro}:expansion=none:x=26:y=h-46:fontsize=22:fontcolor=white:enable='lt(t,2.2)'")
+        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{opening}{portrait}[v]']
         # The clips never overlap. Assemble one PCM track to avoid opening
         # hundreds of FFmpeg inputs for a multi-board campaign.
         narration = Path(temp) / 'narration.wav'
@@ -368,11 +392,11 @@ def build(folder):
     # the videos that actually exist rather than a single claimed file.
     parts = split_parts(folder, f'{base}.mp4', edited, gameplay, short=short,
                         game=title, author=str(trace.get('author') or 'unknown'),
-                        repository_url=url)
+                        repository_url=source if trace.get('game') == 'SuperTuxKart' else url)
     write_release_evidence(folder, trace, capture_seconds=duration, play_seconds=gameplay,
                            parts=parts, subtitle=captions_path.name)
     report = {'short': short, 'video_format': 'short' if short else 'long', 'beta_episode': trace.get('short') is True and not puzzle and not viewport, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
-        'cuts_seconds': cuts, 'raw_duration_seconds': duration,
+        'cuts_seconds': cuts, 'voices_skipped_to_preserve_sync': skipped_cues, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'boards_won': trace.get('boards_won'),
         'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay >= MIN_EDITED_GAMEPLAY_SECONDS,

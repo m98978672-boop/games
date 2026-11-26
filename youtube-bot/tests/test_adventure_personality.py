@@ -30,3 +30,9 @@ class AdventurePersonalityTests(unittest.TestCase):
         self.assertEqual(plan(trace)[2], [(1, 6)])
         event['verified_thinking_only_ms'] = [1000, 21000]
         self.assertEqual(plan(trace)[2], [])
+
+    def test_scene_cues_keep_order_and_map_to_exact_edited_frames(self):
+        from adventure_draft import scene_cues
+        self.assertEqual(scene_cues([(0, 'Пролог.'), (4, 'Второй кадр.'),
+                                    (4, 'Реакция.'), (8, 'Выход.')], [(1, 3)]),
+                         [(0, 'Пролог.'), (2, 'Второй кадр. Реакция.'), (6, 'Выход.')])
