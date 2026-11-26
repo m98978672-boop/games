@@ -41,6 +41,10 @@ if __name__ == '__main__':
                   actual=russian_game_text(source, source_language=lang))
              for lang, source, reference in MULTILINGUAL]
     Path(sys.argv[1]).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
+    # Fixed, non-sensitive fixtures only. Annotations remain available to review
+    # even in environments that cannot download Actions artifacts.
+    for row in rows:
+        print('::notice title=Translation example::' + json.dumps(row, ensure_ascii=False), flush=True)
     print(f'Usable outputs: {sum(row["actual"] is not None for row in rows)}/{len(rows)}; semantic accuracy not automatically scored.')
     if not any(row['actual'] is not None for row in rows):
         raise RuntimeError('The loaded model produced no valid translations')
