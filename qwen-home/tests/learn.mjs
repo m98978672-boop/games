@@ -143,6 +143,10 @@ check('ответы не теряются на гонке коммитов: ко
 check('страница сама дожидается ответа: разговор перепроверяется каждые 30 секунд, отвеченный вопрос уходит из ожидания', appJs.includes('loadDialogue') && appJs.includes('pruneAnsweredOutbox') && appJs.includes('30000') && appJs.includes('перезагружать не нужно'));
 check('очередь вопросов не теряется: отвечает на все неотвеченные в хвосте', talkGen.includes('Без ответа вопросов') && talkGen.includes('answered_turns'));
 const liveJs = await readFile(path.join(home, '..', 'kvenya', 'live.js'), 'utf8');
+check('сайт знает её настоящие факты: те же файлы дома, что читает дом, и проверка чисел в ответе',
+  liveJs.includes('loadSelfFacts') && liveJs.includes('selfFactsBlock') && liveJs.includes('inventedNumbers')
+  && liveJs.includes("state.json") && liveJs.includes("bridge/games.json") && liveJs.includes("bridge/wants.json")
+  && liveJs.includes('шагов обучения') && liveJs.includes('счёт в шахматах'));
 check('живой разговор через сайт: браузерная модель, её персона из дома, живой поиск', liveJs.includes('@huggingface/transformers') && liveJs.includes('persona.md') && liveJs.includes('ru.wikipedia.org/w/api.php') && liveJs.includes('Qwen2.5-0.5B-Instruct'));
 const rootSw = await readFile(path.join(home, '..', 'sw.js'), 'utf8');
 check('скачанная Квеня остаётся в браузере: постоянное хранение, проверка кэша и продолжение после перерыва', liveJs.includes('navigator.storage.persist') && liveJs.includes('transformers-cache') && liveJs.includes('kvenya.liveModel.saved.v1') && liveJs.includes('Продолжить загрузку Квени') && liveJs.includes('useBrowserCache') && rootSw.includes("'transformers-cache'") && rootSw.includes('PRESERVED_CACHES'));
@@ -219,6 +223,168 @@ const wantsPy = await readFile(path.join(home, 'tools', 'wants.py'), 'utf8');
 const bridgeSensePy = await readFile(path.join(home, 'tools', 'bridge-sense.py'), 'utf8');
 const bridgeJsWants = await readFile(path.join(home, '..', 'kvenya', 'bridge.js'), 'utf8');
 check('её собственная воля и скорость: желания из фактов, главное одно, окружение из кэша, решение о поиске короткое', wantsPy.includes('def pick') && wantsPy.includes('want-five-pipes') && wantsPy.includes('bridge/wants') === false && motPy.includes('ownWantsDone') && motPy.includes('own-will') && bridgeSensePy.includes("'wants': wants") && bridgeJsWants.includes('renderWants') && worldHtml.includes('kvBridgeWants') && talkWorkflow.includes('kvenya-venv') && talkWorkflow.includes('import torch, transformers, peft') && talkGen.includes('max_new=8') && talkGen.includes('wants.json') && talkGen.includes('главное желание сейчас') && expWf.includes('wants.py pick') && dialogue.some((r) => r.id === 'dlg-156') && dialogue.some((r) => r.id === 'dlg-157') && dialogue.some((r) => r.id === 'dlg-158') && dialogue.some((r) => r.id === 'dlg-159') && personaMd.includes('## Её собственные желания'));
+
+check('зрение проверяется замером, а не догадкой: отчёт пишет задержку кадра и вердикт',
+  expPy.includes('frame_ms_sum') && expPy.includes('eyeMs') && expPy.includes('успевала') && expPy.includes('отставала') && expPy.includes('кадр разбирался в среднем'));
+
+check('пять труб держим только по табло игры: награда привязана к настоящему счёту',
+  motPy.includes('five-pipes') && expPy.includes('scoreboard()') && expPy.includes('труб по табло игры'));
+
+check('сюжетную игру она ПРОХОДИТ чтением: пассажи, выборы, память пути, честный финал',
+  expPy.includes('TWINE_TASK_JS') && expPy.includes('def read_story') && expPy.includes('def pick_choice')
+  && expPy.includes('data-kv-choice') && expPy.includes("report.data['kind'] = 'story'")
+  && expPy.includes('reachedEnd') && expPy.includes('история её не отпустила'));
+
+check('сюжетная история видна на её странице: сколько выборов, где закончила — одной строкой',
+  expPy.includes('storyLine') && expWf.includes("report.get('storyLine')") && bridgeJs.includes('kv-story'));
+
+check('пыль экспедиций не копится: каталоги чистятся по списку страницы и до выхода «отчёта нет»',
+  expWf.includes('shutil.rmtree') && expWf.includes("keep = {e.get('dir')")
+  // уборка по списку обязана быть и до выхода: иначе каталоги копятся без новых экспедиций
+  && expWf.indexOf('убрала старый каталог') < expWf.indexOf('Отчёта нет — складывать нечего')
+  // и не сносить свежую: список считается уже вместе с ней
+  && expWf.includes("bridge['expeditions'] = ([entry] + bridge.get('expeditions', []))[:5]"));
+
+check('уборка доезжает до main: удаления каталогов тоже записываются в коммит',
+  expWf.includes('git add -A qwen-home/bridge/expeditions'));
+
+check('в истории она ВИДИТ состояние: силы, находки, следы — читает по словам, а не угадывает',
+  expPy.includes('def read_signal') && expPy.includes('STORY_ENERGY') && expPy.includes('STORY_FINDS')
+  && expPy.includes('STORY_CLUES') && expPy.includes("'clues': clues") && expPy.includes('very tired'));
+
+check('в истории она АНАЛИЗИРУЕТ: карта мест и переходов, а не просто клики',
+  expPy.includes('class StoryMap') && expPy.includes('def untried_targets') && expPy.includes('def fresh_choices')
+  && expPy.includes("'places': len(self.nodes)") && expPy.includes("'map': story_map.as_report()"));
+
+check('в истории она ДОБЫВАЕТ новое: после финала начинает заново и идёт в непройденные ветки',
+  expPy.includes('def restart_story') && expPy.includes('tw-icon[title="Restart" i]')
+  && expPy.includes('runs') && expPy.includes('заходов хватит')
+  && expPy.includes('def mark_open') && expPy.includes('непройденных вариантов не осталось')
+  && expPy.includes('RESTART_JS') && expPy.includes('sessionStorage') && expPy.includes("store.removeItem(k)"));
+
+check('карта честная: переход записывается, когда видно, куда он привёл',
+  expPy.includes("story_map.link(pending['from'], pending['choice'], text, here_ctx, labels,"));
+
+check('находки только настоящие: «рука в кармане» за добычу не считается',
+  expPy.includes('you scour the shelves') && !expPy.includes("'in your pocket', 'you grab'"));
+
+check('вымотанной она не бежит за псом, а отдыхает: силы влияют на выбор',
+  expPy.includes('def is_rest') && expPy.includes('def is_far') && expPy.includes('if energy < 0:'));
+
+check('карта истории видна: места, переходы и находки на её странице',
+  expPy.includes("report.data['storyMap']") && expWf.includes("report.get('storyMap')")
+  && bridgeJs.includes('kv-map') && bridgeJs.includes('карта истории'));
+
+check('не топчется: петли и обратные ходы в историю — в последнюю очередь, плюс стоп-кран',
+  expPy.includes('def is_loop') && expPy.includes('came_from') && expPy.includes('стоп-кран')
+  && expPy.includes('два места') && expPy.includes("hashlib.sha1(norm.encode('utf-8'))"));
+
+check('идёт по НЕнажатым выборам, а не по «новому месту»: цикла дом→кухня→дом нет',
+  expPy.includes('def not_tried') && expPy.includes('return not story_map.tried_here(k, c.get(\'label\'))')
+  && expPy.includes('no_loops'));
+
+check('стоп-кран мягче 18 шагов: успевает обойти дом, но не жжёт время',
+  expPy.includes('len(trail) > 18') && expPy.includes('len(set(trail[-8:])) <= 1'));
+
+check('диалог подтверждения в истории: жмёт «OK», а не «Cancel»',
+  expPy.includes("('ok', 'okay', 'yes', 'да'") && expPy.includes('affirm'));
+
+check('карта истории помнится между прогонами: место — хэш, карта едет в репозиторий',
+  expPy.includes('def to_cache') && expPy.includes('def load_cache') && expPy.includes('hashlib.sha1')
+  && expWf.includes('storymap.json') && expWf.includes('--memo')
+  // иначе карта грузится, но до чтения истории не доходит: «name memo_from is not defined»
+  && expPy.includes('runs=6, memo_from=memo_from'));
+
+check('долгая история: окно до 10 минут и до шести заходов, а не 180 секунд',
+  expPy.includes('min(600, seconds)') && expPy.includes('runs=6') && !expPy.includes('min(180, seconds)'));
+
+check('длинный прогон доносит отчёт: причина падения видна, видео не больше 8 МБ',
+  expWf.includes('trap ') && expWf.includes('scale=640:-2,fps=12') && expWf.includes('Пережатое видео всё ещё'));
+
+check('концовки считаются по ПУТИ, а не по одинаковому экрану «The End»',
+  expPy.includes('routeKey') && expPy.includes("'route': ' → '.join(tail)") && expPy.includes('endingsSeen'));
+
+check('видно, сколько осталось непройденного: карта помнит варианты мест',
+  expPy.includes('def remaining') && expPy.includes("'options': (v.get('options') or [])[:8]")
+  && expPy.includes('непройденных вариантов'));
+
+check('аудит всех обнов истории: код и данные проверены списком, а не на глаз',
+  expPy.includes('StOP') === false
+  && expPy.includes('def remaining') && expWf.includes('storymap.json'));
+
+check('память карты несовместимой схемы не берётся: иначе остаток был бы фальшивым',
+  expPy.includes("SCHEMA = 'text+options-v4'") && expPy.includes("data.get('schema') != self.SCHEMA"));
+
+// Чужой merge из отставшей ветки уже стирал работу: PR #611 вернул старые
+// версии 54 файлов (kvenya/live.js, youtube-bot, workflows, экспедицию).
+// Эти проверки держат отличительные признаки тех правок — если merge снова
+// принесёт старьё, признаки исчезнут и сторож загорится.
+const liveJsNow = await readFile(path.join(home, '..', 'kvenya', 'live.js'), 'utf8');
+check('живой Квеня не откачена: факты о себе из дома, проверка выдуманных чисел, защита с ИИ',
+  liveJsNow.includes('loadSelfFacts') && liveJsNow.includes('selfFactsBlock')
+  && liveJsNow.includes('inventedNumbers') && liveJsNow.includes('detectAiSpeaker'));
+const schedPolicy = await readFile(path.join(home, '..', 'youtube-bot', 'schedule_policy.py'), 'utf8');
+check('расписание ютуба не откачено: политика тайм-слотов на месте',
+  schedPolicy.includes('def ') && schedPolicy.length > 500);
+const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8');
+check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
+  expNow.includes('remaining') && expNow.includes('routeKey')
+  && expNow.includes('memo_from') && expNow.includes('план захода')
+  && expNow.includes("SCHEMA = 'text+options-v4'"));
+const expWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-expedition.yml'), 'utf8');
+check('уборка пыли в workflow не откачена: keep по dir, до выхода «Отчёта нет»',
+  expWorkflow.includes("e.get('dir')") && expWorkflow.indexOf("e.get('dir')") < expWorkflow.indexOf('Отчёта нет — складывать нечего'));
+
+// Два бага, из-за которых заходы 3–6 давали по 0 новых мест при остатке 13.
+check('карта: ребро берёт ГОТОВЫЙ ключ места, а не пересчитывает его из текста',
+  expNow.includes('src_key=None') && expNow.includes("fr = src_key or self.key(src_text)")
+  && expNow.includes("'from_key': my_key"));
+check('карта: при малом остатке идёт туда, где непройденное, а не по петле',
+  expNow.includes('leads_to_new') && expNow.includes("if e['to'] == k:\n                return False")
+  && !expNow.includes("known_here = [c for c in fresh if story_map.is_loop"));
+
+check('карта: маршрут к остатку — первый шаг кратчайшего пути по записанным рёбрам',
+  expNow.includes('def route_to_open') && expNow.includes('deque') && expNow.includes('return step'));
+check('отдых один раз в месте: не перебивает непройденное навсегда',
+  expNow.includes('rest_fresh') && expNow.includes('if rest and (rest_fresh or not fresh)'));
+check('когда здесь всё пройдено — идём по маршруту к остатку, а не наугад',
+  expNow.includes('step = story_map.route_to_open(passage)'));
+
+check('стоп-кран не рубит маршрут к остатку: только одно место и ноль новых',
+  expNow.includes("len(set(trail[-8:])) <= 1") && expNow.includes('and new_places == 0'));
+check('места с остатком считаются по непройденному, а не по застывшему флагу open',
+  expNow.includes("for label in (n.get('options') or [])")
+  && expNow.includes('unopened = [k for k, n in story_map.nodes.items()'));
+
+check('карта: тот же текст с другим набором вариантов — ОДНО место, варианты дописываются',
+  expNow.includes('def text_key_index') && expNow.includes('already = self.text_key_index().get(bare_k)')
+  && expNow.includes("merged = node.setdefault('options', [])") && expNow.includes('def bare('));
+check('карта: висячие рёбра не берутся из памяти (было 174 из 311 — половина графа)',
+  expNow.includes("if e.get('from') in self.nodes and e.get('to') in self.nodes"));
+check('карта: нажатие не теряется между разными наборами одного места',
+  expNow.includes('def tried_here') && expNow.includes('def mark_tried')
+  && expNow.includes("if (node.get('text_key') or '', label) in self.tried:") && expNow.includes('bare = self.bare_key(node.get'));
+
+check('Harlowe дописывает названия ссылок в текст пассажа — ключ их вычищает',
+  expNow.includes('def bare(') && expNow.includes("norm = norm.replace(ln, ' ')"));
+
+check('память карты помнит text_key: иначе нажатия теряются и выбор жмётся 68 раз подряд',
+  expNow.includes("'text_key': v.get('text_key') or k")
+  && expNow.includes("node['text_key'] = self.bare_key(node.get('text'), node.get('options'))"));
+
+// Чужой merge из отставшей ветки уже дважды стирал работу: PR #611 (54 файла)
+// и PR #673 (140 файлов, включая фиксы карты). Эти проверки держат признаки
+// самой тяжёлой потери — живой Квени и карты истории.
+check('откат не вернулся: экспедиция умеет и место без вариантов, и ключ текста',
+  expNow.includes('def bare(') && expNow.includes('def bare_key')
+  && expNow.includes('def mark_tried') && expNow.includes('def route_to_open')
+  && expNow.includes('def leads_to_new') && expNow.includes('text+options-v4'));
+check('откат не вернулся: память карты хранит text_key и отбрасывает висячие рёбра',
+  expNow.includes("'text_key': v.get('text_key') or k")
+  && expNow.includes("if e.get('from') in self.nodes and e.get('to') in self.nodes"));
+check('откат не вернулся: страница-отчёт показывает найденные финалы',
+  (await readFile(path.join(home, '..', 'tools', 'make-lost-spot-report.py'), 'utf8'))
+    .includes('Найденные финалы'));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
