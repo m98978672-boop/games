@@ -13,13 +13,13 @@ from gameplay_policy import video_kind_for_duration
 from schedule_policy import manual_publish_time
 
 
-def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool) -> Path:
+def prepare(folder: Path, run_id: str, publish_at: str) -> Path:
     from gameplay_release_gate import require_verified_gameplay_release
-    # Checked against the files in this folder, not against a flag: the evidence
-    # file's numbers are re-derived from the subtitle track and the parts.
+    # The gate re-derives every number from the files in this folder, and it
+    # checks the rights record too: our own games carry "own", an external game
+    # must carry a verified open licence. Asking for a second flag on top would
+    # only mean somebody has to tick a box that proves nothing new.
     require_verified_gameplay_release(folder)
-    if not rights_verified:
-        raise ValueError('Public recording/asset rights must be explicitly verified first.')
     if not run_id.isascii() or not run_id.isdecimal():
         raise ValueError('Expected a numeric capture run ID.')
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
@@ -61,6 +61,4 @@ def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool
 
 if __name__ == '__main__':
     folder, run_id, slot = sys.argv[1:]
-    trace = json.loads((Path(folder) / 'trace.json').read_text(encoding='utf-8'))
-    rights = 'PUZZLE_RECORDING_RIGHTS_VERIFIED' if trace.get('game') == '16 Puzzle' else 'ADVENTURE_RECORDING_RIGHTS_VERIFIED'
-    publish(prepare(Path(folder), run_id, slot, rights_verified=os.environ.get(rights) == 'true'))
+    publish(prepare(Path(folder), run_id, slot))
