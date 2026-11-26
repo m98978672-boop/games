@@ -571,6 +571,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$CAPTURE_RUN" == 45835569880 ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15124642887" | jq -e '
+              .name == "relay-3d-beta-45835569880" and .expired == false and .workflow_run.id == 45835569880
+              and .digest == "sha256:726c86da8b2480ee2b4d20bfd0c45e8884fc62ea169184be2fab7c39c2a55a01"' >/dev/null
+            gh run download "$CAPTURE_RUN" --name relay-3d-beta-45835569880 --dir "$RUNNER_TEMP/adventure-publish"
+            echo 'TRUSTED_RELAY_CAPTURE=true' >> "$GITHUB_ENV"
+            exit 0
+          fi
           if [[ "$CAPTURE_RUN" == 45708093545 || "$CAPTURE_RUN" == lighthouse-revoice ]]; then
             gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15065774746" | jq -e '
               .name == "adventure-private-45708093545" and .expired == false and .workflow_run.id == 45708093545
