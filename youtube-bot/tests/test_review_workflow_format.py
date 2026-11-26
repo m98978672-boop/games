@@ -13,15 +13,15 @@ class ReviewWorkflowFormatTests(unittest.TestCase):
             with self.subTest(cron=cron):
                 self.assertEqual(choose_format('schedule', cron, ''), slot_format(slot_at))
         # A manual format input never overrides a scheduled lane.
-        self.assertEqual(choose_format('schedule', '0 13 * * *', 'short'), 'long')
+        self.assertEqual(choose_format('schedule', '0 0 * * *', 'short'), 'long')
 
     def test_every_scheduled_cron_maps_to_the_right_format(self):
         # The old build recognised only two literals, so 7 of 8 scheduled runs
         # died on "Unknown scheduled review event". Every known cron must work.
-        self.assertEqual(len(CRON_SLOTS), 9)
+        self.assertEqual(len(CRON_SLOTS), 4)
         kinds = [choose_format('schedule', cron, '') for cron in CRON_SLOTS]
-        self.assertEqual(kinds.count('short'), 4)
-        self.assertEqual(kinds.count('long'), 4)
+        self.assertEqual(kinds.count('short'), 2)
+        self.assertEqual(kinds.count('long'), 1)
         # One gameplay firing a day, recognised as its own category.
         self.assertEqual(kinds.count('gameplay'), 1)
     def test_manual_format_and_fail_closed(self):
@@ -35,8 +35,11 @@ class ReviewWorkflowFormatTests(unittest.TestCase):
         legacy = (root / '.github/workflows/youtube-longform-autopilot.yml').read_text()
         # Every cron in the policy table must actually be in the workflow, and
         # the workflow must not schedule anything the policy does not know.
-        for cron in CRON_SLOTS:
-            self.assertIn(f'cron: "{cron}"', authorized)
+        import re
+        schedule = authorized.split('  schedule:', 1)[1].split('  workflow_dispatch:', 1)[0]
+        actual = re.findall(r'cron:\s*["\']([^"\']+)["\']', schedule)
+        self.assertEqual(set(actual), set(CRON_SLOTS))
+        self.assertEqual(len(actual), len(CRON_SLOTS))
 
         self.assertIn('review_workflow_format.py', authorized)
         self.assertIn('timeout-minutes: 360', authorized)

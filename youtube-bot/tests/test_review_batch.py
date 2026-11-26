@@ -22,12 +22,12 @@ class ReviewBatchTests(unittest.TestCase):
         # An explicit start is honoured, then the next regular long slot follows.
         self.assertEqual(plan(2, 'long', '2026-11-25 20:30', now=now), ['2026-11-25 20:30', '2026-11-26 06:00'])
         self.assertEqual(plan(1, 'short', '', now=now), [''])
-        # Four slots per format per day now: each type doubled and staggered.
+        # The approved cadence spreads the batch over days.
         self.assertEqual(plan(5, 'short', '2026-11-25 09:00', now=now),
-                         ['2026-11-25 09:00', '2026-11-25 13:00', '2026-11-25 17:00',
-                          '2026-11-25 21:00', '2026-11-26 09:00'])
+                         ['2026-11-25 09:00', '2026-11-25 13:00', '2026-11-26 09:00',
+                          '2026-11-26 13:00', '2026-11-27 09:00'])
         self.assertEqual(plan(2, 'short', '', now=now), ['2026-11-25 09:00', '2026-11-25 13:00'])
-        self.assertEqual(plan(2, 'long', '', now=now), ['2026-11-25 06:00', '2026-11-25 11:00'])
+        self.assertEqual(plan(2, 'long', '', now=now), ['2026-11-25 06:00', '2026-11-26 06:00'])
         for args in [(0, 'short', ''), (6, 'short', ''), (3, 'long', ''), (1, 'other', '')]:
             with self.subTest(args=args), self.assertRaises(ValueError):
                 plan(*args, now=now)
@@ -171,12 +171,12 @@ class ReviewBatchTests(unittest.TestCase):
         shorts = plan(4, 'short', '', now=now)
         self.assertEqual(len(shorts), 4)
         self.assertEqual(shorts, sorted(shorts))
-        # Every planned time must be one of the four regular Short slots.
-        allowed_short = {'09:00', '13:00', '17:00', '21:00'}
+        # Every planned time must be one of the two regular Short slots.
+        allowed_short = {'09:00', '13:00'}
         self.assertTrue(all(s[11:] in allowed_short for s in shorts), shorts)
         longs = plan(2, 'long', '', now=now)
         self.assertEqual(len(longs), 2)
-        allowed_long = {'06:00', '11:00', '15:00', '19:00'}
+        allowed_long = {'06:00'}
         self.assertTrue(all(s[11:] in allowed_long for s in longs), longs)
         # Blank and padded input behaves like an empty one.
         self.assertEqual(plan(2, 'short', '   ', now=now), shorts[:2])

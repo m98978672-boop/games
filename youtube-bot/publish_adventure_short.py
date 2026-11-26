@@ -15,6 +15,8 @@ from schedule_policy import manual_publish_time, next_publish_slot
 
 
 def prepare(folder, run_id, requested_slot=None, *, lighthouse=False):
+    from gameplay_release_gate import require_verified_gameplay_release
+    require_verified_gameplay_release()
     if not lighthouse and os.getenv('ADVENTURE_RECORDING_RIGHTS_VERIFIED') != 'true':
         raise ValueError('Recording and asset rights are not confirmed')
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
@@ -60,6 +62,8 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False):
 
 
 def publish_checked(result, *, lighthouse=False, now=None):
+    from gameplay_release_gate import require_verified_gameplay_release
+    require_verified_gameplay_release()
     if lighthouse:
         payload = json.loads(result.read_text(encoding='utf-8'))
         metadata = payload['metadata']
