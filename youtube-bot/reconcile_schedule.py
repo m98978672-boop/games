@@ -58,7 +58,10 @@ def _command(slot_local, video_format: str) -> str:
     a review run could produce it.
     """
     if video_format == "gameplay":
-        return (f"gh workflow run youtube-playthrough.yml --ref main "
+        # Gameplay is recorded and published by the autopilot's own lane, which
+        # checks release.evidence.json before it uploads anything.
+        return (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
+                f"-f gameplay_episode=true "
                 f"-f publish_at='{slot_local:%Y-%m-%d %H:%M}'")
     return (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
             f"-f video_format={video_format} -f made_for_kids=false -f batch_count=1 "
@@ -95,6 +98,7 @@ def render_report(missing: list[datetime], booked: list[datetime], *, error: str
         "",
         f"Из них: Shorts **{counts['short']}**, длинных обзоров **{counts['long']}**, "
         f"игровых обзоров **{counts['gameplay']}**.",
+        "Запись очереди не доказывает публикацию на YouTube и не подтверждает формат видео.",
         "",
     ]
     if not everything:
@@ -116,20 +120,35 @@ def render_report(missing: list[datetime], booked: list[datetime], *, error: str
             lines.append("|---|---|---|")
         video_format = _video_format(slot.time())
         label = _LABELS[video_format]
-        status = "✅ готово" if slot in booked_set else "❌ нет видео"
+        status = "✅ запись очереди с ID видео" if slot in booked_set else "❌ нет подтверждения в очереди"
         lines.append(f"| {slot:%H:%M} | {label} | {status} |")
 
     if missing_set:
         lines += ["", "### Чем закрыть пропуски", ""]
-        lines.append("Каждая строка — одна команда, копируется целиком.")
+        lines.append("Команды приведены только для будущих слотов обзоров; сначала проверьте YouTube Studio.")
         lines.append("")
         for slot in sorted(missing_set):
             video_format = _video_format(slot.time())
             lines.append(f"- **{slot:%d.%m %H:%M}** ({_LABELS[video_format]}):")
             lines.append("")
-            lines.append("  ```")
-            lines.append(f"  {_command(slot, video_format)}")
-            lines.append("  ```")
+            if video_format == 'gameplay':
+                # The gate now checks release.evidence.json instead of refusing
+                # outright, so a recording can be requested again. What is still
+                # required is the owner's dated approval inside that evidence.
+                lines.append('  Запись прохождения готовится автопилотом; публикация '
+                             'пойдёт только при подтверждённых правах и 20 минутах игры.')
+                lines.append("")
+                lines.append("  ```")
+                lines.append(f"  {_command(slot, video_format)}")
+                lines.append("  ```")
+            elif slot <= current.astimezone(CHANNEL_TZ) + timedelta(minutes=45):
+                lines.append('  Время прошло или слишком близко: сначала проверьте YouTube Studio и очередь.')
+            else:
+                lines.append('  Сначала проверьте YouTube Studio и очередь: предыдущая загрузка могла остаться без записи.')
+                lines.append("")
+                lines.append("  ```")
+                lines.append(f"  {_command(slot, video_format)}")
+                lines.append("  ```")
             lines.append("")
     else:
         lines += ["", "Все слоты на эти дни уже заняты. Ничего запускать не нужно.", ""]

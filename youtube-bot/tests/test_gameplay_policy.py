@@ -111,7 +111,77 @@ class SlotTests(unittest.TestCase):
             next_gameplay_slot(datetime(2026, 11, 26, 10))
 
 
-class RecallTests(unittest.TestCase):
+class WiringTests(unittest.TestCase):
+    """The rule is only real if something executes it."""
+
+    def test_the_decision_reaches_a_job_that_records(self):
+        import yaml
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / '.github/workflows/youtube-shorts-autopilot.yml').read_text(encoding='utf-8')
+        parsed = yaml.safe_load(workflow)
+        gate = parsed['jobs']['gameplay-gate']
+        # Without job-level outputs the recorder receives empty strings and
+        # records even when the gate said no.
+        self.assertEqual(set(gate['outputs']), {'publish', 'video_kind', 'publish_at'})
+        recorder = parsed['jobs']['record-gameplay']
+        self.assertEqual(recorder['needs'], 'gameplay-gate')
+        # The recording is a reusable workflow, so it must be its own job; a step
+        # cannot declare `uses: ./.github/workflows/...`. Without it the chain
+        # stops at a decision again.
+        capture = parsed['jobs']['capture-gameplay']
+        self.assertEqual(capture['needs'], 'record-gameplay')
+        self.assertTrue(capture['uses'].startswith('./.github/workflows/'))
+        self.assertIn('record', recorder['outputs'])
+        # And the recording must reach the channel, or the lane ends at a file
+        # nobody watches. The gate inside the publisher decides whether it may.
+        publish = parsed['jobs']['publish-gameplay']
+        self.assertEqual(sorted(publish['needs']), ['capture-gameplay', 'record-gameplay'])
+        text = workflow[workflow.index('  publish-gameplay:'):]
+        text = text[:text.index('\n  check-topic-history:')]
+        self.assertIn('release.evidence.json', text)
+        for uploader in ('publish_adventure_short.py', 'publish_adventure_draft.py'):
+            self.assertIn(uploader, text)
+        tail = workflow[workflow.index('  record-gameplay:'):]
+        self.assertIn('GATE_PUBLISH', tail)
+        self.assertIn('record=false', tail)
+
+    def test_the_workflow_does_not_promise_a_release_that_is_blocked(self):
+        # Publication is blocked until the release requirements are verifiable.
+        # A summary line saying a video "will be released at 18:00" would be a
+        # promise the pipeline cannot keep.
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / '.github/workflows/youtube-shorts-autopilot.yml').read_text(encoding='utf-8')
+        tail = workflow[workflow.index('  record-gameplay:'):workflow.index('  capture-gameplay:')]
+        self.assertNotIn('выйдет в', tail)
+        self.assertIn('публикация ждёт проверки', tail)
+
+    def test_a_manual_gameplay_run_exists(self):
+        # Nothing could fill the 18:00 slot by hand before this input existed.
+        import yaml
+        root = Path(__file__).resolve().parents[2]
+        parsed = yaml.safe_load((root / '.github/workflows/youtube-shorts-autopilot.yml').read_text(encoding='utf-8'))
+        self.assertIn('gameplay_episode', parsed[True]['workflow_dispatch']['inputs'])
+
+    def test_the_suggested_command_points_at_a_real_workflow(self):
+        # Gameplay publication is deliberately blocked, so the honest report
+        # offers no command rather than one pointing at a workflow that does not
+        # exist. If a command appears, it must name a real workflow file.
+        from datetime import datetime, timezone
+        import reconcile_schedule
+        root = Path(__file__).resolve().parents[2]
+        workflows = {path.name for path in (root / '.github/workflows').glob('*.yml')}
+        report = reconcile_schedule.render_report(
+            [datetime(2026, 11, 26, 15, tzinfo=timezone.utc)], [], error=None, days=1)
+        commands = [line for line in report.splitlines() if 'gh workflow run' in line]
+        if not commands:
+            self.assertIn('заблокирована', report)
+            return
+        named = commands[0].split('gh workflow run ')[1].split()[0]
+        self.assertIn(named, workflows)
+
+
+class PublicationTests(unittest.TestCase):
+
     def test_state_survives_a_restart(self):
         from gameplay_policy import states_from_rows
         rows = [{'game_id': 'adventure', 'finished': True},

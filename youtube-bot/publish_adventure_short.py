@@ -14,7 +14,15 @@ from review_slot_state import planned_slots
 from schedule_policy import manual_publish_time, next_publish_slot
 
 
+REVIEWED_RELAY_RUN = '45835569880'
+
+
 def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=False, relay=False):
+    if relay and str(run_id) != REVIEWED_RELAY_RUN:
+        raise ValueError('Only the explicitly requested Relay 3D experiment can use this release path')
+    if not relay:
+        from gameplay_release_gate import require_verified_gameplay_release
+        require_verified_gameplay_release(folder)
     if revoice and not lighthouse:
         raise ValueError('Voice revision is only permitted for the reviewed Lighthouse capture')
     if not (lighthouse or relay) and os.getenv('ADVENTURE_RECORDING_RIGHTS_VERIFIED') != 'true':
@@ -63,8 +71,12 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=Fa
     return result
 
 
-def publish_checked(result, *, lighthouse=False, now=None):
-    if lighthouse:
+def publish_checked(result, *, lighthouse=False, relay=False, now=None):
+    from gameplay_release_gate import require_verified_gameplay_release
+    # The result file sits in the artifact folder that holds the evidence.
+    if not relay:
+        require_verified_gameplay_release(Path(result).parent)
+    if lighthouse or relay:
         payload = json.loads(result.read_text(encoding='utf-8'))
         metadata = payload['metadata']
         try:
@@ -97,12 +109,12 @@ def publish_checked(result, *, lighthouse=False, now=None):
 
 
 if __name__ == '__main__':
-    lighthouse = os.getenv('TRUSTED_LIGHTHOUSE_CAPTURE') == 'true'
     relay = os.getenv('TRUSTED_RELAY_CAPTURE') == 'true'
+    lighthouse = not relay and os.getenv('TRUSTED_LIGHTHOUSE_CAPTURE') == 'true'
     try:
         result = prepare(Path(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None,
                          lighthouse=lighthouse, revoice=os.getenv('LIGHTHOUSE_REVOICE') == 'true', relay=relay)
-        status = publish_checked(result, lighthouse=lighthouse or relay)
+        status = publish_checked(result, lighthouse=lighthouse, relay=relay)
         if status.get('video_id'):
             print(f"::notice title=YouTube upload confirmed::https://www.youtube.com/watch?v={status['video_id']} at {status.get('publish_at') or 'unconfirmed time'}")
     except Exception as exc:

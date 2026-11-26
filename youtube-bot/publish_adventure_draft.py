@@ -14,6 +14,10 @@ from schedule_policy import manual_publish_time
 
 
 def prepare(folder: Path, run_id: str, publish_at: str, *, rights_verified: bool) -> Path:
+    from gameplay_release_gate import require_verified_gameplay_release
+    # Checked against the files in this folder, not against a flag: the evidence
+    # file's numbers are re-derived from the subtitle track and the parts.
+    require_verified_gameplay_release(folder)
     if not rights_verified:
         raise ValueError('Public recording/asset rights must be explicitly verified first.')
     if not run_id.isascii() or not run_id.isdecimal():

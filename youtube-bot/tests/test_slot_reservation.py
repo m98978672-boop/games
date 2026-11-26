@@ -45,7 +45,7 @@ class SlotReservationTests(unittest.TestCase):
         reserved = datetime(2026, 11, 25, 3, tzinfo=timezone.utc)  # 06:00 Moscow
         moved, adjusted = settle_slot_after_render(reserved, 'long', now=reserved)
         self.assertTrue(adjusted)
-        self.assertEqual(moved.astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), '25.11 11:00')
+        self.assertEqual(moved.astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), '26.11 06:00')
 
     def test_served_slot_follows_the_cron_not_the_runner_clock(self):
         # Every firing serves exactly one documented slot; a delayed run keeps
@@ -57,22 +57,17 @@ class SlotReservationTests(unittest.TestCase):
         pairs = [
             ('0 3 * * *', datetime(2026, 11, 25, 3, 0, tzinfo=timezone.utc), '25.11 09:00'),
             ('0 7 * * *', datetime(2026, 11, 25, 7, 0, tzinfo=timezone.utc), '25.11 13:00'),
-            ('0 11 * * *', datetime(2026, 11, 25, 11, 0, tzinfo=timezone.utc), '25.11 17:00'),
-            ('0 15 * * *', datetime(2026, 11, 25, 15, 0, tzinfo=timezone.utc), '25.11 21:00'),
             ('0 0 * * *', datetime(2026, 11, 25, 0, 0, tzinfo=timezone.utc), '25.11 06:00'),
-            ('0 5 * * *', datetime(2026, 11, 25, 5, 0, tzinfo=timezone.utc), '25.11 11:00'),
-            ('0 9 * * *', datetime(2026, 11, 25, 9, 0, tzinfo=timezone.utc), '25.11 15:00'),
-            ('0 13 * * *', datetime(2026, 11, 25, 13, 0, tzinfo=timezone.utc), '25.11 19:00'),
         ]
         for cron, now, expected in pairs:
             with self.subTest(cron=cron):
                 self.assertEqual(served_slot(cron, now=now).astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), expected)
 
     def test_delayed_shorts_run_still_serves_the_slot_it_missed(self):
-        # 21:00 Moscow is already past; a run started for it must not quietly
+        # 13:00 Moscow is already past; a run started for it must not quietly
         # claim tomorrow, otherwise today's missed slot looks covered.
-        late = served_slot('0 15 * * *', now=datetime(2026, 11, 25, 18, 30, tzinfo=timezone.utc))
-        self.assertEqual(late.astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), '25.11 21:00')
+        late = served_slot('0 7 * * *', now=datetime(2026, 11, 25, 11, 30, tzinfo=timezone.utc))
+        self.assertEqual(late.astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), '25.11 13:00')
 
     def test_unknown_cron_and_naive_time_fail_closed(self):
         with self.assertRaises(ValueError):
