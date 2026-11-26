@@ -363,10 +363,14 @@ check('карта: висячие рёбра не берутся из памят
   expNow.includes("if e.get('from') in self.nodes and e.get('to') in self.nodes"));
 check('карта: нажатие не теряется между разными наборами одного места',
   expNow.includes('def tried_here') && expNow.includes('def mark_tried')
-  && expNow.includes("return (node.get('text_key') or '', label) in self.tried"));
+  && expNow.includes("if (node.get('text_key') or '', label) in self.tried:") && expNow.includes('bare = self.bare_key(node.get'));
 
 check('Harlowe дописывает названия ссылок в текст пассажа — ключ их вычищает',
   expNow.includes('def bare(') && expNow.includes("norm = norm.replace(ln, ' ')"));
+
+check('память карты помнит text_key: иначе нажатия теряются и выбор жмётся 68 раз подряд',
+  expNow.includes("'text_key': v.get('text_key') or k")
+  && expNow.includes("node['text_key'] = self.bare_key(node.get('text'), node.get('options'))"));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
