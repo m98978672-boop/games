@@ -1,6 +1,7 @@
 """Build a private, trace-based Russian pilot; keep its raw footage unchanged."""
 import json
 import math
+import os
 import subprocess
 import sys
 import tempfile
@@ -16,6 +17,18 @@ PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
 MIN_EDITED_GAMEPLAY_SECONDS = 600
 MAX_CUT_FRACTION = 0.25
 ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHREE': 'третий'}
+
+
+def narrate(text, wav):
+    model = os.environ.get('PIPER_MODEL_PATH')
+    if model:
+        if not Path(model).is_file() or not Path(model + '.json').is_file():
+            raise RuntimeError('Russian neural voice is missing; refusing fallback audio')
+        subprocess.run(['piper', '--model', model, '--output_file', str(wav),
+                        '--length_scale', '1.10', '--sentence_silence', '0.22'],
+                       input=text, text=True, check=True, timeout=60)
+    else:
+        subprocess.run(['espeak-ng', '-v', 'ru', '-s', '145', '-w', str(wav), text], check=True, timeout=30)
 
 
 def plan(trace):
@@ -87,7 +100,7 @@ def plan(trace):
         elif lighthouse:
             label = event.get('choice_label')
             if isinstance(label, str) and label.strip():
-                lines.append((prior, f'Мой выбор: {label.strip()}.'))
+                lines.append((prior, f'Решаю {label.strip()[:1].lower()}{label.strip()[1:]}.'))
         elif trace.get('short'):
             line, reaction = short_comment(event, ORDINAL[event['choice']])
             lines.append((prior, line))
@@ -99,7 +112,7 @@ def plan(trace):
         prior = stamp
     won = trace['outcome'] == ('game_reported_win' if puzzle else 'game_reported_victory')
     ending = f'Решено досок: {trace.get("boards_won", 1)}.' if puzzle else 'Паром миновал риф.' if lighthouse else 'Артефакт найден.'
-    lines.append((prior, ending if won else 'Финиш не подтверждён. Это первая часть.'))
+    lines.append((prior, ending if won else ('Паром потерял сигнал. Спасатели начали поиски.' if lighthouse and trace['outcome'] == 'game_reported_death' else 'Финиш не подтверждён. Это первая часть.')))
     return duration, lines, cuts, won
 
 
@@ -133,7 +146,7 @@ def build(folder):
         cursor = 0.0
         for index, (stamp, text) in enumerate(lines):
             wav = Path(temp) / f'{index}.wav'
-            subprocess.run(['espeak-ng', '-v', 'ru', '-s', '175', '-w', str(wav), text], check=True, timeout=30)
+            narrate(text, wav)
             with wave.open(str(wav), 'rb') as reader:
                 seconds = reader.getnframes() / reader.getframerate()
             stamp -= sum(max(0, min(stamp, end) - start) for start, end in cuts)
