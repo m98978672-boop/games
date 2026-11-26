@@ -284,7 +284,7 @@ check('идёт по НЕнажатым выборам, а не по «ново�
   && expPy.includes('no_loops'));
 
 check('стоп-кран мягче 18 шагов: успевает обойти дом, но не жжёт время',
-  expPy.includes('len(trail) > 18') && expPy.includes('len(set(trail[-8:])) <= 1'));
+  expPy.includes('len(trail) >= 18') && expPy.includes('len(set(trail[-8:])) <= 2'));
 
 check('диалог подтверждения в истории: жмёт «OK», а не «Cancel»',
   expPy.includes("('ok', 'okay', 'yes', 'да'") && expPy.includes('affirm'));
@@ -350,8 +350,9 @@ check('отдых один раз в месте: не перебивает не�
 check('когда здесь всё пройдено — идём по маршруту к остатку, а не наугад',
   expNow.includes('step = story_map.route_to_open(passage)'));
 
-check('стоп-кран не рубит маршрут к остатку: только одно место и ноль новых',
-  expNow.includes("len(set(trail[-8:])) <= 1") && expNow.includes('and new_places == 0'));
+check('стоп-кран не рубит маршрут к остатку: петля по ПОДПИСИ текста и ноль новых',
+  expNow.includes("len(set(trail[-8:])) <= 2") && expNow.includes('and new_places == 0')
+  && expNow.includes('trail.append(story_map.text_sig(text, labels))'));
 check('места с остатком считаются по непройденному, а не по застывшему флагу open',
   expNow.includes("for label in (n.get('options') or [])")
   && expNow.includes('unopened = [k for k, n in story_map.nodes.items()'));
