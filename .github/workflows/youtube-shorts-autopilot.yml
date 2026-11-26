@@ -614,6 +614,7 @@ jobs:
           name: lighthouse-russian-voice-v2-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/adventure-publish/zuza-adventure-short.mp4
+            ${{ runner.temp }}/adventure-publish/zuza-adventure-short.ru.srt
             ${{ runner.temp }}/adventure-publish/pilot.json
           if-no-files-found: error
       - name: Publish through the existing authorized uploader
