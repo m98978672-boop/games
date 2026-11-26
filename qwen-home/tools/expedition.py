@@ -1129,7 +1129,10 @@ class StoryMap:
             return False
 
         if has_left(start_key):
-            return None                     # остаток прямо здесь — никуда идти не надо
+            # Остаток прямо здесь: маршрут не нужен, пусть цикл берёт свои
+            # варианты. Раньше это возвращало None, и получалось «идти некуда»
+            # на старте, хотя непройденное было в этом же месте.
+            return ''
         # Достижимость — по ключу узла И по ключу текста: места с разными
         # наборами вариантов живут под разными ключами, но это один пассаж.
         def same(k1, k2):
@@ -1361,7 +1364,9 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     def here_key(c):
         return (k, c.get('key', c.get('label', '')))
 
-    # Диалог подтверждения: сначала «OK», а не «Cancel».
+    # Диалог подтверждения: сначала «OK», а не «Cancel». «Cancel» и «door» в
+    # этом окне — не ветки истории, а служебные кнопки: оставлять их в остатке
+    # навсегда нельзя, иначе «непройденное» никогда не кончается.
     if len(choices) <= 3:
         affirm = [c for c in choices if (c.get('label') or '').strip().lower() in
                   ('ok', 'okay', 'yes', 'да', 'продолжить', 'continue', 'next', 'далее')]
@@ -1394,8 +1399,9 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             for c in choices:
                 if (c.get('label') or '') == step:
                     return c, False
-        if story_map.remaining() > 0 and energy > -2:
-            return None, False
+        elif step is None and story_map.remaining() > 0 and energy > -2:
+            return None, False          # идти некуда: честно кончаем заход
+        # step == '' — остаток здесь же; дальше возьмём свои варианты
 
     # Петля (ведёт туда же, откуда пришла) — в самом конце. Здесь важна
     # ЧЕСТНОСТЬ: раньше фильтр просто не применялся, если все варианты —
