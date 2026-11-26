@@ -33,6 +33,18 @@ def narrate(text, wav):
 
 def plan(trace):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'Ретранслятор 3D':
+        lines = [(0, 'Эксперимент в три дэ. Ищу два маяка по карте в углу экрана, потом попробую выйти из лабиринта.')]
+        last = 2
+        for event in trace['actions']:
+            remaining = event['remaining_beacons']
+            if remaining < last:
+                stamp = min(duration, (event.get('recording_elapsed_ms') or 0)/1000)
+                lines.append((stamp, 'Первый маяк найден. Ищу второй.' if remaining else 'Оба маяка собраны. Теперь к бирюзовому выходу.'))
+                last = remaining
+        won = trace.get('outcome') == 'game_reported_victory'
+        lines.append((max(0, duration - 1), 'Вышел. Связь восстановлена.' if won else 'До выхода пока не добрался.'))
+        return duration, lines, [], won
     if trace.get('game') == 'Viewport Voyager':
         lines = [(0.0, 'В этой игре окно браузера — часть головоломки.')]
         previous = 0.0
@@ -128,6 +140,10 @@ def build(folder):
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'Ретранслятор 3D':
+        url = GAME_URL.replace('adventure-game/', 'relay-3d/')
+        title = 'Ретранслятор 3D'
+        source = 'https://github.com/m98978672-boop/games/tree/arena/7d9fee46-games/collection/relay-3d'
     if trace.get('game') == 'Последний сигнал':
         url = GAME_URL.replace('adventure-game/', 'lighthouse-relay/')
         title = 'Последний сигнал'

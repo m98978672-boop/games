@@ -1,0 +1,36 @@
+name: Relay 3D experimental playthrough
+on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/relay-3d-experiment.yml, 'collection/relay-3d/**']
+permissions:
+  contents: read
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Capture real maze play and produce a voiced beta
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python -m pip install Pillow 'piper-tts==1.3.0'
+          docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
+          mkdir -p "$RUNNER_TEMP/relay"
+          python -u youtube-bot/run_relay_3d.py "$RUNNER_TEMP/relay"
+          export PIPER_MODEL_PATH="$RUNNER_TEMP/ru_RU-irina-medium.onnx"
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 4 "$base" -o "$PIPER_MODEL_PATH"
+          curl --fail --location --retry 4 "$base.json" -o "$PIPER_MODEL_PATH.json"
+          python youtube-bot/adventure_draft.py "$RUNNER_TEMP/relay"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relay-3d-beta-${{ github.run_id }}
+          path: ${{ runner.temp }}/relay/
+          if-no-files-found: error
