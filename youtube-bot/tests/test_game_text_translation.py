@@ -84,3 +84,14 @@ class GameTextTranslationTests(unittest.TestCase):
                     self.assertEqual(json.loads(messages[1]['content'])['source_text'], original)
                     return '{"ru":"Проверочный перевод."}'
                 self.assertIsNotNone(russian_game_text(original, translate, source_language=language))
+
+    def test_glossary_keeps_names_consistent_and_protected_tokens_get_retry(self):
+        seen = []
+
+        def generate(messages, **kwargs):
+            seen.append(json.loads(messages[1]['content']))
+            return json.dumps({'ru': 'Нажми [E], чтобы войти в Туманный форт.' if len(seen) == 2 else 'Войди в форт.'})
+
+        self.assertEqual(russian_game_text('Press [E] to enter Mist Fort.', generate,
+                         glossary={'Mist Fort': 'Туманный форт'}), 'Нажми [E], чтобы войти в Туманный форт.')
+        self.assertEqual(seen[1]['glossary'], {'Mist Fort': 'Туманный форт'})

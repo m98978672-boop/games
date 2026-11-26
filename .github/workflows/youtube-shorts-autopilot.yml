@@ -491,6 +491,15 @@ jobs:
           curl --fail --location --retry 4 --max-time 180 "$base" -o "$PIPER_MODEL_PATH"
           curl --fail --location --retry 4 --max-time 180 "$base.json" -o "$PIPER_MODEL_PATH.json"
           python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-publish"
+      - name: Save the corrected edition before the upload
+        if: env.LIGHTHOUSE_REVOICE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-russian-voice-v2-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/adventure-publish/zuza-adventure-short.mp4
+            ${{ runner.temp }}/adventure-publish/pilot.json
+          if-no-files-found: error
       - name: Publish through the existing authorized uploader
         env:
           DATA_DIR: ${{ runner.temp }}/adventure-history
