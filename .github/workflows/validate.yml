@@ -60,6 +60,13 @@ jobs:
             youtube-bot/tests/test_gameplay_edit.py \
             youtube-bot/tests/test_gameplay_voiceover.py \
             youtube-bot/tests/test_gameplay_release_plan.py \
+            youtube-bot/tests/test_gameplay_release_evidence.py \
+            youtube-bot/tests/test_gameplay_review_evidence.py \
+            youtube-bot/tests/test_gameplay_policy.py \
+            youtube-bot/tests/test_lighthouse_publish.py \
+            youtube-bot/tests/test_adventure_duration.py \
+            youtube-bot/tests/test_review_preview.py \
+            youtube-bot/tests/test_verify_review_artifact.py \
             youtube-bot/tests/test_feedback_youtube.py \
             youtube-bot/tests/test_playthrough_continue.py \
             youtube-bot/tests/test_gameplay_reflex.py \
