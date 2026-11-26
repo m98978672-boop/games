@@ -271,6 +271,56 @@ jobs:
     with:
       adventure_only: true
 
+  publish-gameplay:
+    # Recording without publishing was the last dead end: the decision was
+    # executed and the result still never reached the channel. This job uploads
+    # what the capture just produced, and the release gate inside the publisher
+    # decides whether it may go out.
+    needs: [record-gameplay, capture-gameplay]
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.capture-gameplay.result == 'success' && needs.record-gameplay.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      CAPTURE_RUN: ${{ github.run_id }}
+      PUBLISH_AT: ${{ needs.record-gameplay.outputs.publish_at }}
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
+      # The uploader checks this too, so it has to be present here or the job
+      # would fail after the recording was already made.
+      ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Fetch the recording from this run
+        uses: actions/download-artifact@v4
+        with:
+          name: adventure-private-${{ github.run_id }}
+          path: ${{ runner.temp }}/adventure-publish
+      - name: Install the media verifier
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Publish through the existing authorized uploader
+        env:
+          DATA_DIR: ${{ runner.temp }}/adventure-history
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/adventure-publish"
+          if [[ ! -f "$folder/release.evidence.json" ]]; then
+            echo '::error::The recording carries no release evidence; nothing is published.'
+            exit 1
+          fi
+          if jq -e '.short == true' "$folder/pilot.json" >/dev/null; then
+            python youtube-bot/publish_adventure_short.py "$folder" "$CAPTURE_RUN" "$PUBLISH_AT"
+          else
+            python youtube-bot/publish_adventure_draft.py "$folder" "$CAPTURE_RUN" "$PUBLISH_AT"
+          fi
+
   check-topic-history:
     if: github.event_name == 'workflow_dispatch' && inputs.check_topics_only
     runs-on: ubuntu-latest
@@ -526,6 +576,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [[ "$CAPTURE_RUN" == 45835569880 ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15124642887" | jq -e '
+              .name == "relay-3d-beta-45835569880" and .expired == false and .workflow_run.id == 45835569880
+              and .digest == "sha256:726c86da8b2480ee2b4d20bfd0c45e8884fc62ea169184be2fab7c39c2a55a01"' >/dev/null
+            gh run download "$CAPTURE_RUN" --name relay-3d-beta-45835569880 --dir "$RUNNER_TEMP/adventure-publish"
+            echo 'TRUSTED_RELAY_CAPTURE=true' >> "$GITHUB_ENV"
+            exit 0
+          fi
           if [[ "$CAPTURE_RUN" == 45708093545 || "$CAPTURE_RUN" == lighthouse-revoice ]]; then
             gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15065774746" | jq -e '
               .name == "adventure-private-45708093545" and .expired == false and .workflow_run.id == 45708093545

@@ -58,7 +58,11 @@ def _command(slot_local, video_format: str) -> str:
     a review run could produce it.
     """
     if video_format == "gameplay":
-        raise ValueError("Gameplay is not eligible for automatic publication yet.")
+        # Gameplay is recorded and published by the autopilot's own lane, which
+        # checks release.evidence.json before it uploads anything.
+        return (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
+                f"-f gameplay_episode=true "
+                f"-f publish_at='{slot_local:%Y-%m-%d %H:%M}'")
     return (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
             f"-f video_format={video_format} -f made_for_kids=false -f batch_count=1 "
             f"-f publish_at='{slot_local:%Y-%m-%d %H:%M}'")
@@ -128,7 +132,15 @@ def render_report(missing: list[datetime], booked: list[datetime], *, error: str
             lines.append(f"- **{slot:%d.%m %H:%M}** ({_LABELS[video_format]}):")
             lines.append("")
             if video_format == 'gameplay':
-                lines.append('  Публикация прохождения заблокирована до проверки требований; команды нет.')
+                # The gate now checks release.evidence.json instead of refusing
+                # outright, so a recording can be requested again. What is still
+                # required is the owner's dated approval inside that evidence.
+                lines.append('  Запись прохождения готовится автопилотом; публикация '
+                             'пойдёт только при подтверждённых правах и 20 минутах игры.')
+                lines.append("")
+                lines.append("  ```")
+                lines.append(f"  {_command(slot, video_format)}")
+                lines.append("  ```")
             elif slot <= current.astimezone(CHANNEL_TZ) + timedelta(minutes=45):
                 lines.append('  Время прошло или слишком близко: сначала проверьте YouTube Studio и очередь.')
             else:
