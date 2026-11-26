@@ -2,7 +2,7 @@ name: Relay 3D experimental playthrough
 on:
   push:
     branches: [arena/7d9fee46-games]
-    paths: [.github/workflows/relay-3d-experiment.yml, 'collection/relay-3d/**']
+    paths: [.github/workflows/relay-3d-experiment.yml, 'collection/relay-3d/**', youtube-bot/run_relay_3d.py]
 permissions:
   contents: read
 jobs:

@@ -38,10 +38,12 @@ def radar(png):
             center = pixel(left+3, top+3)
             horizontal = pixel(left+1, top+3) > threshold and pixel(left+6, top+3) > threshold
             vertical = pixel(left+3, top+1) > threshold and pixel(left+3, top+6) > threshold
-            if center > threshold and horizontal and vertical:
-                targets.add((x,y))
-            elif center > threshold and pixel(left+2, top+2) > threshold:
+            # At the exit the player covers the hollow marker. Give the bright
+            # solid center precedence over the surrounding cross-like silhouette.
+            if min(center, pixel(left+2, top+2)) > wall + contrast * .15:
                 players.append((x,y))
+            elif center > threshold and horizontal and vertical:
+                targets.add((x,y))
     if len(players) != 1 or len(walls) < 25:
         raise ValueError('The visual radar could not be read')
     return players[0], walls, targets

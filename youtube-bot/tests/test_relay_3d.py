@@ -26,3 +26,17 @@ class Relay3DTests(unittest.TestCase):
         self.assertEqual(targets, {(3,1)})
         self.assertEqual(walls, wall)
         self.assertEqual(path(position, walls, targets, {((1,1),(2,1))}), [1,0,0,3])
+
+    def test_player_is_detected_on_top_of_exit_ring(self):
+        frame = Image.new('L', (400, 300), 20)
+        draw = ImageDraw.Draw(frame)
+        for y in range(9):
+            for x in range(9):
+                if x in (0, 8) or y in (0, 8):
+                    draw.rectangle((307+x*9, 6+y*9, 314+x*9, 13+y*9), fill=190)
+        x, y = 307+7*9, 6+7*9
+        draw.rectangle((x+1,y+1,x+6,y+6), fill=185)
+        draw.rectangle((x+2,y+2,x+5,y+5), fill=255)
+        data = io.BytesIO()
+        frame.resize((800, 600), Image.Resampling.NEAREST).save(data, format='PNG')
+        self.assertEqual(radar(data.getvalue())[::2], ((7,7), set()))
