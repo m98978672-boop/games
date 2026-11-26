@@ -1,10 +1,24 @@
 window.VIDEO_CATALOG = [
   {
+    id: "ep05-part3",
+    title: "Эпизод 5 — Обзор ИИ-игры · часть 3",
+    description: "Спор за геймпад, ночная тишина и вердикт: графика 4, физика 2, звук 5. Обзор окончен — канал наш.",
+    file: "boris_ep05_part3_shorts.mp4", poster: "thumb_ep05c.png", duration: 57,
+    format: "9:16", category: "shorts", series: "ep05", channel: "Канал Бориса", badge: "НОВОЕ · ФИНАЛ", order: 0
+  },
+  {
+    id: "ep05-part2",
+    title: "Эпизод 5 — Обзор ИИ-игры · часть 2",
+    description: "Геймплей с телепортирующимися сосисками, голубь у телевизора и три бага в отчёте.",
+    file: "boris_ep05_part2_shorts.mp4", poster: "thumb_ep05b.png", duration: 58,
+    format: "9:16", category: "shorts", series: "ep05", channel: "Канал Бориса", badge: "ЧАСТЬ 2", order: 1
+  },
+  {
     id: "ep05-part1",
     title: "Эпизод 5 — Обзор ИИ-игры · часть 1",
     description: "Голубь-курьер привёз диск с игрой нейросети: студия собрана, обзор начинается.",
     file: "boris_ep05_part1_shorts.mp4", poster: "thumb_ep05a.png", duration: 53,
-    format: "9:16", category: "shorts", series: "ep05", channel: "Канал Бориса", badge: "НОВОЕ · ЧАСТЬ 1", order: 0
+    format: "9:16", category: "shorts", series: "ep05", channel: "Канал Бориса", badge: "ЧАСТЬ 1", order: 2
   },
   {
     id: "baltika-0-prologue",

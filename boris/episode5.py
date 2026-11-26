@@ -36,7 +36,7 @@ P.CLIPS = ["p1n1", "p1c1", "p1n2", "p1c2", "p1n3", "p1c3",
            "p2n1", "p2c1", "p2n2", "p2c2", "p2n3", "p2c3",
            "p3n1", "p3c1", "p3n2", "p3c2", "p3n3", "p3c3"]
 
-P.ANIM = {33: 16.0, 34: 14.0, 35: 14.0, 36: 17.0, 37: 14.0, 38: 14.0, 39: 14.0, 40: 16.0, 41: 17.0}
+P.ANIM = {33: 16.0, 34: 14.0, 35: 14.0, 36: 16.0, 37: 15.0, 38: 13.0, 39: 14.0, 40: 16.0, 41: 17.0}
 
 P.PREV_T = {33: 3.0, 34: 4.0, 35: 3.2, 36: 8.6, 37: 6.3, 38: 6.8, 39: 8.4, 40: 7.0, 41: 11.2}
 
@@ -74,15 +74,15 @@ def setup(part):
         P.STAMP_T = "БАГОВ: 3"
         P.CLIPS = ["p2n1", "p2c1", "p2n2", "p2c2", "p2n3", "p2c3"]
         P.DEFS = [
-            dict(k=36, lines=[("n", "p2n1"), ("c", "p2c1")], pad_s=4.0,
+            dict(k=36, lines=[("n", "p2n1"), ("c", "p2c1")], pad_s=3.6,
                  ov=[("title", 0.25, 4.4, "out")],
                  sfx=[("hum", 0.0, .32, "loop"), ("music", 0.0, .20, "loop"), ("pop", 2.0, .40, None),
                       ("pop", 4.0, .40, None), ("frr", 8.1, .50, None), ("pop", 8.3, .50, None),
                       ("meow_happy", 9.4, .40, None)]),
-            dict(k=37, lines=[("n", "p2n2"), ("c", "p2c2")], pad_s=4.0, ov=[],
+            dict(k=37, lines=[("n", "p2n2"), ("c", "p2c2")], pad_s=3.6, ov=[],
                  sfx=[("hum", 0.0, .30, "loop"), ("music", 0.0, .26, "loop"), ("coo", 6.1, .30, None),
                       ("flutter", 6.3, .40, None), ("pop", 6.35, .40, None), ("purr", 8.0, .35, None)]),
-            dict(k=38, lines=[("n", "p2n3"), ("c", "p2c3")], pad_s=4.0, ov=[("end", -3.0, 99, "out")],
+            dict(k=38, lines=[("n", "p2n3"), ("c", "p2c3")], pad_s=3.4, ov=[("end", -3.0, 99, "out")],
                  sfx=[("music", 0.0, .22, "loop"), ("hum", 0.0, .30, "loop"), ("clink", 1.0, .30, None),
                       ("clink", 1.4, .28, None), ("clink", 1.8, .30, None), ("frr", 6.2, .40, None),
                       ("pop", 9.1, .60, None), ("meow_happy", 10.0, .40, None)]),
