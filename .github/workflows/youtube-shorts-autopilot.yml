@@ -12,6 +12,10 @@ on:
     # Gameplay: one a day at 18:00 Moscow, and only while a playthrough is open.
     # The run checks readiness; a finished playthrough uploads nothing.
     - cron: "0 14 * * *"
+  workflow_run:
+    workflows: [SuperTuxKart race capture]
+    types: [completed]
+    branches: [arena/7d9fee46-games]
   workflow_dispatch:
     inputs:
       review_capture_run:
@@ -336,7 +340,7 @@ jobs:
     # The gameplay firing is a different category: it must never render a review.
     # Without this guard the 17:00 Moscow run would also start a review render
     # and, on a busy day, publish a tenth video nobody asked for.
-    if: ${{ !inputs.check_topics_only && !inputs.review_capture_run && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview && !(github.event_name == 'schedule' && github.event.schedule == '0 14 * * *') }}
+    if: ${{ github.event_name != 'workflow_run' && !inputs.check_topics_only && !inputs.review_capture_run && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview && !(github.event_name == 'schedule' && github.event.schedule == '0 14 * * *') }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -672,3 +676,31 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           python youtube-bot/publish_review_preview.py "$RUNNER_TEMP/saved-review" "$CAPTURE_RUN" "$PUBLISH_AT"
+
+  publish-verified-stk:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.id == 45854300179 && github.event.workflow_run.head_sha == '77f7ed6d9140f8bf5f5e7510400bdfd01e5bb373' && github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      YOUTUBE_MADE_FOR_KIDS: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45854300179
+          name: supertuxkart-race-45854300179
+          path: ${{ runner.temp }}/stk-verified
+      - name: Recheck the race and queue publication
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_verified_stk.py "$RUNNER_TEMP/stk-verified" 45854300179

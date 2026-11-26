@@ -2,7 +2,7 @@ name: SuperTuxKart race capture
 on:
   push:
     branches: [arena/7d9fee46-games]
-    paths: [.github/workflows/supertuxkart-capture.yml, youtube-bot/adventure_draft.py]
+    paths: [.github/workflows/supertuxkart-capture.yml, youtube-bot/adventure_draft.py, youtube-bot/verify_stk_race.py]
 permissions:
   contents: read
 jobs:
@@ -30,17 +30,29 @@ jobs:
           Xvfb "$DISPLAY" -screen 0 800x600x24 +extension GLX -nolisten tcp >"$folder/xvfb.log" 2>&1 &
           xvfb_pid=$!
           race_pid=''
-          trap 'if [[ -n "$race_pid" ]]; then kill "$race_pid" 2>/dev/null || true; fi; kill "$xvfb_pid" 2>/dev/null || true' EXIT
+          capture_pid=''
+          trap 'for pid in "$race_pid" "$capture_pid" "$xvfb_pid"; do if [[ -n "$pid" ]]; then kill "$pid" 2>/dev/null || true; fi; done' EXIT
           for _ in $(seq 1 15); do xdpyinfo >/dev/null 2>&1 && break; sleep 1; done
+          xdpyinfo >/dev/null
           supertuxkart --version >"$folder/version.txt" 2>&1
-          supertuxkart --no-start-screen --track=zenGarden --laps=4 --aiNP=tux,nolok,gnu,sara --fullscreen --screensize=800x600 --no-sound >"$folder/race.log" 2>&1 &
+          track_dir=$(find /usr/share/games/supertuxkart /usr/share/supertuxkart -name track.xml 2>/dev/null | grep -im1 '/zengarden/track.xml$' || true)
+          if [[ -z "$track_dir" ]]; then echo '::error::Zen Garden assets not installed.'; exit 1; fi
+          track=$(basename "$(dirname "$track_dir")")
+          ffmpeg -v error -nostdin -y -f x11grab -video_size 800x600 -framerate 25 -i "$DISPLAY" -t 360 \
+            -c:v libvpx -deadline realtime -cpu-used 8 -threads 2 -crf 10 -b:v 0 "$folder/recording.webm" &
+          capture_pid=$!
+          timeout --signal=TERM 350s supertuxkart --track="$track" --profile-laps=4 --numkarts=4 \
+            --fullscreen --screensize=800x600 --no-sound >"$folder/race.log" 2>&1 &
           race_pid=$!
-          timeout 20s xdotool search --sync --onlyvisible --name 'SuperTuxKart' >/dev/null
-          kill -0 "$race_pid"
-          ffmpeg -v error -nostdin -y -f x11grab -video_size 800x600 -framerate 25 -i "$DISPLAY" -t 240 \
-            -c:v libvpx -deadline realtime -cpu-used 8 -threads 2 -crf 10 -b:v 0 "$folder/recording.webm"
+          race_status=0
+          wait "$race_pid" || race_status=$?
+          race_pid=''
+          kill -INT "$capture_pid" 2>/dev/null || true
+          wait "$capture_pid" || true
+          capture_pid=''
+          if [[ "$race_status" != 0 ]]; then tail -25 "$folder/race.log"; exit "$race_status"; fi
           ffmpeg -v error -nostdin -y -sseof -1 -i "$folder/recording.webm" -frames:v 1 "$folder/finish-check.png"
-          printf '%s\n' '{"game":"SuperTuxKart","short":false,"outcome":"unverified","actions":[]}' > "$folder/trace.json"
+          python youtube-bot/verify_stk_race.py "$folder"
       - name: Build a private voiced race cut with frame-aligned intro
         run: |
           set -euo pipefail
