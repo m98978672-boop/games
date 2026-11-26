@@ -450,12 +450,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ "$CAPTURE_RUN" == 45708093545 ]]; then
+          if [[ "$CAPTURE_RUN" == 45708093545 || "$CAPTURE_RUN" == lighthouse-revoice ]]; then
             gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15065774746" | jq -e '
               .name == "adventure-private-45708093545" and .expired == false and .workflow_run.id == 45708093545
               and .digest == "sha256:4a80b5aba819c13881ecf6d51d1953075e8b61c5424fc9a6d68de5bd246cd044"' >/dev/null
-            gh run download "$CAPTURE_RUN" --name adventure-private-45708093545 --dir "$RUNNER_TEMP/adventure-publish"
+            gh run download 45708093545 --name adventure-private-45708093545 --dir "$RUNNER_TEMP/adventure-publish"
             echo 'TRUSTED_LIGHTHOUSE_CAPTURE=true' >> "$GITHUB_ENV"
+            if [[ "$CAPTURE_RUN" == lighthouse-revoice ]]; then echo 'LIGHTHOUSE_REVOICE=true' >> "$GITHUB_ENV"; fi
             exit 0
           fi
           [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || { echo "::error::A publication time and numeric capture run are required."; exit 1; }
@@ -470,10 +471,29 @@ jobs:
           gh run download "$CAPTURE_RUN" --name "$artifact" --dir "$RUNNER_TEMP/adventure-publish"
       - name: Install media verifier
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Replace narration with Russian neural voice
+        if: env.LIGHTHOUSE_REVOICE == 'true'
+        run: |
+          set -euo pipefail
+          python -m pip install 'piper-tts==1.3.0'
+          export PIPER_MODEL_PATH="$RUNNER_TEMP/ru_RU-irina-medium.onnx"
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 4 --max-time 180 "$base" -o "$PIPER_MODEL_PATH"
+          curl --fail --location --retry 4 --max-time 180 "$base.json" -o "$PIPER_MODEL_PATH.json"
+          python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-publish"
       - name: Publish through the existing authorized uploader
         env:
           DATA_DIR: ${{ runner.temp }}/adventure-history
-        run: python youtube-bot/publish_adventure_draft.py "$RUNNER_TEMP/adventure-publish" "$CAPTURE_RUN" "$PUBLISH_AT"
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/adventure-publish"
+          if jq -e '.beta_episode == true or (has("beta_episode") | not) and .short == true' "$folder/pilot.json" >/dev/null; then
+            source_run="$CAPTURE_RUN"
+            if [[ "$CAPTURE_RUN" == lighthouse-revoice ]]; then source_run=45708093545; fi
+            python youtube-bot/publish_adventure_short.py "$folder" "$source_run" "$PUBLISH_AT"
+          else
+            python youtube-bot/publish_adventure_draft.py "$folder" "$CAPTURE_RUN" "$PUBLISH_AT"
+          fi
 
   publish-saved-review:
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.review_capture_run != '' && !inputs.review_preview && !inputs.adventure_preview && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''

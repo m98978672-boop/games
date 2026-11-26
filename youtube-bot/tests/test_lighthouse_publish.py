@@ -53,3 +53,17 @@ class LighthousePublishTests(unittest.TestCase):
                 with self.assertRaises(PublishError):
                     publish_checked(path, lighthouse=True, now=now)
                 upload.assert_not_called()
+
+    def test_neural_revoice_refuses_missing_model_without_robotic_fallback(self):
+        from adventure_draft import narrate
+        with tempfile.TemporaryDirectory() as root:
+            model = Path(root) / 'russian.onnx'
+            with patch.dict('os.environ', {'PIPER_MODEL_PATH': str(model)}), patch('adventure_draft.subprocess.run') as run:
+                with self.assertRaisesRegex(RuntimeError, 'refusing fallback'):
+                    narrate('Проверяю питание.', Path(root) / 'line.wav')
+                run.assert_not_called()
+                model.touch()
+                model.with_suffix('.onnx.json').touch()
+                narrate('Проверяю питание.', Path(root) / 'line.wav')
+                self.assertEqual(run.call_args.args[0][0], 'piper')
+                self.assertEqual(run.call_args.kwargs['input'], 'Проверяю питание.')

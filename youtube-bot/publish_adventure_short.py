@@ -14,9 +14,11 @@ from review_slot_state import planned_slots
 from schedule_policy import manual_publish_time, next_publish_slot
 
 
-def prepare(folder, run_id, requested_slot=None, *, lighthouse=False):
+def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=False):
     from gameplay_release_gate import require_verified_gameplay_release
     require_verified_gameplay_release()
+    if revoice and not lighthouse:
+        raise ValueError('Voice revision is only permitted for the reviewed Lighthouse capture')
     if not lighthouse and os.getenv('ADVENTURE_RECORDING_RIGHTS_VERIFIED') != 'true':
         raise ValueError('Recording and asset rights are not confirmed')
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
@@ -46,11 +48,13 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False):
     scheduled = manual_publish_time(requested_slot) if requested_slot else next_publish_slot(video_format=video_format)
     slot = scheduled.isoformat().replace('+00:00', 'Z')
     url = GAME_URL.replace('adventure-game/', 'lighthouse-relay/') if lighthouse else GAME_URL
+    revision = '-voice-v2' if revoice else ''
     result = folder / 'publish-short.result.json'
     result.write_text(json.dumps({'metadata': {
-        'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{url}#beta-short-{run_id}')),
+        'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{url}#beta-short-{run_id}{revision}')),
         'game_id': 'last-signal-beta' if lighthouse else 'the-lost-artifact-beta',
-        'title': 'Бета — Последний сигнал: Qwen спасает паром' if lighthouse else 'Бета — Qwen ищет потерянный артефакт',
+        'title': ('Бета — Последний сигнал: новая русская озвучка' if revoice else
+                  'Бета — Последний сигнал: Qwen спасает паром' if lighthouse else 'Бета — Qwen ищет потерянный артефакт'),
         'description': (f'{url}\n\nСюжетный летсплей Qwen: двенадцать решений у погасшего маяка.' if lighthouse else f'{url}\n\nПробный летсплей Qwen с русскими комментариями по событиям игры.\n'
                        'Авторы: Ritaban Ghosh и участники mini-js-games-hub.\n'
                        'Исходник: https://github.com/ritaban06/mini-js-games-hub'),
@@ -95,7 +99,7 @@ if __name__ == '__main__':
     lighthouse = os.getenv('TRUSTED_LIGHTHOUSE_CAPTURE') == 'true'
     try:
         result = prepare(Path(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None,
-                         lighthouse=lighthouse)
+                         lighthouse=lighthouse, revoice=os.getenv('LIGHTHOUSE_REVOICE') == 'true')
         status = publish_checked(result, lighthouse=lighthouse)
         if status.get('video_id'):
             print(f"::notice title=YouTube upload confirmed::https://www.youtube.com/watch?v={status['video_id']} at {status.get('publish_at') or 'unconfirmed time'}")
