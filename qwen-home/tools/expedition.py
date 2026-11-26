@@ -1024,6 +1024,11 @@ class StoryMap:
             self.nodes[k] = node
         node['visits'] += 1
         node['text_key'] = bare_k
+        # Настоящий ключ узла: набор вариантов на входе может отличаться от
+        # того, с которым место впервые попало в карту. Всё, что метит «нажато»
+        # или ищет рёбра, обязано пользоваться ЭТИМ ключом, иначе отметки
+        # ложатся мимо узла — и один вариант жмётся 82 раза подряд.
+        node['key'] = k
         merged = node.setdefault('options', [])
         for o in (options or []):
             if o and o not in merged:
@@ -1093,7 +1098,10 @@ class StoryMap:
         kw = self.key(text, context, [c.get('label') for c in choices])
         node = self.nodes.get(kw)
         if node is None:
-            return
+            node = self.nodes.get(self.text_key_index().get(self.bare_key(text, [c.get('label') for c in choices])))
+            if node is None:
+                return
+            kw = node.get('key') or kw
         node['open'] = any(not self.tried_here(kw, c.get('label')) for c in choices)
         node['options'] = [c.get('label') for c in choices][:8]
 
@@ -1534,7 +1542,9 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             story_map.mark_open(text, choices, here_ctx)
             if choices:
                 # след последних мест: если ходит по кругу, дальше не жмём
-                my_key = story_map.key(text, here_ctx, labels)
+                # Настоящий ключ места (см. see): иначе отметки «нажато»
+                # ложатся мимо узла и один вариант жмётся сотни раз.
+                my_key = sight.get('key') or story_map.key(text, here_ctx, labels)
                 trail.append(my_key)
                 last_place[0] = prev_place[0]
                 if len(trail) > 18:
