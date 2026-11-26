@@ -394,10 +394,12 @@ check('флаг open пересчитывается по нажатиям, а н
   && expNow.includes("for label in (to.get('options') or []))"));
 
 check('когда всё нажато и маршрута нет — заход честно кончается, а не крутится 182 раза',
-  expNow.includes("if story_map.remaining() > 0 and energy > -2:") && expNow.includes('идти некуда'));
+  expNow.includes('elif step is None and story_map.remaining() > 0 and energy > -2:') && expNow.includes('идти некуда'));
 check('маршрут к остатку не ведёт в ложный остаток (по ключу текста тоже)',
   expNow.includes("and not (tk and (tk, label) in self.tried)")
   && expNow.includes('def same(k1, k2):'));
+check('остаток прямо здесь — не повод кончать заход (маршрут «»)',
+  expNow.includes("return ''") && expNow.includes("elif step is None and story_map.remaining() > 0"));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
