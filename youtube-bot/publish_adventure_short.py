@@ -15,6 +15,8 @@ from schedule_policy import manual_publish_time, next_publish_slot
 
 
 def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=False):
+    from gameplay_release_gate import require_verified_gameplay_release
+    require_verified_gameplay_release()
     if revoice and not lighthouse:
         raise ValueError('Voice revision is only permitted for the reviewed Lighthouse capture')
     if not lighthouse and os.getenv('ADVENTURE_RECORDING_RIGHTS_VERIFIED') != 'true':
@@ -64,6 +66,8 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=Fa
 
 
 def publish_checked(result, *, lighthouse=False, now=None):
+    from gameplay_release_gate import require_verified_gameplay_release
+    require_verified_gameplay_release()
     if lighthouse:
         payload = json.loads(result.read_text(encoding='utf-8'))
         metadata = payload['metadata']

@@ -1,14 +1,7 @@
-"""Timezone-aware cadence for the channel's three categories.
+"""Moscow cadence: two Shorts, one long review, and one gameplay slot per day.
 
-- Shorts: four a day, 09:00/13:00/17:00/21:00 Moscow.
-- Long reviews: four a day, 06:00/11:00/15:00/19:00 Moscow.
-- Gameplay ("video game reviews", the AI playing a game to its end): at most one
-  a day, and that one continues until the playthrough is finished.
-
-The first two categories are fixed slots. Gameplay is not: it depends on whether
-a playthrough is still open, so it is planned by `gameplay_plan`, not by a slot
-table. Nine uploads a day is far inside the separate 100-uploads-per-day
-`videos.insert` allowance.
+The gameplay slot does not imply that a recording satisfies release rules.
+Regular slots are not an atomic cross-run daily publication limit.
 """
 from __future__ import annotations
 
@@ -18,12 +11,9 @@ from typing import Iterable
 from zoneinfo import ZoneInfo
 
 CHANNEL_TZ = ZoneInfo("Europe/Moscow")
-# Four Shorts and four long reviews a day: each type doubled from two-per-type,
-# and spread so no two publications land at the same minute. Uploads cost 1 unit
-# from a dedicated bucket of 100 per day, so eight uploads stay far inside the
-# YouTube quota; see the quota calculator Google published for the Data API.
-SHORT_POST_TIMES = (time(9, 0), time(13, 0), time(17, 0), time(21, 0))
-LONG_POST_TIMES = (time(6, 0), time(11, 0), time(15, 0), time(19, 0))
+# The owner requested two Shorts per day and two long reviews per two days.
+SHORT_POST_TIMES = (time(9, 0), time(13, 0))
+LONG_POST_TIMES = (time(6, 0),)
 # Gameplay sits at 18:00 so it never shares a minute with a review or a Short.
 GAMEPLAY_POST_TIME = time(18, 0)
 # A playthrough cut up to this many seconds is a Short; longer is a full video.
@@ -84,21 +74,10 @@ def resolve_manual_after_render(requested: datetime, *, now: datetime | None = N
 # firing time maps to exactly one publication slot and no firing crosses
 # midnight; a late run therefore still knows which slot it was started for.
 CRON_SLOTS: dict[str, tuple[time, time]] = {
-    # Every firing is exactly three hours before the slot it serves, so a slow
-    # run still makes its publication and no firing ever crosses midnight in
-    # Moscow. Times are UTC cron -> (firing, slot) as Moscow wall time.
-    # Shorts: slots 09:00, 13:00, 17:00, 21:00 -> fire at 06:00, 10:00, 14:00, 18:00.
+    # Each review firing is three hours before its slot, on the same day.
     "0 3 * * *": (time(6, 0), time(9, 0)),
     "0 7 * * *": (time(10, 0), time(13, 0)),
-    "0 11 * * *": (time(14, 0), time(17, 0)),
-    "0 15 * * *": (time(18, 0), time(21, 0)),
-    # Long: slots 06:00, 11:00, 15:00, 19:00 -> fire at 03:00, 08:00, 12:00, 16:00.
-    # The 06:00 slot fires at 00:00 UTC, which is 03:00 Moscow the same day, so
-    # even the earliest slot needs no midnight arithmetic.
     "0 0 * * *": (time(3, 0), time(6, 0)),
-    "0 5 * * *": (time(8, 0), time(11, 0)),
-    "0 9 * * *": (time(12, 0), time(15, 0)),
-    "0 13 * * *": (time(16, 0), time(19, 0)),
     # Gameplay: one a day, at 18:00, but only while a playthrough is open. The
     # firing only checks readiness; whether anything publishes is decided by
     # gameplay_policy, so a finished playthrough simply produces no upload.
