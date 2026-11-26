@@ -59,7 +59,7 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=Fa
     result.write_text(json.dumps({'metadata': {
         'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{url}#beta-short-{run_id}{revision}')),
         'game_id': 'relay-3d-beta' if relay else 'last-signal-beta' if lighthouse else 'the-lost-artifact-beta',
-        'title': ('Бета — Ретранслятор 3D: бот проходит лабиринт' if relay else 'Бета — Последний сигнал: новая русская озвучка' if revoice else
+        'title': ('Два маяка и один выход | Ретранслятор 3D' if relay else 'Бета — Последний сигнал: новая русская озвучка' if revoice else
                   'Бета — Последний сигнал: Qwen спасает паром' if lighthouse else 'Бета — Qwen ищет потерянный артефакт'),
         'description': (f'{url}\n\nЭксперимент: бот ориентируется по видимой мини-карте, собирает два маяка и ищет выход. Исходный геймплей не вырезан.' if relay else f'{url}\n\nСюжетный летсплей Qwen: двенадцать решений у погасшего маяка.' if lighthouse else f'{url}\n\nПробный летсплей Qwen с русскими комментариями по событиям игры.\n'
                        'Авторы: Ritaban Ghosh и участники mini-js-games-hub.\n'

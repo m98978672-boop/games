@@ -1,0 +1,57 @@
+name: SuperTuxKart race capture
+on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/supertuxkart-capture.yml]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install race and capture tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y supertuxkart xvfb xdotool ffmpeg espeak-ng mesa-utils fonts-dejavu-core
+          python -m pip install 'piper-tts==1.3.0'
+      - name: Record an AI-only race, no cuts
+        run: |
+          set -euo pipefail
+          export DISPLAY=:93 LIBGL_ALWAYS_SOFTWARE=1
+          folder="$RUNNER_TEMP/stk"
+          mkdir -p "$folder"
+          Xvfb "$DISPLAY" -screen 0 800x600x24 +extension GLX -nolisten tcp >"$folder/xvfb.log" 2>&1 &
+          xvfb_pid=$!
+          race_pid=''
+          trap 'if [[ -n "$race_pid" ]]; then kill "$race_pid" 2>/dev/null || true; fi; kill "$xvfb_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 15); do xdpyinfo >/dev/null 2>&1 && break; sleep 1; done
+          supertuxkart --version >"$folder/version.txt" 2>&1
+          supertuxkart --no-start-screen --track=zenGarden --laps=4 --aiNP=tux,nolok,gnu,sara --fullscreen --screensize=800x600 --no-sound >"$folder/race.log" 2>&1 &
+          race_pid=$!
+          timeout 20s xdotool search --sync --onlyvisible --name 'SuperTuxKart' >/dev/null
+          kill -0 "$race_pid"
+          ffmpeg -v error -nostdin -y -f x11grab -video_size 800x600 -framerate 25 -i "$DISPLAY" -t 240 \
+            -c:v libvpx -deadline realtime -cpu-used 8 -threads 2 -crf 10 -b:v 0 "$folder/recording.webm"
+          ffmpeg -v error -nostdin -y -sseof -1 -i "$folder/recording.webm" -frames:v 1 "$folder/finish-check.png"
+          printf '%s\n' '{"game":"SuperTuxKart","short":false,"outcome":"unverified","actions":[]}' > "$folder/trace.json"
+      - name: Build a private voiced race cut with frame-aligned intro
+        run: |
+          set -euo pipefail
+          export PIPER_MODEL_PATH="$RUNNER_TEMP/ru_RU-irina-medium.onnx"
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 4 --max-time 180 "$base" -o "$PIPER_MODEL_PATH"
+          curl --fail --location --retry 4 --max-time 180 "$base.json" -o "$PIPER_MODEL_PATH.json"
+          python youtube-bot/adventure_draft.py "$RUNNER_TEMP/stk"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: supertuxkart-race-${{ github.run_id }}
+          path: ${{ runner.temp }}/stk/
+          if-no-files-found: error

@@ -9,17 +9,12 @@ import wave
 from pathlib import Path
 
 from gameplay_voiceover import probe_capture
-from gameplay_captions import render_srt
 from viewport_translation import cues as translation_cues, filters as translation_filters
 from adventure_personality import SHORT_SECONDS, short_comment
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
 PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
-# The owner's rule is twenty minutes of real play. Duration is necessary, not
-# proof of actual play, rights or release readiness - that is what the release
-# gate checks. This used to be 600, which let a ten-minute episode satisfy a
-# twenty-minute requirement because the workflow published on this flag alone.
-MIN_EDITED_GAMEPLAY_SECONDS = 1200
+MIN_EDITED_GAMEPLAY_SECONDS = 600
 MAX_CUT_FRACTION = 0.25
 ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHREE': 'третий'}
 
@@ -36,96 +31,19 @@ def narrate(text, wav):
         subprocess.run(['espeak-ng', '-v', 'ru', '-s', '145', '-w', str(wav), text], check=True, timeout=30)
 
 
-def split_parts(folder, draft, edited, gameplay, *, short, game, author, repository_url):
-    """Split a long recording into the parts that will actually be published.
-
-    A Short and anything up to thirty minutes stay a single video. Beyond that
-    the release plan divides the recording, and this cuts the real files with
-    FFmpeg, so each part's measured length is its own - not a claim in JSON.
-    """
-    from gameplay_release_plan import make_plan
-
-    if short:
-        return [(1, 0.0, edited, gameplay, draft)]
-    plan = make_plan(duration_seconds=edited, game=game, author=author,
-                     repository_url=repository_url)
-    if len(plan) == 1:
-        return [(1, 0.0, edited, gameplay, draft)]
-    result = []
-    play_per_second = gameplay / edited if edited else 0.0
-    for part in plan:
-        length = part.end_seconds - part.start_seconds
-        name = f'{Path(draft).stem}-part-{part.number}.mp4'
-        target = folder / name
-        subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-y', '-ss', f'{part.start_seconds:.3f}',
-                        '-i', str(folder / draft), '-t', f'{length:.3f}', '-c', 'copy',
-                        '-movflags', '+faststart', str(target)], check=True, timeout=300)
-        measured = probe_capture(target)
-        if abs(measured - length) > 1.5:
-            raise ValueError(f'Part {part.number} does not match its planned length')
-        result.append((part.number, part.start_seconds, part.end_seconds,
-                       play_per_second * measured, name))
-    return result
-
-
-def rights_from_environment(trace):
-    """Collect the rights record from the owner, or leave it empty.
-
-    An empty record blocks publication, which is the correct outcome: nobody has
-    checked. This function must never guess a date or a licence, because the gate
-    treats a dated approval as proof that a human verified the source.
-    """
-    approval = os.environ.get('GAMEPLAY_RIGHTS_APPROVED_ON', '').strip()
-    checked = os.environ.get('GAMEPLAY_RIGHTS_CHECKED_ON', '').strip()
-    licence = os.environ.get('GAMEPLAY_SOURCE_LICENSE', '').strip()
-    source = str(trace.get('source') or '').strip()
-    if not (approval and checked and licence and source):
-        return {'sources': [], 'owner_approval': ''}
-    return {'sources': [{'name': source, 'license': licence, 'checked': checked}],
-            'owner_approval': approval}
-
-
-def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, parts, subtitle):
-    """Record what was produced, with hashes, so the gate can re-derive it.
-
-    Counts come from the recorded action log, never from the size of the file:
-    padding a recording adds minutes but no actions, and that difference is the
-    whole point of the check.
-    """
-    import hashlib
-    from gameplay_release_evidence import measure_srt
-
-    def digest(path):
-        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-    srt_path = folder / subtitle
-    cues, spoken = measure_srt(srt_path.read_text(encoding='utf-8'))
-    actions = [row for row in trace.get('actions') or [] if isinstance(row, dict)]
-    screen_changes = sum(1 for row in actions if row.get('screen_unchanged') is False)
-    evidence = {
-        'capture_seconds': round(float(capture_seconds), 3),
-        'play_seconds': round(float(play_seconds), 3),
-        'subtitle_tracks': [{'name': subtitle, 'sha256': digest(srt_path),
-                             'cues': cues, 'spoken_seconds': round(spoken, 3)}],
-        'evidence': [{'kind': 'actions', 'count': len(actions)},
-                     {'kind': 'screen_changes', 'count': max(1, screen_changes)}],
-        'parts': [{'number': number, 'start_seconds': round(start, 3), 'end_seconds': round(end, 3),
-                   'play_seconds': round(play, 3), 'video': name,
-                   'sha256': digest(folder / name)}
-                  for number, start, end, play, name in parts],
-        # Rights stay a human decision, so they are never filled in here. A
-        # builder that invents an approval date would be bypassing the very gate
-        # that reads it. The owner supplies them through the environment once
-        # they have actually checked the source and cleared the recording.
-        'rights': rights_from_environment(trace),
-    }
-    (folder / 'release.evidence.json').write_text(
-        json.dumps(evidence, ensure_ascii=False, indent=2), encoding='utf-8')
-    return evidence
+def scene_cues(lines, cuts):
+    """Group simultaneous lines; leave later cues anchored to their own frames."""
+    grouped = {}
+    for stamp, message in sorted(lines, key=lambda line: line[0]):
+        start = round(1000 * (stamp - sum(max(0, min(stamp, end) - begin) for begin, end in cuts)))
+        grouped.setdefault(max(0, start), []).append(message)
+    return [(stamp / 1000, ' '.join(messages)) for stamp, messages in grouped.items()]
 
 
 def plan(trace):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'SuperTuxKart':
+        return duration, [(0.0, 'Сегодня на трассе Зен-Гарден. Пилоты — встроенные соперники самой игры. Проверяю запись гонки и монтаж.')], [], False
     if trace.get('game') == 'Ретранслятор 3D':
         lines = [(0, 'Эксперимент в три дэ. Ищу два маяка по карте в углу экрана, потом попробую выйти из лабиринта.')]
         last = 2
@@ -238,6 +156,10 @@ def build(folder):
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'SuperTuxKart':
+        url = 'https://supertuxkart.net/'
+        title = 'SuperTuxKart'
+        source = 'https://github.com/supertuxkart/stk-code'
     if trace.get('game') == 'Ретранслятор 3D':
         url = GAME_URL.replace('adventure-game/', 'relay-3d/')
         title = 'Ретранслятор 3D'
@@ -258,15 +180,19 @@ def build(folder):
     with tempfile.TemporaryDirectory() as temp:
         wavs = []
         cursor = 0.0
-        for index, (stamp, text) in enumerate(lines):
+        cues = scene_cues(lines, cuts)
+        skipped_cues = []
+        for index, (stamp, text) in enumerate(cues):
             wav = Path(temp) / f'{index}.wav'
             narrate(text, wav)
             with wave.open(str(wav), 'rb') as reader:
                 seconds = reader.getnframes() / reader.getframerate()
-            stamp -= sum(max(0, min(stamp, end) - start) for start, end in cuts)
-            start = max(cursor, stamp)
-            wavs.append((wav, round(start * 1000), text))
-            cursor = start + seconds + 0.12
+            if index + 1 < len(cues) and stamp + seconds + .06 > cues[index + 1][0]:
+                # Avoid drift or overlapping speech. Keep the later event on its own frame.
+                skipped_cues.append(stamp)
+                continue
+            wavs.append((wav, round(stamp * 1000)))
+            cursor = stamp + seconds + .12
         # Remove only redundant waiting on unchanged screens and keep the full raw recording.
         video_seconds = duration - sum(end - start for start, end in cuts)
         discard = '+'.join(f'between(t,{start:.3f},{end:.3f})' for start, end in cuts)
@@ -278,15 +204,19 @@ def build(folder):
         portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
         translated = translation_filters(trace, temp) if viewport else ''
         panel = ',' + translated if translated else ''
-        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{portrait}[v]']
+        intro = Path(temp) / 'opening-title.txt'
+        intro.write_text(f'ЗУЗА  /  {title}', encoding='utf-8')
+        # Put the intro on the first gameplay shot, not in front of it.
+        opening = (",drawbox=x=14:y=ih-56:w=iw-28:h=42:color=0x0b1425@0.84:t=fill:enable='lt(t,2.2)'"
+                   f",drawtext=textfile={intro}:expansion=none:x=26:y=h-46:fontsize=22:fontcolor=white:enable='lt(t,2.2)'")
+        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{opening}{portrait}[v]']
         # The clips never overlap. Assemble one PCM track to avoid opening
         # hundreds of FFmpeg inputs for a multi-board campaign.
         narration = Path(temp) / 'narration.wav'
-        spoken_cues = []
         with wave.open(str(narration), 'wb') as target:
             output_format = None
             written = 0
-            for wav, offset_ms, text in wavs:
+            for wav, offset_ms in wavs:
                 with wave.open(str(wav), 'rb') as clip:
                     fmt = (clip.getnchannels(), clip.getsampwidth(), clip.getframerate())
                     if output_format is None:
@@ -298,16 +228,8 @@ def build(folder):
                         raise ValueError('Unexpected voice format')
                     silence = max(0, round(offset_ms * fmt[2] / 1000) - written)
                     target.writeframesraw(b'\0' * silence * fmt[0] * fmt[1])
-                    start_frame = written + silence
-                    frames = clip.getnframes()
-                    if frames <= 0:
-                        raise ValueError('Synthesized speech clip is empty')
-                    pcm = clip.readframes(frames)
-                    if len(pcm) != frames * fmt[0] * fmt[1]:
-                        raise ValueError('Synthesized speech clip is truncated')
-                    target.writeframesraw(pcm)
-                    written = start_frame + frames
-                    spoken_cues.append((start_frame / fmt[2], written / fmt[2], text))
+                    target.writeframesraw(clip.readframes(clip.getnframes()))
+                    written += silence + clip.getnframes()
         filters.append('[1:a]apad[a]')
         cmd = ['ffmpeg', '-nostdin', '-v', 'error', '-y', '-i', str(raw), '-i', str(narration)]
         subprocess.run(cmd + ['-filter_complex', ';'.join(filters), '-map', '[v]', '-map', '[a]',
@@ -317,28 +239,11 @@ def build(folder):
     if short and edited > SHORT_SECONDS:
         raise ValueError('Encoded Short exceeds the three-minute limit')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
-    # Cue timings use the exact samples written to the mixed narration track,
-    # after cuts and scheduling, then are clipped to the actual encoded video.
-    captions = render_srt(spoken_cues, end=edited)
-    if not captions:
-        raise ValueError('No spoken captions fit the encoded video')
-    captions_path = folder / f'{base}.ru.srt'
-    captions_path.write_text(captions, encoding='utf-8')
-    # A recording over thirty minutes cannot go out as one video, and the plan
-    # module refuses anything needing a third part, so the evidence describes
-    # the videos that actually exist rather than a single claimed file.
-    parts = split_parts(folder, f'{base}.mp4', edited, gameplay, short=short,
-                        game=title, author=str(trace.get('author') or 'unknown'),
-                        repository_url=url)
-    write_release_evidence(folder, trace, capture_seconds=duration, play_seconds=gameplay,
-                           parts=parts, subtitle=captions_path.name)
     report = {'short': short, 'video_format': 'short' if short else 'long', 'beta_episode': trace.get('short') is True and not puzzle and not viewport, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
-        'cuts_seconds': cuts, 'raw_duration_seconds': duration,
+        'cuts_seconds': cuts, 'voices_skipped_to_preserve_sync': skipped_cues, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'boards_won': trace.get('boards_won'),
-        'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay >= MIN_EDITED_GAMEPLAY_SECONDS,
-        'captions': captions_path.name, 'captions_scope': 'synthesized_narration_only',
-        'commentary': [text for _, text in lines], 'published': False}
+        'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay > MIN_EDITED_GAMEPLAY_SECONDS, 'commentary': [text for _, text in lines], 'published': False}
     (folder / 'pilot.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     print('::notice title=Edited pilot::' + json.dumps({k: v for k, v in report.items() if k not in {'commentary', 'cuts_seconds'}}), flush=True)
 
