@@ -31,7 +31,7 @@ jobs:
           python-version: "3.11"
       - name: Test the Steam-sourced Russian YouTube review pipeline (sources, cadence, speech, FPS)
         run: |
-          python -m pip install 'Pillow>=10.4,<13.0' 'numpy>=1.26,<3.0' 'imageio-ffmpeg>=0.5,<1.0'
+          python -m pip install 'Pillow>=10.4,<13.0' 'numpy>=1.26,<3.0' 'imageio-ffmpeg>=0.5,<1.0' 'PyYAML>=6,<7'
           python -m unittest \
             youtube-bot/tests/test_game_reviews.py \
             youtube-bot/tests/test_steam_catalog.py \
