@@ -41,8 +41,11 @@ class AdventureSubtitleTests(unittest.TestCase):
                 adventure_draft.build(folder)
             report = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
             captions = (folder / report['captions']).read_text(encoding='utf-8')
-            self.assertIn('00:00:00,000 --> 00:00:01,000\nЯ ищу потерянный артефакт.', captions)
-            self.assertIn('00:00:01,120 --> 00:00:02,120\nВыбираю первый вариант.', captions)
+            # scene_cues groups lines that share a timestamp: the opening and
+            # the first choice both sit at 0.0, so they are spoken as one cue.
+            # Two subtitles at the same instant would overlap on screen.
+            self.assertIn('00:00:00,000 --> 00:00:01,000\n'
+                          'Я ищу потерянный артефакт. Выбираю первый вариант.', captions)
             self.assertIn('00:00:03,000 --> 00:00:04,000\nАртефакт найден.', captions)
             self.assertEqual(report['captions_scope'], 'synthesized_narration_only')
             self.assertEqual(report['minimum_gameplay_seconds'], 1200)
