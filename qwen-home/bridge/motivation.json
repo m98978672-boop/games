@@ -1,12 +1,12 @@
 {
-  "points": 130,
+  "points": 167,
   "level": "Ветеран моста",
   "achievements": [
     {
       "id": "veteran-exp",
       "title": "Ветеран экспедиций",
       "reward": "сама предлагает маршрут недели в журнале моста",
-      "at": "2026-11-24 04:54 UTC"
+      "at": "2026-11-25 14:13 UTC"
     },
     {
       "id": "game-maker",
@@ -33,29 +33,9 @@
       "at": "2026-11-26"
     }
   ],
-  "pendingDuties": [
-    {
-      "id": "20261126-2128-colinhuang314-github-io:crash",
-      "kind": "crash",
-      "text": "Взыскание: письменно разобрать сбой — что упало и какой фикс нужен",
-      "at": "2026-11-26 21:28 UTC",
-      "closedBy": ""
-    }
-  ],
+  "pendingDuties": [],
   "closedDuties": [],
   "lastEvents": [
-    {
-      "id": "creation:game:ptica-i-truby",
-      "at": "2026-11-23",
-      "delta": 12,
-      "text": "собрала свою игру «Птица и трубы» из библиотеки "
-    },
-    {
-      "id": "creation:game:zvezdny-dozhd",
-      "at": "2026-11-23",
-      "delta": 12,
-      "text": "собрала свою игру «Звёздный дождь» из библиотеки "
-    },
     {
       "id": "creation:game:zmeika",
       "at": "2026-11-23",
@@ -91,18 +71,31 @@
       "at": "2026-11-24 04:33 UTC",
       "delta": 8,
       "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
+    },
+    {
+      "id": "creation:episode:ep-20261125-match",
+      "at": "2026-11-25 04:48 UTC",
+      "delta": 8,
+      "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
+    },
+    {
+      "id": "creation:episode:ep-20261126-match",
+      "at": "2026-11-26 21:00 UTC",
+      "delta": 8,
+      "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
     }
   ],
   "eventIds": [
-    "20261124-0433-colinhuang314-github-io:played",
-    "20261124-0433-colinhuang314-github-io:video",
-    "20261124-0442-colinhuang314-github-io:played",
-    "20261124-0442-colinhuang314-github-io:video",
-    "20261124-0503-colinhuang314-github-io:played",
-    "20261124-0503-colinhuang314-github-io:video",
-    "20261124-0514-colinhuang314-github-io:played",
-    "20261124-0514-colinhuang314-github-io:video",
-    "20261126-2128-colinhuang314-github-io:error",
+    "20261125-1345-colinhuang314-github-io:played",
+    "20261125-1345-colinhuang314-github-io:video",
+    "20261125-1358-colinhuang314-github-io:played",
+    "20261125-1358-colinhuang314-github-io:video",
+    "20261125-1423-colinhuang314-github-io:played",
+    "20261125-1423-colinhuang314-github-io:video",
+    "20261125-1439-colinhuang314-github-io:played",
+    "20261125-1439-colinhuang314-github-io:video",
+    "20261126-2100-colinhuang314-github-io:played",
+    "20261126-2100-colinhuang314-github-io:video",
     "creation:game:ptica-i-truby",
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
@@ -110,15 +103,17 @@
     "creation:episode:ep-20261123-5-truby",
     "creation:episode:ep-20261123-7-truby",
     "creation:episode:ep-20261123-match",
-    "creation:episode:ep-20261124-match"
+    "creation:episode:ep-20261124-match",
+    "creation:episode:ep-20261125-match",
+    "creation:episode:ep-20261126-match"
   ],
   "reportsCounted": 5,
-  "playedCount": 4,
+  "playedCount": 5,
   "bestStepsEver": 0,
   "gamesMade": 3,
-  "episodesMade": 5,
+  "episodesMade": 7,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-26 21:28 UTC",
+  "updatedAt": "2026-11-26 21:00 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -182,13 +177,40 @@
     "20261124-0503-colinhuang314-github-io:video",
     "20261124-0514-colinhuang314-github-io:played",
     "20261124-0514-colinhuang314-github-io:video",
-    "20261126-2128-colinhuang314-github-io:error",
+    "20261124-0535-colinhuang314-github-io:played",
+    "20261124-0535-colinhuang314-github-io:video",
+    "20261125-0448-colinhuang314-github-io:played",
+    "20261125-0448-colinhuang314-github-io:video",
+    "20261125-0459-colinhuang314-github-io:played",
+    "20261125-0459-colinhuang314-github-io:video",
+    "20261125-1235-colinhuang314-github-io:played",
+    "20261125-1235-colinhuang314-github-io:video",
+    "20261125-1247-colinhuang314-github-io:played",
+    "20261125-1247-colinhuang314-github-io:video",
+    "20261125-1258-colinhuang314-github-io:played",
+    "20261125-1258-colinhuang314-github-io:video",
+    "20261125-1309-colinhuang314-github-io:played",
+    "20261125-1309-colinhuang314-github-io:video",
+    "20261125-1328-colinhuang314-github-io:played",
+    "20261125-1328-colinhuang314-github-io:video",
+    "20261125-1345-colinhuang314-github-io:played",
+    "20261125-1345-colinhuang314-github-io:video",
+    "20261125-1358-colinhuang314-github-io:played",
+    "20261125-1358-colinhuang314-github-io:video",
+    "20261125-1423-colinhuang314-github-io:played",
+    "20261125-1423-colinhuang314-github-io:video",
+    "20261125-1439-colinhuang314-github-io:played",
+    "20261125-1439-colinhuang314-github-io:video",
+    "20261126-2100-colinhuang314-github-io:played",
+    "20261126-2100-colinhuang314-github-io:video",
     "creation:episode:ep-20261123-2-truby",
     "creation:episode:ep-20261123-4-truby",
     "creation:episode:ep-20261123-5-truby",
     "creation:episode:ep-20261123-7-truby",
     "creation:episode:ep-20261123-match",
     "creation:episode:ep-20261124-match",
+    "creation:episode:ep-20261125-match",
+    "creation:episode:ep-20261126-match",
     "creation:game:ptica-i-truby",
     "creation:game:zmeika",
     "creation:game:zvezdny-dozhd"

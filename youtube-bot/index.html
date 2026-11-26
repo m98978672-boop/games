@@ -10,6 +10,7 @@
   <script src="../shared/engine.js"></script>
   <script src="../shared/engine-bootstrap.js" defer></script>
   <style>
+    [hidden]{display:none!important}
     :root{color-scheme:dark;--bg:#0b0d12;--panel:#141821;--line:#282f3b;--muted:#9ba7b8;--text:#f3f5fa;--accent:#ff3854;--green:#50d6a0;--yellow:#ffd166}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 10% -10%,#2b1420 0,transparent 38%),var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,Segoe UI,sans-serif}main{width:min(820px,calc(100% - 32px));margin:0 auto;padding:34px 0 64px}.top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:28px}.brand{display:flex;align-items:center;gap:12px}.mark{width:46px;height:34px;background:var(--accent);border-radius:11px;display:grid;place-items:center;font-size:18px}.brand h1{font-size:21px;margin:0}.brand p{margin:2px 0;color:var(--muted);font-size:13px}.button{display:inline-flex;justify-content:center;align-items:center;border:0;border-radius:10px;padding:11px 16px;background:var(--accent);color:#fff;text-decoration:none;font:inherit;font-weight:700}.button.secondary{background:#252c37}.card{background:linear-gradient(155deg,#171c26,#11151c);border:1px solid var(--line);border-radius:17px;padding:clamp(20px,5vw,30px);box-shadow:0 18px 45px #0002;margin-bottom:18px}.card h2{font-size:18px;margin:0 0 12px}.muted{color:var(--muted)}.notice{padding:14px 16px;background:#211c14;border:1px solid #463923;color:#f5d58a;border-radius:10px;margin:0 0 18px}.notice.success{background:#10231d;border-color:#225c46;color:#9af0c7}.notice.error{background:#28151a;border-color:#67313a;color:#ff9fac}.steps{padding-left:22px}.steps li{margin:8px 0}.help{font-size:13px;color:var(--muted)}.footer{margin-top:22px;color:var(--muted);font-size:12px}.status{display:inline-flex;gap:8px;align-items:center;color:var(--green);font-size:13px;font-weight:650}.dot{width:8px;height:8px;background:currentColor;border-radius:50%}@media(max-width:600px){.top{align-items:flex-start;flex-direction:column}}
   </style>
@@ -30,6 +31,22 @@
     <p class="muted">После разрешения Google сервер сохранит токен в зашифрованном хранилище и попробует загрузить короткий тестовый ролик как <strong>приватный</strong>. Тестовое видео не публикуется для зрителей.</p>
     <a class="button" href="https://cuhfnzgytndyntpbnbda.supabase.co/functions/v1/youtube-bot/auth/start">Продолжить через Google</a>
     <p class="help">Пароль Google не передаётся этому сайту. Запрашиваемое разрешение — загрузка видео на YouTube. Не нажимайте повторно, если загрузка завершилась с неопределённым результатом: сначала проверьте YouTube Studio.</p>
+  </section>
+
+  <section class="card" aria-labelledby="comments-title">
+    <h2 id="comments-title">Комментарии с телефона</h2>
+    <p class="muted">Если файл Google не открывается, используйте <a href="credential-copy.html">страницу копирования секрета</a>. Она читает файл только на телефоне.</p>
+    <p class="muted">Подключите Google отдельно с правом только на чтение, укажите своё видео и посмотрите до 50 последних комментариев. Ответы не публикуются. Доступ хранится только в памяти этой вкладки.</p>
+    <button class="button" id="comments-connect" type="button">Подключить чтение комментариев</button>
+    <label for="comments-video" style="display:block;margin-top:18px">Ссылка на своё видео или его ID</label>
+    <input id="comments-video" type="text" inputmode="url" autocomplete="off" placeholder="https://youtu.be/…" style="width:100%;margin:8px 0 12px;padding:12px;border:1px solid #465264;border-radius:10px;background:#0b0d12;color:#fff;font:inherit">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="button" id="comments-read" type="button" disabled>Показать комментарии</button>
+      <button class="button secondary" id="comments-disconnect" type="button" hidden>Отключить в этой вкладке</button>
+    </div>
+    <p id="comments-status" class="help" role="status" aria-live="polite">Google может попросить подтвердить доступ только на чтение.</p>
+    <div id="comments-output" aria-live="polite"></div>
+    <p class="help">Это просмотр в браузере, не автоматическая обработка ИИ. Комментарии и токен не сохраняются на сервере. Для отзыва разрешения откройте <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener noreferrer">подключения Google</a>.</p>
   </section>
 
   <section class="card">
@@ -66,5 +83,7 @@ if (result === 'private_upload_complete') {
   history.replaceState(null, '', location.pathname);
 }
 </script>
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="mobile-comments.js" defer></script>
 </body>
 </html>
