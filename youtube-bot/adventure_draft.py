@@ -135,6 +135,31 @@ def scene_cues(lines, cuts):
 
 def plan(trace):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'Lost in the Maze 3D':
+        lines = [(0, 'Я в лабиринте. Смотрю на схему проходов и ищу путь к порталу.')]
+        spoken = 0
+        previous_direction = None
+        for event in trace['events']:
+            stamp = min(duration, event['ms'] / 1000)
+            kind = event['kind']
+            if kind == 'portal':
+                lines.append((stamp, f'Портал сработал. Теперь уровень {event["level"]}. Маршрут нужно искать заново.'))
+                spoken = stamp
+                previous_direction = None
+            elif stamp - spoken >= 5:
+                if kind == 'retry':
+                    text = 'Эту попытку не пережил. Игра перезапускает уровень, придётся перестроить маршрут.'
+                elif kind == 'blocked':
+                    text = 'Движение не сработало. Проверю, к какой клетке я сейчас прижат.'
+                elif kind == 'route_choice' and event['direction'] != previous_direction:
+                    direction = {'влево': 'на запад карты', 'вправо': 'на восток карты', 'назад': 'в сторону увеличения глубины', 'вперёд': 'в сторону уменьшения глубины'}[event['direction']]
+                    text = f'Меняю направление. По схеме следующий открытый проход ведёт {direction}.'
+                    previous_direction = event['direction']
+                else:
+                    continue
+                lines.append((stamp, text))
+                spoken = stamp
+        return duration, lines, [], trace['furthest'] >= 4
     if trace.get('game') == 'SuperTuxKart':
         won = trace.get('outcome') == 'game_reported_victory'
         lines = [(0.0, 'Сегодня на трассе Зен-Гарден. За рулём — встроенные пилоты Супер Такс Карт.')]
@@ -273,6 +298,10 @@ def build(folder):
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'Lost in the Maze 3D':
+        url = GAME_URL.replace('adventure-game/', 'lost-in-the-maze-3d/')
+        title = 'Lost in the Maze 3D'
+        source = 'https://github.com/m98978672-boop/games/tree/main/collection/lost-in-the-maze-3d'
     if trace.get('game') == 'SuperTuxKart':
         url = 'https://supertuxkart.net/'
         title = 'SuperTuxKart'

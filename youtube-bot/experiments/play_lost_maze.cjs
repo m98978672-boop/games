@@ -55,8 +55,8 @@ async function main(){
     if(furthest<4)throw Error('Did not reach the three-portal milestone');
   } finally {
     await ctx.close();
-    await video.saveAs(`${out}/maze-raw.webm`);
-    fs.writeFileSync(`${out}/trace.json`,JSON.stringify({furthest,events,errors},null,2));
+    await video.saveAs(`${out}/recording.webm`);
+    fs.writeFileSync(`${out}/trace.json`,JSON.stringify({game:'Lost in the Maze 3D',furthest,events,errors},null,2));
     await browser.close();
   }
 }
