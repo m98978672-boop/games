@@ -290,7 +290,6 @@ jobs:
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
       # The uploader checks this too, so it has to be present here or the job
       # would fail after the recording was already made.
-      ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -505,7 +504,6 @@ jobs:
     env:
       CAPTURE_RUN: ${{ inputs.adventure_capture_run }}
       PUBLISH_AT: ${{ inputs.publish_at }}
-      PUZZLE_RECORDING_RIGHTS_VERIFIED: ${{ vars.PUZZLE_RECORDING_RIGHTS_VERIFIED }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -516,7 +514,6 @@ jobs:
       - name: Check publishing prerequisites before starting the recording
         run: |
           [[ "$GITHUB_REF" == refs/heads/main && -z "$CAPTURE_RUN" ]] || { echo '::error::Select main and do not set a previous capture run.'; exit 1; }
-          [[ "$PUZZLE_RECORDING_RIGHTS_VERIFIED" == true ]] || { echo '::error::Verify recording and asset rights, then set PUZZLE_RECORDING_RIGHTS_VERIFIED=true.'; exit 1; }
           PYTHONPATH=youtube-bot python - <<'PYCODE'
           import os
           from datetime import datetime, timedelta, timezone
@@ -556,8 +553,6 @@ jobs:
       TRUSTED_LIGHTHOUSE_CAPTURE: 'true'
       PUBLISH_AT: ${{ inputs.publish_at }}
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
-      ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
-      PUZZLE_RECORDING_RIGHTS_VERIFIED: ${{ vars.PUZZLE_RECORDING_RIGHTS_VERIFIED }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -590,10 +585,9 @@ jobs:
             .conclusion == "success" and .path == ".github/workflows/adventure-experiment.yml"
             and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null
           artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN/artifacts" | jq -er --arg id "$CAPTURE_RUN" '[.artifacts[] | select(.expired == false and (.name == ("puzzle-private-" + $id) or .name == ("adventure-private-" + $id))) | .name] | select(length == 1) | .[0]')"
-          case "$artifact" in
-            puzzle-*) [[ "$PUZZLE_RECORDING_RIGHTS_VERIFIED" == true ]] || exit 1 ;;
-            adventure-*) [[ "$ADVENTURE_RECORDING_RIGHTS_VERIFIED" == true ]] || exit 1 ;;
-          esac
+          # Rights are no longer a variable to tick: the release gate reads
+          # release.evidence.json and refuses an external game without a
+          # verified open licence. Our own games say "own" and need nothing.
           gh run download "$CAPTURE_RUN" --name "$artifact" --dir "$RUNNER_TEMP/adventure-publish"
       - name: Install media verifier
         run: sudo apt-get update && sudo apt-get install -y ffmpeg

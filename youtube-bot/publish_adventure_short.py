@@ -19,8 +19,9 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=Fa
     require_verified_gameplay_release(folder)
     if revoice and not lighthouse:
         raise ValueError('Voice revision is only permitted for the reviewed Lighthouse capture')
-    if not lighthouse and os.getenv('ADVENTURE_RECORDING_RIGHTS_VERIFIED') != 'true':
-        raise ValueError('Recording and asset rights are not confirmed')
+    # Rights are read from the evidence the gate checks: our own game is marked
+    # "own", an external one must carry a verified open licence. A separate
+    # environment flag would be a second key to the same door.
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
     draft = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
     game = 'Последний сигнал' if lighthouse else 'The Lost Artifact'
