@@ -29,6 +29,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Check Python code for names that do not exist
+        # A NameError only shows up when the line runs, and these scripts run on
+        # a schedule, not in tests: youtube_api used PILOT_TOPICS without
+        # importing it, so building the audience report would have crashed in
+        # production after months of green checks.
+        run: |
+          python -m pip install 'ruff>=0.6,<1.0'
+          ruff check youtube-bot razlom-godot qwen-home frontline-command tools site \
+            --select E9,F63,F7,F82,F811,F821
       - name: Test the Steam-sourced Russian YouTube review pipeline (sources, cadence, speech, FPS)
         run: |
           python -m pip install 'Pillow>=10.4,<13.0' 'numpy>=1.26,<3.0' 'imageio-ffmpeg>=0.5,<1.0' 'PyYAML>=6,<7'
