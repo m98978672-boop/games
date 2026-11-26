@@ -386,5 +386,12 @@ check('откат не вернулся: страница-отчёт показ�
   (await readFile(path.join(home, '..', 'tools', 'make-lost-spot-report.py'), 'utf8'))
     .includes('Найденные финалы'));
 
+check('ребро пишется ключом ПРЕДЫДУЩЕГО места (иначе петля не видна: 185 кругов)',
+  expNow.includes("'from_key': my_key") && expNow.includes("prev_key[0] = my_key")
+  && expNow.includes("came_from_key=prev_place[0]"));
+check('флаг open пересчитывается по нажатиям, а не застывает',
+  expNow.includes("node['open'] = any(not self.tried_here(k, label)")
+  && expNow.includes("for label in (to.get('options') or []))"));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
