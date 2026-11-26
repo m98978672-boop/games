@@ -1,8 +1,9 @@
 """Fail closed until the gameplay publisher can prove the owner's release rules.
 
 Private recordings and experiments remain available. The current adventure
-pipeline has no verified timed subtitles, no proof that 20 minutes are genuine
-play, and no two-part same-day release path for recordings over 30 minutes.
+pipeline can create narration SRTs but cannot publish or verify them, has no
+proof that 20 minutes are genuine play, and has no two-part same-day release
+path for recordings over 30 minutes.
 A duration counter or a rights flag alone cannot establish those properties.
 """
 

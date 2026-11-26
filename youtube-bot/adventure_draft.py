@@ -9,12 +9,14 @@ import wave
 from pathlib import Path
 
 from gameplay_voiceover import probe_capture
+from gameplay_captions import render_srt
 from viewport_translation import cues as translation_cues, filters as translation_filters, prepare as prepare_translation
 from adventure_personality import SHORT_SECONDS, short_comment
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
 PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
-MIN_EDITED_GAMEPLAY_SECONDS = 600
+# Duration is necessary, not proof of actual play, rights or release readiness.
+MIN_EDITED_GAMEPLAY_SECONDS = 1200
 MAX_CUT_FRACTION = 0.25
 ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHREE': 'третий'}
 
@@ -152,7 +154,7 @@ def build(folder):
                 seconds = reader.getnframes() / reader.getframerate()
             stamp -= sum(max(0, min(stamp, end) - start) for start, end in cuts)
             start = max(cursor, stamp)
-            wavs.append((wav, round(start * 1000)))
+            wavs.append((wav, round(start * 1000), text))
             cursor = start + seconds + 0.12
         # Remove only redundant waiting on unchanged screens and keep the full raw recording.
         video_seconds = duration - sum(end - start for start, end in cuts)
@@ -169,10 +171,11 @@ def build(folder):
         # The clips never overlap. Assemble one PCM track to avoid opening
         # hundreds of FFmpeg inputs for a multi-board campaign.
         narration = Path(temp) / 'narration.wav'
+        spoken_cues = []
         with wave.open(str(narration), 'wb') as target:
             output_format = None
             written = 0
-            for wav, offset_ms in wavs:
+            for wav, offset_ms, text in wavs:
                 with wave.open(str(wav), 'rb') as clip:
                     fmt = (clip.getnchannels(), clip.getsampwidth(), clip.getframerate())
                     if output_format is None:
@@ -184,8 +187,16 @@ def build(folder):
                         raise ValueError('Unexpected voice format')
                     silence = max(0, round(offset_ms * fmt[2] / 1000) - written)
                     target.writeframesraw(b'\0' * silence * fmt[0] * fmt[1])
-                    target.writeframesraw(clip.readframes(clip.getnframes()))
-                    written += silence + clip.getnframes()
+                    start_frame = written + silence
+                    frames = clip.getnframes()
+                    if frames <= 0:
+                        raise ValueError('Synthesized speech clip is empty')
+                    pcm = clip.readframes(frames)
+                    if len(pcm) != frames * fmt[0] * fmt[1]:
+                        raise ValueError('Synthesized speech clip is truncated')
+                    target.writeframesraw(pcm)
+                    written = start_frame + frames
+                    spoken_cues.append((start_frame / fmt[2], written / fmt[2], text))
         filters.append('[1:a]apad[a]')
         cmd = ['ffmpeg', '-nostdin', '-v', 'error', '-y', '-i', str(raw), '-i', str(narration)]
         subprocess.run(cmd + ['-filter_complex', ';'.join(filters), '-map', '[v]', '-map', '[a]',
@@ -195,11 +206,20 @@ def build(folder):
     if short and edited > SHORT_SECONDS:
         raise ValueError('Encoded Short exceeds the three-minute limit')
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
+    # Cue timings use the exact samples written to the mixed narration track,
+    # after cuts and scheduling, then are clipped to the actual encoded video.
+    captions = render_srt(spoken_cues, end=edited)
+    if not captions:
+        raise ValueError('No spoken captions fit the encoded video')
+    captions_path = folder / f'{base}.ru.srt'
+    captions_path.write_text(captions, encoding='utf-8')
     report = {'short': short, 'video_format': 'short' if short else 'long', 'beta_episode': trace.get('short') is True and not puzzle and not viewport, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
         'cuts_seconds': cuts, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'translation': translation_stats, 'boards_won': trace.get('boards_won'),
-        'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay > MIN_EDITED_GAMEPLAY_SECONDS, 'commentary': [text for _, text in lines], 'published': False}
+        'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay >= MIN_EDITED_GAMEPLAY_SECONDS,
+        'captions': captions_path.name, 'captions_scope': 'synthesized_narration_only',
+        'commentary': [text for _, text in lines], 'published': False}
     (folder / 'pilot.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     print('::notice title=Edited pilot::' + json.dumps({k: v for k, v in report.items() if k not in {'commentary', 'cuts_seconds'}}), flush=True)
 
