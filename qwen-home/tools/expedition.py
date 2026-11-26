@@ -963,16 +963,34 @@ class StoryMap:
         # контекста их варианты смешивались: открытые в одном месте «homework»
         # и «kitchen» приписывались другому, и они «оставались непройденными»
         # навсегда. Теперь «тот же текст, но после другого шага» — другое место.
-        norm = ' '.join((text or '').split()).lower()
+        norm = StoryMap.bare(text, options)
         # Различитель — НАБОР ВАРИАНТОВ, а не «откуда пришла»: в Harlowe одна и
         # та же ссылка ведёт в один пассаж, откуда ни приди, и контекст дробил
         # карту без пользы (100 мест → 473). А вот один и тот же текст с разными
         # вариантами — это правда разные пассажи («дом» и «первый этаж»).
         if options:
             norm += '\u241f' + '|'.join(sorted(o for o in options if o))
-        elif context:
-            norm += '\u241f' + context
         return hashlib.sha1(norm.encode('utf-8')).hexdigest()[:16]
+
+    @staticmethod
+    def bare(text, options=None):
+        """Текст пассажа без названий его вариантов — то, чем место и является.
+
+        Harlowe вставляет названия ссылок прямо в текст: в первом заходе
+        «...tube slide.», после возврата — «...tube slide. back». Один пассаж
+        давал два «текста», место двоилось, и 419 выборов уходили в цикл
+        «школа ↔ площадка», а «slide» оставался ненажатым.
+        """
+        norm = ' '.join((text or '').split()).lower()
+        for label in sorted([o for o in (options or []) if o], key=len, reverse=True):
+            ln = ' '.join(label.split()).lower()
+            if ln and ln in norm:
+                norm = norm.replace(ln, ' ')
+        return ' '.join(norm.split())
+
+    def bare_key(self, text, options=None):
+        """Хэш текста без вариантов: одинаков для одного пассажа при любом наборе."""
+        return hashlib.sha1(self.bare(text, options).encode('utf-8')).hexdigest()[:16]
 
     def text_key_index(self):
         """Какой узел отвечает за этот текст (набор вариантов не в счёт)."""
@@ -989,10 +1007,14 @@ class StoryMap:
     def see(self, text, context=None, options=None):
         """Записать место в карту и вернуть, что в нём видно."""
         k = self.key(text, context, options)
-        # Ключ, под которым живёт узел: если текст уже известен — прежний,
-        # иначе отметки «нажато» повисли бы на несуществующем ключе.
+        # Ключ, под которым живёт узел: если этот текст уже известен, живём под
+        # прежним ключом. Иначе один пассаж делится на два (Harlowe дописывает
+        # названия ссылок в текст) и отметки «нажато» повисают в воздухе.
+        # Разные наборы вариантов при этом остаются разными местами — это
+        # по-прежнему надёжный различитель (§«дом» и «первый этаж»).
+        bare_k = self.bare_key(text, options)
         if self.nodes.get(k) is None:
-            already = self.text_key_index().get(self.key(text))
+            already = self.text_key_index().get(bare_k)
             if already:
                 k = already
         node = self.nodes.get(k)
@@ -1002,12 +1024,11 @@ class StoryMap:
             # появляется «You go back inside»), и без этого один пассаж
             # делился на несколько мест: рёбра теряли источник и половина
             # карты становилась недостижимой. Дописываем варианты в живой узел.
-            tk = self.key(text)
             node = {'text': (text or '')[:220], 'visits': 0}
             node.update(read_signal(text))
             self.nodes[k] = node
         node['visits'] += 1
-        node['text_key'] = self.key(text)
+        node['text_key'] = bare_k
         merged = node.setdefault('options', [])
         for o in (options or []):
             if o and o not in merged:
@@ -1124,10 +1145,24 @@ class StoryMap:
         if (k, label) in self.tried:
             return True
         node = self.nodes.get(k)
-        tk = node.get('text_key') if node else k
-        if not (tk or '').strip():
-            return False
-        return (tk, label) in self.tried
+        if node is not None:
+            # Спрашивают про это место: нажатие помним и по ключу текста.
+            return (node.get('text_key') or '', label) in self.tried
+        # Спрашивают под ключом, которого в карте нет: это тот же пассаж,
+        # если совпадает текст без вариантов (набор мог смениться).
+        return any(tk == k and label == lb for tk, lb in self.tried)
+
+    def mark_tried(self, k, label):
+        """Запомнить нажатие: и под ключом места, и под ключом текста.
+
+        Второе нужно, потому что одно место живёт под ключом, собранным в
+        первый раз, а спрашивают про него иногда под другим набором вариантов.
+        """
+        self.tried.add((k, label))
+        node = self.nodes.get(k)
+        tk = (node or {}).get('text_key')
+        if tk and tk != k:
+            self.tried.add((tk, label))
 
     def remaining(self):
         """Сколько вариантов в известных местах ещё не нажато.
@@ -1168,14 +1203,15 @@ class StoryMap:
                       'clues': v.get('clues', 0), 'open': bool(v.get('open')),
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
-        return {'schema': 'text+options-v3', 'places': places,
+        return {'schema': 'text+options-v4', 'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
                 'tried': sorted([list(t) for t in self.tried])}
 
-    # v3: место — один текст (набор вариантов меняется прямо в пассаже),
-    # висячие рёбра отброшены, нажатия сверяются по тексту. Карты v2 собраны
-    # на сломанной схеме: половина рёбер вела из несуществующих мест.
-    SCHEMA = 'text+options-v3'
+    # v4: место — один текст без названий ссылок (Harlowe дописывает их прямо
+    # в пассаж), висячие рёбра отброшены, нажатия сверяются по тексту.
+    # Карты v3 собирались, когда «...tube slide. back» и «...tube slide.» были
+    # разными местами: 419 выборов уходили в петлю, а slide оставался ненажатым.
+    SCHEMA = 'text+options-v4'
 
     def load_cache(self, data):
         """Вспомнить карту прошлого прогона: там уже есть места и переходы.
@@ -1509,7 +1545,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                           my_key, sight['visits'],
                                           story_map=story_map, energy=sight.get('energy', 0),
                                           came_from=last_place[0])
-                story_map.tried.add((my_key, pick['label']))
+                story_map.mark_tried(my_key, pick['label'])
                 visited.add((my_key, pick['label']))
                 try:
                     el = page.query_selector(f'[data-kv-choice="{pick["i"]}"]')

@@ -93,6 +93,7 @@ def audit(src=None):
             ('есть маршрут к остатку', 'def route_to_open' in e),
             ('висячие рёбра не берутся из памяти', "e.get('from') in self.nodes" in e),
             ('тот же текст — одно место', 'def text_key_index' in e),
+            ('названия ссылок вычищаются из текста', 'def bare(' in e),
             ('нажатие не теряется между наборами', 'def tried_here' in e),
             ('отдых не перебивает непройденное', 'rest_fresh' in e),
             ('память доходит до чтения истории', 'memo_from=memo_from' in e),
