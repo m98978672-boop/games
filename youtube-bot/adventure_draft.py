@@ -136,30 +136,26 @@ def scene_cues(lines, cuts):
 def plan(trace):
     duration = float(trace['duration_seconds'])
     if trace.get('game') == 'Lost in the Maze 3D':
-        lines = [(0, 'Я в лабиринте. Смотрю на схему проходов и ищу путь к порталу.')]
-        spoken = 0
-        previous_direction = None
-        for event in trace['events']:
+        lines = [(0, 'Ищу первый портал. Карта подсказывает, где открыты проходы.')]
+        portals = [event for event in trace['events'] if event['kind'] == 'portal']
+        for event in portals:
             stamp = min(duration, event['ms'] / 1000)
-            kind = event['kind']
-            if kind == 'portal':
-                lines.append((stamp, f'Портал сработал. Теперь уровень {event["level"]}. Маршрут нужно искать заново.'))
-                spoken = stamp
-                previous_direction = None
-            elif stamp - spoken >= 5:
-                if kind == 'retry':
-                    text = 'Эту попытку не пережил. Игра перезапускает уровень, придётся перестроить маршрут.'
-                elif kind == 'blocked':
-                    text = 'Движение не сработало. Проверю, к какой клетке я сейчас прижат.'
-                elif kind == 'route_choice' and event['direction'] != previous_direction:
-                    direction = {'влево': 'на запад карты', 'вправо': 'на восток карты', 'назад': 'в сторону увеличения глубины', 'вперёд': 'в сторону уменьшения глубины'}[event['direction']]
-                    text = f'Меняю направление. По схеме следующий открытый проход ведёт {direction}.'
-                    previous_direction = event['direction']
+            text = {2: 'Первый портал пройден.', 3: 'Второй есть. Здесь маршрут уже длиннее.',
+                    4: 'Третий портал. На этом пока остановлюсь.'}[event['level']]
+            if stamp - lines[-1][0] < 4 and len(lines) > 1:
+                lines.pop()
+            if stamp < 4:
+                lines[0] = (0, 'Ищу портал.')
+            lines.append((stamp, text))
+        for event in trace['events']:
+            stamp = event['ms'] / 1000
+            if stamp < duration - 3 and event['kind'] == 'route_choice' and all(abs(stamp - t) >= 5 for t, _ in lines):
+                text = 'Меняю направление. На карте здесь есть проход.'
+                if all(line != text for _, line in lines):
+                    lines.append((stamp, text))
                 else:
-                    continue
-                lines.append((stamp, text))
-                spoken = stamp
-        return duration, lines, [], trace['furthest'] >= 4
+                    lines.append((stamp, 'Проверяю следующий поворот на пути к выходу.'))
+        return duration, sorted(lines), [], trace['furthest'] >= 4
     if trace.get('game') == 'SuperTuxKart':
         won = trace.get('outcome') == 'game_reported_victory'
         lines = [(0.0, 'Сегодня на трассе Зен-Гарден. За рулём — встроенные пилоты Супер Такс Карт.')]
