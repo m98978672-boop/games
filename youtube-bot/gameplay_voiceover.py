@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import subprocess
 import tempfile
 import wave
@@ -17,6 +18,7 @@ from typing import Any
 
 from gameplay_captions import render_srt
 from gameplay_edit import probe as probe_voiced
+from speech_synthesis import synthesize_narration
 
 DIRECTIONS = {'LEFT': 'влево', 'RIGHT': 'вправо', 'UP': 'вверх', 'DOWN': 'вниз'}
 
@@ -65,7 +67,7 @@ def voiceover(video: Path, trace_file: Path, output: Path) -> dict:
         speech = []
         def synth(text: str) -> tuple[Path, float]:
             wav = tmp / f'speech-{len(list(tmp.glob("speech-*.wav"))):04d}.wav'
-            subprocess.run(['espeak-ng', '-v', 'ru', '-s', '160', '-w', str(wav), text], check=True, timeout=60)
+            synthesize_narration(text, wav, espeak_rate=145)
             with wave.open(str(wav), 'rb') as stream:
                 length = stream.getnframes() / stream.getframerate()
             if not 0 < length <= 30:
@@ -108,7 +110,8 @@ def voiceover(video: Path, trace_file: Path, output: Path) -> dict:
         (deliverable / 'captions-cues.json').write_text(json.dumps(cues, ensure_ascii=False), encoding='utf-8')
         (deliverable / 'voiced.ru.srt').write_text(render_srt(cues, end=duration), encoding='utf-8')
         report = {'game': '2048', 'model_actions': len(trace), 'commentary_clips': len(speech),
-                  'duration_seconds': round(duration, 2), 'voice': 'espeak-ng deterministic action recap',
+                  'duration_seconds': round(duration, 2),
+                  'voice': ('Piper' if os.environ.get('PIPER_MODEL_PATH', '').strip() else 'espeak-ng') + ' deterministic action recap',
                   'game_audio': False, 'gameplay_completed': False, 'uploaded': False}
         (deliverable / 'voiceover-report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
         if output.exists() or output.is_symlink():

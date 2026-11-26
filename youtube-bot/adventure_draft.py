@@ -1,7 +1,6 @@
 """Build a private, trace-based Russian pilot; keep its raw footage unchanged."""
 import json
 import math
-import os
 import subprocess
 import sys
 import tempfile
@@ -12,6 +11,8 @@ from gameplay_voiceover import probe_capture
 from gameplay_captions import render_srt
 from viewport_translation import cues as translation_cues, filters as translation_filters, prepare as prepare_translation
 from adventure_personality import SHORT_SECONDS, short_comment
+from speech_pronunciation import speech_cadence
+from speech_synthesis import synthesize_narration
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
 PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
@@ -22,15 +23,7 @@ ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHRE
 
 
 def narrate(text, wav):
-    model = os.environ.get('PIPER_MODEL_PATH')
-    if model:
-        if not Path(model).is_file() or not Path(model + '.json').is_file():
-            raise RuntimeError('Russian neural voice is missing; refusing fallback audio')
-        subprocess.run(['piper', '--model', model, '--output_file', str(wav),
-                        '--length_scale', '1.10', '--sentence_silence', '0.22'],
-                       input=text, text=True, check=True, timeout=60)
-    else:
-        subprocess.run(['espeak-ng', '-v', 'ru', '-s', '145', '-w', str(wav), text], check=True, timeout=30)
+    synthesize_narration(text, wav)
 
 
 def plan(trace, *, translation_intervals=None):
@@ -155,7 +148,7 @@ def build(folder):
             stamp -= sum(max(0, min(stamp, end) - start) for start, end in cuts)
             start = max(cursor, stamp)
             wavs.append((wav, round(start * 1000), text))
-            cursor = start + seconds + 0.12
+            cursor = start + seconds + speech_cadence(text)[2]
         # Remove only redundant waiting on unchanged screens and keep the full raw recording.
         video_seconds = duration - sum(end - start for start, end in cuts)
         discard = '+'.join(f'between(t,{start:.3f},{end:.3f})' for start, end in cuts)

@@ -38,12 +38,35 @@ class AdventureSubtitleTests(unittest.TestCase):
             report = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
             captions = (folder / report['captions']).read_text(encoding='utf-8')
             self.assertIn('00:00:00,000 --> 00:00:01,000\nЯ ищу потерянный артефакт.', captions)
-            self.assertIn('00:00:01,120 --> 00:00:02,120\nВыбираю первый вариант.', captions)
+            self.assertIn('00:00:01,160 --> 00:00:02,160\nВыбираю первый вариант.', captions)
             self.assertIn('00:00:03,000 --> 00:00:04,000\nАртефакт найден.', captions)
             self.assertEqual(report['captions_scope'], 'synthesized_narration_only')
             self.assertEqual(report['minimum_gameplay_seconds'], 1200)
             self.assertFalse(report['duration_eligible'])
             self.assertFalse(report['published'])
+
+    def test_spoken_aliases_do_not_rewrite_captions_or_shift_sample_timings(self):
+        trace = {'game': 'The Lost Artifact', 'outcome': 'time_limit', 'actions': []}
+        lines = [(0.0, 'Нажми [E] в Steam?'), (0.0, 'Размер 800x600.')]
+        spoken = []
+        def fake_process(command, **kwargs):
+            if command[0] == 'espeak-ng':
+                spoken.append(command[-1])
+                fake_voice(command[-1], Path(command[command.index('-w') + 1]))
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp)
+            (folder / 'trace.json').write_text(json.dumps(trace), encoding='utf-8')
+            (folder / 'recording.webm').touch()
+            with patch.dict('os.environ', {'PIPER_MODEL_PATH': '', 'SPEECH_PRONUNCIATION_PATH': ''}), \
+                 patch.object(adventure_draft, 'plan', return_value=(10.0, lines, [], False)), \
+                 patch.object(adventure_draft, 'probe_capture', side_effect=[10.0, 10.0]), \
+                 patch.object(adventure_draft.subprocess, 'run', side_effect=fake_process):
+                adventure_draft.build(folder)
+            report = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
+            captions = (folder / report['captions']).read_text(encoding='utf-8')
+            self.assertEqual(spoken, ['Нажми клавишу и в Стим?', 'Размер 800 на 600.'])
+            self.assertIn('00:00:00,000 --> 00:00:01,000\nНажми [E] в Steam?', captions)
+            self.assertIn('00:00:01,220 --> 00:00:02,220\nРазмер 800x600.', captions)
 
     def test_empty_voice_clip_never_yields_captions(self):
         def silent_file(text, wav):
