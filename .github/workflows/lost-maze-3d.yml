@@ -14,11 +14,18 @@ jobs:
       - name: Record genuine browser play and verify progress
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/maze" "$RUNNER_TEMP/maze-deps"
-          npm install --prefix "$RUNNER_TEMP/maze-deps" --no-audit --no-fund playwright@1.51.1
-          "$RUNNER_TEMP/maze-deps/node_modules/.bin/playwright" install --with-deps chromium
-          python -m http.server 8765 --bind 127.0.0.1 &
-          NODE_PATH="$RUNNER_TEMP/maze-deps/node_modules" node youtube-bot/experiments/play_lost_maze.cjs "$RUNNER_TEMP/maze"
+          mkdir -p "$RUNNER_TEMP/maze"
+          docker build -t maze-browser youtube-bot/gameplay 2>&1 | tee "$RUNNER_TEMP/maze/browser-build.log"
+          docker run --rm --ipc=host --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/game,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/maze,dst=/capture" \
+            --entrypoint bash maze-browser -c '
+              set -euo pipefail
+              cd /game
+              python3 -m http.server 8765 --bind 127.0.0.1 &
+              for i in {1..30}; do curl -fsS http://127.0.0.1:8765/collection/lost-in-the-maze-3d/ >/dev/null && break; sleep 1; done
+              export NODE_PATH=/runner/node_modules
+              node /game/youtube-bot/experiments/play_lost_maze.cjs /capture
+            ' 2>&1 | tee "$RUNNER_TEMP/maze/attempt.log"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
