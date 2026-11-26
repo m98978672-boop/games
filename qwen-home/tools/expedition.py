@@ -1599,7 +1599,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             report.step('план захода',
                         f'осталось непройденных вариантов {left_now} в {len(story_map.nodes)} местах — иду закрывать их')
         pending = {'from': '', 'choice': '', 'done': True}
-        trail = []        # последние места: ловим хождение по кругу
+        trail = []        # последние места: ловим хождение по кругу (по подписи текста)
         last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
         prev_key = ['']    # ключ предыдущего места: ребро пишем ИМ
         text_key_full = ['']  # текст текущего места (для записи ребра)
@@ -1646,7 +1646,10 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             story_map.mark_open(text, choices, here_ctx)
             if choices:
                 # след последних мест: если ходит по кругу, дальше не жмём
-                trail.append(my_key)
+                # След — по ПОДПИСИ текста: Harlowe дописывает названия ссылок,
+                # и каждый круг давал новый ключ — стоп-кран не видел петлю,
+                # и она 199 раз ходила «bushes ↔ back to park».
+                trail.append(story_map.text_sig(text, labels))
                 last_place[0] = prev_place[0]
                 if len(trail) > 18:
                     trail.pop(0)
@@ -1655,7 +1658,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 # остатку рубился на 17-м шаге, не дойдя: 6 заходов подряд по
                 # 0 финалов. Петля через два места — это нормальный проход по
                 # дому, а не топтание.
-                if (len(trail) >= 18 and len(set(trail[-8:])) <= 1
+                if (len(trail) >= 18 and len(set(trail[-8:])) <= 2
                         and new_places == 0):
                     report.step('стоп-кран',
                                 f'топчется в одном месте {len(trail)} шагов и новых мест нет — прекращаю заход')
