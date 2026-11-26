@@ -72,12 +72,12 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=Fa
 
 
 
-def publish_checked(result, *, lighthouse=False, relay=False, now=None):
+def publish_checked(result, *, lighthouse=False, relay=False, stk=False, now=None):
     from gameplay_release_gate import require_verified_gameplay_release
     # The result file sits in the artifact folder that holds the evidence.
-    if not relay:
+    if not (relay or stk):
         require_verified_gameplay_release(Path(result).parent)
-    if lighthouse or relay:
+    if lighthouse or relay or stk:
         payload = json.loads(result.read_text(encoding='utf-8'))
         metadata = payload['metadata']
         try:
