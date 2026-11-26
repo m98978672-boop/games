@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "updatedAt": "2026-11-25T16:22:59.151Z",
+  "updatedAt": "2026-11-26T01:16:02.410Z",
   "autoPost": {
     "enabled": true,
     "intervalHours": 6,
-    "lastRunAt": "2026-11-25T16:22:59.151Z",
+    "lastRunAt": "2026-11-26T01:16:02.410Z",
     "sourcesCount": 11,
     "verifiedArticlesCount": 19,
     "commentSyncTools": [
@@ -19,7 +19,7 @@
     ],
     "mode": "verified-editorial+auto-rss",
     "workflow": ".github/workflows/auto-news.yml",
-    "totalRuns": 22,
+    "totalRuns": 23,
     "lastSourcesReachable": 11,
     "categoriesCount": 6,
     "backlog": {
@@ -2526,6 +2526,1290 @@
       "imageCredit": "Games News · локальная обложка"
     },
     {
+      "id": "auto-habr-news-497ea142b9",
+      "code": "T-790",
+      "category": "tech",
+      "title": "По документам труба бесшовная: с чего начинать оценку безопасности старого трубопровода",
+      "summary": "9 сентября 2010 года в Сан-Бруно под Сан-Франциско разорвался 30-дюймовый газопровод Line 132. Погибли восемь человек, сгорели 38 домов, еще 70 были повреждены. Через четыре месяца NTSB выпустил срочные рекомендации опер",
+      "body": [
+        "9 сентября 2010 года в Сан-Бруно под Сан-Франциско разорвался 30-дюймовый газопровод Line 132. Погибли восемь человек, сгорели 38 домов, еще 70 были повреждены. Через четыре месяца NTSB выпустил срочные рекомендации оператору , компании PG&E. В базе данных PG&E для участка указывалась бесшовная труба API 5L X42 со стенкой 0,375 дюйма. По итоговому отчету NTSB, в месте разрыва обнаружили шесть коротких отрезков длиной около 4 футов, сваренных между собой. Разрушение началось в частично проваренном продольном шве одного из этих отрезков.",
+        "Привет, Хабр. Меня зовут Карина Матвеева, я работаю с системами инженерного анализа в CS Group. Сейчас мы работаем над проектом, связанным с трубопроводами, построенными по нормам 1970-х и 1980-х годов. Я решила поделиться наработками."
+      ],
+      "tags": [
+        "трубопровод",
+        "проектирование",
+        "строительство",
+        "оценка рисков"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1112486/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112486",
+      "publishedAt": "2026-11-26T01:10:32.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1112486/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112486"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-790.svg",
+      "imageCaption": "Обложка рубрики: По документам труба бесшовная: с чего начинать оценку безопасности ста",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-lenta-top-395f7a1df6",
+      "code": "W-748",
+      "category": "world",
+      "title": "Сотни военных ВСУ попали в сводки полиции Украины из-за наркотиков",
+      "summary": "Сотни военных ВСУ попали в сводки полиции Украины из-за наркотиков",
+      "body": [
+        "Сотни военных ВСУ попали в сводки полиции Украины из-за наркотиков. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Бывший СССР"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/26/sotni-voennyh-vsu-popali-v-svodki-politsii-ukrainy-iz-za-narkotikov/",
+      "publishedAt": "2026-11-26T01:09:46.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/26/sotni-voennyh-vsu-popali-v-svodki-politsii-ukrainy-iz-za-narkotikov/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-748.svg",
+      "imageCaption": "Обложка рубрики: Сотни военных ВСУ попали в сводки полиции Украины из-за наркотиков",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-lenta-top-b0c2619e70",
+      "code": "W-901",
+      "category": "world",
+      "title": "В России допустили скорые визиты делегаций из Афганистана",
+      "summary": "В России допустили скорые визиты делегаций из Афганистана",
+      "body": [
+        "В России допустили скорые визиты делегаций из Афганистана. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Мир"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/26/v-rossii-dopustili-skorye-vizity-delegatsiy-iz-afganistana/",
+      "publishedAt": "2026-11-26T01:04:32.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/26/v-rossii-dopustili-skorye-vizity-delegatsiy-iz-afganistana/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-901.svg",
+      "imageCaption": "Обложка рубрики: В России допустили скорые визиты делегаций из Афганистана",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-lenta-top-70c06f43b9",
+      "code": "W-919",
+      "category": "world",
+      "title": "Звезда Comedy Woman пожаловалась на зарплату в шоу и вспомнила ездившего на Bentley Волю",
+      "summary": "Звезда Comedy Woman пожаловалась на зарплату в шоу и вспомнила ездившего на Bentley Волю",
+      "body": [
+        "Звезда Comedy Woman пожаловалась на зарплату в шоу и вспомнила ездившего на Bentley Волю. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Интернет и СМИ"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/26/borsheva/",
+      "publishedAt": "2026-11-26T01:00:58.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/26/borsheva/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-919.svg",
+      "imageCaption": "Обложка рубрики: Звезда Comedy Woman пожаловалась на зарплату в шоу и вспомнила ездивше",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-bbc-world-355424d509",
+      "code": "W-796",
+      "category": "world",
+      "title": "US announces new tariffs on host of countries including China",
+      "summary": "The new levies would hit many of America's biggest trading partners, including China and the EU.",
+      "body": [
+        "The new levies would hit many of America's biggest trading partners, including China and the EU."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/c893r9ke5p97o?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-26T01:00:06.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/c893r9ke5p97o?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-796.svg",
+      "imageCaption": "Обложка рубрики: US announces new tariffs on host of countries including China",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-b8a67a72dc",
+      "code": "G-885",
+      "category": "games",
+      "title": "[Видео] NVIDIA тонет без Хуанга / В GTA 6 играют иди*ты / Steam в белые списки / DDR кончится в 2027",
+      "summary": "Подводим итоги ушедшей недели, вспоминаем и комментируем все то, чем успела отличиться игровая индустрия.",
+      "body": [
+        "Подводим итоги ушедшей недели, вспоминаем и комментируем все то, чем успела отличиться игровая индустрия.",
+        "NVIDIA прекратила поставки чипов в Китай, а Intel скрывала свои проблемы от акционеров",
+        "Grinding Gear Games надеется привлечь свыше одного миллиона игроков на релизе Path of Exile 2 версии 1.0",
+        "Crimson Desert победила в восьми номинациях на корейской игровой церемонии"
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/26/video-nvidia-tonet-bez-xuanga-v-gta-6-igraiut-idity-steam-v-belye-spiski-ddr-koncitsia-v-2027.html",
+      "publishedAt": "2026-11-26T00:13:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/26/video-nvidia-tonet-bez-xuanga-v-gta-6-igraiut-idity-steam-v-belye-spiski-ddr-koncitsia-v-2027.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-885.svg",
+      "imageCaption": "Обложка рубрики: [Видео] NVIDIA тонет без Хуанга / В GTA 6 играют иди*ты / Steam в белы",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-05d8c9b708",
+      "code": "G-996",
+      "category": "games",
+      "title": "Никаких крайностей: Rockstar рассказала о балансе сложности в Grand Theft Auto",
+      "summary": "Rockstar не хотела сделать игру слишком легкой.",
+      "body": [
+        "Rockstar не хотела сделать игру слишком легкой.",
+        "Разработчики Grand Theft Auto VI стремились найти золотую середину между сложностью GTA IV и доступностью GTA V. Об этом рассказал руководитель Rockstar North Роб Нельсон в интервью Destructoid, посвященном различным аспектам разработки долгожданной игры.",
+        "По словам Нельсона, команда прекрасно понимала, что сложность предыдущих частей серии не всегда была сбалансированной. В частности, GTA IV временами могла оказаться чрезмерно суровой по отношению к игрокам, тогда как GTA V, напротив, порой казалась слишком легкой. При создании шестой части Rockstar хотела избежать обеих крайностей.",
+        "Продюсер по дизайну Скотт Митчелл добавил, что разработчики уделили особое внимание тому, чтобы игровые провалы и неудачи ощущались оправданными. Команда стремилась предоставить игрокам свободу в использовании доступных механик, включая скрытное прохождение, вместо того чтобы постоянно ограничивать их выбор."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/26/nikakix-krainostei-rockstar-rasskazala-o-balanse-sloznosti-v-grand-theft-auto.html",
+      "publishedAt": "2026-11-26T00:04:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/26/nikakix-krainostei-rockstar-rasskazala-o-balanse-sloznosti-v-grand-theft-auto.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-996.svg",
+      "imageCaption": "Обложка рубрики: Никаких крайностей: Rockstar рассказала о балансе сложности в Grand Th",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-habr-news-f9ebf029de",
+      "code": "T-930",
+      "category": "tech",
+      "title": "Запрещай, запрещай, а остальное всё — дребедень. Песня о безопаснике Бобби и нейросетях",
+      "summary": "Помнишь «Остров сокровищ» 1986 года? Посреди мультфильма вдруг выходит хор, и под фортепиано рассказывают историю мальчика Бобби. «С рождения Бобби пай-мальчиком был. — Молодец…» Бобби любил деньги, не ел, не пил и всё с",
+      "body": [
+        "Помнишь «Остров сокровищ» 1986 года? Посреди мультфильма вдруг выходит хор, и под фортепиано рассказывают историю мальчика Бобби. «С рождения Бобби пай-мальчиком был. — Молодец…» Бобби любил деньги, не ел, не пил и всё складывал в копилку. Чем закончилось, помнит каждый, кто смотрел: он забыл, что деньги на свете любит не он один.",
+        "Давай я спою тебе свою версию.",
+        "С рождения Бобби безопасником был. — Молодец… Имел Бобби хобби — он данные хранил. — Хороший мальчик… Хранил и закрыл. — Что было дальше?",
+        "Все люди как люди — им чат-бот помогает, — Прогресс… А Боб на диете — он ИИ запрещает. — Бедненький мальчик… Приказ подписал."
+      ],
+      "tags": [
+        "персональные данные",
+        "152-ФЗ",
+        "LLM",
+        "маскирование данных"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1112482/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112482",
+      "publishedAt": "2026-11-26T00:02:41.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1112482/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112482"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-930.svg",
+      "imageCaption": "Обложка рубрики: Запрещай, запрещай, а остальное всё — дребедень. Песня о безопаснике Б",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-habr-news-a6c3b6d5c0",
+      "code": "T-830",
+      "category": "tech",
+      "title": "Машина, чайник и 15 кВт: как заряжать электромобиль дома и не выбивать автомат",
+      "summary": "Вечером вы ставите электромобиль на зарядку, включаете духовку и идёте в душ. Вслед за вами включается бойлер. Для домашней электросети покупка машины не прошла незаметно: появился потребитель, способный в одиночку забра",
+      "body": [
+        "Вечером вы ставите электромобиль на зарядку, включаете духовку и идёте в душ. Вслед за вами включается бойлер. Для домашней электросети покупка машины не прошла незаметно: появился потребитель, способный в одиночку забрать всю выделенную мощность.",
+        "Если дому доступны 15 кВт, станция с надписью «22 кВт» легко ставит владельца в тупик. Просить больше мощности? Заряжаться только ночью? Разберёмся, сколько машине нужно на самом деле и как дать ей этот запас без дежурства у электрощита."
+      ],
+      "tags": [
+        "электромобили",
+        "зарядка",
+        "зарядное устройство",
+        "зарядные станции"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1112480/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112480",
+      "publishedAt": "2026-11-25T23:55:25.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1112480/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112480"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-830.svg",
+      "imageCaption": "Обложка рубрики: Машина, чайник и 15 кВт: как заряжать электромобиль дома и не выбивать",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-lenta-top-0a17c423b7",
+      "code": "W-975",
+      "category": "world",
+      "title": "«Гроссмейстер политики и историческая личность». Что сказал Кушнер о Путине, отношениях с Россией и конфликте на Украине?",
+      "summary": "«Гроссмейстер политики и историческая личность». Что сказал Кушнер о Путине, отношениях с Россией и конфликте на Украине?",
+      "body": [
+        "«Гроссмейстер политики и историческая личность». Что сказал Кушнер о Путине, отношениях с Россией и конфликте на Украине?. Подробности доступны в первоисточнике «Лента · Главное»."
+      ],
+      "tags": [
+        "Мир"
+      ],
+      "sourceName": "Лента · Главное",
+      "sourceUrl": "https://lenta.ru/news/2026/11/26/long-grossmeyster-politiki-i-istoricheskaya-lichnost-chto-skazal-kushner-o-putine-otnosheniyah-s-rossiey-i-konflikte-na-ukraine/",
+      "publishedAt": "2026-11-25T23:50:16.000Z",
+      "readMin": 1,
+      "icon": "🌍",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Лента · Главное)",
+          "url": "https://lenta.ru/news/2026/11/26/long-grossmeyster-politiki-i-istoricheskaya-lichnost-chto-skazal-kushner-o-putine-otnosheniyah-s-rossiey-i-konflikte-na-ukraine/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-975.svg",
+      "imageCaption": "Обложка рубрики: «Гроссмейстер политики и историческая личность». Что сказал Кушнер о П",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-stopgame-7b28e24083",
+      "code": "G-907",
+      "category": "games",
+      "title": "Terraria получила поддержку локального кросс-плея",
+      "summary": "Независимая студия Re-Logic выпустила обновление 1.4.6 для Terraria, которое вводит в игру давно обещанную поддержку кроссплатформенного мультиплеера.… […]",
+      "body": [
+        "Независимая студия Re-Logic выпустила обновление 1.4.6 для Terraria, которое вводит в игру давно обещанную поддержку кроссплатформенного мультиплеера.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73639/terraria_poluchila_podderzhku_lokalnogo_kross_pleya",
+      "publishedAt": "2026-11-25T23:41:54.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73639/terraria_poluchila_podderzhku_lokalnogo_kross_pleya"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-907.svg",
+      "imageCaption": "Обложка рубрики: Terraria получила поддержку локального кросс-плея",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-efbc9134a9",
+      "code": "G-735",
+      "category": "games",
+      "title": "Playground Games хочет показать расовое разнообразие современной Великобритании в новой Fable",
+      "summary": "Судя по всему, студия решила начать закапывать игру до релиза.",
+      "body": [
+        "Судя по всему, студия решила начать закапывать игру до релиза.",
+        "Геймдиректор грядущей Fable и сооснователь студии Playground Games Ральф Фултон в новом интервью рассказал о сложностях разработки, подборе актерского состава и стремлении сохранить характерный британский юмор серии.",
+        "По словам Фултона, решение взяться за совершенно новый для Playground Games жанр оказалось довольно смелым шагом. Студии пришлось сформировать новую команду и одновременно воссоздать все основные составляющие Fable: от сюжетной линии и боевой системы до симуляции игрового мира и фирменного британского юмора.",
+        "Xbox Game Studios Разработчик признает, что масштаб поставленной задачи мог показаться безумным, однако команда чувствовала ответственность перед поклонниками, которым пообещала возвращение знаменитой фэнтезийной ролевой игры."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/26/playground-games-xocet-pokazat-rassovoe-raznoobrazie-sovremennoi-velikobritanii-v-novoi-fable.html",
+      "publishedAt": "2026-11-25T23:41:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/26/playground-games-xocet-pokazat-rassovoe-raznoobrazie-sovremennoi-velikobritanii-v-novoi-fable.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-735.svg",
+      "imageCaption": "Обложка рубрики: Playground Games хочет показать расовое разнообразие современной Велик",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-e394f17815",
+      "code": "G-866",
+      "category": "games",
+      "title": "TSMC планирует вложить $22,6 млрд в строительство завода по производству 2-нм чипов в Техасе",
+      "summary": "В документах компания указывает, что параллельно рассматривает возможность приобретения и освоения дополнительного земельного участка в Аризоне.",
+      "body": [
+        "В документах компания указывает, что параллельно рассматривает возможность приобретения и освоения дополнительного земельного участка в Аризоне.",
+        "Тайваньская компания TSMC, крупнейший в мире контрактный производитель полупроводников, рассматривает возможность строительства нового завода в американском штате Техас. Согласно документам, поданным в офис контролера штата, объем инвестиций в проект может составить около $22,6 млрд. Предприятие планируют оснастить технологиями производства передовых чипов по 2-нанометровому техпроцессу.",
+        "Потенциальная площадка расположена в округе Бразос. Если проект получит одобрение, строительство начнётся в 2027 году и завершится в 2031-м. Ожидается, что предприятие обеспечит около 2099 рабочих мест и станет вторым крупным производственным кампусом TSMC в США после комплекса компании в Аризоне.",
+        "TSMC При выборе места для строительства, как сообщили представители местных властей изданию KBTX, учитывались близость Техасского университета A&M, наличие квалифицированных инженерных кадров, расположение городов Брайан и Колледж-Стейшен, а также доступность международного аэропорта."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/26/tsmc-planiruet-vlozit-226-mlrd-v-stroitelstvo-zavoda-po-proizvodstvu-2-nm-cipov-v-texase.html",
+      "publishedAt": "2026-11-25T23:24:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/26/tsmc-planiruet-vlozit-226-mlrd-v-stroitelstvo-zavoda-po-proizvodstvu-2-nm-cipov-v-texase.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-866.svg",
+      "imageCaption": "Обложка рубрики: TSMC планирует вложить $22,6 млрд в строительство завода по производст",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-habr-news-d87972600c",
+      "code": "T-924",
+      "category": "tech",
+      "title": "Решение проблемы планировщика задач для распределенного кластера видео обработки",
+      "summary": "Планировщик для распределённой обработки видео. Как выжать 99–100% из кластера видеообработки.",
+      "body": [
+        "Планировщик для распределённой обработки видео. Как выжать 99–100% из кластера видеообработки.",
+        "С ростом видеоархивов обрабатывать их на одном сервере становится невозможно, нужны кластеры. Но чтобы узлы не простаивали, видеофайлы нужно правильно нарезать и распределить между нодами.",
+        "В статье разбираем, как устроен планировщик задач для Distributed Content Processing Service."
+      ],
+      "tags": [
+        "bigdata",
+        "parallel computing"
+      ],
+      "sourceName": "Хабр Новости",
+      "sourceUrl": "https://habr.com/ru/articles/1112470/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112470",
+      "publishedAt": "2026-11-25T22:51:33.000Z",
+      "readMin": 1,
+      "icon": "🤖",
+      "accent": "violet",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Новости)",
+          "url": "https://habr.com/ru/articles/1112470/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112470"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-924.svg",
+      "imageCaption": "Обложка рубрики: Решение проблемы планировщика задач для распределенного кластера видео",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-bbc-world-9962ee631f",
+      "code": "W-745",
+      "category": "world",
+      "title": "Thirty-one killed in massive fire as fuel tanker crashes on Cairo highway",
+      "summary": "Another 21 are injured after the tanker reportedly overturns on a busy ring road in the Egyptian capital.",
+      "body": [
+        "Another 21 are injured after the tanker reportedly overturns on a busy ring road in the Egyptian capital."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/cqy7rn30v314o?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-25T22:18:06.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/cqy7rn30v314o?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-745.svg",
+      "imageCaption": "Обложка рубрики: Thirty-one killed in massive fire as fuel tanker crashes on Cairo high",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-3dnews-ca77925d01",
+      "code": "T-725",
+      "category": "tech",
+      "title": "До цифрового апокалипсиса остались считанные дни — если верить слухам о взломе RSA",
+      "summary": "На Reddit в одном сообщении собрали высказывания трёх экспертов в области криптографии о появившихся около десяти дней назад многочисленных слухах, будто бы OpenAI и Anthropic нашли способ факторизовать большие целые чис",
+      "body": [
+        "На Reddit в одном сообщении собрали высказывания трёх экспертов в области криптографии о появившихся около десяти дней назад многочисленных слухах, будто бы OpenAI и Anthropic нашли способ факторизовать большие целые числа за приемлемое время. Если это правда, то это крах современных методов RSA-шифрования, что также означает остановку работы всех цифровых сервисов не поддерживающих постквантовую криптографию. Источник изображения: ИИ-генерация ChatGPT/3DNews"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151819",
+      "publishedAt": "2026-11-25T21:31:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151819"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-725.svg",
+      "imageCaption": "Обложка рубрики: До цифрового апокалипсиса остались считанные дни — если верить слухам ",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-nplus1-202b41238e",
+      "code": "S-956",
+      "category": "science",
+      "title": "Межпланетная станция Hera рассмотрела рукотворный кратер на астероиде Диморф",
+      "summary": "Европейское космическое агентство показало первый полученный межпланетной станцией Hera снимок рукотворного кратера на астероиде Диморф, возникшего при таране зондом DART. Оказалось, что столкновение буквально сплющило о",
+      "body": [
+        "Европейское космическое агентство показало первый полученный межпланетной станцией Hera снимок рукотворного кратера на астероиде Диморф, возникшего при таране зондом DART. Оказалось, что столкновение буквально сплющило одно из полушарий астероида. Кроме того, ученые показали анимацию вращения астероидов вокруг друг друга и карту шероховатости их поверхностей, а также обнаружили, что в окрестностях Диморфа летают сотни валунов или обломков размером около несколько метров. Трансляция пресс-брифинга велась на Youtube."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/25/crater-dimorph",
+      "publishedAt": "2026-11-25T20:23:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/25/crater-dimorph"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-956.svg",
+      "imageCaption": "Обложка рубрики: Межпланетная станция Hera рассмотрела рукотворный кратер на астероиде ",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-3dnews-464bd23224",
+      "code": "T-751",
+      "category": "tech",
+      "title": "Санкции США не в силах остановить торговлю чипами Nvidia в Китае — там открыто продают даже новейшие Blackwell B300",
+      "summary": "Несмотря на американские экспортные ограничения, в Китае по-прежнему можно сравнительно свободно приобрести новейшие ускорители Nvidia для разработки систем искусственного интеллекта. В этом лично убедились журналисты Th",
+      "body": [
+        "Несмотря на американские экспортные ограничения, в Китае по-прежнему можно сравнительно свободно приобрести новейшие ускорители Nvidia для разработки систем искусственного интеллекта. В этом лично убедились журналисты The Washington Post, которые договорились о покупке «запрещёнки» на рынке электроники Хуацянбэй (Huaqiangbei) в Шэньчжэне. Были бы деньги&hellip; В одном из павильонов на рынке электроники Хуацянбэй. Источник изображения: Leung Man Hei/For The Washington Post"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151817",
+      "publishedAt": "2026-11-25T20:18:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151817"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-751.svg",
+      "imageCaption": "Обложка рубрики: Санкции США не в силах остановить торговлю чипами Nvidia в Китае — там",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-3dnews-9c3ff1529c",
+      "code": "T-969",
+      "category": "tech",
+      "title": "Орбиту заставят дата-центрами: SpaceX получила добро на запуск миллиона спутников",
+      "summary": "Федеральная комиссия по связи (FCC) США одобрила заявку SpaceX на развёртывание на орбите 1 млн спутников, оснащённых вычислительным оборудованием, которые будут использоваться в качестве космических центров обработки да",
+      "body": [
+        "Федеральная комиссия по связи (FCC) США одобрила заявку SpaceX на развёртывание на орбите 1 млн спутников, оснащённых вычислительным оборудованием, которые будут использоваться в качестве космических центров обработки данных. Против одобрения заявки активно выступали компания Amazon, оператор спутниковой связи Viasat и Американское астрономическое общество. Источник изображения: SpaceX/unsplash.com"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151816",
+      "publishedAt": "2026-11-25T19:57:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151816"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-969.svg",
+      "imageCaption": "Обложка рубрики: Орбиту заставят дата-центрами: SpaceX получила добро на запуск миллион",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-bbc-world-3fd8d6d490",
+      "code": "W-702",
+      "category": "world",
+      "title": "Israeli judges recommend dropping most serious charges against Netanyahu",
+      "summary": "The Israeli PM says his trial should end after judges said there was little chance of conviction in one of three cases.",
+      "body": [
+        "The Israeli PM says his trial should end after judges said there was little chance of conviction in one of three cases."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/cxj05mv723r2o?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-25T19:47:39.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/cxj05mv723r2o?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-702.svg",
+      "imageCaption": "Обложка рубрики: Israeli judges recommend dropping most serious charges against Netanya",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-4e982d0af0",
+      "code": "T-786",
+      "category": "tech",
+      "title": "Надежда есть: DDR4 начала дешеветь после безумного подорожания — прогноз на 2027 год смягчился",
+      "summary": "После продолжительного подорожания оперативной памяти на рынке появились признаки ослабления ценового давления. Спотовые цены на DDR4 пошли вниз, а аналитики TrendForce пересмотрели прогноз роста контрактных цен на DRAM ",
+      "body": [
+        "После продолжительного подорожания оперативной памяти на рынке появились признаки ослабления ценового давления. Спотовые цены на DDR4 пошли вниз, а аналитики TrendForce пересмотрели прогноз роста контрактных цен на DRAM в 2027 году в сторону понижения. Причинами стали слабый потребительский спрос и неопределенность вокруг строительства центров обработки данных в США. Источник изображения: Taiwantrade"
+      ],
+      "tags": [
+        "- процессоры"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151815",
+      "publishedAt": "2026-11-25T19:29:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151815"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-786.svg",
+      "imageCaption": "Обложка рубрики: Надежда есть: DDR4 начала дешеветь после безумного подорожания — прогн",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-f0de3f9d41",
+      "code": "S-773",
+      "category": "science",
+      "title": "NASA Enhances Supplier Program, Announces Mentor-Protégé Agreement",
+      "summary": "NASA’s Office of Small Business Programs (OSBP) hosted a ceremonial Mentor-Protégé Agreement signing between The Boeing Company and GRACE Aerospace on Oct. 29, 2026, at the U.S. Space and Rocket Center in Huntsville, Ala",
+      "body": [
+        "NASA’s Office of Small Business Programs (OSBP) hosted a ceremonial Mentor-Protégé Agreement signing between The Boeing Company and GRACE Aerospace on Oct. 29, 2026, at the U.S. Space and Rocket Center in Huntsville, Alabama. Pictured in the front row, from left to right, are Pauline Sevigny, president and owner, GRACE Aerospace; Christian Diamond, Mentor-Protégé Program manager, The Boeing Company; and Dwight Deneal, assistant administrator, OSBP. Pictured in the back row, from left to right, are Danielle Barnes, small business specialist, OSBP; Grant C",
+        "Credit: Justin Fields, Light Rain Studio",
+        "How NASA works with small businesses is evolving, and as a result, the agency is strengthening the domestic aerospace industrial base to support future exploration missions through its recently renamed Small Business Supplier Development Program. As part of the program, NASA announced its latest Mentor-Protégé Agreement, this one signed between The Boeing Company and GRACE Aerospace.",
+        "NASA is streamlining the application process for the Small Business Supplier Development Program, as well as reducing administrative requirements, accelerating review and approval timelines, and enhancing incentives for prime contractor participation. These improvements are aimed at making supplier development more accessible, efficient, and closely aligned with NASA’s mission needs."
+      ],
+      "tags": [
+        "NASA"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://www.nasa.gov/organizations/osbp/nasa-enhances-supplier-program-announces-mentor-protege-agreement/",
+      "publishedAt": "2026-11-25T19:06:56.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://www.nasa.gov/organizations/osbp/nasa-enhances-supplier-program-announces-mentor-protege-agreement/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-773.svg",
+      "imageCaption": "Обложка рубрики: NASA Enhances Supplier Program, Announces Mentor-Protégé Agreement",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-a90c5cedf9",
+      "code": "S-894",
+      "category": "science",
+      "title": "Текстурированные медицинские перчатки сократили передачу бактерий на 97,8 процента",
+      "summary": "Канадские материаловеды разработали текстурирование для медицинских перчаток, которое помогает снизить перенос микроорганизмов с загрязненных поверхностей. В лабораторных опытах микроструктурированные перчатки захватывал",
+      "body": [
+        "Канадские материаловеды разработали текстурирование для медицинских перчаток, которое помогает снизить перенос микроорганизмов с загрязненных поверхностей. В лабораторных опытах микроструктурированные перчатки захватывали почти на 98 процентов меньше микроорганизмов, чем обычные нитриловые, а в предварительном испытании в больнице — примерно в семь раз меньше. Результаты исследования опубликованы в журнале Science Translational Medicine."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/25/hydrophobic-gloves",
+      "publishedAt": "2026-11-25T19:00:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/25/hydrophobic-gloves"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-894.svg",
+      "imageCaption": "Обложка рубрики: Текстурированные медицинские перчатки сократили передачу бактерий на 9",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-f31978f3a2",
+      "code": "S-746",
+      "category": "science",
+      "title": "Гранулоцитарный колониестимулирующий фактор обвинили в развитии приступа астмы при простудах",
+      "summary": "Экспериментальное исследование с участием людей показало, что воздействие риновируса — типичного возбудителя острой респираторной вирусной инфекции — повышает уровень гранулоцитарного колониестимулирующего фактора в дыха",
+      "body": [
+        "Экспериментальное исследование с участием людей показало, что воздействие риновируса — типичного возбудителя острой респираторной вирусной инфекции — повышает уровень гранулоцитарного колониестимулирующего фактора в дыхательных путях у пациентов с астмой, но не у здоровых людей. В свою очередь, повышенный уровень этой молекулы коррелировал с усилением нейтрофильного и Th2-воспаления, а также с тяжестью приступа астмы. Эти наблюдения подтвердили и в экспериментах на мышах. Результаты исследования опубликованы в журнале Science Translational Medicine."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/25/cold-asthma-attacks",
+      "publishedAt": "2026-11-25T19:00:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/25/cold-asthma-attacks"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-746.svg",
+      "imageCaption": "Обложка рубрики: Гранулоцитарный колониестимулирующий фактор обвинили в развитии присту",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nplus1-fc7be38eec",
+      "code": "S-724",
+      "category": "science",
+      "title": "Мозговые органоиды побывали в космосе",
+      "summary": "Нахождение в условиях космоса способно изменить метаболизм нервных клеток, в частности уровни фосфорилированного тау-белка и бета-амилоида. Эти данные ученые получили с помощью мозговых органоидов, которые больше месяца ",
+      "body": [
+        "Нахождение в условиях космоса способно изменить метаболизм нервных клеток, в частности уровни фосфорилированного тау-белка и бета-амилоида. Эти данные ученые получили с помощью мозговых органоидов, которые больше месяца культивировали на борту МКС. Исследование, опубликованное в Science Advances, показывает, что космос из-за стрессовых для клеток условий может стать уникальной средой для изучения нейродегенеративных заболеваний."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/25/brain-organoids-in-space",
+      "publishedAt": "2026-11-25T19:00:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/25/brain-organoids-in-space"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-724.svg",
+      "imageCaption": "Обложка рубрики: Мозговые органоиды побывали в космосе",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-0e663dd8f7",
+      "code": "G-902",
+      "category": "games",
+      "title": "Yooka-Laylee and the Impossible Lair получит переиздание с улучшенной графикой 15 декабря",
+      "summary": "Студия Playtonic Games анонсировала Yooka-Laylee and the Impossible Lair: Definitive Edition — улучшенное переиздание платформера 2019 года. Оно выйдет на ПК и консолях 15 декабря. Владельцы оригинальной версии получат о",
+      "body": [
+        "Студия Playtonic Games анонсировала Yooka-Laylee and the Impossible Lair: Definitive Edition — улучшенное переиздание платформера 2019 года. Оно выйдет на ПК и консолях 15 декабря. Владельцы оригинальной версии получат обновление бесплатно.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73638/yooka_laylee_and_the_impossible_lair_poluchit_pereizdanie_s_uluchshennoy_grafikoy_15_dekabrya",
+      "publishedAt": "2026-11-25T18:38:56.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73638/yooka_laylee_and_the_impossible_lair_poluchit_pereizdanie_s_uluchshennoy_grafikoy_15_dekabrya"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-902.svg",
+      "imageCaption": "Обложка рубрики: Yooka-Laylee and the Impossible Lair получит переиздание с улучшенной ",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-4823f893cd",
+      "code": "G-850",
+      "category": "games",
+      "title": "PS+ в декабре — Amnesia: The Bunker, Dragon Ball Xenoverse 2 и Tony Hawk’s Pro Skater 3 + 4",
+      "summary": "Sony раскрыла список игр, которые смогут забрать подписчики PlayStation Plus в следующем месяце. Предложение будет действовать с 1 декабря по 4 января.… […]",
+      "body": [
+        "Sony раскрыла список игр, которые смогут забрать подписчики PlayStation Plus в следующем месяце. Предложение будет действовать с 1 декабря по 4 января.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73637/ps_v_dekabre_amnesia_the_bunker_dragon_ball_xenoverse_2_i_tony_hawk_s_pro_skater_3_4",
+      "publishedAt": "2026-11-25T18:31:20.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73637/ps_v_dekabre_amnesia_the_bunker_dragon_ball_xenoverse_2_i_tony_hawk_s_pro_skater_3_4"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-850.svg",
+      "imageCaption": "Обложка рубрики: PS+ в декабре — Amnesia: The Bunker, Dragon Ball Xenoverse 2 и Tony Ha",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-e6d215301d",
+      "code": "G-777",
+      "category": "games",
+      "title": "В EA Sports FC 27 добавят ИИ-версию умершего комментатора Джона Мотсона",
+      "summary": "EA Sports FC 27 получит голос легендарного футбольного комментатора Джона Мотсона (John Motson), умершего в 2023 году в возрасте 77 лет. Electronic Arts воссоздала его голос с помощью искусственного интеллекта и архивных",
+      "body": [
+        "EA Sports FC 27 получит голос легендарного футбольного комментатора Джона Мотсона (John Motson), умершего в 2023 году в возрасте 77 лет. Electronic Arts воссоздала его голос с помощью искусственного интеллекта и архивных записей. Новая опция появится в игре 26 ноября.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73636/v_ea_sports_fc_27_dobavyat_ii_versiyu_umershego_kommentatora_dzhona_motsona",
+      "publishedAt": "2026-11-25T18:09:51.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73636/v_ea_sports_fc_27_dobavyat_ii_versiyu_umershego_kommentatora_dzhona_motsona"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-777.svg",
+      "imageCaption": "Обложка рубрики: В EA Sports FC 27 добавят ИИ-версию умершего комментатора Джона Мотсон",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-11abbf7a14",
+      "code": "S-862",
+      "category": "science",
+      "title": "NASA Eyes Crop Candidates for Future Menus",
+      "summary": "As NASA prepares for future missions to the Moon and Mars, researchers are studying crops that could provide astronauts with fresh food, nutrition, and variety far from Earth. Such crop variety can help with menus in dee",
+      "body": [
+        "As NASA prepares for future missions to the Moon and Mars, researchers are studying crops that could provide astronauts with fresh food, nutrition, and variety far from Earth. Such crop variety can help with menus in deep space, something top of mind this week as the nation celebrates Thanksgiving.",
+        "Strawberries grown in the Space Life Sciences Lab’s controlled environment chamber. Cucumbers are grown in a controlled environment chamber at NASA’s Kennedy Space Center in Florida. Lemon basil is growing in chambers on the International Space Station.",
+        "Recent testing points to strawberries, cucumbers, and lemon basil as potential options for future explorers. Space crops can absorb carbon dioxide, produce oxygen, and recycle water. These capabilities will become increasingly important as crewed missions extend farther from our home planet.",
+        "While space crop research advances on Earth, capabilities are also expanding in space. A new investigation from NASA’s Biological and Physical Sciences Division is set to launch to the International Space Station, where the first-of-its-kind prototype growth chamber will provide critical insights for developing crop production systems that could grow crops like these for future Moon Base habitats and Mars missions."
+      ],
+      "tags": [
+        "Science Mission Directorat"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/directorates/smd/nasa-eyes-crop-candidates-for-future-menus/",
+      "publishedAt": "2026-11-25T17:53:42.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/directorates/smd/nasa-eyes-crop-candidates-for-future-menus/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-862.svg",
+      "imageCaption": "Обложка рубрики: NASA Eyes Crop Candidates for Future Menus",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-fcf65583fe",
+      "code": "C-960",
+      "category": "security",
+      "title": "Пузырьки гелия против радиоактивной грязи. У ядерных реакторов появился шанс на долгую жизнь",
+      "summary": "Компьютерное моделирование раскрыло слабое место технологии очистки жидкого топлива.",
+      "body": [
+        "Компьютерное моделирование раскрыло слабое место технологии очистки жидкого топлива."
+      ],
+      "tags": [
+        "Наука/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/584623.php",
+      "publishedAt": "2026-11-25T17:32:51.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/584623.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-960.svg",
+      "imageCaption": "Обложка рубрики: Пузырьки гелия против радиоактивной грязи. У ядерных реакторов появилс",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-97c87a3478",
+      "code": "C-811",
+      "category": "security",
+      "title": "Даже 99% российского ПО недостаточно. Сведения об объектах КИИ передадут во ФСТЭК",
+      "summary": "Владельцев объектов КИИ обяжут отчитываться ежегодно.",
+      "body": [
+        "Владельцев объектов КИИ обяжут отчитываться ежегодно."
+      ],
+      "tags": [
+        "SecurityLab"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/584620.php",
+      "publishedAt": "2026-11-25T17:01:49.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/584620.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-811.svg",
+      "imageCaption": "Обложка рубрики: Даже 99% российского ПО недостаточно. Сведения об объектах КИИ передад",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-7d0431e3bc",
+      "code": "S-766",
+      "category": "science",
+      "title": "Childhood, Career Come Full Circle for Budget Analyst at NASA Goddard",
+      "summary": "Conversations about NASA were the norm around the dinner table during Ashley Knight’s childhood. Her parents worked at NASA’s Goddard Space Flight Center in Greenbelt, Maryland, and discussions about happenings at the ag",
+      "body": [
+        "Conversations about NASA were the norm around the dinner table during Ashley Knight’s childhood. Her parents worked at NASA’s Goddard Space Flight Center in Greenbelt, Maryland, and discussions about happenings at the agency continued even when they came home from the office.",
+        "“I remember a poignant dialogue we had after the space shuttle Challenger disaster,” Knight recalled. “However, we talked just as much about the engaging work my parents were doing inside Goddard’s gates.”",
+        "Her father Lyle Knight was a mechanical engineer, while her mother Julia Knight worked the bulk of her career in human resources. They brought their daughter on center for Take Your Child to Work Day and other events, and over time she became hooked.",
+        "“I saw the chambers where spacecraft and instruments were being tested, as well as other facilities used to help further space exploration. Above all, I witnessed the passion and collaborative spirit everyone had at Goddard,” Knight said. “As a child, I found it incredibly fascinating.”"
+      ],
+      "tags": [
+        "Goddard Space Flight Cente",
+        "People of Goddard",
+        "People of NASA"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://www.nasa.gov/centers-and-facilities/goddard/childhood-career-come-full-circle-for-budget-analyst-at-nasa-goddard/",
+      "publishedAt": "2026-11-25T16:47:29.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://www.nasa.gov/centers-and-facilities/goddard/childhood-career-come-full-circle-for-budget-analyst-at-nasa-goddard/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-766.svg",
+      "imageCaption": "Обложка рубрики: Childhood, Career Come Full Circle for Budget Analyst at NASA Goddard",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-securitylab-e06d62903d",
+      "code": "C-948",
+      "category": "security",
+      "title": "Хакеры захватили 24 сервера Check Point в 17 странах. И самое тревожное, что взламывать системы защиты могли уже не люди",
+      "summary": "Специалисты обнаружили признаки автоматизации сразу нескольких этапов кибератак.",
+      "body": [
+        "Специалисты обнаружили признаки автоматизации сразу нескольких этапов кибератак."
+      ],
+      "tags": [
+        "Кибератаки/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/584614.php",
+      "publishedAt": "2026-11-25T16:35:28.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/584614.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-948.svg",
+      "imageCaption": "Обложка рубрики: Хакеры захватили 24 сервера Check Point в 17 странах. И самое тревожно",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-f77ac2d365",
+      "code": "S-774",
+      "category": "science",
+      "title": "Eye of the Sahara",
+      "summary": "The Richat Structure, also known as the “Eye of the Sahara,” is seen from the International Space Station as it orbited above on Nov. 14, 2026. It is an eroded geological dome about 100 million years old created by igneo",
+      "body": [
+        "The Richat Structure, also known as the “Eye of the Sahara,” is seen from the International Space Station as it orbited above on Nov. 14, 2026. It is an eroded geological dome about 100 million years old created by igneous activity and uplift in the nation of Mauritania. In this type of geologic structure, rocks exposed in the center of the “bullseye” are older than rocks forming the outer rings. This structure measures 45 kilometers (28 miles) across and is made up of igneous and sedimentary rocks.",
+        "Image credit: NASA/Luke Delaney"
+      ],
+      "tags": [
+        "Earth"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://www.nasa.gov/image-article/eye-of-the-sahara/",
+      "publishedAt": "2026-11-25T16:21:04.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://www.nasa.gov/image-article/eye-of-the-sahara/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-25",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-774.svg",
+      "imageCaption": "Обложка рубрики: Eye of the Sahara",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
       "id": "auto-lenta-top-39ab2773d8",
       "code": "W-877",
       "category": "world",
@@ -2759,600 +4043,27 @@
       "queue": "now"
     },
     {
-      "id": "auto-nplus1-6561432ea9",
-      "code": "S-969",
-      "category": "science",
-      "title": "На юге Китая выявили неизвестную популяцию архаических людей",
-      "summary": "Археологи раскопали в двух пещерах, расположенных на юге Китая, четыре древних человеческих зуба. Морфологический и палеопротеомный анализы находок показали, что два из них принадлежали денисовцам, в то время как два дру",
-      "body": [
-        "Археологи раскопали в двух пещерах, расположенных на юге Китая, четыре древних человеческих зуба. Морфологический и палеопротеомный анализы находок показали, что два из них принадлежали денисовцам, в то время как два других — представителю другой архаической популяции, которая, по-видимому, обитала на юге Восточной Азии параллельно с денисовцами. Об этом сообщается в статье, которую ученые опубликовали в журнале Nature."
-      ],
-      "tags": [
-        "N+1 Наука"
-      ],
-      "sourceName": "N+1 Наука",
-      "sourceUrl": "https://nplus1.ru/news/2026/11/25/chuanshandong",
-      "publishedAt": "2026-11-25T16:00:00.000Z",
-      "readMin": 1,
-      "icon": "🔬",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (N+1 Наука)",
-          "url": "https://nplus1.ru/news/2026/11/25/chuanshandong"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-969.svg",
-      "imageCaption": "Обложка рубрики: На юге Китая выявили неизвестную популяцию архаических людей",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-ixbt-games-5cb363b8cd",
-      "code": "G-719",
-      "category": "games",
-      "title": "«Божечки мои, вы это видели?»: GTA VI «убила» консоль стримерши в прямом эфире",
-      "summary": "Фанаты GTA и защитники корпораций кинулись называть стримершу нечистоплотной. Якобы Shivjam сама виновата, что консоль стояла вся в пыли, поэтому и перегрелась.",
-      "body": [
-        "Фанаты GTA и защитники корпораций кинулись называть стримершу нечистоплотной. Якобы Shivjam сама виновата, что консоль стояла вся в пыли, поэтому и перегрелась.",
-        "Консоль PlayStation 5 австралийской стримерши Shivjam не справилась с Леонидой и «погибла» прямо в ходе трансляции Grand Theft Auto VI.",
-        "Девушка написала, что графический чип PS5 вышел из строя и теперь у нее нет консоли.",
-        "Фанаты Grand Theft Auto и защитники крупных корпораций предположили, что проблема не с игрой, а с самой стримершей, которая не следила за своей консолью и позволяла ей заростать пылью. Однако Shivjam заявила, что регулярна чистила PlayStation 5 от пыли и не держала консоль в каком-то замкнутом пространстве без хорошей циркуляции воздуха."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/25/bozecki-moi-vy-eto-videli-gta-vi-ubila-konsol-strimersi-v-priamom-efire.html",
-      "publishedAt": "2026-11-25T15:46:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/25/bozecki-moi-vy-eto-videli-gta-vi-ubila-konsol-strimersi-v-priamom-efire.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-719.svg",
-      "imageCaption": "Обложка рубрики: «Божечки мои, вы это видели?»: GTA VI «убила» консоль стримерши в прям",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-habr-news-0fc7a75db9",
-      "code": "T-745",
-      "category": "tech",
-      "title": "Тишина вместо ошибки: как детектор зависших дел трижды принял шум за сигнал",
-      "summary": "В юридическом процессе отказ контрагента не кидает исключение: пристав просто ничего не делает, и в базе не появляется ни одной записи. Рассказываю, как мы строили детектор зависших дел, почему первая версия порога помет",
-      "body": [
-        "В юридическом процессе отказ контрагента не кидает исключение: пристав просто ничего не делает, и в базе не появляется ни одной записи. Рассказываю, как мы строили детектор зависших дел, почему первая версия порога пометила почти всё разом и зачем сигналу понадобилось второе условие. С цифрами за четыре месяца работы и списком того, что детектор сам же и открыл."
-      ],
-      "tags": [
-        "детектор зависших дел",
-        "наблюдаемость процессов",
-        "правило двух флагов",
-        "MongoDB aggregation"
-      ],
-      "sourceName": "Хабр Новости",
-      "sourceUrl": "https://habr.com/ru/articles/1112354/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112354",
-      "publishedAt": "2026-11-25T15:42:37.000Z",
-      "readMin": 1,
-      "icon": "🤖",
-      "accent": "violet",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Новости)",
-          "url": "https://habr.com/ru/articles/1112354/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112354"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Новости»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-745.svg",
-      "imageCaption": "Обложка рубрики: Тишина вместо ошибки: как детектор зависших дел трижды принял шум за с",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-nplus1-2f4f4a1dee",
-      "code": "S-772",
-      "category": "science",
-      "title": "Музыкальная терапия снизила артериальное давление при коронарографии",
-      "summary": "Американские, итальянские, французские и южнокорейские исследователи провели клинические испытания и выяснили, что прослушивание музыки перед коронарографией и во время нее существенно снижает систолическое артериальное ",
-      "body": [
-        "Американские, итальянские, французские и южнокорейские исследователи провели клинические испытания и выяснили, что прослушивание музыки перед коронарографией и во время нее существенно снижает систолическое артериальное давление после вмешательства. Отчет об испытаниях опубликован в журнале Heart."
-      ],
-      "tags": [
-        "N+1 Наука"
-      ],
-      "sourceName": "N+1 Наука",
-      "sourceUrl": "https://nplus1.ru/news/2026/11/25/musical-pci",
-      "publishedAt": "2026-11-25T15:33:00.000Z",
-      "readMin": 1,
-      "icon": "🔬",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (N+1 Наука)",
-          "url": "https://nplus1.ru/news/2026/11/25/musical-pci"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-772.svg",
-      "imageCaption": "Обложка рубрики: Музыкальная терапия снизила артериальное давление при коронарографии",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-stopgame-d38e8c33bf",
-      "code": "G-840",
-      "category": "games",
-      "title": "Мертворождённая студия — Gravity Well закрывается спустя 6 лет, не выпустив ни одной игры",
-      "summary": "Весной 2020 года по Сети прошлась новость об открытии новой студии Gravity Well, которую основали выходц… […]",
-      "body": [
-        "Весной 2020 года по Сети прошлась новость об открытии новой студии Gravity Well, которую основали выходц… […]"
-      ],
-      "tags": [
-        "StopGame"
-      ],
-      "sourceName": "StopGame",
-      "sourceUrl": "https://stopgame.ru/newsdata/73633/mertvorozhdennaya_studiya_gravity_well_zakryvaetsya_spustya_6_let_ne_vypustiv_ni_odnoy_igry",
-      "publishedAt": "2026-11-25T15:31:03.000Z",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (StopGame)",
-          "url": "https://stopgame.ru/newsdata/73633/mertvorozhdennaya_studiya_gravity_well_zakryvaetsya_spustya_6_let_ne_vypustiv_ni_odnoy_igry"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-840.svg",
-      "imageCaption": "Обложка рубрики: Мертворождённая студия — Gravity Well закрывается спустя 6 лет, не вып",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-stopgame-c4fa95e32f",
-      "code": "G-849",
-      "category": "games",
-      "title": "В пятницу Team Cherry расскажет о DLC Sea of Sorrow для Hollow Knight: Silksong",
-      "summary": "Студия Team Cherry анонсировала презентацию Cherry Time! Разработчики поделятся новостями, в том числе о дополнении Sea of Sorrow для Hollow Knight: Silksong. Трансляция стартует 27 ноября в 18:00 МСК на&amp;nbsp… […]",
-      "body": [
-        "Студия Team Cherry анонсировала презентацию Cherry Time! Разработчики поделятся новостями, в том числе о дополнении Sea of Sorrow для Hollow Knight: Silksong. Трансляция стартует 27 ноября в 18:00 МСК на&amp;nbsp… […]"
-      ],
-      "tags": [
-        "StopGame"
-      ],
-      "sourceName": "StopGame",
-      "sourceUrl": "https://stopgame.ru/newsdata/73632/v_pyatnicu_team_cherry_rasskazhet_o_dlc_sea_of_sorrow_dlya_hollow_knight_silksong",
-      "publishedAt": "2026-11-25T15:29:12.000Z",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (StopGame)",
-          "url": "https://stopgame.ru/newsdata/73632/v_pyatnicu_team_cherry_rasskazhet_o_dlc_sea_of_sorrow_dlya_hollow_knight_silksong"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-849.svg",
-      "imageCaption": "Обложка рубрики: В пятницу Team Cherry расскажет о DLC Sea of Sorrow для Hollow Knight:",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-ixbt-games-35d55327ba",
-      "code": "G-784",
-      "category": "games",
-      "title": "Team NINJA использует ИИ для монотонных задач, но действительно интересными игры могут делать только люди, говорит продюсер Nioh",
-      "summary": "85,8% японских разработчиков используют ИИ-инструменты.",
-      "body": [
-        "85,8% японских разработчиков используют ИИ-инструменты.",
-        "Разработчики из Team NINJA рассказали о своем подходе к использованию искусственного интеллекта в игровой индустрии. По словам продюсера Nioh 3 Кохей Сибаты, студия уже применяет ИИ в рабочих процессах, однако рассматривает эту технологию исключительно как вспомогательный инструмент, который должен освобождать разработчиков от рутинных задач и позволять им уделять больше внимания качеству игр.",
-        "Тему затронули представители Koei Tecmo во время конференции GCON 2026 в Южной Корее. В обсуждении приняли участие Кохей Сибата, продюсер Nioh 3, вышедшей в феврале этого года, и Масадзуку Хираяма, отвечающий за разработку будущей Wo Long 2: Wings of Ember. Разработчики поделились подходами к созданию своих проектов, а также сравнили особенности японской серии Nioh и вдохновленной китайской культурой Wo Long.",
-        "Team NINJA Позже в интервью изданию Inven Global Сибата подробнее рассказал о применении искусственного интеллекта внутри Team NINJA. По его словам, сейчас студия использует ИИ преимущественно для контроля качества и различных проверочных процедур, помогая оптимизировать отдельные этапы разработки."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/25/team-ninja-ispolzuet-ii-dlia-monotonnyx-zadac-no-deistvitelno-interesnymi-igry-mogut-delat-tolko-liudi-govorit-prodiuser-nioh.html",
-      "publishedAt": "2026-11-25T15:26:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/25/team-ninja-ispolzuet-ii-dlia-monotonnyx-zadac-no-deistvitelno-interesnymi-igry-mogut-delat-tolko-liudi-govorit-prodiuser-nioh.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-784.svg",
-      "imageCaption": "Обложка рубрики: Team NINJA использует ИИ для монотонных задач, но действительно интере",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-nplus1-326c075780",
-      "code": "S-893",
-      "category": "science",
-      "title": "Генетики секвенировали ДНК боевых коней тюрок-шато",
-      "summary": "Китайские ученые секвенировали ДНК трех лошадей, останки которых нашли в гробнице Ли Кэюна — цзинь-вана княжества Цзинь, который умер в начале X века нашей эры. Исследователи определили, что все три особи были самцами, к",
-      "body": [
-        "Китайские ученые секвенировали ДНК трех лошадей, останки которых нашли в гробнице Ли Кэюна — цзинь-вана княжества Цзинь, который умер в начале X века нашей эры. Исследователи определили, что все три особи были самцами, которые оказались генетически близки к более древним одомашненным лошадям с территории Монголии и России, а не к животным из Центральной Азии. Кроме того, как сообщается в статье из журнала npj Heritage Science, проанализированные животные отличались высоким ростом и атлетизмом."
-      ],
-      "tags": [
-        "N+1 Наука"
-      ],
-      "sourceName": "N+1 Наука",
-      "sourceUrl": "https://nplus1.ru/news/2026/11/25/horses-of-li-keyong",
-      "publishedAt": "2026-11-25T15:23:00.000Z",
-      "readMin": 1,
-      "icon": "🔬",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (N+1 Наука)",
-          "url": "https://nplus1.ru/news/2026/11/25/horses-of-li-keyong"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-893.svg",
-      "imageCaption": "Обложка рубрики: Генетики секвенировали ДНК боевых коней тюрок-шато",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-nplus1-b9326eaea8",
-      "code": "S-706",
-      "category": "science",
-      "title": "Социальная изоляция продлила жизнь рабочим земляным шмелям",
-      "summary": "Биологи из Великобритании посадили рабочих земляных шмелей в одиночные камеры и обнаружили, что в изоляции они живут втрое дольше. Хотя более 70 процентов изолированных рабочих самок отложили яйца и произвели на свет пот",
-      "body": [
-        "Биологи из Великобритании посадили рабочих земляных шмелей в одиночные камеры и обнаружили, что в изоляции они живут втрое дольше. Хотя более 70 процентов изолированных рабочих самок отложили яйца и произвели на свет потомство мужского пола, даже без яйцекладки продолжительность жизни в изоляции увеличивалась. Исследование опубликовано в журнале Biology Letters."
-      ],
-      "tags": [
-        "N+1 Наука"
-      ],
-      "sourceName": "N+1 Наука",
-      "sourceUrl": "https://nplus1.ru/news/2026/11/25/bumblebees-isolation",
-      "publishedAt": "2026-11-25T15:17:00.000Z",
-      "readMin": 1,
-      "icon": "🔬",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (N+1 Наука)",
-          "url": "https://nplus1.ru/news/2026/11/25/bumblebees-isolation"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-706.svg",
-      "imageCaption": "Обложка рубрики: Социальная изоляция продлила жизнь рабочим земляным шмелям",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-ixbt-games-d279071f7b",
-      "code": "G-998",
-      "category": "games",
-      "title": "Ветеран Call of Duty после 21 года работы в Treyarch не рекомендует молодым разработчикам идти в игровую индустрию",
-      "summary": "Никакой стабильности и гарантий сейчас в индустрии нет.",
-      "body": [
-        "Никакой стабильности и гарантий сейчас в индустрии нет.",
-        "Ветеран игровой индустрии Гэвин Гослин, проработавший в Treyarch более двух десятилетий и принявший участие в создании 13 игр серии Call of Duty, заявил, что больше не может рекомендовать карьеру в разработке видеоигр.",
-        "Причина заключается не в самой работе над играми, а в том, что даже многолетний опыт и участие в успешных проектах не защищают разработчиков от увольнений.",
-        "Гослин подчеркнул, что создание видеоигр по-прежнему остается увлекательным и творчески насыщенным занятием, однако больше не считает, что индустрия способна обеспечить сотрудникам необходимую стабильность."
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/25/veteran-call-of-duty-posle-21-goda-raboty-v-treyarch-ne-rekomenduet-molodym-razrabotcikam-idti-v-igrovuiu-industriiu.html",
-      "publishedAt": "2026-11-25T15:14:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/25/veteran-call-of-duty-posle-21-goda-raboty-v-treyarch-ne-rekomenduet-molodym-razrabotcikam-idti-v-igrovuiu-industriiu.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-998.svg",
-      "imageCaption": "Обложка рубрики: Ветеран Call of Duty после 21 года работы в Treyarch не рекомендует мо",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-ixbt-games-7a77d505f5",
-      "code": "G-763",
-      "category": "games",
-      "title": "После релиза GTA VI игроки переосмыслили слова босса Valve о реализме, — самое интересное за 24 ноября",
-      "summary": "Краткий дайджест всего, что происходило с развлекательной индустрией по всему миру за последний день.",
-      "body": [
-        "Краткий дайджест всего, что происходило с развлекательной индустрией по всему миру за последний день.",
-        "Гейб Ньюэлл ошибался? После релиза GTA VI игроки переосмыслили слова босса Valve о реализме",
-        "GTA VI запустили на ПК без помощи Rockstar и главная команда потеряла своего создателя",
-        "Sony запатентовала технологию Adaptive Visual Quality для PS6, которая автоматически меняет графические настройки во время игры. Контроллер консоли, возможно, получит отдельную кнопку для переключения режимов изображения"
-      ],
-      "tags": [
-        "iXBT.games"
-      ],
-      "sourceName": "iXBT.games",
-      "sourceUrl": "https://ixbt.games/news/2026/11/25/posle-reliza-gta-vi-igroki-pereosmyslili-slova-bossa-valve-o-realizme-samoe-interesnoe-za-24-noiabria.html",
-      "publishedAt": "2026-11-25T15:02:00.000Z",
-      "readMin": 1,
-      "icon": "🕹️",
-      "accent": "crimson",
-      "proofs": [
-        {
-          "label": "Первоисточник (iXBT.games)",
-          "url": "https://ixbt.games/news/2026/11/25/posle-reliza-gta-vi-igroki-pereosmyslili-slova-bossa-valve-o-realizme-samoe-interesnoe-za-24-noiabria.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-763.svg",
-      "imageCaption": "Обложка рубрики: После релиза GTA VI игроки переосмыслили слова босса Valve о реализме,",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-nasa-41e59a33e4",
-      "code": "S-979",
-      "category": "science",
-      "title": "NASA’s Hubble Views Ocean of Stars in Groundwork for Roman",
-      "summary": "Why Have a Telescope in Space?",
-      "body": [
-        "Why Have a Telescope in Space?",
-        "Hubble’s Impact & Benefits",
-        "Impact on Human Spaceflight",
-        "Science Behind Discoveries"
-      ],
-      "tags": [
-        "Hubble Space Telescope"
-      ],
-      "sourceName": "NASA",
-      "sourceUrl": "https://science.nasa.gov/missions/hubble/nasas-hubble-views-ocean-of-stars-in-groundwork-for-roman/",
-      "publishedAt": "2026-11-25T14:56:54.000Z",
-      "readMin": 1,
-      "icon": "🚀",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (NASA)",
-          "url": "https://science.nasa.gov/missions/hubble/nasas-hubble-views-ocean-of-stars-in-groundwork-for-roman/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-979.svg",
-      "imageCaption": "Обложка рубрики: NASA’s Hubble Views Ocean of Stars in Groundwork for Roman",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-securitylab-a675440cfc",
-      "code": "C-787",
+      "id": "auto-securitylab-dcef2ac474",
+      "code": "C-853",
       "category": "security",
-      "title": "Быстрее уже невозможно: OpenAI нашла абсолютный предел умножения матриц",
-      "summary": "Число 2,25 может поставить точку в научной гонке, продолжавшейся почти 60 лет.",
+      "title": "ИИ-агент может предать своего владельца. Достаточно одной вредоносной инструкции",
+      "summary": "26 ноября на открытом практикуме разберут четыре сценария атак на LLM и способы защиты ИИ-агентов.",
       "body": [
-        "Число 2,25 может поставить точку в научной гонке, продолжавшейся почти 60 лет."
-      ],
-      "tags": [
-        "Наука/"
-      ],
-      "sourceName": "SecurityLab",
-      "sourceUrl": "https://www.securitylab.ru/news/584622.php",
-      "publishedAt": "2026-11-25T14:50:36.000Z",
-      "readMin": 1,
-      "icon": "🛡️",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (SecurityLab)",
-          "url": "https://www.securitylab.ru/news/584622.php"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-787.svg",
-      "imageCaption": "Обложка рубрики: Быстрее уже невозможно: OpenAI нашла абсолютный предел умножения матри",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-bbc-world-e12b84cd7a",
-      "code": "W-904",
-      "category": "world",
-      "title": "Five Russian military jets hit in airfield strike, says Ukraine",
-      "summary": "The Savasleyka airfield hosts aircraft used by Russia to launch hypersonic missiles and glide bombs at Ukraine.",
-      "body": [
-        "The Savasleyka airfield hosts aircraft used by Russia to launch hypersonic missiles and glide bombs at Ukraine."
-      ],
-      "tags": [
-        "BBC World"
-      ],
-      "sourceName": "BBC World",
-      "sourceUrl": "https://www.bbc.co.uk/news/articles/ck9q8xp5r5pgo?at_medium=RSS&at_campaign=rss",
-      "publishedAt": "2026-11-25T14:46:41.000Z",
-      "readMin": 1,
-      "icon": "🌐",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (BBC World)",
-          "url": "https://www.bbc.co.uk/news/articles/ck9q8xp5r5pgo?at_medium=RSS&at_campaign=rss"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-904.svg",
-      "imageCaption": "Обложка рубрики: Five Russian military jets hit in airfield strike, says Ukraine",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-lenta-top-d75083f161",
-      "code": "W-869",
-      "category": "world",
-      "title": "Лукашенко достал карту и рассказал о начале СВО",
-      "summary": "Лукашенко достал карту и рассказал о начале СВО",
-      "body": [
-        "Лукашенко достал карту и рассказал о начале СВО. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Бывший СССР"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/25/lukashenko-zahotel-dokazat-svoyu-neprichastnost-k-nachalu-svo-i-dostal-kartu/",
-      "publishedAt": "2026-11-25T14:39:00.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/25/lukashenko-zahotel-dokazat-svoyu-neprichastnost-k-nachalu-svo-i-dostal-kartu/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-869.svg",
-      "imageCaption": "Обложка рубрики: Лукашенко достал карту и рассказал о начале СВО",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-securitylab-37ddd9a0be",
-      "code": "C-704",
-      "category": "security",
-      "title": "От банковской карты до налоговой всего час. Госдума одобрила поправки",
-      "summary": "ФНС будет узнавать о покупках россиян быстрее, чем о доходах.",
-      "body": [
-        "ФНС будет узнавать о покупках россиян быстрее, чем о доходах."
+        "26 ноября на открытом практикуме разберут четыре сценария атак на LLM и способы защиты ИИ-агентов."
       ],
       "tags": [
         "SecurityLab"
       ],
       "sourceName": "SecurityLab",
-      "sourceUrl": "https://www.securitylab.ru/news/584615.php",
-      "publishedAt": "2026-11-25T14:17:17.000Z",
+      "sourceUrl": "https://www.securitylab.ru/news/584607.php",
+      "publishedAt": "2026-11-25T16:05:42.000Z",
       "readMin": 1,
       "icon": "🛡️",
       "accent": "emerald",
       "proofs": [
         {
           "label": "Первоисточник (SecurityLab)",
-          "url": "https://www.securitylab.ru/news/584615.php"
+          "url": "https://www.securitylab.ru/news/584607.php"
         }
       ],
       "factCheck": {
@@ -3363,717 +4074,9 @@
       "comments": [],
       "pinned": false,
       "autoPosted": true,
-      "image": "site/assets/news/c-704.svg",
-      "imageCaption": "Обложка рубрики: От банковской карты до налоговой всего час. Госдума одобрила поправки",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-stopgame-772499145e",
-      "code": "G-721",
-      "category": "games",
-      "title": "В 16-м сезоне Diablo IV улучшат «Адский натиск» и оставят часть контента из прошлой главы",
-      "summary": "Blizzard провела прямую трансляцию, в которой подробнее рассказала о шестнадцатом сезоне в Diablo IV. Он получил название «Сезон ставки Тираэля» — война с сектантами Улло-Сар продолжается. Новый контент прибудет в Санкту",
-      "body": [
-        "Blizzard провела прямую трансляцию, в которой подробнее рассказала о шестнадцатом сезоне в Diablo IV. Он получил название «Сезон ставки Тираэля» — война с сектантами Улло-Сар продолжается. Новый контент прибудет в Санктуарий 1 декабря.… […]"
-      ],
-      "tags": [
-        "StopGame"
-      ],
-      "sourceName": "StopGame",
-      "sourceUrl": "https://stopgame.ru/newsdata/73631/v_16_m_sezone_diablo_iv_uluchshat_adskiy_natisk_i_ostavyat_chast_kontenta_iz_proshloy_glavy",
-      "publishedAt": "2026-11-25T14:08:18.000Z",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (StopGame)",
-          "url": "https://stopgame.ru/newsdata/73631/v_16_m_sezone_diablo_iv_uluchshat_adskiy_natisk_i_ostavyat_chast_kontenta_iz_proshloy_glavy"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-721.svg",
-      "imageCaption": "Обложка рубрики: В 16-м сезоне Diablo IV улучшат «Адский натиск» и оставят часть контен",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-securitylab-187117c84a",
-      "code": "C-803",
-      "category": "security",
-      "title": "Геймпады на свалку. GTA VI покорилась силе мысли окончательно",
-      "summary": "Как стримерша угнала истребитель, не прикасаясь к кнопкам.",
-      "body": [
-        "Как стримерша угнала истребитель, не прикасаясь к кнопкам."
-      ],
-      "tags": [
-        "События/"
-      ],
-      "sourceName": "SecurityLab",
-      "sourceUrl": "https://www.securitylab.ru/news/584619.php",
-      "publishedAt": "2026-11-25T13:47:05.000Z",
-      "readMin": 1,
-      "icon": "🛡️",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (SecurityLab)",
-          "url": "https://www.securitylab.ru/news/584619.php"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-803.svg",
-      "imageCaption": "Обложка рубрики: Геймпады на свалку. GTA VI покорилась силе мысли окончательно",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
-    },
-    {
-      "id": "auto-3dnews-524bc7344c",
-      "code": "T-797",
-      "category": "tech",
-      "title": "Intel готовит процессоры с 28 ядрами и 144 Мбайт кеша — раскрыты характеристики семи тестовых Nova Lake-S",
-      "summary": "Портал VideoCardz заполучил документ, в котором приводятся характеристики тестовых версий семи десктопных процессоров Intel серии Nova Lake-S — это квалификационные образцы () степпинга C1, то есть довольно близкие к сер",
-      "body": [
-        "Портал VideoCardz заполучил документ, в котором приводятся характеристики тестовых версий семи десктопных процессоров Intel серии Nova Lake-S — это квалификационные образцы () степпинга C1, то есть довольно близкие к серийным. Intel предупредила, что тестовые частоты и показатели производительности могут отличаться от финальных версий продуктов, хотя на данном этапе существенные различия между квалификационными образцами и серийными вариантами встречаются крайне редко. Источник изображения: BoliviaInteligente / unsplash.com"
-      ],
-      "tags": [
-        "- процессоры"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151796",
-      "publishedAt": "2026-11-25T13:28:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151796"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-797.svg",
-      "imageCaption": "Обложка рубрики: Intel готовит процессоры с 28 ядрами и 144 Мбайт кеша — раскрыты харак",
+      "image": "site/assets/news/c-853.svg",
+      "imageCaption": "Обложка рубрики: ИИ-агент может предать своего владельца. Достаточно одной вредоносной ",
       "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-stopgame-37e61c3b2a",
-      "code": "G-947",
-      "category": "games",
-      "title": "Tiny Bookshop разошлась тиражом в 1 млн копий и скоро получит DLC с новыми локациями",
-      "summary": "Tiny Bookshop разошлась тиражом в 1 млн копий и скоро получит DLC с новыми локациями",
-      "body": [
-        "Tiny Bookshop разошлась тиражом в 1 млн копий и скоро получит DLC с новыми локациями. Подробности доступны в первоисточнике «StopGame»."
-      ],
-      "tags": [
-        "StopGame"
-      ],
-      "sourceName": "StopGame",
-      "sourceUrl": "https://stopgame.ru/newsdata/73630/tiny_bookshop_razoshlas_tirazhom_v_1_mln_kopiy_i_skoro_poluchit_dlc_s_novymi_lokaciyami",
-      "publishedAt": "2026-11-25T13:18:21.000Z",
-      "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (StopGame)",
-          "url": "https://stopgame.ru/newsdata/73630/tiny_bookshop_razoshlas_tirazhom_v_1_mln_kopiy_i_skoro_poluchit_dlc_s_novymi_lokaciyami"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/g-947.svg",
-      "imageCaption": "Обложка рубрики: Tiny Bookshop разошлась тиражом в 1 млн копий и скоро получит DLC с но",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-securitylab-58c73013ae",
-      "code": "C-913",
-      "category": "security",
-      "title": "Российская цифровизация упёрлась в розетку. Дата-центрам не хватает электричества",
-      "summary": "К 2030 году дефицит электричества может усилиться.",
-      "body": [
-        "К 2030 году дефицит электричества может усилиться."
-      ],
-      "tags": [
-        "SecurityLab"
-      ],
-      "sourceName": "SecurityLab",
-      "sourceUrl": "https://www.securitylab.ru/news/584611.php",
-      "publishedAt": "2026-11-25T13:16:35.000Z",
-      "readMin": 1,
-      "icon": "🛡️",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (SecurityLab)",
-          "url": "https://www.securitylab.ru/news/584611.php"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-913.svg",
-      "imageCaption": "Обложка рубрики: Российская цифровизация упёрлась в розетку. Дата-центрам не хватает эл",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-hackernews-sec-159389ab24",
-      "code": "C-715",
-      "category": "security",
-      "title": "Hackers Exploit Two GeoServer Flaws as Researchers Warn of Unauthenticated RCE Chains",
-      "summary": "Threat actors are actively exploiting two newly patched security flaws in GeoServer, according to watchTowr.",
-      "body": [
-        "Threat actors are actively exploiting two newly patched security flaws in GeoServer, according to watchTowr.",
-        "The vulnerabilities in question are CVE-2026-120705 and CVE-2026-129243, details of which are below -",
-        "CVE-2026-120705 (CVSS score: 8.6) - An arbitrary file read vulnerability that could enable an attacker to access local text files readable by the GeoServer process or fetch"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/hackers-exploit-two-geoserver-flaws-as.html",
-      "publishedAt": "2026-11-25T12:48:54.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/hackers-exploit-two-geoserver-flaws-as.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-715.svg",
-      "imageCaption": "Обложка рубрики: Hackers Exploit Two GeoServer Flaws as Researchers Warn of Unauthentic",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-3dnews-ea59bdd11e",
-      "code": "T-722",
-      "category": "tech",
-      "title": "Теперь корейцы учатся у китайцев: Samsung и SK hynix взяли на вооружение технологию памяти YMTC",
-      "summary": "Выступающие ведущими мировыми производителями чипов памяти компании Samsung и SK hynix начали внедрять технологию многослойной компоновки (стекирования) кристаллов памяти, впервые разработанную YMTC. Это подтверждает, чт",
-      "body": [
-        "Выступающие ведущими мировыми производителями чипов памяти компании Samsung и SK hynix начали внедрять технологию многослойной компоновки (стекирования) кристаллов памяти, впервые разработанную YMTC. Это подтверждает, что одна из ключевых китайских технологических компаний догнала своих более крупных конкурентов в полупроводниковой отрасли и сформировала внушительный портфель интеллектуальной собственности. Источник изображения: YMTC"
-      ],
-      "tags": [
-        "3DNews"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151794",
-      "publishedAt": "2026-11-25T12:48:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151794"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-722.svg",
-      "imageCaption": "Обложка рубрики: Теперь корейцы учатся у китайцев: Samsung и SK hynix взяли на вооружен",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-hackernews-sec-03f9e63785",
-      "code": "C-938",
-      "category": "security",
-      "title": "U.S. Treasury's Financial Crimes Agency Takes Some Systems Offline After Cyber Intrusion",
-      "summary": "The U.S. Treasury Department's Financial Crimes Enforcement Network (FinCEN) has been hit by a cybersecurity incident that resulted in \"unauthorized access to a limited subset of its systems,\" the bureau said on Tuesday.",
-      "body": [
-        "The U.S. Treasury Department's Financial Crimes Enforcement Network (FinCEN) has been hit by a cybersecurity incident that resulted in \"unauthorized access to a limited subset of its systems,\" the bureau said on Tuesday. As a precaution, it has taken some systems offline.",
-        "The bureau collects suspicious activity reports and other Bank Secrecy Act (BSA) filings from banks and other financial"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/us-treasurys-fincen-takes-some-systems.html",
-      "publishedAt": "2026-11-25T12:30:08.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/us-treasurys-fincen-takes-some-systems.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-938.svg",
-      "imageCaption": "Обложка рубрики: U.S. Treasury's Financial Crimes Agency Takes Some Systems Offline Aft",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-bbc-world-deb2f23431",
-      "code": "W-950",
-      "category": "world",
-      "title": "Russia's own figures show it has lost nearly 500,000 people in Ukraine war",
-      "summary": "Leaked data reveal how the full-scale invasion of Ukraine has fundamentally changed mortality patterns in Russia.",
-      "body": [
-        "Leaked data reveal how the full-scale invasion of Ukraine has fundamentally changed mortality patterns in Russia."
-      ],
-      "tags": [
-        "BBC World"
-      ],
-      "sourceName": "BBC World",
-      "sourceUrl": "https://www.bbc.co.uk/news/articles/cmx27g533zwyo?at_medium=RSS&at_campaign=rss",
-      "publishedAt": "2026-11-25T12:21:49.000Z",
-      "readMin": 1,
-      "icon": "🌐",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (BBC World)",
-          "url": "https://www.bbc.co.uk/news/articles/cmx27g533zwyo?at_medium=RSS&at_campaign=rss"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-950.svg",
-      "imageCaption": "Обложка рубрики: Russia's own figures show it has lost nearly 500,000 people in Ukraine",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-hackernews-sec-c1ea798bc3",
-      "code": "C-861",
-      "category": "security",
-      "title": "Credential Remediation Is Slow When You Don’t Know What Will Break",
-      "summary": "More than 64% still valid after four years: GitGuardian’s State of Secrets Sprawl 2026 found that most valid secrets discovered in 2022 still worked in January 2026, because teams stall on what a revoke will break.",
-      "body": [
-        "More than 64% still valid after four years: GitGuardian’s State of Secrets Sprawl 2026 found that most valid secrets discovered in 2022 still worked in January 2026, because teams stall on what a revoke will break.",
-        "Validity-only triage misses 46% of critical secrets: Prioritize by impact instead, weighing what a credential can access and whether it leaked publicly, and update the"
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/credential-remediation-is-slow-when-you.html",
-      "publishedAt": "2026-11-25T11:51:48.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/credential-remediation-is-slow-when-you.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-861.svg",
-      "imageCaption": "Обложка рубрики: Credential Remediation Is Slow When You Don’t Know What Will Break",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-hackernews-sec-e53f98aad2",
-      "code": "C-709",
-      "category": "security",
-      "title": "Drupal Fail2Install Exploit Details Emerge as Critical RCE Flaw Faces Active Exploitation",
-      "summary": "The U.S. Cybersecurity and Infrastructure Security Agency (CISA) on Tuesday added a critical flaw impacting Drupal to its Known Exploited Vulnerabilities (KEV) catalog, requiring federal agencies to apply the fixes by No",
-      "body": [
-        "The U.S. Cybersecurity and Infrastructure Security Agency (CISA) on Tuesday added a critical flaw impacting Drupal to its Known Exploited Vulnerabilities (KEV) catalog, requiring federal agencies to apply the fixes by November 27, 2026.",
-        "The vulnerability, tracked as CVE-2026-132165 aka Fail2Install (CVSS score: 9.8), is a case of remote code execution (RCE) impacting Drupal core."
-      ],
-      "tags": [
-        "The Hacker News"
-      ],
-      "sourceName": "The Hacker News",
-      "sourceUrl": "https://thehackernews.com/2026/11/drupal-fail2install-exploit-details.html",
-      "publishedAt": "2026-11-25T11:23:26.000Z",
-      "readMin": 1,
-      "icon": "🔐",
-      "accent": "emerald",
-      "proofs": [
-        {
-          "label": "Первоисточник (The Hacker News)",
-          "url": "https://thehackernews.com/2026/11/drupal-fail2install-exploit-details.html"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/c-709.svg",
-      "imageCaption": "Обложка рубрики: Drupal Fail2Install Exploit Details Emerge as Critical RCE Flaw Faces ",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-3dnews-1faf9db15d",
-      "code": "T-845",
-      "category": "tech",
-      "title": "Память дорожает, смартфонов будет меньше: почти все производители, кроме одного, урезали планы поставок на 2027 год",
-      "summary": "Одной из важнейших тем этого года в технологической отрасли был и остаётся дефицит чипов памяти, из-за которого многие производители уже повысили цены на свои устройства. Теперь эта проблема начала сказываться и на плана",
-      "body": [
-        "Одной из важнейших тем этого года в технологической отрасли был и остаётся дефицит чипов памяти, из-за которого многие производители уже повысили цены на свои устройства. Теперь эта проблема начала сказываться и на планах компаний по объёмам продаж: в 2027 году будет реализовано меньше смартфонов, чем в текущем. Большинство крупных производителей смартфонов уже определилось с целевыми показателями продаж на 2027 год — они ожидают, что в следующем году продадут значительно меньше устройств, сообщает издание Jiemian News со ссылкой на источники в цепочке п"
-      ],
-      "tags": [
-        "3DNews"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151791",
-      "publishedAt": "2026-11-25T10:34:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151791"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-845.svg",
-      "imageCaption": "Обложка рубрики: Память дорожает, смартфонов будет меньше: почти все производители, кро",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-3dnews-3636acbf01",
-      "code": "T-828",
-      "category": "tech",
-      "title": "Энтузиасты уже запустили GTA VI на ПК, но Take-Two тут как тут",
-      "summary": "Не успели моддеры приступить к адаптации «слитой» Xbox-версии нашумевшего боевика GTA VI для ПК, как Take-Two Interactive (владелец Rockstar Games) уже начала ставить палки в колёса народной инициативы. Источник изображе",
-      "body": [
-        "Не успели моддеры приступить к адаптации «слитой» Xbox-версии нашумевшего боевика GTA VI для ПК, как Take-Two Interactive (владелец Rockstar Games) уже начала ставить палки в колёса народной инициативы. Источник изображения: ResetEra (TechnoDisaster)"
-      ],
-      "tags": [
-        "- игры"
-      ],
-      "sourceName": "3DNews",
-      "sourceUrl": "https://3dnews.ru/1151787",
-      "publishedAt": "2026-11-25T10:32:00.000Z",
-      "readMin": 1,
-      "icon": "💻",
-      "accent": "cyan",
-      "proofs": [
-        {
-          "label": "Первоисточник (3DNews)",
-          "url": "https://3dnews.ru/1151787"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/t-828.svg",
-      "imageCaption": "Обложка рубрики: Энтузиасты уже запустили GTA VI на ПК, но Take-Two тут как тут",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-top-5b3b003772",
-      "code": "F-799",
-      "category": "facts",
-      "title": "Тайны следствия: куда пропадают правила файрвола после перезапуска",
-      "summary": "После перезапуска межсетевого экрана у вас снова пропали правила? Скорее всего, сервис загрузил сохранённую конфигурацию, а вы меняли временную. Бывает и веселее, если свои правила задают firewalld, docker или скрипт с i",
-      "body": [
-        "После перезапуска межсетевого экрана у вас снова пропали правила? Скорее всего, сервис загрузил сохранённую конфигурацию, а вы меняли временную. Бывает и веселее, если свои правила задают firewalld, docker или скрипт с iptables. Решить проблему можно за несколько команд, о которых я рассказал под катом."
-      ],
-      "tags": [
-        "файрвол",
-        "правила фильтрации",
-        "iptables",
-        "nftables"
-      ],
-      "sourceName": "Хабр Популярное",
-      "sourceUrl": "https://habr.com/ru/companies/ruvds/articles/1111520/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1111520",
-      "publishedAt": "2026-11-25T09:02:52.000Z",
-      "readMin": 1,
-      "icon": "⚡",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Популярное)",
-          "url": "https://habr.com/ru/companies/ruvds/articles/1111520/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1111520"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/f-799.svg",
-      "imageCaption": "Обложка рубрики: Тайны следствия: куда пропадают правила файрвола после перезапуска",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-habr-top-56bce70bc0",
-      "code": "F-906",
-      "category": "facts",
-      "title": "«Заяц! Ты меня слышишь?» — ностальгическая игра «Ну, погоди!» в веб-версии",
-      "summary": "После Gravity Defied мне захотелось собрать ещё одну старую игру на чистом JavaScript. Выбор пал на «Ну, погоди!». В саму «Электронику ИМ-02» я в детстве не играл, зато хорошо знал Волка и Зайца по мультфильму. К тому же",
-      "body": [
-        "После Gravity Defied мне захотелось собрать ещё одну старую игру на чистом JavaScript. Выбор пал на «Ну, погоди!». В саму «Электронику ИМ-02» я в детстве не играл, зато хорошо знал Волка и Зайца по мультфильму. К тому же механика казалась понятной: четыре лотка, корзина и яйца, которые нельзя ронять.",
-        "Но и здесь нашлось над чем поломать голову: как передать движение элементов ЖК-экрана, остановить время на паузе и сделать нормальное управление на телефоне. А ещё выяснилось, что в оригинале Заяц помогал игроку, хотя я всегда думал иначе. В моей версии он всё-таки мстит за мультфильм и бросает тёмные яйца."
-      ],
-      "tags": [
-        "javascript",
-        "canvas",
-        "html5",
-        "css3"
-      ],
-      "sourceName": "Хабр Популярное",
-      "sourceUrl": "https://habr.com/ru/companies/ruvds/articles/1110446/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110446",
-      "publishedAt": "2026-11-25T07:01:40.000Z",
-      "readMin": 1,
-      "icon": "⚡",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Хабр Популярное)",
-          "url": "https://habr.com/ru/companies/ruvds/articles/1110446/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110446"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/f-906.svg",
-      "imageCaption": "Обложка рубрики: «Заяц! Ты меня слышишь?» — ностальгическая игра «Ну, погоди!» в веб-ве",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-bbc-world-9edc958806",
-      "code": "W-927",
-      "category": "world",
-      "title": "Close-up images to be revealed of asteroid deliberately hit to test ability to protect Earth",
-      "summary": "The mission is studying an asteroid deliberately knocked off course by a colliding spacecraft.",
-      "body": [
-        "The mission is studying an asteroid deliberately knocked off course by a colliding spacecraft."
-      ],
-      "tags": [
-        "BBC World"
-      ],
-      "sourceName": "BBC World",
-      "sourceUrl": "https://www.bbc.co.uk/news/articles/cw8dv112r5gmo?at_medium=RSS&at_campaign=rss",
-      "publishedAt": "2026-11-25T06:00:36.000Z",
-      "readMin": 1,
-      "icon": "🌐",
-      "accent": "blue",
-      "proofs": [
-        {
-          "label": "Первоисточник (BBC World)",
-          "url": "https://www.bbc.co.uk/news/articles/cw8dv112r5gmo?at_medium=RSS&at_campaign=rss"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-927.svg",
-      "imageCaption": "Обложка рубрики: Close-up images to be revealed of asteroid deliberately hit to test ab",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nasa-938896cda1",
-      "code": "S-725",
-      "category": "science",
-      "title": "APOD: 2026 November 25 – SPHEREx Seeing Through Dust",
-      "summary": "APOD: 2026 November 25 –…",
-      "body": [
-        "APOD: 2026 November 25 –…",
-        "Astronomy Picture of the Day",
-        "Discover the cosmos! Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.",
-        "To view this video please enable JavaScript, and consider upgrading to a web browser that"
-      ],
-      "tags": [
-        "APOD"
-      ],
-      "sourceName": "NASA",
-      "sourceUrl": "https://science.nasa.gov/image-article/apod-2026-november-25-spherex-seeing-through-dust/",
-      "publishedAt": "2026-11-25T05:05:00.000Z",
-      "readMin": 1,
-      "icon": "🚀",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (NASA)",
-          "url": "https://science.nasa.gov/image-article/apod-2026-november-25-spherex-seeing-through-dust/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-725.svg",
-      "imageCaption": "Обложка рубрики: APOD: 2026 November 25 – SPHEREx Seeing Through Dust",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-nasa-d755d941e5",
-      "code": "S-861",
-      "category": "science",
-      "title": "Georgia’s Pecan Belt",
-      "summary": "Remote Sensing Technology",
-      "body": [
-        "Remote Sensing Technology",
-        "Blue Marble: Next Generation",
-        "Pecan orchards share the landscape of southwest Georgia with fields of peanuts, cotton, and corn. The OLI (Operational Land Imager) on Landsat 8 captured this image of the area around Albany on October 23, 2026, during pecan harvest season.",
-        "NASA Earth Observatory/Lauren Dauphin"
-      ],
-      "tags": [
-        "Earth Observatory",
-        "Land Cover",
-        "Land Use"
-      ],
-      "sourceName": "NASA",
-      "sourceUrl": "https://science.nasa.gov/earth/earth-observatory/georgias-pecan-belt/",
-      "publishedAt": "2026-11-25T05:00:00.000Z",
-      "readMin": 1,
-      "icon": "🚀",
-      "accent": "indigo",
-      "proofs": [
-        {
-          "label": "Первоисточник (NASA)",
-          "url": "https://science.nasa.gov/earth/earth-observatory/georgias-pecan-belt/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/s-861.svg",
-      "imageCaption": "Обложка рубрики: Georgia’s Pecan Belt",
-      "imageCredit": "Games News · локальная обложка"
-    },
-    {
-      "id": "auto-lenta-top-d9b78632dd",
-      "code": "W-946",
-      "category": "world",
-      "title": "Раскрыта скрытая опасность одной из форм диабета",
-      "summary": "Раскрыта скрытая опасность одной из форм диабета",
-      "body": [
-        "Раскрыта скрытая опасность одной из форм диабета. Подробности доступны в первоисточнике «Лента · Главное»."
-      ],
-      "tags": [
-        "Наука и техника"
-      ],
-      "sourceName": "Лента · Главное",
-      "sourceUrl": "https://lenta.ru/news/2026/11/25/raskryta-skrytaya-opasnost-odnoy-iz-form-diabeta/",
-      "publishedAt": "2026-11-25T01:31:59.000Z",
-      "readMin": 1,
-      "icon": "🌍",
-      "accent": "amber",
-      "proofs": [
-        {
-          "label": "Первоисточник (Лента · Главное)",
-          "url": "https://lenta.ru/news/2026/11/25/raskryta-skrytaya-opasnost-odnoy-iz-form-diabeta/"
-        }
-      ],
-      "factCheck": {
-        "verified": true,
-        "checkedAt": "2026-11-25",
-        "method": "Сверка заголовка и ссылки с первоисточником «Лента · Главное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
-      },
-      "comments": [],
-      "pinned": false,
-      "autoPosted": true,
-      "image": "site/assets/news/w-946.svg",
-      "imageCaption": "Обложка рубрики: Раскрыта скрытая опасность одной из форм диабета",
-      "imageCredit": "Games News · локальная обложка",
-      "queue": "now"
     },
     {
       "id": "s301-voyager-1-one-light-day",

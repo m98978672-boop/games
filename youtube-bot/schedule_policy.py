@@ -1,8 +1,14 @@
-"""Timezone-aware cadence: four Shorts and four long reviews every day.
+"""Timezone-aware cadence for the channel's three categories.
 
-Each format is doubled against the previous schedule and kept staggered, so a
-review slot and a Short slot never collide. Eight uploads a day is far inside
-the separate 100-uploads-per-day `videos.insert` allowance.
+- Shorts: four a day, 09:00/13:00/17:00/21:00 Moscow.
+- Long reviews: four a day, 06:00/11:00/15:00/19:00 Moscow.
+- Gameplay ("video game reviews", the AI playing a game to its end): at most one
+  a day, and that one continues until the playthrough is finished.
+
+The first two categories are fixed slots. Gameplay is not: it depends on whether
+a playthrough is still open, so it is planned by `gameplay_plan`, not by a slot
+table. Nine uploads a day is far inside the separate 100-uploads-per-day
+`videos.insert` allowance.
 """
 from __future__ import annotations
 
@@ -18,6 +24,12 @@ CHANNEL_TZ = ZoneInfo("Europe/Moscow")
 # YouTube quota; see the quota calculator Google published for the Data API.
 SHORT_POST_TIMES = (time(9, 0), time(13, 0), time(17, 0), time(21, 0))
 LONG_POST_TIMES = (time(6, 0), time(11, 0), time(15, 0), time(19, 0))
+# Gameplay sits at 18:00 so it never shares a minute with a review or a Short.
+GAMEPLAY_POST_TIME = time(18, 0)
+# A playthrough cut up to this many seconds is a Short; longer is a full video.
+# This mirrors adventure_personality.SHORT_SECONDS, which the renderer already
+# uses, so the render and the upload stamp cannot disagree at exactly 180s.
+GAMEPLAY_SHORT_MAX_SECONDS = 180
 # Kept for callers that still ask for "the" long slot; the first one serves the
 # nightly scheduled run. Anything that must handle all long slots uses
 # LONG_POST_TIMES and all_planned_slots().
@@ -87,6 +99,10 @@ CRON_SLOTS: dict[str, tuple[time, time]] = {
     "0 5 * * *": (time(8, 0), time(11, 0)),
     "0 9 * * *": (time(12, 0), time(15, 0)),
     "0 13 * * *": (time(16, 0), time(19, 0)),
+    # Gameplay: one a day, at 18:00, but only while a playthrough is open. The
+    # firing only checks readiness; whether anything publishes is decided by
+    # gameplay_policy, so a finished playthrough simply produces no upload.
+    "0 14 * * *": (time(17, 0), GAMEPLAY_POST_TIME),
 }
 
 
@@ -160,9 +176,9 @@ def settle_slot_after_render(reserved: datetime, video_format: str, *,
     reserved = reserved.astimezone(timezone.utc)
     if reserved >= current + MIN_LEAD:
         return reserved, False
-    # Base the search on the actual finish time as well as the old slot. A
-    # render delayed by days must never select a regular slot in the past.
-    return next_publish_slot(max(current, reserved), video_format=video_format), True
+    # Search strictly after the reserved slot, so a late run moves to the next
+    # regular slot of the same format instead of reusing the one it missed.
+    return next_publish_slot(reserved, video_format=video_format), True
 
 
 def long_video_is_due(now: datetime | None = None) -> bool:
@@ -170,6 +186,17 @@ def long_video_is_due(now: datetime | None = None) -> bool:
     if current.tzinfo is None:
         raise ValueError("now must include a timezone")
     return True
+
+
+def slot_format(slot_at: time) -> str:
+    """Which category a Moscow publication time belongs to."""
+    if slot_at == GAMEPLAY_POST_TIME:
+        return "gameplay"
+    if slot_at in LONG_POST_TIMES:
+        return "long"
+    if slot_at in SHORT_POST_TIMES:
+        return "short"
+    raise ValueError(f"not a regular publication slot: {slot_at}")
 
 
 def slot_sequence(first: datetime, video_format: str, count: int) -> list[datetime]:

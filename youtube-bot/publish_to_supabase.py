@@ -70,6 +70,12 @@ def _utc_now() -> datetime:
 
 
 def _mask(secret: str) -> None:
+    """Ask the runner to hide a secret in future log output.
+
+    Only meaningful inside Actions. The token itself must reach stdout, because
+    that is the protocol; callers that capture output (a report, a summary, an
+    issue body) must drop lines starting with "::" instead of republishing them.
+    """
     if secret:
         print(f"::add-mask::{secret}")
 

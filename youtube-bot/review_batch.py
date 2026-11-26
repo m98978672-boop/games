@@ -67,6 +67,8 @@ def plan(count: int, video_format: str, start: str, *, now=None) -> list[str]:
     # generous lead, but never assume it is free: the publisher must reserve it.
     first = (manual_publish_time(text, now=now) if text else
              next_publish_slot(now, video_format=video_format, min_lead=BATCH_LEAD)).astimezone(CHANNEL_TZ)
+    # Walk the real slots instead of arithmetic: "index // 2" and "+4 hours"
+    # were a copy of the old two-a-day cadence and silently ignored new times.
     times = slot_sequence(first, video_format, count)
     return [slot.strftime("%Y-%m-%d %H:%M") for slot in times]
 

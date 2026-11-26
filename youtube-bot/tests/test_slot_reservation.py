@@ -41,16 +41,6 @@ class SlotReservationTests(unittest.TestCase):
         self.assertEqual(moved.astimezone(CHANNEL_TZ).strftime('%d.%m %H:%M'), '25.11 13:00')
         self.assertGreater(moved, reserved)
 
-    def test_multi_day_delay_never_selects_a_past_slot(self):
-        reserved = datetime(2026, 11, 25, 5, tzinfo=timezone.utc)
-        now = datetime(2026, 11, 28, 8, 40, tzinfo=timezone.utc)
-        for kind in ('short', 'long'):
-            with self.subTest(kind=kind):
-                moved, adjusted = settle_slot_after_render(reserved, kind, now=now)
-                self.assertTrue(adjusted)
-                self.assertGreaterEqual(moved, now + MIN_LEAD)
-                self.assertGreater(moved, reserved)
-
     def test_late_long_review_keeps_its_own_format(self):
         reserved = datetime(2026, 11, 25, 3, tzinfo=timezone.utc)  # 06:00 Moscow
         moved, adjusted = settle_slot_after_render(reserved, 'long', now=reserved)

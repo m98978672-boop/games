@@ -65,11 +65,18 @@ class CloudWorkerTests(unittest.TestCase):
         yt = FakeYouTube()
         with patch.object(worker.comments, '_channel_id', return_value='owner'), \
              patch.object(worker.comments, 'summarize_channel', return_value=[{'count': 2}]), \
-             patch.object(worker.comments, 'recent_public_videos') as videos:
+             patch.object(worker.comments, 'recent_public_videos', return_value=['video']), \
+             patch.object(worker.comments, 'list_comments', return_value=[
+                 {'id': 'one', 'text': 'спасибо'}, {'id': 'two', 'text': 'спасибо'},
+                 {'id': 'three', 'text': 'другая тема'}]), \
+             patch.object(worker.comments, '_verified_thread', return_value=('owner', 'video')), \
+             patch.object(worker.comments, 'has_any_reply', side_effect=[True, False]):
             result = worker.run(yt, 'owner', api=lambda *_: self.fail('must not reserve'))
-        self.assertEqual(result, {'videos_analyzed': 1, 'sent': 0})
+        self.assertEqual(result['sent'], 0)
+        self.assertEqual(result['comments_scanned'], 3)
+        self.assertEqual(result['already_answered'], 1)
+        self.assertEqual(result['candidate_replies_unreserved'], 1)
         self.assertEqual(yt.posts, [])
-        videos.assert_not_called()
 
     def test_existing_reply_skips_post(self):
         yt = FakeYouTube()
