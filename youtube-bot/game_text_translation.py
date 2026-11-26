@@ -55,7 +55,7 @@ def _pieces(text):
     return paragraphs
 
 
-def russian_game_text(text, generate=None, *, context="", source_language=None):
+def russian_game_text(text, generate=None, *, context="", source_language=None, glossary=None):
     """Translate every segment, with neighbouring context; return None on any failure."""
     if not isinstance(text, str) or not text.strip() or len(text) > MAX_SOURCE_CHARS:
         return None
@@ -66,16 +66,19 @@ def russian_game_text(text, generate=None, *, context="", source_language=None):
         return None
     grammar = language_note(source_language, ENGLISH_GRAMMAR)
     context = context[-450:] if isinstance(context, str) else ""
+    terms = tuple((source, target) for source, target in (glossary or {}).items()
+                  if isinstance(source, str) and isinstance(target, str)
+                  and 0 < len(source) <= 80 and 0 < len(target) <= 80)[:24] if isinstance(glossary, dict) else ()
     all_pieces = [piece for paragraph in paragraphs for piece in paragraph]
     translated = []
     for index, piece in enumerate(all_pieces):
         previous = all_pieces[index - 1][-200:] if index else ''
         following = all_pieces[index + 1][:200] if index + 1 < len(all_pieces) else ''
-        result = _translate_segment(piece, generate, context, previous, following, grammar, False)
+        result = _translate_segment(piece, generate, context, previous, following, grammar, terms, False)
         if result is None:
             # A transient model/format failure or a corrupted number deserves one
             # bounded retry, even when the source does not contain digits.
-            result = _translate_segment(piece, generate, context, previous, following, grammar, True)
+            result = _translate_segment(piece, generate, context, previous, following, grammar, terms, True)
         if result is None:
             return None
         translated.append(result)
@@ -86,15 +89,15 @@ def russian_game_text(text, generate=None, *, context="", source_language=None):
     return '\n\n'.join(output)
 
 
-def _translate_segment(text, generate, context, previous, following, grammar, retry):
+def _translate_segment(text, generate, context, previous, following, grammar, terms, retry):
     # Deliberately no process-global cache: a failed or transient model result
     # must not poison later attempts or retain private game text indefinitely.
     if generate is None:
         from script_contract import generate_with_qwen
         generate = generate_with_qwen
-    payload = {'source_text': text, 'scene_context': context, 'previous_text': previous, 'following_text': following}
+    payload = {'source_text': text, 'scene_context': context, 'previous_text': previous, 'following_text': following, 'glossary': dict(terms)}
     instruction = ('Учитывай соседние реплики для рода, обращений и игровых терминов. '
-                   'Переводи только source_text, не добавляй соседние реплики. '
+                   'Переводи только source_text, не добавляй соседние реплики. Сохраняй названия из glossary, склоняй их по смыслу. '
                    'Сохраняй смысл отрицаний, имена, условия и порядок действий. '
                    'Отличай совет, обязанность, разрешение и возможность, факты от предположений, уже выполненное от предстоящего. '
                    'Учитывай фразовые глаголы, идиомы, сарказм и регистр речи; не переводи их пословно. '

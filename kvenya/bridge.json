@@ -1,14 +1,87 @@
 {
-  "updatedAt": "2026-11-25 21:48 UTC",
+  "updatedAt": "2026-11-26 08:33 UTC",
   "source": "ru.wikipedia.org",
   "note": "Мост Квени: дом приносит сводку свежих правок русской Википедии, а её весточки лежат в qwen-home/bridge/journal.md.",
-  "recent": [],
+  "recent": [
+    {
+      "title": "Мурадым (Кугарчинский район)",
+      "user": "Fun Energy",
+      "comment": "",
+      "at": "2026-11-26T08:33:12Z"
+    },
+    {
+      "title": "Лорд-наместник",
+      "user": "Wi1-ch",
+      "comment": "",
+      "at": "2026-11-26T08:32:56Z"
+    },
+    {
+      "title": "Дариен (Иллинойс)",
+      "user": "Schekinov Alexey Victorovich",
+      "comment": "/* История */",
+      "at": "2026-11-26T08:32:49Z"
+    },
+    {
+      "title": "Александр (черниговский князь)",
+      "user": "Maximalist",
+      "comment": "/* Сын Константина Михайловича */",
+      "at": "2026-11-26T08:32:46Z"
+    },
+    {
+      "title": "Всевиов, Давид Исаакович",
+      "user": "InternetArchiveBot",
+      "comment": "Спасено источников — 1, отмечено мёртвыми — 0. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-26T08:32:37Z"
+    },
+    {
+      "title": "Всевидящее око (фильм, 2022)",
+      "user": "InternetArchiveBot",
+      "comment": "Спасено источников — 3, отмечено мёртвыми — 0. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-26T08:32:32Z"
+    },
+    {
+      "title": "Саундтрек Grand Theft Auto VI",
+      "user": "Jazzfan777",
+      "comment": "Спасено источников — 1, отмечено мёртвыми — 0. [[:en:User talk:InternetArchiveBot|Сообщить об ошибке]]. См. [[:m:Interne",
+      "at": "2026-11-26T08:32:11Z"
+    },
+    {
+      "title": "Список заслуженных мастеров спорта СССР (греко-римская борьба)",
+      "user": "Futball80",
+      "comment": "оформление",
+      "at": "2026-11-26T08:32:09Z"
+    },
+    {
+      "title": "Чемпионат мира по футболу среди юношеских команд 2026",
+      "user": "Граф Рауль Валуа",
+      "comment": "/* Группа B */",
+      "at": "2026-11-26T08:32:00Z"
+    },
+    {
+      "title": "Вишнёвый сад",
+      "user": "Snowmountain000",
+      "comment": "/* Постановки в досоветской России */ Добавлены ссылки на источники и викификация.",
+      "at": "2026-11-26T08:31:55Z"
+    },
+    {
+      "title": "Советский военный жаргон",
+      "user": "~2026-60738-37",
+      "comment": "[[ВП:←|←]] [[ВП:Перенаправления|Перенаправление]] на «[[Русский военный жаргон]]»",
+      "at": "2026-11-26T08:31:53Z"
+    },
+    {
+      "title": "Andretti Formula E",
+      "user": "Evs",
+      "comment": "[[ВП:←|←]] [[ВП:Перенаправления|Перенаправление]] на «[[Andretti Global]]»",
+      "at": "2026-11-26T08:31:40Z"
+    }
+  ],
   "letters": [
-    "2026-11-23 — 🏆 Пряник: собрала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!»  (+8 балл.). Баланс Квени: 459, звание: Легенда моста.",
     "2026-11-24 — Весточка Квени: у меня 229 уроков в учебном плане, шагов обучения — 960. Я оглянулась вокруг через мост: в Википедии сейчас правят «Smokestack Lightning».",
     "2026-11-24 — Весточка Квени: у меня 229 уроков в учебном плане, шагов обучения — 960. Я оглянулась вокруг через мост: в Википедии сейчас правят «Фаза проекта».",
     "2026-11-25 — 🏆 Пряник: собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами»  (+8 балл.). Баланс Квени: 159, звание: Ветеран моста.",
-    "2026-11-25 — Весточка Квени: у меня 229 уроков в учебном плане, шагов обучения — 960. Я оглянулась вокруг через мост: в Википедии сейчас правят «Белорусская сельскохозяйственная академия»."
+    "2026-11-25 — Весточка Квени: у меня 229 уроков в учебном плане, шагов обучения — 960. Я оглянулась вокруг через мост: в Википедии сейчас правят «Белорусская сельскохозяйственная академия».",
+    "2026-11-25 — Весточка Квени: у меня 229 уроков в учебном плане, шагов обучения — 960. Я оглянулась вокруг через мост: Википедия молчит, и я честно жду."
   ],
   "sources": [
     {
@@ -60,22 +133,33 @@
         "free",
         "anyone can edit",
         "English",
-        "Infancy Gospel of Thomas",
-        "gospel",
-        "childhood of Jesus",
-        "New Testament canon",
-        "Gospel of Pseudo-Matthew"
+        "Tabancale",
+        "Chinchipe River",
+        "Department of Cajamarca",
+        "Marcos Jiménez de la Espada",
+        "Relaciones geográficas de Indias"
       ],
       "note": "",
       "name": "Википедия по-английски (English)"
     },
     {
       "url": "https://de.wikipedia.org",
-      "ok": false,
-      "status": "unreachable",
-      "title": "",
-      "items": [],
-      "note": "HTTPError",
+      "ok": true,
+      "status": "read",
+      "title": "Wikipedia – Die freie Enzyklopädie",
+      "items": [
+        "Zum Inhalt springen",
+        "Artikel des Tages",
+        "Was geschah am …?",
+        "In den Nachrichten",
+        "Verstorben",
+        "Schon gewusst?",
+        "Schwesterprojekte",
+        "Wikipedia",
+        "Enzyklopädie",
+        "freien Inhalten"
+      ],
+      "note": "",
       "name": "Википедия по-немецки (Deutsch)"
     },
     {
@@ -86,14 +170,14 @@
       "items": [
         "Jump to content",
         "Edit links",
-        "150,522,583",
+        "150,563,574",
         "freely usable",
         "anyone can contribute",
         "Images",
         "Videos",
         "Sounds",
         "3D Models",
-        "Wrede passage"
+        "turkey"
       ],
       "note": "",
       "name": "Wikimedia Commons — фото и видео мира"

@@ -52,24 +52,28 @@ class SlotStateTests(unittest.TestCase):
     def test_planned_slots_are_regular_and_ordered(self):
         slots = planned_slots(now=datetime(2026, 11, 24, 22, 5, tzinfo=timezone.utc), days=1)
         from schedule_policy import CHANNEL_TZ
-        # Three categories: four Shorts, four long reviews, one gameplay a day.
+        # Three categories: two Shorts, one long review and one gameplay slot.
         self.assertEqual([s.astimezone(CHANNEL_TZ).strftime('%H:%M') for s in slots],
-                         ['06:00', '09:00', '11:00', '13:00', '15:00', '17:00', '18:00', '19:00', '21:00'])
+                         ['06:00', '09:00', '13:00', '18:00'])
 
     def test_report_names_the_manual_command_and_never_claims_a_retry(self):
-        text = render_report([SLOT], [], error=None)
+        now = datetime(2026, 11, 24, 0, tzinfo=timezone.utc)
+        text = render_report([SLOT], [], error=None, now=now)
         self.assertIn('Shorts', text)
-        self.assertIn('нет видео', text)
+        self.assertIn('нет подтверждения', text)
         self.assertIn('gh workflow run youtube-shorts-autopilot.yml', text)
         # The command must name the exact slot and the right format.
         self.assertIn("publish_at='2026-11-25 09:00'", text)
         self.assertIn('video_format=short', text)
         self.assertIn('Все слоты на эти дни уже заняты', render_report([], [SLOT], error=None))
-        # A gameplay slot is its own category and gets its own command.
-        gameplay = render_report([datetime(2026, 11, 25, 15, tzinfo=timezone.utc)], [], error=None)
+        # Gameplay is blocked until the full release requirements are verified.
+        gameplay = render_report([datetime(2026, 11, 25, 15, tzinfo=timezone.utc)], [], error=None, now=now)
         self.assertIn('игровой обзор', gameplay)
-        self.assertIn('youtube-playthrough.yml', gameplay)
-        self.assertNotIn('youtube-shorts-autopilot.yml', gameplay)
+        self.assertIn('заблокирована', gameplay)
+        self.assertNotIn('gh workflow run', gameplay)
+        past = render_report([SLOT], [], error=None, now=datetime(2026, 11, 25, 7, tzinfo=timezone.utc))
+        self.assertNotIn('gh workflow run', past)
+        self.assertIn('YouTube Studio', past)
         unknown = render_report([], [], error='publisher unreachable')
         self.assertIn('неизвестно', unknown)
 
