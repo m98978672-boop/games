@@ -8,7 +8,7 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,7 +29,7 @@ jobs:
           command -v supertuxkart Xvfb xdpyinfo ffmpeg
           folder="$RUNNER_TEMP/stk"
           mkdir -p "$folder"
-          Xvfb "$DISPLAY" -screen 0 800x600x24 +extension GLX -nolisten tcp >"$folder/xvfb.log" 2>&1 &
+          Xvfb "$DISPLAY" -screen 0 1280x720x24 +extension GLX -nolisten tcp >"$folder/xvfb.log" 2>&1 &
           xvfb_pid=$!
           race_pid=''
           capture_pid=''
@@ -40,11 +40,11 @@ jobs:
           track_dir=$(find /usr/share/games/supertuxkart /usr/share/supertuxkart -name track.xml 2>/dev/null | grep -im1 '/zengarden/track.xml$' || true)
           if [[ -z "$track_dir" ]]; then echo '::error::Zen Garden assets not installed.'; exit 1; fi
           track=$(basename "$(dirname "$track_dir")")
-          ffmpeg -v error -nostdin -y -f x11grab -video_size 800x600 -framerate 25 -i "$DISPLAY" -t 495 \
-            -c:v libvpx -deadline realtime -cpu-used 8 -threads 2 -crf 10 -b:v 0 "$folder/recording.webm" &
+          ffmpeg -v error -nostdin -y -f x11grab -video_size 1280x720 -framerate 25 -i "$DISPLAY" -t 495 \
+            -c:v libvpx-vp9 -deadline realtime -cpu-used 7 -row-mt 1 -threads 4 -crf 18 -b:v 0 "$folder/recording.webm" &
           capture_pid=$!
           timeout --signal=TERM --kill-after=10s 480s supertuxkart --track="$track" --profile-laps=2 --numkarts=3 --shadows=0 \
-            --fullscreen --screensize=800x600 --no-sound >"$folder/race.log" 2>&1 &
+            --fullscreen --screensize=1280x720 --no-sound >"$folder/race.log" 2>&1 &
           race_pid=$!
           race_status=0
           wait "$race_pid" || race_status=$?
