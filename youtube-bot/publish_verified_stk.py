@@ -37,7 +37,7 @@ def prepare(folder, run_id):
     output = folder / 'publish-stk.result.json'
     output.write_text(json.dumps({'metadata': {
         'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'https://supertuxkart.net/#verified-race-{run_id}')),
-        'game_id': 'supertuxkart-zen-garden', 'title': 'Гонка по Zen Garden | SuperTuxKart',
+        'game_id': f'supertuxkart-zen-garden-race-{run_id}', 'title': 'Гонка по Zen Garden | SuperTuxKart',
         'description': ('https://supertuxkart.net/\n\nГонка на Zen Garden от старта до подтверждённого финиша. '
                         'За рулём — встроенные пилоты SuperTuxKart. Заезд записан без вырезания геймплея.\n\n'
                         'Игра и визуальные материалы: команда SuperTuxKart и авторы ресурсов. '
