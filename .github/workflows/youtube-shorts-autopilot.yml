@@ -684,7 +684,7 @@ jobs:
           python youtube-bot/publish_review_preview.py "$RUNNER_TEMP/saved-review" "$CAPTURE_RUN" "$PUBLISH_AT"
 
   publish-verified-stk:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.id == 45854300179 && github.event.workflow_run.head_sha == '77f7ed6d9140f8bf5f5e7510400bdfd01e5bb373' && github.event.workflow_run.head_repository.full_name == github.repository
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_sha == 'ce90d75c6a0545762ffbf0a16935900336331c85' && github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -703,10 +703,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: 45854300179
-          name: supertuxkart-race-45854300179
+          run-id: ${{ github.event.workflow_run.id }}
+          name: supertuxkart-race-${{ github.event.workflow_run.id }}
           path: ${{ runner.temp }}/stk-verified
       - name: Recheck the race and queue publication
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          python youtube-bot/publish_verified_stk.py "$RUNNER_TEMP/stk-verified" 45854300179
+          python youtube-bot/publish_verified_stk.py "$RUNNER_TEMP/stk-verified" "${{ github.event.workflow_run.id }}"

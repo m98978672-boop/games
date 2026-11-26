@@ -11,11 +11,10 @@ from publish_to_supabase import diagnostic_category
 from schedule_policy import next_publish_slot
 from verify_stk_race import verify
 
-RUN_ID = '45854300179'
 
 
 def prepare(folder, run_id):
-    if str(run_id) != RUN_ID:
+    if not str(run_id).isdigit():
         raise ValueError('Unknown source for this authorized upload')
     verify(folder)
     draft = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
