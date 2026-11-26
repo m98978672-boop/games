@@ -8,7 +8,7 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v7
         with:
@@ -40,10 +40,10 @@ jobs:
           track_dir=$(find /usr/share/games/supertuxkart /usr/share/supertuxkart -name track.xml 2>/dev/null | grep -im1 '/zengarden/track.xml$' || true)
           if [[ -z "$track_dir" ]]; then echo '::error::Zen Garden assets not installed.'; exit 1; fi
           track=$(basename "$(dirname "$track_dir")")
-          ffmpeg -v error -nostdin -y -f x11grab -video_size 800x600 -framerate 25 -i "$DISPLAY" -t 360 \
+          ffmpeg -v error -nostdin -y -f x11grab -video_size 800x600 -framerate 25 -i "$DISPLAY" -t 495 \
             -c:v libvpx -deadline realtime -cpu-used 8 -threads 2 -crf 10 -b:v 0 "$folder/recording.webm" &
           capture_pid=$!
-          timeout --signal=TERM 350s supertuxkart --track="$track" --profile-laps=4 --numkarts=4 \
+          timeout --signal=TERM --kill-after=10s 480s supertuxkart --track="$track" --profile-laps=2 --numkarts=3 --shadows=0 \
             --fullscreen --screensize=800x600 --no-sound >"$folder/race.log" 2>&1 &
           race_pid=$!
           race_status=0
@@ -52,8 +52,18 @@ jobs:
           kill -INT "$capture_pid" 2>/dev/null || true
           wait "$capture_pid" || true
           capture_pid=''
-          if [[ "$race_status" != 0 ]]; then tail -25 "$folder/race.log"; exit "$race_status"; fi
-          ffmpeg -v error -nostdin -y -sseof -1 -i "$folder/recording.webm" -frames:v 1 "$folder/finish-check.png"
+          if [[ -s "$folder/recording.webm" ]]; then
+            ffmpeg -v error -nostdin -y -sseof -1 -i "$folder/recording.webm" -frames:v 1 "$folder/finish-check.png" || true
+          fi
+          if [[ "$race_status" != 0 ]]; then
+            if [[ "$race_status" == 124 ]]; then
+              echo '::error::Race did not report a finish within 480 seconds; capture is private and will not be published.'
+            else
+              echo "::error::SuperTuxKart exited with code $race_status before verification."
+            fi
+            grep -Ei 'profil|warning|error|fatal' "$folder/race.log" | tail -40 || true
+            exit "$race_status"
+          fi
           python youtube-bot/verify_stk_race.py "$folder"
       - name: Build a private voiced race cut with frame-aligned intro
         run: |
