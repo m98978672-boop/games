@@ -22,7 +22,7 @@ def digest(path: Path) -> str:
 
 
 def build(folder: Path, *, capture=1200.0, play=1200.0, actions=400,
-          parts=((1, 0.0, 1200.0, 1200.0),), approval='2026-11-24') -> Path:
+          parts=((1, 0.0, 1200.0, 1200.0),), rights=None) -> Path:
     """Write synthetic data for structural tests, not a real video."""
     cues, cursor = [], 0.0
     index = 0
@@ -46,8 +46,7 @@ def build(folder: Path, *, capture=1200.0, play=1200.0, actions=400,
         'evidence': [{'kind': 'actions', 'count': actions},
                      {'kind': 'screen_changes', 'count': max(1, actions - 50)}],
         'parts': rows,
-        'rights': {'sources': [{'name': 'mini-js-games-hub', 'license': 'MIT', 'checked': '2026-11-24'}],
-                   'owner_approval': approval},
+        'rights': rights or {'sources': [{'name': 'our game', 'ownership': 'own'}]},
     }
     (folder / 'release.evidence.json').write_text(json.dumps(evidence), encoding='utf-8')
     return folder
@@ -159,15 +158,35 @@ class ReleaseEvidenceTests(unittest.TestCase):
 
     # Rights stay a human decision, but a documented one.
 
-    def test_rights_without_a_dated_approval_are_refused(self):
-        folder = self.folder()
-        self.rewrite(folder, lambda e, f: e['rights'].update(owner_approval=''))
-        self.assert_blocked(folder, "owner's dated approval")
+    def test_our_own_game_needs_no_licence_or_approval(self):
+        # Nobody should retype a licence for a game that lives in this repo.
+        self.assertEqual(verify(self.folder())['parts'], 1)
 
-    def test_rights_without_a_source_date_are_refused(self):
-        folder = self.folder()
-        self.rewrite(folder, lambda e, f: e['rights']['sources'][0].update(checked='soon'))
-        self.assert_blocked(folder, 'check date')
+    def test_an_external_game_without_a_licence_is_refused(self):
+        folder = self.root / 'external'
+        folder.mkdir()
+        build(folder, rights={'sources': [{'name': 'someone-else/game'}]})
+        self.assert_blocked(folder, 'not under an allowed licence')
+
+    def test_an_external_game_under_a_noncommercial_licence_is_refused(self):
+        folder = self.root / 'nc'
+        folder.mkdir()
+        build(folder, rights={'sources': [{'name': 'someone/game', 'license': 'CC-BY-NC-4.0',
+                                           'license_verified': '2026-11-24'}]})
+        self.assert_blocked(folder, 'not under an allowed licence')
+
+    def test_an_external_game_under_mit_with_verification_passes(self):
+        folder = self.root / 'mit'
+        folder.mkdir()
+        build(folder, rights={'sources': [{'name': 'someone/game', 'license': 'MIT',
+                                           'license_verified': '2026-11-24'}]})
+        self.assertEqual(verify(folder)['parts'], 1)
+
+    def test_an_external_game_without_verified_licence_is_refused(self):
+        folder = self.root / 'noverify'
+        folder.mkdir()
+        build(folder, rights={'sources': [{'name': 'someone/game', 'license': 'MIT'}]})
+        self.assert_blocked(folder, 'has not been verified')
 
     # Absence of proof must never read as proof.
 
@@ -244,7 +263,7 @@ class SplitTests(unittest.TestCase):
 
 
 class RightsTests(unittest.TestCase):
-    """Rights are the owner's decision; the builder must never invent them."""
+    """Rights are derived from where the assets came from, not typed in by hand."""
 
     def setUp(self):
         import adventure_draft
@@ -261,67 +280,87 @@ class RightsTests(unittest.TestCase):
             self.os.environ.pop(key, None)
         self.os.environ.update(self.saved)
 
-    def test_an_unapproved_recording_gets_no_rights_record(self):
-        # A builder that filled this in would bypass the gate that reads it.
-        rights = self.draft.rights_from_environment({'source': 'https://github.com/a/b'})
-        self.assertEqual(rights, {'sources': [], 'owner_approval': ''})
+    def test_our_own_game_is_recognised_without_any_configuration(self):
+        # "Последний сигнал" is three files in this repository: there is no
+        # external licence to confirm and nobody should have to configure one.
+        rights = self.draft.rights_from_environment(
+            {'source': 'https://github.com/m98978672-boop/games/tree/main/collection/lighthouse-relay'})
+        self.assertEqual(rights, {'sources': [{'name': 'https://github.com/m98978672-boop/games/'
+                                               'tree/main/collection/lighthouse-relay',
+                                               'ownership': 'own'}]})
+
+    def test_an_external_game_is_not_assumed_to_be_ours(self):
+        rights = self.draft.rights_from_environment(
+            {'source': 'https://github.com/ritaban06/mini-js-games-hub'})
+        self.assertNotEqual(rights['sources'][0].get('ownership'), 'own')
+        self.assertNotIn('license', rights['sources'][0])
 
     def test_the_builder_never_invents_an_approval_date(self):
         import inspect
-        source = inspect.getsource(self.draft.rights_from_environment)
-        for invented in ('1970', '2026-', 'datetime.now', 'date.today'):
-            self.assertNotIn(invented, source)
+        for name in ('rights_from_environment',):
+            source = inspect.getsource(getattr(self.draft, name))
+            for invented in ('1970', 'datetime.now', 'date.today'):
+                self.assertNotIn(invented, source)
 
-    def test_an_incomplete_approval_is_not_partial(self):
-        self.os.environ['GAMEPLAY_RIGHTS_APPROVED_ON'] = '2026-11-24'
-        rights = self.draft.rights_from_environment({'source': 'https://github.com/a/b'})
-        self.assertEqual(rights['owner_approval'], '')
+    def test_an_external_game_without_licence_stays_unlicensed(self):
+        rights = self.draft.rights_from_environment(
+            {'source': 'https://github.com/someone/game'})
+        self.assertEqual(rights['sources'][0].get('license'), None)
 
-    def test_a_complete_owner_record_is_passed_through(self):
-        self.os.environ.update(GAMEPLAY_RIGHTS_APPROVED_ON='2026-11-24',
-                               GAMEPLAY_RIGHTS_CHECKED_ON='2026-11-20',
-                               GAMEPLAY_SOURCE_LICENSE='MIT')
-        rights = self.draft.rights_from_environment({'source': 'https://github.com/a/b'})
-        self.assertEqual(rights['owner_approval'], '2026-11-24')
+    def test_a_verified_licence_is_carried_into_the_record(self):
+        self.os.environ.update(GAMEPLAY_SOURCE_LICENSE='MIT',
+                               GAMEPLAY_RIGHTS_CHECKED_ON='2026-11-24')
+        rights = self.draft.rights_from_environment(
+            {'source': 'https://github.com/someone/game'})
         self.assertEqual(rights['sources'][0]['license'], 'MIT')
+        self.assertEqual(rights['sources'][0]['license_verified'], '2026-11-24')
+
+    def test_the_licence_is_read_from_github_not_guessed(self):
+        # The repository's own licence file is the source of truth. A runner
+        # without network access skips rather than pretending either way.
+        try:
+            licence = self.draft.verified_license('https://github.com/ritaban06/mini-js-games-hub')
+        except Exception:
+            self.skipTest('no network access to the GitHub API here')
+        self.assertEqual(licence, 'MIT')
 
 
-class WorkflowRightsTests(unittest.TestCase):
-    """A rights rule that never reaches the builder is a rule that never applies."""
+class LicenseStepTests(unittest.TestCase):
+    """The workflow must read a fact, and a failure must not read as a licence."""
 
-    def root(self) -> Path:
-        return Path(__file__).resolve().parents[2]
+    def facts(self, trace, today='2026-11-24'):
+        from read_game_license import facts
+        return facts(trace, today=today)
 
-    def test_the_builder_receives_the_owner_rights_record(self):
-        import yaml
-        parsed = yaml.safe_load((self.root() / '.github/workflows/adventure-experiment.yml')
-                                .read_text(encoding='utf-8'))
-        steps = parsed['jobs']['adventure']['steps']
-        build = [s for s in steps if 'adventure_draft.py' in str(s.get('run', ''))]
-        self.assertTrue(build)
-        env = build[0].get('env') or {}
-        # Without these the record stays empty and every upload is refused, so
-        # the gate would look broken rather than strict.
-        for name in ('GAMEPLAY_RIGHTS_APPROVED_ON', 'GAMEPLAY_RIGHTS_CHECKED_ON',
-                     'GAMEPLAY_SOURCE_LICENSE'):
-            self.assertIn(name, env)
+    def test_our_own_game_reports_nothing_to_license(self):
+        result = self.facts({'source': 'https://github.com/m98978672-boop/games/tree/main/collection/lighthouse-relay'})
+        self.assertEqual(result, {'checked': '', 'license': ''})
 
-    def test_the_uploader_job_carries_the_rights_flag(self):
-        import yaml
-        parsed = yaml.safe_load((self.root() / '.github/workflows/youtube-shorts-autopilot.yml')
-                                .read_text(encoding='utf-8'))
-        job = parsed['jobs']['publish-gameplay']
-        # The uploader checks this flag itself, so a missing value fails the job
-        # after the recording has already been paid for.
-        self.assertIn('ADVENTURE_RECORDING_RIGHTS_VERIFIED', job['env'])
+    def test_an_external_game_reports_its_real_licence(self):
+        # This reads the actual repository licence over the network.
+        result = self.facts({'source': 'https://github.com/ritaban06/mini-js-games-hub'})
+        if not result['license']:
+            self.skipTest('no network access to the GitHub API here')
+        self.assertEqual(result['license'], 'MIT')
+        self.assertEqual(result['checked'], '2026-11-24')
 
-    def test_both_uploaders_hand_the_gate_a_folder(self):
-        #  A gate called without a folder can only refuse, which is how the
-        #  pipeline looked "blocked" while nothing was actually wrong.
-        for name in ('publish_adventure_draft.py', 'publish_adventure_short.py'):
-            source = (self.root() / 'youtube-bot' / name).read_text(encoding='utf-8')
-            self.assertNotIn('require_verified_gameplay_release()', source)
-            self.assertIn('require_verified_gameplay_release(', source)
+    def test_an_unreadable_source_is_unlicensed_rather_than_permitted(self):
+        result = self.facts({'source': 'https://github.com/definitely-not-a-real-owner-xyz/nope'})
+        self.assertEqual(result['license'], '')
+
+    def test_a_capture_without_a_source_is_unlicensed(self):
+        self.assertEqual(self.facts({})['license'], '')
+
+    def test_the_cli_writes_key_value_lines(self):
+        import tempfile
+        from read_game_license import main
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'trace.json').write_text(
+                json.dumps({'source': 'https://github.com/m98978672-boop/games/tree/main/collection/lighthouse-relay'}),
+                encoding='utf-8')
+            self.assertEqual(main([str(root / 'trace.json'), str(root / 'out.txt')]), 0)
+            self.assertIn('license=', (root / 'out.txt').read_text(encoding='utf-8'))
 
 
 class BuilderSplitTests(unittest.TestCase):

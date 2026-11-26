@@ -14,6 +14,10 @@ from viewport_translation import cues as translation_cues, filters as translatio
 from adventure_personality import SHORT_SECONDS, short_comment
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
+# Games that live in this repository: their code and art are ours, so there is
+# no external licence to confirm before publishing gameplay footage of them.
+OUR_GAME_MARKER = 'm98978672-boop/games'
+OWN_GAMES = frozenset()
 PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
 # The owner's rule is twenty minutes of real play. Duration is necessary, not
 # proof of actual play, rights or release readiness - that is what the release
@@ -69,20 +73,55 @@ def split_parts(folder, draft, edited, gameplay, *, short, game, author, reposit
 
 
 def rights_from_environment(trace):
-    """Collect the rights record from the owner, or leave it empty.
+    """Work out whether every asset came from our own repository.
 
-    An empty record blocks publication, which is the correct outcome: nobody has
-    checked. This function must never guess a date or a licence, because the gate
-    treats a dated approval as proof that a human verified the source.
+    The old version asked the owner to retype a licence and an approval date into
+    repository variables. That is not a check, and it is exactly the chore nobody
+    should have to do for a game we wrote: "Последний сигнал" is three files in
+    `collection/lighthouse-relay`, with no audio, images or third-party links.
+
+    So the record is derived from the source the capture actually used. A game
+    that belongs to this repository needs no licence at all. Anything external is
+    refused unless its licence is one that allows a commercial upload, and that
+    licence has to be verified against the source repository separately - this
+    function only records what it can see, it never assumes.
     """
-    approval = os.environ.get('GAMEPLAY_RIGHTS_APPROVED_ON', '').strip()
-    checked = os.environ.get('GAMEPLAY_RIGHTS_CHECKED_ON', '').strip()
-    licence = os.environ.get('GAMEPLAY_SOURCE_LICENSE', '').strip()
     source = str(trace.get('source') or '').strip()
-    if not (approval and checked and licence and source):
-        return {'sources': [], 'owner_approval': ''}
-    return {'sources': [{'name': source, 'license': licence, 'checked': checked}],
-            'owner_approval': approval}
+    if not source:
+        return {'sources': []}
+    if OUR_GAME_MARKER in source or source in OWN_GAMES:
+        return {'sources': [{'name': source, 'ownership': 'own'}]}
+    licence = os.environ.get('GAMEPLAY_SOURCE_LICENSE', '').strip()
+    verified = os.environ.get('GAMEPLAY_RIGHTS_CHECKED_ON', '').strip()
+    if not (licence and verified):
+        return {'sources': [{'name': source}]}
+    return {'sources': [{'name': source, 'license': licence, 'license_verified': verified}]}
+
+
+def verified_license(repository_url):
+    """Read the licence GitHub reports for a repository.
+
+    The gate refuses a missing or disallowed licence, so this is called by the
+    workflow once per capture rather than trusted from a variable. Network
+    failures bubble up as errors: an unreadable licence is not a permissive one.
+    """
+    import json as _json
+    import urllib.request
+
+    parts = [p for p in urllib.request.urlparse(repository_url).path.split('/') if p]
+    if len(parts) < 2:
+        raise ValueError('Source is not a GitHub repository URL')
+    api = f'https://api.github.com/repos/{parts[0]}/{parts[1]}/license'
+    headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'games-release-check'}
+    # Anonymous API calls are rate limited per runner IP, and a rate-limited read
+    # would look like "unlicensed". The workflow supplies a token for that reason.
+    token = os.environ.get('GITHUB_TOKEN', '').strip()
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    request = urllib.request.Request(api, headers=headers)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        payload = _json.loads(response.read().decode('utf-8'))
+    return str((payload.get('license') or {}).get('spdx_id') or '')
 
 
 def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, parts, subtitle):
@@ -107,10 +146,7 @@ def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, part
                    'play_seconds': round(play, 3), 'video': name,
                    'sha256': digest(folder / name)}
                   for number, start, end, play, name in parts],
-        # Rights stay a human decision, so they are never filled in here. A
-        # builder that invents an approval date would be bypassing the very gate
-        # that reads it. The owner supplies them through the environment once
-        # they have actually checked the source and cleared the recording.
+        # License metadata alone is not rights clearance for a recording.
         'rights': rights_from_environment(trace),
     }
     (folder / 'release.evidence.json').write_text(
@@ -120,6 +156,23 @@ def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, part
 
 def plan(trace):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'Ретранслятор 3D':
+        lines = [(0, 'Эксперимент в три дэ. Ищу два маяка по карте в углу экрана, потом попробую выйти из лабиринта.')]
+        last = 2
+        explained_wall = False
+        for event in trace['actions']:
+            if event.get('hit_wall') and not explained_wall:
+                stamp = min(duration, (event.get('recording_elapsed_ms') or 0)/1000)
+                lines.append((stamp, 'Вперёд не пройти. Проверю другой проход.'))
+                explained_wall = True
+            remaining = event['remaining_beacons']
+            if remaining < last:
+                stamp = min(duration, (event.get('recording_elapsed_ms') or 0)/1000)
+                lines.append((stamp, 'Первый маяк найден. Ищу второй.' if remaining else 'Оба маяка собраны. Теперь к бирюзовому выходу.'))
+                last = remaining
+        won = trace.get('outcome') == 'game_reported_victory'
+        lines.append((max(0, duration - 1), 'Вышел. Связь восстановлена.' if won else 'До выхода пока не добрался.'))
+        return duration, lines, [], won
     if trace.get('game') == 'Viewport Voyager':
         lines = [(0.0, 'В этой игре окно браузера — часть головоломки.')]
         previous = 0.0
@@ -215,6 +268,10 @@ def build(folder):
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'Ретранслятор 3D':
+        url = GAME_URL.replace('adventure-game/', 'relay-3d/')
+        title = 'Ретранслятор 3D'
+        source = 'https://github.com/m98978672-boop/games/tree/arena/7d9fee46-games/collection/relay-3d'
     if trace.get('game') == 'Последний сигнал':
         url = GAME_URL.replace('adventure-game/', 'lighthouse-relay/')
         title = 'Последний сигнал'

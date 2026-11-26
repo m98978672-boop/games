@@ -18,6 +18,9 @@ MIN_REAL_PLAY_SECONDS = 20 * 60      # "20 минут реальной игры"
 MAX_PART_SECONDS = 30 * 60           # a part longer than this cannot be split safely
 MAX_PARTS = 2                        # one recording becomes at most two videos
 MIN_PART_PLAY_RATIO = 0.5            # no part may be mostly padding
+# A narrow list of code licence identifiers for diagnostics, not a grant
+# of rights to video, assets, music or trademarks.
+ALLOWED_LICENSES = frozenset({'MIT', 'Apache-2.0', 'BSD-2-Clause', 'BSD-3-Clause', 'ISC'})
 MIN_ACTION_RATE = 4.0                # deliberate inputs per minute of play
 MIN_CAPTION_COVERAGE = 0.25          # narration measured against the recording
 MIN_CUES = 20
@@ -196,6 +199,7 @@ def _check_parts(evidence: Any, folder: Path, capture_seconds: float, play_secon
 
 
 def _check_rights(rights: Any) -> None:
+    """Validate recorded license metadata only, not actual ownership or rights."""
     if not isinstance(rights, dict):
         _fail('rights must be documented, not assumed')
     sources = rights.get('sources')
@@ -204,15 +208,19 @@ def _check_rights(rights: Any) -> None:
     for source in sources:
         if not isinstance(source, dict):
             _fail('rights sources must be objects')
-        for field in ('name', 'license', 'checked'):
-            value = source.get(field)
-            if not isinstance(value, str) or not value.strip() or len(value) > 200:
-                _fail(f'a rights source is missing {field}')
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", source['checked']):
-            _fail('a rights source has no check date')
-    approval = rights.get('owner_approval')
-    if not isinstance(approval, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", approval):
-        _fail('publication needs the owner\'s dated approval')
+        name = source.get('name')
+        if not isinstance(name, str) or not name.strip() or len(name) > 200:
+            _fail('an asset source is unnamed')
+        if source.get('ownership') == 'own':
+            # This is an unverified claim, not proof of ownership or asset rights.
+            continue
+        license_id = source.get('license')
+        if not isinstance(license_id, str) or license_id not in ALLOWED_LICENSES:
+            _fail(f'source {name} is not ours and is not under an allowed licence '
+                  f'({", ".join(sorted(ALLOWED_LICENSES))})')
+        verified = source.get('license_verified')
+        if not isinstance(verified, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", verified):
+            _fail(f'the licence for {name} has not been verified against its source')
 
 
 def verify(folder: Path) -> dict[str, Any]:

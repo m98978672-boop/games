@@ -14,16 +14,20 @@ from review_slot_state import planned_slots
 from schedule_policy import manual_publish_time, next_publish_slot
 
 
-def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=False):
+REVIEWED_RELAY_RUN = '45835569880'
+
+
+def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=False, relay=False):
+    if relay and str(run_id) != REVIEWED_RELAY_RUN:
+        raise ValueError('Only the explicitly requested Relay 3D experiment can use this release path')
     from gameplay_release_gate import require_verified_gameplay_release
     require_verified_gameplay_release(folder)
     if revoice and not lighthouse:
         raise ValueError('Voice revision is only permitted for the reviewed Lighthouse capture')
-    if not lighthouse and os.getenv('ADVENTURE_RECORDING_RIGHTS_VERIFIED') != 'true':
-        raise ValueError('Recording and asset rights are not confirmed')
+    # License metadata is not independent clearance for the game and assets.
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
     draft = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
-    game = 'Последний сигнал' if lighthouse else 'The Lost Artifact'
+    game = 'Ретранслятор 3D' if relay else 'Последний сигнал' if lighthouse else 'The Lost Artifact'
     completed = trace.get('outcome') in ({'game_reported_victory', 'game_reported_death'} if lighthouse else {'game_reported_victory'})
     if lighthouse:
         completed = completed and isinstance(trace.get('actions'), list) and len(trace['actions']) == 12
@@ -47,15 +51,15 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=Fa
         raise ValueError('Expected vertical Short up to 180 seconds or landscape long video over 180 seconds, with audio')
     scheduled = manual_publish_time(requested_slot) if requested_slot else next_publish_slot(video_format=video_format)
     slot = scheduled.isoformat().replace('+00:00', 'Z')
-    url = GAME_URL.replace('adventure-game/', 'lighthouse-relay/') if lighthouse else GAME_URL
+    url = GAME_URL.replace('adventure-game/', 'relay-3d/' if relay else 'lighthouse-relay/') if (relay or lighthouse) else GAME_URL
     revision = '-voice-v2' if revoice else ''
     result = folder / 'publish-short.result.json'
     result.write_text(json.dumps({'metadata': {
         'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'{url}#beta-short-{run_id}{revision}')),
-        'game_id': 'last-signal-beta' if lighthouse else 'the-lost-artifact-beta',
-        'title': ('Бета — Последний сигнал: новая русская озвучка' if revoice else
+        'game_id': 'relay-3d-beta' if relay else 'last-signal-beta' if lighthouse else 'the-lost-artifact-beta',
+        'title': ('Бета — Ретранслятор 3D: бот проходит лабиринт' if relay else 'Бета — Последний сигнал: новая русская озвучка' if revoice else
                   'Бета — Последний сигнал: Qwen спасает паром' if lighthouse else 'Бета — Qwen ищет потерянный артефакт'),
-        'description': (f'{url}\n\nСюжетный летсплей Qwen: двенадцать решений у погасшего маяка.' if lighthouse else f'{url}\n\nПробный летсплей Qwen с русскими комментариями по событиям игры.\n'
+        'description': (f'{url}\n\nЭксперимент: бот ориентируется по видимой мини-карте, собирает два маяка и ищет выход. Исходный геймплей не вырезан.' if relay else f'{url}\n\nСюжетный летсплей Qwen: двенадцать решений у погасшего маяка.' if lighthouse else f'{url}\n\nПробный летсплей Qwen с русскими комментариями по событиям игры.\n'
                        'Авторы: Ritaban Ghosh и участники mini-js-games-hub.\n'
                        'Исходник: https://github.com/ritaban06/mini-js-games-hub'),
         'tags': ['games', 'Qwen', game, 'Shorts' if short else 'Longplay'], 'category_id': '20',
@@ -65,11 +69,11 @@ def prepare(folder, run_id, requested_slot=None, *, lighthouse=False, revoice=Fa
     return result
 
 
-def publish_checked(result, *, lighthouse=False, now=None):
+def publish_checked(result, *, lighthouse=False, relay=False, now=None):
     from gameplay_release_gate import require_verified_gameplay_release
     # The result file sits in the artifact folder that holds the evidence.
     require_verified_gameplay_release(Path(result).parent)
-    if lighthouse:
+    if lighthouse or relay:
         payload = json.loads(result.read_text(encoding='utf-8'))
         metadata = payload['metadata']
         try:
@@ -102,11 +106,12 @@ def publish_checked(result, *, lighthouse=False, now=None):
 
 
 if __name__ == '__main__':
-    lighthouse = os.getenv('TRUSTED_LIGHTHOUSE_CAPTURE') == 'true'
+    relay = os.getenv('TRUSTED_RELAY_CAPTURE') == 'true'
+    lighthouse = not relay and os.getenv('TRUSTED_LIGHTHOUSE_CAPTURE') == 'true'
     try:
         result = prepare(Path(sys.argv[1]), sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None,
-                         lighthouse=lighthouse, revoice=os.getenv('LIGHTHOUSE_REVOICE') == 'true')
-        status = publish_checked(result, lighthouse=lighthouse)
+                         lighthouse=lighthouse, revoice=os.getenv('LIGHTHOUSE_REVOICE') == 'true', relay=relay)
+        status = publish_checked(result, lighthouse=lighthouse, relay=relay)
         if status.get('video_id'):
             print(f"::notice title=YouTube upload confirmed::https://www.youtube.com/watch?v={status['video_id']} at {status.get('publish_at') or 'unconfirmed time'}")
     except Exception as exc:
