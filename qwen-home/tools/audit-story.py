@@ -143,8 +143,14 @@ def audit(src=None):
 def audit_data(reports_dir=None):
     """Аудит данных: отчёты, карты, страница. Код может быть цел, а данные — нет."""
     root = Path(reports_dir) if reports_dir else HOME / 'bridge' / 'expeditions'
+    # Архив — прогоны, которые доказывают старое умение (например, 5 разных
+    # путей к финалу). Уборка workflow чистит только свежие каталоги, архив
+    # остаётся, и аудит смотрит в обе папки.
+    arch = HOME / 'bridge' / 'archive'
     rows = []
     reports = sorted(root.glob('*/report.json')) if root.exists() else []
+    if arch.exists():
+        reports += sorted(arch.glob('*/report.json'))
     rows.append(('отчёты экспедиций есть', bool(reports), f'{len(reports)} шт.'))
 
     story_reports, maps, routes, zeros = [], 0, set(), []

@@ -988,6 +988,16 @@ class StoryMap:
                 norm = norm.replace(ln, ' ')
         return ' '.join(norm.split())
 
+    @staticmethod
+    def text_sig(text, options=None):
+        """Подпись текста для сравнения: без вариантов и без изменчивых цифр.
+
+        В Harlowe текст иногда меняется мелочью («...you feel sleepy.» против
+        «...you come out.»), и место двоилось. Сравниваем по первым СЕМИ словам:
+        этого хватает, чтобы узнать пассаж, но мало, чтобы склеить разные.
+        """
+        return ' '.join(StoryMap.bare(text, options).split()[:7])
+
     def bare_key(self, text, options=None):
         """Хэш текста без вариантов: одинаков для одного пассажа при любом наборе."""
         return hashlib.sha1(self.bare(text, options).encode('utf-8')).hexdigest()[:16]
@@ -1017,6 +1027,15 @@ class StoryMap:
             already = self.text_key_index().get(bare_k)
             if already:
                 k = already
+            else:
+                # Тот же пассаж с чуть изменённым хвостом («You went to your
+                # room…» после «do homework») — тоже он: узнаём по первым
+                # словам, иначе место двоится и остаток не тратится.
+                sig = self.text_sig(text, options)
+                twin = next((kk for kk, n in self.nodes.items()
+                             if self.text_sig(n.get('text'), n.get('options')) == sig), None)
+                if twin:
+                    k = twin
         node = self.nodes.get(k)
         if node is None:
             node = {'text': (text or '')[:220], 'visits': 0}
@@ -1325,7 +1344,9 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     # осторожность: вымотана — сначала передохнуть, даже если отдых уже нажимала.
     # Отдых ищем среди ВСЕХ вариантов: в карте он может быть «изведан», но силы
     # важнее новизны — иначе она уходит вымотанной и теряет заход.
-    if energy < 0:
+    # Отдых — только когда силы правда на нуле. При «устала, но идёт» отдых
+    # съедал весь заход: она отдыхала, вставала, снова «уставала» и отдыхала.
+    if energy <= -2:
         rest = [c for c in choices if is_rest(c.get('label', ''))]
         # Отдых — ОДИН раз в месте. Раньше он перебивал всё: в узле «ты дома»
         # было 18 визитов и нажат только «couch», а «homework» и «kitchen» так
@@ -1346,9 +1367,13 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
 
 
 def is_rest(label):
-    """Отдых по названию кнопки: тут силы возвращаются."""
+    """Отдых по названию кнопки: тут силы возвращаются.
+
+    «homework» и «door» сюда НЕ входят: раньше они считались отдыхом по
+    подстрокам, и она 200 раз подряд «отдыхала» домашкой вместо поисков.
+    """
     low = (label or '').lower()
-    return any(w in low for w in ('rest', 'couch', 'sit', 'lie', 'sleep', 'feet up', 'get up', 'wait'))
+    return any(w in low for w in ('rest', 'couch', 'sit', 'lie', 'sleep', 'feet up'))
 
 
 def is_far(label):

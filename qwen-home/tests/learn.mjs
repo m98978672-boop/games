@@ -269,7 +269,7 @@ check('находки только настоящие: «рука в карма�
   expPy.includes('you scour the shelves') && !expPy.includes("'in your pocket', 'you grab'"));
 
 check('вымотанной она не бежит за псом, а отдыхает: силы влияют на выбор',
-  expPy.includes('def is_rest') && expPy.includes('def is_far') && expPy.includes('if energy < 0:'));
+  expPy.includes('def is_rest') && expPy.includes('def is_far') && expPy.includes('if energy <= -2:'));
 
 check('карта истории видна: места, переходы и находки на её странице',
   expPy.includes("report.data['storyMap']") && expWf.includes("report.get('storyMap')")
