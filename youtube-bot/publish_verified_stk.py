@@ -26,7 +26,7 @@ def prepare(folder, run_id):
         raise ValueError('Corrected race MP4 missing')
     media = json.loads(subprocess.check_output(['ffprobe', '-v', 'error', '-show_format', '-show_streams', '-of', 'json', str(path)], timeout=60))
     duration = float(media['format']['duration'])
-    if not math.isfinite(duration) or not 0 < duration <= 370:
+    if not math.isfinite(duration) or not 0 < duration <= 505:
         raise ValueError('Invalid race video duration')
     video_format = 'short' if duration <= 180 else 'long'
     def valid_video(v):
@@ -37,7 +37,7 @@ def prepare(folder, run_id):
     output = folder / 'publish-stk.result.json'
     output.write_text(json.dumps({'metadata': {
         'job_id': str(uuid.uuid5(uuid.NAMESPACE_URL, f'https://supertuxkart.net/#verified-race-{run_id}')),
-        'game_id': 'supertuxkart-zen-garden', 'title': 'Четыре круга по Zen Garden | SuperTuxKart',
+        'game_id': 'supertuxkart-zen-garden', 'title': 'Гонка по Zen Garden | SuperTuxKart',
         'description': ('https://supertuxkart.net/\n\nГонка на Zen Garden от старта до подтверждённого финиша. '
                         'За рулём — встроенные пилоты SuperTuxKart. Заезд записан без вырезания геймплея.\n\n'
                         'Игра и визуальные материалы: команда SuperTuxKart и авторы ресурсов. '
