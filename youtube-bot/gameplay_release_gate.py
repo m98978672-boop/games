@@ -1,18 +1,8 @@
-"""Fail closed unless the gameplay release requirements can be checked.
+"""Keep gameplay publication stopped until all release requirements are met.
 
-The owner's rules for publishing a playthrough: twenty minutes of real play,
-narration with timed subtitles, verified rights, and a safe same-day split for
-recordings over thirty minutes.
-
-This gate used to refuse everything, because the pipeline produced no artifact
-that could establish those properties. Refusing for ever is not a policy: it
-quietly turned "not yet proven" into "never published". The builder now writes
-``release.evidence.json`` beside the draft, and this gate re-derives every number
-from the files themselves, so the evidence file cannot simply assert success.
-
-A missing evidence file still blocks, and that is deliberate: a recording made
-before the evidence existed has not proven anything, and inventing the numbers
-for it would be exactly the falsehood this gate exists to prevent.
+Artifacts may be checked for internal consistency, but current uploaders do not
+send subtitles or schedule both parts and evidence alone cannot prove real play.
+Private capture and editing remain available.
 """
 from __future__ import annotations
 
@@ -23,7 +13,7 @@ EVIDENCE_NAME = 'release.evidence.json'
 
 
 def require_verified_gameplay_release(folder: str | Path | None = None) -> dict[str, Any]:
-    """Check the release requirements and return the measured numbers.
+    """Check diagnostics, then stop until the missing delivery path exists.
 
     ``folder`` is the artifact folder that holds the draft, its subtitles, the
     published parts and the evidence file. Omitting it blocks: there is nothing
@@ -36,4 +26,10 @@ def require_verified_gameplay_release(folder: str | Path | None = None) -> dict[
             'Gameplay publication blocked: no artifact folder was given, so the '
             'twenty-minute play, subtitles, rights and split requirements cannot '
             'be checked. Private experiments are allowed.')
-    return verify(Path(folder))
+    verify(Path(folder))
+    # Current publishers upload only one original file, do not transfer SRTs,
+    # and cannot schedule both parts on the same day. Artifact claims alone
+    # also cannot prove genuine gameplay or training. Never start an upload
+    # until those delivery and verification gaps are actually implemented.
+    raise ValueError('Gameplay publication blocked: verified subtitle delivery, '
+                     'genuine play and same-day multipart publication are not implemented.')
