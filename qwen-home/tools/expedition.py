@@ -1070,6 +1070,13 @@ class StoryMap:
                 return True          # «Nothing has changed» — то же место
             if back_key and e['to'] == back_key:
                 return True          # обратный ход: «back», «Leave this place!»
+            # Возврат может идти через одно место: парк → кусты → back to park.
+            # Ищем, куда из e['to'] можно вернуться, и совпадает ли это с
+            # «откуда пришла». Так 182 круга «bushes ↔ back to park» видны.
+            if back_key:
+                for e2 in self.edges:
+                    if e2['from'] == e['to'] and e2['to'] == back_key:
+                        return True
         # Обратный ход узнаём и по названию: «back», «go back», «return».
         low = (choice or '').strip().lower()
         if low.startswith(('back', 'go back', 'return')) or low in ('назад', 'вернуться'):
@@ -1107,17 +1114,36 @@ class StoryMap:
             return None
 
         def has_left(k):
+            """Есть ли в месте настоящее непройденное.
+
+            Считаем по ключу узла И по ключу текста: остаток мог записаться
+            «брату» с другим набором вариантов, и тогда место выглядит
+            открытым, хотя всё нажато — из-за этого маршрут вёл в тупик
+            «bushes», где ничего не осталось.
+            """
             n = self.nodes.get(k) or {}
-            return any(not self.tried_here(k, label) for label in (n.get('options') or []))
+            tk = n.get('text_key')
+            for label in (n.get('options') or []):
+                if not (k, label) in self.tried and not (tk and (tk, label) in self.tried):
+                    return True
+            return False
 
         if has_left(start_key):
             return None                     # остаток прямо здесь — никуда идти не надо
+        # Достижимость — по ключу узла И по ключу текста: места с разными
+        # наборами вариантов живут под разными ключами, но это один пассаж.
+        def same(k1, k2):
+            if k1 == k2:
+                return True
+            n1, n2 = self.nodes.get(k1) or {}, self.nodes.get(k2) or {}
+            return bool(n1.get('text_key')) and n1.get('text_key') == n2.get('text_key')
+
         seen = {start_key}
         q = deque([(start_key, None)])
         while q:
             cur, first = q.popleft()
             for e in self.edges:
-                if e.get('from') != cur or e.get('to') in seen:
+                if e.get('from') != cur or any(same(e['to'], v) for v in seen):
                     continue
                 step = first if first is not None else e.get('choice')
                 if has_left(e['to']):
@@ -1127,14 +1153,26 @@ class StoryMap:
         return None                         # остатка в достижимой части карты нет
 
     def mark_open(self, text, choices, context=None):
-        """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
-        kw = self.key(text, context, [c.get('label') for c in choices])
+        """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала.
+
+        Узел ищем ПО ТЕКСТУ: ключ с текущим набором вариантов может не совпасть
+        с тем, под которым место живёт в карте. Раньше остаток записывался
+        несуществующему ключу — парк выглядел «полностью пройденным», а его
+        кусты числились открытыми, и она ходила по кругу 182 раза.
+        """
+        labels = [c.get('label') for c in choices]
+        kw = self.key(text, context, labels)
         node = self.nodes.get(kw)
         if node is None:
-            node = self.nodes.get(self.text_key_index().get(self.bare_key(text, [c.get('label') for c in choices])))
-            if node is None:
-                return
-            kw = node.get('key') or kw
+            same = self.text_key_index().get(self.bare_key(text, labels))
+            if same:
+                kw, node = same, self.nodes[same]
+        if node is None:
+            return
+        # Варианты, которых в узле ещё нет, — тоже его варианты.
+        for label in labels:
+            if label and label not in node.setdefault('options', []):
+                node['options'].append(label)
         node['open'] = any(not self.tried_here(kw, c.get('label')) for c in choices)
         node['options'] = [c.get('label') for c in choices][:8]
 
@@ -1347,20 +1385,29 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                 pool = leads_new
 
     # Здесь всё нажато, а в карте ещё есть остаток — идём к нему по маршруту,
-    # а не тычем первый попавшийся вариант.
+    # а не тычем первый попавшийся вариант. И если маршрута нет, а остаток
+    # есть в других местах — честно кончаем заход: иначе она 182 раза ходит
+    # «bushes ↔ back to park», потому что все варианты ведут по кругу.
     if story_map is not None and passage and not fresh:
         step = story_map.route_to_open(passage)
         if step:
             for c in choices:
                 if (c.get('label') or '') == step:
                     return c, False
+        if story_map.remaining() > 0 and energy > -2:
+            return None, False
 
-    # Петля (ведёт туда же, откуда пришла) — в самом конце.
-    if passage and len(pool) > 1:
+    # Петля (ведёт туда же, откуда пришла) — в самом конце. Здесь важна
+    # ЧЕСТНОСТЬ: раньше фильтр просто не применялся, если все варианты —
+    # петли, и она 182 раза ходила «bushes ↔ back to park». Теперь если всё
+    # нажато и всё ведёт назад — честно возвращаем «идти некуда» (None).
+    if passage and story_map is not None:
         no_loops = [c for c in pool
-                    if not story_map.is_loop(passage, c.get('label'), came_from, came_from_key)] if story_map else pool
+                    if not story_map.is_loop(passage, c.get('label'), came_from, came_from_key)]
         if no_loops:
             pool = no_loops
+        elif len(pool) > 0 and not fresh and energy > -2:
+            return None, False          # тут делать нечего — пусть заход закончится
 
     # осторожность: вымотана — сначала передохнуть, даже если отдых уже нажимала.
     # Отдых ищем среди ВСЕХ вариантов: в карте он может быть «изведан», но силы
@@ -1612,6 +1659,13 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                           story_map=story_map, energy=sight.get('energy', 0),
                                           came_from=last_place[0],
                                           came_from_key=prev_place[0])
+                if pick is None:
+                    # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
+                    # а не крутимся. Следующий заход начнётся с начала и пойдёт
+                    # по маршруту к остатку в других местах.
+                    report.step('идти некуда',
+                                f'заход {run}: в этом месте всё нажато, остаток — в других местах карты')
+                    break
                 story_map.mark_tried(my_key, pick['label'])
                 visited.add((my_key, pick['label']))
                 try:

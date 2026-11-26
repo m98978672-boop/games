@@ -97,6 +97,8 @@ def audit(src=None):
             ('память хранит text_key', "'text_key': v.get('text_key') or k" in e),
             ('ребро — ключом предыдущего места', "prev_key[0] = my_key" in e),
             ('флаг open пересчитывается', "node['open'] = any(not self.tried_here" in e),
+            ('заход кончается, если идти некуда', 'идти некуда' in e),
+            ('маршрут не ведёт в ложный остаток', "not (tk and (tk, label) in self.tried)" in e),
             ('нажатие не теряется между наборами', 'def tried_here' in e),
             ('отдых не перебивает непройденное', 'rest_fresh' in e),
             ('память доходит до чтения истории', 'memo_from=memo_from' in e),
