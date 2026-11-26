@@ -313,7 +313,7 @@ check('аудит всех обнов истории: код и данные п�
   && expPy.includes('def remaining') && expWf.includes('storymap.json'));
 
 check('память карты несовместимой схемы не берётся: иначе остаток был бы фальшивым',
-  expPy.includes("SCHEMA = 'text+options-v3'") && expPy.includes("data.get('schema') != self.SCHEMA"));
+  expPy.includes("SCHEMA = 'text+options-v4'") && expPy.includes("data.get('schema') != self.SCHEMA"));
 
 // Чужой merge из отставшей ветки уже стирал работу: PR #611 вернул старые
 // версии 54 файлов (kvenya/live.js, youtube-bot, workflows, экспедицию).
@@ -330,7 +330,7 @@ const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8')
 check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
   expNow.includes('remaining') && expNow.includes('routeKey')
   && expNow.includes('memo_from') && expNow.includes('план захода')
-  && expNow.includes("SCHEMA = 'text+options-v3'"));
+  && expNow.includes("SCHEMA = 'text+options-v4'"));
 const expWorkflow = await readFile(path.join(home, '..', '.github', 'workflows', 'kvenya-expedition.yml'), 'utf8');
 check('уборка пыли в workflow не откачена: keep по dir, до выхода «Отчёта нет»',
   expWorkflow.includes("e.get('dir')") && expWorkflow.indexOf("e.get('dir')") < expWorkflow.indexOf('Отчёта нет — складывать нечего'));
@@ -357,12 +357,16 @@ check('места с остатком считаются по непройден
   && expNow.includes('unopened = [k for k, n in story_map.nodes.items()'));
 
 check('карта: тот же текст с другим набором вариантов — ОДНО место, варианты дописываются',
-  expNow.includes('def text_key_index') && expNow.includes('already = self.text_key_index().get(self.key(text))')
-  && expNow.includes("merged = node.setdefault('options', [])"));
+  expNow.includes('def text_key_index') && expNow.includes('already = self.text_key_index().get(bare_k)')
+  && expNow.includes("merged = node.setdefault('options', [])") && expNow.includes('def bare('));
 check('карта: висячие рёбра не берутся из памяти (было 174 из 311 — половина графа)',
   expNow.includes("if e.get('from') in self.nodes and e.get('to') in self.nodes"));
 check('карта: нажатие не теряется между разными наборами одного места',
-  expNow.includes('def tried_here') && expNow.includes("return (tk, label) in self.tried"));
+  expNow.includes('def tried_here') && expNow.includes('def mark_tried')
+  && expNow.includes("return (node.get('text_key') or '', label) in self.tried"));
+
+check('Harlowe дописывает названия ссылок в текст пассажа — ключ их вычищает',
+  expNow.includes('def bare(') && expNow.includes("norm = norm.replace(ln, ' ')"));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
