@@ -177,8 +177,24 @@ def plan(trace):
     if trace.get('game') == 'SuperTuxKart':
         won = trace.get('outcome') == 'game_reported_victory'
         lines = [(0.0, 'Сегодня на трассе Зен-Гарден. За рулём — встроенные пилоты Супер Такс Карт.')]
+        observations = [
+            'Здесь камера за картом. Так проще следить за направлением движения.',
+            'На этой трассе мне нравится контраст между дорожкой и зеленью: границы хорошо видны.',
+            'В одиночку такую трассу удобно учить по ориентирам, а не по секундомеру.',
+            'Для меня самый интересный вопрос тут — сколько скорости можно сохранить в повороте.',
+            'Из минусов: с этой камеры сложно оценить, что происходит позади карта.',
+            'Встроенные пилоты ведут заезд сами. Это не проверка того, как я умею рулить.',
+            'Мне нравится, что оформление трассы помогает запоминать маршрут, а не просто украшает фон.',
+            'Короткий заезд хорош для знакомства с трассой. Хочется отдельно сравнить управление разными картами.',
+        ]
+        # These are observations about the track and camera, not claims about
+        # unsighted overtakes or lap boundaries at manufactured timestamps.
+        for index, text in enumerate(observations, start=1):
+            stamp = duration * index / (len(observations) + 1)
+            if stamp >= 10 and duration - stamp >= 10:
+                lines.append((stamp, text))
         if won:
-            lines.append((max(0, duration-1), 'Все пилоты пересекли финиш.'))
+            lines.append((max(0, duration - 5), 'Заезд завершён. Игра подтвердила финиш.'))
         return duration, lines, [], won
     if trace.get('game') == 'Ретранслятор 3D':
         lines = [(0, 'Эксперимент в три дэ. Ищу два маяка по карте в углу экрана, потом попробую выйти из лабиринта.')]
@@ -386,6 +402,10 @@ def build(folder):
     gameplay = min(video_seconds, max(0.0, edited - closing_hold))
     # Cue timings use the exact samples written to the mixed narration track,
     # after cuts and scheduling, then are clipped to the actual encoded video.
+    if trace.get('game') == 'SuperTuxKart' and edited >= 90:
+        edges = [0.0, *(stamp for stamp, _, _ in spoken_cues), edited]
+        if len(spoken_cues) < 5 or max(b - a for a, b in zip(edges, edges[1:])) > max(32, edited / 8):
+            raise ValueError('Race commentary is missing from part of the rendered timeline')
     captions = render_srt(spoken_cues, end=edited)
     if not captions:
         raise ValueError('No spoken captions fit the encoded video')
