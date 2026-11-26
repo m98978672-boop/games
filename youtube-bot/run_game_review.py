@@ -2,18 +2,21 @@
 from __future__ import annotations
 
 import argparse
+from review_slot_state import OCCUPIED_SLOT_EXIT, OccupiedReviewSlot
 import json
 import os
+import re
 import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from game_reviews import generate_game_review, generate_long_narration, youtube_description, ensure_editorial_quality
+from game_reviews import generate_game_review, generate_long_narration, youtube_description, ensure_editorial_quality, make_review_title, occasionally_ask_viewers
 from renderer import render_long_review, render_short
 from schedule_policy import manual_publish_time, next_publish_slot, resolve_manual_after_render, CHANNEL_TZ
 from steam_catalog import download_screenshots, load_steam_games
+from review_slot_state import QueueStateUnknown, UncertainSlot
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data"))).resolve()
@@ -27,6 +30,19 @@ def recent_games(path: Path) -> list[str]:
     return [str(item) for item in value if isinstance(item, str)][-24:] if isinstance(value, list) else []
 
 
+def authoritative_topic_history() -> list[str]:
+    """Fetch the complete shared ledger; fail closed on malformed/unavailable data."""
+    from publish_to_supabase import _supabase_post
+    result = _supabase_post('/autopilot/topic-history', {})
+    ids = result.get('game_ids')
+    if (type(result.get('version')) is not int or result['version'] != 1 or
+            not isinstance(ids, list) or len(ids) > 20000 or
+            any(not isinstance(item, str) or not re.fullmatch(r'[a-z0-9-]{1,60}', item) for item in ids) or
+            len(set(ids)) != len(ids)):
+        raise ValueError('Shared topic history is incomplete or malformed; refusing to render.')
+    return ids
+
+
 def remember_game(path: Path, game_id: str) -> list[str]:
     history = recent_games(path)
     updated = [item for item in history if item != game_id] + [game_id]
@@ -38,13 +54,15 @@ def remember_game(path: Path, game_id: str) -> list[str]:
     return updated
 
 
-def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
+def run(output: Path, *, video_format: str = "short", preview: bool = False) -> dict[str, Any]:
     if video_format not in {"short", "long"}:
         raise ValueError("video_format must be short or long")
     manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
     requested = manual_publish_time(manual_time) if manual_time else None  # Validate before rendering.
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
+    if not preview and os.getenv('REQUIRE_SHARED_TOPIC_HISTORY') == 'true':
+        previous = list(set(previous) | set(authoritative_topic_history()))
     # Deliberately source only games listed by Steam's live public shelves; never
     # silently switch back to the repository's own community games.
     games = load_steam_games(recent_game_ids=previous)
@@ -65,7 +83,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     if video_format == "long":
         review["format"] = "game-review-long"
         rendered = render_long_review(review, output, workdir)
-        title = f"Полный обзор: {review['game_title']} — разбор по источникам"[:100]
+        title = make_review_title(review["game_title"], video_format="long")
     else:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
@@ -75,7 +93,9 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
     # still works; otherwise explicitly report a safe one-off delay. Never
     # change the recurring cadence.
     adjusted = False
-    if requested is not None:
+    if preview:
+        scheduled = None
+    elif requested is not None:
         scheduled, adjusted = resolve_manual_after_render(requested)
         if adjusted:
             print(f"Requested Moscow time {manual_time} became too close during rendering; "
@@ -90,6 +110,8 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         + ("\nСценарий создан по шаблону из открытых источников: ИИ не смог подготовить корректный текст."
            if any(scene.get("generation") == "source-template" for scene in review.get("scenes", [])) else "")
     )
+    if occasionally_ask_viewers(str(review["game_id"])):
+        description += "\n\nА вам интересен такой формат игры? Поделитесь мнением, если хотите."
     metadata = {
         "job_id": str(uuid.uuid4()),
         "game_id": review["game_id"],
@@ -97,7 +119,7 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         "description": description[:5000],
         "tags": ["games", "steam", "game-review", f"bot-topic:game-review", f"steam-app:{review['game_id']}", video_format],
         "category_id": "20",
-        "publish_at": scheduled.isoformat().replace("+00:00", "Z"),
+        "publish_at": scheduled.isoformat().replace("+00:00", "Z") if scheduled else None,
         "video_format": video_format,
         "requested_publish_at": requested.isoformat().replace("+00:00", "Z") if requested else None,
         "manual_time_adjusted": adjusted,
@@ -114,8 +136,16 @@ def run(output: Path, *, video_format: str = "short") -> dict[str, Any]:
         "review": review,
         "metadata": metadata,
         "video": rendered,
-        "status": "rendered_waiting_for_explicit_audience_setting",
+        "status": "private_preview" if preview else "rendered_waiting_for_explicit_audience_setting",
     }
+    if preview:
+        from renderer import pronunciation_text
+        result['speech_aliases_applied'] = [
+            {'scene': index, 'original': dialogue, 'spoken': spoken}
+            for index, scene in enumerate(review.get('scenes', []), 1)
+            if isinstance(dialogue := scene.get('dialogue'), str)
+            and (spoken := pronunciation_text(dialogue)) != dialogue
+        ]
     result_path = output.with_suffix(".result.json")
     result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     result["result_path"] = str(result_path)
@@ -127,9 +157,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a locally inferred Steam game review.")
     parser.add_argument("output", nargs="?", type=Path, default=DATA_DIR / "episodes" / "game-review.mp4")
     parser.add_argument("--format", choices=("short", "long"), default="short")
+    parser.add_argument("--preview", action="store_true", help="Render without reserving or checking a publication slot.")
     args = parser.parse_args()
     try:
-        run(args.output, video_format=args.format)
+        run(args.output, video_format=args.format, preview=args.preview)
+    except OccupiedReviewSlot as exc:
+        print(f"Game-review cycle stopped safely: {exc}", file=sys.stderr)
+        raise SystemExit(OCCUPIED_SLOT_EXIT) from None
+    except (QueueStateUnknown, UncertainSlot) as exc:
+        print(f"Queue state uncertain; stop and check YouTube Studio: {exc}", file=sys.stderr)
+        raise SystemExit(75)
     except Exception as exc:
         print(f"Game-review cycle stopped safely: {exc}", file=sys.stderr)
         raise SystemExit(1)

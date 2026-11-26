@@ -15,6 +15,7 @@ import time
 
 from gameplay.action_pacer import ActionPacer
 from gameplay.input_profiles import InputProfile, profile_from_name
+from gameplay.playbook import Playbook
 from gameplay.screen_recognizer import classify, preferred_intents
 from gameplay.tracker import Tracker, describe as describe_tracks
 from gameplay.world_model import WorldModel
@@ -32,6 +33,9 @@ MAX_PACED_BURSTS = 4
 @dataclass
 class ReflexAgentStats:
     ticks: list = field(default_factory=list)
+    # Measured highlights, in the words the montage understands. Only events the
+    # agent actually observed are added: a reached goal, a frame that changed.
+    events: list = field(default_factory=list)
     advisor_calls: int = 0
     advisor_skipped_for_budget: int = 0
     screen: str | None = None
@@ -65,7 +69,9 @@ class ReflexAgent:
                  pacer: "ActionPacer | None" = None,
                  world_model: WorldModel | None = None,
                  tracker: Tracker | None = None,
-                 director: "Director | None" = None):
+                 director: "Director | None" = None,
+                 playbook: Playbook | None = None,
+                 cadence_seconds: float = 1.0):
         self.profile = profile_from_name(profile) if isinstance(profile, str) else profile
         self.controller = controller or ReflexController(
             default_intent=self._default_intent(),
@@ -82,6 +88,12 @@ class ReflexAgent:
         # With a stream plan the agent also decides what to say; without one it
         # only plays, so nothing changes for the existing autopilot.
         self.director = director
+        # Scoring what actually paid off on each screen: this is what makes the
+        # bot play *better*, not just faster. Optional, so old callers are intact.
+        self.playbook = playbook
+        # How many seconds one step of this agent stands for. Frames are the only
+        # clock a recording offers, so offsets come from the step number and this.
+        self.cadence_seconds = float(cadence_seconds)
         self.tracks: list = []
         self.screen = None
         self.pending_bursts: list[dict] = []
@@ -154,11 +166,12 @@ class ReflexAgent:
             self.controller.note_outcome(self._last_perception, self._last_decision, perception.changed)
             self.learn_transition(self._last_perception.signature, self._last_decision.intent,
                                   perception.signature)
+            self._learn_payoff(perception)
         # The advisor sees the cheap perception summary; screen content stays
         # untrusted and the model's answer is filtered against the profile.
         decision: Decision = self.controller.decide(
             perception, step, advisor=self._guarded_advisor if self.advisor else None)
-        decision = self._plan(perception, decision)
+        decision = self._plan(perception, decision, step)
         if decision.intent != self._intent:
             if self._intent is not None:
                 self.pacer.stats.switches += 1
@@ -175,6 +188,7 @@ class ReflexAgent:
             intent=decision.intent, action=action, source=decision.source,
             overlap_ms=round(overlap_ms * 1000.0, 2),
             perception_started_before_action_finished=overlap_ms > 0))
+        self._record_event(step, perception)
         self._last_perception, self._last_decision = perception, decision
         stats = self.pacer.stats
         # Recomputed per tick on purpose: the summary is small and derived, and
@@ -194,7 +208,7 @@ class ReflexAgent:
             raise RuntimeError(f"step {step} took {elapsed:.2f}s, above {MAX_STEP_SECONDS}s")
         return action
 
-    def _plan(self, perception, decision) -> Decision:
+    def _plan(self, perception, decision, step: int = 0) -> Decision:
         """Prefer a planned intent when the decision came from reflex/fallback.
 
         Memory and advisor answers are kept as they are: they are evidence, while
@@ -205,6 +219,16 @@ class ReflexAgent:
         if decision.source not in ("reflex", "fallback"):
             return decision
         allowed = preferred_intents(self.screen, self.profile)
+        if self.playbook is not None and allowed:
+            self.playbook.note_screen(perception.signature)
+            # The tick is the real frame number, so exploration is deterministic
+            # and a decision can be replayed; it is *not* the latency.
+            choice = self.playbook.choose(perception.signature, tuple(allowed),
+                                          tick=int(step), facts=self._facts(perception))
+            if choice.intent != decision.intent:
+                return Decision(choice.intent, f"play:{choice.reason}", decision.latency_ms,
+                                decision.target)
+            return decision
         if self.world_model is not None:
             try:
                 plan = self.world_model.plan(perception.signature, allowed)
@@ -219,6 +243,47 @@ class ReflexAgent:
         if allowed and decision.intent not in allowed:
             return Decision(allowed[0], "screen", decision.latency_ms, decision.target)
         return decision
+
+    def _record_event(self, step: int, perception) -> None:
+        """Keep a measured highlight with its real offset in the recording.
+
+        A **goal** is a claim and needs a goal to be reached against; without one
+        the agent has no right to say anything was achieved. A **change** is only
+        an observation: the frame was different, which is a fact on its own. The
+        montage keeps goals as its spine and lets changes only extend a clip.
+        """
+        facts = self._facts(perception)
+        if self.playbook is not None and self.playbook.goal.reached(facts):
+            kind = "goal"
+            detail = f"targets={facts['targets']} kind={facts['kind']}"
+        elif facts.get("changed"):
+            kind = "change"
+            detail = f"kind={facts['kind']} changed"
+        else:
+            return
+        self.stats.events.append({"seconds": round(step * self.cadence_seconds, 2),
+                                  "kind": kind, "reason": detail})
+
+    def _facts(self, perception) -> dict:
+        """Measured facts about a frame: the only input the playbook trusts."""
+        tracks = self.tracks or []
+        return {
+            "targets": len(getattr(perception, "targets", ()) or ()),
+            "kind": self.screen.label if self.screen else "unknown",
+            "changed": getattr(perception, "changed", None),
+            "moving": sum(1 for track in tracks
+                          if abs(getattr(track, "vx", 0)) + abs(getattr(track, "vy", 0)) > 1),
+        }
+
+    def _learn_payoff(self, perception) -> None:
+        """Tell the playbook how the previous intent actually turned out."""
+        if self.playbook is None or self._last_perception is None:
+            return
+        try:
+            self.playbook.observe(self._last_perception.signature, self._last_decision.intent,
+                                  self._facts(perception), after_signature=perception.signature)
+        except ValueError:
+            return
 
     def _stream_offset(self, step: int) -> float:
         """Seconds since the stream started, from the step number and cadence."""

@@ -1,16 +1,28 @@
 name: Private finite adventure experiment (no upload)
 on:
   workflow_call:
+    inputs:
+      adventure_only:
+        type: boolean
+        default: false
+      lighthouse:
+        type: boolean
+        default: false
+      puzzle_episode:
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   adventure:
+    if: ${{ !inputs.puzzle_episode && (github.event_name != 'push' || inputs.lighthouse) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
+      FINITE_GAME_SECONDS: "1800"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -20,8 +32,10 @@ jobs:
           python-version: '3.11'
       - name: Install verifier and local model
         run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
           pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
+      - name: Verify adventure memory
+        run: python -m unittest discover -s youtube-bot/tests -p test_adventure_learning.py
       - name: Build offline bridge
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Fetch pinned home adapter
@@ -31,10 +45,19 @@ jobs:
           mkdir -p "$RUNNER_TEMP/kvenya-release"
           gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
           python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Restore verified adventure memory
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/adventure-skill-memory
+          key: adventure-skills-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: adventure-skills-v1-
       - name: Record real model choices without padding
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+          LIGHTHOUSE_EPISODE: ${{ inputs.lighthouse && '1' || '0' }}
+          ADVENTURE_SHORT: ${{ inputs.adventure_only && '1' || '0' }}
           ADVENTURE_RECORD_DIR: ${{ runner.temp }}/adventure-recording
+          ADVENTURE_SKILL_DB: ${{ runner.temp }}/adventure-skill-memory/skills.sqlite3
         shell: bash
         run: |
           mkdir -p "$ADVENTURE_RECORD_DIR"
@@ -43,7 +66,33 @@ jobs:
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/adventure.log"; fi
           exit "$result"
+      - name: Read the licence of any external game
+        id: license
+        if: inputs.adventure_only
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        # Our own games resolve to "own" inside the builder and ignore these
+        # outputs. An external game gets its licence read from GitHub here, so
+        # the gate compares a fact rather than a value somebody typed.
+        run: |
+          set -euo pipefail
+          record="$RUNNER_TEMP/license.txt"
+          python3 youtube-bot/read_game_license.py "$RUNNER_TEMP/adventure-recording/trace.json" "$record"
+          {
+            echo "checked=$(sed -n 's/^checked=//p' "$record")"
+            echo "license=$(sed -n 's/^license=//p' "$record")"
+          } >> "$GITHUB_OUTPUT"
+      - name: Build narrated adventure draft and measure edited gameplay
+        if: inputs.adventure_only
+        env:
+          # Our own games need nothing here: the builder recognises them and the
+          # record says "own". Only an external game needs a licence, verified
+          # from its repository rather than retyped by hand.
+          GAMEPLAY_RIGHTS_CHECKED_ON: ${{ steps.license.outputs.checked }}
+          GAMEPLAY_SOURCE_LICENSE: ${{ steps.license.outputs.license }}
+        run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-recording"
       - name: Save private recording and observed trace
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: adventure-private-${{ github.run_id }}
@@ -51,12 +100,14 @@ jobs:
           if-no-files-found: error
           retention-days: 3
   finite-puzzle:
+    if: ${{ !inputs.adventure_only }}
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 95
     env:
       OMP_NUM_THREADS: '1'
       MKL_NUM_THREADS: '1'
       HF_HUB_DISABLE_XET: '1'
+      FINITE_GAME_SECONDS: "1800"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -66,10 +117,10 @@ jobs:
           python-version: '3.11'
       - name: Install video verifier and local model
         run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
           pip install -r youtube-bot/requirements-autopilot.txt 'torchvision>=0.20,<1.0' 'transformers==5.5.4' 'peft==0.19.1' 'accelerate==1.13.0'
       - name: Verify bounded progress feedback
-        run: python -m unittest discover -s youtube-bot/tests -p 'test_puzzle_supervisor.py'
+        run: python -m unittest discover -s youtube-bot/tests -p 'test_puzzle*.py'
       - name: Build isolated browser
         run: docker build -t games-playthrough-2048-experiment:1 youtube-bot/gameplay
       - name: Fetch pinned home adapter
@@ -79,10 +130,19 @@ jobs:
           mkdir -p "$RUNNER_TEMP/kvenya-release"
           gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
           python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Restore verified puzzle memory
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/puzzle-skill-memory
+          key: puzzle-skills-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: puzzle-skills-v1-
       - name: Record finite puzzle without padding
+        if: ${{ !inputs.puzzle_episode }}
         env:
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+          PUZZLE_CAMPAIGN_ROUNDS: ${{ (github.event_name == 'push' || inputs.puzzle_episode) && '4' || '1' }}
           PUZZLE_RECORD_DIR: ${{ runner.temp }}/puzzle-recording
+          PUZZLE_SKILL_DB: ${{ runner.temp }}/puzzle-skill-memory/skills.sqlite3
         shell: bash
         run: |
           mkdir -p "$PUZZLE_RECORD_DIR"
@@ -91,7 +151,33 @@ jobs:
           result=${PIPESTATUS[0]}
           if [ "$result" -ne 0 ]; then python youtube-bot/tests/smoke_annotation.py "$RUNNER_TEMP/puzzle.log"; fi
           exit "$result"
+      - name: Build narrated puzzle draft and measure edited gameplay
+        if: github.event_name == 'push' && !inputs.puzzle_episode
+        run: python youtube-bot/adventure_draft.py "$RUNNER_TEMP/puzzle-recording"
+      - name: Automatically record and qualify an episode (up to two attempts)
+        if: inputs.puzzle_episode
+        env:
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+          PUZZLE_CAMPAIGN_ROUNDS: '4'
+          PUZZLE_SKILL_DB: ${{ runner.temp }}/puzzle-skill-memory/skills.sqlite3
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            export PUZZLE_RECORD_DIR="$RUNNER_TEMP/puzzle-attempt-$attempt"
+            mkdir -p "$PUZZLE_RECORD_DIR"
+            if python -u youtube-bot/tests/smoke_puzzle_qwen.py 2>&1 | tee "$PUZZLE_RECORD_DIR/session.log" &&
+               python youtube-bot/adventure_draft.py "$PUZZLE_RECORD_DIR" &&
+               jq -e '.duration_eligible == true and .needs_continuation == false and .boards_won >= 1' "$PUZZLE_RECORD_DIR/pilot.json"; then
+              mv "$PUZZLE_RECORD_DIR" "$RUNNER_TEMP/puzzle-recording"
+              exit 0
+            fi
+            echo "::warning::Attempt $attempt did not qualify. No upload started."
+          done
+          mv "$PUZZLE_RECORD_DIR" "$RUNNER_TEMP/puzzle-recording"
+          echo '::error::No completed episode with 20 minutes of real play after editing; private draft only.'
+          exit 1
       - name: Save private recording and observed trace
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: puzzle-private-${{ github.run_id }}

@@ -1,7 +1,7 @@
 // Кадры в движении: трафик, сцепка, кабина. node tests/_drive.mjs <префикс>
 import { createRequire } from 'node:module';
 const require2 = createRequire(import.meta.url);
-const puppeteer = require2('/tmp/node_modules/puppeteer-core');
+const puppeteer = require2('puppeteer-core');
 const prefix = process.argv[2] || '/tmp/drive-';
 const browser = await puppeteer.launch({
   args: ['--no-sandbox', '--no-zygote', '--disable-gpu', '--enable-unsafe-swiftshader', '--use-gl=angle',

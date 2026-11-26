@@ -11,6 +11,67 @@ import run_game_review
 
 
 class RunReviewTests(unittest.TestCase):
+    def test_shared_history_is_validated_and_never_silently_ignored(self):
+        from publish_to_supabase import PublishError
+        with patch('publish_to_supabase._supabase_post', return_value={'version': 1, 'game_ids': ['1', '2']}):
+            self.assertEqual(run_game_review.authoritative_topic_history(), ['1', '2'])
+        for value in ({}, {'version': 1, 'game_ids': ['1', '1']},
+                      {'version': 1, 'game_ids': [None]}, {'version': True, 'game_ids': []}):
+            with self.subTest(value=value), patch('publish_to_supabase._supabase_post', return_value=value):
+                with self.assertRaises(ValueError):
+                    run_game_review.authoritative_topic_history()
+        with tempfile.TemporaryDirectory() as temp, patch.dict('os.environ', {'REQUIRE_SHARED_TOPIC_HISTORY': 'true'}), \
+             patch.object(run_game_review, 'DATA_DIR', Path(temp)), \
+             patch('publish_to_supabase.read_queue', return_value=[]), \
+             patch.object(run_game_review, 'authoritative_topic_history', side_effect=PublishError('offline')), \
+             patch.object(run_game_review, 'load_steam_games') as load:
+            with self.assertRaises(PublishError):
+                run_game_review.run(Path(temp) / 'review.mp4')
+            load.assert_not_called()
+
+    def test_cli_uses_distinct_exit_code_when_queue_cannot_be_verified(self):
+        import os
+        import subprocess
+        env = os.environ.copy()
+        env.pop('ACTIONS_ID_TOKEN_REQUEST_URL', None)
+        env.pop('ACTIONS_ID_TOKEN_REQUEST_TOKEN', None)
+        env.pop('MANUAL_PUBLISH_AT', None)
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / 'episode.mp4'
+            process = subprocess.run([sys.executable, str(Path(run_game_review.__file__)), str(output)],
+                                     env=env, capture_output=True, text=True, timeout=15)
+            self.assertEqual(process.returncode, 75, process.stderr)
+            self.assertIn('Queue state uncertain', process.stderr)
+            self.assertFalse(output.exists())
+
+    def test_automatic_slot_with_nearby_confirmed_video_does_not_render(self):
+        chosen = datetime(2026, 11, 26, 5, tzinfo=timezone.utc)
+        jobs = [{'publish_at': '2026-11-26T05:00:30Z', 'status': 'scheduled', 'video_id': 'abc'}]
+        with tempfile.TemporaryDirectory() as temp, patch.dict('os.environ', {'MANUAL_PUBLISH_AT': ''}), \
+             patch('publish_to_supabase.read_queue', return_value=jobs), \
+             patch.object(run_game_review, 'reserve_slot_before_render', return_value=chosen), \
+             patch.object(run_game_review, 'load_steam_games') as load:
+            with self.assertRaisesRegex(RuntimeError, 'nearby scheduled video'):
+                run_game_review.run(Path(temp) / 'review.mp4')
+            load.assert_not_called()
+
+    def test_unresolved_manual_and_automatic_slot_stop_before_source_collection(self):
+        chosen = datetime(2026, 11, 26, 5, tzinfo=timezone.utc)
+        for manual in (True, False):
+            for status in ('processing', 'failed'):
+                jobs = [{'publish_at': '2026-11-26T05:00:00Z', 'status': status, 'video_id': None}]
+                with self.subTest(manual=manual, status=status), tempfile.TemporaryDirectory() as temp, \
+                     patch.dict('os.environ', {'MANUAL_PUBLISH_AT': '2026-11-26 08:00' if manual else ''}), \
+                     patch('publish_to_supabase.read_queue', return_value=jobs), \
+                     patch.object(run_game_review, 'manual_publish_time', return_value=chosen), \
+                     patch.object(run_game_review, 'reserve_slot_before_render', return_value=chosen), \
+                     patch.object(run_game_review, 'load_steam_games') as load, \
+                     patch.object(run_game_review, 'render_short') as render:
+                    with self.assertRaisesRegex(ValueError, 'unresolved reservation'):
+                        run_game_review.run(Path(temp) / 'review.mp4')
+                    load.assert_not_called()
+                    render.assert_not_called()
+
     def test_long_external_review_keeps_copyable_sources_and_uses_long_renderer(self):
         game = {
             "id": "12345", "title": "Внешняя игра", "features": ["Описание Steam: Русское описание игры", "Отзывы Steam: в основном положительные"],
@@ -67,6 +128,7 @@ class RunReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, \
              patch.dict("os.environ", {"MANUAL_PUBLISH_AT": "2026-11-25 10:00"}), \
              patch.object(run_game_review, "DATA_DIR", Path(temp)), \
+             patch("publish_to_supabase.read_queue", return_value=[]), \
              patch.object(run_game_review, "manual_publish_time", return_value=chosen) as validate, \
              patch.object(run_game_review, "resolve_manual_after_render", return_value=(chosen, False)) as resolve, \
              patch.object(run_game_review, "next_publish_slot") as default_slot, \
@@ -90,6 +152,7 @@ class RunReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp, \
              patch.dict("os.environ", {"MANUAL_PUBLISH_AT": "2026-11-25 10:00"}), \
              patch.object(run_game_review, "DATA_DIR", Path(temp)), \
+             patch("publish_to_supabase.read_queue", return_value=[]), \
              patch.object(run_game_review, "manual_publish_time", return_value=requested), \
              patch.object(run_game_review, "resolve_manual_after_render", return_value=(delayed, True)), \
              patch.object(run_game_review, "load_steam_games", return_value=[game]), \

@@ -25,6 +25,32 @@ class PublisherNetworkTests(unittest.TestCase):
                 self.assertEqual(actual, category)
                 self.assertNotIn("secret123", safe)
 
+    def test_occupied_slot_is_not_reported_as_a_failed_upload(self):
+        """A taken slot never started an upload, so Studio must not be blamed.
+
+        Regression: "…slot is occupied; no upload was started" matched the word
+        "upload" and was labelled youtube-upload, telling the owner to check
+        Studio for an upload that had never been attempted.
+        """
+        messages = (
+            "Requested publication slot is occupied; no upload was started. Choose another time after checking Studio.",
+            "Four regular publication slots were occupied; no upload was started.",
+            "Requested publication slot 2026-11-26 08:00 Moscow already has a video; no review was rendered or uploaded.",
+        )
+        for message in messages:
+            with self.subTest(message=message):
+                category, safe = publisher.diagnostic_category(publisher.PublishError(message))
+                self.assertEqual(category, "slot-taken")
+                self.assertIn("no upload was started", safe)
+                self.assertNotIn("Studio before", safe)
+
+    def test_real_upload_failures_keep_their_own_category(self):
+        for message, category in (("YouTube accepted the video but confirmation failed", "ambiguous-upload"),
+                                  ("Upload reservation processing failed", "reservation"),
+                                  ("YouTube could not start the upload (HTTP 500)", "youtube-upload")):
+            with self.subTest(message=message):
+                self.assertEqual(publisher.diagnostic_category(publisher.PublishError(message))[0], category)
+
     def test_github_oidc_endpoint_allows_github_actions_subdomains_only(self):
         allowed = (
             "https://pipelines.actions.githubusercontent.com/runner/token?api-version=2.0",
@@ -258,11 +284,13 @@ class PublisherNetworkTests(unittest.TestCase):
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret') as start, \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
                 publisher.publish(result)
-            self.assertEqual([r['publish_at'] for r in requests], ['2026-12-01T07:00:00Z', '2026-12-01T09:00:00Z'])
+            # Four Short slots a day: a conflict moves to 13:00 Moscow, not to
+            # tomorrow. Only one upload is ever started.
+            self.assertEqual([r['publish_at'] for r in requests], ['2026-12-01T07:00:00Z', '2026-12-01T10:00:00Z'])
             self.assertEqual(requests[0]['job_id'], requests[1]['job_id'])
             self.assertEqual(start.call_count, 1)
 
-    def test_scheduled_long_conflict_uses_next_day_six_moscow(self):
+    def test_scheduled_long_conflict_moves_to_the_next_long_slot(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp); video=root/'clip.mp4'; video.write_bytes(b'x'*2048); result=root/'result.json'
             result.write_text(json.dumps({'metadata':{'job_id':'b85e890f-7dd0-4d35-a7ab-8ef24ba826b3',
@@ -282,6 +310,7 @@ class PublisherNetworkTests(unittest.TestCase):
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret') as start, \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
                 publisher.publish(result)
+            # A held long slot moves to the next day's regular long slot.
             self.assertEqual(requested, ['2026-11-24T03:00:00Z','2026-11-25T03:00:00Z'])
             start.assert_called_once()
 
@@ -304,7 +333,9 @@ class PublisherNetworkTests(unittest.TestCase):
                  patch.object(publisher, '_start_youtube_session', return_value='https://www.googleapis.com/upload/youtube/v3/videos?upload_id=secret'), \
                  patch.object(publisher, '_upload_resumably', return_value='newvideo'), patch.object(publisher, '_mask'):
                 publisher.publish(result)
-            self.assertEqual(requested, ['2026-11-24T03:00:00Z','2026-11-28T03:00:00Z'])
+            # A stale past slot plus a held one: at 05:30 Moscow the 06:00 slot
+            # is inside the 45-minute lead, so the next day is the safe one.
+            self.assertEqual(requested, ['2026-11-24T03:00:00Z', '2026-11-28T03:00:00Z'])
 
     def test_four_occupied_slots_fail_without_starting_upload(self):
         with tempfile.TemporaryDirectory() as temp:

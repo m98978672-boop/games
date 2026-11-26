@@ -958,15 +958,25 @@ class StoryMap:
         k = self.key(text)
         node = self.nodes.get(k)
         if node is None:
+            # Тот же текст, но другой набор вариантов. В Harlowe набор меняется
+            # прямо в пассаже (после «OK» пропадает «Cancel»; после «door»
+            # появляется «You go back inside»), и без этого один пассаж
+            # делился на несколько мест: рёбра теряли источник и половина
+            # карты становилась недостижимой. Дописываем варианты в живой узел.
             node = {'text': (text or '')[:220], 'visits': 0}
             node.update(read_signal(text))
             self.nodes[k] = node
         node['visits'] += 1
+        node['text_key'] = bare_k
+        merged = node.setdefault('options', [])
+        for o in (options or []):
+            if o and o not in merged:
+                merged.append(o)
         return node
 
     def is_loop(self, text, choice, came_from=None):
         """Петля: вариант возвращает туда, откуда пришли, или в это же место."""
-        k = self.key(text)
+        k = text if self._is_key(text) else self.key(text)
         for e in self.edges:
             if e['from'] != k or e['choice'] != choice:
                 continue
@@ -993,7 +1003,7 @@ class StoryMap:
     def fresh_choices(self, text, choices):
         """Варианты, которых в этом месте ещё не нажимали."""
         k = self.key(text)
-        return [c for c in choices if (k, c.get('label')) not in self.tried]
+        return [c for c in choices if not self.tried_here(k, c.get('label'))]
 
     def untried_targets(self, text, choices):
         """Куда ведёт неизведанное: места, которых в карте ещё нет."""
@@ -1029,9 +1039,15 @@ class StoryMap:
         if not data:
             return 0
         for k, v in (data.get('places') or {}).items():
-            self.nodes[k] = dict(v)
+            node = dict(v)
+            if not node.get('text_key'):
+                node['text_key'] = self.bare_key(node.get('text'), node.get('options'))
+            self.nodes[k] = node
+        # Рёбра, которые ведут из мест, которых в карте нет, — мусор прошлых
+        # прогонов (накопилось 174 из 311, и половина графа была нерабочей:
+        # маршрут к остатку не находился). Такие рёбра не берём.
         for e in (data.get('links') or []):
-            if e not in self.edges:
+            if e.get('from') in self.nodes and e.get('to') in self.nodes and e not in self.edges:
                 self.edges.append(e)
         for pair in (data.get('tried') or []):
             if len(pair) == 2:
@@ -1064,7 +1080,7 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     def not_tried(c):
         """Этот выбор в этом месте ещё не нажимали?"""
         if story_map is not None and passage:
-            return (k, c.get('label')) not in story_map.tried
+            return not story_map.tried_here(k, c.get('label'))
         return here_key(c) not in visited
 
     def here_key(c):
@@ -1094,8 +1110,14 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     # важнее новизны — иначе она уходит вымотанной и теряет заход.
     if energy < 0:
         rest = [c for c in choices if is_rest(c.get('label', ''))]
-        if rest:
-            pool = rest
+        # Отдых — ОДИН раз в месте. Раньше он перебивал всё: в узле «ты дома»
+        # было 18 визитов и нажат только «couch», а «homework» и «kitchen» так
+        # и остались непройденными навсегда. Если отдохнуть тут уже пробовала,
+        # а непройденное есть — идём по делу.
+        rest_fresh = [c for c in rest
+                      if story_map is None or not story_map.tried_here(k, c.get('label'))]
+        if rest and (rest_fresh or not fresh):
+            pool = rest_fresh or rest
         else:
             far = [c for c in pool if not is_far(c.get('label', ''))]
             if far:
@@ -1232,7 +1254,11 @@ def read_story(page, seconds, out, report, shot, runs=6):
         if run > 1:
             # Заново идём только если есть что искать: непройденные переходы
             # уже известных мест и места, до которых не добрались.
-            unopened = [n for n in story_map.nodes.values() if n.get('visits', 0) and n.get('open')]
+            # Считаем по-настоящему непройденное (место, вариант), а не по
+            # устаревшему флагу open: он застывает с прошлых прогонов.
+            unopened = [k for k, n in story_map.nodes.items()
+                        if n.get('visits', 0)
+                        and any(not story_map.tried_here(k, label) for label in (n.get('options') or []))]
             if not unopened:
                 report.step('добор веток', 'непройденных вариантов не осталось — второй заход не нужен')
                 break
@@ -1287,9 +1313,15 @@ def read_story(page, seconds, out, report, shot, runs=6):
                 last_place[0] = prev_place[0]
                 if len(trail) > 18:
                     trail.pop(0)
-                if len(trail) >= 18 and len(set(trail[-8:])) <= 2:
+                # Стоп-кран: прекращаем, только если заход реально ничего не
+                # принёс. Раньше хватало «два места за 18 шагов» — и маршрут к
+                # остатку рубился на 17-м шаге, не дойдя: 6 заходов подряд по
+                # 0 финалов. Петля через два места — это нормальный проход по
+                # дому, а не топтание.
+                if (len(trail) >= 18 and len(set(trail[-8:])) <= 1
+                        and new_places == 0):
                     report.step('стоп-кран',
-                                f'топчется на месте (последние {len(trail)} шагов — два места) — прекращаю заход')
+                                f'топчется в одном месте {len(trail)} шагов и новых мест нет — прекращаю заход')
                     break
                 pick, fresh = pick_choice(choices, visited, rng,
                                           story_map.key(text), sight['visits'],
@@ -1311,7 +1343,7 @@ def read_story(page, seconds, out, report, shot, runs=6):
                     page.wait_for_timeout(500)
                     continue
                 moves += 1
-                pending = {'from': text, 'choice': pick['label'], 'done': False}
+                pending = {'from': text, 'choice': pick['label'], 'done': False, 'from_key': my_key}
                 if fresh:
                     fresh_moves += 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],

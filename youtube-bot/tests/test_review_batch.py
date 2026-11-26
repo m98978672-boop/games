@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import review_batch
 from review_batch import (main, parse_count, parse_format, plan, run_queue, scheduled_plan,
                           suggest_start, validate_inputs)
 from schedule_policy import CHANNEL_TZ
@@ -18,10 +19,14 @@ from schedule_policy import CHANNEL_TZ
 class ReviewBatchTests(unittest.TestCase):
     def test_plan(self):
         now = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
-        self.assertEqual(plan(2, 'long', '2026-11-25 20:30', now=now), ['2026-11-25 20:30', '2026-11-26 20:30'])
+        # An explicit start is honoured, then the next regular long slot follows.
+        self.assertEqual(plan(2, 'long', '2026-11-25 20:30', now=now), ['2026-11-25 20:30', '2026-11-26 06:00'])
         self.assertEqual(plan(1, 'short', '', now=now), [''])
-        self.assertEqual(plan(5, 'short', '2026-11-25 08:00', now=now), ['2026-11-25 08:00', '2026-11-25 12:00', '2026-11-26 08:00', '2026-11-26 12:00', '2026-11-27 08:00'])
-        self.assertEqual(plan(2, 'short', '', now=now), ['2026-11-25 08:00', '2026-11-25 12:00'])
+        # The approved cadence spreads the batch over days.
+        self.assertEqual(plan(5, 'short', '2026-11-25 09:00', now=now),
+                         ['2026-11-25 09:00', '2026-11-25 13:00', '2026-11-26 09:00',
+                          '2026-11-26 13:00', '2026-11-27 09:00'])
+        self.assertEqual(plan(2, 'short', '', now=now), ['2026-11-25 09:00', '2026-11-25 13:00'])
         self.assertEqual(plan(2, 'long', '', now=now), ['2026-11-25 06:00', '2026-11-26 06:00'])
         for args in [(0, 'short', ''), (6, 'short', ''), (3, 'long', ''), (1, 'other', '')]:
             with self.subTest(args=args), self.assertRaises(ValueError):
@@ -46,6 +51,16 @@ class ReviewBatchTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 run_queue(['a', 'b'], 'short', Path(tmp))
             self.assertEqual(run.call_count, 2)
+
+    def test_uncertain_queue_stops_entire_batch_without_retry_or_upload(self):
+        with tempfile.TemporaryDirectory() as tmp, patch('review_batch.subprocess.run') as run, \
+             patch('review_batch.manual_publish_time'), patch('review_batch.time.sleep') as sleep:
+            run.return_value.returncode = 75
+            with self.assertRaisesRegex(RuntimeError, 'queue state is uncertain'):
+                run_queue(['a', 'b'], 'short', Path(tmp))
+            self.assertEqual(run.call_count, 1)
+            self.assertIn('run_game_review.py', run.call_args.args[0][1])
+            sleep.assert_not_called()
 
     def test_generation_failure_skips_that_item_and_keeps_the_next(self):
         # A single bad Steam/Qwen draw used to kill the whole scheduled run.
@@ -76,15 +91,22 @@ class ReviewBatchTests(unittest.TestCase):
         slot = '2026-11-25T05:00:00Z'
         with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
                 patch('publish_to_supabase.read_queue', return_value=[{'publish_at': slot, 'status': 'scheduled', 'video_id': 'abc'}]), \
-                patch('schedule_policy.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+                patch('review_batch.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
                 contextlib.redirect_stdout(io.StringIO()) as output:
             self.assertEqual(scheduled_plan(), [])
         self.assertIn('already has', output.getvalue())
 
+    def test_scheduled_plan_refuses_an_unresolved_reservation(self):
+        with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
+                patch('publish_to_supabase.read_queue', return_value=[{'publish_at': '2026-11-25T05:00:00Z', 'status': 'processing', 'video_id': None}]), \
+                patch('review_batch.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)):
+            with self.assertRaisesRegex(ValueError, 'unresolved reservation'):
+                scheduled_plan()
+
     def test_scheduled_plan_targets_the_served_slot_when_it_is_empty(self):
         with patch.dict(os.environ, {'REVIEW_SCHEDULE': '0 1,5 * * *'}, clear=True), \
                 patch('publish_to_supabase.read_queue', return_value=[]), \
-                patch('schedule_policy.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
+                patch('review_batch.served_slot', return_value=datetime(2026, 11, 25, 5, tzinfo=timezone.utc)), \
                 contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(scheduled_plan(), ['2026-11-25 08:00'])
 
@@ -149,10 +171,13 @@ class ReviewBatchTests(unittest.TestCase):
         shorts = plan(4, 'short', '', now=now)
         self.assertEqual(len(shorts), 4)
         self.assertEqual(shorts, sorted(shorts))
-        self.assertTrue(all('08:00' in s or '12:00' in s for s in shorts), shorts)
+        # Every planned time must be one of the two regular Short slots.
+        allowed_short = {'09:00', '13:00'}
+        self.assertTrue(all(s[11:] in allowed_short for s in shorts), shorts)
         longs = plan(2, 'long', '', now=now)
         self.assertEqual(len(longs), 2)
-        self.assertTrue(all(s.endswith('06:00') for s in longs), longs)
+        allowed_long = {'06:00'}
+        self.assertTrue(all(s[11:] in allowed_long for s in longs), longs)
         # Blank and padded input behaves like an empty one.
         self.assertEqual(plan(2, 'short', '   ', now=now), shorts[:2])
 

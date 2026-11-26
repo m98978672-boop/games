@@ -53,12 +53,12 @@ def audit(src=None):
         # --- анализировать ---
         ('ведёт карту мест и переходов', [
             ('класс карты', 'class StoryMap' in e),
-            ('переход пишется, когда видно, куда привёл', "story_map.link(pending['from'], pending['choice'], text, here_ctx, labels)" in e),
+            ('переход пишется, когда видно, куда привёл', "story_map.link(pending['from'], pending['choice'], text, here_ctx, labels," in e),
             ('место различается набором вариантов, а не путём', 'options' in e and "'\\u241f' + '|'.join(sorted" in e),
             ('место — хэш всего текста', "hashlib.sha1(norm.encode('utf-8'))" in e),
         ]),
         ('идёт по НЕнажатым выборам (главный фикс цикла)', [
-            ('критерий — пара место+выбор', 'def not_tried' in e and "not in story_map.tried" in e),
+            ('критерий — пара место+выбор', 'def not_tried' in e and 'story_map.tried_here' in e),
         ]),
         ('петли не считаются новыми', [
             ('петля по came_from', 'def is_loop' in e and 'came_from' in e),
@@ -88,6 +88,15 @@ def audit(src=None):
             ('сохранение карты', 'def to_cache' in e),
             ('загрузка карты', 'def load_cache' in e),
             ('старая схема карты не берётся', "data.get('schema') != self.SCHEMA" in e),
+            ('ребро берёт готовый ключ места', 'src_key=None' in e and 'from_key' in e),
+            ('при малом остатке — в непройденное, не в петлю', 'leads_to_new' in e),
+            ('есть маршрут к остатку', 'def route_to_open' in e),
+            ('висячие рёбра не берутся из памяти', "e.get('from') in self.nodes" in e),
+            ('тот же текст — одно место', 'def text_key_index' in e),
+            ('названия ссылок вычищаются из текста', 'def bare(' in e),
+            ('память хранит text_key', "'text_key': v.get('text_key') or k" in e),
+            ('нажатие не теряется между наборами', 'def tried_here' in e),
+            ('отдых не перебивает непройденное', 'rest_fresh' in e),
             ('память доходит до чтения истории', 'memo_from=memo_from' in e),
             ('workflow передаёт карту', '--memo' in w and 'storymap.json' in w),
         ]),
@@ -169,11 +178,25 @@ def audit_data(reports_dir=None):
         last = json.loads(story_reports[-1].read_text(encoding='utf-8'))
         st = last['story']
         mp = st.get('map') or {}
-        rows.append(('последний прогон помнит прошлую карту', st.get('remembered', 0) > 0,
-                     f"вспомнила {st.get('remembered', 0)} мест"))
-        rows.append(('прогресс есть: места растут от прогона к прогону',
-                     mp.get('places', 0) >= 20, f"{mp.get('places', 0)} мест"))
+        # Память либо вспомнилась (совместимая схема), либо честно пустая.
+        # Фальшивкой было бы «вспомнила» места, которых нет в карте.
+        remembered = st.get('remembered', 0)
+        rows.append(('память не врёт: вспомненных мест не больше, чем в карте',
+                     remembered <= mp.get('places', 0),
+                     f"вспомнила {remembered}, в карте {mp.get('places', 0)}"))
+        # Мест может быть и мало: после чистки схемы карта начинается с нуля,
+        # а «много мест» — не добродетель: раздутая карта из мусорных ключей
+        # была 473 места при остатке 516. Важно не число мест, а честный
+        # прогресс: нажато вариантов и остаток внятный.
+        rows.append(('прогресс есть: варианты нажимаются',
+                     mp.get('tried', 0) >= 20, f"нажато {mp.get('tried', 0)}"))
         rows.append(('в отчёте есть, что осталось', 'remaining' in mp, f"остаток {mp.get('remaining', '—')}"))
+        # Остаток обязан быть меньше числа нажатых вариантов: если «осталось»
+        # больше, чем вообще было вариантов, — счёт врёт (считает по устаревшему
+        # флагу open, как было в прогоне 45628356826: «29 мест» при остатке 9).
+        rows.append(('остаток не больше нажатого: счёт не по застывшему флагу',
+                     mp.get('remaining', 0) <= mp.get('tried', 0) + 1,
+                     f"остаток {mp.get('remaining')} при нажатых {mp.get('tried')}"))
     return [{'проверка': n, 'ок': bool(ok), 'факт': fact} for n, ok, fact in rows]
 
 def main():

@@ -6,17 +6,20 @@ hours (scheduled jobs can start late). Unknown events fail closed.
 from __future__ import annotations
 import os
 
-SHORT_CRON = '0 1,5 * * *'
-LONG_CRON = '0 22 * * *'
+from schedule_policy import CRON_SLOTS, slot_format
+
+# No cron literal is hardcoded here on purpose. Format follows CRON_SLOTS in
+# schedule_policy, so adding a slot never leaves this file behind and no
+# scheduled run can die with "Unknown scheduled review event".
 
 
 def choose_format(event: str, cron: str, manual: str) -> str:
     if event == 'schedule':
-        if cron == SHORT_CRON:
-            return 'short'
-        if cron == LONG_CRON:
-            return 'long'
-        raise ValueError('Unknown scheduled review event')
+        if cron not in CRON_SLOTS:
+            raise ValueError('Unknown scheduled review event')
+        # The slot decides the category; the firing hour never does.
+        slot_at = CRON_SLOTS[cron][1]
+        return slot_format(slot_at)
     if event == 'workflow_dispatch' and manual in ('short', 'long'):
         return manual
     raise ValueError('Unexpected review event or video format')

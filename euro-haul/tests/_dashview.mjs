@@ -3,7 +3,7 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', { pretendToBe
 global.window = dom.window; global.document = dom.window.document;
 import { createRequire } from 'node:module';
 const require2 = createRequire(import.meta.url);
-const { createCanvas } = require2('/tmp/node_modules/@napi-rs/canvas');
+const { createCanvas } = require2('@napi-rs/canvas');
 dom.window.HTMLCanvasElement.prototype.getContext = function () {
   if (!this.__c) this.__c = createCanvas(this.width || 300, this.height || 150);
   return this.__c.getContext('2d');

@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 const require2 = createRequire(import.meta.url);
-const puppeteer = require2('/tmp/node_modules/puppeteer-core');
+const puppeteer = require2('puppeteer-core');
 const browser = await puppeteer.launch({
   args: ['--no-sandbox', '--no-zygote', '--disable-gpu', '--enable-unsafe-swiftshader', '--use-gl=angle', '--use-angle=swiftshader', '--disable-dev-shm-usage', '--user-data-dir=/tmp/pprof' + Math.random().toString(36).slice(2)],
   defaultViewport: { width: 900, height: 520 }, executablePath: '/tmp/chromium', headless: true,

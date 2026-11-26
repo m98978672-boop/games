@@ -1,4 +1,8 @@
-"""Timezone-aware minimum cadence: two daily Shorts and one long video every day."""
+"""Moscow cadence: two Shorts, one long review, and one gameplay slot per day.
+
+The gameplay slot does not imply that a recording satisfies release rules.
+Regular slots are not an atomic cross-run daily publication limit.
+"""
 from __future__ import annotations
 
 import argparse
@@ -6,8 +10,19 @@ from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 CHANNEL_TZ = ZoneInfo("Europe/Moscow")
-SHORT_POST_TIMES = (time(8, 0), time(12, 0))
-LONG_POST_TIME = time(6, 0)
+# The owner requested two Shorts per day and two long reviews per two days.
+SHORT_POST_TIMES = (time(9, 0), time(13, 0))
+LONG_POST_TIMES = (time(6, 0),)
+# Gameplay sits at 18:00 so it never shares a minute with a review or a Short.
+GAMEPLAY_POST_TIME = time(18, 0)
+# A playthrough cut up to this many seconds is a Short; longer is a full video.
+# This mirrors adventure_personality.SHORT_SECONDS, which the renderer already
+# uses, so the render and the upload stamp cannot disagree at exactly 180s.
+GAMEPLAY_SHORT_MAX_SECONDS = 180
+# Kept for callers that still ask for "the" long slot; the first one serves the
+# nightly scheduled run. Anything that must handle all long slots uses
+# LONG_POST_TIMES and all_planned_slots().
+LONG_POST_TIME = LONG_POST_TIMES[0]
 MIN_LEAD = timedelta(minutes=45)
 
 
@@ -57,6 +72,44 @@ def long_video_is_due(now: datetime | None = None) -> bool:
     return True
 
 
+def slot_format(slot_at: time) -> str:
+    """Which category a Moscow publication time belongs to."""
+    if slot_at == GAMEPLAY_POST_TIME:
+        return "gameplay"
+    if slot_at in LONG_POST_TIMES:
+        return "long"
+    if slot_at in SHORT_POST_TIMES:
+        return "short"
+    raise ValueError(f"not a regular publication slot: {slot_at}")
+
+
+def slot_sequence(first: datetime, video_format: str, count: int) -> list[datetime]:
+    """`count` publication slots of one format, starting at `first`.
+
+    Derived from SHORT_POST_TIMES / LONG_POST_TIMES rather than from arithmetic,
+    so doubling the schedule never silently keeps the old two-a-day step. Times
+    are Moscow wall-clock; a slot already equal to `first` is kept, later ones
+    move forward to the next regular slot of the same format.
+    """
+    if video_format not in {"short", "long"}:
+        raise ValueError("video_format must be short or long")
+    if count < 1:
+        raise ValueError("count must be at least 1")
+    times = SHORT_POST_TIMES if video_format == "short" else LONG_POST_TIMES
+    local = first.astimezone(CHANNEL_TZ)
+    slots = [local]
+    probe = local
+    while len(slots) < count:
+        nxt = next_publish_slot(probe, video_format=video_format, min_lead=timedelta(0))
+        if nxt.astimezone(CHANNEL_TZ) <= probe.astimezone(CHANNEL_TZ):
+            # next_publish_slot is inclusive of an exact slot; step past it.
+            probe = probe + timedelta(minutes=1)
+            continue
+        slots.append(nxt.astimezone(CHANNEL_TZ))
+        probe = nxt
+    return slots
+
+
 def next_publish_slot(now: datetime | None = None, *, video_format: str = "short",
                       min_lead: timedelta = MIN_LEAD) -> datetime:
     current = now or datetime.now(timezone.utc)
@@ -68,10 +121,7 @@ def next_publish_slot(now: datetime | None = None, *, video_format: str = "short
     earliest = local_now + min_lead
     for offset in range(16):
         candidate_date = local_now.date() + timedelta(days=offset)
-        if video_format == "short":
-            times = SHORT_POST_TIMES
-        else:
-            times = (LONG_POST_TIME,)
+        times = SHORT_POST_TIMES if video_format == "short" else LONG_POST_TIMES
         for slot_time in times:
             candidate = datetime.combine(candidate_date, slot_time, CHANNEL_TZ)
             if candidate >= earliest:

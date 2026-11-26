@@ -13,7 +13,9 @@ import renderer
 
 class RenderQualityTests(unittest.TestCase):
     def test_render_targets_full_hd_50fps(self):
-        self.assertEqual(renderer.SOURCE_FPS, 25)
+        # Shorts are drawn directly at the delivery rate: the cards carry no
+        # generated motion, so interpolating 25->50 only cost minutes per video.
+        self.assertEqual(renderer.SOURCE_FPS, 50)
         self.assertEqual(renderer.OUTPUT_FPS, 50)
         self.assertEqual((renderer.OUTPUT_WIDTH, renderer.OUTPUT_HEIGHT), (1080, 1920))
 
@@ -57,6 +59,60 @@ class RenderQualityTests(unittest.TestCase):
         ):
             result = renderer.verify_video_profile(Path(temp) / "clip.mp4")
         self.assertEqual(result, {"fps": 50.0, "width": 1920, "height": 1080})
+
+    def test_review_verdict_fallback_never_drops_personal_experience_disclaimer(self):
+        from unittest.mock import patch
+        heard = []
+        def fake_speech(text, path, **_kwargs):
+            heard.append(text)
+            with wave.open(str(path), 'wb') as target:
+                target.setnchannels(1); target.setsampwidth(2); target.setframerate(1000)
+                target.writeframes(b'\0\0' * 1000)
+            return 13.0 if 'Оценка' in text or 'Итог' in text else 1.0
+        script = {'format': 'game-review', 'idea_score': 7,
+                  'scenes': [{'dialogue': 'Первая сцена.'} for _ in range(4)] +
+                            [{'dialogue': 'Итог: оценка идеи — 7 из 10. Я ещё не играла.'}]}
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); model = root / 'voice.onnx'; model.write_bytes(b'model')
+            with patch.dict('os.environ', {'PIPER_MODEL_PATH': str(model)}), \
+                 patch.object(renderer, 'ffmpeg_executable', return_value='ffmpeg'), \
+                 patch.object(renderer, 'synthesize', side_effect=fake_speech), \
+                 patch.object(renderer, 'render_frame'), patch.object(renderer, 'SOURCE_FPS', 1):
+                with self.assertRaisesRegex(ValueError, 'fallback exceeds'):
+                    renderer.render_short(script, root / 'out.mp4', root / 'work')
+        self.assertIn('Оценка идеи по описанию — 7,0 из 10. Я не играла.', heard)
+
+    def test_long_review_batches_both_stages_without_reordering(self):
+        from threading import Barrier
+        voice_pair, encode_pair = Barrier(2), Barrier(2)
+
+        def fake_speech(text, path, **_kwargs):
+            if path.stem in {'chapter-00', 'chapter-01'}:
+                voice_pair.wait(timeout=3)
+            with wave.open(str(path), 'wb') as audio:
+                audio.setparams((1, 2, 1000, 0, 'NONE', 'not compressed'))
+                audio.writeframes(b'\0\0' * 18000)
+            return 18.0
+
+        def fake_encode(command, **_kwargs):
+            self.assertEqual(len(list((work / 'audio').glob('*.wav'))), 10)
+            if Path(command[-1]).stem in {'chapter-00', 'chapter-01'}:
+                encode_pair.wait(timeout=3)
+
+        script = {'scenes': [{'dialogue': f'Глава {index}.'} for index in range(10)]}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            work, output = root / 'work', root / 'out.mp4'
+            with patch.object(renderer, '_scene_worker_count', return_value=2), \
+                 patch.object(renderer, 'ffmpeg_executable', return_value='ffmpeg'), \
+                 patch.object(renderer, 'synthesize', side_effect=fake_speech), \
+                 patch.object(renderer, '_render_long_card'), \
+                 patch.object(renderer.subprocess, 'run', side_effect=fake_encode), \
+                 patch.object(renderer, 'concat_long_segments') as concat, \
+                 patch.object(renderer, 'verify_video_profile', return_value={'fps': 50}):
+                renderer.render_long_review(script, output, work)
+            self.assertEqual(concat.call_args.args[1],
+                             [work / 'segments' / f'chapter-{index:02d}.mp4' for index in range(10)])
 
     def test_short_long_narration_fails_before_any_video_encoding(self):
         def fake_speech(_text, path, **_kwargs):

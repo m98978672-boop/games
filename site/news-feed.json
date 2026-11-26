@@ -2961,7 +2961,7 @@
         "The promoter and broadcaster helped define the music tastes of Australians for decades."
       ],
       "tags": [
-        "BBC World"
+        "Путешествия"
       ],
       "sourceName": "BBC World",
       "sourceUrl": "https://www.bbc.co.uk/news/articles/c3qj57rkd2k1o?at_medium=RSS&at_campaign=rss",
@@ -3187,14 +3187,14 @@
         "Ukraine's sinking of a Russian battleship at a port in Libya raises the stakes of the war a notch, writes Frank Gardner."
       ],
       "tags": [
-        "BBC World"
+        "Среда обитания"
       ],
       "sourceName": "BBC World",
       "sourceUrl": "https://www.bbc.co.uk/news/articles/cm894p88jzxpo?at_medium=RSS&at_campaign=rss",
       "publishedAt": "2026-11-23T20:48:35.000Z",
       "readMin": 1,
-      "icon": "🌐",
-      "accent": "blue",
+      "icon": "🌍",
+      "accent": "amber",
       "proofs": [
         {
           "label": "Первоисточник (BBC World)",
@@ -3224,14 +3224,14 @@
         "Создатель Resident Evil Синдзи Миками (Shinji Mikami) рассказал о своём отношении к искусственному интеллекту. Разработчик признался, что порой хочет, чтобы ИИ вообще не существовало, при этом сам экспериментирует с технологией и видит в ней полезный инструмент для девелоперов.… […]"
       ],
       "tags": [
-        "StopGame"
+        "iXBT.games"
       ],
       "sourceName": "StopGame",
       "sourceUrl": "https://stopgame.ru/newsdata/73608/sindzi_mikami_hotel_by_chtoby_ii_voobsche_ne_suschestvovalo",
       "publishedAt": "2026-11-23T20:45:50.000Z",
       "readMin": 1,
-      "icon": "🎮",
-      "accent": "blue",
+      "icon": "🕹️",
+      "accent": "crimson",
       "proofs": [
         {
           "label": "Первоисточник (StopGame)",
@@ -3528,14 +3528,17 @@
         "Два независимых подхода к обработке радиоданных подтвердили кольцевую структуру, хотя детали распределения яркости на новых изображениях немного отличаются от оригинала."
       ],
       "tags": [
-        "SecurityLab"
+        "google",
+        "google play",
+        "бизнес",
+        "платежная система"
       ],
       "sourceName": "SecurityLab",
       "sourceUrl": "https://www.securitylab.ru/news/584159.php",
       "publishedAt": "2026-11-23T17:46:34.000Z",
       "readMin": 1,
-      "icon": "🛡️",
-      "accent": "emerald",
+      "icon": "🤖",
+      "accent": "violet",
       "proofs": [
         {
           "label": "Первоисточник (SecurityLab)",
@@ -4071,6 +4074,946 @@
       "autoPosted": true,
       "image": "site/assets/news/c-946.svg",
       "imageCaption": "Обложка рубрики: Hackers Exploit Critical ScreenConnect Flaw to Hijack MSP Technician P",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-ixbt-games-79944683cf",
+      "code": "G-916",
+      "category": "games",
+      "title": "Никто не запрещал изображения девушек в эротичных купальниках на машинах в Forza Horizon 6, объяснила Playground Games",
+      "summary": "Playground Games опубликовала подробное разъяснение принципов модерации пользовательского контента в Forza Horizon 6 на фоне недовольства игроков блокировками автомобилей с аниме-дизайнами в стиле иташи.",
+      "body": [
+        "Playground Games опубликовала подробное разъяснение принципов модерации пользовательского контента в Forza Horizon 6 на фоне недовольства игроков блокировками автомобилей с аниме-дизайнами в стиле иташи.",
+        "Разработчики признали, что решения модераторов вызвали недовольство части сообщества, и подчеркнули, что считают иташи важной составляющей японской автомобильной культуры и способом творческого самовыражения.",
+        "В октябрьском сообщении для китайских социальных сетей Playground Games уже пыталась объяснить критерии модерации, однако публикация вызвала дополнительную критику. В частности, игроков возмутило упоминание таких особенностей изображений, как приоткрытый рот и «стеклянный взгляд», в качестве потенциально проблемных элементов.",
+        "Xbox В новом разъяснении студия подробнее остановилась на контексте и подчеркнула, что отдельные визуальные особенности сами по себе не являются основанием для наказания."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/26/nikto-ne-zapreshhal-izobrazeniia-devusek-v-eroticnyx-kupalnikax-na-masinax-v-forza-horizon-6-obieiasnila-playground-games.html",
+      "publishedAt": "2026-11-26T14:10:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/26/nikto-ne-zapreshhal-izobrazeniia-devusek-v-eroticnyx-kupalnikax-na-masinax-v-forza-horizon-6-obieiasnila-playground-games.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-916.svg",
+      "imageCaption": "Обложка рубрики: Никто не запрещал изображения девушек в эротичных купальниках на машин",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-securitylab-264878b0d8",
+      "code": "C-816",
+      "category": "security",
+      "title": "ИИ получил root в Linux без помощи человека. Уязвимость NFS2ROOT скрывалась с 2014 года",
+      "summary": "Для атаки достаточно сетевого доступа к уязвимой файловой службе.",
+      "body": [
+        "Для атаки достаточно сетевого доступа к уязвимой файловой службе."
+      ],
+      "tags": [
+        "Уязвимости нулевого дня/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/584674.php",
+      "publishedAt": "2026-11-26T14:02:23.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/584674.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-816.svg",
+      "imageCaption": "Обложка рубрики: ИИ получил root в Linux без помощи человека. Уязвимость NFS2ROOT скрыв",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-ixbt-games-187544df15",
+      "code": "G-746",
+      "category": "games",
+      "title": "Ubisoft требует от разработчиков использовать ИИ и объясняться в случае отказа",
+      "summary": "Пока неизвестно, насколько далеко Ubisoft готова зайти в этом направлении и повлияет ли новая политика на численность команд или распределение обязанностей внутри студий.",
+      "body": [
+        "Пока неизвестно, насколько далеко Ubisoft готова зайти в этом направлении и повлияет ли новая политика на численность команд или распределение обязанностей внутри студий.",
+        "Ubisoft усиливает давление на сотрудников, стремясь повсеместно внедрить генеративный искусственный интеллект в процесс разработки игр.",
+        "Как утверждают анонимные источники, внутри Ubisoft сотрудникам объясняют, что генеративный искусственный интеллект должен ускорить подготовку презентаций и прототипов благодаря работе «небольших, гибких и адаптивных команд». Предполагается, что это позволит быстрее создавать экспериментальные версии игр, проверять различные идеи и отказываться от неудачных концепций на ранних этапах разработки.",
+        "Ubisoft Один из сотрудников рассказал, что руководители представили использование ИИ как необходимое условие для поддержания высокого темпа работы. Разработчикам, которые не хотят применять подобные инструменты, теперь приходится объяснять причины своего решения."
+      ],
+      "tags": [
+        "iXBT.games"
+      ],
+      "sourceName": "iXBT.games",
+      "sourceUrl": "https://ixbt.games/news/2026/11/26/ubisoft-trebuet-ot-razrabotcikov-ispolzovat-ii-i-obieiasniatsia-v-slucae-otkaza.html",
+      "publishedAt": "2026-11-26T13:55:00.000Z",
+      "readMin": 1,
+      "icon": "🕹️",
+      "accent": "crimson",
+      "proofs": [
+        {
+          "label": "Первоисточник (iXBT.games)",
+          "url": "https://ixbt.games/news/2026/11/26/ubisoft-trebuet-ot-razrabotcikov-ispolzovat-ii-i-obieiasniatsia-v-slucae-otkaza.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «iXBT.games»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-746.svg",
+      "imageCaption": "Обложка рубрики: Ubisoft требует от разработчиков использовать ИИ и объясняться в случа",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-securitylab-48604e0c54",
+      "code": "C-925",
+      "category": "security",
+      "title": "Чтобы раскрыть главную тайну Вселенной, физики превратили Землю в гигантский детектор тёмной материи",
+      "summary": "Магнитное поле помогло обнаружить 25 загадочных сигналов, природу которых ещё предстоит выяснить.",
+      "body": [
+        "Магнитное поле помогло обнаружить 25 загадочных сигналов, природу которых ещё предстоит выяснить."
+      ],
+      "tags": [
+        "Наука/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/584660.php",
+      "publishedAt": "2026-11-26T13:35:41.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/584660.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-925.svg",
+      "imageCaption": "Обложка рубрики: Чтобы раскрыть главную тайну Вселенной, физики превратили Землю в гига",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-securitylab-6a6aa4e255",
+      "code": "C-918",
+      "category": "security",
+      "title": "Достаточно лишь одной картинки. Обычная загрузка изображения на Joomla может закончиться взломом",
+      "summary": "Для эксплуатации ошибки не требуется даже регистрация.",
+      "body": [
+        "Для эксплуатации ошибки не требуется даже регистрация."
+      ],
+      "tags": [
+        "Уязвимости нулевого дня/"
+      ],
+      "sourceName": "SecurityLab",
+      "sourceUrl": "https://www.securitylab.ru/news/584676.php",
+      "publishedAt": "2026-11-26T13:03:12.000Z",
+      "readMin": 1,
+      "icon": "🛡️",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (SecurityLab)",
+          "url": "https://www.securitylab.ru/news/584676.php"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «SecurityLab»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-918.svg",
+      "imageCaption": "Обложка рубрики: Достаточно лишь одной картинки. Обычная загрузка изображения на Joomla",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-stopgame-a242fa929c",
+      "code": "G-722",
+      "category": "games",
+      "title": "В GTA VI могли добавить возможность ползать, обустраивать дом, ходить в кино и другое",
+      "summary": "Как многие геймеры уже успели убедиться, мир в Grand Theft Auto VI проработан до мелочей. Однако всех аспектов реальной жизни в игру пока не уместить, даже если очень постараться. В интервью немецкому порталу PCGames гла",
+      "body": [
+        "Как многие геймеры уже успели убедиться, мир в Grand Theft Auto VI проработан до мелочей. Однако всех аспектов реальной жизни в игру пока не уместить, даже если очень постараться. В интервью немецкому порталу PCGames глава разработки и соруководитель Rockstar North Роб Нельсон (Rob Nelson) вместе с дизайн-продюсером Скоттом Митчеллом (Scott Mitchell) поделились, какие идеи команда планировала добавить в GTA VI, но в итоге от них отказалась.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73644/v_gta_vi_mogli_dobavit_vozmozhnost_polzat_obustraivat_dom_hodit_v_kino_i_drugoe",
+      "publishedAt": "2026-11-26T12:40:53.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73644/v_gta_vi_mogli_dobavit_vozmozhnost_polzat_obustraivat_dom_hodit_v_kino_i_drugoe"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-722.svg",
+      "imageCaption": "Обложка рубрики: В GTA VI могли добавить возможность ползать, обустраивать дом, ходить ",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-nplus1-cf0e9dd4db",
+      "code": "S-839",
+      "category": "science",
+      "title": "Не стоит прогибаться",
+      "summary": "Осьминоги способны протискиваться в невероятно узкие щели благодаря тому, что в их теле почти нет твердых структур. Долгое время считалось, что минимальный размер отверстия, через которое может пролезть осьминог, определ",
+      "body": [
+        "Осьминоги способны протискиваться в невероятно узкие щели благодаря тому, что в их теле почти нет твердых структур. Долгое время считалось, что минимальный размер отверстия, через которое может пролезть осьминог, определяется размером его клюва. Однако до сих пор было неясно, как именно эти животные координируют движения восьми щупалец и тела, чтобы преодолеть препятствие."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/blog/2026/11/26/perst-130",
+      "publishedAt": "2026-11-26T12:40:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/blog/2026/11/26/perst-130"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-839.svg",
+      "imageCaption": "Обложка рубрики: Не стоит прогибаться",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-nplus1-50e0f9968b",
+      "code": "S-942",
+      "category": "science",
+      "title": "Височный артериит у пожилой австралийки оказался сифилисом",
+      "summary": "Австралийские врачи описали случай потери зрения из-за сифилиса у женщины в возрасте около 60 лет. Изначально медики заподозрили височный артериит, однако биопсия не подтвердила этот диагноз. Офтальмологическое обследова",
+      "body": [
+        "Австралийские врачи описали случай потери зрения из-за сифилиса у женщины в возрасте около 60 лет. Изначально медики заподозрили височный артериит, однако биопсия не подтвердила этот диагноз. Офтальмологическое обследование выявило передний и задний увеит, и сифилис подтвердили серологическим исследованием. Случай описан в BMJ Case Reports."
+      ],
+      "tags": [
+        "N+1 Наука"
+      ],
+      "sourceName": "N+1 Наука",
+      "sourceUrl": "https://nplus1.ru/news/2026/11/26/syphilis-temporal-arteritis",
+      "publishedAt": "2026-11-26T12:39:00.000Z",
+      "readMin": 1,
+      "icon": "🔬",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (N+1 Наука)",
+          "url": "https://nplus1.ru/news/2026/11/26/syphilis-temporal-arteritis"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «N+1 Наука»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-942.svg",
+      "imageCaption": "Обложка рубрики: Височный артериит у пожилой австралийки оказался сифилисом",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-stopgame-0ff9576b7e",
+      "code": "G-873",
+      "category": "games",
+      "title": "СМИ: в Ubisoft заставляют объяснять, почему в проекте не используют генеративный ИИ",
+      "summary": "У Ubisoft есть нехорошая привычка крепко хвататься за сомнительные технологии. Уже были NFT, а теперь студии сильно приглянулись ИИ-технологии. Как пишут в издании Vertical Slice, Ubisoft стала требовать от сотрудников о",
+      "body": [
+        "У Ubisoft есть нехорошая привычка крепко хвататься за сомнительные технологии. Уже были NFT, а теперь студии сильно приглянулись ИИ-технологии. Как пишут в издании Vertical Slice, Ubisoft стала требовать от сотрудников объяснять во время питчинга, как генеративный ИИ поможет им быстрее делать игры. Однако если использовать его они не собираются, то придётся пояснить, почему.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73643/smi_v_ubisoft_zastavlyayut_obyasnyat_pochemu_v_proekte_ne_ispolzuyut_generativnyy_ii",
+      "publishedAt": "2026-11-26T12:07:31.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73643/smi_v_ubisoft_zastavlyayut_obyasnyat_pochemu_v_proekte_ne_ispolzuyut_generativnyy_ii"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-873.svg",
+      "imageCaption": "Обложка рубрики: СМИ: в Ubisoft заставляют объяснять, почему в проекте не используют ге",
+      "imageCredit": "Games News · локальная обложка",
+      "queue": "now"
+    },
+    {
+      "id": "auto-3dnews-5ce591d21e",
+      "code": "T-726",
+      "category": "tech",
+      "title": "Не бублик, а восьмёрка: Германия сделала новый шаг к созданию термоядерного реактора будущего",
+      "summary": "Немецкая компания Proxima Fusion сообщила об изготовлении первой радиальной пластины для стелларатора — термоядерного реактора в форме восьмёрки, а не бублика как в случае токамаков. Пластина станет основой сверхпроводящ",
+      "body": [
+        "Немецкая компания Proxima Fusion сообщила об изготовлении первой радиальной пластины для стелларатора — термоядерного реактора в форме восьмёрки, а не бублика как в случае токамаков. Пластина станет основой сверхпроводящего магнита для первого в мире стеллатора с положительным выходом энергии, который начали создавать в Германии. Источник изображений: Proxima Fusion"
+      ],
+      "tags": [
+        "- на острие науки"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151847",
+      "publishedAt": "2026-11-26T11:45:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151847"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-726.svg",
+      "imageCaption": "Обложка рубрики: Не бублик, а восьмёрка: Германия сделала новый шаг к созданию термояде",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-df0e268098",
+      "code": "T-849",
+      "category": "tech",
+      "title": "Anthropic создала тест-ловушку для непокорных ИИ-агентов",
+      "summary": "Исследователи Anthropic разработали Siren — новый тест для агентов с искусственным интеллектом, построенный на принципе ловушки. В рамках эксперимента они помещаются в реалистичные симуляции, провоцирующие их на нарушени",
+      "body": [
+        "Исследователи Anthropic разработали Siren — новый тест для агентов с искусственным интеллектом, построенный на принципе ловушки. В рамках эксперимента они помещаются в реалистичные симуляции, провоцирующие их на нарушение правил. Реакция агентов позволяет исследователям оценить вероятность того, что новые модели могут выйти из-под контроля в реальных условиях, а также проверить эффективность различных мер безопасности. Источник изображения: anthropic.com"
+      ],
+      "tags": [
+        "3DNews"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151844",
+      "publishedAt": "2026-11-26T11:25:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151844"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-849.svg",
+      "imageCaption": "Обложка рубрики: Anthropic создала тест-ловушку для непокорных ИИ-агентов",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-d2b6e6f2c9",
+      "code": "C-995",
+      "category": "security",
+      "title": "Most Wanted: The Phishing Kits and Techniques Getting Past Security Controls",
+      "summary": "Every phishing attack has to get past email security, web filtering, and safe browsing before it reaches an employee. Some kits manage that far more often than others, and those are the kits that security teams need to k",
+      "body": [
+        "Every phishing attack has to get past email security, web filtering, and safe browsing before it reaches an employee. Some kits manage that far more often than others, and those are the kits that security teams need to know about.",
+        "At Push Security, we measure this as breakthrough rate: The share of attacks that get past email security, web gateways, and safe browsing to reach the user."
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/most-wanted-phishing-kits-and.html",
+      "publishedAt": "2026-11-26T10:57:55.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/most-wanted-phishing-kits-and.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-995.svg",
+      "imageCaption": "Обложка рубрики: Most Wanted: The Phishing Kits and Techniques Getting Past Security Co",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-907fce5a62",
+      "code": "C-939",
+      "category": "security",
+      "title": "1Password Hacked, Customer Data and Source Code Stolen in GitHub Account Breach",
+      "summary": "Popular password management software 1Password on Wednesday disclosed a security incident involving its backend systems that led to the unauthorized access of some customer information, but emphasized that customer passw",
+      "body": [
+        "Popular password management software 1Password on Wednesday disclosed a security incident involving its backend systems that led to the unauthorized access of some customer information, but emphasized that customer password vaults and other secrets were not accessed.",
+        "\"While we took immediate steps to contain the incident, the attacker gained access to some of our backend systems and accessed a"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/1password-hacked-customer-data-and.html",
+      "publishedAt": "2026-11-26T10:57:25.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/1password-hacked-customer-data-and.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-939.svg",
+      "imageCaption": "Обложка рубрики: 1Password Hacked, Customer Data and Source Code Stolen in GitHub Accou",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-top-69d287fed7",
+      "code": "F-974",
+      "category": "facts",
+      "title": "GigaChat 4: новые агентные навыки и первый миллион",
+      "summary": "Представляем GigaChat 4 — две новые модели: на 37 и 708 миллиардов параметров. Обе поддерживают контекст до миллиона токенов, работают с инструментами и предлагают два режима ответа: быстрый instant и reasoning с предвар",
+      "body": [
+        "Представляем GigaChat 4 — две новые модели: на 37 и 708 миллиардов параметров. Обе поддерживают контекст до миллиона токенов, работают с инструментами и предлагают два режима ответа: быстрый instant и reasoning с предварительным рассуждением."
+      ],
+      "tags": [
+        "GigaChat 4",
+        "большие языковые модели",
+        "Mixture of Experts",
+        "гибридная архитектура"
+      ],
+      "sourceName": "Хабр Популярное",
+      "sourceUrl": "https://habr.com/ru/companies/sberbank/articles/1112118/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112118",
+      "publishedAt": "2026-11-26T10:00:10.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Популярное)",
+          "url": "https://habr.com/ru/companies/sberbank/articles/1112118/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112118"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/f-974.svg",
+      "imageCaption": "Обложка рубрики: GigaChat 4: новые агентные навыки и первый миллион",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-125d9a57c4",
+      "code": "T-817",
+      "category": "tech",
+      "title": "Спустя неделю после релиза GTA VI для PS5 «слили» на торренты — пираты ликуют",
+      "summary": "Пока Take-Two Interactive (владелец Rockstar Games) охотится за неофициальными портами нашумевшего криминального боевика GTA VI на ПК, в открытый доступ просочилась полная версия игры для PS5. Источник изображения: Rocks",
+      "body": [
+        "Пока Take-Two Interactive (владелец Rockstar Games) охотится за неофициальными портами нашумевшего криминального боевика GTA VI на ПК, в открытый доступ просочилась полная версия игры для PS5. Источник изображения: Rockstar Games"
+      ],
+      "tags": [
+        "- игры"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151841",
+      "publishedAt": "2026-11-26T09:42:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151841"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-817.svg",
+      "imageCaption": "Обложка рубрики: Спустя неделю после релиза GTA VI для PS5 «слили» на торренты — пираты",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-top-c7d165c77a",
+      "code": "F-866",
+      "category": "facts",
+      "title": "Физика матрицы: куда пропадают две трети света в ЖК‑экранах и чем RGB MiniLED отличается от OLED",
+      "summary": "Два телевизора с одинаковыми строками в характеристиках — «4K, 120 Гц, HDR, 10 бит, контраст 1 000 000:1» — на соседних полках показывают ощутимо разную картинку. На одном нуарный детектив в HDR сохраняет глубокие тени и",
+      "body": [
+        "Два телевизора с одинаковыми строками в характеристиках — «4K, 120 Гц, HDR, 10 бит, контраст 1 000 000:1» — на соседних полках показывают ощутимо разную картинку. На одном нуарный детектив в HDR сохраняет глубокие тени и чёткие неоновые вывески, на втором вокруг каждого фонаря и спички неопрятным пятном расползается грязное гало, а тёмные переулки сливаются в кашу из восьмидесяти оттенков серого. Дело здесь не в браке матрицы: стандартные таблицы характеристик фиксируют лишь пропускную способность видеовхода и кратковременную вспышку на крохотном участке",
+        "Чтобы не вестись на трюки и не переплачивать за маркетинговые индексы на ценнике, нужно спуститься на уровень физики светофильтров, полупроводниковых излучателей и алгоритмов локального затемнения. Давайте вместе пройдём путь фотона от подложки до сетчатки глаза, посчитаем, сколько энергии съедают обычные цветофильтры, разберём архитектуру Hisense RGB MiniLED, и сформируем рабочую методику для выбора панели под конкретную комнату и сценарий."
+      ],
+      "tags": [
+        "rgb miniled",
+        "miniled",
+        "woled",
+        "lcd"
+      ],
+      "sourceName": "Хабр Популярное",
+      "sourceUrl": "https://habr.com/ru/companies/hisense_tv/articles/1112568/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112568",
+      "publishedAt": "2026-11-26T09:21:39.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Популярное)",
+          "url": "https://habr.com/ru/companies/hisense_tv/articles/1112568/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1112568"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/f-866.svg",
+      "imageCaption": "Обложка рубрики: Физика матрицы: куда пропадают две трети света в ЖК‑экранах и чем RGB ",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-habr-top-9ac75ecaa0",
+      "code": "F-910",
+      "category": "facts",
+      "title": "Гравировка алмазом по металлу на домашнем ЧПУ-станке 3018. Может ли станок что-то, кроме печатных плат? ;-)",
+      "summary": "В одной из прошлых статей мы провели финальный тест разработанной мною технологии «скрайбирования», то есть высокоскоростного (2000 мм/мин) изготовления дорожек печатных плат на дому с помощью процарапывания их алмазным ",
+      "body": [
+        "В одной из прошлых статей мы провели финальный тест разработанной мною технологии «скрайбирования», то есть высокоскоростного (2000 мм/мин) изготовления дорожек печатных плат на дому с помощью процарапывания их алмазным наконечником на моём домашнем ЧПУ-станке 3018 (по первой ссылке вы можете найти самую последнюю статью из этой темы, а также в конце статьи — список статей с другими тестами, которые и привели к развитию мной этого направления).",
+        "Очевидно, что, имея под рукой технологию процарапывания, было бы совершенно непростительным ограничиваться только изготовлением печатных плат, хоть этот вопрос и интересует нас больше всего, полагаю! :-)",
+        "Ввиду этого в статье ниже мы рассмотрим возможность применения подобной алмазной гравировки для нанесения собственной гравировки декоративного назначения!",
+        "Что во всём этом особенно интересно: подобная гравировка позволяет довольно дешёвыми средствами (используя обычный ЧПУ-станок) производить работу чуть ли не на уровне (не совсем, но близко) дорогих волоконных лазеров, которые обычно и применяют для гравировки металлов!"
+      ],
+      "tags": [
+        "3018",
+        "чпу-фрезер",
+        "скрайбирование",
+        "гравировка"
+      ],
+      "sourceName": "Хабр Популярное",
+      "sourceUrl": "https://habr.com/ru/companies/ruvds/articles/1110936/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110936",
+      "publishedAt": "2026-11-26T09:02:05.000Z",
+      "readMin": 1,
+      "icon": "⚡",
+      "accent": "amber",
+      "proofs": [
+        {
+          "label": "Первоисточник (Хабр Популярное)",
+          "url": "https://habr.com/ru/companies/ruvds/articles/1110936/?utm_source=habrahabr&utm_medium=rss&utm_campaign=1110936"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «Хабр Популярное»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/f-910.svg",
+      "imageCaption": "Обложка рубрики: Гравировка алмазом по металлу на домашнем ЧПУ-станке 3018. Может ли ст",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-3dnews-d8022b7119",
+      "code": "T-793",
+      "category": "tech",
+      "title": "Видеокарты скупали майнеры, а Nvidia рассказывала об успехах игрового бизнеса — и теперь заплатит $290 млн за это",
+      "summary": "Nvidia согласилась выплатить $290 млн, чтобы урегулировать иск своих инвесторов, гласят судебные документы. В иске утверждалось, что производитель вводил акционеров в заблуждение относительно того, в какой степени рост п",
+      "body": [
+        "Nvidia согласилась выплатить $290 млн, чтобы урегулировать иск своих инвесторов, гласят судебные документы. В иске утверждалось, что производитель вводил акционеров в заблуждение относительно того, в какой степени рост продаж видеокарт был обусловлен отраслью майнинга криптовалют. Источник изображения: nvidia.com"
+      ],
+      "tags": [
+        "- видеокарты"
+      ],
+      "sourceName": "3DNews",
+      "sourceUrl": "https://3dnews.ru/1151823",
+      "publishedAt": "2026-11-26T07:30:00.000Z",
+      "readMin": 1,
+      "icon": "💻",
+      "accent": "cyan",
+      "proofs": [
+        {
+          "label": "Первоисточник (3DNews)",
+          "url": "https://3dnews.ru/1151823"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «3DNews»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/t-793.svg",
+      "imageCaption": "Обложка рубрики: Видеокарты скупали майнеры, а Nvidia рассказывала об успехах игрового ",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-hackernews-sec-4fb355a972",
+      "code": "C-857",
+      "category": "security",
+      "title": "Drupal Warns of New Highly Critical Site Takeover Vulnerability Under Active Exploitation",
+      "summary": "Drupal has warned of a new \"highly critical\" security flaw impacting Drupal core that it said has been exploited in the wild.",
+      "body": [
+        "Drupal has warned of a new \"highly critical\" security flaw impacting Drupal core that it said has been exploited in the wild.",
+        "The vulnerability, tracked as CVE-2026-136716 (CVSS score: N/A), has been described as a case of improper checking for unusual or exceptional conditions. It also relates to CVE-2026-132165 aka Fail2Install in that it addresses remaining vulnerable installation states"
+      ],
+      "tags": [
+        "The Hacker News"
+      ],
+      "sourceName": "The Hacker News",
+      "sourceUrl": "https://thehackernews.com/2026/11/drupal-warns-of-new-highly-critical.html",
+      "publishedAt": "2026-11-26T07:02:34.000Z",
+      "readMin": 1,
+      "icon": "🔐",
+      "accent": "emerald",
+      "proofs": [
+        {
+          "label": "Первоисточник (The Hacker News)",
+          "url": "https://thehackernews.com/2026/11/drupal-warns-of-new-highly-critical.html"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «The Hacker News»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/c-857.svg",
+      "imageCaption": "Обложка рубрики: Drupal Warns of New Highly Critical Site Takeover Vulnerability Under ",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-bbc-world-f70ae89bb2",
+      "code": "W-932",
+      "category": "world",
+      "title": "Desperate appeals from women on death row in Iran after protests",
+      "summary": "Female protesters and dissidents are being sentenced to death in numbers not seen for decades, a rights group says.",
+      "body": [
+        "Female protesters and dissidents are being sentenced to death in numbers not seen for decades, a rights group says."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/cm8x0ve4yd7wo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-26T06:01:58.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/cm8x0ve4yd7wo?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-932.svg",
+      "imageCaption": "Обложка рубрики: Desperate appeals from women on death row in Iran after protests",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-d1936acac8",
+      "code": "S-726",
+      "category": "science",
+      "title": "APOD: 2026 November 26 – Eye in the Sky: The Milky Way over Lençóis",
+      "summary": "APOD: 2026 November 26 – Eye…",
+      "body": [
+        "APOD: 2026 November 26 – Eye…",
+        "Astronomy Picture of the Day",
+        "Discover the cosmos! Each day a different image or photograph of our fascinating universe is featured, along with a brief explanation written by a professional astronomer.",
+        "Eye in the Sky: The Milky Way over Lençóis"
+      ],
+      "tags": [
+        "APOD"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/image-article/apod-2026-november-26-eye-in-the-sky-the-milky-way-over-lencois/",
+      "publishedAt": "2026-11-26T05:05:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/image-article/apod-2026-november-26-eye-in-the-sky-the-milky-way-over-lencois/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-726.svg",
+      "imageCaption": "Обложка рубрики: APOD: 2026 November 26 – Eye in the Sky: The Milky Way over Lençóis",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-nasa-8e17dba8a8",
+      "code": "S-955",
+      "category": "science",
+      "title": "Seeking Refuge on Resolution Island",
+      "summary": "Seeking Refuge on Resolution…",
+      "body": [
+        "Seeking Refuge on Resolution…",
+        "Remote Sensing Technology",
+        "Blue Marble: Next Generation",
+        "In the late 1800s, wildlife conservationists in New Zealand were recognizing how predators such as stoats , brought to the country to control other nonnative animal populations, were becoming a threat to native birds. Naturalists at the time surmised that some of the nation’s islands could serve as sanctuaries where endemic species could persist, free from the voracious newcomers."
+      ],
+      "tags": [
+        "Earth Observatory",
+        "Landsat 9",
+        "Topography",
+        "Wildlife"
+      ],
+      "sourceName": "NASA",
+      "sourceUrl": "https://science.nasa.gov/earth/earth-observatory/seeking-refuge-on-resolution-island/",
+      "publishedAt": "2026-11-26T05:01:00.000Z",
+      "readMin": 1,
+      "icon": "🚀",
+      "accent": "indigo",
+      "proofs": [
+        {
+          "label": "Первоисточник (NASA)",
+          "url": "https://science.nasa.gov/earth/earth-observatory/seeking-refuge-on-resolution-island/"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «NASA»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/s-955.svg",
+      "imageCaption": "Обложка рубрики: Seeking Refuge on Resolution Island",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-bbc-world-b019c1dcd6",
+      "code": "W-755",
+      "category": "world",
+      "title": "Watch: BBC confronts German man suspected of supplying migrant gangs with small boats",
+      "summary": "Marvin Reuter is contesting extradition to France, where he could face smuggling, criminal conspiracy and involuntary manslaughter charges.",
+      "body": [
+        "Marvin Reuter is contesting extradition to France, where he could face smuggling, criminal conspiracy and involuntary manslaughter charges."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/videos/cvglrz5yr79go?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-26T05:00:27.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/videos/cvglrz5yr79go?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-755.svg",
+      "imageCaption": "Обложка рубрики: Watch: BBC confronts German man suspected of supplying migrant gangs w",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-bbc-world-b4795f9264",
+      "code": "W-855",
+      "category": "world",
+      "title": "German boat dealer suspected of supplying Channel smuggling gangs, BBC finds",
+      "summary": "Nearly a third of crossings in early 2026 allegedly involved boats or engines from the German man's firm.",
+      "body": [
+        "Nearly a third of crossings in early 2026 allegedly involved boats or engines from the German man's firm."
+      ],
+      "tags": [
+        "BBC World"
+      ],
+      "sourceName": "BBC World",
+      "sourceUrl": "https://www.bbc.co.uk/news/articles/cqlymky8kpzjo?at_medium=RSS&at_campaign=rss",
+      "publishedAt": "2026-11-26T05:00:24.000Z",
+      "readMin": 1,
+      "icon": "🌐",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (BBC World)",
+          "url": "https://www.bbc.co.uk/news/articles/cqlymky8kpzjo?at_medium=RSS&at_campaign=rss"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «BBC World»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/w-855.svg",
+      "imageCaption": "Обложка рубрики: German boat dealer suspected of supplying Channel smuggling gangs, BBC",
+      "imageCredit": "Games News · локальная обложка"
+    },
+    {
+      "id": "auto-stopgame-0f7e7b1e27",
+      "code": "G-796",
+      "category": "games",
+      "title": "Ubisoft представила сюжетный трейлер Rayman Legends Retold",
+      "summary": "В преддверии релиза Rayman Legends Retold разработчики из Ubisoft опубликовали ещё один кинематографический трейлер. На сей раз ролик посвятили основной сюжетной кампании.… […]",
+      "body": [
+        "В преддверии релиза Rayman Legends Retold разработчики из Ubisoft опубликовали ещё один кинематографический трейлер. На сей раз ролик посвятили основной сюжетной кампании.… […]"
+      ],
+      "tags": [
+        "StopGame"
+      ],
+      "sourceName": "StopGame",
+      "sourceUrl": "https://stopgame.ru/newsdata/73642/ubisoft_predstavila_syuzhetnyy_trailer_rayman_legends_retold",
+      "publishedAt": "2026-11-26T03:03:32.000Z",
+      "readMin": 1,
+      "icon": "🎮",
+      "accent": "blue",
+      "proofs": [
+        {
+          "label": "Первоисточник (StopGame)",
+          "url": "https://stopgame.ru/newsdata/73642/ubisoft_predstavila_syuzhetnyy_trailer_rayman_legends_retold"
+        }
+      ],
+      "factCheck": {
+        "verified": true,
+        "checkedAt": "2026-11-26",
+        "method": "Сверка заголовка и ссылки с первоисточником «StopGame»; текст очищен от HTML/скриптов и проверен 10-проходным Games Antivirus."
+      },
+      "comments": [],
+      "pinned": false,
+      "autoPosted": true,
+      "image": "site/assets/news/g-796.svg",
+      "imageCaption": "Обложка рубрики: Ubisoft представила сюжетный трейлер Rayman Legends Retold",
       "imageCredit": "Games News · локальная обложка"
     },
     {

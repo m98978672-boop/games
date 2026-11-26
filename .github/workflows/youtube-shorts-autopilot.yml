@@ -1,13 +1,43 @@
+# The name is referenced by youtube-autopilot-monitor.yml; renaming it here
+# would silently stop failure monitoring, so the third category is documented in
+# the schedule comment instead.
 name: YouTube reviews autopilot (Shorts and long)
 
 on:
   schedule:
-    # Start at 04:00 and 08:00 Moscow, ahead of 08:00 and 12:00 publication.
-    - cron: "0 1,5 * * *"
-    # Start at 01:00 Moscow, ahead of 06:00 long-review publication.
-    - cron: "0 22 * * *"
+    # Owner-approved review cadence: two Shorts and one long per day.
+    - cron: "0 3 * * *" # Short at 09:00 Moscow
+    - cron: "0 7 * * *" # Short at 13:00 Moscow
+    - cron: "0 0 * * *" # Long review at 06:00 Moscow
+    # Gameplay: one a day at 18:00 Moscow, and only while a playthrough is open.
+    # The run checks readiness; a finished playthrough uploads nothing.
+    - cron: "0 14 * * *"
   workflow_dispatch:
     inputs:
+      review_capture_run:
+        description: "Publish the exact completed Steam review preview from this Actions run ID"
+        type: string
+        required: false
+      review_preview:
+        description: "Render one complete Steam game review without uploading"
+        type: boolean
+        default: false
+      adventure_preview:
+        description: "Record a finite story adventure instead of reviews (private draft)"
+        type: boolean
+        default: false
+      puzzle_episode:
+        description: "Record, edit and schedule a new independent Zuza puzzle episode"
+        type: boolean
+        default: false
+      adventure_capture_run:
+        description: "Optional completed private finite-game capture run ID; publish pilot only"
+        type: string
+        required: false
+      gameplay_episode:
+        description: "Record today's gameplay video (one a day, only while the playthrough is open)"
+        type: boolean
+        default: false
       publish_at:
         description: "Moscow time YYYY-MM-DD HH:MM; if rendering runs late, publish later once"
         type: string
@@ -39,6 +69,10 @@ concurrency:
 
 jobs:
   create-and-schedule:
+    # The gameplay firing is a different category: it must never render a review.
+    # Without this guard the 17:00 Moscow run would also start a review render
+    # and, on a busy day, publish a tenth video nobody asked for.
+    if: ${{ !inputs.check_topics_only && !inputs.review_capture_run && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview && !(github.event_name == 'schedule' && github.event.schedule == '0 14 * * *') }}
     runs-on: ubuntu-latest
     timeout-minutes: 150
     env:
@@ -47,9 +81,21 @@ jobs:
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids || 'false' }}
       MANUAL_PUBLISH_AT: ${{ inputs.publish_at || '' }}
       REVIEW_SCHEDULE: ${{ github.event.schedule || '' }}
+      REVIEW_PREVIEW: ${{ inputs.review_preview }}
       MANUAL_VIDEO_FORMAT: ${{ inputs.video_format || '' }}
       DATA_DIR: youtube-bot/data
+      # Never render with an unavailable or incomplete shared topic ledger.
+      REQUIRE_SHARED_TOPIC_HISTORY: "true"
     steps:
+      # The pipeline is cut by purpose, not by tool: each stage produces exactly
+      # the inputs the next one needs, and starts as soon as those inputs exist.
+      #
+      #   stage 1  ready to generate   -> checkout, inputs, caches, ffmpeg, voice
+      #   stage 2  ready to render     -> one review planned for a confirmed slot
+      #   stage 3  ready to publish    -> verified 1080p50 file
+      #   stage 4  publish             -> exactly one upload
+      #
+      # Stage 1: everything stage 2 needs.
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
@@ -63,12 +109,19 @@ jobs:
         run: python youtube-bot/schedule_policy.py --manual-publish-at "$MANUAL_PUBLISH_AT"
       - name: Require the explicit owner-approved audience value
         run: |
+          set -euo pipefail
+          python youtube-bot/review_workflow_format.py
+          # A value written to $GITHUB_ENV reaches only later steps, so pass the
+          # format to the same-step validator explicitly.
+          if [ "$REVIEW_PREVIEW" != "true" ]; then
+            VIDEO_FORMAT=$(grep -m1 '^VIDEO_FORMAT=' "$GITHUB_ENV" | cut -d= -f2-)
+            VIDEO_FORMAT="$VIDEO_FORMAT" python youtube-bot/review_batch.py --check
+          fi
           if [ "$YOUTUBE_MADE_FOR_KIDS" != "true" ] && [ "$YOUTUBE_MADE_FOR_KIDS" != "false" ]; then
             echo "::error::Choose the owner-approved audience value true or false in the workflow input."
             exit 1
           fi
-      - name: Set the Russian Piper model path
-        run: echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
+          echo "PIPER_MODEL_PATH=$RUNNER_TEMP/ru_RU-irina-medium.onnx" >> "$GITHUB_ENV"
       - name: Restore the local Qwen model cache
         uses: actions/cache@v6
         with:
@@ -150,3 +203,257 @@ jobs:
         with:
           path: youtube-bot/data/recent-games.json
           key: youtube-review-history-${{ github.run_id }}-${{ github.run_attempt }}
+
+  check-puzzle-episode:
+    if: github.event_name == 'workflow_dispatch' && inputs.puzzle_episode && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      CAPTURE_RUN: ${{ inputs.adventure_capture_run }}
+      PUBLISH_AT: ${{ inputs.publish_at }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Check publishing prerequisites before starting the recording
+        run: |
+          [[ "$GITHUB_REF" == refs/heads/main && -z "$CAPTURE_RUN" ]] || { echo '::error::Select main and do not set a previous capture run.'; exit 1; }
+          PYTHONPATH=youtube-bot python - <<'PYCODE'
+          import os
+          from datetime import datetime, timedelta, timezone
+          from schedule_policy import manual_publish_time
+          now = datetime.now(timezone.utc)
+          if manual_publish_time(os.environ['PUBLISH_AT'], now=now) < now + timedelta(hours=3):
+              raise SystemExit('Choose a Moscow publication slot at least 3 hours ahead for recording, retry and upload.')
+          PYCODE
+
+  record-puzzle-episode:
+    needs: check-puzzle-episode
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      puzzle_episode: true
+
+  record-adventure-preview:
+    if: github.event_name == 'workflow_dispatch' && inputs.adventure_preview && !inputs.review_capture_run && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      adventure_only: true
+
+  publish-adventure-pilot:
+    needs: record-puzzle-episode
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '' && inputs.adventure_capture_run != '45857021167' && inputs.adventure_capture_run != '45866506191' && inputs.adventure_capture_run != '45884136453')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      CAPTURE_RUN: ${{ inputs.puzzle_episode && github.run_id || inputs.adventure_capture_run }}
+      TRUSTED_LIGHTHOUSE_CAPTURE: 'true'
+      PUBLISH_AT: ${{ inputs.publish_at }}
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Fetch this episode from the same run
+        if: inputs.puzzle_episode
+        uses: actions/download-artifact@v4
+        with:
+          name: puzzle-private-${{ github.run_id }}
+          path: ${{ runner.temp }}/adventure-publish
+      - name: Verify capture provenance and fetch the private artifact
+        if: ${{ !inputs.puzzle_episode }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$CAPTURE_RUN" == 45841604660 ]]; then
+            echo '::error::This SuperTuxKart recording was withdrawn: it contains no verified gameplay. Nothing was uploaded.'
+            exit 1
+          fi
+          if [[ "$CAPTURE_RUN" == 45835569880 ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15124642887" | jq -e '
+              .name == "relay-3d-beta-45835569880" and .expired == false and .workflow_run.id == 45835569880
+              and .digest == "sha256:726c86da8b2480ee2b4d20bfd0c45e8884fc62ea169184be2fab7c39c2a55a01"' >/dev/null
+            gh run download "$CAPTURE_RUN" --name relay-3d-beta-45835569880 --dir "$RUNNER_TEMP/adventure-publish"
+            echo 'TRUSTED_RELAY_CAPTURE=true' >> "$GITHUB_ENV"
+            exit 0
+          fi
+          if [[ "$CAPTURE_RUN" == 45708093545 || "$CAPTURE_RUN" == lighthouse-revoice ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15065774746" | jq -e '
+              .name == "adventure-private-45708093545" and .expired == false and .workflow_run.id == 45708093545
+              and .digest == "sha256:4a80b5aba819c13881ecf6d51d1953075e8b61c5424fc9a6d68de5bd246cd044"' >/dev/null
+            gh run download 45708093545 --name adventure-private-45708093545 --dir "$RUNNER_TEMP/adventure-publish"
+            echo 'TRUSTED_LIGHTHOUSE_CAPTURE=true' >> "$GITHUB_ENV"
+            if [[ "$CAPTURE_RUN" == lighthouse-revoice ]]; then echo 'LIGHTHOUSE_REVOICE=true' >> "$GITHUB_ENV"; fi
+            exit 0
+          fi
+          [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || { echo "::error::A publication time and numeric capture run are required."; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e '
+            .conclusion == "success" and .path == ".github/workflows/adventure-experiment.yml"
+            and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null
+          artifact="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN/artifacts" | jq -er --arg id "$CAPTURE_RUN" '[.artifacts[] | select(.expired == false and (.name == ("puzzle-private-" + $id) or .name == ("adventure-private-" + $id))) | .name] | select(length == 1) | .[0]')"
+          # Rights are no longer a variable to tick: the release gate reads
+          # release.evidence.json and refuses an external game without a
+          # verified open licence. Our own games say "own" and need nothing.
+          gh run download "$CAPTURE_RUN" --name "$artifact" --dir "$RUNNER_TEMP/adventure-publish"
+      - name: Install media verifier
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Replace narration with Russian neural voice
+        if: env.LIGHTHOUSE_REVOICE == 'true'
+        run: |
+          set -euo pipefail
+          python -m pip install 'piper-tts==1.3.0'
+          export PIPER_MODEL_PATH="$RUNNER_TEMP/ru_RU-irina-medium.onnx"
+          base=https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx
+          curl --fail --location --retry 4 --max-time 180 "$base" -o "$PIPER_MODEL_PATH"
+          curl --fail --location --retry 4 --max-time 180 "$base.json" -o "$PIPER_MODEL_PATH.json"
+          python youtube-bot/adventure_draft.py "$RUNNER_TEMP/adventure-publish"
+      - name: Save the corrected edition before the upload
+        if: env.LIGHTHOUSE_REVOICE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-russian-voice-v2-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/adventure-publish/zuza-adventure-short.mp4
+            ${{ runner.temp }}/adventure-publish/zuza-adventure-short.ru.srt
+            ${{ runner.temp }}/adventure-publish/pilot.json
+          if-no-files-found: error
+      - name: Publish through the existing authorized uploader
+        env:
+          DATA_DIR: ${{ runner.temp }}/adventure-history
+        run: |
+          set -euo pipefail
+          folder="$RUNNER_TEMP/adventure-publish"
+          if jq -e '.beta_episode == true or (has("beta_episode") | not) and .short == true' "$folder/pilot.json" >/dev/null; then
+            source_run="$CAPTURE_RUN"
+            if [[ "$CAPTURE_RUN" == lighthouse-revoice ]]; then source_run=45708093545; fi
+            python youtube-bot/publish_adventure_short.py "$folder" "$source_run" "$PUBLISH_AT"
+          else
+            python youtube-bot/publish_adventure_draft.py "$folder" "$CAPTURE_RUN" "$PUBLISH_AT"
+          fi
+
+  publish-saved-review:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.review_capture_run != '' && !inputs.review_preview && !inputs.adventure_preview && !inputs.puzzle_episode && !inputs.check_topics_only && inputs.adventure_capture_run == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      CAPTURE_RUN: ${{ inputs.review_capture_run }}
+      PUBLISH_AT: ${{ inputs.publish_at }}
+      YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Download the selected private review from this repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$CAPTURE_RUN" =~ ^[0-9]+$ && -n "$PUBLISH_AT" ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e --arg repo "$GITHUB_REPOSITORY" '
+            .conclusion == "success" and .event == "workflow_dispatch"
+            and .path == ".github/workflows/youtube-shorts-autopilot.yml"
+            and .head_repository.full_name == $repo
+            and (.head_branch == "main" or .head_branch == "arena/7d9fee46-games")' >/dev/null
+          gh run download "$CAPTURE_RUN" --name "voiced-steam-review-$CAPTURE_RUN" --dir "$RUNNER_TEMP/saved-review"
+      - name: Verify and schedule the exact video through the existing uploader
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_review_preview.py "$RUNNER_TEMP/saved-review" "$CAPTURE_RUN" "$PUBLISH_AT"
+
+  publish-verified-stk:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_capture_run == '45866506191' && !inputs.puzzle_episode && !inputs.adventure_preview && !inputs.review_preview && !inputs.review_capture_run && !inputs.check_topics_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      YOUTUBE_MADE_FOR_KIDS: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Verify the finished race archive provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45866506191" | jq -e '
+            .head_sha == "bae342209915206960a1bfafe054806dd80ec52c"
+            and .path == ".github/workflows/supertuxkart-revoice.yml"
+            and .conclusion == "success" and .head_repository.full_name == .repository.full_name' >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45866506191/artifacts" | jq -e '
+            [.artifacts[] | select(.name == "supertuxkart-race-revoice-45866506191" and .expired == false)] | length == 1' >/dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45866506191
+          name: supertuxkart-race-revoice-45866506191
+          path: ${{ runner.temp }}/stk-verified
+      - name: Recheck the race and queue publication
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_verified_stk.py "$RUNNER_TEMP/stk-verified" "45866506191"
+
+  publish-verified-maze:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_capture_run == '45884136453' && !inputs.puzzle_episode && !inputs.adventure_preview && !inputs.review_preview && !inputs.review_capture_run && !inputs.check_topics_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    env:
+      YOUTUBE_MADE_FOR_KIDS: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Verify the finished race archive provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45884136453" | jq -e '
+            .head_sha == "20ceb97247eca7873f90d38ba6feeb12632ffe87"
+            and .path == ".github/workflows/lost-maze-3d.yml"
+            and .conclusion == "success" and .head_repository.full_name == .repository.full_name' >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/45884136453/artifacts" | jq -e '
+            [.artifacts[] | select(.name == "lost-maze-3d-45884136453" and .expired == false and .id == 15148608293 and .digest == "sha256:65d84dc09d67681eb744cae92bb11a3385549b97bc4cb65ef5f104f030d8a660")] | length == 1' >/dev/null
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45884136453
+          name: lost-maze-3d-45884136453
+          path: ${{ runner.temp }}/maze-verified
+      - name: Recheck the race and queue publication
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          python youtube-bot/publish_verified_maze.py "$RUNNER_TEMP/maze-verified"

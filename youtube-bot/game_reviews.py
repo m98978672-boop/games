@@ -5,8 +5,10 @@ rendered description carries the URLs so viewers can copy and inspect them.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+from decimal import Decimal
 import sys
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -28,6 +30,20 @@ feature_id из внешних источников). Не выдумывай и
 Не выбирай игру из recent_game_ids, если есть другие варианты. Верни только JSON по схеме:
 {"schema_version":1,"game_id":"id из списка Steam","selected_feature_ids":["точные feature-id","точные feature-id"],"possible_minus":"короткая осторожная гипотеза до 100 символов","minus_feature_id":"точный feature-id","idea_score":7,"hook":"короткий крючок до 100 символов"}
 """
+
+
+
+def parse_idea_score(raw):
+    if type(raw) not in (int, float, str) or not re.fullmatch(r'(?:[1-9]|10)(?:[.,]\d)?', str(raw).strip()):
+        raise ValueError('idea_score must be from 1 to 10 with at most one decimal place; refusing to invent a rating')
+    value = Decimal(str(raw).strip().replace(',', '.'))
+    if not Decimal(1) <= value <= Decimal(10):
+        raise ValueError('idea_score must be from 1 to 10; refusing to invent a rating')
+    return int(value) if value == value.to_integral_value() else float(value)
+
+
+def score_label(raw):
+    return f'{parse_idea_score(raw):.1f}'.replace('.', ',')
 
 
 def _russian_ratio(text: str) -> float:
@@ -165,15 +181,7 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     if minus_feature_id not in feature_ids:
         raise ValueError("possible minus must cite an existing catalog feature")
 
-    raw_score = data.get("idea_score")
-    if type(raw_score) is int:
-        score = raw_score
-    elif isinstance(raw_score, str) and re.fullmatch(r"[0-9]{1,2}", raw_score.strip()):
-        score = int(raw_score.strip())
-    else:
-        raise ValueError("idea_score must be an integer from 1 to 10")
-    if not 1 <= score <= 10:
-        raise ValueError("idea_score must be an integer from 1 to 10")
+    score = parse_idea_score(data.get("idea_score"))
     hook = str(data.get("hook", "")).strip()
     if not 8 <= len(hook) <= 100 or _russian_ratio(hook) < 0.5:
         raise ValueError("hook must be 8–100 characters of Russian narration")
@@ -185,8 +193,8 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
     if _russian_ratio(possible_minus) < 0.5:
         raise ValueError("possible_minus must be Russian narration")
     recent = set(recent_game_ids)
-    if game_id in recent and (set(catalog) - recent):
-        raise ValueError("Qwen repeated a recently reviewed game while alternatives remain")
+    if game_id in recent:
+        raise ValueError("Qwen repeated a recently reviewed game")
 
     pros = [feature_ids[str(item)] for item in selected]
     minus_evidence = feature_ids[minus_feature_id]
@@ -213,7 +221,7 @@ def validate_review(raw: str | dict[str, Any], games: Iterable[Mapping[str, Any]
         "screenshots": list(game.get("screenshots", [])),
         "source_facts": dict(game.get("source_facts", {})),
         "evidence": {f"{game_id}-f{i + 1}": str(feature) for i, feature in enumerate(game["features"][:12])},
-        "title": f"ИИ-разбор: {game['title']} — плюс и возможный минус"[:100],
+        "title": make_review_title(game["title"]),
         "hook": hook,
         "pros": pros,
         "possible_minus": possible_minus,
@@ -235,9 +243,11 @@ def _catalog_only_fallback(
         data = {}
     catalog = {str(game["id"]): game for game in games}
     recent = set(recent_game_ids)
-    fallback_game = next((game for game in games if str(game["id"]) not in recent), games[0])
+    fallback_game = next((game for game in games if str(game["id"]) not in recent), None)
+    if fallback_game is None:
+        raise ValueError("No unused game available")
     game = catalog.get(str(data.get("game_id", "")), fallback_game)
-    if str(game["id"]) in recent and any(str(item["id"]) not in recent for item in games):
+    if str(game["id"]) in recent:
         game = fallback_game
     game_id = str(game["id"])
     features = [str(feature) for feature in game.get("features", [])[:12]]
@@ -258,15 +268,7 @@ def _catalog_only_fallback(
     if minus_id not in feature_ids:
         minus_id = valid_proposed[0]
 
-    raw_score = data.get("idea_score")
-    if type(raw_score) is int:
-        score = raw_score
-    elif isinstance(raw_score, str) and re.fullmatch(r"[0-9]{1,2}", raw_score.strip()):
-        score = int(raw_score.strip())
-    else:
-        raise ValueError("No valid model assessment; refusing to invent a numeric rating")
-    if not 1 <= score <= 10:
-        raise ValueError("No valid model assessment; refusing to invent a numeric rating")
+    score = parse_idea_score(data.get("idea_score"))
 
     hook = str(data.get("hook", "")).strip()
     if not 8 <= len(hook) <= 100 or _russian_ratio(hook) < 0.5:
@@ -344,15 +346,17 @@ def generate_game_review(games: Iterable[Mapping[str, Any]], *, recent_game_ids:
         if chosen is None or len(chosen.get('features', [])) < 2:
             raise ValueError('No eligible game for score recovery')
         score_messages = [
-            {'role':'system','content':'Оцени идею игры исключительно по описанию, не утверждая, что играл. Ответь одним целым числом от 1 до 10 без пояснений и знаков.'},
+            {'role':'system','content':'Оцени идею игры исключительно по описанию, не утверждая, что играл. Ответь числом от 1 до 10, с максимум одним десятичным знаком, без пояснений.'},
             {'role':'user','content':json.dumps({'game':str(chosen.get('title','')), 'facts':chosen['features'][:6]},ensure_ascii=False)},
         ]
         score = None
         for _ in range(2):
             answer = generate_with_qwen(score_messages, max_new_tokens=12).strip()
-            if re.fullmatch(r'(?:10|[1-9])', answer):
-                score = int(answer)
+            try:
+                score = parse_idea_score(answer)
                 break
+            except ValueError:
+                continue
         if score is None:
             raise ValueError('Model could not provide an unambiguous score; no upload')
         gid = str(chosen['id'])
@@ -434,7 +438,8 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
                 "Ты пишешь длинный русскоязычный видеообзор игры только по предоставленным фактам Steam. "
                 "Ведущий уже поздоровался и назвал игру: не повторяй приветствие, сразу переходи к сути. "
                 "Затем объясни, что игра предлагает и что в ней нужно делать только по описанию источника. "
-                "Разнообразь длину фраз и переходы; избегай канцелярита и повторяющихся оговорок. "
+                "Пиши грамотно, с естественной пунктуацией и законченными предложениями, чтобы синтезатор мог выразительно читать с уместными паузами и интонацией. Незнакомые названия не искажай. Не обрывай мысль. "
+                "Разнообразь длину фраз и переходы; избегай канцелярита и повторяющихся оговорок. Не задавай зрителю навязчивых вопросов. "
                 "Далее обсуждай конкретные особенности и возможные ограничения, затем итог. "
                 "Не говори, что играл, не выдумывай механику, сюжет, производительность или отзывы. "
                 "Отделяй факты из источника от субъективного мнения словами «по моему впечатлению от описания». "
@@ -490,7 +495,7 @@ def generate_long_narration(review: Mapping[str, Any]) -> list[dict[str, str]]:
             if sum(len(scene["dialogue"]) for scene in clean) < 2400:
                 raise ValueError("long narration is too short to count as a full video")
             clean[-1]["dialogue"] += _source_verdict(review)
-            clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
+            clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {score_label(review['idea_score'])}/10"
             return with_store_context(clean, review)
         except ValueError as exc:
             last_error = exc
@@ -513,7 +518,7 @@ def fit_complete_chapter(text: str, *, minimum: int = 220, maximum: int = 320) -
 
 def _source_verdict(review: Mapping[str, Any]) -> str:
     """Add a conclusion without clipping the model's final sentence or a source fact."""
-    return f" Итог по источникам: оценка идеи по описанию — {review['idea_score']} из 10. Лично я не играл."
+    return f" Итог по источникам: оценка идеи по описанию — {score_label(review['idea_score'])} из 10. Лично я не играл."
 
 
 
@@ -588,7 +593,7 @@ def _generate_long_in_batches(review: Mapping[str, Any]) -> list[dict[str, str]]
         print("Qwen chapter total too short; using clearly labelled source-based template.", file=sys.stderr)
         return _source_template_long_narration(review, reason="chapters too short")
     clean[-1]["dialogue"] += _source_verdict(review)
-    clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
+    clean[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {score_label(review['idea_score'])}/10"
     return with_store_context(clean, review)
 
 
@@ -627,8 +632,8 @@ def _source_template_long_narration(review: Mapping[str, Any], *, reason: str = 
         scenes.append({"fact_id": fact_id, "dialogue": prefix + paragraph,
                        "visual": "ОПИСАНИЕ ИЗ ИСТОЧНИКА", "generation": "source-template", "fallback_reason": reason})
     summary = speech_excerpt(str(review["pros"][0]), 50)
-    scenes[-1]["dialogue"] += f" Итог по источникам: {summary}. Оценка идеи — {review['idea_score']} из 10. Лично я не играл."
-    scenes[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {review['idea_score']}/10"
+    scenes[-1]["dialogue"] += f" Итог по источникам: {summary}. Оценка идеи — {score_label(review['idea_score'])} из 10. Лично я не играл."
+    scenes[-1]["visual"] = f"ИТОГ ПО ИСТОЧНИКАМ · {score_label(review['idea_score'])}/10"
     return with_store_context(scenes, review)
 
 
@@ -659,7 +664,9 @@ def steam_release_note(review: Mapping[str, Any]) -> str:
     if (not isinstance(value, str) or not value.strip() or len(value) > 80
             or re.search(r"https?://|www\.|[<>\r\n]", value, re.I)):
         return "Дата выхода не подтверждена; проверьте страницу игры."
-    date = speech_excerpt(value.strip(), 60)
+    date = value.strip()
+    if len(date) > 60:
+        return "Дата выхода не подтверждена; проверьте страницу игры."
     if coming is True:
         return f"По Steam, выход ожидается: {date}. Дата может измениться."
     if coming is False:

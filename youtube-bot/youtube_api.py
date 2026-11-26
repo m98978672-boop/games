@@ -5,7 +5,7 @@ import re
 from datetime import date, timedelta
 from typing import Any, Mapping
 
-from audience import TopicMetrics, metrics_from_analytics_rows
+from audience import PILOT_TOPICS, TopicMetrics, metrics_from_analytics_rows
 
 TOPIC_TAG_PREFIX = "bot-topic:"
 
