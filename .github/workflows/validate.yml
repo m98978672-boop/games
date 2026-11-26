@@ -67,6 +67,15 @@ jobs:
             youtube-bot/tests/test_adventure_duration.py \
             youtube-bot/tests/test_review_preview.py \
             youtube-bot/tests/test_verify_review_artifact.py \
+            youtube-bot/tests/test_adventure_personality.py \
+            youtube-bot/tests/test_minecraft_bridge.py \
+            youtube-bot/tests/test_prepare_kvenya_adapter.py \
+            youtube-bot/tests/test_prepare_voxel_recreation.py \
+            youtube-bot/tests/test_puzzle_learning.py \
+            youtube-bot/tests/test_puzzle_planner.py \
+            youtube-bot/tests/test_voxel_supervisor.py \
+            youtube-bot/tests/test_voxel_timing.py \
+            youtube-bot/tests/test_voxel_voiceover.py \
             youtube-bot/tests/test_feedback_youtube.py \
             youtube-bot/tests/test_playthrough_continue.py \
             youtube-bot/tests/test_gameplay_reflex.py \

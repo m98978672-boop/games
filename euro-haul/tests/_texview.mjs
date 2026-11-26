@@ -3,7 +3,7 @@ import { JSDOM } from 'jsdom';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { pretendToBeVisual: true });
 global.window = dom.window; global.document = dom.window.document;
 import { createRequire } from 'node:module';
-const { createCanvas } = createRequire(import.meta.url)('/tmp/node_modules/@napi-rs/canvas');
+const { createCanvas } = createRequire(import.meta.url)('@napi-rs/canvas');
 dom.window.HTMLCanvasElement.prototype.getContext = function () { if (!this.__c) this.__c = createCanvas(this.width||300,this.height||150); return this.__c.getContext('2d'); };
 Object.defineProperty(dom.window.HTMLCanvasElement.prototype, 'width', { get(){return this.__w||300;}, set(v){ this.__w=v; if(this.__c) this.__c.width=v; } });
 Object.defineProperty(dom.window.HTMLCanvasElement.prototype, 'height', { get(){return this.__h||150;}, set(v){ this.__h=v; if(this.__c) this.__c.height=v; } });

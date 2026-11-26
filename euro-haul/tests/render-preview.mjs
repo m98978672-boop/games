@@ -22,6 +22,10 @@ function fakeContext() {
     createRadialGradient: () => gradient,
     createPattern: () => null,
     measureText: () => ({ width: 10 }),
+    // The material builder writes into a real pixel buffer; a mock that returns
+    // undefined here hides the code being tested rather than standing in for it.
+    createImageData: (w, h) => ({ data: new Uint8ClampedArray(Math.max(1, w * h * 4)) }),
+    getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(Math.max(1, w * h * 4)) }),
   };
   return new Proxy(target, {
     get(obj, prop) {
