@@ -8,7 +8,7 @@ import wave
 from pathlib import Path
 
 from gameplay_voiceover import probe_capture
-from viewport_translation import cues as translation_cues, filters as translation_filters
+from viewport_translation import cues as translation_cues, filters as translation_filters, prepare as prepare_translation
 from adventure_personality import SHORT_SECONDS, short_comment
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
@@ -18,7 +18,7 @@ MAX_CUT_FRACTION = 0.25
 ORDINAL = {'CHOICEONE': 'первый', 'CHOICETWO': 'второй', 'CHOICETHREE': 'третий'}
 
 
-def plan(trace):
+def plan(trace, *, translation_intervals=None):
     duration = float(trace['duration_seconds'])
     if trace.get('game') == 'Viewport Voyager':
         lines = [(0.0, 'В этой игре окно браузера — часть головоломки.')]
@@ -40,7 +40,7 @@ def plan(trace):
         won = trace.get('game_reported_victory') is True
         lines.append((previous, 'Игра подтвердила прохождение.' if won else 'До финала в этой попытке не дошёл.'))
         spoken = set()
-        for stamp, _, _, message in translation_cues(trace):
+        for stamp, _, _, message in (translation_cues(trace) if translation_intervals is None else translation_intervals):
             if message not in spoken and (not won or message != 'Игра пройдена!'):
                 lines.append((stamp, message))
                 spoken.add(message)
@@ -107,9 +107,10 @@ def build(folder):
     trace = json.loads((folder / 'trace.json').read_text(encoding='utf-8'))
     raw = folder / 'recording.webm'
     trace['duration_seconds'] = probe_capture(raw)
-    duration, lines, cuts, won = plan(trace)
-    short = trace.get('short') is True
     viewport = trace.get('game') == 'Viewport Voyager'
+    intervals, translation_stats = prepare_translation(trace) if viewport else (None, None)
+    duration, lines, cuts, won = plan(trace, translation_intervals=intervals)
+    short = trace.get('short') is True
     base = 'zuza-viewport-beta' if viewport else 'zuza-adventure-short' if short else ('zuza-pilot' if won else 'zuza-part-01')
     puzzle = trace.get('game') == '16 Puzzle'
     url = PUZZLE_URL if puzzle else GAME_URL
@@ -149,7 +150,7 @@ def build(folder):
         # All gameplay drafts use the same cutoff, irrespective of the game.
         short = max(video_seconds, cursor) <= SHORT_SECONDS
         portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
-        translated = translation_filters(trace, temp) if viewport else ''
+        translated = translation_filters(trace, temp, intervals=intervals, stats=translation_stats) if viewport else ''
         panel = ',' + translated if translated else ''
         filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{portrait}[v]']
         # The clips never overlap. Assemble one PCM track to avoid opening
@@ -184,7 +185,7 @@ def build(folder):
     report = {'short': short, 'video_format': 'short' if short else 'long', 'beta_episode': trace.get('short') is True and not puzzle and not viewport, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
         'cuts_seconds': cuts, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
-        'boards_won': trace.get('boards_won'),
+        'translation': translation_stats, 'boards_won': trace.get('boards_won'),
         'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay > MIN_EDITED_GAMEPLAY_SECONDS, 'commentary': [text for _, text in lines], 'published': False}
     (folder / 'pilot.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     print('::notice title=Edited pilot::' + json.dumps({k: v for k, v in report.items() if k not in {'commentary', 'cuts_seconds'}}), flush=True)
