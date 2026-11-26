@@ -80,7 +80,7 @@ class RenderQualityTests(unittest.TestCase):
                  patch.object(renderer, 'render_frame'), patch.object(renderer, 'SOURCE_FPS', 1):
                 with self.assertRaisesRegex(ValueError, 'fallback exceeds'):
                     renderer.render_short(script, root / 'out.mp4', root / 'work')
-        self.assertIn('Оценка идеи по описанию — 7 из 10. Я не играла.', heard)
+        self.assertIn('Оценка идеи по описанию — 7,0 из 10. Я не играла.', heard)
 
     def test_long_review_batches_both_stages_without_reordering(self):
         from threading import Barrier

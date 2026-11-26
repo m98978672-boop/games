@@ -1,0 +1,13 @@
+name: Last Signal story playthrough
+on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/lighthouse-playthrough.yml, 'collection/lighthouse-relay/**']
+permissions:
+  contents: read
+jobs:
+  play:
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      lighthouse: true
+      adventure_only: true

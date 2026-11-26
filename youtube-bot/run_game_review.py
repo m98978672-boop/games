@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from review_slot_state import OCCUPIED_SLOT_EXIT, OccupiedReviewSlot
 import json
 import os
 import re
@@ -82,7 +83,7 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
         else:
             missing, _ = assess([requested], jobs)
             if not missing:
-                raise RuntimeError(
+                raise OccupiedReviewSlot(
                     f"Requested publication slot {requested.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow "
                     "already has a video; no review was rendered or uploaded. Choose another time. "
                     "Nothing was uploaded, so YouTube Studio does not need checking."
@@ -150,6 +151,17 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
             print("The reserved slot passed during rendering; moved once to the next regular "
                   f"{video_format} slot {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow. "
                   "No recurring times changed.", file=sys.stderr)
+    if not preview:
+        # Rendering may take hours. Re-read the queue for the final slot, which
+        # may have changed or been booked meanwhile. This is advisory, not an
+        # atomic reservation: the publisher must still enforce its uniqueness.
+        try:
+            latest_jobs = read_queue()
+        except Exception as exc:  # noqa: BLE001 - never guess after rendering
+            raise QueueStateUnknown("Could not recheck the publication queue after rendering; no upload was started.") from exc
+        missing, _ = assess([scheduled], latest_jobs)
+        if not missing:
+            raise RuntimeError("Final publication slot already has a nearby scheduled video; no upload was started.")
     source_description = youtube_description(review)
     description = (
         source_description
@@ -209,6 +221,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         run(args.output, video_format=args.format, preview=args.preview)
+    except OccupiedReviewSlot as exc:
+        print(f"Game-review cycle stopped safely: {exc}", file=sys.stderr)
+        raise SystemExit(OCCUPIED_SLOT_EXIT) from None
     except (QueueStateUnknown, UncertainSlot) as exc:
         print(f"Queue state uncertain; stop and check YouTube Studio: {exc}", file=sys.stderr)
         raise SystemExit(75)

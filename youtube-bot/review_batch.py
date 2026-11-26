@@ -12,6 +12,7 @@ Nothing is rendered or uploaded in that case.
 from __future__ import annotations
 
 import argparse
+from review_slot_state import OCCUPIED_SLOT_EXIT, OccupiedReviewSlot
 import json
 import os
 import subprocess
@@ -20,7 +21,7 @@ import time
 from datetime import timedelta
 from pathlib import Path
 
-from schedule_policy import CHANNEL_TZ, manual_publish_time, next_publish_slot, served_slot
+from schedule_policy import CHANNEL_TZ, manual_publish_time, next_publish_slot, served_slot, slot_sequence
 LIMITS = {"short": 5, "long": 2}
 # Batch rendering can take hours; the first automatic slot keeps this much lead.
 BATCH_LEAD = timedelta(hours=8)
@@ -66,10 +67,9 @@ def plan(count: int, video_format: str, start: str, *, now=None) -> list[str]:
     # generous lead, but never assume it is free: the publisher must reserve it.
     first = (manual_publish_time(text, now=now) if text else
              next_publish_slot(now, video_format=video_format, min_lead=BATCH_LEAD)).astimezone(CHANNEL_TZ)
-    if video_format == 'short':
-        times = (first + timedelta(days=index // 2, hours=4 * (index % 2)) for index in range(count))
-    else:
-        times = (first + timedelta(days=index) for index in range(count))
+    # Walk the real slots instead of arithmetic: "index // 2" and "+4 hours"
+    # were a copy of the old two-a-day cadence and silently ignored new times.
+    times = slot_sequence(first, video_format, count)
     return [slot.strftime("%Y-%m-%d %H:%M") for slot in times]
 
 
@@ -103,6 +103,8 @@ def _render(index: int, publish_at: str, video_format: str, output_dir: Path) ->
                                  "--format", video_format], env=env)
         if result.returncode == 0:
             return output
+        if result.returncode == OCCUPIED_SLOT_EXIT:
+            raise OccupiedReviewSlot(publish_at)
         if result.returncode == 75:
             raise UncertainBatchQueue("Publication queue state is uncertain; stop the batch and check YouTube Studio before retrying.")
         if attempt == 0:
@@ -164,6 +166,10 @@ def run_queue(times: list[str], video_format: str, output_dir: Path) -> tuple[in
               f"requested MSK {publish_at or 'automatic'}", flush=True)
         try:
             output = _render(index, publish_at, video_format, output_dir)
+        except OccupiedReviewSlot:
+            skipped.append(f"{publish_at}: publication slot already occupied")
+            print(f"::warning::Slot {publish_at} is occupied; skipped without retry or upload.", flush=True)
+            continue
         except UncertainBatchQueue:
             raise
         except RuntimeError:
@@ -284,6 +290,11 @@ def main(argv: list[str] | None = None) -> int:
                     output.write(f"- skipped before upload: {item}\n")
         except OSError:
             pass
+    if not published and times and len(skipped) == len(times) and all(
+        item.endswith(": publication slot already occupied") for item in skipped
+    ):
+        print("All requested slots already have videos. Nothing new was uploaded; choose other times for new videos.", flush=True)
+        return 0
     if not published and times:
         print("::error::No review from this queue was uploaded; every item was skipped before upload.", flush=True)
         return 1

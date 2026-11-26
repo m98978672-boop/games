@@ -1,11 +1,27 @@
+# The name is referenced by youtube-autopilot-monitor.yml; renaming it here
+# would silently stop failure monitoring, so the third category is documented in
+# the schedule comment instead.
 name: YouTube reviews autopilot (Shorts and long)
 
 on:
   schedule:
-    # Start at 04:00 and 08:00 Moscow, ahead of 08:00 and 12:00 publication.
-    - cron: "0 1,5 * * *"
-    # Start at 01:00 Moscow, ahead of 06:00 long-review publication.
-    - cron: "0 22 * * *"
+    # Three categories. Shorts and long reviews each publish four times a day;
+    # gameplay publishes at most once, and only while a playthrough is open.
+    # Each review run fires exactly three hours before its slot, so a slow run
+    # still makes the slot and no firing crosses midnight in Moscow.
+    # Shorts: 09:00, 13:00, 17:00, 21:00 Moscow -> 06:00, 10:00, 14:00, 18:00.
+    - cron: "0 3 * * *"
+    - cron: "0 7 * * *"
+    - cron: "0 11 * * *"
+    - cron: "0 15 * * *"
+    # Long: 06:00, 11:00, 15:00, 19:00 Moscow -> 03:00, 08:00, 12:00, 16:00.
+    - cron: "0 0 * * *"
+    - cron: "0 5 * * *"
+    - cron: "0 9 * * *"
+    - cron: "0 13 * * *"
+    # Gameplay: one a day at 18:00 Moscow, and only while a playthrough is open.
+    # The run checks readiness; a finished playthrough uploads nothing.
+    - cron: "0 14 * * *"
   workflow_dispatch:
     inputs:
       review_capture_run:
@@ -29,7 +45,7 @@ on:
         type: string
         required: false
       publish_at:
-        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 2 Shorts a day / 1 long a day)"
+        description: "Moscow time YYYY-MM-DD HH:MM; blank picks regular slots (batch: 8h lead, 4 Shorts a day / 4 long a day)"
         type: string
         required: false
       made_for_kids:
@@ -66,7 +82,10 @@ permissions:
 concurrency:
   # Separate lanes can run in parallel, but GitHub retains at most one pending
   # run per group. Submit one batch per lane and wait for it to finish.
-  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 22 * * *' && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.review_preview && 'review-preview') || (inputs.adventure_preview && 'adventure-preview') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
+  # One lane per format, so a long review never waits behind a Short. GitHub
+  # keeps at most one pending run per group, which is why the batch input is
+  # capped; separate firing times never share a lane at the same moment.
+  group: youtube-review-${{ (github.event_name == 'schedule' && github.event.schedule == '0 14 * * *' && 'gameplay') || (github.event_name == 'schedule' && contains(fromJSON('["0 0 * * *","0 5 * * *","0 9 * * *","0 13 * * *"]'), github.event.schedule) && 'long') || (github.event_name == 'schedule' && 'short') || (inputs.review_preview && 'review-preview') || (inputs.adventure_preview && 'adventure-preview') || (inputs.puzzle_episode && 'puzzle-episode') || inputs.video_format }}
   cancel-in-progress: false
 
 jobs:
@@ -76,10 +95,19 @@ jobs:
     if: github.event_name == 'schedule' && github.repository == 'm98978672-boop/games'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      # The plan is written to an issue, because Actions logs are not readable
+      # from a phone and the owner must not have to dig for the schedule.
+      issues: write
     env:
       REVIEW_SCHEDULE: ${{ github.event.schedule || '' }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
@@ -88,8 +116,94 @@ jobs:
           set -euo pipefail
           # Read-only: lists planned slots, their state and the exact start
           # command for every missing one. It never renders or uploads.
-          python youtube-bot/reconcile_schedule.py | tee "$RUNNER_TEMP/slots.md"
+          python youtube-bot/reconcile_schedule.py > "$RUNNER_TEMP/slots.md" 2>&1 || true
           cat "$RUNNER_TEMP/slots.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish the plan to the pinned issue
+        run: |
+          set -euo pipefail
+          # Strip runner protocol lines. "::add-mask::<token>" is a command for
+          # the runner, not Markdown; pasting it into an issue would print a
+          # credential in the clear.
+          grep -v -e '^::' -e '^eyJ' "$RUNNER_TEMP/slots.md" > "$RUNNER_TEMP/plan.md" || true
+          if [ ! -s "$RUNNER_TEMP/plan.md" ]; then
+            printf '## Что выйдет в ближайшие дни\n\nОчередь прочитать не удалось. Ничего не запущено.\n' \
+              > "$RUNNER_TEMP/plan.md"
+          fi
+          {
+            cat "$RUNNER_TEMP/plan.md"
+            echo
+            echo '---'
+            echo "Обновлено: $(TZ=Europe/Moscow date '+%d.%m %H:%M') МСК."
+            echo 'Это только чтение: доска ничего не рендерит и не загружает.'
+          } > "$RUNNER_TEMP/issue.md"
+          number=$(gh issue list --state open --limit 100 --json number,title \
+            --jq '.[] | select(.title == "План видео") | .number' | head -n 1)
+          if [ -z "$number" ]; then
+            gh issue create --title "План видео" --body-file "$RUNNER_TEMP/issue.md" > /dev/null
+            echo "Доска создана." >> "$GITHUB_STEP_SUMMARY"
+          else
+            gh issue edit "$number" --body-file "$RUNNER_TEMP/issue.md"
+            echo "Доска #$number обновлена." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  gameplay-gate:
+    # The owner's rule, checked before an hour of capture is spent: a gameplay
+    # video is at most one a day, only while the playthrough is open, and a cut
+    # under three minutes is a Short. This job decides; it never records.
+    if: github.event_name == 'schedule' && contains(fromJSON('["0 14 * * *"]'), github.event.schedule)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Decide today's gameplay publication
+        id: decide
+        run: |
+          set -euo pipefail
+          # An unreadable playthrough state stops here: treating a finished game
+          # as open would restart a playthrough the AI already completed.
+          python youtube-bot/gameplay_today.py --game adventure > "$RUNNER_TEMP/gameplay.txt" 2>&1 || {
+            cat "$RUNNER_TEMP/gameplay.txt" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
+          cat "$RUNNER_TEMP/gameplay.txt" | tee -a "$GITHUB_STEP_SUMMARY" | grep -v -e '^::' -e '^eyJ' || true
+          publish=$(grep -m1 '^publish=' "$RUNNER_TEMP/gameplay.txt" | cut -d= -f2-)
+          kind=$(grep -m1 '^video_kind=' "$RUNNER_TEMP/gameplay.txt" | cut -d= -f2-)
+          when=$(grep -m1 '^publish_at=' "$RUNNER_TEMP/gameplay.txt" | cut -d= -f2-)
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "video_kind=$kind" >> "$GITHUB_OUTPUT"
+          echo "publish_at=$when" >> "$GITHUB_OUTPUT"
+      - name: Explain the decision in plain words
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.decide.outputs.publish }}" != "true" ]; then
+            echo "Сегодня игрового видео нет — и это правильно. Ничего не записано." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          case "${{ steps.decide.outputs.video_kind }}" in
+            short) shelf="Shorts (запись короче трёх минут)";;
+            long)  shelf="полное видео (три минуты и больше)";;
+            *)     echo "::error::Неизвестная категория игрового видео."; exit 1;;
+          esac
+          {
+            echo "### Игровое видео на сегодня"
+            echo
+            echo "- Категория: $shelf"
+            echo "- Время выхода: ${{ steps.decide.outputs.publish_at }} МСК"
+            echo
+            echo "Запись запускается отдельной джобой прохождения; здесь только решение."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   check-topic-history:
     if: github.event_name == 'workflow_dispatch' && inputs.check_topics_only
@@ -104,7 +218,10 @@ jobs:
         run: PYTHONPATH=youtube-bot python -c 'from publish_to_supabase import _supabase_post; r = _supabase_post("/autopilot/topic-history", {}); assert r.get("version") == 1 and isinstance(r.get("game_ids"), list); print("History available:", len(r["game_ids"]), "topics")'
 
   create-and-schedule:
-    if: ${{ !inputs.check_topics_only && !inputs.review_capture_run && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview }}
+    # The gameplay firing is a different category: it must never render a review.
+    # Without this guard the 17:00 Moscow run would also start a review render
+    # and, on a busy day, publish a tenth video nobody asked for.
+    if: ${{ !inputs.check_topics_only && !inputs.review_capture_run && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview && !(github.event_name == 'schedule' && github.event.schedule == '0 14 * * *') }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -320,6 +437,7 @@ jobs:
       id-token: write
     env:
       CAPTURE_RUN: ${{ inputs.puzzle_episode && github.run_id || inputs.adventure_capture_run }}
+      TRUSTED_LIGHTHOUSE_CAPTURE: 'true'
       PUBLISH_AT: ${{ inputs.publish_at }}
       YOUTUBE_MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
       ADVENTURE_RECORDING_RIGHTS_VERIFIED: ${{ vars.ADVENTURE_RECORDING_RIGHTS_VERIFIED }}
@@ -342,7 +460,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || exit 1
+          if [[ "$CAPTURE_RUN" == 45708093545 ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15065774746" | jq -e '
+              .name == "adventure-private-45708093545" and .expired == false and .workflow_run.id == 45708093545
+              and .digest == "sha256:4a80b5aba819c13881ecf6d51d1953075e8b61c5424fc9a6d68de5bd246cd044"' >/dev/null
+            gh run download "$CAPTURE_RUN" --name adventure-private-45708093545 --dir "$RUNNER_TEMP/adventure-publish"
+            echo 'TRUSTED_LIGHTHOUSE_CAPTURE=true' >> "$GITHUB_ENV"
+            exit 0
+          fi
+          [[ -n "$PUBLISH_AT" && "$CAPTURE_RUN" =~ ^[0-9]+$ ]] || { echo "::error::A publication time and numeric capture run are required."; exit 1; }
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CAPTURE_RUN" | jq -e '
             .conclusion == "success" and .path == ".github/workflows/adventure-experiment.yml"
             and .head_branch == "arena/7d9fee46-games" and .head_repository.full_name == "m98978672-boop/games"' >/dev/null

@@ -1,0 +1,25 @@
+name: GTA VI long editorial draft
+on:
+  push:
+    branches: [arena/7d9fee46-games]
+    paths: [.github/workflows/gta-vi-editorial.yml, 'youtube-bot/editorial/**']
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng fonts-dejavu-core
+          python youtube-bot/editorial/render_gta_vi.py "$RUNNER_TEMP/editorial"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gta-vi-editorial-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/editorial/gta-vi-editorial.mp4
+            youtube-bot/editorial/gta-vi.txt
+          if-no-files-found: error

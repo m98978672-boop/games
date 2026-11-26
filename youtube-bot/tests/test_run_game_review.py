@@ -325,6 +325,33 @@ class RunReviewTests(unittest.TestCase):
         self.assertTrue(result["metadata"]["manual_time_adjusted"])
         self.assertEqual(result["metadata"]["publish_at"], "2026-11-25T09:00:00Z")
 
+    def test_queue_changes_during_render_stop_before_result(self):
+        from review_slot_state import QueueStateUnknown, UncertainSlot
+        game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
+        review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7,
+                  "sources": [], "screenshots": [], "pros": game["features"], "possible_minus": "Возможно, не всем."}
+        reserved = datetime(2026, 11, 25, 5, tzinfo=timezone.utc)
+        delayed = datetime(2026, 11, 25, 9, tzinfo=timezone.utc)
+        for second, exception in [
+            ([{'publish_at': '2026-11-25T09:00:30Z', 'status': 'scheduled', 'video_id': 'abc'}], RuntimeError),
+            ([{'publish_at': '2026-11-25T09:00:00Z', 'status': 'processing', 'video_id': None}], UncertainSlot),
+            (RuntimeError('unreachable'), QueueStateUnknown),
+        ]:
+            with self.subTest(second=second), tempfile.TemporaryDirectory() as temp, \
+                 patch.dict('os.environ', {'MANUAL_PUBLISH_AT': ''}), \
+                 patch.object(run_game_review, 'DATA_DIR', Path(temp)), \
+                 patch('publish_to_supabase.read_queue', side_effect=[[], second]), \
+                 patch.object(run_game_review, 'reserve_slot_before_render', return_value=reserved), \
+                 patch.object(run_game_review, 'settle_slot_after_render', return_value=(delayed, True)), \
+                 patch.object(run_game_review, 'load_steam_games', return_value=[game]), \
+                 patch.object(run_game_review, 'generate_game_review', return_value=review), \
+                 patch.object(run_game_review, 'download_screenshots', return_value=[]), \
+                 patch.object(run_game_review, 'render_short', return_value={}):
+                output = Path(temp) / 'short.mp4'
+                with self.assertRaises(exception):
+                    run_game_review.run(output)
+                self.assertFalse(output.with_suffix('.result.json').exists())
+
     def test_delayed_manual_time_after_render_is_reported(self):
         game = {"id": "1", "title": "Игра", "features": ["Факт один", "Факт два"]}
         review = {"game_id": "1", "game_title": "Игра", "title": "Обзор", "idea_score": 7,
