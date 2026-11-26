@@ -12,10 +12,6 @@ on:
     # Gameplay: one a day at 18:00 Moscow, and only while a playthrough is open.
     # The run checks readiness; a finished playthrough uploads nothing.
     - cron: "0 14 * * *"
-  workflow_run:
-    workflows: [SuperTuxKart race capture]
-    types: [completed]
-    branches: [arena/7d9fee46-games]
   workflow_dispatch:
     inputs:
       review_capture_run:
@@ -341,7 +337,7 @@ jobs:
     # The gameplay firing is a different category: it must never render a review.
     # Without this guard the 17:00 Moscow run would also start a review render
     # and, on a busy day, publish a tenth video nobody asked for.
-    if: ${{ github.event_name != 'workflow_run' && !inputs.check_topics_only && !inputs.review_capture_run && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview && !(github.event_name == 'schedule' && github.event.schedule == '0 14 * * *') }}
+    if: ${{ !inputs.check_topics_only && !inputs.review_capture_run && !inputs.adventure_capture_run && !inputs.puzzle_episode && !inputs.adventure_preview && !(github.event_name == 'schedule' && github.event.schedule == '0 14 * * *') }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
@@ -548,7 +544,7 @@ jobs:
 
   publish-adventure-pilot:
     needs: record-puzzle-episode
-    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '')) }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && !inputs.review_capture_run && !inputs.adventure_preview && !inputs.check_topics_only && ((inputs.puzzle_episode && needs.record-puzzle-episode.result == 'success') || (!inputs.puzzle_episode && inputs.adventure_capture_run != '' && inputs.adventure_capture_run != '45857021167')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -684,7 +680,7 @@ jobs:
           python youtube-bot/publish_review_preview.py "$RUNNER_TEMP/saved-review" "$CAPTURE_RUN" "$PUBLISH_AT"
 
   publish-verified-stk:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_sha == 'a7d8028368d31af450ac05402dd3af9ec9c47806' && github.event.workflow_run.head_repository.full_name == github.repository
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.adventure_capture_run == '45857021167' && !inputs.puzzle_episode && !inputs.adventure_preview && !inputs.review_preview && !inputs.review_capture_run && !inputs.check_topics_only
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -700,13 +696,21 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Verify the finished race archive provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/15137150710" | jq -e '
+            .workflow_run.id == 45857021167 and .workflow_run.head_sha == "a7d8028368d31af450ac05402dd3af9ec9c47806"
+            and .name == "supertuxkart-race-45857021167" and .expired == false
+            and .digest == "sha256:d0c87c85999f5d2d73b26a426266625d42ce55e2fb2964fe5c560078a2e69d30"' >/dev/null
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: ${{ github.event.workflow_run.id }}
-          name: supertuxkart-race-${{ github.event.workflow_run.id }}
+          run-id: 45857021167
+          name: supertuxkart-race-45857021167
           path: ${{ runner.temp }}/stk-verified
       - name: Recheck the race and queue publication
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          python youtube-bot/publish_verified_stk.py "$RUNNER_TEMP/stk-verified" "${{ github.event.workflow_run.id }}"
+          python youtube-bot/publish_verified_stk.py "$RUNNER_TEMP/stk-verified" "45857021167"
