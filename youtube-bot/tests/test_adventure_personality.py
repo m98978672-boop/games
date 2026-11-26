@@ -18,6 +18,17 @@ class AdventurePersonalityTests(unittest.TestCase):
         self.assertIn((5, 'Карманный инвентарь: ворс. Как щедро.'), lines)
         self.assertFalse(won)
 
+    def test_lighthouse_choices_preserve_case_and_punctuation(self):
+        trace = dict(game='Последний сигнал', duration_seconds=20, outcome='time_limit', actions=[
+            dict(choice_label='Нажми [E]?', screen_unchanged=False, recording_elapsed_ms=1000),
+            dict(choice_label='Связаться с Ирой.', screen_unchanged=False, recording_elapsed_ms=2000),
+            dict(choice_label='Да', screen_unchanged=False, recording_elapsed_ms=3000),
+        ])
+        lines = [text for _, text in plan(trace)[1]]
+        self.assertIn('Мой выбор: Нажми [E]?', lines)
+        self.assertIn('Мой выбор: Связаться с Ирой.', lines)
+        self.assertIn('Мой выбор: Да.', lines)
+
     def test_unknown_text_does_not_become_narration(self):
         self.assertEqual(short_comment({'choice_label': 'unknown', 'game_dialog': 'unknown'}, 'первый'),
                          ('Выбираю первый вариант.', ''))

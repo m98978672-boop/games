@@ -60,8 +60,26 @@ class PronunciationTests(unittest.TestCase):
             with patch.dict(os.environ, {'PIPER_MODEL_PATH': ''}, clear=False), \
                  patch.object(adventure_draft.subprocess, 'run') as run:
                 adventure_draft.narrate(text, Path(temp) / 'out.wav')
-            self.assertEqual(run.call_args.args[0][-1], 'Нажми клавишу и в Стим, размер 800 на 600?')
+            self.assertEqual(run.call_args.args[0][-1], '--stdin')
+            self.assertEqual(run.call_args.kwargs['input'], 'Нажми клавишу и в Стим, размер 800 на 600?')
             self.assertEqual(text, 'Нажми [E] в Steam, размер 800×600?')
+
+    def test_control_characters_are_rejected_before_synthesizer(self):
+        from speech_synthesis import synthesize_narration
+        with patch.object(adventure_draft.subprocess, 'run') as run:
+            for text in ('', 'Текст {part\nextra}', 'Текст\0дальше'):
+                with self.subTest(text=text), self.assertRaises(ValueError):
+                    synthesize_narration(text, Path('unused.wav'))
+            run.assert_not_called()
+
+    def test_text_cannot_be_interpreted_as_espeak_options(self):
+        from speech_synthesis import synthesize_narration
+        with patch.dict(os.environ, {'PIPER_MODEL_PATH': ''}), \
+             patch.object(adventure_draft.subprocess, 'run') as run:
+            synthesize_narration('--version текст', Path('unused.wav'))
+        self.assertNotIn('--version текст', run.call_args.args[0])
+        self.assertEqual(run.call_args.kwargs['input'], '--version текст')
+
 
 
 if __name__ == '__main__': unittest.main()

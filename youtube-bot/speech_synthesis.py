@@ -6,13 +6,19 @@ from pathlib import Path
 from speech_pronunciation import pronunciation_text, speech_cadence
 
 
+def validate_spoken_text(spoken: str) -> str:
+    if not spoken or any(ord(ch) < 32 and ch != '\t' for ch in spoken):
+        raise ValueError('Narration must be nonempty and contain no control characters or embedded newlines')
+    return spoken
+
+
 def synthesize_narration(text: str, wav: Path, *, espeak_rate: int = 145) -> None:
     """Synthesize one clip, using Piper when configured, otherwise eSpeak-NG.
 
     Source text stays untouched for captions. Cadence varies only by punctuation;
     the voice model controls pitch and natural prosody.
     """
-    spoken = pronunciation_text(text)
+    spoken = validate_spoken_text(pronunciation_text(text))
     length, sentence_silence, _ = speech_cadence(text)
     model = os.environ.get('PIPER_MODEL_PATH', '').strip()
     if model:
@@ -22,5 +28,5 @@ def synthesize_narration(text: str, wav: Path, *, espeak_rate: int = 145) -> Non
                         '--length_scale', length, '--sentence_silence', sentence_silence],
                        input=spoken, text=True, check=True, timeout=60)
     else:
-        subprocess.run(['espeak-ng', '-v', 'ru', '-s', str(espeak_rate), '-w', str(wav), spoken],
-                       check=True, timeout=60)
+        subprocess.run(['espeak-ng', '-v', 'ru', '-s', str(espeak_rate), '-w', str(wav), '--stdin'],
+                       input=spoken, text=True, check=True, timeout=60)

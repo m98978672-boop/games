@@ -55,8 +55,8 @@ class AdventureSubtitleTests(unittest.TestCase):
         spoken = []
         def fake_process(command, **kwargs):
             if command[0] == 'espeak-ng':
-                spoken.append(command[-1])
-                fake_voice(command[-1], Path(command[command.index('-w') + 1]))
+                spoken.append(kwargs['input'])
+                fake_voice(kwargs['input'], Path(command[command.index('-w') + 1]))
             else:
                 Path(command[-1]).write_bytes(b'encoded video')
         with tempfile.TemporaryDirectory() as temp:

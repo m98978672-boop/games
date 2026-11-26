@@ -23,6 +23,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from speech_policy import fit_speech_text
 from speech_pronunciation import pronunciation_text, SPOKEN_ALIASES
+from speech_synthesis import validate_spoken_text
 
 WIDTH, HEIGHT = 720, 1280
 OUTPUT_WIDTH, OUTPUT_HEIGHT = 1080, 1920
@@ -96,7 +97,7 @@ def synthesize(text: str, output: Path, voice: str = "ru", *, style: str = "neut
     configured_model = os.environ.get("PIPER_MODEL_PATH", "").strip()
     with tempfile.TemporaryDirectory(prefix="voice-", dir=output.parent) as temp:
         raw, processed = Path(temp) / "raw.wav", Path(temp) / "processed.wav"
-        spoken_text = pronunciation_text(text)
+        spoken_text = validate_spoken_text(pronunciation_text(text))
         if configured_model:
             model_path = Path(configured_model)
             if not model_path.is_file():
@@ -108,8 +109,8 @@ def synthesize(text: str, output: Path, voice: str = "ru", *, style: str = "neut
             )
         else:
             subprocess.run(
-                ["espeak-ng", "-v", voice, "-s", "145", "-a", "165", "-w", str(raw), spoken_text],
-                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                ["espeak-ng", "-v", voice, "-s", "145", "-a", "165", "-w", str(raw), "--stdin"],
+                input=spoken_text, text=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
             )
         normalize_narration(raw, processed)
         with wave.open(str(processed), "rb") as stream:

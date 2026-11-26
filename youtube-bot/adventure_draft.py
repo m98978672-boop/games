@@ -204,7 +204,9 @@ def plan(trace, *, translation_intervals=None):
         elif lighthouse:
             label = event.get('choice_label')
             if isinstance(label, str) and label.strip():
-                lines.append((prior, f'Решаю {label.strip()[:1].lower()}{label.strip()[1:]}.'))
+                label = label.strip()
+                punctuation = '' if label.endswith(('.', '!', '?', '…')) else '.'
+                lines.append((prior, f'Мой выбор: {label}{punctuation}'))
         elif trace.get('short'):
             line, reaction = short_comment(event, ORDINAL[event['choice']])
             lines.append((prior, line))
