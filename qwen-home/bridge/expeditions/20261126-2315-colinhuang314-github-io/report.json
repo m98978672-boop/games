@@ -1,0 +1,4319 @@
+{
+  "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+  "startedAt": "2026-11-26 23:05 UTC",
+  "status": "played",
+  "steps": [
+    {
+      "t": 114.7,
+      "action": "вежливый гость: проверка robots.txt",
+      "result": "robots.txt прочитан"
+    },
+    {
+      "t": 119.4,
+      "action": "открыла страницу",
+      "result": "Lost Spot (Draft)"
+    },
+    {
+      "t": 119.5,
+      "action": "кнопка игры",
+      "result": "не нашлась — пробую играть прямо на открытой странице"
+    },
+    {
+      "t": 123.5,
+      "action": "это сюжетная игра, а не полёт",
+      "result": "история «Lost Spot (Draft)»: текст и варианты выбора, играю чтением, а не кадрами"
+    },
+    {
+      "t": 123.6,
+      "action": "читаю историю",
+      "result": "сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки"
+    },
+    {
+      "t": 710.9,
+      "action": "карта сохранена",
+      "result": "59 мест для следующего прогона"
+    },
+    {
+      "t": 710.9,
+      "action": "итог истории",
+      "result": "выборов 416 за 1 заход(ов); мест в карте 59, связей 100, нажато вариантов 262; концовок видела 0; находки: you pick up"
+    }
+  ],
+  "screenshots": [
+    "01-open.png",
+    "02-after-play.png",
+    "03-story.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "07-story-32.png",
+    "08-story-40.png",
+    "09-story-48.png",
+    "09-story-56.png",
+    "09-story-64.png",
+    "09-story-72.png",
+    "09-story-80.png",
+    "09-story-88.png",
+    "09-story-96.png",
+    "09-story-104.png",
+    "09-story-112.png",
+    "09-story-120.png",
+    "09-story-128.png",
+    "09-story-136.png",
+    "09-story-144.png",
+    "09-story-152.png",
+    "09-story-160.png",
+    "09-story-168.png",
+    "09-story-176.png",
+    "09-story-184.png",
+    "09-story-192.png",
+    "09-story-200.png",
+    "09-story-208.png",
+    "09-story-216.png",
+    "09-story-224.png",
+    "09-story-232.png",
+    "09-story-240.png",
+    "09-story-248.png",
+    "09-story-256.png",
+    "09-story-264.png",
+    "09-story-272.png",
+    "09-story-280.png",
+    "09-story-288.png",
+    "09-story-296.png",
+    "09-story-304.png",
+    "09-story-312.png",
+    "09-story-320.png",
+    "09-story-328.png",
+    "09-story-336.png",
+    "09-story-344.png",
+    "09-story-352.png",
+    "09-story-360.png",
+    "09-story-368.png",
+    "09-story-376.png",
+    "09-story-384.png",
+    "09-story-392.png",
+    "09-story-400.png",
+    "09-story-408.png",
+    "09-story-416.png",
+    "09-story-end.png"
+  ],
+  "kind": "story",
+  "hasVideo": true,
+  "textSample": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel",
+  "story": {
+    "moves": 416,
+    "runs": [
+      {
+        "run": 1,
+        "moves": 416,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 59
+      }
+    ],
+    "path": [
+      {
+        "run": 1,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 1,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 1,
+        "n": 3,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 1,
+        "n": 4,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 1,
+        "n": 5,
+        "choice": "You wonder why Spot was in the kitchen",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 6,
+        "choice": "...",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Why was Spot in the kitchen?\", you wonder to yourself. He's supposed to be in the living room on his dog bed! He always is! ..."
+      },
+      {
+        "run": 1,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are very tired. You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 8,
+        "choice": "homework",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are very tired."
+      },
+      {
+        "run": 1,
+        "n": 9,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 1,
+        "n": 10,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are tired."
+      },
+      {
+        "run": 1,
+        "n": 11,
+        "choice": "You yell after him, \"Spot!\"",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are tired. You yell after him, \"Spot!\" You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 12,
+        "choice": ". . .",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ \"Spot!\", you yell out the door. \"Is something wrong honey?\" your Mom asks from the kitchen. \"No! Everythings fine, Mom! \"Ok, just remember, you have a very strict homework time, so go to your room!\" . . ."
+      },
+      {
+        "run": 1,
+        "n": 13,
+        "choice": "go after Spot",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You have no choice but to go after Spot! Mom would freak out if Spot got lost!"
+      },
+      {
+        "run": 1,
+        "n": 14,
+        "choice": "restaurant",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You could go left towards the school, or right towards the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 15,
+        "choice": "park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+      },
+      {
+        "run": 1,
+        "n": 16,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 17,
+        "choice": "You walk up to the bushes carefully",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You walk up to the bushes carefully. You run up to the bushes."
+      },
+      {
+        "run": 1,
+        "n": 18,
+        "choice": "Turn right",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You look behind the bushes. It's like a maze in here! Turn left Turn right"
+      },
+      {
+        "run": 1,
+        "n": 19,
+        "choice": "Turn left",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go deeper into the bushes. You can go left or right. Turn left Turn right"
+      },
+      {
+        "run": 1,
+        "n": 20,
+        "choice": "Go around the corner",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You hear more noises. Go around the corner"
+      },
+      {
+        "run": 1,
+        "n": 21,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You reach a dead end. You heard a noise to your left and realize it's just a bird. back to park"
+      },
+      {
+        "run": 1,
+        "n": 22,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 23,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 24,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 25,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 26,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 27,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 28,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 29,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 30,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 31,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 32,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 33,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 34,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 35,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 36,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 37,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 38,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 39,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 40,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 41,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 42,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 43,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 44,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 45,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 46,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 47,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 48,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 49,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 50,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 51,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 52,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 53,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 54,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 55,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 56,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 57,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 58,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 59,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 60,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 61,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 62,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 63,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 64,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 65,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 66,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 67,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 68,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 69,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 70,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 71,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 72,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 73,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 74,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 75,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 76,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 77,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 78,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 79,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 80,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 81,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 82,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 83,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 84,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 85,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 86,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 87,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 88,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 89,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 90,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 91,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 92,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 93,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 94,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 95,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 96,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 97,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 98,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 99,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 100,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 101,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 102,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 103,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 104,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 105,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 106,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 107,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 108,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 109,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 110,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 111,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 112,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 113,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 114,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 115,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 116,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 117,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 118,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 119,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 120,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 121,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 122,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 123,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 124,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 125,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 126,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 127,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 128,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 129,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 130,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 131,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 132,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 133,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 134,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 135,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 136,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 137,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 138,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 139,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 140,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 141,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 142,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 143,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 144,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 145,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 146,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 147,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 148,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 149,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 150,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 151,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 152,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 153,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 154,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 155,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 156,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 157,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 158,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 159,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 160,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 161,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 162,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 163,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 164,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 165,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 166,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 167,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 168,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 169,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 170,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 171,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 172,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 173,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 174,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 175,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 176,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 177,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 178,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 179,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 180,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 181,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 182,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 183,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 184,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 185,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 186,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 187,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 188,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 189,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 190,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 191,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 192,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 193,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 194,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 195,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 196,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 197,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 198,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 199,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 200,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 201,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 202,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 203,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 204,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 205,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 206,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 207,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 208,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 209,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 210,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 211,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 212,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 213,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 214,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 215,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 216,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 217,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 218,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 219,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 220,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 221,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 222,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 223,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 224,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 225,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 226,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 227,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 228,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 229,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 230,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 231,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 232,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 233,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 234,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 235,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 236,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 237,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 238,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 239,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 240,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 241,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 242,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 243,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 244,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 245,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 246,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 247,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 248,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 249,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 250,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 251,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 252,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 253,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 254,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 255,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 256,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 257,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 258,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 259,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 260,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 261,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 262,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 263,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 264,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 265,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 266,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 267,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 268,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 269,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 270,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 271,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 272,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 273,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 274,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 275,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 276,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 277,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 278,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 279,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 280,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 281,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 282,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 283,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 284,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 285,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 286,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 287,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 288,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 289,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 290,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 291,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 292,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 293,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 294,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 295,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 296,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 297,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 298,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 299,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 300,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 301,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 302,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 303,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 304,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 305,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 306,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 307,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 308,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 309,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 310,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 311,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 312,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 313,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 314,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 315,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 316,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 317,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 318,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 319,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 320,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 321,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 322,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 323,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 324,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 325,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 326,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 327,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 328,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 329,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 330,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 331,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 332,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 333,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 334,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 335,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 336,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 337,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 338,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 339,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 340,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 341,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 342,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 343,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 344,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 345,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 346,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 347,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 348,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 349,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 350,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 351,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 352,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 353,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 354,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 355,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 356,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 357,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 358,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 359,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 360,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 361,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 362,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 363,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 364,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 365,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 366,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 367,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 368,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 369,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 370,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 371,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 372,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 373,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 374,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 375,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 376,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 377,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 378,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 379,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 380,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 381,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 382,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 383,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 384,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 385,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 386,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 387,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 388,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 389,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 390,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 391,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 392,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 393,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 394,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 395,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 396,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 397,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 398,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 399,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 400,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 401,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 402,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 403,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 404,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 405,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 406,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 407,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 408,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 409,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 410,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 411,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 412,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 413,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 414,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      },
+      {
+        "run": 1,
+        "n": 415,
+        "choice": "back to park",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You already checked here. back to park"
+      },
+      {
+        "run": 1,
+        "n": 416,
+        "choice": "bushes",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+      }
+    ],
+    "endings": [],
+    "reachedEnd": false,
+    "last": {
+      "run": 1,
+      "n": 416,
+      "choice": "bushes",
+      "fresh": false,
+      "energy": 0,
+      "finds": [],
+      "clues": 1,
+      "text": "↶ You go to the park. You take Spot here often to play in the grass. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
+    },
+    "map": {
+      "places": 59,
+      "links": 100,
+      "remaining": 4,
+      "tried": 262,
+      "energetic": 4,
+      "tired": 7,
+      "finds": [
+        "you pick up"
+      ]
+    },
+    "sawFinds": [],
+    "freshPlaces": 0,
+    "remembered": 59
+  },
+  "endingsSeen": [],
+  "storyMap": {
+    "places": 59,
+    "links": 100,
+    "tried": 262,
+    "finds": [
+      "you pick up"
+    ],
+    "tired": 7,
+    "energetic": 4
+  },
+  "storyLine": "прошла историю: 416 выборов, 1 захода(ов), 59 мест в карте, путей к финалу 0, непройденных вариантов 4, нашла: you pick up · до финала не дошла — история не отпустила"
+}
