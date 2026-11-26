@@ -125,6 +125,13 @@ class WiringTests(unittest.TestCase):
         self.assertEqual(set(gate['outputs']), {'publish', 'video_kind', 'publish_at'})
         recorder = parsed['jobs']['record-gameplay']
         self.assertEqual(recorder['needs'], 'gameplay-gate')
+        # The recording is a reusable workflow, so it must be its own job; a step
+        # cannot declare `uses: ./.github/workflows/...`. Without it the chain
+        # stops at a decision again.
+        capture = parsed['jobs']['capture-gameplay']
+        self.assertEqual(capture['needs'], 'record-gameplay')
+        self.assertTrue(capture['uses'].startswith('./.github/workflows/'))
+        self.assertIn('record', recorder['outputs'])
         tail = workflow[workflow.index('  record-gameplay:'):]
         self.assertIn('GATE_PUBLISH', tail)
         self.assertIn('record=false', tail)

@@ -233,6 +233,9 @@ jobs:
     env:
       GATE_PUBLISH: ${{ needs.gameplay-gate.outputs.publish }}
       GATE_PUBLISH_AT: ${{ needs.gameplay-gate.outputs.publish_at }}
+    outputs:
+      record: ${{ steps.decide.outputs.record }}
+      publish_at: ${{ steps.slot.outputs.publish_at }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -261,6 +264,18 @@ jobs:
           fi
           echo "publish_at=$slot" >> "$GITHUB_OUTPUT"
           echo "Игровое видео выйдет в $slot МСК." >> "$GITHUB_STEP_SUMMARY"
+
+  capture-gameplay:
+    # The recording itself, split out because a reusable workflow cannot be a
+    # step: it must be its own job. Without this the decision above was still
+    # only a decision.
+    needs: record-gameplay
+    if: ${{ always() && !cancelled() && needs.record-gameplay.outputs.record == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/adventure-experiment.yml
+    with:
+      adventure_only: true
 
   check-topic-history:
     if: github.event_name == 'workflow_dispatch' && inputs.check_topics_only
