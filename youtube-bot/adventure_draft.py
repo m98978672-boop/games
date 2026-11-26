@@ -136,7 +136,11 @@ def scene_cues(lines, cuts):
 def plan(trace):
     duration = float(trace['duration_seconds'])
     if trace.get('game') == 'SuperTuxKart':
-        return duration, [(0.0, 'Сегодня на трассе Зен-Гарден. Пилоты — встроенные соперники самой игры. Проверяю запись гонки и монтаж.')], [], False
+        won = trace.get('outcome') == 'game_reported_victory'
+        lines = [(0.0, 'Сегодня на трассе Зен-Гарден. За рулём — встроенные пилоты Супер Такс Карт.')]
+        if won:
+            lines.append((max(0, duration-1), 'Все пилоты пересекли финиш.'))
+        return duration, lines, [], won
     if trace.get('game') == 'Ретранслятор 3D':
         lines = [(0, 'Эксперимент в три дэ. Ищу два маяка по карте в углу экрана, потом попробую выйти из лабиринта.')]
         last = 2
