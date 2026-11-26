@@ -31,14 +31,21 @@ MULTILINGUAL = [
 ]
 
 if __name__ == '__main__':
-    # Fail explicitly if the runtime/weights cannot load rather than treating a
-    # set of None values as a successful model check.
-    from script_contract import _load_qwen_runtime
-    _load_qwen_runtime()
-    rows = [dict(source=source, reference=reference, actual=russian_game_text(source, context='Реплики и подсказки сюжетной игры.'))
+    engine = sys.argv[2] if len(sys.argv) > 2 else 'qwen'
+    if engine == 'm2m':
+        from multilingual_translation import _load_runtime, m2m_russian_text
+        _load_runtime()
+        translate = lambda source, lang: m2m_russian_text(source, source_language=lang or 'en')
+    elif engine == 'qwen':
+        from script_contract import _load_qwen_runtime
+        _load_qwen_runtime()
+        translate = lambda source, lang: russian_game_text(source, source_language=lang)
+    else:
+        raise ValueError('Unknown translation engine')
+    rows = [dict(source=source, reference=reference, actual=translate(source, 'en'))
             for source, reference in EXAMPLES]
     rows += [dict(language=lang, source=source, reference=reference,
-                  actual=russian_game_text(source, source_language=lang))
+                  actual=translate(source, lang))
              for lang, source, reference in MULTILINGUAL]
     Path(sys.argv[1]).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
     # Fixed, non-sensitive fixtures only. Annotations remain available to review

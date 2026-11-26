@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from translate_text import translate_content, translate_file
+from translate_text import translate_content, translate_file, load_glossary
 
 
 def fake(text, **kwargs):
@@ -53,6 +53,21 @@ class TranslateTextTests(unittest.TestCase):
                              ('[[0, 4, "Hello!"], [3, 5, "Hello!"]]', '.json')]:
             with self.subTest(kind=kind), self.assertRaises(ValueError):
                 translate_content(source, kind, lambda *a, **k: self.fail('Should validate first'))
+
+    def test_glossary_is_loaded_and_passed_to_translator(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'glossary.json'
+            path.write_text(json.dumps({'Mist Fort': 'Туманный форт'}, ensure_ascii=False))
+            glossary = load_glossary(path)
+            calls = []
+            def translate(text, **options):
+                calls.append(options)
+                return 'Привет!'
+            translate_content('Hello!', '.txt', translate, glossary=glossary)
+            self.assertEqual(calls[0]['glossary'], glossary)
+            path.write_text(json.dumps({'word': 123}))
+            with self.assertRaises(ValueError):
+                load_glossary(path)
 
     def test_plain_text(self):
         self.assertEqual(translate_content('Hello world\n', '.txt', fake), 'Привет мир\n')

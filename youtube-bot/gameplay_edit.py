@@ -16,7 +16,7 @@ import tempfile
 from gameplay_captions import render_srt
 from gameplay_release_plan import make_plan
 from game_text_translation import russian_game_text
-from translate_text import translate_content
+from translate_text import translate_content, load_glossary
 
 
 def probe(path: Path) -> float:
@@ -34,7 +34,8 @@ def probe(path: Path) -> float:
 
 
 def edit(video: Path, cues_file: Path, destination: Path, *, game: str, author: str, repository_url: str,
-         translate_from: str | None = None, translation_context: str = "") -> list[dict]:
+         translate_from: str | None = None, translation_context: str = "",
+         translation_glossary: dict[str, str] | None = None) -> list[dict]:
     video, cues_file, destination = Path(video), Path(cues_file), Path(destination)
     if video.is_symlink() or cues_file.is_symlink() or not video.is_file() or not cues_file.is_file():
         raise ValueError('Video and captions must be existing regular files, not symlinks')
@@ -58,7 +59,7 @@ def edit(video: Path, cues_file: Path, destination: Path, *, game: str, author: 
         raise ValueError('Caption extends beyond the recording')
     if translate_from is not None:
         translated = translate_content(json.dumps(raw, ensure_ascii=False), '.json', russian_game_text,
-                                       source_language=translate_from, context=translation_context)
+                                       source_language=translate_from, context=translation_context, glossary=translation_glossary)
         cues = [tuple(cue) for cue in json.loads(translated)]
         render_srt(cues, end=duration)
     with tempfile.TemporaryDirectory(prefix='.gameplay-edit-', dir=destination.parent) as temp:
@@ -100,10 +101,14 @@ def main() -> None:
     parser.add_argument('--repository-url', required=True)
     parser.add_argument('--translate-from', help='translate supplied captions from this language to Russian before editing')
     parser.add_argument('--translation-context', default='', help='brief context for the local translation model')
+    parser.add_argument('--translation-glossary', type=Path, help='JSON map of source terms to Russian terms')
     args = parser.parse_args()
+    if args.translation_glossary and not args.translate_from:
+        parser.error('--translation-glossary requires --translate-from')
+    glossary = load_glossary(args.translation_glossary) if args.translation_glossary else None
     print(json.dumps(edit(args.video, args.cues, args.destination, game=args.game, author=args.author,
                           repository_url=args.repository_url, translate_from=args.translate_from,
-                          translation_context=args.translation_context), ensure_ascii=False, indent=2))
+                          translation_context=args.translation_context, translation_glossary=glossary), ensure_ascii=False, indent=2))
 
 
 if __name__ == '__main__':

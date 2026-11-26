@@ -2,7 +2,7 @@ name: Live game translation check
 on:
   push:
     branches: [arena/7d9fee46-games, arena/4735b829-games]
-    paths: [.github/workflows/game-translation-check.yml, youtube-bot/tests/live_translation_examples.py, youtube-bot/game_text_translation.py, youtube-bot/translate_text.py, youtube-bot/translation_grammar.py]
+    paths: [.github/workflows/game-translation-check.yml, youtube-bot/tests/live_translation_examples.py, youtube-bot/game_text_translation.py, youtube-bot/translate_text.py, youtube-bot/translation_grammar.py, youtube-bot/multilingual_translation.py]
 permissions:
   contents: read
 jobs:
@@ -20,13 +20,14 @@ jobs:
         with:
           python-version: '3.11'
       - run: |
-          pip install 'torch>=2.6,<3' 'transformers==5.5.4'
+          pip install 'torch>=2.6,<3' 'transformers==5.5.4' sentencepiece
           python -m unittest discover -s youtube-bot/tests -p 'test_*translation*.py'
           python -m unittest discover -s youtube-bot/tests -p test_translate_text.py
-          python youtube-bot/tests/live_translation_examples.py "$RUNNER_TEMP/translation.json"
+          python youtube-bot/tests/live_translation_examples.py "$RUNNER_TEMP/qwen-translation.json" qwen
+      - run: python youtube-bot/tests/live_translation_examples.py "$RUNNER_TEMP/m2m-translation.json" m2m
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: translation-review
-          path: ${{ runner.temp }}/translation.json
+          path: ${{ runner.temp }}/*-translation.json
           if-no-files-found: error

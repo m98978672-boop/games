@@ -24,7 +24,7 @@ def _seconds(stamp):
     return int(h) * 3600 + int(m) * 60 + seconds
 
 
-def translate_content(content, kind, translate, *, source_language=None, context=''):
+def translate_content(content, kind, translate, *, source_language=None, context='', glossary=None):
     """Return complete translated content or raise without returning partial data."""
     cache = {}
 
@@ -37,7 +37,10 @@ def translate_content(content, kind, translate, *, source_language=None, context
             scene += f'\nPrevious: {previous[-120:]}\nNext: {following[:120]}'
         key = (text, scene)
         if key not in cache:
-            result = translate(text, source_language=source_language, context=scene)
+            options = {'source_language': source_language, 'context': scene}
+            if glossary is not None:
+                options['glossary'] = glossary
+            result = translate(text, **options)
             if not isinstance(result, str) or not result.strip():
                 raise ValueError('Translation failed; no output was written')
             cache[key] = result
@@ -103,7 +106,7 @@ def translate_content(content, kind, translate, *, source_language=None, context
     return ''.join(parts)
 
 
-def translate_file(source, destination, *, source_language='en', context='', translate=russian_game_text):
+def translate_file(source, destination, *, source_language='en', context='', glossary=None, translate=russian_game_text):
     source, destination = Path(source), Path(destination)
     if source.is_symlink() or not source.is_file() or source.stat().st_size > MAX_BYTES:
         raise ValueError('Input must be a regular file at most 1 MB')
@@ -113,7 +116,7 @@ def translate_file(source, destination, *, source_language='en', context='', tra
         raise FileExistsError('Output already exists')
     with source.open('r', encoding='utf-8-sig', newline='') as stream:
         content = stream.read()
-    result = translate_content(content, source.suffix.lower(), translate, source_language=source_language, context=context)
+    result = translate_content(content, source.suffix.lower(), translate, source_language=source_language, context=context, glossary=glossary)
     # Exclusive creation prevents overwriting a file created during translation.
     created = False
     try:
@@ -127,6 +130,20 @@ def translate_file(source, destination, *, source_language='en', context='', tra
         raise
 
 
+def load_glossary(path):
+    """Load a small source-to-Russian terminology map before model inference."""
+    path = Path(path)
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 20_000:
+        raise ValueError('Glossary must be a regular JSON file at most 20 KB')
+    glossary = json.loads(path.read_text(encoding='utf-8-sig'))
+    if (not isinstance(glossary, dict) or len(glossary) > 24 or
+            any(not isinstance(k, str) or not isinstance(v, str) or
+                not k.strip() or not v.strip() or len(k) > 80 or len(v) > 80
+                for k, v in glossary.items())):
+        raise ValueError('Glossary must contain at most 24 nonempty text pairs of up to 80 characters')
+    return glossary
+
+
 def main():
     parser = argparse.ArgumentParser(description='Translate existing .txt, .srt or timed JSON to Russian; no OCR/ASR')
     parser.add_argument('source', type=Path)
@@ -134,8 +151,10 @@ def main():
     parser.add_argument('--source-language', default='en', help='source language tag, e.g. en, ja, pt-BR')
     parser.add_argument('--target-language', default='ru', choices=['ru'])
     parser.add_argument('--context', default='', help='brief scene context (local model input)')
+    parser.add_argument('--glossary', type=Path, help='JSON map of source terms to Russian terms')
     args = parser.parse_args()
-    translate_file(args.source, args.destination, source_language=args.source_language, context=args.context)
+    glossary = load_glossary(args.glossary) if args.glossary else None
+    translate_file(args.source, args.destination, source_language=args.source_language, context=args.context, glossary=glossary)
     print(f'Created {args.destination}; review the translation before use.')
 
 
