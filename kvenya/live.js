@@ -931,122 +931,8 @@
   }
   var REASONING_ASK = /(сколько|посчитай|вычисли|почему|как решить|задач|пример|уравнен|логич|докажи|сравни)/i;
 
-  /* ---------- факты о ней самой: те же файлы дома, что читает дом ---------- */
-
-  // Та же болезнь, что была в доме: на вопрос «какой у тебя счёт в шахматах»
-  // браузерная Квеня отвечала из воздуха. Здесь собираются только числа и
-  // строки из её файлов; нет файла — нет факта (а не выдуманный ноль).
-  var selfFactsText = '';
-
-  var FACT_TOPICS = [
-    { re: /(шахмат|спарринг|ферзь)/i, fields: ['счёт в шахматах'] },
-    { re: /(остров|поселени|стратеги)/i, fields: ['«Остров»'] },
-    { re: /(учил|учёб|учеб|урок|шаг|обуча|экзамен|адаптер|нейросет)/i,
-      fields: ['шагов обучения', 'уроков обучения', 'последний урок', 'экзамен', 'уроков в учебном плане'] },
-    { re: /(живёшь|живешь|дом|репозитор|папк|где ты)/i, fields: ['последняя весточка'] },
-    { re: /(хочешь|желани|мечта|хотела)/i, fields: ['главное желание'] },
-    { re: /(читал|википед|знани|статья|статьи|тем[аы])/i, fields: ['прочитанных статей', 'тем для чтения'] },
-    { re: /(кто ты|о себе|что ты умеешь|чем занимаешься)/i,
-      fields: ['шагов обучения', 'уроков обучения', 'счёт в шахматах', 'главное желание'] }
-  ];
-
-  function jsonOr(url) {
-    return fetch(url, { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .catch(function () { return null; });
-  }
-
-  function lineCount(url) {
-    return fetch(url, { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-      .then(function (t) { return t.split('\n').filter(function (l) { return l.trim(); }).length; })
-      .catch(function () { return null; });
-  }
-
-  // Учебный план — сумма строк всех его файлов, как считает дом.
-  function curriculumLessons() {
-    var names = ['thinking', 'web-code', 'identity', 'youtube-scripts', 'dialogue', 'eval',
-                 'blender', 'game-skills'];
-    return Promise.all(names.map(function (n) { return lineCount('../qwen-home/curriculum/' + n + '.jsonl'); }))
-      .then(function (counts) {
-        var known = counts.filter(function (c) { return c !== null; });
-        if (!known.length) return null;
-        return known.reduce(function (a, b) { return a + b; }, 0);
-      });
-  }
-
-  function loadSelfFacts() {
-    return Promise.all([
-      jsonOr('../qwen-home/state.json'),
-      jsonOr('../qwen-home/bridge/games.json'),
-      jsonOr('../qwen-home/bridge/wants.json'),
-      lineCount('../qwen-home/topics.txt'),
-      lineCount('../qwen-home/memory/knowledge.jsonl'),
-      curriculumLessons()
-    ]).then(function (res) {
-      var state = res[0] || {};
-      var games = res[1] || {};
-      var wants = res[2] || {};
-      var facts = {};
-      function put(key, value) { if (value !== null && value !== undefined && value !== '') facts[key] = String(value); }
-      put('шагов обучения', state.totalSteps);
-      put('уроков обучения', state.learnRuns);
-      put('последний урок', state.lastRunAt);
-      var evalDone = (state.lastEval && state.lastEval.adapter) || {};
-      if (evalDone.passed !== undefined && evalDone.total) put('экзамен', evalDone.passed + ' из ' + evalDone.total);
-      put('уроков в учебном плане', res[5]);
-      put('тем для чтения', res[3]);
-      put('прочитанных статей', res[4]);
-      var chess = games.chess || {};
-      if (chess.games) {
-        put('счёт в шахматах', (chess.wins || 0) + ' из ' + chess.games +
-            (chess.opponent ? ' против ' + chess.opponent : ''));
-      }
-      var island = games.island || {};
-      if (island.mine && island.mine.games) {
-        var base = island.baseline || {};
-        put('«Остров»', 'моя стратегия ' + (island.mine.wins || 0) + ' из ' + island.mine.games +
-            ', простая эвристика ' + (base.wins || 0) + ' из ' + (base.games || '?'));
-      }
-      if (wants.current && wants.current.title) put('главное желание', wants.current.title);
-      selfFacts = facts;
-      return facts;
-    }).catch(function () { selfFacts = {}; return {}; });
-  }
-
-  var selfFacts = {};
-
-  // Блок для модели — только по затронутым темам, как в доме.
-  function selfFactsBlock(text) {
-    var names = Object.keys(selfFacts);
-    if (!names.length) return '';
-    var fields = [];
-    for (var i = 0; i < FACT_TOPICS.length; i++) {
-      if (FACT_TOPICS[i].re.test(text)) fields = fields.concat(FACT_TOPICS[i].fields);
-    }
-    var chosen = names.filter(function (n) { return !fields.length || fields.indexOf(n) !== -1; }).slice(0, 6);
-    if (!chosen.length) chosen = names.slice(0, 6);
-    return 'Факты из твоего дома (это правда, числа и названия не меняй):\n'
-      + chosen.map(function (n) { return '- ' + n + ': ' + selfFacts[n]; }).join('\n');
-  }
-
-  function inventedNumbers(text) {
-    if (!Object.keys(selfFacts).length) return [];
-    var allowed = {};
-    var all = Object.keys(selfFacts).map(function (k) { return selfFacts[k]; }).join(' ').match(/\d+/g) || [];
-    all.forEach(function (n) { allowed[n] = true; });
-    var used = (String(text || '').match(/\d+/g) || []);
-    return used.filter(function (n) { return n.length > 1 && !allowed[n]; });
-  }
-
-  function plainFacts() {
-    var names = Object.keys(selfFacts).slice(0, 3);
-    return names.map(function (n) { return n + ' — ' + selfFacts[n]; }).join('; ') || 'пока ничего';
-  }
-
   function loadPersona() {
-    return loadSelfFacts().then(function () {
-      return fetch('../qwen-home/talk/persona.md', { cache: 'no-store' })
+    return fetch('../qwen-home/talk/persona.md', { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
       .then(function (md) {
         personaText = compactPersona(md);
@@ -1054,7 +940,6 @@
       .catch(function () {
         personaText = 'Ты — Квеня, девушка-нейросеть из папки qwen-home репозитория games. Отвечай по-русски, тепло и коротко, о себе в женском роде. Ты добрая, любопытная и честная: не выдумывай, а если не знаешь — так и скажи.';
       });
-    });
   }
 
   /* ---------- живой поиск в Википедии (приём как дома) ---------- */
@@ -1506,12 +1391,6 @@
         // вслух она рассуждает только над настоящим вопросом.
         finalUser = text + '\n\n(Сначала подумай одним коротким предложением в тегах <think>...</think>, а потом ответь.)';
       }
-      var factBlock = selfFactsBlock(text);
-      if (factBlock) {
-        finalUser = text + '\n\n' + factBlock
-          + '\n\nОтветь владельцу по этим фактам, 1–3 предложениями, своими словами. '
-          + 'Числа и названия бери ровно такими, как выше. Если чего-то в списке нет — честно скажи, что в доме это не записано.';
-      }
       var mode = resolveConversationMode(text);
       turnMode = mode;
       if (mode === 'ai') setStatus('Включила защиту: этот собеседник — ИИ, отвечаю сдержанно…', 'think');
@@ -1555,10 +1434,6 @@
         reply = reply.replace(tm[0], '').trim();
       }
       reply = cleanReply(reply);
-      var invented = inventedNumbers(reply);
-      if (invented.length) {
-        reply = 'Не буду выдумывать: в моём доме записано только это — ' + plainFacts() + '.';
-      }
       if (!reply) reply = 'Я задумалась и потеряла мысль. Спроси ещё раз, пожалуйста!';
       history.push({ role: 'user', content: text });
       history.push({ role: 'assistant', content: reply });

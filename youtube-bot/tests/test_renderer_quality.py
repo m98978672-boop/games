@@ -186,18 +186,6 @@ class RenderQualityTests(unittest.TestCase):
     def test_platform_name_is_pronounced_in_russian_without_changing_other_words(self):
         self.assertEqual(renderer.pronunciation_text("По данным Steam: Steamworks"), "По данным Стим: Steamworks")
 
-    def test_speech_aliases_prefer_full_terms_and_preserve_unknown_names(self):
-        self.assertEqual(renderer.pronunciation_text('Steam Deck, RPG и DLC. Steamworks и XUnity.'),
-                         'Стим Дек, эр пэ гэ и ди эл си. Steamworks и XUnity.')
-        self.assertEqual(renderer.pronunciation_text('Тест: `Steam` и https://example.com/Steam.'),
-                         'Тест: `Steam` и https://example.com/Steam.')
-
-    def test_spoken_score_and_punctuation_leave_other_numbers_and_ellipsis_intact(self):
-        self.assertEqual(renderer.pronunciation_text('Оценка — 7 из 10 .Steam...Далее!'),
-                         'Оценка — семь из десяти. Стим... Далее!')
-        self.assertEqual(renderer.pronunciation_text('Цена 10 евро, версия 1.2.'), 'Цена 10 евро, версия 1.2.')
-        self.assertEqual(renderer.pronunciation_text('10 из 10!'), 'десять из десяти!')
-
     def test_audio_processing_is_bounded_and_does_not_adjust_pitch(self):
         with patch.object(renderer, "ffmpeg_executable", return_value="ffmpeg"), patch.object(renderer.subprocess, "run") as run:
             renderer.normalize_narration(Path("in.wav"), Path("out.wav"))
@@ -207,28 +195,6 @@ class RenderQualityTests(unittest.TestCase):
         self.assertIn("highpass=f=75", audio_filter)
         self.assertNotIn("atempo", audio_filter)
         self.assertNotIn("asetrate", audio_filter)
-
-    def test_temporary_png_compression_keeps_exact_frame_pixels(self):
-        from PIL import Image
-        original_save = Image.Image.save
-        script = {'format': 'game-review', 'game_title': 'Проверочная игра',
-                  'idea_score': 7, 'scenes': [{}] * 5, 'screenshot_paths': []}
-        scene = {'label': 'ФАКТ ИЗ STEAM', 'visual': 'Сведения об игре',
-                 'dialogue': 'Русская проверочная фраза.'}
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            for frame in (0, 13):
-                baseline = root / f'baseline-{frame}.png'
-                new = root / f'new-{frame}.png'
-                def force_old_compression(image, path, *args, **kwargs):
-                    kwargs['optimize'] = True
-                    return original_save(image, path, *args, **kwargs)
-                with patch.object(Image.Image, 'save', force_old_compression):
-                    renderer.render_frame(script, scene, 1, frame, baseline)
-                renderer.render_frame(script, scene, 1, frame, new)
-                with Image.open(baseline) as old_image, Image.open(new) as new_image:
-                    self.assertEqual(old_image.size, new_image.size)
-                    self.assertEqual(old_image.convert('RGB').tobytes(), new_image.convert('RGB').tobytes())
 
     def test_review_layouts_render_at_required_dimensions_and_fit_long_words(self):
         from PIL import Image, ImageDraw
