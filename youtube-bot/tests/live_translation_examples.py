@@ -50,36 +50,43 @@ if __name__ == '__main__':
     Path(sys.argv[1]).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
     # Fixed, non-sensitive fixtures only. Annotations remain available to review
     # even in environments that cannot download Actions artifacts.
-    for row in rows:
+    # Leave room for a final end-to-end notice (Actions caps notices per step).
+    for row in rows[:7] + rows[8:10]:
         print('::notice title=Translation example::' + json.dumps(row, ensure_ascii=False), flush=True)
     print(f'Usable outputs: {sum(row["actual"] is not None for row in rows)}/{len(rows)}; semantic accuracy not automatically scored.')
     if not any(row['actual'] is not None for row in rows):
         raise RuntimeError('The loaded model produced no valid translations')
 
     if engine == 'm2m':
-        # Exercise the actual CLI backend and real FFmpeg editing path together.
-        import subprocess
-        import tempfile
-        from gameplay_edit import edit
-        from translate_text import translate_file, translation_engine
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            source = root / 'captions.en.srt'
-            source.write_text('1\n00:00:00,250 --> 00:00:01,500\nOpen the door.\n', encoding='utf-8')
-            output = root / 'captions.ru.srt'
-            translate_file(source, output, translate=translation_engine('m2m'))
-            assert '00:00:00,250 --> 00:00:01,500' in output.read_text(encoding='utf-8')
-            video = root / 'source.mp4'
-            subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-f', 'lavfi', '-i',
-                            'color=c=blue:s=320x240:r=25:d=2', '-f', 'lavfi', '-i',
-                            'sine=frequency=440:duration=2', '-c:v', 'libx264', '-c:a', 'aac',
-                            '-shortest', str(video)], check=True, timeout=30)
-            cues = root / 'cues.json'
-            cues.write_text(json.dumps([[0.25, 1.5, 'Open the door.']]), encoding='utf-8')
-            parts = edit(video, cues, root / 'output', game='Test game', author='Test',
-                         repository_url='https://github.com/test/example', translate_from='en',
-                         translation_model='m2m')
-            subtitle = (root / 'output' / parts[0]['captions']).read_text(encoding='utf-8')
-            assert '00:00:00,250 --> 00:00:01,500' in subtitle
-            assert (root / 'output' / parts[0]['video']).is_file()
-            print('::notice title=End-to-end M2M montage::' + ' '.join(subtitle.split()), flush=True)
+        import traceback
+        try:
+            # Exercise the actual CLI backend and real FFmpeg editing path together.
+            import subprocess
+            import tempfile
+            from gameplay_edit import edit
+            from translate_text import translate_file, translation_engine
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                source = root / 'captions.en.srt'
+                source.write_text('1\n00:00:00,250 --> 00:00:01,500\nOpen the door.\n', encoding='utf-8')
+                output = root / 'captions.ru.srt'
+                translate_file(source, output, translate=translation_engine('m2m'))
+                assert '00:00:00,250 --> 00:00:01,500' in output.read_text(encoding='utf-8')
+                video = root / 'source.mp4'
+                subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-f', 'lavfi', '-i',
+                                'color=c=blue:s=320x240:r=25:d=2', '-f', 'lavfi', '-i',
+                                'sine=frequency=440:duration=2', '-c:v', 'libx264', '-c:a', 'aac',
+                                '-shortest', str(video)], check=True, timeout=30)
+                cues = root / 'cues.json'
+                cues.write_text(json.dumps([[0.25, 1.5, 'Open the door.']]), encoding='utf-8')
+                parts = edit(video, cues, root / 'output', game='Test game', author='Test',
+                             repository_url='https://github.com/test/example', translate_from='en',
+                             translation_model='m2m')
+                subtitle = (root / 'output' / parts[0]['captions']).read_text(encoding='utf-8')
+                assert '00:00:00,250 --> 00:00:01,500' in subtitle
+                assert (root / 'output' / parts[0]['video']).is_file()
+                print('::notice title=End-to-end M2M montage::' + ' '.join(subtitle.split()), flush=True)
+        except Exception:
+            details = traceback.format_exc().replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+            print('::error title=M2M end-to-end::' + details, flush=True)
+            raise
