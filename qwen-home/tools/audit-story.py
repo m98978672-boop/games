@@ -99,6 +99,7 @@ def audit(src=None):
             ('флаг open пересчитывается', "node['open'] = any(not self.tried_here" in e),
             ('заход кончается, если идти некуда', 'идти некуда' in e),
             ('стоп-кран ловит петлю по подписи текста', 'trail.append(story_map.text_sig' in e),
+            ('«уже проверено» — не новое место', 'def is_echo' in e),
             ('маршрут не ведёт в ложный остаток', "not (tk and (tk, label) in self.tried)" in e),
             ('нажатие не теряется между наборами', 'def tried_here' in e),
             ('отдых не перебивает непройденное', 'rest_fresh' in e),

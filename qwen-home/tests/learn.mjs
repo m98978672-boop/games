@@ -402,5 +402,8 @@ check('маршрут к остатку не ведёт в ложный оста
 check('остаток прямо здесь — не повод кончать заход (маршрут «»)',
   expNow.includes("return ''") && expNow.includes("elif step is None and story_map.remaining() > 0"));
 
+check('«you already checked here» — тот же пассаж, а не новое место',
+  expNow.includes('def is_echo') && expNow.includes('parent_key=prev_place[0]'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
