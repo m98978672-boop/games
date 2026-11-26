@@ -21,11 +21,32 @@ jobs:
             --entrypoint bash maze-browser -c '
               set -euo pipefail
               cd /game
-              python3 -m http.server 8765 --bind 127.0.0.1 &
-              for i in {1..30}; do curl -fsS http://127.0.0.1:8765/collection/lost-in-the-maze-3d/ >/dev/null && break; sleep 1; done
+              node /game/youtube-bot/experiments/serve_maze.cjs &
+              for i in {1..30}; do
+                if node -e "fetch(\"http://127.0.0.1:8765/collection/lost-in-the-maze-3d/\").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"; then break; fi
+                sleep 1
+              done
               export NODE_PATH=/runner/node_modules
               node /game/youtube-bot/experiments/play_lost_maze.cjs /capture
             ' 2>&1 | tee "$RUNNER_TEMP/maze/attempt.log"
+      - name: Expose recorder failure without relying on downloadable logs
+        if: failure()
+        run: |
+          python - <<'PYTHON'
+          import json, os, pathlib, re
+          folder = pathlib.Path(os.environ['RUNNER_TEMP']) / 'maze'
+          trace = folder / 'trace.json'
+          if trace.exists():
+              report = json.loads(trace.read_text())
+              print(f'::notice title=Maze milestone::Reached level {report.get("furthest")}')
+          for file in ('attempt.log', 'browser-build.log'):
+              path = folder / file
+              if path.exists():
+                  matches = [x.strip() for x in path.read_text(errors='replace').splitlines()
+                             if re.search(r'error|failed|not found|no movement|timeout', x, re.I)]
+                  for text in matches[-5:]:
+                      print('::warning title=Maze recorder::' + text[:350].replace('%', '%25'))
+          PYTHON
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
