@@ -1014,8 +1014,35 @@ class StoryMap:
         """Похоже ли на готовый ключ места (16 hex-символов), а не на текст."""
         return isinstance(s, str) and len(s) == 16 and all(c in '0123456789abcdef' for c in s)
 
-    def see(self, text, context=None, options=None):
-        """Записать место в карту и вернуть, что в нём видно."""
+    @staticmethod
+    def is_echo(text, options=None):
+        """«Уже проверено» — не новое место, а тот же пассаж после повторного входа.
+
+        Harlowe внутри пассажа меняет текст: первый заход — «You go to the park…»,
+        повторный — «You already checked here. back to park». Это одно место, и
+        плодить из него новое нельзя: она 199 раз ходила «bushes ↔ back to park».
+        """
+        low = ' '.join((text or '').lower().split())
+        if not low or len(options or []) > 1:
+            return False
+        return ('already checked' in low or 'уже провер' in low
+                or low.startswith('you already'))
+
+    def see(self, text, context=None, options=None, parent_key=None):
+        """Записать место в карту и вернуть, что в нём видно.
+
+        parent_key — место, откуда пришли: если текст «уже проверено», это ОНО,
+        а не новое место.
+        """
+        if parent_key and self.nodes.get(parent_key) is not None and self.is_echo(text, options):
+            node = self.nodes[parent_key]
+            node['visits'] += 1
+            node['key'] = parent_key
+            merged = node.setdefault('options', [])
+            for o in (options or []):
+                if o and o not in merged:
+                    merged.append(o)
+            return node
         k = self.key(text, context, options)
         # Ключ, под которым живёт узел: если этот текст уже известен, живём под
         # прежним ключом. Иначе один пассаж делится на два (Harlowe дописывает
@@ -1149,9 +1176,9 @@ class StoryMap:
                 if e.get('from') != cur or any(same(e['to'], v) for v in seen):
                     continue
                 step = first if first is not None else e.get('choice')
+                seen.add(e['to'])
                 if has_left(e['to']):
                     return step
-                seen.add(e['to'])
                 q.append((e['to'], step))
         return None                         # остатка в достижимой части карты нет
 
@@ -1629,7 +1656,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             labels = [c.get('label') for c in choices]
             # Сначала варианты, потом место в карту: набор вариантов — часть
             # ключа (по нему различаются пассажи с одинаковым текстом).
-            sight = story_map.see(text, here_ctx, labels)   # зрение: силы, находки, следы
+            sight = story_map.see(text, here_ctx, labels, parent_key=prev_place[0])   # зрение
             my_key = sight.get('key') or story_map.key(text, here_ctx, labels)
             if pending.get('from') and not pending.get('done'):
                 # пришли из предыдущего пассажа: записываем ребро карты, зная
