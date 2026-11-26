@@ -1,14 +1,14 @@
 name: Live game translation check
 on:
   push:
-    branches: [arena/7d9fee46-games]
-    paths: [.github/workflows/game-translation-check.yml, youtube-bot/tests/live_translation_examples.py]
+    branches: [arena/7d9fee46-games, arena/4735b829-games]
+    paths: [.github/workflows/game-translation-check.yml, youtube-bot/tests/live_translation_examples.py, youtube-bot/game_text_translation.py, youtube-bot/translate_text.py, youtube-bot/translation_grammar.py]
 permissions:
   contents: read
 jobs:
   examples:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       HF_HUB_DISABLE_XET: '1'
       OMP_NUM_THREADS: '2'
@@ -21,9 +21,11 @@ jobs:
           python-version: '3.11'
       - run: |
           pip install 'torch>=2.6,<3' 'transformers==5.5.4'
-          python -m unittest discover -s youtube-bot/tests -p test_game_text_translation.py
+          python -m unittest discover -s youtube-bot/tests -p 'test_*translation*.py'
+          python -m unittest discover -s youtube-bot/tests -p test_translate_text.py
           python youtube-bot/tests/live_translation_examples.py "$RUNNER_TEMP/translation.json"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: translation-review
           path: ${{ runner.temp }}/translation.json

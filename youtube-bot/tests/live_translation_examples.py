@@ -31,6 +31,10 @@ MULTILINGUAL = [
 ]
 
 if __name__ == '__main__':
+    # Fail explicitly if the runtime/weights cannot load rather than treating a
+    # set of None values as a successful model check.
+    from script_contract import _load_qwen_runtime
+    _load_qwen_runtime()
     rows = [dict(source=source, reference=reference, actual=russian_game_text(source, context='Реплики и подсказки сюжетной игры.'))
             for source, reference in EXAMPLES]
     rows += [dict(language=lang, source=source, reference=reference,
@@ -38,3 +42,5 @@ if __name__ == '__main__':
              for lang, source, reference in MULTILINGUAL]
     Path(sys.argv[1]).write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
     print(f'Usable outputs: {sum(row["actual"] is not None for row in rows)}/{len(rows)}; semantic accuracy not automatically scored.')
+    if not any(row['actual'] is not None for row in rows):
+        raise RuntimeError('The loaded model produced no valid translations')
