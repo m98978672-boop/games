@@ -115,16 +115,16 @@ def translate_file(source, destination, *, source_language='en', context='', tra
         content = stream.read()
     result = translate_content(content, source.suffix.lower(), translate, source_language=source_language, context=context)
     # Exclusive creation prevents overwriting a file created during translation.
+    created = False
     try:
         with destination.open('x', encoding='utf-8', newline='') as output:
-            try:
-                output.write(result)
-            except BaseException:
-                output.close()
-                os.unlink(destination)
-                raise
-    except FileExistsError:
-        raise FileExistsError('Output already exists') from None
+            created = True
+            output.write(result)
+    except BaseException:
+        # Also remove the result if flushing/closing the stream fails.
+        if created:
+            os.unlink(destination)
+        raise
 
 
 def main():
