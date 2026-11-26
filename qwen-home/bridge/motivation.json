@@ -12,25 +12,25 @@
       "id": "game-maker",
       "title": "Сборщик игр",
       "reward": "право придумывать следующий шаблон самой",
-      "at": "2026-11-25"
+      "at": "2026-11-26"
     },
     {
       "id": "game-smith",
       "title": "Игровых дел мастер",
       "reward": "своя полка игр в мире Квени",
-      "at": "2026-11-25"
+      "at": "2026-11-26"
     },
     {
       "id": "first-episode",
       "title": "Первый выпуск",
       "reward": "студия открывает второй сезон",
-      "at": "2026-11-25"
+      "at": "2026-11-26"
     },
     {
       "id": "director",
       "title": "Режиссёр",
       "reward": "блог выходит по расписанию",
-      "at": "2026-11-25"
+      "at": "2026-11-26"
     }
   ],
   "pendingDuties": [],
@@ -112,7 +112,7 @@
   "gamesMade": 3,
   "episodesMade": 6,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-25 18:03 UTC",
+  "updatedAt": "2026-11-26 17:48 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
