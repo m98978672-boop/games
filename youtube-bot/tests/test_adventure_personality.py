@@ -23,11 +23,13 @@ class AdventurePersonalityTests(unittest.TestCase):
             dict(choice_label='Нажми [E]?', screen_unchanged=False, recording_elapsed_ms=1000),
             dict(choice_label='Связаться с Ирой.', screen_unchanged=False, recording_elapsed_ms=2000),
             dict(choice_label='Да', screen_unchanged=False, recording_elapsed_ms=3000),
+            dict(choice_label='«Ты уверен?»', screen_unchanged=False, recording_elapsed_ms=4000),
         ])
         lines = [text for _, text in plan(trace)[1]]
         self.assertIn('Мой выбор: Нажми [E]?', lines)
         self.assertIn('Мой выбор: Связаться с Ирой.', lines)
         self.assertIn('Мой выбор: Да.', lines)
+        self.assertIn('Мой выбор: «Ты уверен?»', lines)
 
     def test_unknown_text_does_not_become_narration(self):
         self.assertEqual(short_comment({'choice_label': 'unknown', 'game_dialog': 'unknown'}, 'первый'),
@@ -41,3 +43,9 @@ class AdventurePersonalityTests(unittest.TestCase):
         self.assertEqual(plan(trace)[2], [(1, 6)])
         event['verified_thinking_only_ms'] = [1000, 21000]
         self.assertEqual(plan(trace)[2], [])
+
+    def test_scene_cues_keep_order_and_map_to_exact_edited_frames(self):
+        from adventure_draft import scene_cues
+        self.assertEqual(scene_cues([(0, 'Пролог.'), (4, 'Второй кадр.'),
+                                    (4, 'Реакция.'), (8, 'Выход.')], [(1, 3)]),
+                         [(0, 'Пролог.'), (2, 'Второй кадр. Реакция.'), (6, 'Выход.')])

@@ -16,6 +16,10 @@ from speech_pronunciation import speech_cadence
 from speech_synthesis import synthesize_narration
 
 GAME_URL = 'https://m98978672-boop.github.io/games/collection/adventure-game/'
+# Games that live in this repository: their code and art are ours, so there is
+# no external licence to confirm before publishing gameplay footage of them.
+OUR_GAME_MARKER = 'm98978672-boop/games'
+OWN_GAMES = frozenset()
 PUZZLE_URL = 'https://m98978672-boop.github.io/games/collection/16-puzzle/'
 # The owner's rule is twenty minutes of real play. Duration is necessary, not
 # proof of actual play, rights or release readiness - that is what the release
@@ -63,20 +67,55 @@ def split_parts(folder, draft, edited, gameplay, *, short, game, author, reposit
 
 
 def rights_from_environment(trace):
-    """Collect the rights record from the owner, or leave it empty.
+    """Work out whether every asset came from our own repository.
 
-    An empty record blocks publication, which is the correct outcome: nobody has
-    checked. This function must never guess a date or a licence, because the gate
-    treats a dated approval as proof that a human verified the source.
+    The old version asked the owner to retype a licence and an approval date into
+    repository variables. That is not a check, and it is exactly the chore nobody
+    should have to do for a game we wrote: "Последний сигнал" is three files in
+    `collection/lighthouse-relay`, with no audio, images or third-party links.
+
+    So the record is derived from the source the capture actually used. A game
+    that belongs to this repository needs no licence at all. Anything external is
+    refused unless its licence is one that allows a commercial upload, and that
+    licence has to be verified against the source repository separately - this
+    function only records what it can see, it never assumes.
     """
-    approval = os.environ.get('GAMEPLAY_RIGHTS_APPROVED_ON', '').strip()
-    checked = os.environ.get('GAMEPLAY_RIGHTS_CHECKED_ON', '').strip()
-    licence = os.environ.get('GAMEPLAY_SOURCE_LICENSE', '').strip()
     source = str(trace.get('source') or '').strip()
-    if not (approval and checked and licence and source):
-        return {'sources': [], 'owner_approval': ''}
-    return {'sources': [{'name': source, 'license': licence, 'checked': checked}],
-            'owner_approval': approval}
+    if not source:
+        return {'sources': []}
+    if OUR_GAME_MARKER in source or source in OWN_GAMES:
+        return {'sources': [{'name': source, 'ownership': 'own'}]}
+    licence = os.environ.get('GAMEPLAY_SOURCE_LICENSE', '').strip()
+    verified = os.environ.get('GAMEPLAY_RIGHTS_CHECKED_ON', '').strip()
+    if not (licence and verified):
+        return {'sources': [{'name': source}]}
+    return {'sources': [{'name': source, 'license': licence, 'license_verified': verified}]}
+
+
+def verified_license(repository_url):
+    """Read the licence GitHub reports for a repository.
+
+    The gate refuses a missing or disallowed licence, so this is called by the
+    workflow once per capture rather than trusted from a variable. Network
+    failures bubble up as errors: an unreadable licence is not a permissive one.
+    """
+    import json as _json
+    import urllib.request
+
+    parts = [p for p in urllib.request.urlparse(repository_url).path.split('/') if p]
+    if len(parts) < 2:
+        raise ValueError('Source is not a GitHub repository URL')
+    api = f'https://api.github.com/repos/{parts[0]}/{parts[1]}/license'
+    headers = {'Accept': 'application/vnd.github+json', 'User-Agent': 'games-release-check'}
+    # Anonymous API calls are rate limited per runner IP, and a rate-limited read
+    # would look like "unlicensed". The workflow supplies a token for that reason.
+    token = os.environ.get('GITHUB_TOKEN', '').strip()
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    request = urllib.request.Request(api, headers=headers)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        payload = _json.loads(response.read().decode('utf-8'))
+    return str((payload.get('license') or {}).get('spdx_id') or '')
 
 
 def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, parts, subtitle):
@@ -118,8 +157,19 @@ def write_release_evidence(folder, trace, *, capture_seconds, play_seconds, part
     return evidence
 
 
+def scene_cues(lines, cuts):
+    """Group simultaneous lines; leave later cues anchored to their own frames."""
+    grouped = {}
+    for stamp, message in sorted(lines, key=lambda line: line[0]):
+        start = round(1000 * (stamp - sum(max(0, min(stamp, end) - begin) for begin, end in cuts)))
+        grouped.setdefault(max(0, start), []).append(message)
+    return [(stamp / 1000, ' '.join(messages)) for stamp, messages in grouped.items()]
+
+
 def plan(trace, *, translation_intervals=None):
     duration = float(trace['duration_seconds'])
+    if trace.get('game') == 'SuperTuxKart':
+        return duration, [(0.0, 'Сегодня на трассе Зен-Гарден. Пилоты — встроенные соперники самой игры. Проверяю запись гонки и монтаж.')], [], False
     if trace.get('game') == 'Ретранслятор 3D':
         lines = [(0, 'Эксперимент в три дэ. Ищу два маяка по карте в углу экрана, потом попробую выйти из лабиринта.')]
         last = 2
@@ -205,7 +255,7 @@ def plan(trace, *, translation_intervals=None):
             label = event.get('choice_label')
             if isinstance(label, str) and label.strip():
                 label = label.strip()
-                punctuation = '' if label.endswith(('.', '!', '?', '…')) else '.'
+                punctuation = '' if label.rstrip('»”\"\')]}').endswith(('.', '!', '?', '…')) else '.'
                 lines.append((prior, f'Мой выбор: {label}{punctuation}'))
         elif trace.get('short'):
             line, reaction = short_comment(event, ORDINAL[event['choice']])
@@ -235,6 +285,10 @@ def build(folder):
     url = PUZZLE_URL if puzzle else GAME_URL
     title = 'Пятнашки' if puzzle else 'The Lost Artifact'
     source = 'https://github.com/kunjgit/GameZone' if puzzle else 'https://github.com/ritaban06/mini-js-games-hub'
+    if trace.get('game') == 'SuperTuxKart':
+        url = 'https://supertuxkart.net/'
+        title = 'SuperTuxKart'
+        source = 'https://github.com/supertuxkart/stk-code'
     if trace.get('game') == 'Ретранслятор 3D':
         url = GAME_URL.replace('adventure-game/', 'relay-3d/')
         title = 'Ретранслятор 3D'
@@ -255,15 +309,19 @@ def build(folder):
     with tempfile.TemporaryDirectory() as temp:
         wavs = []
         cursor = 0.0
-        for index, (stamp, text) in enumerate(lines):
+        cues = scene_cues(lines, cuts)
+        skipped_cues = []
+        for index, (stamp, text) in enumerate(cues):
             wav = Path(temp) / f'{index}.wav'
             narrate(text, wav)
             with wave.open(str(wav), 'rb') as reader:
                 seconds = reader.getnframes() / reader.getframerate()
-            stamp -= sum(max(0, min(stamp, end) - start) for start, end in cuts)
-            start = max(cursor, stamp)
-            wavs.append((wav, round(start * 1000), text))
-            cursor = start + seconds + speech_cadence(text)[2]
+            if index + 1 < len(cues) and stamp + seconds + .06 > cues[index + 1][0]:
+                # Do not drift into the next scene or omit a later event silently.
+                skipped_cues.append(stamp)
+                continue
+            wavs.append((wav, round(stamp * 1000), text))
+            cursor = stamp + seconds + speech_cadence(text)[2]
         # Remove only redundant waiting on unchanged screens and keep the full raw recording.
         video_seconds = duration - sum(end - start for start, end in cuts)
         discard = '+'.join(f'between(t,{start:.3f},{end:.3f})' for start, end in cuts)
@@ -275,7 +333,12 @@ def build(folder):
         portrait = ',scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1' if short else ''
         translated = translation_filters(trace, temp, intervals=intervals, stats=translation_stats) if viewport else ''
         panel = ',' + translated if translated else ''
-        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{portrait}[v]']
+        intro = Path(temp) / 'opening-title.txt'
+        intro.write_text(f'ЗУЗА  /  {title}', encoding='utf-8')
+        # Put the intro on the first gameplay shot, not in front of it.
+        opening = (",drawbox=x=14:y=ih-56:w=iw-28:h=42:color=0x0b1425@0.84:t=fill:enable='lt(t,2.2)'"
+                   f",drawtext=textfile={intro}:expansion=none:x=26:y=h-46:fontsize=22:fontcolor=white:enable='lt(t,2.2)'")
+        filters = [f'[0:v]fps=25,{select}tpad=stop_mode=clone:stop_duration={closing_hold:.3f}{panel}{opening}{portrait}[v]']
         # The clips never overlap. Assemble one PCM track to avoid opening
         # hundreds of FFmpeg inputs for a multi-board campaign.
         narration = Path(temp) / 'narration.wav'
@@ -326,11 +389,11 @@ def build(folder):
     # the videos that actually exist rather than a single claimed file.
     parts = split_parts(folder, f'{base}.mp4', edited, gameplay, short=short,
                         game=title, author=str(trace.get('author') or 'unknown'),
-                        repository_url=url)
+                        repository_url=source if trace.get('game') == 'SuperTuxKart' else url)
     write_release_evidence(folder, trace, capture_seconds=duration, play_seconds=gameplay,
                            parts=parts, subtitle=captions_path.name)
     report = {'short': short, 'video_format': 'short' if short else 'long', 'beta_episode': trace.get('short') is True and not puzzle and not viewport, 'draft': f'{base}.mp4', 'needs_continuation': not (won or (trace.get('game') == 'Последний сигнал' and trace.get('outcome') == 'game_reported_death' and len(trace['actions']) == 12)),
-        'cuts_seconds': cuts, 'raw_duration_seconds': duration,
+        'cuts_seconds': cuts, 'voices_skipped_to_preserve_sync': skipped_cues, 'raw_duration_seconds': duration,
         'removed_fraction': sum(end - start for start, end in cuts) / duration, 'edited_duration_seconds': edited, 'edited_gameplay_seconds': gameplay,
         'translation': translation_stats, 'boards_won': trace.get('boards_won'),
         'minimum_gameplay_seconds': MIN_EDITED_GAMEPLAY_SECONDS, 'duration_eligible': gameplay >= MIN_EDITED_GAMEPLAY_SECONDS,

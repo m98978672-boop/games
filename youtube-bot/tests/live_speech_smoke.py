@@ -47,18 +47,18 @@ def smoke_montage(target, model):
         folder = Path(temp)
         raw = folder / 'recording.webm'
         subprocess.run(['ffmpeg', '-nostdin', '-v', 'error', '-f', 'lavfi', '-i',
-                        'color=c=blue:s=320x240:r=25:d=4', '-an', '-c:v', 'libvpx',
+                        'color=c=blue:s=320x240:r=25:d=14', '-an', '-c:v', 'libvpx',
                         '-deadline', 'realtime', str(raw)], check=True, timeout=90)
         original = hashlib.sha256(raw.read_bytes()).hexdigest()
         trace = {'game': 'Последний сигнал', 'outcome': 'time_limit', 'actions': [
-            {'choice_label': 'Нажми [E]?', 'screen_unchanged': False, 'recording_elapsed_ms': 1000},
+            {'choice_label': 'Нажми [E]?', 'screen_unchanged': False, 'recording_elapsed_ms': 10000},
         ]}
         (folder / 'trace.json').write_text(json.dumps(trace, ensure_ascii=False), encoding='utf-8')
         build(folder)
         report = json.loads((folder / 'pilot.json').read_text(encoding='utf-8'))
         captions = (folder / report['captions']).read_text(encoding='utf-8')
         cue_count, spoken_seconds = measure_srt(captions)
-        if cue_count != 3 or spoken_seconds <= 0 or 'Мой выбор: Нажми [E]?' not in captions:
+        if cue_count != 2 or spoken_seconds <= 0 or 'Мой выбор: Нажми [E]?' not in captions:
             raise ValueError('Synthetic montage captions do not match the original narration')
         if hashlib.sha256(raw.read_bytes()).hexdigest() != original or report['published'] is not False:
             raise ValueError('The original recording changed or the draft was marked published')
