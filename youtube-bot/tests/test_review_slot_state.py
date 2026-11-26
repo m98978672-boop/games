@@ -68,8 +68,8 @@ class SlotStateTests(unittest.TestCase):
         # A gameplay slot is its own category and gets its own command.
         gameplay = render_report([datetime(2026, 11, 25, 15, tzinfo=timezone.utc)], [], error=None)
         self.assertIn('игровой обзор', gameplay)
-        self.assertIn('youtube-playthrough.yml', gameplay)
-        self.assertNotIn('youtube-shorts-autopilot.yml', gameplay)
+        # The command must name a workflow that exists.
+        self.assertIn('gameplay_episode=true', gameplay)
         unknown = render_report([], [], error='publisher unreachable')
         self.assertIn('неизвестно', unknown)
 

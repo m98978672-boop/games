@@ -58,7 +58,10 @@ def _command(slot_local, video_format: str) -> str:
     a review run could produce it.
     """
     if video_format == "gameplay":
-        return (f"gh workflow run youtube-playthrough.yml --ref main "
+        # There is no separate playthrough workflow: gameplay is recorded by the
+        # autopilot itself, so this is the command that actually exists.
+        return (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
+                f"-f gameplay_episode=true "
                 f"-f publish_at='{slot_local:%Y-%m-%d %H:%M}'")
     return (f"gh workflow run youtube-shorts-autopilot.yml --ref main "
             f"-f video_format={video_format} -f made_for_kids=false -f batch_count=1 "

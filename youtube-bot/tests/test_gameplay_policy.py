@@ -111,6 +111,43 @@ class SlotTests(unittest.TestCase):
             next_gameplay_slot(datetime(2026, 11, 26, 10))
 
 
+class WiringTests(unittest.TestCase):
+    """The rule is only real if something executes it."""
+
+    def test_the_decision_reaches_a_job_that_records(self):
+        import yaml
+        root = Path(__file__).resolve().parents[2]
+        workflow = (root / '.github/workflows/youtube-shorts-autopilot.yml').read_text(encoding='utf-8')
+        parsed = yaml.safe_load(workflow)
+        gate = parsed['jobs']['gameplay-gate']
+        # Without job-level outputs the recorder receives empty strings and
+        # records even when the gate said no.
+        self.assertEqual(set(gate['outputs']), {'publish', 'video_kind', 'publish_at'})
+        recorder = parsed['jobs']['record-gameplay']
+        self.assertEqual(recorder['needs'], 'gameplay-gate')
+        tail = workflow[workflow.index('  record-gameplay:'):]
+        self.assertIn('GATE_PUBLISH', tail)
+        self.assertIn('record=false', tail)
+
+    def test_a_manual_gameplay_run_exists(self):
+        # Nothing could fill the 18:00 slot by hand before this input existed.
+        import yaml
+        root = Path(__file__).resolve().parents[2]
+        parsed = yaml.safe_load((root / '.github/workflows/youtube-shorts-autopilot.yml').read_text(encoding='utf-8'))
+        self.assertIn('gameplay_episode', parsed[True]['workflow_dispatch']['inputs'])
+
+    def test_the_suggested_command_points_at_a_real_workflow(self):
+        from datetime import datetime, timezone
+        import reconcile_schedule
+        root = Path(__file__).resolve().parents[2]
+        workflows = {path.name for path in (root / '.github/workflows').glob('*.yml')}
+        report = reconcile_schedule.render_report(
+            [datetime(2026, 11, 26, 15, tzinfo=timezone.utc)], [], error=None, days=1)
+        command = [line for line in report.splitlines() if 'gh workflow run' in line][0]
+        named = command.split('gh workflow run ')[1].split()[0]
+        self.assertIn(named, workflows)
+
+
 class RecallTests(unittest.TestCase):
     def test_state_survives_a_restart(self):
         from gameplay_policy import states_from_rows
