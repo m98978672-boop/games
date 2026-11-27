@@ -1,10 +1,17 @@
 window.VIDEO_CATALOG = [
   {
+    id: "ep07-part1",
+    title: "Эпизод 7 — Первый снег",
+    description: "Зимний день кота Бориса: скрипучий снег, чих в сугроб, снеговик с сосиской и тёплое окно человека.",
+    file: "boris_ep07_shorts.mp4", poster: "thumb_ep07.png", duration: 54,
+    format: "9:16", category: "shorts", series: "ep07", channel: "Канал Бориса", badge: "НОВОЕ", order: 0
+  },
+  {
     id: "ep06-part1",
     title: "Эпизод 6 — Просто жизнь",
     description: "Обычный день кота Бориса: будильник-рыба, горка с картонкой, полотенце-привидение и закат на крыше. Никаких обзоров — только жизнь.",
     file: "boris_ep06_shorts.mp4", poster: "thumb_ep06.png", duration: 52,
-    format: "9:16", category: "shorts", series: "ep06", channel: "Канал Бориса", badge: "НОВОЕ", order: 0
+    format: "9:16", category: "shorts", series: "ep06", channel: "Канал Бориса", badge: "ЭПИЗОД 6", order: 1
   },
   
   
