@@ -419,5 +419,9 @@ check('откат не вернулся: карта истории цела (м�
 check('откат не вернулся: доставка отчёта умеет несвязанные истории main',
   expWf.includes('allow-unrelated-histories'));
 
+check('маршрут к остатку проходит пустые места насквозь, но целью их не считает',
+  expNow.includes('return step             # цель — только там, где есть остаток')
+  && expNow.includes("return (bool(n1.get('text')) and n1.get('text') == n2.get('text'))"));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

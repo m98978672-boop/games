@@ -1166,8 +1166,17 @@ class StoryMap:
             if k1 == k2:
                 return True
             n1, n2 = self.nodes.get(k1) or {}, self.nodes.get(k2) or {}
-            return bool(n1.get('text_key')) and n1.get('text_key') == n2.get('text_key')
+            # text_key у старых узлов мог не заполниться: тогда сверяем и по
+            # подписи текста, иначе один и тот же пассаж считается двумя
+            # местами — и маршрут не находит развилку с остатком.
+            if n1.get('text_key') and n1.get('text_key') == n2.get('text_key'):
+                return True
+            return (bool(n1.get('text')) and n1.get('text') == n2.get('text'))
 
+        # Визиты — только для ОБХОДА: через пустые места надо проходить
+        # насквозь (в кустах тупик ведёт дальше к развилке). А «целью» пустое
+        # место не считаем — иначе маршрут возвращался в тупик, где всё
+        # нажато, и до развилки с остатком она не доходила.
         seen = {start_key}
         q = deque([(start_key, None)])
         while q:
@@ -1176,9 +1185,9 @@ class StoryMap:
                 if e.get('from') != cur or any(same(e['to'], v) for v in seen):
                     continue
                 step = first if first is not None else e.get('choice')
-                seen.add(e['to'])
                 if has_left(e['to']):
-                    return step
+                    return step             # цель — только там, где есть остаток
+                seen.add(e['to'])
                 q.append((e['to'], step))
         return None                         # остатка в достижимой части карты нет
 
