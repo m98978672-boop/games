@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, time, timedelta, timezone
+from typing import Iterable
 from zoneinfo import ZoneInfo
 
 CHANNEL_TZ = ZoneInfo("Europe/Moscow")
@@ -24,6 +25,10 @@ GAMEPLAY_SHORT_MAX_SECONDS = 180
 # LONG_POST_TIMES and all_planned_slots().
 LONG_POST_TIME = LONG_POST_TIMES[0]
 MIN_LEAD = timedelta(minutes=45)
+# A review is rendered before its publication time is fixed, and a run takes
+# from five minutes to over an hour. A slot chosen with less than this headroom
+# may pass by during rendering, so automatic plans keep this far ahead instead.
+SCHEDULE_LEAD = timedelta(hours=2)
 
 
 def manual_publish_time(value: str, *, now: datetime | None = None) -> datetime:
@@ -63,6 +68,96 @@ def resolve_manual_after_render(requested: datetime, *, now: datetime | None = N
     if earliest.second or earliest.microsecond:
         earliest = earliest.replace(second=0, microsecond=0) + timedelta(minutes=1)
     return earliest, True
+
+
+# Each scheduled run fires three hours before the slot it serves, so its own
+# firing time maps to exactly one publication slot and no firing crosses
+# midnight; a late run therefore still knows which slot it was started for.
+CRON_SLOTS: dict[str, tuple[time, time]] = {
+    # Each review firing is three hours before its slot, on the same day.
+    "0 3 * * *": (time(6, 0), time(9, 0)),
+    "0 7 * * *": (time(10, 0), time(13, 0)),
+    "0 0 * * *": (time(3, 0), time(6, 0)),
+    # Gameplay: one a day, at 18:00, but only while a playthrough is open. The
+    # firing only checks readiness; whether anything publishes is decided by
+    # gameplay_policy, so a finished playthrough simply produces no upload.
+    "0 14 * * *": (time(17, 0), GAMEPLAY_POST_TIME),
+}
+
+
+def served_slot(event_schedule: str, *, now: datetime | None = None) -> datetime:
+    """The publication slot a scheduled run is meant to serve.
+
+    GitHub reports only the cron literal, not which of its firing times ran, and
+    a delayed run must still serve the slot it was started for. So: find the most
+    recent firing of *this* cron in Moscow, then take the slot it was scheduled
+    for. Every firing is three hours before its slot, so no firing crosses
+    midnight and the slot is always on the firing's own Moscow day.
+    """
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        raise ValueError("now must include a timezone")
+    if event_schedule not in CRON_SLOTS:
+        raise ValueError("Unknown scheduled review event")
+    fires_at, slot_at = CRON_SLOTS[event_schedule]
+    local = current.astimezone(CHANNEL_TZ)
+    # The slot always falls on the same Moscow calendar day as its firing, which
+    # is what makes the delayed-run case below correct without date arithmetic.
+    candidates = [
+        datetime.combine(local.date() + timedelta(days=offset), fires_at, CHANNEL_TZ)
+        for offset in (-1, 0)
+    ]
+    fired = max(moment for moment in candidates if moment <= local)
+    day = fired.date()
+    # A run so late that the slot has passed still belongs to that slot: a
+    # missed publication must never be silently counted as tomorrow's.
+    return datetime.combine(day, slot_at, CHANNEL_TZ).astimezone(timezone.utc)
+
+
+def reserve_slot_before_render(video_format: str, *, now: datetime | None = None,
+                               occupied: Iterable[datetime] = ()) -> datetime:
+    """Pick the slot a review will target *before* the long rendering starts.
+
+    A slot fixed before rendering cannot be double-booked by two runs that both
+    finish at a different moment. SCHEDULE_LEAD keeps the usual short render
+    from overrunning the slot. ``occupied`` lets an owner who starts several
+    runs at once let each one take a different regular slot instead of all of
+    them aiming at the same time and failing after the render.
+    """
+    if video_format not in {"short", "long"}:
+        raise ValueError("video_format must be short or long")
+    taken = {moment.astimezone(timezone.utc) for moment in occupied}
+    probe = now
+    for _ in range(16):
+        slot = next_publish_slot(probe, video_format=video_format, min_lead=SCHEDULE_LEAD)
+        if slot.astimezone(timezone.utc) not in taken:
+            return slot
+        # Search again strictly after the slot that is already taken.
+        probe = slot
+    raise RuntimeError("every regular slot in the next days is already booked")
+
+
+def settle_slot_after_render(reserved: datetime, video_format: str, *,
+                             now: datetime | None = None) -> tuple[datetime, bool]:
+    """Keep the reserved slot, or move it once if rendering consumed its lead.
+
+    The delayed slot stays at a regular wall time (08:00/12:00 for Shorts,
+    06:00 for a long review) so a slow run never publishes at an arbitrary hour
+    and never silently skips the day. A manual publish_at is not handled here:
+    its own explicit rule is resolve_manual_after_render().
+    """
+    if video_format not in {"short", "long"}:
+        raise ValueError("video_format must be short or long")
+    current = now or datetime.now(timezone.utc)
+    if reserved.tzinfo is None or current.tzinfo is None:
+        raise ValueError("reserved and now must include a timezone")
+    current = current.astimezone(timezone.utc)
+    reserved = reserved.astimezone(timezone.utc)
+    if reserved >= current + MIN_LEAD:
+        return reserved, False
+    # Search strictly after the reserved slot, so a late run moves to the next
+    # regular slot of the same format instead of reusing the one it missed.
+    return next_publish_slot(reserved, video_format=video_format), True
 
 
 def long_video_is_due(now: datetime | None = None) -> bool:

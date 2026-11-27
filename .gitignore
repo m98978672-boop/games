@@ -28,6 +28,11 @@ tools/training/__pycache__/
 # python-кэш
 __pycache__/
 node_modules/
+
+# база «выученных» решений игрового автопилота (локальная, не для git)
+youtube-bot/data/*.sqlite3
+youtube-bot/data/*.sqlite3-journal
+youtube-bot/data/help-cache.json
 /boris/audio_ep2/*.wav
 /boris/audio_ep3/*.wav
 /boris/audio_ep3p2/*.wav
