@@ -423,5 +423,8 @@ check('маршрут к остатку проходит пустые места
   expNow.includes('return step             # цель — только там, где есть остаток')
   && expNow.includes("return (bool(n1.get('text')) and n1.get('text') == n2.get('text'))"));
 
+check('одна ссылка — один исход: первое наблюдение не переписывается',
+  expNow.includes("if e.get('from') == fr and e.get('choice') == choice and e.get('to') != to:"));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
