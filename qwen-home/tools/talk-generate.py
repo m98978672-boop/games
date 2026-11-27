@@ -36,8 +36,6 @@ MODEL = 'Qwen/Qwen3.5-0.8B'
 REVISION = '2fc06364715b967f1860aea9cf38778875588b17'
 
 HOME = Path(__file__).resolve().parent.parent
-from self_facts import SelfFactsError, build_fact_block, read_home, topics_in  # noqa: E402
-
 DIALOGUE = HOME / 'talk' / 'dialogue.md'
 PERSONA = HOME / 'talk' / 'persona.md'
 LAST_REPLY = HOME / 'talk' / 'last-reply.txt'
@@ -415,41 +413,6 @@ def log_search(query, results, best=None):
     SEARCH_LOG.write_text(old.rstrip() + '\n\n' + '\n'.join(lines), encoding='utf-8')
 
 
-def _retake_index(turns):
-    """Индекс вопроса, на который стоит плохой ответ и его надо переписать.
-
-    Условия узкие, чтобы не переписывать хорошие ответы:
-    * последняя пара — «вопрос → ответ»;
-    * вопрос о ней самой (шахматы, уроки, дом, желание, поиск);
-    * в ответе есть цифра, которой нет в её доме, или ответ короче 12 символов.
-    """
-    if len(turns) < 2:
-        return None
-    question_role, question = turns[-2]
-    answer_role, answer = turns[-1]
-    if question_role != 'user' or answer_role != 'assistant':
-        return None
-    if not topics_in(question):
-        return None
-    try:
-        facts = read_home(HOME)
-    except SelfFactsError:
-        return None
-    allowed = set(re.findall(r'\d+', ' '.join(value for _, value in facts.facts())))
-    used = set(re.findall(r'\d+', answer or ''))
-    invented = {number for number in used if number not in allowed and len(number) > 1}
-    # Ответ может быть и без выдуманных цифр, но мимо вопроса: так она уже
-    # ответила «собираю 3D-модельку» на вопрос о счёте в шахматах.
-    off_topic = not re.search(r'(счёт|шаг|урок|модельн|дом|жив|желан|википед|поиск|умею)',
-                              answer or '', re.I)
-    if invented or off_topic or len((answer or '').strip()) < 12:
-        reason = (f'выдуманные цифры {sorted(invented)}' if invented
-                  else 'ответ мимо вопроса' if off_topic else 'слишком короткий')
-        print(f'Плохой прошлый ответ: {reason}', flush=True)
-        return len(turns) - 2
-    return None
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--adapter', type=Path, help='home adapter folder; without it the base model answers')
@@ -460,42 +423,23 @@ def main():
     args = parser.parse_args()
     text = DIALOGUE.read_text(encoding='utf-8')
     turns = parse_turns(text)
-    # Переписываем ли мы плохой прошлый ответ? Тогда вопрос уже «отвечен»
-    # формально, и обычная ветка «последнее слово не за владельцем» молча
-    # выходила — именно так висел её неверный ответ про «3D-модельку».
-    retake_index = None
-    if turns and turns[-1][0] == 'assistant':
-        candidate = _retake_index(turns)
-        if candidate is not None:
-            retake_index = candidate
-            print('Переписываю свой прошлый ответ: он не опирался на дом', flush=True)
-    if not turns or (turns[-1][0] != 'user' and retake_index is None):
+    if not turns or turns[-1][0] != 'user':
         print('Нечего отвечать: последнее слово не за владельцем.')
         return
-    if retake_index is not None:
-        # Вопрос — тот, на который был плохой ответ; историю берём до него.
-        answered_turns = turns[:retake_index]
-        pending = [turns[retake_index][1]]
-    else:
-        # Отвечает на ВСЕ неотвеченные вопросы в хвосте, а не только на
-        # последний: очередь из двух вопросов раньше теряла первый.
-        # Отвечаем на ВСЕ неотвеченные вопросы в хвосте (до трёх), включая
-        # повторы: пропустить вопрос хуже, чем сказать одно и то же дважды,
-        # а порядок и полнота очереди закреплены тестом её дома.
-        pending = []
-        for role, body in reversed(turns):
-            if role != 'user':
-                break
-            pending.append(body)
-            if len(pending) >= 3:
-                break
-        pending.reverse()
-        if len(pending) > 1:
-            # Несколько вопросов без ответа — отвечаем на все разом, а не
-            # только на последний (эту строку проверяет тест её дома).
-            print(f'Без ответа вопросов: {len(pending)} — отвечаю на все разом', flush=True)
-        answered_turns = turns[:len(turns) - len(pending)]
+    # Отвечает на ВСЕ неотвеченные вопросы в хвосте, а не только на
+    # последний: очередь из двух вопросов раньше теряла первый.
+    pending = []
+    for role, body in reversed(turns):
+        if role != 'user':
+            break
+        pending.append(body)
+        if len(pending) >= 3:
+            break
+    pending.reverse()
     owner_text = '\n'.join(pending)
+    answered_turns = turns[:len(turns) - len(pending)]
+    if len(pending) > 1:
+        print(f'Без ответа вопросов: {len(pending)} — отвечаю на все разом', flush=True)
     persona = PERSONA.read_text(encoding='utf-8').strip()
     run_started = time.monotonic()
     torch.set_num_threads(max(1, min(4, os.cpu_count() or 2)))
@@ -562,19 +506,6 @@ def main():
                 print(f'Подложил ей факт её желания: {cur["title"]}', flush=True)
         except Exception:
             pass
-    # Факты о ней самой: вопрос «какой у тебя счёт в шахматах» раньше уходил
-    # модели без опоры — она выдумывала. Теперь дом подкладывает настоящие
-    # числа из state.json и bridge/games.json, как факты поиска.
-    self_topics = topics_in(owner_text)
-    self_facts = None
-    fact_block = ''
-    if self_topics:
-        try:
-            self_facts = read_home(HOME)
-            fact_block = build_fact_block(self_facts, self_topics)
-            print(f'Вопрос о ней самой, темы: {self_topics}; фактов из дома: {len(self_facts.facts())}', flush=True)
-        except SelfFactsError as error:
-            print(f'Дом не прочитался: {error}', flush=True)
     best = None
     if query:
         if results:
@@ -595,11 +526,6 @@ def main():
         final_user = (f'Владелец спрашивает: {owner_text}\n\n'
                       f'Текст из {src_name} «{best["title"]}» ({best.get("url", "")}): {best["digest"]}\n\n'
                       f'Ответь владельцу двумя короткими фразами по этому тексту: первая фраза — «{src_phrase}», вторая фраза — сам ответ из текста СВОИМИ СЛОВАМИ, с годом из текста. Ничего больше не пиши.')
-    elif fact_block:
-        final_user = (f'Владелец спрашивает: {owner_text}\n\n{fact_block}\n\n'
-                      'Ответь владельцу по этим фактам, 1–3 предложениями, своими словами. '
-                      'Числа и названия бери ровно такими, как выше, ничего не добавляй от себя. '
-                      'Если про что-то в списке ничего нет, честно скажи, что в доме этого не записано.')
     elif want_fact:
         # Как и с поиском, факт её желания маленькой модели подаётся
         # структурой, а не скобкой: иначе она отвечает общими словами.
@@ -633,12 +559,6 @@ def main():
             return 'оборвался'
         if not best and len((text or '').strip()) < 8:
             return 'невпопад: пустой ответ'
-        if self_facts is not None:
-            allowed = set(re.findall(r'\d+', ' '.join(v for _, v in self_facts.facts())))
-            used = set(re.findall(r'\d+', text or ''))
-            invented = {n for n in used if n not in allowed and len(n) > 1}
-            if invented:
-                return f'цифры не из дома (выдумано: {", ".join(sorted(invented))})'
         if best:
             fact_years = set(re.findall(r'\b\d{3,4}\b', best['digest']))
             reply_years = set(re.findall(r'\b\d{3,4}\b', text))
@@ -655,9 +575,7 @@ def main():
         attempt += 1
         print(f'Черновик плох ({problem}), попытка {attempt + 1}: {reply!r}', flush=True)
         torch.manual_seed(100 + attempt)
-        if fact_block:
-            retry_note = '\n(Прошлый черновик не годится: цифры не из фактов выше. Возьми числа ровно из списка и ответь 1–3 предложениями.)'
-        elif results:
+        if results:
             retry_note = '\n(Прошлый черновик не годится. Пиши обе фразы целиком до точки, а год бери из текста выше — тот же год, что там написан, цифры не меняй.)'
         else:
             retry_note = '\n(Прошлый черновик не годится: он невпопад. Отвечай владельцу от своего имени, тепло и точно по вопросу, 1–3 предложения целиком. К самой себе по имени не обращайся и чужие роли не пиши.)'
@@ -681,18 +599,7 @@ def main():
         reply = 'Я задумалась и ответила невпопад. Спроси меня ещё раз, пожалуйста!'
     if not reply:
         reply = 'Я задумалась и потеряла мысль. Спроси меня ещё раз, пожалуйста!'
-    if retake_index is not None:
-        # Заменяем ровно свой прошлый ответ, а не дописываем второй.
-        lines = []
-        for index, (role, body) in enumerate(turns):
-            speaker = 'Владелец' if role == 'user' else 'Квеня'
-            lines.append(f'{speaker}: {body}')
-            if retake_index is not None and index == retake_index + 1:
-                lines[-1] = f'Квеня: {reply}'
-        updated = '\n\n'.join(lines) + '\n'
-        DIALOGUE.write_text(updated, encoding='utf-8')
-    else:
-        DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
+    DIALOGUE.write_text(text.rstrip() + f'\n\nКвеня: {reply}\n', encoding='utf-8')
     LAST_REPLY.write_text(reply + '\n', encoding='utf-8')
     print(f'Всего на ответ ушло {time.monotonic() - run_started:.1f} c', flush=True)
     print('ОТВЕТ КВЕНИ:')

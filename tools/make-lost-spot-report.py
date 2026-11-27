@@ -125,8 +125,7 @@ values = {
     'links': m.get('links', 0), 'finds': len(m.get('finds') or []), 'runs': runs_html,
     'figs': figs, 'tried': m.get('tried', 0), 'tired': m.get('tired', 0),
     'energetic': m.get('energetic', 0), 'finds_list': ', '.join(m.get('finds') or []) or '—',
-    'rows': rows, 'milestones': milestones, 'endings': endings_html or '<p class="lead">финалов не было</p>',
-    'nend': len(endings),
+    'rows': rows, 'milestones': milestones,
 }
 
 for k, v in values.items():

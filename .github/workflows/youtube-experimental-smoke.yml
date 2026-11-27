@@ -19,19 +19,12 @@ on:
       - 'youtube-bot/tests/smoke_*.py'
       - '.github/workflows/youtube-experimental-smoke.yml'
   workflow_dispatch:
-    inputs:
-      comments_probe:
-        description: 'Only verify the public comments OAuth redirect'
-        type: boolean
-        default: false
-        required: false
 
 permissions:
   contents: read
 
 jobs:
   gameplay-capture:
-    if: ${{ !inputs.comments_probe }}
     # Never expose upload credentials to downloaded game code. This is a private
     # short technical recording test, not a publication or rights approval.
     runs-on: ubuntu-latest
@@ -67,7 +60,6 @@ jobs:
         run: python youtube-bot/tests/smoke_browser_bridge.py
 
   review-video:
-    if: ${{ !inputs.comments_probe }}
     # Synthetic source material; no channel credentials or publishing.
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -99,7 +91,6 @@ jobs:
           exit "$result"
 
   qwen-long-script:
-    if: ${{ !inputs.comments_probe }}
     # Synthetic source data, no YouTube upload and no secrets.
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -131,7 +122,6 @@ jobs:
           exit "$result"
 
   qwen-gameplay:
-    if: ${{ !inputs.comments_probe }}
     # No OAuth, upload or untrusted game downloads; the model controls a test game.
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -184,7 +174,6 @@ jobs:
           exit "$result"
 
   private-review-repair:
-    if: ${{ !inputs.comments_probe }}
     # Real Steam and Qwen, synthetic failed plans; no publishing credentials.
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -219,25 +208,14 @@ jobs:
 
   voxel-survival-one-off:
     # One explicitly requested test; independent game, not official Minecraft.
-    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.comments_probe }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
     uses: ./.github/workflows/voxel-survival-experiment.yml
 
   finite-adventure-one-off:
     # Private, bounded, finite game; never uploads or pads a short session.
-    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.comments_probe }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     permissions:
       contents: read
     uses: ./.github/workflows/adventure-experiment.yml
-
-  comments-oauth-probe:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.comments_probe }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Verify comment consent redirect without accepting it
-        run: python youtube-bot/tests/probe_comments_oauth.py

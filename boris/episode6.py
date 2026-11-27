@@ -34,17 +34,17 @@ P.ANIM = {42: 16.0, 43: 17.0, 44: 16.0}
 P.PREV_T = {42: 6.0, 43: 11.0, 44: 10.0}
 
 P.DEFS = [
-    dict(k=42, lines=[("n", "p6n1"), ("c", "p6c1")], pad_s=3.0,
-         ov=[("title", 0.25, 4.4, "out"), ("stamp", 4.8, 7.8, "anim")],
+    dict(k=42, lines=[("n", "p6n1"), ("c", "p6c1")], pad_s=4.0,
+         ov=[("title", 0.25, 4.4, "out")],
          sfx=[("birds", 0.0, .30, "loop"), ("music", 0.0, .24, "loop"), ("clink", 2.9, .55, None),
               ("pop", 3.1, .45, None), ("mew", 5.4, .40, None), ("steps", 8.4, .35, None),
               ("rustle", 11.9, .40, None), ("purr", 13.0, .35, None)]),
-    dict(k=43, lines=[("n", "p6n2"), ("c", "p6c2")], pad_s=3.0, ov=[],
+    dict(k=43, lines=[("n", "p6n2"), ("c", "p6c2")], pad_s=4.0, ov=[],
          sfx=[("street", 0.0, .16, "loop"), ("birds", 0.0, .26, "loop"), ("music", 0.0, .22, "loop"),
               ("rustle", 1.6, .30, None), ("wind", 3.8, .30, None), ("rustle", 5.7, .50, None),
               ("meow_happy", 6.6, .40, None), ("pop", 10.4, .55, None), ("coo", 11.2, .35, None),
               ("flutter", 12.7, .45, None)]),
-    dict(k=44, lines=[("n", "p6n3"), ("c", "p6c3")], pad_s=3.0, ov=[("end", -3.0, 99, "out")],
+    dict(k=44, lines=[("n", "p6n3"), ("c", "p6c3")], pad_s=4.0, ov=[("stamp", 4.6, 7.6, "anim"), ("end", -3.0, 99, "out")],
          sfx=[("night", 0.0, .30, "loop"), ("music", 0.0, .26, "loop"), ("frr", 5.2, .40, None),
               ("pop", 8.9, .45, None), ("meow", 9.9, .40, None), ("mew", 11.8, .40, None),
               ("wind", 12.3, .30, None), ("purr_soft", 13.4, .35, None)]),

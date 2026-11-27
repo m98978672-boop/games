@@ -13,7 +13,7 @@ import sys
 from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gameplay_bridge import BrowserBridge
-from gameplay_qwen import QwenVisionAgent, qwen_observe
+from gameplay_qwen import QwenVisionAgent
 
 HTML = '''<!doctype html><html><style>
 body {margin:0;background:white;font-family:Arial;text-align:center}
@@ -35,32 +35,28 @@ with tempfile.TemporaryDirectory(prefix='qwen-game-') as temp:
     game = Path(temp) / 'game'
     game.mkdir()
     (game / 'index.html').write_text(HTML, encoding='utf-8')
-    # Separate fresh game sessions compare the same model with and without the
-    # additional description. This is a tiny diagnostic, not evidence of training.
-    for mode in ('direct', 'observe_then_act'):
-        agent = QwenVisionAgent('Follow the large arrow displayed in the center of the screen.',
-                                ('LEFT', 'RIGHT'), observer=qwen_observe if mode == 'observe_then_act' else None)
-        outcome = 'not_completed'
-        with BrowserBridge(game, rights_acknowledged=True) as bridge:
-            obs = bridge.receive(timeout=60)
-            for step in range(4):
-                assert obs['type'] == 'observation' and obs['step'] == step, obs
-                image = base64.b64decode(obs['screenshot_png_base64'], validate=True)
-                try:
-                    action = agent(image, step)
-                except ValueError:
-                    outcome = 'invalid_model_action'
-                    break
-                obs = bridge.step(action)
-                assert obs['type'] == 'observation', obs
-                if success(obs):
-                    outcome = 'completed'
-                    break
-        report = {'outcome': outcome, 'qwen_actions': agent.decisions, 'mode': mode,
-                  'model': 'Qwen/Qwen3.5-0.8B', 'game': 'two-stage visual arrow test',
-                  'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base', 'game_finetuned': False, 'vision_observation_used': agent.last_observation is not None, 'last_model_response': agent.last_response, 'published': False}
-        print('QWEN_GAMEPLAY_REPORT=' + json.dumps(report, ensure_ascii=True))
-        print(f"::notice title=Qwen gameplay test::{json.dumps(report, ensure_ascii=True)}")
+    agent = QwenVisionAgent('Follow the large arrow displayed in the center of the screen.', ('LEFT', 'RIGHT'))
+    outcome = 'not_completed'
+    with BrowserBridge(game, rights_acknowledged=True) as bridge:
+        obs = bridge.receive(timeout=60)
+        for step in range(4):
+            assert obs['type'] == 'observation' and obs['step'] == step, obs
+            image = base64.b64decode(obs['screenshot_png_base64'], validate=True)
+            try:
+                action = agent(image, step)
+            except ValueError:
+                outcome = 'invalid_model_action'
+                break
+            obs = bridge.step(action)
+            assert obs['type'] == 'observation', obs
+            if success(obs):
+                outcome = 'completed'
+                break
+    report = {'outcome': outcome, 'qwen_actions': agent.decisions,
+              'model': 'Qwen/Qwen3.5-0.8B', 'game': 'two-stage visual arrow test',
+              'model_variant': 'home-adapter' if os.environ.get('QWEN_GAME_ADAPTER_PATH') else 'base', 'game_finetuned': False, 'last_model_response': agent.last_response, 'published': False}
+    print('QWEN_GAMEPLAY_REPORT=' + json.dumps(report, ensure_ascii=True))
+    print(f"::notice title=Qwen gameplay test::{json.dumps(report, ensure_ascii=True)}")
 
 # Also try one model-selected action on the repository's driving game. A visual
 # change alone is not proof that the model has learned to drive or opened it.
