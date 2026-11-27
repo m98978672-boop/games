@@ -1289,8 +1289,18 @@ class StoryMap:
                 if label not in labels:
                     labels.append(label)
         left = 0
+        # Окно ввода (OK/Cancel) — не ветки истории: остатка в нём нет. И
+        # «door» в таком окне — тоже кнопка: имя просят ДО того, как герой
+        # выйдет за дверь, и «door» там ничего не открывает.
+        dialogs = {tk for tk, labels in groups.items()
+                   if is_dialog([{'label': l} for l in labels])
+                   or {'ok', 'cancel'} & {l.strip().lower() for l in labels}}
         for tk, labels in groups.items():
+            if tk in dialogs:
+                continue
             for label in labels:
+                if label.strip().lower() in ('door', 'дверь', 'cancel', 'отмена'):
+                    continue        # служебные кнопки, а не ветки истории
                 if (tk, label) in self.tried:
                     continue
                 if any(self.tried_here(k, label) for k, n in self.nodes.items()
@@ -1463,6 +1473,12 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                 pool = far
 
 
+    # Сначала непроверенные ВЕТКИ, только потом выходы: иначе место с двумя
+    # новыми развилками бросалось ради «back to park».
+    branches = [c for c in pool if not is_exit(c.get('label', ''))]
+    if branches:
+        pool = branches
+
     pick = pool[0] if rng is None else pool[rng.randrange(len(pool))]
     return pick, bool(fresh)
 
@@ -1475,6 +1491,33 @@ def is_rest(label):
     """
     low = (label or '').lower()
     return any(w in low for w in ('rest', 'couch', 'sit', 'lie', 'sleep', 'feet up'))
+
+
+def is_exit(label):
+    """Это выход из места («back to park», «leave», «return») — не ветка истории.
+
+    На развилке в кустах были «Turn left», «Turn right» и «back to park», и она
+    выбирала «back to park»: место с двумя непройденными ветками бросалось,
+    а они оставались в остатке навсегда.
+    """
+    low = ' '.join((label or '').lower().split())
+    return (low.startswith(('back', 'go back', 'return', 'leave', 'exit'))
+            or low in ('назад', 'вернуться', 'выйти'))
+
+
+def is_dialog(choices):
+    """Окно ВВОДА имени (OK/Cancel и больше нечего читать): кнопки, не ветки.
+
+    Осторожно: «door, OK, Cancel» — это окно ввода (имя), а «You already
+    checked here, OK» — место, где «OK» бывает веткой. Поэтому диалог — только
+    ДВЕ кнопки подтверждения и ничего больше.
+    """
+    labels = [(c.get('label') or '').strip().lower() for c in (choices or [])]
+    if len(labels) != 2:
+        return False
+    has_ok = any(l in ('ok', 'okay', 'yes', 'continue', 'next', 'да', 'далее') for l in labels)
+    has_no = any(l in ('cancel', 'no', 'нет', 'отмена') for l in labels)
+    return has_ok and has_no
 
 
 def is_far(label):

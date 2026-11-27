@@ -405,5 +405,10 @@ check('остаток прямо здесь — не повод кончать �
 check('«you already checked here» — тот же пассаж, а не новое место',
   expNow.includes('def is_echo') && expNow.includes('parent_key=prev_place[0]'));
 
+check('на развилке выбирает ветку, а не выход («back to park»)',
+  expNow.includes('def is_exit') && expNow.includes("branches = [c for c in pool if not is_exit"));
+check('окно ввода имени не даёт вечного остатка (door/Cancel — кнопки)',
+  expNow.includes('def is_dialog') && expNow.includes("in ('door', 'дверь', 'cancel', 'отмена')"));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
