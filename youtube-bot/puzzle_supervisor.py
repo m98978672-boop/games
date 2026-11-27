@@ -72,28 +72,6 @@ def avoid_recent_states(legal, before, history):
     return candidates, blocked
 
 
-def verify_transition(before, after, chosen):
-    """Reject false or inconsistent game telemetry; a click may also do nothing."""
-    distance(before)
-    distance(after)
-    if type(chosen) is not int or chosen not in legal_indices(before):
-        raise ValueError('Chosen puzzle move is not legal')
-    if after == before:
-        return False
-    expected = before[:]
-    empty = before.index(0)
-    expected[empty], expected[chosen] = expected[chosen], expected[empty]
-    if after != expected:
-        raise ValueError('Puzzle telemetry does not match the chosen move')
-    return True
-
-
-def board_hint(board):
-    """Trusted bounded textual summary of untrusted but validated telemetry."""
-    distance(board)
-    return 'Reported tiles A-P: ' + ','.join(str(value) for value in board) + ' (0 is blank).'
-
-
 def feedback(before, after, *, best=None, previous=None, history=None):
     before_distance = distance(before)
     after_distance = distance(after)

@@ -130,22 +130,6 @@ jobs:
           # логам нельзя было понять, что именно сломалось.
           trap 'echo "СТРОКА $LINENO: команда «$BASH_COMMAND» упала с кодом $?" >&2' ERR
           SRC="$RUNNER_TEMP/expedition"
-          # Уборку делаем ДО выхода «отчёта нет»: иначе старые каталоги копятся
-          # даже без новых экспедиций и валят сборку Pages по объёму (так и было:
-          # 52 МБ старых видео вернулись через merge, и Pages упал).
-          python3 - <<'PY'
-          import json, shutil
-          from pathlib import Path
-          bridge_path = Path('kvenya/bridge.json')
-          if bridge_path.exists():
-              keep = {e.get('dir') for e in json.loads(bridge_path.read_text(encoding='utf-8')).get('expeditions', []) if e.get('dir')}
-              root = Path('qwen-home/bridge/expeditions')
-              if root.exists():
-                  for old_dir in sorted(root.iterdir()):
-                      if old_dir.is_dir() and str(old_dir) not in keep:
-                          shutil.rmtree(old_dir, ignore_errors=True)
-                          print('убрала старый каталог:', old_dir.name)
-          PY
           [ -f "$SRC/report.json" ] || { echo "Отчёта нет — складывать нечего"; exit 0; }
           STAMP=$(date -u +%Y%m%d-%H%M)
           HOST=$(python3 -c "import os, urllib.parse; print((urllib.parse.urlparse(os.environ['EXP_URL']).hostname or 'site').replace('.', '-'))")
@@ -240,18 +224,7 @@ jobs:
             if git push origin HEAD:main; then pushed=1; break; fi
             echo "push отклонён (попытка $attempt): сливаюсь со свежим main"
             git fetch origin main
-            # Конфликт в отчётах/данных не должен терять саму экспедицию:
-            # в споре берём свою свежую версию — она только что снята.
-            if ! git merge --no-edit origin/main; then
-              echo "конфликт при слиянии — беру свою версию отчёта и данных"
-              git checkout --ours qwen-home/bridge/expeditions kvenya/bridge.json qwen-home/state.json 2>/dev/null || true
-              git add -A qwen-home/bridge/expeditions kvenya/bridge.json qwen-home/state.json 2>/dev/null || true
-              git commit -m "Экспедиция Квени: конфликт слияния — своя версия" || git merge --abort
-            fi
+            git merge --no-edit origin/main || { git merge --abort; exit 1; }
           done
-          if [ -z "$pushed" ]; then
-            echo "Не удалось доставить отчёт за 5 попыток; коммит остаётся в ветке запуска" >&2
-            git log --oneline -2 >&2
-            exit 1
-          fi
+          if [ -z "$pushed" ]; then echo "Не удалось доставить отчёт за 5 попыток" >&2; exit 1; fi
           gh api -X POST "repos/${{ github.repository }}/pages/builds" || true

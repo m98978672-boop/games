@@ -1,0 +1,3053 @@
+{
+  "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
+  "startedAt": "2026-11-24 04:35 UTC",
+  "status": "played",
+  "steps": [
+    {
+      "t": 61.1,
+      "action": "вежливый гость: проверка robots.txt",
+      "result": "robots.txt прочитан"
+    },
+    {
+      "t": 65.6,
+      "action": "открыла страницу",
+      "result": "Lost Spot (Draft)"
+    },
+    {
+      "t": 65.8,
+      "action": "кнопка игры",
+      "result": "не нашлась — пробую играть прямо на открытой странице"
+    },
+    {
+      "t": 69.9,
+      "action": "это сюжетная игра, а не полёт",
+      "result": "история «Lost Spot (Draft)»: текст и варианты выбора, играю чтением, а не кадрами"
+    },
+    {
+      "t": 69.9,
+      "action": "память карты",
+      "result": "прошлую карту не прочитать: name 'memo_from' is not defined"
+    },
+    {
+      "t": 69.9,
+      "action": "читаю историю",
+      "result": "сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки"
+    },
+    {
+      "t": 106.8,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 106.8,
+      "action": "разбор захода",
+      "result": "заход 1: мест в карте 16, нажато вариантов 19; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 106.8,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 15 — иду заново"
+    },
+    {
+      "t": 109.3,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 199.5,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 199.5,
+      "action": "разбор захода",
+      "result": "заход 2: мест в карте 18, нажато вариантов 23; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 199.5,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 12 — иду заново"
+    },
+    {
+      "t": 201.8,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 235.5,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 235.5,
+      "action": "разбор захода",
+      "result": "заход 3: мест в карте 18, нажато вариантов 23; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 235.5,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 12 — иду заново"
+    },
+    {
+      "t": 237.8,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 389.9,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 389.9,
+      "action": "разбор захода",
+      "result": "заход 4: мест в карте 18, нажато вариантов 23; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 389.9,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 12 — иду заново"
+    },
+    {
+      "t": 392.2,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 456.8,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 456.8,
+      "action": "разбор захода",
+      "result": "заход 5: мест в карте 18, нажато вариантов 23; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 456.8,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 12 — иду заново"
+    },
+    {
+      "t": 459.1,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 485.9,
+      "action": "стоп-кран",
+      "result": "топчется на месте (последние 18 шагов — два места) — прекращаю заход"
+    },
+    {
+      "t": 485.9,
+      "action": "разбор захода",
+      "result": "заход 6: мест в карте 19, нажато вариантов 24; заходов хватит"
+    },
+    {
+      "t": 485.9,
+      "action": "карта сохранена",
+      "result": "19 мест для следующего прогона"
+    },
+    {
+      "t": 485.9,
+      "action": "итог истории",
+      "result": "выборов 275 за 6 заход(ов); мест в карте 19, связей 25, нажато вариантов 24; концовок видела 0; находки: —"
+    }
+  ],
+  "screenshots": [
+    "01-open.png",
+    "02-after-play.png",
+    "03-story.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "07-story-32.png",
+    "08-story-40.png",
+    "09-story-48.png",
+    "09-story-56.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "07-story-32.png",
+    "08-story-40.png",
+    "09-story-48.png",
+    "09-story-56.png",
+    "09-story-64.png",
+    "09-story-72.png",
+    "09-story-80.png",
+    "09-story-88.png",
+    "09-story-96.png",
+    "09-story-104.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "07-story-32.png",
+    "08-story-40.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "09-story-end.png"
+  ],
+  "kind": "story",
+  "hasVideo": true,
+  "textSample": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel",
+  "story": {
+    "moves": 275,
+    "runs": [
+      {
+        "run": 1,
+        "moves": 24,
+        "fresh": 22,
+        "newPlaces": 16,
+        "end": "",
+        "placesByNow": 16
+      },
+      {
+        "run": 2,
+        "moves": 62,
+        "fresh": 47,
+        "newPlaces": 2,
+        "end": "",
+        "placesByNow": 18
+      },
+      {
+        "run": 3,
+        "moves": 22,
+        "fresh": 16,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 18
+      },
+      {
+        "run": 4,
+        "moves": 106,
+        "fresh": 79,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 18
+      },
+      {
+        "run": 5,
+        "moves": 44,
+        "fresh": 31,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 18
+      },
+      {
+        "run": 6,
+        "moves": 17,
+        "fresh": 9,
+        "newPlaces": 1,
+        "end": "",
+        "placesByNow": 19
+      }
+    ],
+    "path": [
+      {
+        "run": 1,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 1,
+        "n": 2,
+        "choice": "door",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 1,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 1,
+        "n": 4,
+        "choice": "Get up",
+        "fresh": true,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 1,
+        "n": 5,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. You are tired."
+      },
+      {
+        "run": 1,
+        "n": 6,
+        "choice": "Start scrolling on your phone",
+        "fresh": true,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 1,
+        "n": 7,
+        "choice": "kitchen",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 1,
+        "n": 8,
+        "choice": "door",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 1,
+        "n": 9,
+        "choice": "Go After Spot",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 1,
+        "n": 10,
+        "choice": "school",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You must find Spot quickly! You are not supposed to be out of the house! Mom makes a big point to stay in my room during homework time. You cou"
+      },
+      {
+        "run": 1,
+        "n": 11,
+        "choice": "playground",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 12,
+        "choice": "swings",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide."
+      },
+      {
+        "run": 1,
+        "n": 13,
+        "choice": "To playground",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 1,
+        "n": 14,
+        "choice": "slide",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 15,
+        "choice": "To playground",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 1,
+        "n": 16,
+        "choice": "back",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 1,
+        "n": 17,
+        "choice": "house",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 1,
+        "n": 18,
+        "choice": "house",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 19,
+        "choice": "Leave quietly!",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ Nothing has changed. Leave quietly!"
+      },
+      {
+        "run": 1,
+        "n": 20,
+        "choice": "house",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 21,
+        "choice": "Leave quietly!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ Nothing has changed. Leave quietly!"
+      },
+      {
+        "run": 1,
+        "n": 22,
+        "choice": "house",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 1,
+        "n": 23,
+        "choice": "Leave quietly!",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ Nothing has changed. Leave quietly!"
+      },
+      {
+        "run": 1,
+        "n": 24,
+        "choice": "house",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 2,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 2,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 2,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 2,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 2,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 2,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 2,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 8,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 9,
+        "choice": "back",
+        "fresh": true,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 10,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 11,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 12,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 13,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 14,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 15,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 16,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 17,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 18,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 19,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 20,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 21,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 22,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 23,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 24,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 25,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 26,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 27,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 28,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 29,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 30,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 31,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 32,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 33,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 34,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 35,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 36,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 37,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 38,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 39,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 40,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 41,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 42,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 43,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 44,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 45,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 46,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 47,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 48,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 49,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 50,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 51,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 52,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 53,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 54,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 55,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 2,
+        "n": 56,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 57,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 58,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 59,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 60,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 2,
+        "n": 61,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 2,
+        "n": 62,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 3,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 3,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 3,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 3,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 3,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 3,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 8,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 9,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 10,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 11,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 12,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 13,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 14,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 15,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 3,
+        "n": 16,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 17,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 18,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 19,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 20,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 3,
+        "n": 21,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 3,
+        "n": 22,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 4,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 4,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 4,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 4,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 4,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 4,
+        "n": 7,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 8,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 9,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 10,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 11,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 12,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 13,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 14,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 15,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 16,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 17,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 18,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 19,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 20,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 21,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 22,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 23,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 24,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 25,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 26,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 27,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 28,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 29,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 30,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 31,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 32,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 33,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 34,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 35,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 36,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 37,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 38,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 39,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 40,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 41,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 42,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 43,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 44,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 45,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 46,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 47,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 48,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 49,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 50,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 51,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 52,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 53,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 54,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 55,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 56,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 57,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 58,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 59,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 60,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 61,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 62,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 63,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 64,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 65,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 66,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 67,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 68,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 69,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 70,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 71,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 72,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 73,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 74,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 75,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 76,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 77,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 78,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 79,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 80,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 81,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 82,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 83,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 84,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 85,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 86,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 87,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 88,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 89,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 90,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 91,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 92,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 93,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 94,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 95,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 96,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 97,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 98,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 99,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 4,
+        "n": 100,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 101,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 102,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 103,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 104,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 4,
+        "n": 105,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 4,
+        "n": 106,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 5,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 5,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 5,
+        "n": 4,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 5,
+        "n": 5,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. You are tired."
+      },
+      {
+        "run": 5,
+        "n": 6,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 5,
+        "n": 7,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 5,
+        "n": 8,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 5,
+        "n": 9,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 10,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 11,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 12,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 13,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 14,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 15,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 16,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 17,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 18,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 19,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 20,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 21,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 22,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 23,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 24,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 25,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 26,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 27,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 28,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 29,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 30,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 31,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 32,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 33,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 34,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 35,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 36,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 37,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 5,
+        "n": 38,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 39,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 40,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 41,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 42,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 5,
+        "n": 43,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 5,
+        "n": 44,
+        "choice": "door",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 6,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 6,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 6,
+        "n": 3,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 6,
+        "n": 4,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 6,
+        "n": 5,
+        "choice": "couch",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. You are tired."
+      },
+      {
+        "run": 6,
+        "n": 6,
+        "choice": "Get up",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 6,
+        "n": 7,
+        "choice": "kitchen",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. You are well rested."
+      },
+      {
+        "run": 6,
+        "n": 8,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 6,
+        "n": 9,
+        "choice": "You go back inside",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 6,
+        "n": 10,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 6,
+        "n": 11,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 6,
+        "n": 12,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 6,
+        "n": 13,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 6,
+        "n": 14,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 6,
+        "n": 15,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      },
+      {
+        "run": 6,
+        "n": 16,
+        "choice": "homework",
+        "fresh": true,
+        "energy": 3,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are on the first floor. You could go to the couch, but you also need to do your homework. Go to the kitchen. Go out the front door. You are well rested."
+      },
+      {
+        "run": 6,
+        "n": 17,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+      }
+    ],
+    "endings": [],
+    "reachedEnd": false,
+    "last": {
+      "run": 6,
+      "n": 17,
+      "choice": "back",
+      "fresh": false,
+      "energy": 0,
+      "finds": [],
+      "clues": 0,
+      "text": "↶ You went to your room to do homework. You always did your homework on time and liked doing it. Everyone in your class supported you. back"
+    },
+    "map": {
+      "places": 19,
+      "links": 25,
+      "tried": 24,
+      "energetic": 4,
+      "tired": 4,
+      "finds": []
+    },
+    "sawFinds": [],
+    "freshPlaces": 19,
+    "remembered": 0
+  },
+  "storyMap": {
+    "places": 19,
+    "links": 25,
+    "tried": 24,
+    "finds": [],
+    "tired": 4,
+    "energetic": 4
+  },
+  "storyLine": "прошла историю: 275 выборов, 6 захода(ов), 19 мест в карте, концовок видела 0 · до финала не дошла — история не отпустила"
+}

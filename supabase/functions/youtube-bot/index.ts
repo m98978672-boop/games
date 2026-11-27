@@ -314,42 +314,6 @@ async function issueAutopilotAccessToken(jobId: string): Promise<Response> {
   }
 }
 
-// Read-only view of the private queue. The scheduled autopilot uses it to skip
-// a slot that already has a video, so a late or repeated cron never renders a
-// duplicate. Only non-secret scheduling fields leave the server: no titles,
-// no descriptions, no tokens, no error text.
-async function readAutopilotQueue(request: Request): Promise<Response> {
-  try { await verifyGitHubActionsOidc(request); }
-  catch (error) {
-    const reason = error instanceof Error ? error.message.slice(0, 160) : "identity verification failed";
-    console.error("Autopilot queue OIDC verification failed", reason);
-    return Response.json({ error: `GitHub Actions identity was not accepted: ${reason}` }, { status: 401 });
-  }
-  const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
-  let response: Response;
-  try {
-    response = await dbRequest(
-      "youtube_bot_autopilot_jobs",
-      `?publish_at=gte.${encodeURIComponent(since)}&select=id,publish_at,status,video_id&order=publish_at.desc&limit=100`,
-      { method: "GET" },
-    );
-  } catch (error) {
-    const safeError = error instanceof Error ? error.message.slice(0, 160) : "queue read failed";
-    return Response.json({ error: `Could not read the publication queue: ${safeError}` }, { status: 502 });
-  }
-  const rows = await response.json().catch(() => null);
-  if (!Array.isArray(rows)) {
-    return Response.json({ error: "Publication queue returned an unexpected response." }, { status: 502 });
-  }
-  const jobs = rows.map((row: Record<string, unknown>) => ({
-    id: row.id,
-    publish_at: row.publish_at,
-    status: row.status,
-    video_id: typeof row.video_id === "string" ? row.video_id : null,
-  }));
-  return Response.json({ status: "ok", jobs }, { headers: cors(request.headers.get("origin")) });
-}
-
 async function prepareAutopilotReview(request: Request): Promise<Response> {
   try { await verifyGitHubActionsOidc(request); }
   catch (error) {
@@ -538,7 +502,6 @@ Deno.serve(async (request: Request) => {
     if (request.method === "GET" && route === "/auth/start") return await startOAuth(request);
     if (request.method === "GET" && route === "/oauth/callback") return await oauthCallback(request);
     if (request.method === "GET" && route === "/health") return Response.json({ ok: true, service: "youtube-bot" }, { headers: cors(request.headers.get("origin")) });
-    if (request.method === "GET" && route === "/autopilot/queue") return await readAutopilotQueue(request);
     if (request.method === "POST" && route === "/autopilot/prepare") return await prepareAutopilotReview(request);
     if (request.method === "POST" && route === "/autopilot/complete") return await completeAutopilotReview(request);
     if (request.method === "POST" && route === "/autopilot/fail") return await failAutopilotReview(request);
