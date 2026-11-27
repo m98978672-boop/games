@@ -11,6 +11,39 @@ from schedule_policy import next_publish_slot
 
 
 class GameCatalogTests(unittest.TestCase):
+    def test_spoken_source_excerpt_does_not_read_an_incomplete_cutoff(self):
+        from game_reviews import spoken_source_excerpt, review_opening, steam_release_note
+        self.assertEqual(spoken_source_excerpt('Слово ' * 50, 40, 'Полный запасной текст.'), 'Полный запасной текст.')
+        self.assertEqual(spoken_source_excerpt('Первое полное предложение. Следующее длинное предложение.', 35, 'Запасной текст.'), 'Первое полное предложение.')
+        self.assertIn('Сегодня в обзоре', review_opening('Игра'))
+        self.assertNotIn('…', steam_release_note({'source_facts': {'release_date': 'а' * 70, 'release_coming_soon': True}}))
+
+    def test_titles_are_bounded_sanitized_and_not_cut_mid_suffix(self):
+        from game_reviews import make_review_title
+        title = make_review_title('Игра 😀 ' * 50, video_format='long')
+        self.assertLessEqual(len(title.encode('utf-16-le')) // 2, 100)
+        self.assertTrue(title.endswith('…'))
+        self.assertNotIn('\n', make_review_title('Первая\nВторая'))
+        with self.assertRaises(ValueError):
+            make_review_title('https://example.com')
+
+    def test_rare_question_is_stable(self):
+        from game_reviews import occasionally_ask_viewers
+        results = [occasionally_ask_viewers(str(i)) for i in range(1000)]
+        self.assertTrue(50 < sum(results) < 150)
+        self.assertEqual(results, [occasionally_ask_viewers(str(i)) for i in range(1000)])
+
+    def test_description_preserves_official_game_link_under_length_limit(self):
+        review = {'game_id': '123456', 'game_title': 'Игра' * 100, 'game_version': 'v' * 300,
+                  'pros': ['факт' * 3000, 'факт' * 3000], 'possible_minus': 'Возможно, не всем.',
+                  'sources': [{'name': 'Steam', 'url': 'https://store.steampowered.com/app/123456/'},
+                              {'name': 'bad', 'url': 'https://[broken'}]}
+        description = youtube_description(review)
+        self.assertLessEqual(len(description), 5000)
+        self.assertIn('https://store.steampowered.com/app/123456/', description)
+        self.assertEqual(description.count('https://store.steampowered.com/app/123456/'), 1)
+        self.assertNotIn('https://[broken', description)
+
     def test_price_note_does_not_invent_free_or_other_region_price(self):
         from game_reviews import steam_price_note
         self.assertIn("не подтверждена", steam_price_note({}))
@@ -57,6 +90,39 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(request["recent_game_ids"], [games[0]["id"]])
         self.assertTrue(request["catalog"][0]["features"][0]["feature_id"].endswith("-f1"))
         self.assertIn("Не выдумывай игровой процесс", messages[0]["content"])
+
+    def test_score_prompt_is_not_anchored_to_seven(self):
+        prompt = build_review_messages(load_game_catalog())[0]['content']
+        self.assertIn('весь диапазон', prompt)
+        self.assertNotIn('"idea_score":7', prompt)
+
+    def test_review_rejects_repeat_even_without_alternatives(self):
+        game = load_game_catalog()[0]
+        gid = game['id']
+        data = {'schema_version': 1, 'game_id': gid, 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'],
+                'possible_minus': 'Возможно, этот формат подойдёт не всем.', 'minus_feature_id': f'{gid}-f1',
+                'idea_score': 7, 'hook': 'Что интересного предлагает игра?'}
+        with self.assertRaisesRegex(ValueError, 'repeated'):
+            validate_review(data, [game], recent_game_ids=[gid])
+
+    def test_each_valid_rating_is_preserved(self):
+        game = load_game_catalog()[0]
+        gid = game['id']
+        for score in (1, 1.1, 2.9, 3.8, 4, 5.6, 6.2, 7, 8.4, 9.9, 10):
+            data = {'schema_version': 1, 'game_id': gid, 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'],
+                    'possible_minus': 'Возможно, этот формат подойдёт не всем.', 'minus_feature_id': f'{gid}-f1',
+                    'idea_score': score, 'hook': 'Что интересного предлагает игра?'}
+            with self.subTest(score=score):
+                result = validate_review(data, [game])
+                self.assertEqual(result['idea_score'], score)
+                self.assertIn(f'{score:.1f}'.replace('.', ',') + ' из 10', result['scenes'][-1]['dialogue'])
+
+    def test_spoken_source_labels_and_foreign_title(self):
+        from game_reviews import spoken_feature, review_opening
+        self.assertEqual(spoken_feature('Описание Steam: Кооперативная игра.'), 'Кооперативная игра.')
+        self.assertEqual(spoken_feature('Жанры, указанные в Steam: Головоломки'), 'Жанры игры: Головоломки')
+        self.assertIn('разбираем игру', review_opening('PERI.CO'))
+        self.assertIn('Борис', review_opening('Борис'))
 
     def test_review_prompt_supplies_source_price_and_date_without_inventing_them(self):
         game = dict(load_game_catalog()[0])
@@ -259,6 +325,20 @@ class GameCatalogTests(unittest.TestCase):
         self.assertEqual(prompt['source_fact'],review['evidence']['a'])
         self.assertNotIn('sources',prompt)
 
+    def test_individual_chapter_retries_long_unpunctuated_output(self):
+        from game_reviews import _generate_long_in_batches
+        review = {'evidence': {'a': 'В игре есть головоломки.', 'b': 'В карточке указан одиночный режим.'},
+                  'game_title': 'Пример', 'idea_score': 7, 'pros': ['Головоломки', 'Одиночный режим']}
+        text = ('По описанию игроку предстоит знакомство с правилами и поиск решения. '
+                'Здесь интересно рассматривать каждое действие в контексте заявленной задачи. '
+                'Это впечатление от карточки, а не вывод после личного прохождения; '
+                'чтобы оценить исполнение, понадобится попробовать игру самостоятельно.')
+        with patch('game_reviews.generate_with_qwen', side_effect=['Слишком длинная мысль ' * 40] * 3 + [text] * 10) as gen:
+            scenes = _generate_long_in_batches(review)
+        self.assertEqual(len(scenes), 10)
+        self.assertEqual(gen.call_count, 13)
+        self.assertIn('4 коротких', gen.call_args_list[1].args[0][-1]['content'])
+
     def test_long_review_rejects_invalid_individual_chapters(self):
         review = {"evidence": {"a": "Один факт", "b": "Другой факт"}, "game_title": "Test", "idea_score": 7,
                   "hook": "Что предлагает игра?", "pros": ["Один факт", "Другой факт"], "possible_minus": "Возможно, не для всех."}
@@ -318,9 +398,20 @@ class GameCatalogTests(unittest.TestCase):
         draft = {'game_id':gid, 'idea_score':6, 'possible_minus':'Нет', 'hook':'Что предлагает игра?'}
         wrong = {'possible_minus':'Возможно, формат подойдёт не каждому.', 'minus_feature_id':'other-f1'}
         unsupported = {'possible_minus':'Игра сломана!', 'minus_feature_id':f'{gid}-f1'}
-        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft),json.dumps(draft),json.dumps(wrong),json.dumps(unsupported)]):
+        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft),json.dumps(draft),json.dumps(wrong),json.dumps(unsupported)]+["Нет"]*3):
             with self.assertRaisesRegex(ValueError,'targeted retries'):
                 generate_game_review([game])
+
+    def test_single_fact_repair_binds_source_without_model_id(self):
+        game = dict(load_game_catalog()[0]); gid = game['id']
+        draft = {'game_id': gid, 'idea_score': 6, 'possible_minus': 'Нет', 'hook': 'Что предлагает игра?'}
+        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft)] * 2 + ['{}'] * 2 +
+                   ['Возможно, такой формат подойдёт не каждому игроку.']) as gen:
+            result = generate_game_review([game])
+        self.assertEqual(result['limitation_generation'], 'single_fact_model_repair')
+        self.assertEqual(result['minus_evidence'], game['features'][0])
+        self.assertEqual(json.loads(gen.call_args.args[0][1]['content'])['факт'], game['features'][0])
+        self.assertEqual(result['idea_score'], 6)
 
     def test_platform_fallback_requires_explicit_platform_evidence(self):
         game=dict(load_game_catalog()[0]); gid=game['id']
@@ -328,20 +419,35 @@ class GameCatalogTests(unittest.TestCase):
         game['source_facts']={'platforms_not_marked_supported':['Linux']}
         draft={'game_id':gid,'idea_score':7,'possible_minus':'Нет','hook':'Что предлагает игра?'}
         invalid={'possible_minus':'Нет','minus_feature_id':f'{gid}-f1'}
-        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2):
+        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2+["Нет"]*3):
             review=generate_game_review([game])
         self.assertEqual(review['minus_evidence'],'Карточка Steam не отмечает поддержку Linux')
         self.assertEqual(review['limitation_generation'],'explicit_steam_platform_flag_template')
         self.assertIn('Linux',review['possible_minus'])
         game['source_facts']={}
-        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2):
+        with patch('game_reviews.generate_with_qwen',side_effect=[json.dumps(draft)]*2+[json.dumps(invalid)]*2+["Нет"]*3):
             with self.assertRaisesRegex(ValueError,'targeted retries'): generate_game_review([game])
+
+    def test_missing_score_is_recovered_for_same_game_only(self):
+        game = dict(load_game_catalog()[0]); gid = game['id']
+        draft = {'schema_version': 1, 'game_id': gid, 'selected_feature_ids': [f'{gid}-f1', f'{gid}-f2'],
+                 'minus_feature_id': f'{gid}-f1', 'possible_minus': 'Возможно, такой формат подойдёт не всем.',
+                 'hook': 'Что предлагает эта игра?'}
+        with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft)] * 2 + ['4']) as generator:
+            review = generate_game_review([game])
+        self.assertEqual(review['idea_score'], 4)
+        self.assertEqual(review['game_id'], gid)
+        self.assertEqual(json.loads(generator.call_args.args[0][1]['content'])['game'], game['title'])
+        for invalid in ('8/10', 'три'):
+            with patch('game_reviews.generate_with_qwen', side_effect=[json.dumps(draft)] * 2 + [invalid] * 2):
+                with self.assertRaisesRegex(ValueError, 'unambiguous score'):
+                    generate_game_review([game])
 
     def test_malformed_json_recovers_only_unambiguous_model_score(self):
         game=dict(load_game_catalog()[0]); gid=game['id']
         game['features']=list(game['features'])+['Карточка Steam не отмечает поддержку Linux']
         game['source_facts']={'platforms_not_marked_supported':['Linux']}
-        with patch('game_reviews.generate_with_qwen',side_effect=['{broken','{broken','8','{}','{}']):
+        with patch('game_reviews.generate_with_qwen',side_effect=['{broken','{broken','8','{}','{}']+['Нет']*3):
             review=generate_game_review([game])
         self.assertEqual(review['idea_score'],8)
         self.assertEqual(review['selection_method'],'first_eligible_catalog_candidate_after_invalid_json')
