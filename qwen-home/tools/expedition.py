@@ -1124,6 +1124,12 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                 pool = far
 
 
+    # Сначала непроверенные ВЕТКИ, только потом выходы: иначе место с двумя
+    # новыми развилками бросалось ради «back to park».
+    branches = [c for c in pool if not is_exit(c.get('label', ''))]
+    if branches:
+        pool = branches
+
     pick = pool[0] if rng is None else pool[rng.randrange(len(pool))]
     return pick, bool(fresh)
 
