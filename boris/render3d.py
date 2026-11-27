@@ -77,6 +77,13 @@ def octa(z, yc, r, squash=0.92):
         pts.append((r*math.cos(a), yc + r*math.sin(a)*squash, z))
     return pts
 
+def dodeca(z, yc, r, squash=0.92):
+    pts = []
+    for k in range(12):
+        a = math.radians(15 + 30*k)
+        pts.append((r*math.cos(a), yc + r*math.sin(a)*squash, z))
+    return pts
+
 def loft(rings, col, ol=True, caps=True):
     faces = []
     for i in range(len(rings)-1):
@@ -108,27 +115,36 @@ def cat_faces(P):
     """P: x,z,yaw,lift,pitch,walk,head_yaw,head_pitch,sit,rear,tp,tail_t,blink,detach,paper,crouch,grey,ear_tw"""
     faces, lines = [], []
     lift = P.get("lift", 0.0) + (0.015*abs(math.sin(P["walk"]*math.pi*2)) if P.get("walk") else 0.0)
-    lift += 0.010*math.sin(P.get("breath", P.get("tail_t", 0.0))*2.3)   # дыхание
     if P.get("crouch"): lift -= 0.13
-    bp = P.get("pitch", 0.0)
+    sitv = P.get("sit", 0.0) or 0.0
+    liftb = lift + 0.010*math.sin(P.get("breath", P.get("tail_t", 0.0))*2.3)   # дыхание: тело дышит, лапы стоят
+    bp = P.get("pitch", 0.0) + 0.10*sitv   # посадка: грудь чуть вверх
     def body(p):
         p = rx(p, bp, (0, 0.30, 0))
+        p = ry(p, P.get("yaw", 0.0))
+        return (p[0]+P.get("x", 0), p[1]+liftb, p[2]+P.get("z", 0))
+    def ground(p):
         p = ry(p, P.get("yaw", 0.0))
         return (p[0]+P.get("x", 0), p[1]+lift, p[2]+P.get("z", 0))
     # тело — округлый лофт из восьмигранных сечений
     BS = [(-0.22, 0.295, 0.068), (-0.12, 0.310, 0.090), (0.04, 0.317, 0.088),
           (0.15, 0.327, 0.074), (0.22, 0.337, 0.056)]
-    rings = [octa(z, yc, r) for z, yc, r in BS]
+    rings = [dodeca(z, yc, r) for z, yc, r in BS]
     faces += [([body(p) for p in q], c, e, ol) for q, c, e, ol in loft(rings, CLAY, False)]
-    pr = [octa(z, yc, r*1.06) for z, yc, r in BS]
+    pr = [dodeca(z, yc, r*1.06) for z, yc, r in BS]
     for i in (1, 2):
         faces += [([body(p) for p in [pr[i][1], pr[i][2], pr[i+1][2], pr[i+1][1]]], ORANGE, False, False)]
     faces += [([body(p) for p in q], c, e, ol) for q, c, e, ol in B4((0, 0.385, 0.14), (0.10, 0.12, 0.14), CLAY)]
     # ноги: бедро тоньше к низу + подушечка-лапка
     legs = {"FL": (0.070, 0.26, 0.14), "FR": (-0.070, 0.26, 0.14), "HL": (0.070, 0.26, -0.14), "HR": (-0.070, 0.26, -0.14)}
-    a = 0.5*math.sin(P["walk"]*math.pi*2) if P.get("walk") else 0.0
-    ang = {"FL": a, "HR": a, "FR": -a, "HL": -a}
-    if P.get("sit"): ang.update({"HL": 1.25, "HR": 1.25, "FL": 0.0, "FR": 0.0})
+    if P.get("walk"):
+        s = math.sin(P["walk"]*math.pi*2)
+        sw1 = s if s > 0 else 0.10*s
+        sw2 = -s if s < 0 else -0.10*s
+        ang = {"FL": -0.45*sw1, "HR": -0.45*sw1, "FR": -0.45*sw2, "HL": -0.45*sw2}
+    else:
+        ang = {"FL": 0.0, "FR": 0.0, "HL": 0.0, "HR": 0.0}
+    if sitv: ang.update({"HL": 1.05*sitv, "HR": 1.05*sitv, "FL": 0.0, "FR": 0.0})
     if P.get("rear"): r = P["rear"]; ang.update({"FL": -1.15*r, "FR": -1.15*r, "HL": 0.5*r, "HR": 0.5*r})
     if P.get("crouch"): ang = {"FL": 0.7, "FR": 0.7, "HL": 0.9, "HR": 0.9}
     if P.get("knead") is not None:
@@ -138,24 +154,26 @@ def cat_faces(P):
     for name, pv in legs.items():
         parts = B4((pv[0], pv[1]-0.075, pv[2]), (0.062, 0.14, 0.066), CLAY)
         parts += B4((pv[0], pv[1]-0.185, pv[2]), (0.048, 0.13, 0.052), CLAY)
-        parts += B4((pv[0], pv[1]-0.24, pv[2]+0.02), (0.055, 0.05, 0.08), CLAY)
+        parts += B4((pv[0], pv[1]-0.235, pv[2]+0.02), (0.055, 0.05, 0.08), CLAY)
         for q, col, e, ol in parts:
             qq = [rx(p, ang[name], pv) for p in q]
             if P.get("tp"):
                 sgn = 1.0 if name.endswith("L") else -1.0
                 qq = [rz(p, sgn*1.5708, pv) for p in qq]
                 qq = [(p[0], pv[1], p[2]) for p in qq]
-            faces.append(([body(p) for p in qq], col, e, ol))
+            faces.append(([ground(p) for p in qq], col, e, ol))
     # голова — округлый лофт, чуть крупнее тела (чиби)
     HP = (0, 0.40, 0.20)
-    hy, hp = P.get("head_yaw", 0.0), P.get("head_pitch", 0.0)
+    tb0 = P.get("tail_t", 0.0)
+    hy = P.get("head_yaw", 0.0) + 0.05*math.sin(tb0*0.8)
+    hp = P.get("head_pitch", 0.0) + 0.03*math.sin(tb0*0.6 + 1.3) - 0.08*sitv
     def head(p):
         p = ry(p, hy, HP); p = rx(p, hp, HP)
         return body(p)
     HS = [(0.155, 0.465, 0.070), (0.225, 0.475, 0.096), (0.315, 0.480, 0.090), (0.375, 0.472, 0.062)]
-    hr = [octa(z, yc, r, 0.95) for z, yc, r in HS]
+    hr = [dodeca(z, yc, r, 0.95) for z, yc, r in HS]
     faces += [([head(p) for p in q], c, e, ol) for q, c, e, ol in loft(hr, CLAY, False)]
-    ph = [octa(z, yc, r*1.05, 0.95) for z, yc, r in HS]
+    ph = [dodeca(z, yc, r*1.05, 0.95) for z, yc, r in HS]
     for i in (1, 2):
         faces += [([head(p) for p in [ph[i][1], ph[i][2], ph[i+1][2], ph[i+1][1]]], ORANGE, False, False)]
     faces += [([head(p) for p in q], c, e, ol) for q, c, e, ol in B4((0, 0.442, 0.390), (0.062, 0.048, 0.055), MUZZ)]
@@ -173,8 +191,8 @@ def cat_faces(P):
     for sgn in (1, -1):
         ex = sgn*0.046
         faces += [( [head(p) for p in disc(ex, 0.492, 0.378, 0.034, bl)], GREEN, True, False)]
-        faces += [( [head(p) for p in disc(ex, 0.492, 0.382, 0.016, bl)], (25, 25, 25), True, False)]
-        faces += [( [head(p) for p in disc(ex-0.010, 0.492+0.012*bl, 0.386, 0.0065, bl)], (250, 250, 250), True, False)]
+        faces += [( [head(p) for p in disc(ex, 0.492, 0.382, 0.018, bl)], (25, 25, 25), True, False)]
+        faces += [( [head(p) for p in disc(ex-0.010, 0.492+0.012*bl, 0.386, 0.0075, bl)], (250, 250, 250), True, False)]
     if P.get("paper"):
         faces += [([head(p) for p in [(-0.09, 0.40, 0.42), (0.09, 0.40, 0.42), (0.11, 0.52, 0.48), (-0.11, 0.52, 0.48)]], WHITE, False, False)]
     # усы
@@ -190,8 +208,8 @@ def cat_faces(P):
     w = P["tail_t"]
     for i in range(10):
         eb = -0.35 if P.get("tail_down") else 0.75
-        elev = eb + 0.22*math.sin(w*2.0 + i*0.42)
-        azim = 0.45*math.sin(w*2.6 + i*0.31)
+        elev = eb + (0.10 + 0.16*(i/9.0))*math.sin(w*2.0 + i*0.42)
+        azim = (0.28 + 0.30*(i/9.0))*math.sin(w*2.6 + i*0.31)
         d = (math.sin(azim)*0.038, math.sin(elev)*0.038, -math.cos(azim)*0.038)
         pos = (pos[0]+d[0], pos[1]+d[1], pos[2]+d[2])
         s = 0.054 - 0.028*(i/9.0)
