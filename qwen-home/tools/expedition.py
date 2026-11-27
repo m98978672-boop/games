@@ -1227,6 +1227,13 @@ class StoryMap:
             same = self.text_key_index().get(self.key(dst_text))
             if same:
                 to = same
+        # Одна ссылка в Harlowe может вести в РАЗНЫЕ пассажи (зависит от того,
+        # что уже видано). Наблюдали «Go around the corner» → развилка, потом
+        # → тупик; в карте появлялись два ребра, и маршрут к остатку то
+        # находился, то нет. Первое наблюдение решает — остальные не пишем.
+        for e in self.edges:
+            if e.get('from') == fr and e.get('choice') == choice and e.get('to') != to:
+                return
         edge = {'from': fr, 'choice': choice, 'to': to}
         if edge not in self.edges:
             self.edges.append(edge)
