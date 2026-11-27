@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="icon" href="cover.svg" type="image/svg+xml" />
-<link rel="stylesheet" href="style.css?v=20261122-23" />
+<link rel="stylesheet" href="style.css?v=20261122-24" />
 </head>
 <body data-sheet="hidden">
 <!-- Иконки: одна спрайт-карта на всю страницу (никаких CDN и шрифтов) -->
@@ -213,6 +213,16 @@
       </details>
     </div>
 
+    <div class="ctl-group" aria-labelledby="challenge-heading">
+      <div class="ctl-label" id="challenge-heading">Доска испытаний <span id="challenge-count" class="queue-count">0 / 2</span></div>
+      <p class="contract-help">20 заданий на приёмку, качество, фуры и бригаду. Выберите до двух: учитываются только действия после принятия. Отменённое испытание нельзя взять снова в этой смене.</p>
+      <details id="challenge-board"><summary>Выбрать испытания</summary>
+        <label for="challenge-group">Раздел</label>
+        <select id="challenge-group"><option value="all">Все разделы</option><option value="Приёмка">Приёмка</option><option value="Качество">Качество</option><option value="Фуры">Фуры</option><option value="Особые условия">Особые условия</option></select>
+        <div id="challenge-list" class="contracts-list"></div>
+      </details>
+      <div id="challenge-active" class="challenge-active" aria-live="polite"></div>
+    </div>
     <div class="ctl-group" aria-labelledby="contracts-heading">
       <div class="ctl-label" id="contracts-heading">Контракты смены <span id="contracts-count" class="queue-count">0 / 2</span></div>
       <p class="contract-help">Дополнительные задания на очки. Одновременно — до двух; время идёт по часам смены. Отменённый контракт нельзя взять снова.</p>
@@ -268,30 +278,31 @@
 <script src="../shared/engine.js"></script>
 <script src="../shared/engine-bootstrap.js" defer></script>
 <script src="../shooter/three.min.js"></script>
-<script src="../ratcore/ratcore.bundle.js?v=20261122-23"></script>
+<script src="../ratcore/ratcore.bundle.js?v=20261122-24"></script>
 <!-- Мозги «в коде»: нужны, чтобы игра шла и без fetch (открытие с диска, file://) -->
 <script src="data/brain-data.js"></script>
-<script src="src/sim/model.js?v=20261122-23"></script>
-<script src="src/ai/brain-net.js?v=20261122-23"></script>
+<script src="src/sim/model.js?v=20261122-24"></script>
+<script src="src/ai/brain-net.js?v=20261122-24"></script>
 <script src="vendor/cannon-es.min.js"></script>
-<script src="src/sim/physics.js?v=20261122-23"></script>
-<script src="src/sim/warehouse.js?v=20261122-23"></script>
-<script src="src/sim/worker.js?v=20261122-23"></script>
-<script src="src/config.js?v=20261122-23"></script>
-<script src="src/util.js?v=20261122-23"></script>
-<script src="src/layout.js?v=20261122-23"></script>
-<script src="src/save.js?v=20261122-23"></script>
-<script src="src/audio.js?v=20261122-23"></script>
-<script src="src/dialogue.js?v=20261122-23"></script>
-<script src="src/safety.js?v=20261122-23"></script>
-<script src="src/voice.js?v=20261122-23"></script>
-<script src="src/render/meshes.js?v=20261122-23"></script>
-<script src="src/render/world.js?v=20261122-23"></script>
-<script src="src/render/bodyview.js?v=20261122-23"></script>
-<script src="src/render.js?v=20261122-23"></script>
-<script src="src/contracts.js?v=20261122-23"></script>
-<script src="src/game.js?v=20261122-23"></script>
-<script src="src/ui.js?v=20261122-23"></script>
-<script src="src/main.js?v=20261122-23"></script>
+<script src="src/sim/physics.js?v=20261122-24"></script>
+<script src="src/sim/warehouse.js?v=20261122-24"></script>
+<script src="src/sim/worker.js?v=20261122-24"></script>
+<script src="src/config.js?v=20261122-24"></script>
+<script src="src/util.js?v=20261122-24"></script>
+<script src="src/layout.js?v=20261122-24"></script>
+<script src="src/save.js?v=20261122-24"></script>
+<script src="src/audio.js?v=20261122-24"></script>
+<script src="src/dialogue.js?v=20261122-24"></script>
+<script src="src/safety.js?v=20261122-24"></script>
+<script src="src/voice.js?v=20261122-24"></script>
+<script src="src/render/meshes.js?v=20261122-24"></script>
+<script src="src/render/world.js?v=20261122-24"></script>
+<script src="src/render/bodyview.js?v=20261122-24"></script>
+<script src="src/render.js?v=20261122-24"></script>
+<script src="src/contracts.js?v=20261122-24"></script>
+<script src="src/challenges.js?v=20261122-24"></script>
+<script src="src/game.js?v=20261122-24"></script>
+<script src="src/ui.js?v=20261122-24"></script>
+<script src="src/main.js?v=20261122-24"></script>
 </body>
 </html>

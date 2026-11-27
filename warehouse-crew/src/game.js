@@ -186,6 +186,7 @@ WC.game = (function () {
           WC.audio.delivered();
           reactToEvent(worker, 'delivered');
           contractChanges(WC.contracts.record(api.contracts, api.sim.state.stats, api.sim.state.time, 'delivered', order));
+          challengeEvent('delivered', order, result, w.id);
           emit('delivered', { worker: worker, order: order, result: result });
         },
         onInjury: function (w, injury) {
@@ -205,6 +206,7 @@ WC.game = (function () {
           if (WC.audio && WC.audio.delivered) WC.audio.delivered();
           reactToEvent(worker, 'loaded');
           contractChanges(WC.contracts.record(api.contracts, api.sim.state.stats, api.sim.state.time, 'loaded', order));
+          challengeEvent('loaded', order, result, w.id);
           emit('loaded', { worker: worker, order: order, result: result });
         },
         onDropped: function (w, order, outcome) {
@@ -247,6 +249,28 @@ WC.game = (function () {
     return result;
   }
 
+  function challengeEvent(event, order, result, workerId) {
+    if (S.shiftEnded || api.sim.state.time > cfg.shiftRealSeconds) return;
+    WC.challenges.record(api.challenges, event, order, result, workerId, api.shiftMode).forEach(function (change) {
+      var d = WC.challenges.definitions.find(function (item) { return item.id === change.id; });
+      api.sim.state.stats.score += change.reward;
+      pushLog('Испытание «' + d.title + '» выполнено (+' + change.reward + ')', 'good');
+      emit('challenge', change);
+    });
+  }
+  function acceptChallenge(id) {
+    if (!api.ready || !api.sim || S.shiftEnded || api.sim.state.time >= cfg.shiftRealSeconds) return { ok:false, reason:'Смена не активна' };
+    var result = WC.challenges.accept(api.challenges, id);
+    if (result.ok) { pushLog('Взято испытание «' + WC.challenges.definitions.find(function (d) { return d.id === id; }).title + '»', 'info'); WC.save.autosave(api); }
+    return result;
+  }
+  function cancelChallenge(id) {
+    if (!api.ready || !api.sim || S.shiftEnded) return { ok:false, reason:'Смена не активна' };
+    var result = WC.challenges.cancel(api.challenges, id);
+    if (result.ok) { pushLog('Испытание «' + WC.challenges.definitions.find(function (d) { return d.id === id; }).title + '» отменено', 'warn'); WC.save.autosave(api); }
+    return result;
+  }
+
   // Ручной вызов конкретного дока не меняет очередность автоматических рейсов.
   function callTruck(kind) {
     if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена не активна' };
@@ -277,6 +301,7 @@ WC.game = (function () {
 
   function createSim() {
     api.contracts = WC.contracts.create();
+    api.challenges = WC.challenges.create();
     api.dialogueState = WC.dialogue.create(0);
     socialRng = window.WarehouseSim.createRng(cfg.seed + 7719);
     api.sim = window.WarehouseSim.createWarehouse({
@@ -878,6 +903,7 @@ WC.game = (function () {
   function endShift() {
     if (S.shiftEnded) return;
     contractChanges(WC.contracts.finish(api.contracts, api.sim.state.time));
+    WC.challenges.finish(api.challenges);
     S.shiftEnded = true;
     S.paused = true;
     setPaused(true);
@@ -891,6 +917,7 @@ WC.game = (function () {
     return {
       score: Math.round(stats.score),
       contracts: api.contracts.items.map(function (i) { var d = WC.contracts.definitions.find(function (x) { return x.id === i.id; }); return { id: i.id, title: d.title, status: i.status, progress: i.progress, goal: d.goal, reward: i.status === 'completed' ? d.reward : 0, reason: i.reason }; }),
+      challenges: api.challenges.items.map(function (i) { var d = WC.challenges.definitions.find(function (x) { return x.id === i.id; }); return { id:i.id, title:d.title, status:i.status, progress:i.progress, goal:d.goal, reward:i.status === 'completed' ? d.reward : 0 }; }),
       lighting: api.shiftMode,
       delivered: stats.delivered,
       ruined: stats.ruined,
@@ -980,7 +1007,7 @@ WC.game = (function () {
   // Только данные: функции, ссылки окружения и тела Cannon живут в фабриках.
   function captureCheckpoint() {
     return JSON.parse(JSON.stringify({
-      version: 2, contracts: api.contracts, shiftMode: api.shiftMode, dialogueState: api.dialogueState, runtime: S, warehouse: api.sim.captureCheckpoint(),
+      version: 2, contracts: api.contracts, challenges: api.challenges, shiftMode: api.shiftMode, dialogueState: api.dialogueState, runtime: S, warehouse: api.sim.captureCheckpoint(),
       crew: api.crew.map(function (worker) {
         return { state: worker.state, brain: api.envs[worker.id].brain,
           rng: api.envs[worker.id].rng.getState() };
@@ -1017,6 +1044,7 @@ WC.game = (function () {
         !saved.warehouse || !saved.warehouse.state) throw new Error('Повреждён снимок смены');
     // Снимки v2, созданные до появления ночного режима, считаются дневными.
     var restoredContracts = saved.contracts == null ? WC.contracts.create() : WC.contracts.validate(saved.contracts);
+    var restoredChallenges = saved.challenges == null ? WC.challenges.create() : WC.challenges.validate(saved.challenges);
     var restoredMode = saved.shiftMode == null ? 'day' : saved.shiftMode;
     if (restoredMode !== 'day' && restoredMode !== 'night') throw new Error('Неизвестный режим освещения');
     function safeTree(value, depth) {
@@ -1088,6 +1116,7 @@ WC.game = (function () {
     api.sim.restoreCheckpoint(saved.warehouse, workers.map(function (worker) { return worker.state; }));
     api.shiftMode = restoredMode;
     api.contracts = restoredContracts;
+    api.challenges = restoredChallenges;
     api.dialogueState = saved.dialogueState == null ? WC.dialogue.create(saved.warehouse.state.time) : WC.dialogue.validate(saved.dialogueState);
     api.crew = workers; api.staff = staff; api.envs = {};
     workers.forEach(function (worker, i) {
@@ -1188,6 +1217,8 @@ WC.game = (function () {
     dispatchTruck: dispatchTruck,
     acceptContract: acceptContract,
     cancelContract: cancelContract,
+    acceptChallenge: acceptChallenge,
+    cancelChallenge: cancelChallenge,
     buyStaff: buyStaff,
     hireWorker: hireWorker,
     staffCost: staffCost,
