@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const files = ['vendor/cannon-es.min.js','src/sim/physics.js','src/sim/model.js','src/ai/brain-net.js','src/sim/warehouse.js','src/sim/worker.js','src/config.js','data/brain-data.js','src/save.js','src/dialogue.js', 'src/contracts.js','src/game.js'];
+const files = ['vendor/cannon-es.min.js','src/sim/physics.js','src/sim/model.js','src/ai/brain-net.js','src/sim/warehouse.js','src/sim/worker.js','src/config.js','data/brain-data.js','src/save.js','src/dialogue.js', 'src/contracts.js','src/challenges.js','src/game.js'];
 const data = new Map();
 const storage = {getItem: k => data.has(k) ? data.get(k) : null, setItem: (k,v) => data.set(k,String(v)), removeItem:k=>data.delete(k)};
 async function boot() {
@@ -161,7 +161,7 @@ c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed');
 assert.equal(c.WC.save.protectionReason(),'damaged');
 assert.equal(c.WC.save.save(c.WC.game),false); assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),'');
 // v2 старого формата без поля режима должен оставаться доступным.
-const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode; delete oldV2.checkpoint.dialogueState; delete oldV2.checkpoint.contracts;
+const oldV2 = JSON.parse(raw); delete oldV2.checkpoint.shiftMode; delete oldV2.checkpoint.dialogueState; delete oldV2.checkpoint.contracts; delete oldV2.checkpoint.challenges;
 oldV2.checkpoint.warehouse.state.orders.forEach(o => delete o.dispatchPriority);
 data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldV2));
 c = await boot(); assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.shiftMode,'day'); assert.equal(c.WC.game.api.contracts.items[0].status,'available');
@@ -336,4 +336,44 @@ assert.equal(resumedIn.completedDetached,2); assert.equal(resumedIn.unfulfilled,
 assert.equal(game.sim.ordersOfTruck(resumedOut).length,2);
 assert(game.sim.ordersOfTruck(resumedOut).some(o=>o.id===receivingItems[0].id));
 assert(!game.sim.ordersOfTruck(resumedIn).some(o=>o.id===receivingItems[2].id));
+// Испытания считают только события после принятия; состояние и награда
+// переживают загрузку, а старый v2 без доски остаётся совместимым.
+data.clear(); c=await boot(); game=c.WC.game; game.setPaused(true);
+assert(game.acceptChallenge('intake-2').ok); assert(game.acceptChallenge('team-2').ok);
+assert(!game.acceptChallenge('night-2').ok);
+let chWorker=game.api.crew[0]; let chOrder=game.sim.spawnOrder();
+let chResult=game.sim.store(chOrder,chWorker.id);
+game.api.envs[chWorker.id].onDelivered(chWorker.state,chOrder,chResult);
+assert.equal(game.api.challenges.items.find(i=>i.id==='intake-2').progress,1);
+assert(c.WC.save.save(game)); let challengeSave=data.get(c.WC.save.CHECKPOINT_KEY);
+c=await boot(); game=c.WC.game;
+assert.equal(game.api.resumeStatus,'restored');
+assert.equal(game.api.challenges.items.find(i=>i.id==='team-2').workers.length,1);
+chWorker=game.api.crew[1]; chOrder=game.sim.spawnOrder();
+chResult=game.sim.store(chOrder,chWorker.id);
+const afterStore=game.sim.state.stats.score;
+game.api.envs[chWorker.id].onDelivered(chWorker.state,chOrder,chResult);
+assert.equal(game.sim.state.stats.score,afterStore+20+35);
+assert.equal(game.summary().challenges.find(i=>i.id==='team-2').status,'completed');
+assert(c.WC.save.save(game)); c=await boot(); game=c.WC.game;
+assert.equal(game.api.challenges.items.find(i=>i.id==='intake-2').status,'completed');
+assert(!game.acceptChallenge('intake-2').ok);
+game.restart(); assert.equal(game.api.challenges.items[0].status,'available');
+assert(game.acceptChallenge('intake-2').ok); game.endShift();
+assert.equal(game.api.challenges.items[0].status,'failed'); assert(!game.acceptChallenge('intake-5').ok);
+const oldChallenges=JSON.parse(challengeSave); delete oldChallenges.checkpoint.challenges;
+data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldChallenges)); c=await boot();
+assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.challenges.items[0].status,'available');
+const badChallenges=JSON.parse(challengeSave); badChallenges.checkpoint.challenges.items[0].progress=999;
+const badChallengeText=JSON.stringify(badChallenges); data.set(c.WC.save.CHECKPOINT_KEY,badChallengeText);
+c=await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed'); assert(!c.WC.save.save(c.WC.game));
+assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),badChallengeText);
+// Полный путь: автономная бригада физически доставляет две коробки и
+// закрывает испытание через обычный callback игрового цикла.
+data.clear(); c=await boot(); game=c.WC.game;
+assert(game.acceptChallenge('intake-2').ok); game.teamCommand('auto');
+for (let frame=0;frame<2400 && game.api.challenges.items[0].status!=='completed';frame++) game.update(.1);
+assert.equal(game.api.challenges.items[0].status,'completed');
+assert(game.sim.state.stats.delivered>=2);
+assert(game.api.log.some(entry=>entry.text.includes('Испытание «Первый поток» выполнено')));
 console.log('✓ Перезагрузка смены: бригада, мозги, физика, склад, персонал, v1 и защита повреждённого файла');

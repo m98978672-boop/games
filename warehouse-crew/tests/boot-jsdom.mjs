@@ -48,7 +48,7 @@ if (!JSDOM || !THREE) {
 
 const SCRIPTS = [
   'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
-  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/contracts.js', 'src/safety.js', 'src/voice.js',
+  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/contracts.js', 'src/challenges.js', 'src/safety.js', 'src/voice.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
 ];
@@ -744,8 +744,17 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
     const saved = JSON.parse(window.localStorage.getItem(window.WC.save.CHECKPOINT_KEY)).checkpoint.contracts.items[0].status === 'active';
     doc.querySelector('#contracts-list [data-contract="intake"]').click();
     const cancelled = game.api.contracts.items[0].status === 'cancelled' && doc.querySelector('#contracts-list').textContent.includes('Отменён');
+    const challengeButton=doc.querySelector('[data-challenge="intake-2"]');
+    challengeButton.click();
+    const chActive=game.api.challenges.items[0].status==='active' && doc.querySelector('#challenge-count').textContent==='1 / 2';
+    const chSaved=JSON.parse(window.localStorage.getItem(window.WC.save.CHECKPOINT_KEY)).checkpoint.challenges.items[0].status==='active';
+    const group=doc.querySelector('#challenge-group'); group.value='Фуры'; group.dispatchEvent(new window.Event('change'));
+    const chFilter=!!doc.querySelector('[data-challenge="load-2"]') && !doc.querySelector('[data-challenge="light"]') && !!doc.querySelector('[data-challenge="intake-2"]');
+    doc.querySelector('[data-challenge="intake-2"]').click();
+    const chCancel=game.api.challenges.items[0].status==='cancelled';
     doc.getElementById('btn-report').click();
     const report = doc.querySelector('.shift-report').textContent.includes('Контракты смены');
+    result.challengeUi=chActive && chSaved && chFilter && chCancel && doc.querySelector('.shift-report').textContent.includes('Испытания смены');
     result.contractUi = active && saved && cancelled && report;
   } catch (err) { result.contractError = String(err && err.stack || err); }
   window.close();
@@ -784,6 +793,7 @@ for (const mode of modes) {
   check(r.cargoManifest, 'ведомость двух доков: состав, статусы, возврат, фокус и новая смена', {error:r.contractError});
   check(r.stockUi, 'остатки: отметка, отмена, сохранение фокуса, возврат', {error:r.contractError});
   check(r.departureUi, 'досрочная отправка: таймер, сохранение фокуса, подтверждение и отмена', {error:r.contractError});
+  check(r.challengeUi, 'испытания: фильтр, принятие, сохранение, отмена и отчёт', {error:r.contractError});
   check(r.contractUi, 'контракты в пульте: взять, сохранить, отменить и увидеть в отчёте', {error:r.contractError});
   check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});
   check(r.reportDisplay && r.reportRefresh && r.reportInspect && r.reportExport && r.reportEnd && r.reportEmpty && r.reportFocus, 'отчёт смены: снимок, обновление, инспектор, экспорт и итоги', {display:r.reportDisplay, refresh:r.reportRefresh, inspect:r.reportInspect, export:r.reportExport, end:r.reportEnd, empty:r.reportEmpty, focus:r.reportFocus, error:r.featureError});
