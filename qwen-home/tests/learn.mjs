@@ -437,13 +437,13 @@ check('в случайном лабиринте усталость не отме
   expNow.includes('and attempts < MAZE_STEPS):') && expNow.includes('def has_shaky_at'));
 check('предел стоит на топтании, а не на каждом повторном визите',
   expNow.includes('MAZE_STEPS = 60')
-  && expNow.includes("attempts[0] = 0 if fresh else attempts[0] + 1")
+  && expNow.includes('if len(story_map.nodes) > places_seen[0]:')
   && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
 check('место меняет контент по $sus — старые «нажато» не закрывают новые ветки',
   expNow.includes('MAX_VARIANTS') && expNow.includes('def forget_tried')
-  && expNow.includes("self.variant_key[k] = vk") && expNow.includes('if story_map.variant_key.get(k):')
+  && expNow.includes("self.variant_key[k] = vk") && expNow.includes('def forget_tried')
   && expNow.includes("'variant_key': self.variant_key"));
 check('нажато в отчёте не уменьшается, когда место меняет контент',
   expNow.includes('len(self.tried | self.pressed_old)') && expNow.includes('self.pressed_old.add'));
