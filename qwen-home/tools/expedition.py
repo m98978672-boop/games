@@ -1880,6 +1880,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
     report.step('читаю историю',
                 'сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки')
 
+    stuck_places = set()   # места, где остаток есть, но ветка не показывается
     for run in range(1, max(1, runs) + 1):
         if time.monotonic() >= deadline - 8:
             break
@@ -1893,6 +1894,16 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                         and any(not story_map.tried_here(k, label) for label in (n.get('options') or []))]
             if not unopened:
                 report.step('добор веток', 'непройденных вариантов не осталось — второй заход не нужен')
+                break
+            # Если остаток — сплошь «условные» ветки (место показало другую
+            # ветку по $sus), новые заходы ничего не дадут: каждый заход
+            # начинается с тех же мест. Честно кончаем и говорим об этом.
+            if len(unopened) <= 2 and all(
+                    story_map.remaining_at(k) == 0 or k in stuck_places
+                    for k in unopened):
+                report.step('добор веток',
+                            f'остаток ({len(unopened)} места) — ветки, которые в этом состоянии '
+                            'игры не показываются: повторные заходы их не откроют')
                 break
             report.step('добор веток',
                         f'осталось мест с непройденными вариантами: {len(unopened)} — иду заново')
@@ -2030,9 +2041,11 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                           seen_bad=seen_bad, sus=sus_now[0],
                                           gather=gather_now[0])
                 if pick is None:
-                    # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
-                    # а не крутимся. Следующий заход начнётся с начала и пойдёт
-                    # по маршруту к остатку в других местах.
+                    # Здесь нечего нажимать (или остаток — условная ветка,
+                    # которую игра сейчас не показывает). Запоминаем, чтобы
+                    # не гонять 12 одинаковых заходов.
+                    if any(not story_map.tried_here(my_key, l) for l in labels):
+                        stuck_places.add(my_key)
                     report.step('идти некуда',
                                 f'заход {run}: в этом месте всё нажато, остаток — в других местах карты')
                     break
