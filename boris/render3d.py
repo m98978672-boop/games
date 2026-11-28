@@ -485,11 +485,11 @@ def draw_grid(dr, cam, n=7, step=1.0, zmax=16):
         a, b = project((-n*step, 0, z), cam), project((n*step, 0, z), cam)
         if a and b: dr.line([a[0], a[1], b[0], b[1]], fill=(105, 105, 107), width=2)
 
-def draw_shadow(dr, cam, x, z, r=0.35):
+def draw_shadow(dr, cam, x, z, r=0.35, col=(95, 95, 97)):
     c = project((x, 0.012, z), cam)
     e = project((x+r, 0.012, z), cam)
     if c and e:
-        rx_ = abs(e[0]-c[0]); dr.ellipse([c[0]-rx_, c[1]-rx_*0.32, c[0]+rx_, c[1]+rx_*0.32], fill=(95, 95, 97))
+        rx_ = abs(e[0]-c[0]); dr.ellipse([c[0]-rx_, c[1]-rx_*0.32, c[0]+rx_, c[1]+rx_*0.32], fill=col)
 
 # ---------- пролог: голуби, рука, лавка, сердечки, краска ----------
 PGREY = (152, 158, 170); PGREY_D = (110, 116, 130); PBEAK = (228, 178, 92)
@@ -649,7 +649,9 @@ def cat_house(x, z, yaw=0.0, s=1.0, glow=1.0, night=False, snow_roof=0.0):
     return f
 
 
-CARD = (186, 142, 94)
+CARD = (202, 158, 100)
+CARD_L = (186, 142, 90)
+CARD_R = (172, 128, 80)
 CARD_D = (150, 110, 70)
 CARD_I = (116, 84, 54)
 
@@ -658,10 +660,13 @@ def room_faces(night=False, lamp=0.0):
     f = []
     wall = (206, 188, 168) if not night else (132, 116, 112)
     wall_d = (188, 170, 150) if not night else (104, 92, 90)
-    f += quad((-2.6, 0, -1.2), (2.6, 0, -1.2), (2.6, 0, 3.8), (-2.6, 0, 3.8), (150, 116, 82))
+    f += quad((-2.6, 0, -1.2), (2.6, 0, -1.2), (2.6, 0, 3.8), (-2.6, 0, 3.8), (128, 100, 74))
     for i2 in range(-2, 3):
         f += quad((i2*0.9-0.02, 0.004, -1.2), (i2*0.9+0.02, 0.004, -1.2),
-                  (i2*0.9+0.02, 0.004, 3.8), (i2*0.9-0.02, 0.004, 3.8), (132, 100, 70))
+                  (i2*0.9+0.02, 0.004, 3.8), (i2*0.9-0.02, 0.004, 3.8), (106, 80, 58))
+    for zz in (0.4, 1.3, 2.2, 3.1):
+        f += quad((-2.6, 0.004, zz-0.02), (2.6, 0.004, zz-0.02), (2.6, 0.004, zz+0.02), (-2.6, 0.004, zz+0.02), (106, 80, 58))
+    f += quad((-2.6, 0.008, 3.70), (2.6, 0.008, 3.70), (2.6, 0.008, 3.80), (-2.6, 0.008, 3.80), (88, 66, 48))
     f += quad((-2.6, 0, 3.8), (2.6, 0, 3.8), (2.6, 2.7, 3.8), (-2.6, 2.7, 3.8), wall)
     for sx in (-1, 1):
         f += quad((sx*2.6, 0, 1.6), (sx*2.6, 0, 3.8), (sx*2.6, 2.7, 3.8), (sx*2.6, 2.7, 1.6), wall_d)
@@ -677,12 +682,13 @@ def room_faces(night=False, lamp=0.0):
         f += quad((dx, 1.62, wz-0.020), (dx+0.06, 1.62, wz-0.020), (dx+0.06, 1.68, wz-0.020), (dx, 1.68, wz-0.020), (246, 248, 252))
     f += quad((-0.025, 1.12, wz-0.015), (0.025, 1.12, wz-0.015), (0.025, 2.08, wz-0.015), (-0.025, 2.08, wz-0.015), (86, 60, 48))
     f += quad((-1.16, 2.20, wz-0.03), (1.16, 2.20, wz-0.03), (1.16, 2.28, wz-0.03), (-1.16, 2.28, wz-0.03), (120, 90, 62))
-    f += quad((-1.30, 0.010, 0.7), (1.30, 0.010, 0.7), (1.45, 0.010, 2.9), (-1.45, 0.010, 2.9), (146, 92, 88))
-    f += quad((-1.10, 0.014, 0.92), (1.10, 0.014, 0.92), (1.22, 0.014, 2.68), (-1.22, 0.014, 2.68), (168, 110, 104))
-    f += box((-2.05, 0.20, 3.15), (0.22, 0.40, 0.22), (168, 108, 78))
-    f += puff_ball(-2.05, 0.78, 3.15, 0.36, (74, 118, 70))
-    f += puff_ball(-2.18, 1.00, 3.05, 0.22, (86, 132, 80))
-    f += box((2.05, 0.07, 3.25), (0.22, 0.13, 0.22), (196, 120, 96))
+    f += quad((-1.30, 0.010, 0.7), (1.30, 0.010, 0.7), (1.45, 0.010, 2.9), (-1.45, 0.010, 2.9), (158, 84, 80))
+    f += quad((-1.10, 0.014, 0.92), (1.10, 0.014, 0.92), (1.22, 0.014, 2.68), (-1.22, 0.014, 2.68), (182, 116, 108))
+    f += quad((-1.85, 0.006, 2.80), (-0.85, 0.006, 2.80), (-0.85, 0.006, 3.52), (-1.85, 0.006, 3.52), (84, 62, 44))
+    for lx, lz in ((-1.73, 2.91), (-0.97, 2.91), (-1.73, 3.39), (-0.97, 3.39)):
+        f += box((lx, 0.24, lz), (0.045, 0.24, 0.045), (96, 70, 48))
+    f += box((-1.35, 0.50, 3.15), (0.46, 0.035, 0.32), (110, 78, 52))
+    f += box((-1.35, 0.585, 3.15), (0.16, 0.06, 0.16), (196, 120, 96))
     f += quad((-2.00, 1.50, 3.77), (-1.40, 1.50, 3.77), (-1.40, 2.05, 3.77), (-2.00, 2.05, 3.77), (120, 90, 62))
     f += quad((-1.93, 1.57, 3.765), (-1.47, 1.57, 3.765), (-1.47, 1.98, 3.765), (-1.93, 1.98, 3.765), (214, 190, 150))
     if lamp > 0:
@@ -701,10 +707,12 @@ def cardboard_box(cx, cz, yaw=0.0, w=1.10, h=0.80, d=1.00, flap=1.0, cut=0, tilt
         p = rx(p, tilt, (0, 0, 0))
         p = ry(p, yaw)
         return (p[0]+cx, p[1], p[2]+cz)
+    f += [([T(p) for p in [(-hw-0.13, 0.006, -hd-0.13), (hw+0.13, 0.006, -hd-0.13),
+                           (hw+0.13, 0.006, hd+0.13), (-hw-0.13, 0.006, hd+0.13)]], (60, 42, 30), False, False)]
     f += [([T(p) for p in q], c, False, True) for q, c in (
         ([(-hw, 0, hd), (hw, 0, hd), (hw, h, hd), (-hw, h, hd)], CARD_D),
-        ([(-hw, 0, -hd), (-hw, 0, hd), (-hw, h, hd), (-hw, h, -hd)], CARD),
-        ([(hw, 0, -hd), (hw, 0, hd), (hw, h, hd), (hw, h, -hd)], CARD))]
+        ([(-hw, 0, -hd), (-hw, 0, hd), (-hw, h, hd), (-hw, h, -hd)], CARD_L),
+        ([(hw, 0, -hd), (hw, 0, hd), (hw, h, hd), (hw, h, -hd)], CARD_R))]
     if cut < 1:
         f += [([T(p) for p in [(-hw, 0, -hd), (hw, 0, -hd), (hw, h, -hd), (-hw, h, -hd)]], CARD, False, True)]
     else:
@@ -727,12 +735,12 @@ def cardboard_box(cx, cz, yaw=0.0, w=1.10, h=0.80, d=1.00, flap=1.0, cut=0, tilt
     fl = 0.42*h + 0.10
     for sz in (-1, 1):
         oz = sz*(hd - fl + 2*fl*flap)
-        oy = h + 0.012*(1-flap) - 0.22*fl*flap
+        oy = h + 0.012*(1-flap) - 0.45*fl*flap
         f += [([T(p) for p in [(-hw, h, sz*hd), (hw, h, sz*hd), (hw, oy, oz), (-hw, oy, oz)]],
                CARD_D if sz > 0 else CARD, False, True)]
     for sx in (-1, 1):
         ox = sx*(hw - fl + 2*fl*flap)
-        oy = h + 0.014*(1-flap) - 0.22*fl*flap
+        oy = h + 0.014*(1-flap) - 0.45*fl*flap
         f += [([T(p) for p in [(sx*hw, h, -hd), (sx*hw, h, hd), (ox, oy, hd), (ox, oy, -hd)]], CARD, False, True)]
     f += [([T(p) for p in [(-0.16, 0.16, -hd-0.006), (0.16, 0.16, -hd-0.006),
                            (0.16, 0.40, -hd-0.006), (-0.16, 0.40, -hd-0.006)]], (226, 214, 190), False, False)]
@@ -2544,7 +2552,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
         M = dict(x=-0.70, z=1.18, yaw=math.atan2(0.30+0.70, bz-1.18), sit=1.0,
                  head_yaw=0.25*math.sin(t*0.5), tail_t=t*0.6+1.0, blink=blink(t+0.7), grey=True)
         cf, cl = cat_faces(M); faces += cf; lines += cl
-        shadow = [(px, pz), (-0.70, 1.18)]
+        shadow = [(px, pz, 0.30, (70, 50, 36)), (-0.70, 1.18, 0.30, (70, 50, 36))]
         cam = make_cam((0.10, 0.98, -0.80), (0.10, 0.64, 1.95))
     elif k == 49:
         # ЭП8 ч1 · примерка: Борис запрыгивает и садится, Мурка привстаёт заглянуть
@@ -2552,13 +2560,14 @@ def render_frame(k, t, ovl_imgs, ot=None):
         grid = False
         faces += room_faces()
         faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=0.85)
-        if t < 2.0:
-            blift, bzp = 0.0, 0.85
-            bsit = 0.0
+        if t < 1.4:
+            blift, bzp, bsit = 0.0, 1.00, 0.0
+        elif t < 2.0:
+            blift, bzp, bsit = -0.07*math.sin(math.pi*(t-1.4)/0.6), 1.00, 0.0
         elif t < 2.8:
             u = (t-2.0)/0.8
             blift = 1.05*math.sin(math.pi*u)
-            bzp = 0.85 + 1.25*u
+            bzp = 1.00 + 1.10*u
             bsit = 0.0
         else:
             blift, bzp, bsit = 0.50, 2.10, 1.0
@@ -2574,7 +2583,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
                  rear=rearv, pitch=-0.45*rearv, lift=0.10*rearv, head_pitch=-0.15*rearv,
                  tail_t=t*0.7+2.0, blink=blink(t+1.3), grey=True)
         cf, cl = cat_faces(M); faces += cf; lines += cl
-        shadow = [(0.30, bzp), (mx, mz)]
+        shadow = [(0.30, 1.00, 0.30/(1+blift*1.3), (70, 50, 36)), (mx, mz, 0.30, (70, 50, 36))]
         cam = make_cam((0.15, 0.92, -0.35), (0.30, 0.66, 2.00))
     elif k == 50:
         # ЭП8 ч1 · вечер: Борис спит в коробке, Мурка клубком, лампа горит
@@ -2591,7 +2600,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
         for i in range(3):
             su = (t*0.35 + i*0.33) % 1.0
             faces += puff_ball(0.62+0.06*i, 1.10+0.55*su, 1.95-0.12*su, 0.030+0.026*su, (226, 228, 238))
-        shadow = [(0.30, 2.10), (-0.75, 1.35)]
+        shadow = [(0.30, 2.10, 0.32, (40, 28, 20)), (-0.75, 1.35, 0.30, (40, 28, 20))]
         cam = make_cam((0.0, 0.88, -0.30), (0.20, 0.64, 2.00))
     elif k == 51:
         # ЭП8 ч2 · утро: место занято Муркой, Борис возмущается
@@ -2610,7 +2619,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
                   lift=hop, head_pitch=-0.10*hop, tail_t=t*2.4, blink=blink(t),
                   ear_tw=0.5 if 5.2 < t < 5.6 else 0.0, painted=True)
         cf, cl = cat_faces(BB); faces += cf; lines += cl
-        shadow = [(0.30, 2.10), (bxp, bzp)]
+        shadow = [(0.30, 2.10, 0.32, (70, 50, 36)), (bxp, bzp, 0.30/(1+hop*2.0), (70, 50, 36))]
         cam = make_cam((0.05, 0.95, -0.50), (0.0, 0.66, 2.00))
     elif k == 52:
         # ЭП8 ч2 · музыкальные стулья: круги вокруг коробки, Барсик садится молча
@@ -2645,7 +2654,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
         BK = dict(x=kx, z=kz, yaw=math.atan2(0.30-kx, 2.10-kz), walk=t*1.4 if 3.5 < t < 6.2 else None,
                   lift=klift, sit=ksit, tail_t=t*0.9+4.0, blink=blink(t+1.7), black=True)
         cf, cl = cat_faces(BK); faces += cf; lines += cl
-        shadow = [(bpx, bpz), (mpx, mpz), (kx, kz)]
+        shadow = [(bpx, bpz, 0.30, (70, 50, 36)), (mpx, mpz, 0.30, (70, 50, 36)), (1.15, 2.50, 0.30/(1+klift*1.3), (70, 50, 36))]
         cam = make_cam((0.10, 1.10, -0.85), (0.0, 0.72, 2.00))
     elif k == 53:
         # ЭП8 ч2 · коробка с Барсиком уезжает по полу и возвращается победителем
@@ -2675,7 +2684,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
         M = dict(x=mxp, z=mpz, yaw=math.atan2(sx-mxp, 2.10-mpz), lift=h2, walk=t*1.6 if 6.5 < t < 9.0 else None,
                  head_pitch=0.20*w1, tail_t=t*1.1+3.0, blink=blink(t+1.1), grey=True)
         cf, cl = cat_faces(M); faces += cf; lines += cl
-        shadow = [(sx, 2.10), (bxp, bzp), (mxp, mpz)]
+        shadow = [(sx, 2.10, 0.34, (70, 50, 36)), (bxp, bzp, 0.30/(1+h1*2.0), (70, 50, 36)), (mxp, mpz, 0.30/(1+h2*2.0), (70, 50, 36))]
         cam = make_cam((0.15, 1.00, -0.70), (0.45, 0.68, 2.10))
     elif k == 54:
         # ЭП8 ч3 · человек вырезает окно: клапаны в крышу, проём спереди, обрезки
@@ -2702,7 +2711,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
         M = dict(x=-1.60, z=1.60, yaw=math.atan2(0.30+1.60, 2.10-1.60), sit=1.0,
                  head_yaw=0.3*math.sin(t*0.6), tail_t=t*0.6+1.0, blink=blink(t+0.5), grey=True)
         cf, cl = cat_faces(M); faces += cf; lines += cl
-        shadow = [(bxp, bzp), (-1.60, 1.60)]
+        shadow = [(bxp, bzp, 0.30, (70, 50, 36)), (-1.60, 1.60, 0.30, (70, 50, 36))]
         cam = make_cam((0.05, 0.92, -0.45), (0.20, 0.66, 2.00))
     elif k == 55:
         # ЭП8 ч3 · заселение: Мурка головой в окно, Борис на крыше, Барсик в очереди
@@ -2719,7 +2728,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
         BK = dict(x=1.15, z=1.28, yaw=math.atan2(0.30-1.15, 2.10-1.28), sit=1.0, black=True,
                   head_yaw=0.2*math.sin(t*0.6+2.0), tail_t=t*0.7+4.0, blink=blink(t+1.4))
         cf, cl = cat_faces(BK); faces += cf; lines += cl
-        shadow = [(0.30, 1.16), (0.30, 2.10), (1.15, 1.28)]
+        shadow = [(0.30, 1.16, 0.30, (70, 50, 36)), (1.15, 1.28, 0.30, (70, 50, 36))]
         cam = make_cam((0.05, 0.98, -0.50), (0.20, 0.70, 2.00))
     elif k == 56:
         # ЭП8 ч3 · вечер: окна дома светятся, все мурчат, финал
@@ -2742,7 +2751,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
         for i in range(2):
             su = (t*0.4 + i*0.5) % 1.0
             faces += puff_ball(0.75+0.10*i, 1.00+0.45*su, 1.80-0.10*su, 0.028+0.022*su, (232, 226, 220))
-        shadow = [(0.30, 1.16), (0.30, 2.10), (1.20, 2.35)]
+        shadow = [(0.30, 1.16, 0.30, (40, 28, 20)), (1.20, 2.35, 0.30, (40, 28, 20))]
         cam = make_cam((0.0, 0.88, -0.35), (0.20, 0.66, 2.00))
     else:
         sky = sky_img("studio", (118, 118, 121), (162, 162, 164))
@@ -2750,10 +2759,6 @@ def render_frame(k, t, ovl_imgs, ot=None):
     img = sky.copy()
     dr = ImageDraw.Draw(img)
     if grid: draw_grid(dr, cam)
-    if shadow:
-        shs = shadow if (shadow and isinstance(shadow[0], (list, tuple))) else [shadow]
-        for sh in shs:
-            draw_shadow(dr, cam, sh[0], sh[1], *(sh[2:] if len(sh) > 2 else ()))
     proj = []
     for item in faces:
         q, col, emis = item[0], item[1], item[2]
@@ -2777,6 +2782,10 @@ def render_frame(k, t, ovl_imgs, ot=None):
         dr.polygon(poly, fill=col, outline=col)
         if ol:
             dr.line(poly + [poly[0]], fill=(36, 36, 40), width=2, joint="curve")
+    if shadow:
+        shs = shadow if (shadow and isinstance(shadow[0], (list, tuple))) else [shadow]
+        for sh in shs:
+            draw_shadow(dr, cam, sh[0], sh[1], *(sh[2:] if len(sh) > 2 else ()))
     for pa, pb in lines:
         qa, qb = project(pa, cam), project(pb, cam)
         if qa and qb:
