@@ -147,6 +147,7 @@ def audit(src=None):
             ('эхо лабиринта кончает заход', "report.step('эхо лабиринта'" in e),
             ('скрытые числа игры читаются из состояния', 'window.State && window.State.variables' in e),
             ('цена места в подозрительности — увидена по числам игры', 'def note_sus' in e),
+            ('подозрительность копится по сигналу игры', 'HEARD_BUSHES' in e and 'gather_now' in e),
         ]),
     ]
     out = []
