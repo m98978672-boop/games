@@ -251,6 +251,13 @@ jobs:
           python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
       - name: Test action validation
         run: python -m unittest youtube-bot/tests/test_strategy_desktop.py youtube-bot/tests/test_strategy_qwen.py
+      - name: Inspect the previous private Warzone probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/warzone-previous"
+          gh run download 46123124776 --name warzone-private-46123124776 --dir "$RUNNER_TEMP/warzone-previous"
+          python youtube-bot/warzone_probe/inspect.py "$RUNNER_TEMP/warzone-previous"
       - name: Build isolated Warzone desktop
         run: docker build -f youtube-bot/warzone_probe/Dockerfile -t kvenya-warzone-private:1 youtube-bot
       - name: Capture a bounded private Kvenya session
