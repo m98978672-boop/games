@@ -257,7 +257,11 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/warzone-previous"
           gh run download 46123124776 --name warzone-private-46123124776 --dir "$RUNNER_TEMP/warzone-previous"
-          python youtube-bot/warzone_probe/inspect.py "$RUNNER_TEMP/warzone-previous"
+          ls -lh "$RUNNER_TEMP/warzone-previous"
+          python youtube-bot/warzone_probe/inspect.py "$RUNNER_TEMP/warzone-previous" 2>"$RUNNER_TEMP/inspect-error" || {
+            python -c 'import os; s=open(os.environ["RUNNER_TEMP"]+"/inspect-error").read()[-2500:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+            exit 1
+          }
       - name: Build isolated Warzone desktop
         run: docker build -f youtube-bot/warzone_probe/Dockerfile -t kvenya-warzone-private:1 youtube-bot
       - name: Capture a bounded private Kvenya session
