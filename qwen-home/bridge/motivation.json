@@ -1,5 +1,5 @@
 {
-  "points": 99,
+  "points": 112,
   "level": "Странник",
   "achievements": [
     {
@@ -82,6 +82,8 @@
   "eventIds": [
     "20261128-1629-colinhuang314-github-io:played",
     "20261128-1629-colinhuang314-github-io:video",
+    "20261128-1646-colinhuang314-github-io:played",
+    "20261128-1646-colinhuang314-github-io:video",
     "creation:game:ptica-i-truby",
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
@@ -91,13 +93,13 @@
     "creation:episode:ep-20261123-match",
     "creation:episode:ep-20261124-match"
   ],
-  "reportsCounted": 1,
-  "playedCount": 1,
+  "reportsCounted": 2,
+  "playedCount": 2,
   "bestStepsEver": 0,
   "gamesMade": 3,
   "episodesMade": 5,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-28 16:29 UTC",
+  "updatedAt": "2026-11-28 16:46 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -207,6 +209,8 @@
     "20261128-1613-colinhuang314-github-io:video",
     "20261128-1629-colinhuang314-github-io:played",
     "20261128-1629-colinhuang314-github-io:video",
+    "20261128-1646-colinhuang314-github-io:played",
+    "20261128-1646-colinhuang314-github-io:video",
     "creation:episode:ep-20261123-2-truby",
     "creation:episode:ep-20261123-4-truby",
     "creation:episode:ep-20261123-5-truby",
