@@ -441,6 +441,8 @@ check('предел стоит на топтании, а не на каждом 
   && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
+check('условный остаток не заманивает маршрут: помечаем «не сейчас»',
+  expNow.includes('def note_unreachable') && expNow.includes("if n.get('not_now'):"));
 check('круг из нажатых шагов прерывается: не больше 3 заходов в один пассаж',
   expNow.includes('run_visits[my_key] > 3') && expNow.includes('4-й раз в одном пассаже'));
 check('маршрут предпочитает ненажатый шаг нажатому',
