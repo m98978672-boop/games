@@ -1153,13 +1153,11 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     def not_tried(c):
         """Этот выбор в этом месте ещё не нажимали?
 
-        С оговоркой: если контент места уже менялся ($sus в Harlowe), то
-        «нажато» в прежнем состоянии не считается — ссылка теперь ведёт в
-        другую ветку. Иначе 3 концовки из 6 недостижимы в принципе.
+        Свежесть снимается НЕ здесь, а в момент смены контента (forget_tried):
+        иначе все варианты навсегда «свежие», и она 418 шагов ходит
+        «качели ↔ горка», потому что заход не кончается.
         """
         if story_map is not None and passage:
-            if story_map.variant_key.get(k):
-                return True
             return not story_map.tried_here(k, c.get('label'))
         return here_key(c) not in visited
 
@@ -1477,10 +1475,16 @@ def read_story(page, seconds, out, report, shot, runs=6):
                 # ссылками): раньше счётчик рос на каждом повторном визите
                 # в доме, лимит 6 сгорал до кустов, и она сдавалась там, где
                 # надо было разыгрывать проход.
-                # Топтание: шаги подряд, не открывшие ни одного нового места.
-                # Сбрасывается, как только нашлось новое, — иначе дальняя дорога
-                # к остатку съедала предел ещё до кустов.
-                attempts[0] = 0 if fresh else attempts[0] + 1
+                # Топтание: шаги подряд, не открывшие ни одного нового МЕСТА.
+                # Считаем по числу мест в карте, а не по флагу fresh: после
+                # того как место меняет контент по $sus, свежими выглядят ВСЕ
+                # варианты, и счётчик по fresh не рос — она 418 шагов ходила
+                # «качели ↔ горка», а заход не кончался вовсе.
+                if len(story_map.nodes) > places_seen[0]:
+                    places_seen[0] = len(story_map.nodes)
+                    attempts[0] = 0
+                else:
+                    attempts[0] += 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
                              'fresh': fresh, 'energy': sight.get('energy', 0),
                              'finds': sight.get('finds', []), 'clues': sight.get('clues', 0),
