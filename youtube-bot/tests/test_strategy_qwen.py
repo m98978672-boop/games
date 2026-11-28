@@ -37,6 +37,16 @@ class StrategyQwenTests(unittest.TestCase):
         agent.generator = lambda image,prompt,allowed:'LAA'
         with self.assertRaises(ValueError): agent.choose(screenshot())
 
+    def test_repeated_drag_anchor_is_not_reused(self):
+        selected = []
+        agent=StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'test screen',
+                           generator=lambda image,prompt,allowed:(selected.extend(allowed) or 'LAA'))
+        agent.menu_actions = 4
+        agent.history = ['SAA', 'DAA', 'SAA', 'DAA']
+        agent.choose(screenshot())
+        self.assertNotIn('SAA', selected)
+        self.assertIn('SAB', selected)
+
     def test_invalid_or_unallowed_answer_never_executes(self):
         agent=StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'test screen', generator=lambda image,prompt,allowed:'DELETE /')
         with self.assertRaises(ValueError): agent.choose(screenshot())

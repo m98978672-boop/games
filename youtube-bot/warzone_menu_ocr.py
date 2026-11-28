@@ -12,7 +12,7 @@ from collections import defaultdict
 # Navigation options only, not game actions or an instruction script.
 # User requested the story campaign, not skirmishes or tutorials.  The OCR
 # candidates are assistance; the model still chooses whether and what to click.
-LABELS = ('single player', 'new campaign', 'load campaign game',
+LABELS = ('single player', 'new campaign',
           'easy', 'normal', 'hard', 'insane', 'start game', 'continue',
           'return', 'back')
 

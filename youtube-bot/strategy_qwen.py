@@ -67,6 +67,11 @@ class StrategyQwen:
         # Avoid repeating the same action while stuck; the model still chooses.
         if len(self.history) >= 2 and self.history[-1] == self.history[-2]:
             allowed = tuple(a for a in allowed if a != self.history[-1])
+        # A repeated drag pair is also a loop, even though individual tokens alternate.
+        if len(self.history) >= 4 and self.history[-4:] == self.history[-2:] * 2:
+            repeated = self.history[-2]
+            if repeated.startswith('S'):
+                allowed = tuple(a for a in allowed if a != repeated)
         marked = marked_image(screenshot)
         observed = bounded_observation(self.observer(marked))
         self.last_observation = observed
