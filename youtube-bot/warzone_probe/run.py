@@ -52,4 +52,12 @@ def run(out):
         subprocess.run(['docker', 'cp', CONTAINER+':/out/capture.mp4', str(out/'capture.mp4')], timeout=60, capture_output=True)
         subprocess.run(['docker', 'rm', '-f', CONTAINER], timeout=15, capture_output=True)
 
-if __name__ == '__main__': run(Path(sys.argv[1]))
+if __name__ == '__main__':
+    try:
+        run(Path(sys.argv[1]))
+    except Exception:
+        import traceback
+        error = traceback.format_exc()[-3500:]
+        print('::error::Private probe failed: ' + error.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'), flush=True)
+        raise
+
