@@ -441,6 +441,9 @@ check('предел стоит на топтании, а не на каждом 
   && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
+check('подозрительность копится по сигналу самой игры, а не в кустах наугад',
+  expNow.includes('HEARD_BUSHES') && expNow.includes('gather_now')
+  && expNow.includes('and not (c.get(\'label\') or \'\').lower().startswith(\'bush\')'));
 check('скрытое число игры читается, а не выдумывается: $sus из State.variables',
   expNow.includes('window.State && window.State.variables') && expNow.includes('vars: vars')
   && expNow.includes('SUS_TAIL = 15') && expNow.includes('def note_sus'));

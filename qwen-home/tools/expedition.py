@@ -1540,11 +1540,15 @@ MAZE_STEPS = 60
 # Порог подозрительности, на котором игра показывает хвост Spot. Угадывать его
 # вслепую бессмысленно: до развилки кустов нужен $sus > 9, а до хвоста — >= 15.
 SUS_TAIL = 15
+# Её собственный сигнал: в парке игра печатает это, когда $sus уже >= 8.
+# Это видимая подсказка, а не чтение скрытой переменной: по ней и решаем,
+# что пора в кусты.
+HEARD_BUSHES = 'you hear something in the bushes'
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                 story_map=None, energy=0, came_from=None, came_from_key=None,
-                attempts=0, seen_bad=None, sus=None):
+                attempts=0, seen_bad=None, sus=None, gather=False):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
     visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
@@ -1579,6 +1583,18 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     # ГЛАВНОЕ: идём по ещё не нажатым ВЫБОРАМ. Раньше я считал новизну по месту,
     # куда пришла, — и после «house» любой переход выглядел новым: она крутила
     # дом → кухня → «Go After Spot» → дом шесть заходов подряд.
+    # Копить подозрительность. В этой истории от $sus зависит, пустит ли игра
+    # в развилку кустов (>9): растёт он только за ПЕРВЫЙ визит места, всего за
+    # заход наберётся не больше 12. Поэтому пока игра сама не сказала «слышу
+    # что-то в кустах» (это её же условие $sus >= 8, видно в тексте парка),
+    # в кусты не входим: иначе два очка за кусты сгорают впустую.
+    if gather and story_map is not None and passage and seen_bad is not None:
+        tour = [c for c in choices
+                if (passage, c.get('label')) not in seen_bad
+                and not (c.get('label') or '').lower().startswith('bush')]
+        if tour:
+            return tour[0], False
+
     # Скрытое число игры: подозрительность $sus. От неё зависит, пустит ли
     # игра в развилку кустов ($sus > 9) и покажет ли хвост Spot ($sus >= 15).
     # Мы его НЕ выдумываем и НЕ правим — читаем из состояния игры (State.variables)
@@ -1910,6 +1926,9 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         # Что уже видела В ЭТОМ заходе: нужно, чтобы возвращаться в место
         # стоило только туда, где история ещё не была.
         vars_logged = [False]
+        # Копим подозрительность, пока игра сама не скажет, что в кустах
+        # что-то есть (её условие $sus >= 8, напечатанное в парке).
+        gather_now = [True]
         seen_bad = {(k, l) for (k, l), r in story_map.seen_run.items() if r == run}
         last_text = ['']   # прошлый текст: ловим «страница не сменилась»
         same_text = [0]
@@ -1957,6 +1976,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             # второй раз пускает в тот же пассаж только эхом. Раньше она
             # тратила 40 шагов на «bushes ↔ back to park», хотя надо было
             # начать заход заново и пройти лабиринт ещё раз — заходов мало.
+            if HEARD_BUSHES in (text or '').lower():
+                gather_now[0] = False
             if (story_map.is_echo(text, labels) and story_map.has_shaky()
                     and story_map.remaining() > 0):
                 report.step('эхо лабиринта',
@@ -2006,7 +2027,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                           came_from=last_place[0],
                                           came_from_key=prev_place[0],
                                           attempts=attempts[0],
-                                          seen_bad=seen_bad, sus=sus_now[0])
+                                          seen_bad=seen_bad, sus=sus_now[0],
+                                          gather=gather_now[0])
                 if pick is None:
                     # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
                     # а не крутимся. Следующий заход начнётся с начала и пойдёт
