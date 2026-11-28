@@ -44,6 +44,11 @@ def run(out):
         except subprocess.TimeoutExpired: subprocess.run(['docker', 'stop', '-t', '5', CONTAINER], timeout=15, capture_output=True)
         with (out / 'container.log').open('wb') as log:
             subprocess.run(['docker', 'logs', CONTAINER], stdout=log, stderr=subprocess.STDOUT, timeout=15)
+        # Container has no credentials or network; surface only a bounded log tail.
+        tail = (out / 'container.log').read_text(errors='replace')[-3500:]
+        print('Container log tail:', tail, flush=True)
+        if not trace:
+            print('::error::Warzone startup log: ' + tail.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'), flush=True)
         subprocess.run(['docker', 'cp', CONTAINER+':/out/capture.mp4', str(out/'capture.mp4')], timeout=60, capture_output=True)
         subprocess.run(['docker', 'rm', '-f', CONTAINER], timeout=15, capture_output=True)
 
