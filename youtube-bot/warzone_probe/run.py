@@ -29,7 +29,7 @@ def run(out):
                 raise RuntimeError('Warzone container stopped before the desktop was ready')
             time.sleep(1)
         else: raise RuntimeError('Warzone desktop did not become ready')
-        agent = StrategyQwen(allow_drag=False)
+        agent = StrategyQwen(allow_drag=False, semantic_mission=True)
         for index in range(24):
             shot = call('exec', CONTAINER, 'python3', '/app/container.py', 'screenshot', capture=True).stdout
             if index in (0, 7, 15, 23):

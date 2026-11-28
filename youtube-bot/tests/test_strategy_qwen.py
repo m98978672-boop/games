@@ -60,6 +60,23 @@ class StrategyQwenTests(unittest.TestCase):
         self.assertNotIn('RAB', selected)
         self.assertIn('RAC', selected)
 
+    def test_semantic_mission_actions_are_two_model_choices(self):
+        replies = iter(['SELECT', 'CC', 'MOVE', 'CD'])
+        agent = StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'map',
+                             generator=lambda image,prompt,allowed:next(replies),
+                             allow_drag=False, semantic_mission=True)
+        agent.campaign_selected = True
+        self.assertEqual(agent.choose(screenshot()), ('SELECT_CC', {'type':'click','at':(400,250),'button':'left'}))
+        self.assertEqual(agent.choose(screenshot()), ('MOVE_CD', {'type':'click','at':(560,250),'button':'right'}))
+    def test_semantic_selection_rejects_unpermitted_target(self):
+        replies = iter(['SELECT', 'AA'])  # The top margin is outside the map area.
+        agent = StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'map',
+                             generator=lambda image,prompt,allowed:next(replies),
+                             allow_drag=False, semantic_mission=True)
+        agent.campaign_selected = True
+        with self.assertRaises(ValueError): agent.choose(screenshot())
+        self.assertEqual(agent.history, [])
+
     def test_invalid_or_unallowed_answer_never_executes(self):
         agent=StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'test screen', generator=lambda image,prompt,allowed:'DELETE /')
         with self.assertRaises(ValueError): agent.choose(screenshot())
