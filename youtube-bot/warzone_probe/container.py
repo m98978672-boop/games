@@ -22,7 +22,7 @@ def serve():
         time.sleep(2)
         if xvfb.poll() is not None:
             raise RuntimeError('Virtual display failed to start')
-        game = subprocess.Popen(['warzone2100', '--fullscreen', '--resolution=800x600', '--nosound'])
+        game = subprocess.Popen(['/usr/games/warzone2100', '--fullscreen', '--resolution=800x600', '--nosound'])
         for _ in range(90):
             if game.poll() is not None:
                 raise RuntimeError(f'Game exited with status {game.returncode}')
