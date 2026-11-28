@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict'; import {createRequire} from 'node:module';
+const S=createRequire(import.meta.url)('../src/schedule.js'); let state=S.create();
+assert(S.schedule(state,'load',30,10,100).ok); assert(!S.schedule(state,'load',30,10,100).ok);
+assert(!S.schedule(state,'unload',17,10,100).ok); assert(!S.schedule(state,'unload',120,10,100).ok);
+assert(!S.schedule(state,'invalid',30,10,100).ok); assert(S.schedule(state,'unload',60,10,100).ok);
+assert.deepEqual(S.takeDue(state,39),[]); assert.deepEqual(S.takeDue(state,40),['load']);
+assert.deepEqual(S.takeDue(state,40),[]); assert(S.cancel(state,'unload').ok); assert(!S.cancel(state,'unload').ok);
+assert(S.schedule(state,'load',30,10,100).ok); assert.deepEqual(S.validate(JSON.parse(JSON.stringify(state))),state);
+state.load.due=-1; assert.throws(()=>S.validate(state));
+console.log('✓ Расписание: доки, границы смены, однократный вызов, отмена и проверка сохранения');

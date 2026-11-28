@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="icon" href="cover.svg" type="image/svg+xml" />
-<link rel="stylesheet" href="style.css?v=20261122-24" />
+<link rel="stylesheet" href="style.css?v=20261122-25" />
 </head>
 <body data-sheet="hidden">
 <!-- Иконки: одна спрайт-карта на всю страницу (никаких CDN и шрифтов) -->
@@ -205,6 +205,13 @@
         <button class="cmd" data-call-truck="unload" type="button"><b>На разгрузку</b><i>нужны свободные ячейки</i></button>
         <button class="cmd" data-call-truck="load" type="button"><b>На загрузку</b><i>нужен груз на полках</i></button>
       </div>
+      <details id="schedule-details" class="stock-details">
+        <summary>Расписание вызовов фур</summary>
+        <p class="stock-help">Одна попытка в выбранное время по часам смены. Если док занят или нет ресурсов, вызов не состоится; причина появится в журнале.</p>
+        <label for="schedule-delay">Через сколько вызвать</label>
+        <select id="schedule-delay"><option value="30">30 секунд</option><option value="60" selected>60 секунд</option><option value="120">120 секунд</option></select>
+        <div id="schedule-list" class="contracts-list"></div>
+      </details>
       <details id="stock-details" class="stock-details">
         <summary id="stock-heading">Грузы на полках <span id="stock-count" class="queue-count">0</span></summary>
         <p class="stock-help">Отметьте грузы для следующей загрузки. Фура сначала выбирает отмеченные, затем остальные по ценности. Отметка сохраняется до фактической отгрузки.</p>
@@ -213,6 +220,16 @@
       </details>
     </div>
 
+    <div class="ctl-group" aria-labelledby="dispatch-heading">
+      <div class="ctl-label" id="dispatch-heading">Совет диспетчера</div>
+      <p class="contract-help">Сводка по реальным срокам, докам и состоянию бригады. Кнопки только открывают нужный раздел, приказы не отдаются.</p>
+      <div id="dispatch-advice" class="contracts-list"></div>
+    </div>
+    <div class="ctl-group" aria-labelledby="career-heading">
+      <div class="ctl-label" id="career-heading">Карьера склада <span id="career-status" class="queue-count">не начата</span></div>
+      <p class="contract-help">Кредиты карьеры и очки смены — разные счета. Результаты учитываются в конце смены.</p>
+      <details id="career-board"><summary>Открыть карьеру и развитие</summary><div id="career-content"></div></details>
+    </div>
     <div class="ctl-group" aria-labelledby="challenge-heading">
       <div class="ctl-label" id="challenge-heading">Доска испытаний <span id="challenge-count" class="queue-count">0 / 2</span></div>
       <p class="contract-help">20 заданий на приёмку, качество, фуры и бригаду. Выберите до двух: учитываются только действия после принятия. Отменённое испытание нельзя взять снова в этой смене.</p>
@@ -278,31 +295,34 @@
 <script src="../shared/engine.js"></script>
 <script src="../shared/engine-bootstrap.js" defer></script>
 <script src="../shooter/three.min.js"></script>
-<script src="../ratcore/ratcore.bundle.js?v=20261122-24"></script>
+<script src="../ratcore/ratcore.bundle.js?v=20261122-25"></script>
 <!-- Мозги «в коде»: нужны, чтобы игра шла и без fetch (открытие с диска, file://) -->
 <script src="data/brain-data.js"></script>
-<script src="src/sim/model.js?v=20261122-24"></script>
-<script src="src/ai/brain-net.js?v=20261122-24"></script>
+<script src="src/sim/model.js?v=20261122-25"></script>
+<script src="src/ai/brain-net.js?v=20261122-25"></script>
 <script src="vendor/cannon-es.min.js"></script>
-<script src="src/sim/physics.js?v=20261122-24"></script>
-<script src="src/sim/warehouse.js?v=20261122-24"></script>
-<script src="src/sim/worker.js?v=20261122-24"></script>
-<script src="src/config.js?v=20261122-24"></script>
-<script src="src/util.js?v=20261122-24"></script>
-<script src="src/layout.js?v=20261122-24"></script>
-<script src="src/save.js?v=20261122-24"></script>
-<script src="src/audio.js?v=20261122-24"></script>
-<script src="src/dialogue.js?v=20261122-24"></script>
-<script src="src/safety.js?v=20261122-24"></script>
-<script src="src/voice.js?v=20261122-24"></script>
-<script src="src/render/meshes.js?v=20261122-24"></script>
-<script src="src/render/world.js?v=20261122-24"></script>
-<script src="src/render/bodyview.js?v=20261122-24"></script>
-<script src="src/render.js?v=20261122-24"></script>
-<script src="src/contracts.js?v=20261122-24"></script>
-<script src="src/challenges.js?v=20261122-24"></script>
-<script src="src/game.js?v=20261122-24"></script>
-<script src="src/ui.js?v=20261122-24"></script>
-<script src="src/main.js?v=20261122-24"></script>
+<script src="src/sim/physics.js?v=20261122-25"></script>
+<script src="src/sim/warehouse.js?v=20261122-25"></script>
+<script src="src/sim/worker.js?v=20261122-25"></script>
+<script src="src/config.js?v=20261122-25"></script>
+<script src="src/util.js?v=20261122-25"></script>
+<script src="src/layout.js?v=20261122-25"></script>
+<script src="src/save.js?v=20261122-25"></script>
+<script src="src/audio.js?v=20261122-25"></script>
+<script src="src/dialogue.js?v=20261122-25"></script>
+<script src="src/safety.js?v=20261122-25"></script>
+<script src="src/voice.js?v=20261122-25"></script>
+<script src="src/render/meshes.js?v=20261122-25"></script>
+<script src="src/render/world.js?v=20261122-25"></script>
+<script src="src/render/bodyview.js?v=20261122-25"></script>
+<script src="src/render.js?v=20261122-25"></script>
+<script src="src/contracts.js?v=20261122-25"></script>
+<script src="src/challenges.js?v=20261122-25"></script>
+<script src="src/career.js?v=20261122-25"></script>
+<script src="src/dispatch-advice.js?v=20261122-25"></script>
+<script src="src/schedule.js?v=20261122-25"></script>
+<script src="src/game.js?v=20261122-25"></script>
+<script src="src/ui.js?v=20261122-25"></script>
+<script src="src/main.js?v=20261122-25"></script>
 </body>
 </html>

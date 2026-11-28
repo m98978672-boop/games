@@ -48,7 +48,7 @@ if (!JSDOM || !THREE) {
 
 const SCRIPTS = [
   'src/sim/model.js', 'src/ai/brain-net.js', 'vendor/cannon-es.min.js', 'src/sim/physics.js', 'src/sim/warehouse.js', 'src/sim/worker.js',
-  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/contracts.js', 'src/challenges.js', 'src/safety.js', 'src/voice.js',
+  'src/config.js', 'src/util.js', 'src/layout.js', 'src/save.js', 'src/audio.js', 'src/dialogue.js', 'src/contracts.js', 'src/challenges.js', 'src/career.js', 'src/dispatch-advice.js', 'src/schedule.js', 'src/safety.js', 'src/voice.js',
   'src/render/meshes.js', 'src/render/world.js', 'src/render/bodyview.js',
   'src/render.js', 'src/game.js', 'src/ui.js', 'src/main.js',
 ];
@@ -752,8 +752,25 @@ async function boot({ allowFetch, allowInline, label, width, height, touch, text
     const chFilter=!!doc.querySelector('[data-challenge="load-2"]') && !doc.querySelector('[data-challenge="light"]') && !!doc.querySelector('[data-challenge="intake-2"]');
     doc.querySelector('[data-challenge="intake-2"]').click();
     const chCancel=game.api.challenges.items[0].status==='cancelled';
+    doc.querySelector('[data-career-action="start"]').click();
+    const careerEnabled=game.api.career.enabled && !!doc.querySelector('[data-career-action="offer-local"]');
+    doc.querySelector('[data-career-action="offer-local"]').click();
+    doc.querySelector('[data-career-action="mode-rush"]').click();
+    const careerSaved=JSON.parse(window.localStorage.getItem(window.WC.save.CHECKPOINT_KEY)).checkpoint.career;
+    const careerUi=careerEnabled && careerSaved.current.offer==='local' && careerSaved.nextMode==='rush' && doc.querySelector('#career-status').textContent.includes('репутация');
+    game.setPaused(true);
+    doc.querySelector('#schedule-delay').value='30'; doc.querySelector('[data-schedule="unload"]').click();
+    const planned=game.api.schedule.unload && JSON.parse(window.localStorage.getItem(window.WC.save.CHECKPOINT_KEY)).checkpoint.schedule.unload;
+    doc.querySelector('[data-schedule="unload"]').click();
+    result.scheduleUi=!!planned && game.api.schedule.unload===null;
+    const urgentOrder=game.sim.spawnOrder(); urgentOrder.deadline=game.sim.state.time+15;
+    window.WC.ui.state.lastUiAt=-Infinity; window.WC.ui.frame(0);
+    const advice=doc.querySelector('[data-advice="urgent"]');
+    const beforeAdvice=JSON.stringify(game.captureCheckpoint()); advice.click();
+    result.adviceUi=doc.activeElement===doc.querySelector('[data-order-filter="all"]') && JSON.stringify(game.captureCheckpoint())===beforeAdvice && doc.querySelector('#dispatch-advice').textContent.includes('Пауза');
     doc.getElementById('btn-report').click();
     const report = doc.querySelector('.shift-report').textContent.includes('Контракты смены');
+    result.careerUi=careerUi && doc.querySelector('.shift-report').textContent.includes('Карьера:');
     result.challengeUi=chActive && chSaved && chFilter && chCancel && doc.querySelector('.shift-report').textContent.includes('Испытания смены');
     result.contractUi = active && saved && cancelled && report;
   } catch (err) { result.contractError = String(err && err.stack || err); }
@@ -793,6 +810,9 @@ for (const mode of modes) {
   check(r.cargoManifest, 'ведомость двух доков: состав, статусы, возврат, фокус и новая смена', {error:r.contractError});
   check(r.stockUi, 'остатки: отметка, отмена, сохранение фокуса, возврат', {error:r.contractError});
   check(r.departureUi, 'досрочная отправка: таймер, сохранение фокуса, подтверждение и отмена', {error:r.contractError});
+  check(r.scheduleUi, 'расписание фур: постановка, сохранение и отмена', {error:r.contractError});
+  check(r.adviceUi, 'совет диспетчера: сроки, пауза и переход без приказов', {error:r.contractError});
+  check(r.careerUi, 'карьера: запуск, заказчик, режим, сохранение и отчёт', {error:r.contractError});
   check(r.challengeUi, 'испытания: фильтр, принятие, сохранение, отмена и отчёт', {error:r.contractError});
   check(r.contractUi, 'контракты в пульте: взять, сохранить, отменить и увидеть в отчёте', {error:r.contractError});
   check(r.backgroundSave, 'сохранение при уходе в фон и pagehide', {error:r.featureError});

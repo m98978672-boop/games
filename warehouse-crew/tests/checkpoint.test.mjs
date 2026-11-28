@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const files = ['vendor/cannon-es.min.js','src/sim/physics.js','src/sim/model.js','src/ai/brain-net.js','src/sim/warehouse.js','src/sim/worker.js','src/config.js','data/brain-data.js','src/save.js','src/dialogue.js', 'src/contracts.js','src/challenges.js','src/game.js'];
+const files = ['vendor/cannon-es.min.js','src/sim/physics.js','src/sim/model.js','src/ai/brain-net.js','src/sim/warehouse.js','src/sim/worker.js','src/config.js','data/brain-data.js','src/save.js','src/dialogue.js', 'src/contracts.js','src/challenges.js','src/career.js','src/schedule.js','src/game.js'];
 const data = new Map();
 const storage = {getItem: k => data.has(k) ? data.get(k) : null, setItem: (k,v) => data.set(k,String(v)), removeItem:k=>data.delete(k)};
 async function boot() {
@@ -376,4 +376,63 @@ for (let frame=0;frame<2400 && game.api.challenges.items[0].status!=='completed'
 assert.equal(game.api.challenges.items[0].status,'completed');
 assert(game.sim.state.stats.delivered>=2);
 assert(game.api.log.some(entry=>entry.text.includes('Испытание «Первый поток» выполнено')));
+// Карьера переживает завершение и следующую смену, старые v2 совместимы.
+data.clear(); c=await boot(); game=c.WC.game; game.setPaused(true);
+assert(game.enableCareer().ok); assert(game.careerOffer('local').ok);
+assert(!game.careerOffer('freight').ok); assert(game.careerMode('rush').ok);
+for (let i=0;i<3;i++) {
+  const worker=game.api.crew[i], order=game.sim.spawnOrder();
+  const result=game.sim.store(order,worker.id);
+  game.api.envs[worker.id].onDelivered(worker.state,order,result);
+}
+assert.equal(game.api.career.current.progress,3);
+assert(c.WC.save.save(game)); let careerSaved=data.get(c.WC.save.CHECKPOINT_KEY);
+c=await boot(); game=c.WC.game; assert.equal(game.api.resumeStatus,'restored');
+assert.equal(game.api.career.current.progress,3); assert.equal(game.api.career.nextMode,'rush');
+game.endShift(); assert.equal(game.api.career.balance,65); assert.equal(game.api.career.shifts,1);
+game.endShift(); assert.equal(game.api.career.balance,65); assert.equal(game.api.career.shifts,1);
+assert(game.careerUpgrade('quality').ok); assert.equal(game.api.career.balance,5);
+assert.equal(game.summary().career.history[0].bonus,35);
+game.restart(); assert.equal(game.api.career.shifts,1); assert.equal(game.api.career.current.applied.quality,1);
+assert.equal(game.api.career.current.mode,'rush'); assert(Math.abs(game.sim.state.spawnEvery-9.6)<1e-8);
+assert(game.careerOffer('local').ok); const careerWorker=game.api.crew[0], careerBox=game.sim.spawnOrder(); careerBox.damage=0;
+const careerStore=game.sim.store(careerBox,careerWorker.id), preBonus=game.sim.state.stats.score;
+game.api.envs[careerWorker.id].onDelivered(careerWorker.state,careerBox,careerStore); assert.equal(game.sim.state.stats.score,preBonus+2);
+assert(c.WC.save.save(game)); c=await boot(); game=c.WC.game;
+assert.equal(game.api.career.current.progress,1); assert.equal(game.api.career.balance,5);
+game.restart(); assert.equal(game.api.career.shifts,1); assert.equal(game.api.career.balance,5); // досрочный перезапуск без награды
+let oldCareer=JSON.parse(careerSaved); delete oldCareer.checkpoint.career;
+data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(oldCareer)); c=await boot();
+assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.career.enabled,false);
+let badCareer=JSON.parse(careerSaved); badCareer.checkpoint.career.balance=-100;
+const corruptCareer=JSON.stringify(badCareer); data.set(c.WC.save.CHECKPOINT_KEY,corruptCareer);
+c=await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed'); assert(!c.WC.save.save(c.WC.game));
+assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),corruptCareer);
+// Расписание работает по времени симуляции, не на паузе, и вызывает один раз.
+data.clear(); c=await boot(); game=c.WC.game; game.setPaused(true);
+assert(game.scheduleTruck('unload',30).ok); assert(!game.scheduleTruck('unload',30).ok);
+for(let i=0;i<30;i++) game.update(.1);
+assert(game.api.schedule.unload); assert.equal(game.sim.state.time,0);
+const scheduledSave=data.get(c.WC.save.CHECKPOINT_KEY);
+const legacySchedule=JSON.parse(scheduledSave); delete legacySchedule.checkpoint.schedule;
+data.set(c.WC.save.CHECKPOINT_KEY,JSON.stringify(legacySchedule)); c=await boot();
+assert.equal(c.WC.game.api.resumeStatus,'restored'); assert.equal(c.WC.game.api.schedule.unload,null);
+const badSchedule=JSON.parse(scheduledSave); badSchedule.checkpoint.schedule.unload.due=-1;
+const badScheduleText=JSON.stringify(badSchedule); data.set(c.WC.save.CHECKPOINT_KEY,badScheduleText);
+c=await boot(); assert.equal(c.WC.game.api.resumeStatus,'failed'); assert(!c.WC.save.save(c.WC.game));
+assert.equal(data.get(c.WC.save.CHECKPOINT_KEY),badScheduleText);
+data.set(c.WC.save.CHECKPOINT_KEY,scheduledSave);
+c=await boot(); game=c.WC.game; assert.equal(game.api.resumeStatus,'restored'); assert(game.api.schedule.unload);
+game.setPaused(false); for(let i=0;i<310 && game.api.schedule.unload;i++) game.update(.1);
+assert.equal(game.api.schedule.unload,null); assert(game.sim.activeTruck('unload'));
+assert.equal(game.sim.state.trucks.filter(t=>t.kind==='unload').length,1);
+assert(c.WC.save.save(game)); c=await boot(); game=c.WC.game;
+assert.equal(game.api.schedule.unload,null); assert(game.sim.activeTruck('unload'));
+assert(game.scheduleTruck('unload',30).ok); game.sim.state.time=game.api.schedule.unload.due-.02;
+game.update(.1); assert.equal(game.api.schedule.unload,null);
+assert(game.api.log.some(e=>e.text.includes('не состоялся') && e.text.includes('занят')));
+assert.equal(game.sim.state.trucks.filter(t=>t.kind==='unload').length,1);
+assert(game.scheduleTruck('load',30).ok); assert(game.cancelScheduledTruck('load').ok);
+assert(!game.cancelScheduledTruck('load').ok); assert(game.scheduleTruck('load',30).ok);
+game.endShift(); assert.equal(game.api.schedule.load,null); assert(!game.scheduleTruck('load',30).ok);
 console.log('✓ Перезагрузка смены: бригада, мозги, физика, склад, персонал, v1 и защита повреждённого файла');

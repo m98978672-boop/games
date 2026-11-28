@@ -39,8 +39,23 @@ try {
     await page.waitForFunction(()=>WC.game.api.ready && WC.world.state.ready,{timeout:60000});
     assert.equal(await page.evaluate(()=>WC.game.api.challenges.items[0].status),'active');
     assert.equal(await page.evaluate(()=>WC.game.api.resumeStatus),'restored');
+    if(size.width<500) { await page.locator('#sheet-handle').click(); await page.waitForTimeout(1000); }
+    await page.locator('#career-board summary').click();
+    await page.locator('[data-career-action="start"]').click();
+    await page.locator('[data-career-action="offer-local"]').click();
+    await page.locator('[data-career-action="mode-rush"]').click();
+    assert.equal(await page.evaluate(()=>WC.game.api.career.current.offer),'local');
+    await page.locator('#schedule-details summary').click();
+    await page.locator('#schedule-delay').selectOption('30');
+    await page.locator('[data-schedule="unload"]').click();
+    assert(await page.evaluate(()=>WC.game.api.schedule.unload));
+    await page.reload({waitUntil:'load',timeout:60000});
+    await page.waitForFunction(()=>WC.game.api.ready && WC.world.state.ready,{timeout:60000});
+    assert.equal(await page.evaluate(()=>WC.game.api.career.current.offer),'local');
+    assert.equal(await page.evaluate(()=>WC.game.api.career.nextMode),'rush');
+    assert(await page.evaluate(()=>WC.game.api.schedule.unload));
     assert.deepEqual(errors,[]);
-    console.log('✓ Доска испытаний: клавиатура, фильтр, сохранение и перезагрузка '+size.width+'×'+size.height);
+    console.log('✓ Испытания, карьера и расписание: управление и сохранение '+size.width+'×'+size.height);
     await context.close();
   }
 } finally { if(browser) await browser.close(); await new Promise(resolve=>server.close(resolve)); }

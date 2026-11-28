@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+const A=createRequire(import.meta.url)('../src/dispatch-advice.js');
+let state={time:100,slots:[{occupied:false},{occupied:true}],orders:[{status:'stored'},{status:'pending',deadline:129},{status:'claimed',deadline:60,direction:'return'}],trucks:[{status:'working',arrivedAt:0}]};
+let crew=[{state:{dead:false},body:{fatigue:.9,energy:.8}},{state:{dead:true},body:{fatigue:1,energy:0}}];
+let before=JSON.stringify({state,crew}); let result=A.analyse(state,crew,120,false,false);
+assert.equal(result.free,1); assert.equal(result.stock,1); assert.equal(result.urgent,1); assert.equal(result.returns,1); assert.equal(result.trucks,1); assert.equal(result.tired,1);
+assert.deepEqual(result.cards.map(c=>c.id),['urgent','trucks','space','tired','returns']);
+assert.equal(JSON.stringify({state,crew}),before);
+assert.equal(A.analyse(state,crew,120,true,false).cards[0].id,'paused');
+assert.deepEqual(A.analyse(state,crew,120,false,true).cards.map(c=>c.id),['ended']);
+state={time:0,slots:Array.from({length:4},()=>({occupied:false})),orders:[],trucks:[]};
+assert.deepEqual(A.analyse(state,[],165,false,false).cards.map(c=>c.id),['normal']);
+state.orders.push({status:'pending',deadline:31}); assert.equal(A.analyse(state,[],165,false,false).urgent,0);
+state.orders[0].deadline=30; assert.equal(A.analyse(state,[],165,false,false).urgent,1);
+console.log('✓ Диспетчерская аналитика: сроки, доки, ячейки, усталость, возвраты и пауза');
