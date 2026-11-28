@@ -251,6 +251,8 @@ jobs:
           python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
       - name: Test action validation
         run: python -m unittest youtube-bot/tests/test_strategy_desktop.py youtube-bot/tests/test_strategy_qwen.py
+      - name: Install capture inspector
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Inspect the previous private Warzone probe
         env:
           GH_TOKEN: ${{ github.token }}
