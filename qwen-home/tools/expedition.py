@@ -891,7 +891,25 @@ TWINE_TASK_JS = r"""
     out.push({i: out.length, label: label});
     el.setAttribute('data-kv-choice', String(out.length - 1));
   });
-  return {ok: true, title: document.title || '', text: text.slice(0, 3000), choices: out};
+  // Скрытые числа истории (в Harlowe это $sus, $energy и т. п.). Игра честно
+  // держит их в State.variables — читаем их, а не гадаем по словам: от $sus
+  // зависит, пустит ли игра в развилку кустов ($sus > 9) и покажет ли хвост
+  // Spot ($sus >= 15). Своих чисел мы не пишем — только читаем то, что игра
+  // сама положила в состояние.
+  const vars = {};
+  try {
+    const st = window.State && window.State.variables;
+    if (st) {
+      const plain = (st.toJSON ? st.toJSON() : st);
+      for (const k of Object.keys(plain || {})) {
+        const v = plain[k];
+        if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') {
+          vars[k] = (typeof v === 'string') ? v.slice(0, 40) : v;
+        }
+      }
+    }
+  } catch (e) {}
+  return {ok: true, title: document.title || '', text: text.slice(0, 3000), choices: out, vars: vars};
 }
 """
 
@@ -954,6 +972,14 @@ class StoryMap:
         self.tried = set()  # (место, выбор) — что уже нажимали
         # (место, ссылка) → где ЭТА ссылка сработала путём в новое место
         self.beacon = {}
+        # Сколько подозрительности ($sus) даёт вход в место — увидено по
+        # настоящим числам игры, а не угадано. Нужно, чтобы набрать $sus > 9
+        # и попасть в развилку кустов.
+        self.sus_gain = {}
+        # (место, ссылка) → номер захода, в котором она её уже видела. Память
+        # «за заходы», а не «за прогоны»: иначе on во втором заходе сразу
+        # решала «всё видела» и бежала по кругу.
+        self.seen_run = {}
 
     @staticmethod
     def key(text, context=None, options=None):
@@ -1363,6 +1389,14 @@ class StoryMap:
             if extra and extra != k:
                 self.tried.add((extra, label))
 
+    def note_sus(self, before, after, where):
+        """Записать, что вход в это место поднял подозрительность игры."""
+        if before is None or after is None or after <= before or not where:
+            return
+        gain = int(after - before)
+        if gain > self.sus_gain.get(where, 0):
+            self.sus_gain[where] = gain
+
     def remaining_at(self, k):
         """Сколько вариантов в ЭТОМ месте ещё не нажато."""
         n = self.nodes.get(k) or {}
@@ -1425,6 +1459,8 @@ class StoryMap:
         return {'schema': 'text+options-v4', 'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
                 'beacon': [[a, b, c] for (a, b), c in self.beacon.items()],
+                'sus_gain': self.sus_gain,
+                'seen_run': [[a, b, c] for (a, b), c in self.seen_run.items()],
                 'tried': sorted([list(t) for t in self.tried])}
 
     # v4: место — один текст без названий ссылок (Harlowe дописывает их прямо
@@ -1475,6 +1511,12 @@ class StoryMap:
         for item in (data.get('beacon') or []):
             if len(item) == 3 and item[0] in self.nodes and item[2] in self.nodes:
                 self.beacon[(item[0], item[1])] = item[2]
+        for k, v in (data.get('sus_gain') or {}).items():
+            if k in self.nodes and isinstance(v, (int, float)) and v > 0:
+                self.sus_gain[k] = int(v)
+        for item in (data.get('seen_run') or []):
+            if len(item) == 3 and item[0] in self.nodes:
+                self.seen_run[(item[0], item[1])] = int(item[2])
         # Флаг open застывает: после загрузки пересчитываем его по нажатиям,
         # иначе маршрут к остатку считает закрытые места открытыми.
         for k, node in self.nodes.items():
@@ -1495,11 +1537,14 @@ class StoryMap:
 # шесть шагов (в карте уже 59 мест, всё давно нажато) — и она сдавалась,
 # не дойдя до развилки в кустах.
 MAZE_STEPS = 60
+# Порог подозрительности, на котором игра показывает хвост Spot. Угадывать его
+# вслепую бессмысленно: до развилки кустов нужен $sus > 9, а до хвоста — >= 15.
+SUS_TAIL = 15
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                 story_map=None, energy=0, came_from=None, came_from_key=None,
-                attempts=0):
+                attempts=0, seen_bad=None, sus=None):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
     visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
@@ -1534,6 +1579,35 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     # ГЛАВНОЕ: идём по ещё не нажатым ВЫБОРАМ. Раньше я считал новизну по месту,
     # куда пришла, — и после «house» любой переход выглядел новым: она крутила
     # дом → кухня → «Go After Spot» → дом шесть заходов подряд.
+    # Скрытое число игры: подозрительность $sus. От неё зависит, пустит ли
+    # игра в развилку кустов ($sus > 9) и покажет ли хвост Spot ($sus >= 15).
+    # Мы его НЕ выдумываем и НЕ правим — читаем из состояния игры (State.variables)
+    # и учитываем: в лабиринте она остаётся, пока не наберёт 15, а не уходит,
+    # «закрыв» пару мест.
+    if sus is not None and sus < SUS_TAIL and story_map is not None and passage \
+            and story_map.has_shaky():
+        here_has_left = story_map.remaining_at(passage) > 0
+        if not here_has_left:
+            # Остатка здесь нет, но и уходить из лабиринта рано: идём туда, где
+            # история ещё не была в этом заходе (кэш «видела за заходы»).
+            unseen = [c for c in choices
+                      if (passage, c.get('label')) not in (seen_bad or set())]
+            if unseen:
+                return (unseen[0] if rng is None
+                        else unseen[rng.randrange(len(unseen))]), False
+    # Бюджет подозрительности: за один заход игра даёт максимум 12 (проверено
+    # по исходнику), развилке нужно > 9. Поэтому места, где подозрительность
+    # растёт, она проходит ОДИН раз за заход, а не ходит по кругу: иначе
+    # набирает 12 на ерунде и в кустах ей уже нечем набрать 10. Концовки
+    # ($sus >= 15) не достигаются в принципе — это и есть «невидимый барьер».
+    if sus is not None and sus < SUS_TAIL and story_map is not None and passage \
+            and story_map.sus_gain.get(passage) and seen_bad is not None:
+        spent = [c for c in choices
+                 if (passage, c.get('label')) not in seen_bad]
+        if spent:
+            return (spent[0] if rng is None
+                    else spent[rng.randrange(len(spent))]), False
+
     fresh = [c for c in choices if not_tried(c)]
     pool = fresh or choices
 
@@ -1832,6 +1906,10 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         # Сколько раз за этот заход пробовали пройти случайный лабиринт заново.
         # Ограничено, чтобы «нервные» рёбра не вернули вечный цикл на 400 шагов.
         attempts = [0]
+        sus_now = [None]   # подозрительность из самой игры (скрытая переменная)
+        # Что уже видела В ЭТОМ заходе: нужно, чтобы возвращаться в место
+        # стоило только туда, где история ещё не была.
+        seen_bad = {(k, l) for (k, l), r in story_map.seen_run.items() if r == run}
         last_text = ['']   # прошлый текст: ловим «страница не сменилась»
         same_text = [0]
         prev_place = ['']  # место предыдущего шага
@@ -1847,6 +1925,15 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 report.step('чтение', 'не нашла ни текста, ни вариантов — останавливаюсь честно')
                 break
             text = state.get('text', '')
+            # Скрытые числа игры: помним $sus, чтобы решать по нему.
+            game_vars = state.get('vars') or {}
+            if isinstance(game_vars.get('sus'), (int, float)):
+                prev_sus = sus_now[0]
+                sus_now[0] = int(game_vars['sus'])
+                # Прибавка случилась при входе в ПРЕДЫДУЩЕЕ место — запоминаем,
+                # это и есть цена места. Числа берём у игры, не выдумываем.
+                if prev_sus is not None and sus_now[0] > prev_sus and prev_place[0]:
+                    story_map.note_sus(prev_sus, sus_now[0], prev_place[0])
             text_key_full[0] = text
             here_ctx = prev_place[0]             # откуда пришли (запасной различитель)
             if text and last_text[0] and text[:120] == last_text[0][:120] and moves > 0:
@@ -1912,7 +1999,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                           story_map=story_map, energy=sight.get('energy', 0),
                                           came_from=last_place[0],
                                           came_from_key=prev_place[0],
-                                          attempts=attempts[0])
+                                          attempts=attempts[0],
+                                          seen_bad=seen_bad, sus=sus_now[0])
                 if pick is None:
                     # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
                     # а не крутимся. Следующий заход начнётся с начала и пойдёт
@@ -1922,6 +2010,9 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                     break
                 story_map.mark_tried(my_key, pick['label'])
                 visited.add((my_key, pick['label']))
+                # «Видела этот переход в этом заходе» — для возврата в лабиринт.
+                story_map.seen_run[(my_key, pick['label'])] = run
+                seen_bad.add((my_key, pick['label']))
                 try:
                     el = page.query_selector(f'[data-kv-choice="{pick["i"]}"]')
                     if el is None:
