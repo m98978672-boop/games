@@ -1518,7 +1518,7 @@ class StoryMap:
                 self.beacon[(item[0], item[1])] = item[2]
         for item in (data.get('ending_routes') or []):
             if isinstance(item, dict) and item.get('choices'):
-                self.ending_routes.append({'choices': list(item['choices'])[:40],
+                self.ending_routes.append({'choices': list(item['choices'])[:80],
                                            'end': item.get('end', '')[:200]})
         for k, v in (data.get('sus_gain') or {}).items():
             if k in self.nodes and isinstance(v, (int, float)) and v > 0:
@@ -1584,10 +1584,13 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     # Иначе с полной картой она сразу говорит «всё пройдено» и не доходит до
     # концовок, которые уже видела (прогон 20261128-1629: 0 финалов).
     if replay:
-        want = replay[0]
-        for c in choices:
-            if (c.get('label') or '') == want:
-                return c, False
+        # Ждём свою ссылку в ближайших шагах: в известном пути бывают кнопки
+        # ввода («OK»), которых в текущем наборе нет, и раньше дорога из-за
+        # этого рвалась на первом же экране.
+        for want in replay[:4]:
+            for c in choices:
+                if (c.get('label') or '') == want:
+                    return c, False
 
     # Диалог подтверждения: сначала «OK», а не «Cancel». «Cancel» и «door» в
     # этом окне — не ветки истории, а служебные кнопки: оставлять их в остатке
@@ -2131,7 +2134,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 # Чем кончился заход: последние выборы перед финалом. Экран у
                 # всех концовок один, поэтому путь и есть различитель.
                 tail = [p2['choice'] for p2 in path[-4:]]
-                story_map.ending_routes.append({'choices': [p2['choice'] for p2 in path][-40:],
+                story_map.ending_routes.append({'choices': [p2['choice'] for p2 in path][:80],
                                                 'end': (text or '')[:200]})
                 endings.append({'run': run, 'n': moves, 'text': run_end,
                                 'route': ' → '.join(tail),

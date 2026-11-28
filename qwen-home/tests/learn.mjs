@@ -329,7 +329,8 @@ check('расписание ютуба не откачено: политика �
 const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8');
 check('известный путь к финалу повторяется: память помнит дорогу',
   expNow.includes("'ending_routes': self.ending_routes[:10]")
-  && expNow.includes('if replay:') && expNow.includes('replay=replay_left'));
+  && expNow.includes('if replay:') && expNow.includes('replay=replay_left')
+  && expNow.includes('[p2[\'choice\'] for p2 in path][:80]') && expNow.includes('for want in replay[:4]:'));
 check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
   expNow.includes('remaining') && expNow.includes('routeKey')
   && expNow.includes('memo_from') && expNow.includes('план захода')
