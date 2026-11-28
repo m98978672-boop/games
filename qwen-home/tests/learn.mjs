@@ -420,7 +420,7 @@ check('откат не вернулся: доставка отчёта умее�
   expWf.includes('allow-unrelated-histories'));
 
 check('маршрут к остатку проходит пустые места насквозь, но целью их не считает',
-  expNow.includes('return step         # цель — только там, где есть остаток')
+  expNow.includes('return step             # цель — только там, где есть остаток')
   && expNow.includes("return (bool(n1.get('text')) and n1.get('text') == n2.get('text'))"));
 
 check('одна ссылка — один исход: первое наблюдение не переписывается',
