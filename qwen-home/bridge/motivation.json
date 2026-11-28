@@ -1,6 +1,6 @@
 {
-  "points": 151,
-  "level": "Ветеран моста",
+  "points": 469,
+  "level": "Легенда моста",
   "achievements": [
     {
       "id": "veteran-exp",
@@ -12,30 +12,54 @@
       "id": "game-maker",
       "title": "Сборщик игр",
       "reward": "право придумывать следующий шаблон самой",
-      "at": "2026-11-28"
+      "at": "2026-11-24"
     },
     {
       "id": "game-smith",
       "title": "Игровых дел мастер",
       "reward": "своя полка игр в мире Квени",
-      "at": "2026-11-28"
+      "at": "2026-11-24"
     },
     {
       "id": "first-episode",
       "title": "Первый выпуск",
       "reward": "студия открывает второй сезон",
-      "at": "2026-11-28"
+      "at": "2026-11-24"
     },
     {
       "id": "director",
       "title": "Режиссёр",
       "reward": "блог выходит по расписанию",
-      "at": "2026-11-28"
+      "at": "2026-11-24"
     }
   ],
   "pendingDuties": [],
   "closedDuties": [],
   "lastEvents": [
+    {
+      "id": "20261123-0003-ellisonleao-github-io:played",
+      "at": "2026-11-23 00:02 UTC",
+      "delta": 10,
+      "text": "сыграла экспедицию сама, по-честному, до конца"
+    },
+    {
+      "id": "20261123-0003-ellisonleao-github-io:video",
+      "at": "2026-11-23 00:02 UTC",
+      "delta": 3,
+      "text": "видео экспедиции доехало до её страницы"
+    },
+    {
+      "id": "20261123-0003-ellisonleao-github-io:eyes",
+      "at": "2026-11-23 00:02 UTC",
+      "delta": 2,
+      "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
+    },
+    {
+      "id": "20261123-0003-ellisonleao-github-io:steps",
+      "at": "2026-11-23 00:02 UTC",
+      "delta": 30,
+      "text": "трубы по табло игры: 2 — первый настоящий счёт"
+    },
     {
       "id": "creation:game:ptica-i-truby",
       "at": "2026-11-23",
@@ -59,30 +83,6 @@
       "at": "2026-11-23 11:52 UTC",
       "delta": 18,
       "text": "опубликовала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!» "
-    },
-    {
-      "id": "creation:episode:ep-20261123-5-truby",
-      "at": "2026-11-23 20:39 UTC",
-      "delta": 8,
-      "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: 5 труб по табло!» "
-    },
-    {
-      "id": "creation:episode:ep-20261123-7-truby",
-      "at": "2026-11-23 20:44 UTC",
-      "delta": 8,
-      "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: 7 труб по табло!» "
-    },
-    {
-      "id": "creation:episode:ep-20261123-match",
-      "at": "2026-11-23 20:46 UTC",
-      "delta": 8,
-      "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
-    },
-    {
-      "id": "creation:episode:ep-20261124-match",
-      "at": "2026-11-24 04:33 UTC",
-      "delta": 8,
-      "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
     }
   ],
   "eventIds": [
@@ -99,15 +99,11 @@
     "creation:game:ptica-i-truby",
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
-    "creation:episode:ep-20261123-2-truby",
-    "creation:episode:ep-20261123-5-truby",
-    "creation:episode:ep-20261123-7-truby",
-    "creation:episode:ep-20261123-match",
-    "creation:episode:ep-20261124-match"
+    "creation:episode:ep-20261123-2-truby"
   ],
-  "reportsCounted": 5,
-  "playedCount": 5,
-  "bestStepsEver": 0,
+  "reportsCounted": 17,
+  "playedCount": 14,
+  "bestStepsEver": 4,
   "gamesMade": 3,
   "episodesMade": 5,
   "ownWantsDone": 0,

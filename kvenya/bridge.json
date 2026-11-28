@@ -218,7 +218,7 @@
       "date": "2026-11-28 13:52 UTC",
       "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261128-1402-colinhuang314-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261124-0514-colinhuang314-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
@@ -226,11 +226,11 @@
         "03-story-01.png"
       ],
       "kind": "story",
-      "storyLine": "прошла историю: 418 выборов, 1 захода(ов), 70 мест в карте, путей к финалу 0, непройденных вариантов 2, нашла: chips on the bottom, find your favorite, you found · до финала не дошла — история не отпустила",
+      "storyLine": "прошла историю: 350 выборов, 6 захода(ов), 86 мест в карте, концовок видела 1, нашла: chips on the bottom, find your favorite, you found · финал: ↶ Congratulations ! You finished the game! The End",
       "storyMap": {
-        "places": 70,
-        "links": 128,
-        "tried": 324,
+        "places": 86,
+        "links": 154,
+        "tried": 137,
         "finds": [
           "chips on the bottom",
           "find your favorite",
@@ -238,17 +238,17 @@
           "you grab",
           "you pick up"
         ],
-        "tired": 7,
-        "energetic": 4
+        "tired": 11,
+        "energetic": 6
       },
       "hasVideo": true,
       "video": ""
     },
     {
-      "date": "2026-11-28 08:49 UTC",
+      "date": "2026-11-24 04:54 UTC",
       "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261128-0859-colinhuang314-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261124-0503-colinhuang314-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
@@ -256,11 +256,11 @@
         "03-story-01.png"
       ],
       "kind": "story",
-      "storyLine": "прошла историю: 384 выборов, 10 захода(ов), 70 мест в карте, путей к финалу 3, непройденных вариантов 2, нашла: chips on the bottom, find your favorite, you found · финал: ↶ Congratulations ! You finished the game! The End",
+      "storyLine": "прошла историю: 350 выборов, 6 захода(ов), 86 мест в карте, концовок видела 1, нашла: chips on the bottom, find your favorite, you found · финал: ↶ Congratulations ! You finished the game! The End",
       "storyMap": {
-        "places": 70,
-        "links": 128,
-        "tried": 324,
+        "places": 86,
+        "links": 154,
+        "tried": 137,
         "finds": [
           "chips on the bottom",
           "find your favorite",
@@ -268,17 +268,17 @@
           "you grab",
           "you pick up"
         ],
-        "tired": 7,
-        "energetic": 4
+        "tired": 5,
+        "energetic": 6
       },
       "hasVideo": true,
       "video": ""
     },
     {
-      "date": "2026-11-28 08:44 UTC",
+      "date": "2026-11-24 04:35 UTC",
       "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261128-0847-colinhuang314-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261124-0442-colinhuang314-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
@@ -286,25 +286,23 @@
         "03-story-01.png"
       ],
       "kind": "story",
-      "storyLine": "прошла историю: 86 выборов, 4 захода(ов), 59 мест в карте, путей к финалу 0, непройденных вариантов 2, нашла: you pick up · до финала не дошла — история не отпустила",
+      "storyLine": "прошла историю: 275 выборов, 6 захода(ов), 19 мест в карте, концовок видела 0 · до финала не дошла — история не отпустила",
       "storyMap": {
-        "places": 59,
-        "links": 102,
-        "tried": 264,
-        "finds": [
-          "you pick up"
-        ],
-        "tired": 7,
+        "places": 19,
+        "links": 25,
+        "tried": 24,
+        "finds": [],
+        "tired": 4,
         "energetic": 4
       },
       "hasVideo": true,
       "video": ""
     },
     {
-      "date": "2026-11-28 08:27 UTC",
+      "date": "2026-11-24 04:29 UTC",
       "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
       "status": "played",
-      "dir": "qwen-home/bridge/expeditions/20261128-0835-colinhuang314-github-io",
+      "dir": "qwen-home/bridge/expeditions/20261124-0433-colinhuang314-github-io",
       "screenshots": [
         "01-open.png",
         "02-after-play.png",
@@ -312,15 +310,13 @@
         "03-story-01.png"
       ],
       "kind": "story",
-      "storyLine": "прошла историю: 264 выборов, 12 захода(ов), 59 мест в карте, путей к финалу 0, непройденных вариантов 2, нашла: you pick up · до финала не дошла — история не отпустила",
+      "storyLine": "прошла историю: 118 выборов, 6 захода(ов), 22 мест в карте, концовок видела 0 · до финала не дошла — история не отпустила",
       "storyMap": {
-        "places": 59,
-        "links": 102,
-        "tried": 264,
-        "finds": [
-          "you pick up"
-        ],
-        "tired": 7,
+        "places": 22,
+        "links": 30,
+        "tried": 29,
+        "finds": [],
+        "tired": 4,
         "energetic": 4
       },
       "hasVideo": true,
@@ -328,8 +324,8 @@
     }
   ],
   "motivation": {
-    "points": 151,
-    "level": "Ветеран моста",
+    "points": 415,
+    "level": "Легенда моста",
     "achievements": [
       {
         "id": "veteran-exp",
@@ -338,80 +334,70 @@
         "at": "2026-11-28 08:49 UTC"
       },
       {
-        "id": "game-maker",
-        "title": "Сборщик игр",
-        "reward": "право придумывать следующий шаблон самой",
-        "at": "2026-11-28"
-      },
-      {
-        "id": "game-smith",
-        "title": "Игровых дел мастер",
-        "reward": "своя полка игр в мире Квени",
-        "at": "2026-11-28"
-      },
-      {
-        "id": "first-episode",
-        "title": "Первый выпуск",
-        "reward": "студия открывает второй сезон",
-        "at": "2026-11-28"
-      },
+        "id": "three-pipes",
+        "title": "Три трубы за матч",
+        "reward": "вечер свободной экспедиции по своему выбору",
+        "at": "2026-11-22 23:26 UTC"
+      }
+    ],
+    "pendingDuties": [
       {
         "id": "director",
         "title": "Режиссёр",
         "reward": "блог выходит по расписанию",
-        "at": "2026-11-28"
+        "at": "2026-11-24"
       }
     ],
     "pendingDuties": [],
     "closedDuties": [],
     "lastEvents": [
       {
-        "id": "creation:game:ptica-i-truby",
-        "at": "2026-11-23",
-        "delta": 12,
-        "text": "собрала свою игру «Птица и трубы» из библиотеки "
+        "id": "20261122-2359-ellisonleao-github-io:played",
+        "at": "2026-11-22 23:59 UTC",
+        "delta": 10,
+        "text": "сыграла экспедицию сама, по-честному, до конца"
       },
       {
-        "id": "creation:game:zvezdny-dozhd",
-        "at": "2026-11-23",
-        "delta": 12,
-        "text": "собрала свою игру «Звёздный дождь» из библиотеки "
+        "id": "20261122-2359-ellisonleao-github-io:video",
+        "at": "2026-11-22 23:59 UTC",
+        "delta": 3,
+        "text": "видео экспедиции доехало до её страницы"
       },
       {
-        "id": "creation:game:zmeika",
-        "at": "2026-11-23",
-        "delta": 12,
-        "text": "собрала свою игру «Змейка Квени» из библиотеки "
+        "id": "20261122-2359-ellisonleao-github-io:eyes",
+        "at": "2026-11-22 23:59 UTC",
+        "delta": 2,
+        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
       },
       {
-        "id": "creation:episode:ep-20261123-2-truby",
-        "at": "2026-11-23 11:52 UTC",
-        "delta": 18,
-        "text": "опубликовала выпуск блога «Квеня играет в Clumsy Bird: 2 трубы по табло!» "
+        "id": "20261122-2359-ellisonleao-github-io:steps",
+        "at": "2026-11-22 23:59 UTC",
+        "delta": 60,
+        "text": "трубы по табло игры: 4 — первый настоящий счёт"
       },
       {
-        "id": "creation:episode:ep-20261123-5-truby",
-        "at": "2026-11-23 20:39 UTC",
-        "delta": 8,
-        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: 5 труб по табло!» "
+        "id": "20261123-0003-ellisonleao-github-io:played",
+        "at": "2026-11-23 00:02 UTC",
+        "delta": 10,
+        "text": "сыграла экспедицию сама, по-честному, до конца"
       },
       {
-        "id": "creation:episode:ep-20261123-7-truby",
-        "at": "2026-11-23 20:44 UTC",
-        "delta": 8,
-        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: 7 труб по табло!» "
+        "id": "20261123-0003-ellisonleao-github-io:video",
+        "at": "2026-11-23 00:02 UTC",
+        "delta": 3,
+        "text": "видео экспедиции доехало до её страницы"
       },
       {
-        "id": "creation:episode:ep-20261123-match",
-        "at": "2026-11-23 20:46 UTC",
-        "delta": 8,
-        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
+        "id": "20261123-0003-ellisonleao-github-io:eyes",
+        "at": "2026-11-23 00:02 UTC",
+        "delta": 2,
+        "text": "держала глаза открытыми: птицу видела почти в каждом кадре"
       },
       {
-        "id": "creation:episode:ep-20261124-match",
-        "at": "2026-11-24 04:33 UTC",
-        "delta": 8,
-        "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
+        "id": "20261123-0003-ellisonleao-github-io:steps",
+        "at": "2026-11-23 00:02 UTC",
+        "delta": 30,
+        "text": "трубы по табло игры: 2 — первый настоящий счёт"
       }
     ],
     "eventIds": [
