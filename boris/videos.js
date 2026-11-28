@@ -1,17 +1,41 @@
 window.VIDEO_CATALOG = [
   {
+    id: "ep08-part1",
+    title: "Эпизод 8 — Коробка счастья · Часть 1",
+    description: "Коробка приехала: Борис обходит её по кругу, нюхает и селится внутрь. Вечером место в коробке — трон, который не оспаривают.",
+    file: "boris_ep08_part1_shorts.mp4", poster: "thumb_ep08a.png", duration: 48,
+    format: "9:16", category: "shorts", series: "ep08", channel: "Канал Бориса", badge: "НОВОЕ", order: 0, part: 1, parts: 3
+  },
+  {
+    id: "ep08-part2",
+    title: "Эпизод 8 — Коробка счастья · Часть 2",
+    description: "Великий коробочный спор: Мурка заняла место, коты ходят кругами, а Барсик молча сел и уехал кататься по полу. Проезд платный.",
+    file: "boris_ep08_part2_shorts.mp4", poster: "thumb_ep08b.png", duration: 48,
+    format: "9:16", category: "shorts", series: "ep08", channel: "Канал Бориса", badge: "НОВОЕ", order: 1, part: 2, parts: 3
+  },
+  {
+    id: "ep08-part3",
+    title: "Эпизод 8 — Коробка счастья · Часть 3",
+    description: "Человек вырезал окно — и коробка стала домом: Мурка на входе, Борис на крыше, Барсик в очереди. Вечером дом горит тёплым светом.",
+    file: "boris_ep08_part3_shorts.mp4", poster: "thumb_ep08c.png", duration: 51,
+    format: "9:16", category: "shorts", series: "ep08", channel: "Канал Бориса", badge: "НОВОЕ", order: 2, part: 3, parts: 3
+  },
+  
+  
+  
+  {
     id: "ep07-part1",
     title: "Эпизод 7 — Первый снег",
     description: "Зимний день кота Бориса: скрипучий снег, чих в сугроб, снеговик с сосиской и тёплое окно человека.",
     file: "boris_ep07_shorts.mp4", poster: "thumb_ep07.png", duration: 54,
-    format: "9:16", category: "shorts", series: "ep07", channel: "Канал Бориса", badge: "НОВОЕ", order: 0
+    format: "9:16", category: "shorts", series: "ep07", channel: "Канал Бориса", badge: "ЭПИЗОД 7", order: 3
   },
   {
     id: "ep06-part1",
     title: "Эпизод 6 — Просто жизнь",
     description: "Обычный день кота Бориса: будильник-рыба, горка с картонкой, полотенце-привидение и закат на крыше. Никаких обзоров — только жизнь.",
     file: "boris_ep06_shorts.mp4", poster: "thumb_ep06.png", duration: 52,
-    format: "9:16", category: "shorts", series: "ep06", channel: "Канал Бориса", badge: "ЭПИЗОД 6", order: 1
+    format: "9:16", category: "shorts", series: "ep06", channel: "Канал Бориса", badge: "ЭПИЗОД 6", order: 4
   },
   
   
@@ -48,28 +72,28 @@ window.VIDEO_CATALOG = [
     title: "Эпизод 4 — Просто жизнь · часть 4",
     description: "Финал дня: плед пополам, тихий вечер и Борис с другом-котом.",
     file: "boris_ep04_part4_shorts.mp4", poster: "thumb_ep04d.png", duration: 59,
-    format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 4", order: 3
+    format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 4", order: 3, part: 4, parts: 4
   },
   {
     id: "ep04-part3",
     title: "Эпизод 4 — Котов приютили · часть 3",
     description: "По комментариям котов приютили. Приют оказался взаимным, голубь стал соседом.",
     file: "boris_ep04_part3_shorts.mp4", poster: "thumb_ep04c.png", duration: 58,
-    format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 3", order: 4
+    format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 3", order: 4, part: 3, parts: 4
   },
   {
     id: "ep04-part2",
     title: "Эпизод 4 — Всё сбылось · часть 2",
     description: "Итоги голосования: друг, охота и вторая миска — всё сразу.",
     file: "boris_ep04_part2_shorts.mp4", poster: "thumb_ep04b.png", duration: 41,
-    format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 2", order: 5
+    format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 2", order: 5, part: 2, parts: 4
   },
   {
     id: "ep04-part1",
     title: "Эпизод 4 — Голосование · часть 1",
     description: "Борис проверил комментарии. Голосов ноль, но у кошачьей демократии свой план.",
     file: "boris_ep04_part1_shorts.mp4", poster: "thumb_ep04.png", duration: 43,
-    format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 1", order: 6
+    format: "9:16", category: "shorts", series: "ep04", channel: "Канал Бориса", badge: "SHORTS · ЧАСТЬ 1", order: 6, part: 1, parts: 4
   },
   {
     id: "ep03-part2-shorts",

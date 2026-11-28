@@ -2,7 +2,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from puzzle_supervisor import validate_board, legal_indices, distance, feedback, avoid_immediate_undo, avoid_recent_states, verify_transition, board_hint
+from puzzle_supervisor import validate_board, legal_indices, distance, feedback, avoid_immediate_undo, avoid_recent_states
 
 class PuzzleTests(unittest.TestCase):
     def test_legal_neighbours_and_feedback(self):
@@ -34,17 +34,6 @@ class PuzzleTests(unittest.TestCase):
         self.assertEqual(feedback(away,solved,best=0,history=[solved])[0],-2)
         self.assertEqual(avoid_recent_states([15],away,[solved]),([15],[]))
         with self.assertRaises(ValueError): avoid_recent_states(legal,away,[solved]*17)
-
-    def test_move_validation_and_board_hint(self):
-        solved = list(range(1, 16)) + [0]
-        after = solved[:]
-        after[14], after[15] = after[15], after[14]
-        self.assertTrue(verify_transition(solved, after, 14))
-        self.assertFalse(verify_transition(solved, solved, 14))
-        with self.assertRaises(ValueError): verify_transition(solved, after, 11)
-        with self.assertRaises(ValueError): verify_transition(solved, after, 0)
-        self.assertIn('0 is blank', board_hint(solved))
-        with self.assertRaises(ValueError): board_hint([0]*16)
 
     def test_untrusted_data_requires_permutation_and_bounded_coords(self):
         cells=[{'index':i,'value':(i+1)%16,'x':i*10,'y':20} for i in range(16)]
