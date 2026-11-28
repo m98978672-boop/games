@@ -430,13 +430,19 @@ check('случайный лабиринт: пометки «нервности�
   expNow.includes('conflicting = set()') && expNow.includes("edge['shaky'] = True")
   && expNow.includes('def has_shaky'));
 check('случайный лабиринт: повторный проход по направлению, но не бесконечно',
-  expNow.includes('def direction_to_open') && expNow.includes('attempts < 6')
+  expNow.includes('def direction_to_open') && expNow.includes('attempts < MAZE_STEPS')
   && expNow.includes('attempts=attempts[0]'));
 
 check('в случайном лабиринте усталость не отменяет попытку прохода',
-  expNow.includes('and attempts < 6):') && expNow.includes('def has_shaky_at'));
-check('подходы считаются в лабиринте, а не на каждом повторном визите',
-  expNow.includes("if not fresh and (story_map.has_shaky_at(my_key) or story_map.has_shaky()):"));
+  expNow.includes('and attempts < MAZE_STEPS):') && expNow.includes('def has_shaky_at'));
+check('предел стоит на топтании, а не на каждом повторном визите',
+  expNow.includes('MAZE_STEPS = 60')
+  && expNow.includes("attempts[0] = 0 if fresh else attempts[0] + 1")
+  && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
+check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
+  expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
+check('у разыгрывания прохода предел тоже MAZE_STEPS, а не 6',
+  expNow.includes('story_map.has_shaky() and attempts < MAZE_STEPS'));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);
