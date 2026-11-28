@@ -1463,6 +1463,13 @@ class StoryMap:
         return {'places': nodes, 'links': self.edges[:200], **self.summary()}
 
 
+# Сколько шагов подряд без новых мест допустимо в одном заходе. Это предел
+# именно на ТОПТАНИЕ: раньше лимит стоял на «подходах» и сгорал за первые же
+# шесть шагов (в карте уже 59 мест, всё давно нажато) — и она сдавалась,
+# не дойдя до развилки в кустах.
+MAZE_STEPS = 60
+
+
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                 story_map=None, energy=0, came_from=None, came_from_key=None,
                 attempts=0):
@@ -1528,7 +1535,7 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             # нужная ветка открывается с шансом, и его надо разыгрывать.
             # Но только по «нервным» местам и только пока подходов не много —
             # иначе это тот самый вечный цикл на 400 шагов.
-            if story_map.has_shaky() and attempts < 6:
+            if story_map.has_shaky() and attempts < MAZE_STEPS:
                 # Сначала пробуем НАПРАВЛЕНИЕ к остатку (даже если там уже
                 # были: в случайном лабиринте именно повторный проход и
                 # открывает нужную ветку), потом — любой не-обратный ход.
@@ -1561,7 +1568,7 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             # мало. Раньше здесь стоял ещё и energy > -2, и вымотанная она
             # сдавалась ровно там, где надо было разыгрывать проход.
             if not ((story_map.has_shaky() or story_map.has_shaky_at(passage))
-                    and attempts < 6):
+                    and attempts < MAZE_STEPS):
                 return None, False      # тут делать нечего — пусть заход закончится
 
     # осторожность: вымотана — сначала передохнуть, даже если отдых уже нажимала.
@@ -1843,8 +1850,12 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 # остатку рубился на 17-м шаге, не дойдя: 6 заходов подряд по
                 # 0 финалов. Петля через два места — это нормальный проход по
                 # дому, а не топтание.
+                if attempts[0] >= MAZE_STEPS:
+                    report.step('стоп-кран',
+                                f'{attempts[0]} шагов подряд без новых мест — прекращаю заход честно')
+                    break
                 if (len(trail) >= 18 and len(set(trail[-8:])) <= 2
-                        and new_places == 0):
+                        and new_places == 0 and not story_map.has_shaky()):
                     report.step('стоп-кран',
                                 f'топчется в одном месте {len(trail)} шагов и новых мест нет — прекращаю заход')
                     break
@@ -1885,8 +1896,10 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 # ссылками): раньше счётчик рос на каждом повторном визите
                 # в доме, лимит 6 сгорал до кустов, и она сдавалась там, где
                 # надо было разыгрывать проход.
-                if not fresh and (story_map.has_shaky_at(my_key) or story_map.has_shaky()):
-                    attempts[0] += 1
+                # Топтание: шаги подряд, не открывшие ни одного нового места.
+                # Сбрасывается, как только нашлось новое, — иначе дальняя дорога
+                # к остатку съедала предел ещё до кустов.
+                attempts[0] = 0 if fresh else attempts[0] + 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
                              'fresh': fresh, 'energy': sight.get('energy', 0),
                              'finds': sight.get('finds', []), 'clues': sight.get('clues', 0),
