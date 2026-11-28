@@ -25,6 +25,7 @@ permissions:
 
 jobs:
   gameplay-capture:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.ref != 'refs/heads/arena/5da71980-games' }}
     # Never expose upload credentials to downloaded game code. This is a private
     # short technical recording test, not a publication or rights approval.
     runs-on: ubuntu-latest
@@ -60,6 +61,7 @@ jobs:
         run: python youtube-bot/tests/smoke_browser_bridge.py
 
   review-video:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.ref != 'refs/heads/arena/5da71980-games' }}
     # Synthetic source material; no channel credentials or publishing.
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -91,6 +93,7 @@ jobs:
           exit "$result"
 
   qwen-long-script:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.ref != 'refs/heads/arena/5da71980-games' }}
     # Synthetic source data, no YouTube upload and no secrets.
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -122,6 +125,7 @@ jobs:
           exit "$result"
 
   qwen-gameplay:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.ref != 'refs/heads/arena/5da71980-games' }}
     # No OAuth, upload or untrusted game downloads; the model controls a test game.
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -174,6 +178,7 @@ jobs:
           exit "$result"
 
   private-review-repair:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.ref != 'refs/heads/arena/5da71980-games' }}
     # Real Steam and Qwen, synthetic failed plans; no publishing credentials.
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -208,14 +213,57 @@ jobs:
 
   voxel-survival-one-off:
     # One explicitly requested test; independent game, not official Minecraft.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/arena/5da71980-games' }}
     permissions:
       contents: read
     uses: ./.github/workflows/voxel-survival-experiment.yml
 
   finite-adventure-one-off:
     # Private, bounded, finite game; never uploads or pads a short session.
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/arena/5da71980-games' }}
     permissions:
       contents: read
     uses: ./.github/workflows/adventure-experiment.yml
+
+  warzone-private-probe:
+    # This branch-only dispatch runs the untrusted game in a networkless container.
+    # It produces a private diagnostic capture, never a review or an upload.
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/arena/5da71980-games' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Install model dependencies
+        run: pip install -r youtube-bot/requirements-autopilot.txt "torchvision>=0.20,<1.0" "transformers==5.5.4" "peft==0.19.1" "accelerate==1.13.0"
+      - name: Fetch and validate the pinned Kvenya adapter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kvenya-release"
+          gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
+          python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
+      - name: Test action validation
+        run: python -m unittest youtube-bot/tests/test_strategy_desktop.py youtube-bot/tests/test_strategy_qwen.py
+      - name: Build isolated Warzone desktop
+        run: docker build -f youtube-bot/warzone_probe/Dockerfile -t kvenya-warzone-private:1 youtube-bot
+      - name: Capture a bounded private Kvenya session
+        env:
+          OMP_NUM_THREADS: '2'
+          MKL_NUM_THREADS: '2'
+          QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
+        run: python -u youtube-bot/warzone_probe/run.py "$RUNNER_TEMP/warzone-private"
+      - name: Save private diagnostic material, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warzone-private-${{ github.run_id }}
+          path: ${{ runner.temp }}/warzone-private/
+          if-no-files-found: warn
+          retention-days: 3
