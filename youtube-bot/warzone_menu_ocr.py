@@ -7,6 +7,7 @@ import csv
 import io
 import re
 import subprocess
+from PIL import Image, ImageOps, ImageEnhance
 from collections import defaultdict
 
 # Navigation options only, not game actions or an instruction script.
@@ -47,7 +48,25 @@ def candidates_from_tsv(text):
 def scan_menu(png):
     if not isinstance(png, bytes) or not 0 < len(png) <= 2_000_000:
         raise ValueError('Invalid screenshot')
-    proc = subprocess.run(['tesseract', 'stdin', 'stdout', '--psm', '11', 'tsv'],
-                          input=png, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                          timeout=20, check=True)
-    return candidates_from_tsv(proc.stdout.decode('utf-8', errors='replace'))
+    with Image.open(io.BytesIO(png)) as image:
+        if image.format != 'PNG' or image.size != (800, 600):
+            raise ValueError('Expected an 800x600 PNG screenshot')
+        gray = ImageOps.autocontrast(image.convert('L'))
+        boosted = ImageEnhance.Contrast(gray).enhance(2)
+        variants = [png]
+        for variant in (gray, boosted):
+            out = io.BytesIO()
+            variant.save(out, format='PNG')
+            variants.append(out.getvalue())
+    found = []
+    for content in variants:
+        proc = subprocess.run(['tesseract', 'stdin', 'stdout', '--psm', '11', 'tsv'],
+                              input=content, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              timeout=20, check=True)
+        for item in candidates_from_tsv(proc.stdout.decode('utf-8', errors='replace')):
+            # Multiple preprocessing passes can identify the same button.
+            if not any(item['label'] == prior['label'] and
+                       abs(item['at'][0]-prior['at'][0]) < 25 and
+                       abs(item['at'][1]-prior['at'][1]) < 25 for prior in found):
+                found.append(item)
+    return sorted(found, key=lambda c: (c['at'][1], c['at'][0]))[:16]

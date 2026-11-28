@@ -1,8 +1,12 @@
 import sys
+import io
+from unittest.mock import patch
+from types import SimpleNamespace
+from PIL import Image
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from warzone_menu_ocr import candidates_from_tsv
+from warzone_menu_ocr import candidates_from_tsv, scan_menu
 
 HEADER = 'level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext\n'
 
@@ -23,6 +27,16 @@ class MenuOCRTests(unittest.TestCase):
                 '5\t1\t1\t1\t1\t2\t375\t240\t110\t28\t82\tCampaign']
         self.assertEqual(candidates_from_tsv(HEADER+'\n'.join(rows)),
                          [{'label':'alpha campaign', 'at':(392,254)}])
+
+    def test_contrast_recovers_menu_and_deduplicates(self):
+        img = io.BytesIO(); Image.new('RGB',(800,600)).save(img,'PNG')
+        rows = ['5\t1\t1\t1\t1\t1\t300\t240\t70\t28\t80\tAlpha',
+                '5\t1\t1\t1\t1\t2\t375\t240\t110\t28\t82\tCampaign']
+        empty = SimpleNamespace(stdout=HEADER.encode())
+        found = SimpleNamespace(stdout=(HEADER+'\n'.join(rows)).encode())
+        with patch('warzone_menu_ocr.subprocess.run', side_effect=[empty, found, found]) as calls:
+            self.assertEqual(scan_menu(img.getvalue()), [{'label':'alpha campaign','at':(392,254)}])
+            self.assertEqual(calls.call_count, 3)
 
     def test_empty_and_untrusted_are_not_actions(self):
         self.assertEqual(candidates_from_tsv(HEADER), [])
