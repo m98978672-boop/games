@@ -1909,6 +1909,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         sus_now = [None]   # подозрительность из самой игры (скрытая переменная)
         # Что уже видела В ЭТОМ заходе: нужно, чтобы возвращаться в место
         # стоило только туда, где история ещё не была.
+        vars_logged = [False]
         seen_bad = {(k, l) for (k, l), r in story_map.seen_run.items() if r == run}
         last_text = ['']   # прошлый текст: ловим «страница не сменилась»
         same_text = [0]
@@ -1927,6 +1928,11 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             text = state.get('text', '')
             # Скрытые числа игры: помним $sus, чтобы решать по нему.
             game_vars = state.get('vars') or {}
+            if story_map is not None and not vars_logged[0]:
+                vars_logged[0] = True
+                report.step('числа игры', 'вижу переменные: '
+                            + (', '.join(f'{k}={v}' for k, v in list(game_vars.items())[:8])
+                               or 'ни одной (состояние игры закрыто)'))
             if isinstance(game_vars.get('sus'), (int, float)):
                 prev_sus = sus_now[0]
                 sus_now[0] = int(game_vars['sus'])
