@@ -1,232 +1,387 @@
 {
   "url": "https://colinhuang314.github.io/Lost-Spot-Twine-/",
-  "startedAt": "2026-11-28 14:25 UTC",
+  "startedAt": "2026-11-28 15:48 UTC",
   "status": "played",
   "steps": [
     {
-      "t": 74.4,
+      "t": 64.4,
       "action": "вежливый гость: проверка robots.txt",
       "result": "robots.txt прочитан"
     },
     {
-      "t": 78.9,
+      "t": 69.4,
       "action": "открыла страницу",
       "result": "Lost Spot (Draft)"
     },
     {
-      "t": 78.9,
+      "t": 69.5,
       "action": "кнопка игры",
       "result": "не нашлась — пробую играть прямо на открытой странице"
     },
     {
-      "t": 83.0,
+      "t": 73.5,
       "action": "это сюжетная игра, а не полёт",
       "result": "история «Lost Spot (Draft)»: текст и варианты выбора, играю чтением, а не кадрами"
     },
     {
-      "t": 83.0,
+      "t": 73.6,
       "action": "читаю историю",
       "result": "сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки"
     },
     {
-      "t": 83.0,
+      "t": 73.6,
       "action": "числа игры",
       "result": "вижу переменные: ни одной (состояние игры закрыто)"
     },
     {
-      "t": 132.2,
-      "action": "финал",
-      "result": "заход 1: 33 выборов, новых мест 2 — ↶ Congratulations ! You finished the game! The End"
+      "t": 118.2,
+      "action": "идти некуда",
+      "result": "заход 1: в этом месте всё нажато, остаток — в других местах карты"
     },
     {
-      "t": 132.2,
+      "t": 118.2,
       "action": "разбор захода",
       "result": "заход 1: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
     },
     {
-      "t": 132.2,
+      "t": 118.2,
       "action": "добор веток",
       "result": "осталось мест с непройденными вариантами: 5 — иду заново"
     },
     {
-      "t": 134.5,
+      "t": 120.6,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 134.5,
+      "t": 120.6,
       "action": "план захода",
       "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
     },
     {
-      "t": 134.5,
+      "t": 120.6,
       "action": "числа игры",
       "result": "вижу переменные: ни одной (состояние игры закрыто)"
     },
     {
-      "t": 221.2,
-      "action": "стоп-кран",
-      "result": "60 шагов подряд без новых мест — прекращаю заход честно"
+      "t": 163.9,
+      "action": "идти некуда",
+      "result": "заход 2: в этом месте всё нажато, остаток — в других местах карты"
     },
     {
-      "t": 221.2,
+      "t": 163.9,
       "action": "разбор захода",
-      "result": "заход 2: мест в карте 75, нажато вариантов 331; есть куда идти — начинаю заново"
+      "result": "заход 2: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
     },
     {
-      "t": 221.2,
+      "t": 163.9,
       "action": "добор веток",
       "result": "осталось мест с непройденными вариантами: 5 — иду заново"
     },
     {
-      "t": 223.5,
+      "t": 166.2,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 223.5,
+      "t": 166.2,
       "action": "план захода",
       "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
     },
     {
-      "t": 223.5,
+      "t": 166.2,
       "action": "числа игры",
       "result": "вижу переменные: ни одной (состояние игры закрыто)"
     },
     {
-      "t": 310.1,
-      "action": "стоп-кран",
-      "result": "60 шагов подряд без новых мест — прекращаю заход честно"
+      "t": 209.6,
+      "action": "идти некуда",
+      "result": "заход 3: в этом месте всё нажато, остаток — в других местах карты"
     },
     {
-      "t": 310.1,
+      "t": 209.6,
       "action": "разбор захода",
       "result": "заход 3: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
     },
     {
-      "t": 310.1,
+      "t": 209.6,
       "action": "добор веток",
       "result": "осталось мест с непройденными вариантами: 5 — иду заново"
     },
     {
-      "t": 312.4,
+      "t": 211.9,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 312.4,
+      "t": 211.9,
       "action": "план захода",
       "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
     },
     {
-      "t": 312.4,
+      "t": 211.9,
       "action": "числа игры",
       "result": "вижу переменные: ни одной (состояние игры закрыто)"
     },
     {
-      "t": 399.1,
-      "action": "стоп-кран",
-      "result": "60 шагов подряд без новых мест — прекращаю заход честно"
+      "t": 255.3,
+      "action": "идти некуда",
+      "result": "заход 4: в этом месте всё нажато, остаток — в других местах карты"
     },
     {
-      "t": 399.1,
+      "t": 255.3,
       "action": "разбор захода",
       "result": "заход 4: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
     },
     {
-      "t": 399.1,
+      "t": 255.3,
       "action": "добор веток",
       "result": "осталось мест с непройденными вариантами: 5 — иду заново"
     },
     {
-      "t": 401.4,
+      "t": 257.5,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 401.4,
+      "t": 257.5,
       "action": "план захода",
       "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
     },
     {
-      "t": 401.4,
+      "t": 257.5,
       "action": "числа игры",
       "result": "вижу переменные: ни одной (состояние игры закрыто)"
     },
     {
-      "t": 488.1,
-      "action": "стоп-кран",
-      "result": "60 шагов подряд без новых мест — прекращаю заход честно"
+      "t": 300.8,
+      "action": "идти некуда",
+      "result": "заход 5: в этом месте всё нажато, остаток — в других местах карты"
     },
     {
-      "t": 488.1,
+      "t": 300.8,
       "action": "разбор захода",
       "result": "заход 5: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
     },
     {
-      "t": 488.1,
+      "t": 300.8,
       "action": "добор веток",
       "result": "осталось мест с непройденными вариантами: 5 — иду заново"
     },
     {
-      "t": 490.4,
+      "t": 303.1,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 490.4,
+      "t": 303.1,
       "action": "план захода",
       "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
     },
     {
-      "t": 490.4,
+      "t": 303.1,
       "action": "числа игры",
       "result": "вижу переменные: ни одной (состояние игры закрыто)"
     },
     {
-      "t": 577.0,
-      "action": "стоп-кран",
-      "result": "60 шагов подряд без новых мест — прекращаю заход честно"
+      "t": 350.8,
+      "action": "идти некуда",
+      "result": "заход 6: в этом месте всё нажато, остаток — в других местах карты"
     },
     {
-      "t": 577.0,
+      "t": 350.8,
       "action": "разбор захода",
       "result": "заход 6: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
     },
     {
-      "t": 577.0,
+      "t": 350.8,
       "action": "добор веток",
       "result": "осталось мест с непройденными вариантами: 5 — иду заново"
     },
     {
-      "t": 579.2,
+      "t": 353.1,
       "action": "начать заново",
       "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
     },
     {
-      "t": 579.2,
+      "t": 353.1,
       "action": "план захода",
       "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
     },
     {
-      "t": 579.2,
+      "t": 353.1,
       "action": "числа игры",
       "result": "вижу переменные: ни одной (состояние игры закрыто)"
     },
     {
-      "t": 665.9,
-      "action": "стоп-кран",
-      "result": "60 шагов подряд без новых мест — прекращаю заход честно"
+      "t": 396.4,
+      "action": "идти некуда",
+      "result": "заход 7: в этом месте всё нажато, остаток — в других местах карты"
     },
     {
-      "t": 665.9,
+      "t": 396.4,
+      "action": "разбор захода",
+      "result": "заход 7: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 396.4,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 5 — иду заново"
+    },
+    {
+      "t": 398.6,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 398.6,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
+    },
+    {
+      "t": 398.6,
+      "action": "числа игры",
+      "result": "вижу переменные: ни одной (состояние игры закрыто)"
+    },
+    {
+      "t": 441.9,
+      "action": "идти некуда",
+      "result": "заход 8: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 441.9,
+      "action": "разбор захода",
+      "result": "заход 8: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 441.9,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 5 — иду заново"
+    },
+    {
+      "t": 444.2,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 444.2,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
+    },
+    {
+      "t": 444.2,
+      "action": "числа игры",
+      "result": "вижу переменные: ни одной (состояние игры закрыто)"
+    },
+    {
+      "t": 487.5,
+      "action": "идти некуда",
+      "result": "заход 9: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 487.5,
+      "action": "разбор захода",
+      "result": "заход 9: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 487.5,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 5 — иду заново"
+    },
+    {
+      "t": 489.8,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 489.8,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
+    },
+    {
+      "t": 489.8,
+      "action": "числа игры",
+      "result": "вижу переменные: ни одной (состояние игры закрыто)"
+    },
+    {
+      "t": 534.4,
+      "action": "идти некуда",
+      "result": "заход 10: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 534.4,
+      "action": "разбор захода",
+      "result": "заход 10: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 534.4,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 5 — иду заново"
+    },
+    {
+      "t": 536.7,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 536.7,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
+    },
+    {
+      "t": 536.7,
+      "action": "числа игры",
+      "result": "вижу переменные: ни одной (состояние игры закрыто)"
+    },
+    {
+      "t": 580.0,
+      "action": "идти некуда",
+      "result": "заход 11: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 580.0,
+      "action": "разбор захода",
+      "result": "заход 11: мест в карте 75, нажато вариантов 333; есть куда идти — начинаю заново"
+    },
+    {
+      "t": 580.0,
+      "action": "добор веток",
+      "result": "осталось мест с непройденными вариантами: 5 — иду заново"
+    },
+    {
+      "t": 582.3,
+      "action": "начать заново",
+      "result": "очистила сохранённую историю (session:Saved Session) и перезагрузила — история с начала"
+    },
+    {
+      "t": 582.3,
+      "action": "план захода",
+      "result": "осталось непройденных вариантов 5 в 75 местах — иду закрывать их"
+    },
+    {
+      "t": 582.3,
+      "action": "числа игры",
+      "result": "вижу переменные: ни одной (состояние игры закрыто)"
+    },
+    {
+      "t": 630.0,
+      "action": "идти некуда",
+      "result": "заход 12: в этом месте всё нажато, остаток — в других местах карты"
+    },
+    {
+      "t": 630.0,
+      "action": "разбор захода",
+      "result": "заход 12: мест в карте 75, нажато вариантов 333; заходов хватит"
+    },
+    {
+      "t": 630.0,
       "action": "карта сохранена",
       "result": "75 мест для следующего прогона"
     },
     {
-      "t": 665.9,
+      "t": 630.0,
       "action": "итог истории",
-      "result": "выборов 393 за 7 заход(ов); мест в карте 75, связей 138, нажато вариантов 338; концовок видела 1; находки: chips on the bottom, find your favorite, you found, you grab"
+      "result": "выборов 356 за 12 заход(ов); мест в карте 75, связей 138, нажато вариантов 333; концовок видела 0; находки: chips on the bottom, find your favorite, you found, you grab"
     }
   ],
   "screenshots": [
@@ -239,7 +394,30 @@
     "04-story-08.png",
     "05-story-16.png",
     "06-story-24.png",
-    "07-story-32.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
     "03-story-01.png",
     "03-story-02.png",
     "03-story-03.png",
@@ -247,9 +425,36 @@
     "05-story-16.png",
     "06-story-24.png",
     "07-story-32.png",
-    "08-story-40.png",
-    "09-story-48.png",
-    "09-story-56.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
+    "03-story-01.png",
+    "03-story-02.png",
+    "03-story-03.png",
+    "04-story-08.png",
+    "05-story-16.png",
+    "06-story-24.png",
     "03-story-01.png",
     "03-story-02.png",
     "03-story-03.png",
@@ -257,68 +462,25 @@
     "05-story-16.png",
     "06-story-24.png",
     "07-story-32.png",
-    "08-story-40.png",
-    "09-story-48.png",
-    "09-story-56.png",
-    "03-story-01.png",
-    "03-story-02.png",
-    "03-story-03.png",
-    "04-story-08.png",
-    "05-story-16.png",
-    "06-story-24.png",
-    "07-story-32.png",
-    "08-story-40.png",
-    "09-story-48.png",
-    "09-story-56.png",
-    "03-story-01.png",
-    "03-story-02.png",
-    "03-story-03.png",
-    "04-story-08.png",
-    "05-story-16.png",
-    "06-story-24.png",
-    "07-story-32.png",
-    "08-story-40.png",
-    "09-story-48.png",
-    "09-story-56.png",
-    "03-story-01.png",
-    "03-story-02.png",
-    "03-story-03.png",
-    "04-story-08.png",
-    "05-story-16.png",
-    "06-story-24.png",
-    "07-story-32.png",
-    "08-story-40.png",
-    "09-story-48.png",
-    "09-story-56.png",
-    "03-story-01.png",
-    "03-story-02.png",
-    "03-story-03.png",
-    "04-story-08.png",
-    "05-story-16.png",
-    "06-story-24.png",
-    "07-story-32.png",
-    "08-story-40.png",
-    "09-story-48.png",
-    "09-story-56.png",
     "09-story-end.png"
   ],
   "kind": "story",
   "hasVideo": true,
   "textSample": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel",
   "story": {
-    "moves": 393,
+    "moves": 356,
     "runs": [
       {
         "run": 1,
-        "moves": 33,
+        "moves": 30,
         "fresh": 1,
-        "newPlaces": 2,
-        "end": "↶ Congratulations ! You finished the game! The End",
+        "newPlaces": 0,
+        "end": "",
         "placesByNow": 75
       },
       {
         "run": 2,
-        "moves": 60,
+        "moves": 29,
         "fresh": 1,
         "newPlaces": 0,
         "end": "",
@@ -326,7 +488,7 @@
       },
       {
         "run": 3,
-        "moves": 60,
+        "moves": 29,
         "fresh": 1,
         "newPlaces": 0,
         "end": "",
@@ -334,7 +496,7 @@
       },
       {
         "run": 4,
-        "moves": 60,
+        "moves": 29,
         "fresh": 1,
         "newPlaces": 0,
         "end": "",
@@ -342,7 +504,7 @@
       },
       {
         "run": 5,
-        "moves": 60,
+        "moves": 29,
         "fresh": 1,
         "newPlaces": 0,
         "end": "",
@@ -350,7 +512,7 @@
       },
       {
         "run": 6,
-        "moves": 60,
+        "moves": 32,
         "fresh": 1,
         "newPlaces": 0,
         "end": "",
@@ -358,7 +520,47 @@
       },
       {
         "run": 7,
-        "moves": 60,
+        "moves": 29,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 75
+      },
+      {
+        "run": 8,
+        "moves": 29,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 75
+      },
+      {
+        "run": 9,
+        "moves": 29,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 75
+      },
+      {
+        "run": 10,
+        "moves": 30,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 75
+      },
+      {
+        "run": 11,
+        "moves": 29,
+        "fresh": 1,
+        "newPlaces": 0,
+        "end": "",
+        "placesByNow": 75
+      },
+      {
+        "run": 12,
+        "moves": 32,
         "fresh": 1,
         "newPlaces": 0,
         "end": "",
@@ -643,7 +845,7 @@
       {
         "run": 1,
         "n": 28,
-        "choice": "house",
+        "choice": "store",
         "fresh": false,
         "energy": 0,
         "finds": [],
@@ -653,52 +855,22 @@
       {
         "run": 1,
         "n": 29,
-        "choice": "restaurant",
+        "choice": "aisles",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 0,
-        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
       },
       {
         "run": 1,
         "n": 30,
-        "choice": "home",
+        "choice": "frozen aisle",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 1,
-        "n": 31,
-        "choice": "house",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
-      },
-      {
-        "run": 1,
-        "n": 32,
-        "choice": "\"But I was trying to find Spot!\"",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ You look in the kitchen to see if Spot has returned, but as you turn the corner, your Mom walks through the hallway toward you. \"Hey! You were supposed to be in your room! You are grounded!\" \"But I was trying to find S"
-      },
-      {
-        "run": 1,
-        "n": 33,
-        "choice": "Game Over",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 2,
-        "text": "↶ \"You lost spot?!\" Mom said furiously. \"You are super-grounded!\" Game Over"
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
       },
       {
         "run": 2,
@@ -977,7 +1149,7 @@
       {
         "run": 2,
         "n": 28,
-        "choice": "house",
+        "choice": "playground",
         "fresh": false,
         "energy": 0,
         "finds": [],
@@ -987,322 +1159,12 @@
       {
         "run": 2,
         "n": 29,
-        "choice": "restaurant",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
-      },
-      {
-        "run": 2,
-        "n": 30,
-        "choice": "waiters",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 2,
-        "n": 31,
-        "choice": "She responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds..."
-      },
-      {
-        "run": 2,
-        "n": 32,
-        "choice": "How do you know my name?",
+        "choice": "swings",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 1,
-        "text": "↶ \"Hi ! I'm sorry you lost Spot. I havn't seen him. I hope you find him though!\" How do you know my name? How do you know my dog's name?"
-      },
-      {
-        "run": 2,
-        "n": 33,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"How do you know my name?\" you ask the woman. \"You mother told me! We talked once. Now if you'll excuse me, I have to attend a table.\" back"
-      },
-      {
-        "run": 2,
-        "n": 34,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds... back"
-      },
-      {
-        "run": 2,
-        "n": 35,
-        "choice": "park",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 2,
-        "n": 36,
-        "choice": "Hospital",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
-      },
-      {
-        "run": 2,
-        "n": 37,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 2,
-        "n": 38,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 2,
-        "n": 39,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 2,
-        "n": 40,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 2,
-        "n": 41,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 2,
-        "n": 42,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 2,
-        "n": 43,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 2,
-        "n": 44,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 2,
-        "n": 45,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 2,
-        "n": 46,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 2,
-        "n": 47,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 2,
-        "n": 48,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 2,
-        "n": 49,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 2,
-        "n": 50,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 2,
-        "n": 51,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 2,
-        "n": 52,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 2,
-        "n": 53,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 2,
-        "n": 54,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 2,
-        "n": 55,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 2,
-        "n": 56,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 2,
-        "n": 57,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 2,
-        "n": 58,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 2,
-        "n": 59,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 2,
-        "n": 60,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
       },
       {
         "run": 3,
@@ -1581,7 +1443,7 @@
       {
         "run": 3,
         "n": 28,
-        "choice": "house",
+        "choice": "playground",
         "fresh": false,
         "energy": 0,
         "finds": [],
@@ -1591,322 +1453,12 @@
       {
         "run": 3,
         "n": 29,
-        "choice": "restaurant",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
-      },
-      {
-        "run": 3,
-        "n": 30,
-        "choice": "waiters",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 3,
-        "n": 31,
-        "choice": "She responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds..."
-      },
-      {
-        "run": 3,
-        "n": 32,
-        "choice": "How do you know my name?",
+        "choice": "slide",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 1,
-        "text": "↶ \"Hi ! I'm sorry you lost Spot. I havn't seen him. I hope you find him though!\" How do you know my name? How do you know my dog's name?"
-      },
-      {
-        "run": 3,
-        "n": 33,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"How do you know my name?\" you ask the woman. \"You mother told me! We talked once. Now if you'll excuse me, I have to attend a table.\" back"
-      },
-      {
-        "run": 3,
-        "n": 34,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds... back"
-      },
-      {
-        "run": 3,
-        "n": 35,
-        "choice": "park",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 3,
-        "n": 36,
-        "choice": "Hospital",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
-      },
-      {
-        "run": 3,
-        "n": 37,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 3,
-        "n": 38,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 3,
-        "n": 39,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 3,
-        "n": 40,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 3,
-        "n": 41,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 3,
-        "n": 42,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 3,
-        "n": 43,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 3,
-        "n": 44,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 3,
-        "n": 45,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 3,
-        "n": 46,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 3,
-        "n": 47,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 3,
-        "n": 48,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 3,
-        "n": 49,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 3,
-        "n": 50,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 3,
-        "n": 51,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 3,
-        "n": 52,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 3,
-        "n": 53,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 3,
-        "n": 54,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 3,
-        "n": 55,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 3,
-        "n": 56,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 3,
-        "n": 57,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 3,
-        "n": 58,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 3,
-        "n": 59,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 3,
-        "n": 60,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
       },
       {
         "run": 4,
@@ -2185,7 +1737,7 @@
       {
         "run": 4,
         "n": 28,
-        "choice": "house",
+        "choice": "playground",
         "fresh": false,
         "energy": 0,
         "finds": [],
@@ -2195,322 +1747,12 @@
       {
         "run": 4,
         "n": 29,
-        "choice": "restaurant",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
-      },
-      {
-        "run": 4,
-        "n": 30,
-        "choice": "waiters",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 4,
-        "n": 31,
-        "choice": "She responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds..."
-      },
-      {
-        "run": 4,
-        "n": 32,
-        "choice": "How do you know my name?",
+        "choice": "swings",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 1,
-        "text": "↶ \"Hi ! I'm sorry you lost Spot. I havn't seen him. I hope you find him though!\" How do you know my name? How do you know my dog's name?"
-      },
-      {
-        "run": 4,
-        "n": 33,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"How do you know my name?\" you ask the woman. \"You mother told me! We talked once. Now if you'll excuse me, I have to attend a table.\" back"
-      },
-      {
-        "run": 4,
-        "n": 34,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds... back"
-      },
-      {
-        "run": 4,
-        "n": 35,
-        "choice": "park",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 4,
-        "n": 36,
-        "choice": "Hospital",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
-      },
-      {
-        "run": 4,
-        "n": 37,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 4,
-        "n": 38,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 4,
-        "n": 39,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 4,
-        "n": 40,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 4,
-        "n": 41,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 4,
-        "n": 42,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 4,
-        "n": 43,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 4,
-        "n": 44,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 4,
-        "n": 45,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 4,
-        "n": 46,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 4,
-        "n": 47,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 4,
-        "n": 48,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 4,
-        "n": 49,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 4,
-        "n": 50,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 4,
-        "n": 51,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 4,
-        "n": 52,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 4,
-        "n": 53,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 4,
-        "n": 54,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 4,
-        "n": 55,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 4,
-        "n": 56,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 4,
-        "n": 57,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 4,
-        "n": 58,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 4,
-        "n": 59,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 4,
-        "n": 60,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
       },
       {
         "run": 5,
@@ -2789,7 +2031,7 @@
       {
         "run": 5,
         "n": 28,
-        "choice": "house",
+        "choice": "playground",
         "fresh": false,
         "energy": 0,
         "finds": [],
@@ -2799,322 +2041,12 @@
       {
         "run": 5,
         "n": 29,
-        "choice": "restaurant",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
-      },
-      {
-        "run": 5,
-        "n": 30,
-        "choice": "waiters",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 5,
-        "n": 31,
-        "choice": "She responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds..."
-      },
-      {
-        "run": 5,
-        "n": 32,
-        "choice": "How do you know my name?",
+        "choice": "swings",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 1,
-        "text": "↶ \"Hi ! I'm sorry you lost Spot. I havn't seen him. I hope you find him though!\" How do you know my name? How do you know my dog's name?"
-      },
-      {
-        "run": 5,
-        "n": 33,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"How do you know my name?\" you ask the woman. \"You mother told me! We talked once. Now if you'll excuse me, I have to attend a table.\" back"
-      },
-      {
-        "run": 5,
-        "n": 34,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds... back"
-      },
-      {
-        "run": 5,
-        "n": 35,
-        "choice": "park",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 5,
-        "n": 36,
-        "choice": "Hospital",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
-      },
-      {
-        "run": 5,
-        "n": 37,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 5,
-        "n": 38,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 5,
-        "n": 39,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 5,
-        "n": 40,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 5,
-        "n": 41,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 5,
-        "n": 42,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 5,
-        "n": 43,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 5,
-        "n": 44,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 5,
-        "n": 45,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 5,
-        "n": 46,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 5,
-        "n": 47,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 5,
-        "n": 48,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 5,
-        "n": 49,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 5,
-        "n": 50,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 5,
-        "n": 51,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 5,
-        "n": 52,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 5,
-        "n": 53,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 5,
-        "n": 54,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 5,
-        "n": 55,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 5,
-        "n": 56,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 5,
-        "n": 57,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 5,
-        "n": 58,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 5,
-        "n": 59,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 5,
-        "n": 60,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
       },
       {
         "run": 6,
@@ -3393,7 +2325,7 @@
       {
         "run": 6,
         "n": 28,
-        "choice": "house",
+        "choice": "store",
         "fresh": false,
         "energy": 0,
         "finds": [],
@@ -3403,322 +2335,42 @@
       {
         "run": 6,
         "n": 29,
-        "choice": "restaurant",
+        "choice": "past the store",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 0,
-        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
       },
       {
         "run": 6,
         "n": 30,
-        "choice": "waiters",
+        "choice": "store",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
       },
       {
         "run": 6,
         "n": 31,
-        "choice": "She responds...",
+        "choice": "aisles",
         "fresh": false,
         "energy": 0,
         "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds..."
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
       },
       {
         "run": 6,
         "n": 32,
-        "choice": "How do you know my name?",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ \"Hi ! I'm sorry you lost Spot. I havn't seen him. I hope you find him though!\" How do you know my name? How do you know my dog's name?"
-      },
-      {
-        "run": 6,
-        "n": 33,
-        "choice": "back",
+        "choice": "snack section",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 0,
-        "text": "↶ \"How do you know my name?\" you ask the woman. \"You mother told me! We talked once. Now if you'll excuse me, I have to attend a table.\" back"
-      },
-      {
-        "run": 6,
-        "n": 34,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds... back"
-      },
-      {
-        "run": 6,
-        "n": 35,
-        "choice": "park",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 6,
-        "n": 36,
-        "choice": "Hospital",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
-      },
-      {
-        "run": 6,
-        "n": 37,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 6,
-        "n": 38,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 6,
-        "n": 39,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 6,
-        "n": 40,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 6,
-        "n": 41,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 6,
-        "n": 42,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 6,
-        "n": 43,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 6,
-        "n": 44,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 6,
-        "n": 45,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 6,
-        "n": 46,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 6,
-        "n": 47,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 6,
-        "n": 48,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 6,
-        "n": 49,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 6,
-        "n": 50,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 6,
-        "n": 51,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 6,
-        "n": 52,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 6,
-        "n": 53,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 6,
-        "n": 54,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 6,
-        "n": 55,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 6,
-        "n": 56,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 6,
-        "n": 57,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 6,
-        "n": 58,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 6,
-        "n": 59,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 6,
-        "n": 60,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
       },
       {
         "run": 7,
@@ -3997,7 +2649,7 @@
       {
         "run": 7,
         "n": 28,
-        "choice": "house",
+        "choice": "playground",
         "fresh": false,
         "energy": 0,
         "finds": [],
@@ -4007,7 +2659,281 @@
       {
         "run": 7,
         "n": 29,
-        "choice": "restaurant",
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 8,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 8,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 8,
+        "n": 3,
+        "choice": "couch",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 8,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 8,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 8,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 8,
+        "n": 7,
+        "choice": "Go After Spot",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 8,
+        "n": 8,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You must find Spot quickly! You are not supposed to be out of the house! Mom makes a big point to stay in my room during homework time. You cou"
+      },
+      {
+        "run": 8,
+        "n": 9,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 8,
+        "n": 10,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide."
+      },
+      {
+        "run": 8,
+        "n": 11,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 8,
+        "n": 12,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 8,
+        "n": 13,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 8,
+        "n": 14,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 8,
+        "n": 15,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 8,
+        "n": 16,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 8,
+        "n": 17,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle."
+      },
+      {
+        "run": 8,
+        "n": 18,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 8,
+        "n": 19,
+        "choice": "frozen aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 8,
+        "n": 20,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You doubt Spot would be in such a cold location, but you take a look anyway. You get distracted by the frozen pizzas, but then refocus on your goal. Go back"
+      },
+      {
+        "run": 8,
+        "n": 21,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 8,
+        "n": 22,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 8,
+        "n": 23,
+        "choice": "Stay longer and look around",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 8,
+        "n": 24,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You take a quick look around. Nothing seems out of the ordinary to you. Go to the store. Go to the Hospital."
+      },
+      {
+        "run": 8,
+        "n": 25,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 8,
+        "n": 26,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 8,
+        "n": 27,
+        "choice": "school",
         "fresh": false,
         "energy": 0,
         "finds": [],
@@ -4015,341 +2941,1259 @@
         "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
       },
       {
-        "run": 7,
+        "run": 8,
+        "n": 28,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 8,
+        "n": 29,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 9,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 9,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 9,
+        "n": 3,
+        "choice": "couch",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 9,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 9,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 9,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 9,
+        "n": 7,
+        "choice": "Go After Spot",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 9,
+        "n": 8,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You must find Spot quickly! You are not supposed to be out of the house! Mom makes a big point to stay in my room during homework time. You cou"
+      },
+      {
+        "run": 9,
+        "n": 9,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 9,
+        "n": 10,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide."
+      },
+      {
+        "run": 9,
+        "n": 11,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 9,
+        "n": 12,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 9,
+        "n": 13,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 9,
+        "n": 14,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 9,
+        "n": 15,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 9,
+        "n": 16,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 9,
+        "n": 17,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle."
+      },
+      {
+        "run": 9,
+        "n": 18,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 9,
+        "n": 19,
+        "choice": "frozen aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 9,
+        "n": 20,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You doubt Spot would be in such a cold location, but you take a look anyway. You get distracted by the frozen pizzas, but then refocus on your goal. Go back"
+      },
+      {
+        "run": 9,
+        "n": 21,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 9,
+        "n": 22,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 9,
+        "n": 23,
+        "choice": "Stay longer and look around",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 9,
+        "n": 24,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You take a quick look around. Nothing seems out of the ordinary to you. Go to the store. Go to the Hospital."
+      },
+      {
+        "run": 9,
+        "n": 25,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 9,
+        "n": 26,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 9,
+        "n": 27,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 9,
+        "n": 28,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 9,
+        "n": 29,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 10,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 10,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 10,
+        "n": 3,
+        "choice": "couch",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 10,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 10,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 10,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 10,
+        "n": 7,
+        "choice": "Go After Spot",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 10,
+        "n": 8,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You must find Spot quickly! You are not supposed to be out of the house! Mom makes a big point to stay in my room during homework time. You cou"
+      },
+      {
+        "run": 10,
+        "n": 9,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 10,
+        "n": 10,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide."
+      },
+      {
+        "run": 10,
+        "n": 11,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 10,
+        "n": 12,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 10,
+        "n": 13,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 10,
+        "n": 14,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 10,
+        "n": 15,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 10,
+        "n": 16,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 10,
+        "n": 17,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle."
+      },
+      {
+        "run": 10,
+        "n": 18,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 10,
+        "n": 19,
+        "choice": "frozen aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 10,
+        "n": 20,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You doubt Spot would be in such a cold location, but you take a look anyway. You get distracted by the frozen pizzas, but then refocus on your goal. Go back"
+      },
+      {
+        "run": 10,
+        "n": 21,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 10,
+        "n": 22,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 10,
+        "n": 23,
+        "choice": "Stay longer and look around",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 10,
+        "n": 24,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You take a quick look around. Nothing seems out of the ordinary to you. Go to the store. Go to the Hospital."
+      },
+      {
+        "run": 10,
+        "n": 25,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 10,
+        "n": 26,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 10,
+        "n": 27,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 10,
+        "n": 28,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 10,
+        "n": 29,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 10,
         "n": 30,
-        "choice": "waiters",
+        "choice": "snack section",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
       },
       {
-        "run": 7,
+        "run": 11,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 11,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 11,
+        "n": 3,
+        "choice": "couch",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 11,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 11,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 11,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 11,
+        "n": 7,
+        "choice": "Go After Spot",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 11,
+        "n": 8,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You must find Spot quickly! You are not supposed to be out of the house! Mom makes a big point to stay in my room during homework time. You cou"
+      },
+      {
+        "run": 11,
+        "n": 9,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 11,
+        "n": 10,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide."
+      },
+      {
+        "run": 11,
+        "n": 11,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 11,
+        "n": 12,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 11,
+        "n": 13,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 11,
+        "n": 14,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 11,
+        "n": 15,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 11,
+        "n": 16,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 11,
+        "n": 17,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle."
+      },
+      {
+        "run": 11,
+        "n": 18,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 11,
+        "n": 19,
+        "choice": "frozen aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 11,
+        "n": 20,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You doubt Spot would be in such a cold location, but you take a look anyway. You get distracted by the frozen pizzas, but then refocus on your goal. Go back"
+      },
+      {
+        "run": 11,
+        "n": 21,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 11,
+        "n": 22,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 11,
+        "n": 23,
+        "choice": "Stay longer and look around",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 11,
+        "n": 24,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You take a quick look around. Nothing seems out of the ordinary to you. Go to the store. Go to the Hospital."
+      },
+      {
+        "run": 11,
+        "n": 25,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 11,
+        "n": 26,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 11,
+        "n": 27,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 11,
+        "n": 28,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 11,
+        "n": 29,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 12,
+        "n": 1,
+        "choice": "OK",
+        "fresh": true,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door. Enter your name: OK Cancel"
+      },
+      {
+        "run": 12,
+        "n": 2,
+        "choice": "door",
+        "fresh": false,
+        "energy": -2,
+        "finds": [],
+        "clues": 0,
+        "text": "Your legs ache as you fumble in your pocket for your key. The hot sun scorches your back as you unlock the door."
+      },
+      {
+        "run": 12,
+        "n": 3,
+        "choice": "couch",
+        "fresh": false,
+        "energy": -3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You are still panting as you enter your house. You really want to rest your legs by lying on the couch, but you also need to do your homework. Your dog Spot is in the kitchen. You are very tired."
+      },
+      {
+        "run": 12,
+        "n": 4,
+        "choice": "Start scrolling on your phone",
+        "fresh": false,
+        "energy": 2,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You put your feet up and your legs feel better. Start scrolling on your phone Get up"
+      },
+      {
+        "run": 12,
+        "n": 5,
+        "choice": "kitchen",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scroll until you start to get hungry, so you go to make some food in the kitchen."
+      },
+      {
+        "run": 12,
+        "n": 6,
+        "choice": "door",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 2,
+        "text": "↶ Spot looks up at you as he sits in the kitchen. \"How's my good boy?\" you say as you go to pet him. Spot runs around you, wagging his tail. He slips through your hands, and, oh no! You forgot to close the door!"
+      },
+      {
+        "run": 12,
+        "n": 7,
+        "choice": "Go After Spot",
+        "fresh": false,
+        "energy": 3,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ Spot ran out the door! You are well rested and Have enough energy to Go After Spot! You yell after him, \"Spot!\" You wonder why Spot was in the kitchen You go back inside"
+      },
+      {
+        "run": 12,
+        "n": 8,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You sprint out the door to try and catch Spot, but he is nowhere in sight. You must find Spot quickly! You are not supposed to be out of the house! Mom makes a big point to stay in my room during homework time. You cou"
+      },
+      {
+        "run": 12,
+        "n": 9,
+        "choice": "playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 12,
+        "n": 10,
+        "choice": "swings",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide."
+      },
+      {
+        "run": 12,
+        "n": 11,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You play on the swings, but it's not fun. You really should be searching for Spot right now. To playground"
+      },
+      {
+        "run": 12,
+        "n": 12,
+        "choice": "slide",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 12,
+        "n": 13,
+        "choice": "To playground",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ What better way to look for Spot in the slide then by sliding down yourself! You have a moment of fun, but then realize what's at stake. Spot wasn't in the slide. To playground"
+      },
+      {
+        "run": 12,
+        "n": 14,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ The playground is empty, but maybe Spot is hiding here. Play on the swings. It's fun! Check out the tube slide. back"
+      },
+      {
+        "run": 12,
+        "n": 15,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. Look around the playground. Go to the store. Go to your house."
+      },
+      {
+        "run": 12,
+        "n": 16,
+        "choice": "aisles",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 12,
+        "n": 17,
+        "choice": "snack section",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle."
+      },
+      {
+        "run": 12,
+        "n": 18,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [
+          "find your favorite",
+          "you scour the shelves",
+          "chips on the bottom"
+        ],
+        "clues": 1,
+        "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
+      },
+      {
+        "run": 12,
+        "n": 19,
+        "choice": "frozen aisle",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 12,
+        "n": 20,
+        "choice": "Go back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 1,
+        "text": "↶ You doubt Spot would be in such a cold location, but you take a look anyway. You get distracted by the frozen pizzas, but then refocus on your goal. Go back"
+      },
+      {
+        "run": 12,
+        "n": 21,
+        "choice": "back",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
+      },
+      {
+        "run": 12,
+        "n": 22,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. Check the aisles. Keep searching past the store. Run to the school."
+      },
+      {
+        "run": 12,
+        "n": 23,
+        "choice": "Stay longer and look around",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 12,
+        "n": 24,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You take a quick look around. Nothing seems out of the ordinary to you. Go to the store. Go to the Hospital."
+      },
+      {
+        "run": 12,
+        "n": 25,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 12,
+        "n": 26,
+        "choice": "house",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 12,
+        "n": 27,
+        "choice": "school",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You at in front of your house. You could go left towards the school, or right towards the restaurant, or back into your house."
+      },
+      {
+        "run": 12,
+        "n": 28,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You are at school. Your school is very small, with only a few classrooms, one for each subject. The school is oddly quiet. It's after school hours, but its still strange that there are no kids on the field or playgroun"
+      },
+      {
+        "run": 12,
+        "n": 29,
+        "choice": "past the store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
+      },
+      {
+        "run": 12,
+        "n": 30,
+        "choice": "store",
+        "fresh": false,
+        "energy": 0,
+        "finds": [],
+        "clues": 0,
+        "text": "↶ A large block of concrete stands before you. You havn't been this far from home before. You aren't supposed to be here. At least that's what you heard from your best friend Micheal. Otherwise you haven't heard much abo"
+      },
+      {
+        "run": 12,
         "n": 31,
-        "choice": "She responds...",
+        "choice": "aisles",
         "fresh": false,
         "energy": 0,
         "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds..."
+        "clues": 0,
+        "text": "↶ You go into the store. You don't go here often; usually, your Mom does the shopping. All the shelves are freshly stocked. And all the produce looks perfectly fresh! Check the aisles. Keep searching past the store. Run "
       },
       {
-        "run": 7,
+        "run": 12,
         "n": 32,
-        "choice": "How do you know my name?",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ \"Hi ! I'm sorry you lost Spot. I havn't seen him. I hope you find him though!\" How do you know my name? How do you know my dog's name?"
-      },
-      {
-        "run": 7,
-        "n": 33,
-        "choice": "back",
+        "choice": "snack section",
         "fresh": false,
         "energy": 0,
         "finds": [],
         "clues": 0,
-        "text": "↶ \"How do you know my name?\" you ask the woman. \"You mother told me! We talked once. Now if you'll excuse me, I have to attend a table.\" back"
-      },
-      {
-        "run": 7,
-        "n": 34,
-        "choice": "back",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 3,
-        "text": "↶ Hi! Have you seen a dog here recently? I just lost him. He has white fur with a black spot around his left eye. The waiter is a woman that looks to be in her 20's. She responds... back"
-      },
-      {
-        "run": 7,
-        "n": 35,
-        "choice": "park",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the restaurant. You go here with your Mom once a week on Saturdays. They offer so many dishes it feels like they have anything you could ask for! Talk to one of the waiters. Keep going, to the park. Go back "
-      },
-      {
-        "run": 7,
-        "n": 36,
-        "choice": "Hospital",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 1,
-        "text": "↶ You go to the park. You take Spot here often to play in the grass. You hear something in the bushes. Check the bushes. Keep going, to the Hospital. Go back to the restaurant."
-      },
-      {
-        "run": 7,
-        "n": 37,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 7,
-        "n": 38,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 7,
-        "n": 39,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 7,
-        "n": 40,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 7,
-        "n": 41,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 7,
-        "n": 42,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 7,
-        "n": 43,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 7,
-        "n": 44,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 7,
-        "n": 45,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 7,
-        "n": 46,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 7,
-        "n": 47,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 7,
-        "n": 48,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 7,
-        "n": 49,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 7,
-        "n": 50,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 7,
-        "n": 51,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 7,
-        "n": 52,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 7,
-        "n": 53,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 7,
-        "n": 54,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 7,
-        "n": 55,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 7,
-        "n": 56,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
-      },
-      {
-        "run": 7,
-        "n": 57,
-        "choice": "receptionist",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You are at the hospital. Something about hospitals frighten you. You hear someone yelling inside. Talk to the receptionist. Keep going, past the hospital. Go back to the park."
-      },
-      {
-        "run": 7,
-        "n": 58,
-        "choice": "The receptionist responds...",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ Hi, I lost my dog. Do you think he could be in here? The receptionist responds..."
-      },
-      {
-        "run": 7,
-        "n": 59,
-        "choice": "Wait 15 min and go inside.",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ \"I doubt it, but you can look inside if you want. You'll have to wait 15 min.\" You hear the yelling again. Wait 15 min and go inside. \"What was that yelling?\"."
-      },
-      {
-        "run": 7,
-        "n": 60,
-        "choice": "leave",
-        "fresh": false,
-        "energy": 0,
-        "finds": [],
-        "clues": 0,
-        "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
+        "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
       }
     ],
-    "endings": [
-      {
-        "run": 1,
-        "n": 33,
-        "text": "↶ Congratulations ! You finished the game! The End",
-        "route": "home → house → \"But I was trying to find Spot!\" → Game Over",
-        "routeKey": "1035431bbec0"
-      }
-    ],
-    "reachedEnd": true,
+    "endings": [],
+    "reachedEnd": false,
     "last": {
-      "run": 7,
-      "n": 60,
-      "choice": "leave",
+      "run": 12,
+      "n": 32,
+      "choice": "snack section",
       "fresh": false,
       "energy": 0,
       "finds": [],
       "clues": 0,
-      "text": "↶ You follow the yelling sounds to a room at the back of the hospital. You peer through the blinds to get a better look. \"I'm not crazy!\" the patient says to the doctor. \"We are living in a simulation!\" Then he looks ove"
+      "text": "↶ You scan a few aisles in the store, not seeing much yet. Check the snack section. Maybe get some snacks while you're there! Look in the frozen aisle. back"
     },
     "map": {
       "places": 75,
       "links": 138,
       "remaining": 5,
-      "tried": 338,
+      "tried": 333,
       "energetic": 4,
       "tired": 7,
       "finds": [
@@ -4433,19 +4277,14 @@
         "text": "↶ You scour the shelves and finally find your favorite chips on the bottom shelf. You contemplate buying it, but then notice a trail of chips on the floor. It leads to a bag with a dog-sized bite out of it. Spot was here"
       }
     ],
-    "freshPlaces": 2,
-    "remembered": 73
+    "freshPlaces": 0,
+    "remembered": 75
   },
-  "endingsSeen": [
-    {
-      "route": "home → house → \"But I was trying to find Spot!\" → Game Over",
-      "run": 1
-    }
-  ],
+  "endingsSeen": [],
   "storyMap": {
     "places": 75,
     "links": 138,
-    "tried": 338,
+    "tried": 333,
     "finds": [
       "chips on the bottom",
       "find your favorite",
@@ -4456,5 +4295,5 @@
     "tired": 7,
     "energetic": 4
   },
-  "storyLine": "прошла историю: 393 выборов, 7 захода(ов), 75 мест в карте, путей к финалу 1, непройденных вариантов 5, нашла: chips on the bottom, find your favorite, you found · финал: ↶ Congratulations ! You finished the game! The End"
+  "storyLine": "прошла историю: 356 выборов, 12 захода(ов), 75 мест в карте, путей к финалу 0, непройденных вариантов 5, нашла: chips on the bottom, find your favorite, you found · до финала не дошла — история не отпустила"
 }
