@@ -22,9 +22,7 @@ def serve():
         time.sleep(2)
         if xvfb.poll() is not None:
             raise RuntimeError('Virtual display failed to start')
-        print('warzone package contents:', subprocess.run(['dpkg', '-L', 'warzone2100'], capture_output=True, text=True).stdout, flush=True)
-        print('launcher:', Path('/usr/games/warzone2100').read_text(errors='replace')[:6000], flush=True)
-        game = subprocess.Popen(['/usr/games/warzone2100', '--fullscreen', '--resolution=800x600', '--nosound'])
+        game = subprocess.Popen(['/usr/games/warzone2100.real', '--fullscreen', '--resolution=800x600', '--nosound'])
         for _ in range(90):
             if game.poll() is not None:
                 raise RuntimeError(f'Game exited with status {game.returncode}')
