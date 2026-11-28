@@ -523,12 +523,19 @@ def run(url, seconds, out, task_keys='', interval_ms=0, memo_from=None):
                             f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
                 shot('03-story.png')
                 visited = set()
-                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=6)
+                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=6, memo_from=memo_from)
                 report.data['story'] = story
                 mp = story.get('map') or {}
                 fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
                 runs = story.get('runs') or []
-                ends = {e['text'][:120] for e in (story.get('endings') or [])}
+                # Концовки считаем по ПУТИ (routeKey), а не по экрану: у этой
+                # игры финальный экран один и тот же у всех концовок.
+                ends = {}
+                for e in (story.get('endings') or []):
+                    ends[e.get('routeKey') or e['text'][:120]] = e.get('route', '')
+                report.data['endingsSeen'] = [{'route': v, 'run': e.get('run')}
+                                              for k, v in list(ends.items())
+                                              for e in story['endings'] if (e.get('routeKey') or e['text'][:120]) == k][:10]
                 report.data['storyMap'] = {
                     'places': mp.get('places', 0), 'links': mp.get('links', 0),
                     'tried': mp.get('tried', 0), 'finds': mp.get('finds', [])[:5],
@@ -536,7 +543,8 @@ def run(url, seconds, out, task_keys='', interval_ms=0, memo_from=None):
                 }
                 report.data['storyLine'] = (
                     f"прошла историю: {story['moves']} выборов, {len(runs)} захода(ов), "
-                    f"{mp.get('places', 0)} мест в карте, концовок видела {len(ends)}"
+                    f"{mp.get('places', 0)} мест в карте, путей к финалу {len(ends)}, "
+                    f"непройденных вариантов {mp.get('remaining', 0)}"
                     + (f", нашла: {', '.join(mp.get('finds', [])[:3])}" if mp.get('finds') else '')
                     + ((' · финал: ' + (story['endings'][-1].get('text') or '')[:70].strip())
                        if story.get('endings') else ' · до финала не дошла — история не отпустила'))
@@ -946,56 +954,342 @@ class StoryMap:
         self.tried = set()  # (место, выбор) — что уже нажимали
 
     @staticmethod
-    def key(text):
+    def key(text, context=None, options=None):
         # Ключ — хэш ВСЕГО текста пассажа: у Lost Spot общее начало («You at in
         # front of your house…»), и по обрезку все места дома сливались в одно.
-        # Хэш ещё и компактен — карту можно хранить между прогонами.
-        norm = ' '.join((text or '').split()).lower()
+        #
+        # context — предыдущий пассаж: в Harlowe один и тот же текст бывает у
+        # РАЗНЫХ пассажей («дом» и «первый этаж» пишут одно и то же), и без
+        # контекста их варианты смешивались: открытые в одном месте «homework»
+        # и «kitchen» приписывались другому, и они «оставались непройденными»
+        # навсегда. Теперь «тот же текст, но после другого шага» — другое место.
+        norm = StoryMap.bare(text, options)
+        # Различитель — НАБОР ВАРИАНТОВ, а не «откуда пришла»: в Harlowe одна и
+        # та же ссылка ведёт в один пассаж, откуда ни приди, и контекст дробил
+        # карту без пользы (100 мест → 473). А вот один и тот же текст с разными
+        # вариантами — это правда разные пассажи («дом» и «первый этаж»).
+        if options:
+            norm += '\u241f' + '|'.join(sorted(o for o in options if o))
         return hashlib.sha1(norm.encode('utf-8')).hexdigest()[:16]
 
-    def see(self, text):
-        """Записать место в карту и вернуть, что в нём видно."""
-        k = self.key(text)
+    @staticmethod
+    def bare(text, options=None):
+        """Текст пассажа без названий его вариантов — то, чем место и является.
+
+        Harlowe вставляет названия ссылок прямо в текст: в первом заходе
+        «...tube slide.», после возврата — «...tube slide. back». Один пассаж
+        давал два «текста», место двоилось, и 419 выборов уходили в цикл
+        «школа ↔ площадка», а «slide» оставался ненажатым.
+        """
+        norm = ' '.join((text or '').split()).lower()
+        for label in sorted([o for o in (options or []) if o], key=len, reverse=True):
+            ln = ' '.join(label.split()).lower()
+            if ln and ln in norm:
+                norm = norm.replace(ln, ' ')
+        return ' '.join(norm.split())
+
+    @staticmethod
+    def text_sig(text, options=None):
+        """Подпись текста для сравнения: без вариантов и без изменчивых цифр.
+
+        В Harlowe текст иногда меняется мелочью («...you feel sleepy.» против
+        «...you come out.»), и место двоилось. Сравниваем по первым СЕМИ словам:
+        этого хватает, чтобы узнать пассаж, но мало, чтобы склеить разные.
+        """
+        return ' '.join(StoryMap.bare(text, options).split()[:7])
+
+    def bare_key(self, text, options=None):
+        """Хэш текста без вариантов: одинаков для одного пассажа при любом наборе."""
+        return hashlib.sha1(self.bare(text, options).encode('utf-8')).hexdigest()[:16]
+
+    def text_key_index(self):
+        """Какой узел отвечает за этот текст (набор вариантов не в счёт)."""
+        idx = {}
+        for k, n in self.nodes.items():
+            tk = n.get('text_key') or k
+            idx.setdefault(tk, k)
+        return idx
+
+    def _is_key(self, s):
+        """Похоже ли на готовый ключ места (16 hex-символов), а не на текст."""
+        return isinstance(s, str) and len(s) == 16 and all(c in '0123456789abcdef' for c in s)
+
+    @staticmethod
+    def is_echo(text, options=None):
+        """«Уже проверено» — не новое место, а тот же пассаж после повторного входа.
+
+        Harlowe внутри пассажа меняет текст: первый заход — «You go to the park…»,
+        повторный — «You already checked here. back to park». Это одно место, и
+        плодить из него новое нельзя: она 199 раз ходила «bushes ↔ back to park».
+        """
+        low = ' '.join((text or '').lower().split())
+        if not low or len(options or []) > 1:
+            return False
+        return ('already checked' in low or 'уже провер' in low
+                or low.startswith('you already'))
+
+    def see(self, text, context=None, options=None, parent_key=None):
+        """Записать место в карту и вернуть, что в нём видно.
+
+        parent_key — место, откуда пришли: если текст «уже проверено», это ОНО,
+        а не новое место.
+        """
+        if parent_key and self.nodes.get(parent_key) is not None and self.is_echo(text, options):
+            node = self.nodes[parent_key]
+            node['visits'] += 1
+            node['key'] = parent_key
+            merged = node.setdefault('options', [])
+            for o in (options or []):
+                if o and o not in merged:
+                    merged.append(o)
+            return node
+        k = self.key(text, context, options)
+        # Ключ, под которым живёт узел: если этот текст уже известен, живём под
+        # прежним ключом. Иначе один пассаж делится на два (Harlowe дописывает
+        # названия ссылок в текст) и отметки «нажато» повисают в воздухе.
+        # Разные наборы вариантов при этом остаются разными местами — это
+        # по-прежнему надёжный различитель (§«дом» и «первый этаж»).
+        bare_k = self.bare_key(text, options)
+        if self.nodes.get(k) is None:
+            already = self.text_key_index().get(bare_k)
+            if already:
+                k = already
+            else:
+                # Тот же пассаж с чуть изменённым хвостом («You went to your
+                # room…» после «do homework») — тоже он: узнаём по первым
+                # словам, иначе место двоится и остаток не тратится.
+                sig = self.text_sig(text, options)
+                twin = next((kk for kk, n in self.nodes.items()
+                             if self.text_sig(n.get('text'), n.get('options')) == sig), None)
+                if twin:
+                    k = twin
         node = self.nodes.get(k)
         if node is None:
-            # Тот же текст, но другой набор вариантов. В Harlowe набор меняется
-            # прямо в пассаже (после «OK» пропадает «Cancel»; после «door»
-            # появляется «You go back inside»), и без этого один пассаж
-            # делился на несколько мест: рёбра теряли источник и половина
-            # карты становилась недостижимой. Дописываем варианты в живой узел.
             node = {'text': (text or '')[:220], 'visits': 0}
             node.update(read_signal(text))
             self.nodes[k] = node
         node['visits'] += 1
         node['text_key'] = bare_k
+        # Настоящий ключ узла: набор вариантов на входе может отличаться от
+        # того, с которым место впервые попало в карту. Всё, что метит «нажато»
+        # или ищет рёбра, обязано пользоваться ЭТИМ ключом, иначе отметки
+        # ложатся мимо узла — и один вариант жмётся 82 раза подряд.
+        node['key'] = k
         merged = node.setdefault('options', [])
         for o in (options or []):
             if o and o not in merged:
                 merged.append(o)
         return node
 
-    def is_loop(self, text, choice, came_from=None):
-        """Петля: вариант возвращает туда, откуда пришли, или в это же место."""
+    def is_loop(self, text, choice, came_from=None, came_from_key=None):
+        """Петля: вариант возвращает туда, откуда пришли, или в это же место.
+
+        Сравниваем ПО КАРТЕ: раньше «откуда пришла» приходило текстом и
+        превращалось в ключ по одному тексту — не совпадало с ключом места, и
+        «back to park» не считался обратным ходом: 185 кругов подряд.
+        """
         k = text if self._is_key(text) else self.key(text)
+        back_key = came_from_key or (came_from if came_from and self._is_key(came_from) else None)
         for e in self.edges:
             if e['from'] != k or e['choice'] != choice:
                 continue
             if e['to'] == k:
                 return True          # «Nothing has changed» — то же место
-            if came_from and e['to'] == self.key(came_from):
-                return True          # обратный ход: «back», «Leave quietly!»
+            if back_key and e['to'] == back_key:
+                return True          # обратный ход: «back», «Leave this place!»
+            # Возврат может идти через одно место: парк → кусты → back to park.
+            # Ищем, куда из e['to'] можно вернуться, и совпадает ли это с
+            # «откуда пришла». Так 182 круга «bushes ↔ back to park» видны.
+            if back_key:
+                for e2 in self.edges:
+                    if e2['from'] == e['to'] and e2['to'] == back_key:
+                        return True
+        # Обратный ход узнаём и по названию: «back», «go back», «return».
+        low = (choice or '').strip().lower()
+        if low.startswith(('back', 'go back', 'return')) or low in ('назад', 'вернуться'):
+            for e in self.edges:
+                if e['from'] == k and e['choice'] == choice and back_key and e['to'] == back_key:
+                    return True
         return False
 
-    def mark_open(self, text, choices):
-        """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала."""
-        node = self.nodes.get(self.key(text))
+    def leads_to_new(self, text, choice):
+        """Ведёт ли вариант в место, которого в карте ещё нет (или где есть остаток)?"""
+        k = text if self._is_key(text) else self.key(text)
+        for e in self.edges:
+            if e['from'] != k or e['choice'] != choice:
+                continue
+            if e['to'] == k:
+                return False        # петля в это же место: нового не приносит
+            to = self.nodes.get(e['to'])
+            if to is None:
+                return True         # место, которого в карте ещё нет
+            # Флаг open застывает с прошлых прогонов — считаем по-настоящему.
+            return any(not self.tried_here(e['to'], label)
+                       for label in (to.get('options') or []))
+        return False            # куда ведёт — неизвестно, значит не «новое»
+
+    def direction_to_open(self, start_key):
+        """Первый шаг к месту с остатком БЕЗ учёта того, что там уже были.
+
+        В случайном лабиринте путь зависит от удачи, но направление — нет:
+        «bushes» из парка ведёт в кусты всегда, просто кусты иногда водой в
+        тупик. Значит повторять надо именно направление, а не наугад.
+        """
+        from collections import deque
+        if not start_key or start_key not in self.nodes:
+            return None
+
+        def has_left(k):
+            n = self.nodes.get(k) or {}
+            tk = n.get('text_key')
+            return any(not (k, label) in self.tried
+                       and not (tk and (tk, label) in self.tried)
+                       for label in (n.get('options') or []))
+
+        q = deque([(start_key, None)])
+        seen = {start_key}
+        while q:
+            cur, first = q.popleft()
+            for e in self.edges:
+                if e.get('from') != cur:
+                    continue
+                step = first if first is not None else e.get('choice')
+                if has_left(e['to']):
+                    return step
+                if e['to'] in seen:
+                    continue
+                seen.add(e['to'])
+                q.append((e['to'], step))
+        return None
+
+    def has_shaky_at(self, k):
+        """Есть ли у ЭТОГО места ссылки, которые вели в разные места."""
+        return any(e.get('shaky') and e.get('from') == k for e in self.edges)
+
+    def has_shaky(self):
+        """Есть ли в карте ссылки, которые вели в разные места.
+
+        Это признак СЛУЧАЙНОГО лабиринта: в Lost Spot «Turn left» из кустов
+        ведёт то в тупик, то на развилку — 24 раза в тупик и 1 раз на развилку
+        на одних и тех же данных. В таком месте повторный проход — не петля,
+        а единственный способ попасть в нужную ветку (83% шагов всех прогонов
+        — возврат в уже виденное место).
+        """
+        return any(e.get('shaky') for e in self.edges)
+
+    def route_to_open(self, start_key):
+        """Куда идти, чтобы добрать непройденное: первый шаг кратчайшего пути.
+
+        Без этого она, стоя в известном месте, перебирала тамошние варианты и
+        никогда не доходила до дальних мест с остатком (11 вариантов висели,
+        хотя путь к ним был). Путь ищется по уже записанным рёбрам — то есть
+        только там, где она правда ходила.
+        """
+        from collections import deque
+        if not start_key or start_key not in self.nodes:
+            return None
+
+        def has_left(k):
+            """Есть ли в месте настоящее непройденное.
+
+            Считаем по ключу узла И по ключу текста: остаток мог записаться
+            «брату» с другим набором вариантов, и тогда место выглядит
+            открытым, хотя всё нажато — из-за этого маршрут вёл в тупик
+            «bushes», где ничего не осталось.
+            """
+            n = self.nodes.get(k) or {}
+            tk = n.get('text_key')
+            for label in (n.get('options') or []):
+                if not (k, label) in self.tried and not (tk and (tk, label) in self.tried):
+                    return True
+            return False
+
+        if has_left(start_key):
+            # Остаток прямо здесь: маршрут не нужен, пусть цикл берёт свои
+            # варианты. Раньше это возвращало None, и получалось «идти некуда»
+            # на старте, хотя непройденное было в этом же месте.
+            return ''
+        # Достижимость — по ключу узла И по ключу текста: места с разными
+        # наборами вариантов живут под разными ключами, но это один пассаж.
+        def same(k1, k2):
+            if k1 == k2:
+                return True
+            n1, n2 = self.nodes.get(k1) or {}, self.nodes.get(k2) or {}
+            # text_key у старых узлов мог не заполниться: тогда сверяем и по
+            # подписи текста, иначе один и тот же пассаж считается двумя
+            # местами — и маршрут не находит развилку с остатком.
+            if n1.get('text_key') and n1.get('text_key') == n2.get('text_key'):
+                return True
+            return (bool(n1.get('text')) and n1.get('text') == n2.get('text'))
+
+        # Визиты — только для ОБХОДА: через пустые места надо проходить
+        # насквозь (в кустах тупик ведёт дальше к развилке). А «целью» пустое
+        # место не считаем — иначе маршрут возвращался в тупик, где всё
+        # нажато, и до развилки с остатком она не доходила.
+        seen = {start_key}
+        # «Нервные» рёбра (одна ссылка вела в разные места) не запрещаем, а
+        # отодвигаем: обычные идут первыми. Запрет был ошибкой — маршрут
+        # пропадал совсем, и она сдавалась через 3 шага вместо 22.
+        ordered = ([e for e in self.edges if not e.get('shaky')]
+                   + [e for e in self.edges if e.get('shaky')])
+        q = deque([(start_key, None)])
+        while q:
+            cur, first = q.popleft()
+            for e in ordered:
+                if e.get('from') != cur or any(same(e['to'], v) for v in seen):
+                    continue
+                step = first if first is not None else e.get('choice')
+                if has_left(e['to']):
+                    return step             # цель — только там, где есть остаток
+                seen.add(e['to'])
+                q.append((e['to'], step))
+        return None                         # остатка в достижимой части карты нет
+
+    def mark_open(self, text, choices, context=None):
+        """Отметить, есть ли в этом месте варианты, которые она ещё не нажимала.
+
+        Узел ищем ПО ТЕКСТУ: ключ с текущим набором вариантов может не совпасть
+        с тем, под которым место живёт в карте. Раньше остаток записывался
+        несуществующему ключу — парк выглядел «полностью пройденным», а его
+        кусты числились открытыми, и она ходила по кругу 182 раза.
+        """
+        labels = [c.get('label') for c in choices]
+        kw = self.key(text, context, labels)
+        node = self.nodes.get(kw)
+        if node is None:
+            same = self.text_key_index().get(self.bare_key(text, labels))
+            if same:
+                kw, node = same, self.nodes[same]
         if node is None:
             return
-        node['open'] = any((self.key(text), c.get('label')) not in self.tried for c in choices)
+        # Варианты, которых в узле ещё нет, — тоже его варианты.
+        for label in labels:
+            if label and label not in node.setdefault('options', []):
+                node['options'].append(label)
+        node['open'] = any(not self.tried_here(kw, c.get('label')) for c in choices)
         node['options'] = [c.get('label') for c in choices][:8]
 
-    def link(self, src_text, choice, dst_text):
-        fr, to = self.key(src_text), self.key(dst_text)
+    def link(self, src_text, choice, dst_text, context=None, dst_options=None,
+             src_key=None, dst_key=None):
+        """Ребро карты. src_key/dst_key — готовые ключи мест: текст в ключ не
+        превратить повторно (набор вариантов уже в нём), иначе связь повиснет
+        в воздухе. Если ключа цели нет в карте — берём узел с тем же текстом.
+        """
+        fr = src_key or self.key(src_text)
+        to = dst_key or self.key(dst_text, context, dst_options)
+        if to not in self.nodes:
+            same = self.text_key_index().get(self.key(dst_text))
+            if same:
+                to = same
+        # Одна ссылка в Harlowe может вести в РАЗНЫЕ пассажи (зависит от того,
+        # что уже видано). Наблюдали «Go around the corner» → развилка, потом
+        # → тупик. Первое наблюдение решает — остальные не пишем.
+        for e in self.edges:
+            if e.get('from') == fr and e.get('choice') == choice and e.get('to') != to:
+                # Пометка «ведёт не туда, куда считали»: маршрут не должен
+                # считать этот шаг надёжным путём к остатку.
+                e['shaky'] = True
+                return
         edge = {'from': fr, 'choice': choice, 'to': to}
         if edge not in self.edges:
             self.edges.append(edge)
@@ -1017,8 +1311,78 @@ class StoryMap:
                 out.append(c)
         return out
 
+    def tried_here(self, k, label):
+        """Нажимали ли этот вариант в этом месте — с оглядкой на тот же текст.
+
+        Отметки пишутся под ключом с набором вариантов, а спрашивают иногда под
+        другим набором. Поэтому сверяем и по одному тексту (а если узла ещё нет
+        — по ключу, который и есть текст).
+        """
+        if (k, label) in self.tried:
+            return True
+        node = self.nodes.get(k)
+        if node is not None:
+            # Спрашивают про это место: нажатие помним и по ключу текста.
+            if (node.get('text_key') or '', label) in self.tried:
+                return True
+            # Ключа текста может не быть (карта из старой памяти) — сверяем
+            # по самому тексту: он у пассажа один.
+            bare = self.bare_key(node.get('text'), node.get('options'))
+            return (bare, label) in self.tried
+        # Спрашивают под ключом, которого в карте нет: это тот же пассаж,
+        # если совпадает текст без вариантов (набор мог смениться).
+        return any(tk == k and label == lb for tk, lb in self.tried)
+
+    def mark_tried(self, k, label):
+        """Запомнить нажатие: и под ключом места, и под ключом текста.
+
+        Второе нужно, потому что одно место живёт под ключом, собранным в
+        первый раз, а спрашивают про него иногда под другим набором вариантов.
+        """
+        self.tried.add((k, label))
+        node = self.nodes.get(k) or {}
+        for extra in ((node.get('text_key'),
+                       self.bare_key(node.get('text'), node.get('options')))):
+            if extra and extra != k:
+                self.tried.add((extra, label))
+
+    def remaining(self):
+        """Сколько вариантов в известных местах ещё не нажато.
+
+        Считаем по паре (место, вариант), но один и тот же текст не считаем
+        дважды: иначе «Cancel» с экрана ввода имени висел в остатке вечно,
+        хотя пассаж давно ушёл дальше.
+        """
+        groups = {}
+        for k, node in self.nodes.items():
+            tk = node.get('text_key') or k
+            labels = groups.setdefault(tk, [])
+            for label in (node.get('options') or []):
+                if label not in labels:
+                    labels.append(label)
+        left = 0
+        # Окно ввода (OK/Cancel) — не ветки истории: остатка в нём нет. И
+        # «door» в таком окне — тоже кнопка: имя просят ДО того, как герой
+        # выйдет за дверь, и «door» там ничего не открывает.
+        dialogs = {tk for tk, labels in groups.items()
+                   if is_dialog([{'label': l} for l in labels])
+                   or {'ok', 'cancel'} & {l.strip().lower() for l in labels}}
+        for tk, labels in groups.items():
+            if tk in dialogs:
+                continue
+            for label in labels:
+                if label.strip().lower() in ('door', 'дверь', 'cancel', 'отмена'):
+                    continue        # служебные кнопки, а не ветки истории
+                if (tk, label) in self.tried:
+                    continue
+                if any(self.tried_here(k, label) for k, n in self.nodes.items()
+                       if (n.get('text_key') or k) == tk):
+                    continue
+                left += 1
+        return left
+
     def summary(self):
-        return {'places': len(self.nodes), 'links': len(self.edges),
+        return {'remaining': self.remaining(), 'places': len(self.nodes), 'links': len(self.edges),
                 'tried': len(self.tried),
                 'energetic': sum(1 for n in self.nodes.values() if n.get('energy', 0) > 0),
                 'tired': sum(1 for n in self.nodes.values() if n.get('energy', 0) < 0),
@@ -1028,20 +1392,38 @@ class StoryMap:
         """Слепок карты для следующего прогона: места, переходы, что нажато."""
         places = {k: {'text': v.get('text', '')[:160], 'visits': v.get('visits', 0),
                       'energy': v.get('energy', 0), 'finds': v.get('finds', []),
-                      'clues': v.get('clues', 0), 'open': bool(v.get('open'))}
+                      'clues': v.get('clues', 0), 'open': bool(v.get('open')),
+                      # text_key обязателен: по нему видно, что уже нажато.
+                      # Без него после загрузки памяти отметки «нажато»
+                      # терялись, и один и тот же выбор жался 68 раз подряд.
+                      'text_key': v.get('text_key') or k,
+                      'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
-        return {'places': places,
+        return {'schema': 'text+options-v4', 'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
                 'tried': sorted([list(t) for t in self.tried])}
 
+    # v4: место — один текст без названий ссылок (Harlowe дописывает их прямо
+    # в пассаж), висячие рёбра отброшены, нажатия сверяются по тексту.
+    # Карты v3 собирались, когда «...tube slide. back» и «...tube slide.» были
+    # разными местами: 419 выборов уходили в петлю, а slide оставался ненажатым.
+    SCHEMA = 'text+options-v4'
+
     def load_cache(self, data):
-        """Вспомнить карту прошлого прогона: там уже есть места и переходы."""
+        """Вспомнить карту прошлого прогона: там уже есть места и переходы.
+
+        Карта старой схемы (когда местом считался только текст) не годится:
+        ключи другие, и остаток был бы фальшивым. Такую память не берём.
+        """
         if not data:
+            return 0
+        if data.get('schema') != self.SCHEMA:
             return 0
         for k, v in (data.get('places') or {}).items():
             node = dict(v)
             if not node.get('text_key'):
                 node['text_key'] = self.bare_key(node.get('text'), node.get('options'))
+            node['key'] = k
             self.nodes[k] = node
         # Рёбра, которые ведут из мест, которых в карте нет, — мусор прошлых
         # прогонов (накопилось 174 из 311, и половина графа была нерабочей:
@@ -1066,6 +1448,11 @@ class StoryMap:
         for pair in (data.get('tried') or []):
             if len(pair) == 2:
                 self.tried.add((pair[0], pair[1]))
+        # Флаг open застывает: после загрузки пересчитываем его по нажатиям,
+        # иначе маршрут к остатку считает закрытые места открытыми.
+        for k, node in self.nodes.items():
+            node['open'] = any(not self.tried_here(k, label)
+                               for label in (node.get('options') or []))
         return len(self.nodes)
 
     def as_report(self):
@@ -1084,7 +1471,8 @@ MAZE_STEPS = 60
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
-                story_map=None, energy=0, came_from=None):
+                story_map=None, energy=0, came_from=None, came_from_key=None,
+                attempts=0):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
     visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
@@ -1107,7 +1495,9 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     def here_key(c):
         return (k, c.get('key', c.get('label', '')))
 
-    # Диалог подтверждения: сначала «OK», а не «Cancel».
+    # Диалог подтверждения: сначала «OK», а не «Cancel». «Cancel» и «door» в
+    # этом окне — не ветки истории, а служебные кнопки: оставлять их в остатке
+    # навсегда нельзя, иначе «непройденное» никогда не кончается.
     if len(choices) <= 3:
         affirm = [c for c in choices if (c.get('label') or '').strip().lower() in
                   ('ok', 'okay', 'yes', 'да', 'продолжить', 'continue', 'next', 'далее')]
@@ -1120,16 +1510,73 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     fresh = [c for c in choices if not_tried(c)]
     pool = fresh or choices
 
-    # Петля (ведёт туда же, откуда пришла) — в самом конце.
-    if passage and len(pool) > 1:
-        no_loops = [c for c in pool if not story_map.is_loop(passage, c.get('label'), came_from)] if story_map else pool
+    # Когда остаток мал, добираем его, а не бегаем наугад: сначала варианты,
+    # из которых карта уже знает, что они ведут в НОВОЕ место. Раньше здесь
+    # стоял is_loop — и она предпочитала как раз обратные ходы («back»,
+    # «go home»), заходы 3–6 давали по 0 новых мест.
+    if story_map is not None and passage and fresh and len(fresh) > 1:
+        if story_map.remaining() <= 8:
+            leads_new = [c for c in fresh if story_map.leads_to_new(passage, c.get('label'))]
+            if leads_new:
+                pool = leads_new
+
+    # Здесь всё нажато, а в карте ещё есть остаток — идём к нему по маршруту,
+    # а не тычем первый попавшийся вариант. И если маршрута нет, а остаток
+    # есть в других местах — честно кончаем заход: иначе она 182 раза ходит
+    # «bushes ↔ back to park», потому что все варианты ведут по кругу.
+    if story_map is not None and passage and not fresh:
+        step = story_map.route_to_open(passage)
+        if step:
+            for c in choices:
+                if (c.get('label') or '') == step:
+                    return c, False
+        elif step is None and story_map.remaining() > 0 and energy > -2:
+            # В случайном лабиринте «маршрута нет» не значит «делать нечего»:
+            # нужная ветка открывается с шансом, и его надо разыгрывать.
+            # Но только по «нервным» местам и только пока подходов не много —
+            # иначе это тот самый вечный цикл на 400 шагов.
+            if story_map.has_shaky() and attempts < MAZE_STEPS:
+                # Сначала пробуем НАПРАВЛЕНИЕ к остатку (даже если там уже
+                # были: в случайном лабиринте именно повторный проход и
+                # открывает нужную ветку), потом — любой не-обратный ход.
+                want = story_map.direction_to_open(passage)
+                for c in choices:
+                    if want and (c.get('label') or '') == want:
+                        return c, False
+                revisit = [c for c in choices
+                           if not story_map.is_loop(passage, c.get('label'), came_from, came_from_key)]
+                if revisit:
+                    return (revisit[0] if rng is None
+                            else revisit[rng.randrange(len(revisit))]), False
+            return None, False          # идти некуда: честно кончаем заход
+        # step == '' — остаток здесь же; дальше возьмём свои варианты
+
+    # Петля (ведёт туда же, откуда пришла) — в самом конце. Здесь важна
+    # ЧЕСТНОСТЬ: раньше фильтр просто не применялся, если все варианты —
+    # петли, и она 182 раза ходила «bushes ↔ back to park». Теперь если всё
+    # нажато и всё ведёт назад — честно возвращаем «идти некуда» (None).
+    if passage and story_map is not None:
+        no_loops = [c for c in pool
+                    if not story_map.is_loop(passage, c.get('label'), came_from, came_from_key)]
         if no_loops:
             pool = no_loops
+        elif len(pool) > 0 and not fresh:
+            # Все варианты ведут назад. В ОБЫЧНОМ месте это значит «делать
+            # нечего» — заход кончается. Но если карта видела, что ссылки ведут
+            # в разные места (случайный лабиринт), «назад» — это и есть
+            # единственный способ попасть в нужную ветку: идём, пока подходов
+            # мало. Раньше здесь стоял ещё и energy > -2, и вымотанная она
+            # сдавалась ровно там, где надо было разыгрывать проход.
+            if not ((story_map.has_shaky() or story_map.has_shaky_at(passage))
+                    and attempts < MAZE_STEPS):
+                return None, False      # тут делать нечего — пусть заход закончится
 
     # осторожность: вымотана — сначала передохнуть, даже если отдых уже нажимала.
     # Отдых ищем среди ВСЕХ вариантов: в карте он может быть «изведан», но силы
     # важнее новизны — иначе она уходит вымотанной и теряет заход.
-    if energy < 0:
+    # Отдых — только когда силы правда на нуле. При «устала, но идёт» отдых
+    # съедал весь заход: она отдыхала, вставала, снова «уставала» и отдыхала.
+    if energy <= -2:
         rest = [c for c in choices if is_rest(c.get('label', ''))]
         # Отдых — ОДИН раз в месте. Раньше он перебивал всё: в узле «ты дома»
         # было 18 визитов и нажат только «couch», а «homework» и «kitchen» так
@@ -1156,9 +1603,40 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
 
 
 def is_rest(label):
-    """Отдых по названию кнопки: тут силы возвращаются."""
+    """Отдых по названию кнопки: тут силы возвращаются.
+
+    «homework» и «door» сюда НЕ входят: раньше они считались отдыхом по
+    подстрокам, и она 200 раз подряд «отдыхала» домашкой вместо поисков.
+    """
     low = (label or '').lower()
-    return any(w in low for w in ('rest', 'couch', 'sit', 'lie', 'sleep', 'feet up', 'get up', 'wait'))
+    return any(w in low for w in ('rest', 'couch', 'sit', 'lie', 'sleep', 'feet up'))
+
+
+def is_exit(label):
+    """Это выход из места («back to park», «leave», «return») — не ветка истории.
+
+    На развилке в кустах были «Turn left», «Turn right» и «back to park», и она
+    выбирала «back to park»: место с двумя непройденными ветками бросалось,
+    а они оставались в остатке навсегда.
+    """
+    low = ' '.join((label or '').lower().split())
+    return (low.startswith(('back', 'go back', 'return', 'leave', 'exit'))
+            or low in ('назад', 'вернуться', 'выйти'))
+
+
+def is_dialog(choices):
+    """Окно ВВОДА имени (OK/Cancel и больше нечего читать): кнопки, не ветки.
+
+    Осторожно: «door, OK, Cancel» — это окно ввода (имя), а «You already
+    checked here, OK» — место, где «OK» бывает веткой. Поэтому диалог — только
+    ДВЕ кнопки подтверждения и ничего больше.
+    """
+    labels = [(c.get('label') or '').strip().lower() for c in (choices or [])]
+    if len(labels) != 2:
+        return False
+    has_ok = any(l in ('ok', 'okay', 'yes', 'continue', 'next', 'да', 'далее') for l in labels)
+    has_no = any(l in ('cancel', 'no', 'нет', 'отмена') for l in labels)
+    return has_ok and has_no
 
 
 def is_far(label):
@@ -1239,7 +1717,7 @@ def restart_story(page, report):
         return False
 
 
-def read_story(page, seconds, out, report, shot, runs=6):
+def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
     """Пройти сюжетную игру чтением и добрать ветки, которых ещё не видела.
 
     Один заход — до финала. Если время осталось и в карте есть неизведанные
@@ -1302,9 +1780,21 @@ def read_story(page, seconds, out, report, shot, runs=6):
         moves = 0
         stuck = 0
         fresh_moves = 0
+        # План захода: сначала называем, что именно ищем. Если известных мест
+        # с непройденными вариантами мало, а незнакомых много — идём исследовать;
+        # если наоборот — целенаправленно закрываем известные.
+        left_now = story_map.remaining()
+        if run > 1:
+            report.step('план захода',
+                        f'осталось непройденных вариантов {left_now} в {len(story_map.nodes)} местах — иду закрывать их')
         pending = {'from': '', 'choice': '', 'done': True}
-        trail = []        # последние места: ловим хождение по кругу
+        trail = []        # последние места: ловим хождение по кругу (по подписи текста)
         last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
+        prev_key = ['']    # ключ предыдущего места: ребро пишем ИМ
+        text_key_full = ['']  # текст текущего места (для записи ребра)
+        # Сколько раз за этот заход пробовали пройти случайный лабиринт заново.
+        # Ограничено, чтобы «нервные» рёбра не вернули вечный цикл на 400 шагов.
+        attempts = [0]
         last_text = ['']   # прошлый текст: ловим «страница не сменилась»
         same_text = [0]
         prev_place = ['']  # место предыдущего шага
@@ -1320,23 +1810,38 @@ def read_story(page, seconds, out, report, shot, runs=6):
                 report.step('чтение', 'не нашла ни текста, ни вариантов — останавливаюсь честно')
                 break
             text = state.get('text', '')
-            if pending.get('from') and not pending.get('done'):
-                # пришли из предыдущего пассажа: записываем ребро карты
-                story_map.link(pending['from'], pending['choice'], text)
-                pending['done'] = True
+            text_key_full[0] = text
+            here_ctx = prev_place[0]             # откуда пришли (запасной различитель)
             if text and last_text[0] and text[:120] == last_text[0][:120] and moves > 0:
                 same_text[0] += 1
             last_text[0] = text
-            sight = story_map.see(text)          # зрение: силы, находки, следы
-            if sight['visits'] == 1:
-                new_places += 1
             choices = state.get('choices') or []
             for c in choices:
                 c['key'] = c.get('label', '')
-            story_map.mark_open(text, choices)
+            labels = [c.get('label') for c in choices]
+            # Сначала варианты, потом место в карту: набор вариантов — часть
+            # ключа (по нему различаются пассажи с одинаковым текстом).
+            sight = story_map.see(text, here_ctx, labels, parent_key=prev_place[0])   # зрение
+            my_key = sight.get('key') or story_map.key(text, here_ctx, labels)
+            if pending.get('from') and not pending.get('done'):
+                # пришли из предыдущего пассажа: записываем ребро карты, зная
+                # уже и текст, и набор вариантов. Источник — ключ ПРЕДЫДУЩЕГО
+                # места, цель — ключ этого. Раньше источник брался из «see» этого
+                # шага, и рёбра «back to park» вешались от самого тупика: 185
+                # кругов подряд, потому что петля не распознавалась.
+                story_map.link(pending['from'], pending['choice'], text, here_ctx, labels,
+                               src_key=pending.get('from_key') or prev_key[0],
+                               dst_key=my_key)
+                pending['done'] = True
+            if sight['visits'] == 1:
+                new_places += 1
+            story_map.mark_open(text, choices, here_ctx)
             if choices:
                 # след последних мест: если ходит по кругу, дальше не жмём
-                trail.append(story_map.key(text))
+                # След — по ПОДПИСИ текста: Harlowe дописывает названия ссылок,
+                # и каждый круг давал новый ключ — стоп-кран не видел петлю,
+                # и она 199 раз ходила «bushes ↔ back to park».
+                trail.append(story_map.text_sig(text, labels))
                 last_place[0] = prev_place[0]
                 if len(trail) > 18:
                     trail.pop(0)
@@ -1345,17 +1850,30 @@ def read_story(page, seconds, out, report, shot, runs=6):
                 # остатку рубился на 17-м шаге, не дойдя: 6 заходов подряд по
                 # 0 финалов. Петля через два места — это нормальный проход по
                 # дому, а не топтание.
-                if (len(trail) >= 18 and len(set(trail[-8:])) <= 1
-                        and new_places == 0):
+                if attempts[0] >= MAZE_STEPS:
+                    report.step('стоп-кран',
+                                f'{attempts[0]} шагов подряд без новых мест — прекращаю заход честно')
+                    break
+                if (len(trail) >= 18 and len(set(trail[-8:])) <= 2
+                        and new_places == 0 and not story_map.has_shaky()):
                     report.step('стоп-кран',
                                 f'топчется в одном месте {len(trail)} шагов и новых мест нет — прекращаю заход')
                     break
                 pick, fresh = pick_choice(choices, visited, rng,
-                                          story_map.key(text), sight['visits'],
+                                          my_key, sight['visits'],
                                           story_map=story_map, energy=sight.get('energy', 0),
-                                          came_from=last_place[0])
-                story_map.tried.add((story_map.key(text), pick['label']))
-                visited.add((story_map.key(text), pick['label']))
+                                          came_from=last_place[0],
+                                          came_from_key=prev_place[0],
+                                          attempts=attempts[0])
+                if pick is None:
+                    # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
+                    # а не крутимся. Следующий заход начнётся с начала и пойдёт
+                    # по маршруту к остатку в других местах.
+                    report.step('идти некуда',
+                                f'заход {run}: в этом месте всё нажато, остаток — в других местах карты')
+                    break
+                story_map.mark_tried(my_key, pick['label'])
+                visited.add((my_key, pick['label']))
                 try:
                     el = page.query_selector(f'[data-kv-choice="{pick["i"]}"]')
                     if el is None:
@@ -1370,7 +1888,8 @@ def read_story(page, seconds, out, report, shot, runs=6):
                     page.wait_for_timeout(500)
                     continue
                 moves += 1
-                pending = {'from': text, 'choice': pick['label'], 'done': False, 'from_key': my_key}
+                pending = {'from': text_key_full[0], 'choice': pick['label'], 'done': False, 'from_key': my_key}
+                prev_key[0] = my_key
                 if fresh:
                     fresh_moves += 1
                 # Считаем только подходы в САМОМ лабиринте (место с «нервными»
@@ -1395,7 +1914,7 @@ def read_story(page, seconds, out, report, shot, runs=6):
                             break
                         page.wait_for_timeout(160)
                     shot(f'0{min(9, 3 + moves // 8)}-story-{moves:02d}.png')
-                prev_place[0] = story_map.key(text)   # для следующего шага: откуда пришли
+                prev_place[0] = my_key   # следующий шаг: откуда пришли
                 page.wait_for_timeout(1300)
                 stuck = 0
             else:
@@ -1414,7 +1933,12 @@ def read_story(page, seconds, out, report, shot, runs=6):
                     page.wait_for_timeout(900)
                     continue
                 run_end = text[:400]
-                endings.append({'run': run, 'n': moves, 'text': run_end})
+                # Чем кончился заход: последние выборы перед финалом. Экран у
+                # всех концовок один, поэтому путь и есть различитель.
+                tail = [p2['choice'] for p2 in path[-4:]]
+                endings.append({'run': run, 'n': moves, 'text': run_end,
+                                'route': ' → '.join(tail),
+                                'routeKey': hashlib.sha1('|'.join(tail).encode('utf-8')).hexdigest()[:12]})
                 report.step('финал' if text else 'пусто',
                             f'заход {run}: {moves} выборов, новых мест {new_places} — {text[:170] or "пусто"}')
                 break
