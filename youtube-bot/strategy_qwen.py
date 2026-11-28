@@ -41,10 +41,14 @@ class StrategyQwen:
     def __init__(self, *, generator=qwen_vision):
         self.generator = generator
         self.drag_start: str | None = None
+        self.clicked = False
         self.history: list[str] = []
 
     def choose(self, screenshot: bytes) -> tuple[str, dict]:
         allowed = tuple(a for a in CHOICES if not (a.startswith('D') and len(a) == 3))
+        if not self.clicked:
+            # Start screens are menus: require a model-selected click before a drag.
+            allowed = tuple(a for a in allowed if not (a.startswith('S') and len(a) == 3))
         if self.drag_start:
             # A pending anchor must be completed or explicitly discarded.
             allowed = tuple('D'+cell for cell in CELLS) + ('WAIT',)
@@ -70,4 +74,5 @@ class StrategyQwen:
             start = self.drag_start
             self.drag_start = None
             return action, {'type':'drag','start':center(start),'end':center(cell)}
+        self.clicked = True
         return action, {'type':'click','at':center(cell),'button':'left' if prefix == 'L' else 'right'}

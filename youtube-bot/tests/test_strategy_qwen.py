@@ -18,8 +18,17 @@ class StrategyQwenTests(unittest.TestCase):
     def test_drag_has_two_model_decisions_no_scripted_target(self):
         seq=iter(['SAA','DCD'])
         agent=StrategyQwen(generator=lambda image,prompt,allowed:next(seq))
+        agent.clicked = True
         self.assertEqual(agent.choose(screenshot())[1],{'type':'wait'})
         self.assertEqual(agent.choose(screenshot())[1],{'type':'drag','start':(100,100),'end':(700,500)})
+    def test_menu_cannot_start_by_dragging(self):
+        agent=StrategyQwen(generator=lambda image,prompt,allowed:'SAD')
+        with self.assertRaises(ValueError): agent.choose(screenshot())
+        self.assertFalse(agent.clicked)
+        agent.generator = lambda image,prompt,allowed:'LAA'
+        agent.choose(screenshot())
+        self.assertTrue(agent.clicked)
+
     def test_invalid_or_unallowed_answer_never_executes(self):
         agent=StrategyQwen(generator=lambda image,prompt,allowed:'DELETE /')
         with self.assertRaises(ValueError): agent.choose(screenshot())

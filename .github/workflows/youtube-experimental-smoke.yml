@@ -253,17 +253,6 @@ jobs:
         run: python -m unittest youtube-bot/tests/test_strategy_desktop.py youtube-bot/tests/test_strategy_qwen.py
       - name: Install capture inspector
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Inspect the previous private Warzone probe
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/warzone-previous"
-          gh run download 46123124776 --name warzone-private-46123124776 --dir "$RUNNER_TEMP/warzone-previous"
-          ls -lh "$RUNNER_TEMP/warzone-previous"
-          python youtube-bot/warzone_probe/inspect.py "$RUNNER_TEMP/warzone-previous" 2>"$RUNNER_TEMP/inspect-error" || {
-            python -c 'import os; s=open(os.environ["RUNNER_TEMP"]+"/inspect-error").read()[-2500:]; print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
-            exit 1
-          }
       - name: Build isolated Warzone desktop
         run: docker build -f youtube-bot/warzone_probe/Dockerfile -t kvenya-warzone-private:1 youtube-bot
       - name: Capture a bounded private Kvenya session
@@ -272,6 +261,12 @@ jobs:
           MKL_NUM_THREADS: '2'
           QWEN_GAME_ADAPTER_PATH: ${{ runner.temp }}/kvenya-adapter
         run: python -u youtube-bot/warzone_probe/run.py "$RUNNER_TEMP/warzone-private"
+      - name: Inspect captured file and action trace
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/warzone-private/capture.mp4" ]; then
+            python youtube-bot/warzone_probe/inspect.py "$RUNNER_TEMP/warzone-private"
+          fi
       - name: Save private diagnostic material, including failures
         if: always()
         uses: actions/upload-artifact@v4
