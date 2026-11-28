@@ -18,6 +18,12 @@ class MenuOCRTests(unittest.TestCase):
         ]
         self.assertEqual(candidates_from_tsv(HEADER+'\n'.join(rows)),
                          [{'label':'single player','at':(392,275)}, {'label':'new campaign','at':(417,315)}])
+    def test_alpha_campaign_is_a_visible_target(self):
+        rows = ['5\t1\t1\t1\t1\t1\t300\t240\t70\t28\t80\tAlpha',
+                '5\t1\t1\t1\t1\t2\t375\t240\t110\t28\t82\tCampaign']
+        self.assertEqual(candidates_from_tsv(HEADER+'\n'.join(rows)),
+                         [{'label':'alpha campaign', 'at':(392,254)}])
+
     def test_empty_and_untrusted_are_not_actions(self):
         self.assertEqual(candidates_from_tsv(HEADER), [])
         with self.assertRaises(ValueError): candidates_from_tsv('x'*1_000_001)
