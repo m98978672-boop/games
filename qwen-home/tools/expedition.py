@@ -1377,24 +1377,15 @@ class StoryMap:
         return any(tk == k and label == lb for tk, lb in self.tried)
 
     def mark_tried(self, k, label):
-        """Запомнить нажатие — под ВСЕМИ ключами этого места.
+        """Запомнить нажатие: и под ключом места, и под ключом текста.
 
-        Одно место живёт под несколькими ключами: ключ узла (с набором
-        вариантов), ключ текста и ключ «текст без вариантов». Раньше метка
-        ложилась только под первые два, и нажатое «Get up» терялось: место
-        выглядело непройденным и держало остаток, а заход 12 раз упирался в
-        него («диван ↔ нога отдыхает»).
+        Второе нужно, потому что одно место живёт под ключом, собранным в
+        первый раз, а спрашивают про него иногда под другим набором вариантов.
         """
         self.tried.add((k, label))
         node = self.nodes.get(k) or {}
-        keys = {node.get('text_key'),
-                self.bare_key(node.get('text'), node.get('options')),
-                self.bare_key(node.get('text'))}
-        for other_k, other in self.nodes.items():
-            if other.get('text_key') and node.get('text_key') \
-                    and other.get('text_key') == node.get('text_key'):
-                keys.add(other_k)
-        for extra in keys:
+        for extra in ((node.get('text_key'),
+                       self.bare_key(node.get('text'), node.get('options')))):
             if extra and extra != k:
                 self.tried.add((extra, label))
 
@@ -1889,7 +1880,6 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
     report.step('читаю историю',
                 'сюжетная игра: читаю текст, вижу силы и находки, веду карту мест; после финала начну заново и доберу новые ветки')
 
-    stuck_places = set()   # места, где остаток есть, но ветка не показывается
     for run in range(1, max(1, runs) + 1):
         if time.monotonic() >= deadline - 8:
             break
@@ -1903,16 +1893,6 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                         and any(not story_map.tried_here(k, label) for label in (n.get('options') or []))]
             if not unopened:
                 report.step('добор веток', 'непройденных вариантов не осталось — второй заход не нужен')
-                break
-            # Если остаток — сплошь «условные» ветки (место показало другую
-            # ветку по $sus), новые заходы ничего не дадут: каждый заход
-            # начинается с тех же мест. Честно кончаем и говорим об этом.
-            if len(unopened) <= 2 and all(
-                    story_map.remaining_at(k) == 0 or k in stuck_places
-                    for k in unopened):
-                report.step('добор веток',
-                            f'остаток ({len(unopened)} места) — ветки, которые в этом состоянии '
-                            'игры не показываются: повторные заходы их не откроют')
                 break
             report.step('добор веток',
                         f'осталось мест с непройденными вариантами: {len(unopened)} — иду заново')
@@ -2050,11 +2030,9 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                           seen_bad=seen_bad, sus=sus_now[0],
                                           gather=gather_now[0])
                 if pick is None:
-                    # Здесь нечего нажимать (или остаток — условная ветка,
-                    # которую игра сейчас не показывает). Запоминаем, чтобы
-                    # не гонять 12 одинаковых заходов.
-                    if any(not story_map.tried_here(my_key, l) for l in labels):
-                        stuck_places.add(my_key)
+                    # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
+                    # а не крутимся. Следующий заход начнётся с начала и пойдёт
+                    # по маршруту к остатку в других местах.
                     report.step('идти некуда',
                                 f'заход {run}: в этом месте всё нажато, остаток — в других местах карты')
                     break
