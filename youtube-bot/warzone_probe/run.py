@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from strategy_qwen import StrategyQwen
+from warzone_probe.visual_feedback import compare_frames
 
 CONTAINER = 'kvenya-warzone-private'
 
@@ -28,7 +29,7 @@ def run(out):
                 raise RuntimeError('Warzone container stopped before the desktop was ready')
             time.sleep(1)
         else: raise RuntimeError('Warzone desktop did not become ready')
-        agent = StrategyQwen()
+        agent = StrategyQwen(allow_drag=False)
         for index in range(24):
             shot = call('exec', CONTAINER, 'python3', '/app/container.py', 'screenshot', capture=True).stdout
             if index in (0, 7, 15, 23):
@@ -36,10 +37,14 @@ def run(out):
             action, command = agent.choose(shot)
             at = round(time.monotonic()-start, 2)
             call('exec', CONTAINER, 'python3', '/app/container.py', 'action', json.dumps(command), capture=True)
-            trace.append({'step': index+1, 'elapsed_seconds': at, 'action': action, 'command': command,
-                          'ocr_menu': agent.last_menu, 'model_observation': agent.last_observation})
-            print(f'Action {index+1}: {action} at {at}s', flush=True)
             time.sleep(2)
+            after = call('exec', CONTAINER, 'python3', '/app/container.py', 'screenshot', capture=True).stdout
+            feedback = compare_frames(shot, after)
+            agent.frame_feedback = feedback['assessment']
+            trace.append({'step': index+1, 'elapsed_seconds': at, 'action': action, 'command': command,
+                          'ocr_menu': agent.last_menu, 'model_observation': agent.last_observation,
+                          'frame_feedback': feedback})
+            print(f'Action {index+1}: {action} at {at}s; {feedback["assessment"]}', flush=True)
     finally:
         (out / 'trace.json').write_text(json.dumps({'private_probe': True, 'victory_verified': False, 'review_ready': False, 'actions': trace}, ensure_ascii=False, indent=2))
         subprocess.run(['docker', 'exec', CONTAINER, 'touch', '/out/stop'], timeout=10, capture_output=True)

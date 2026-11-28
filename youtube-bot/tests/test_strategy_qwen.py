@@ -47,6 +47,19 @@ class StrategyQwenTests(unittest.TestCase):
         self.assertNotIn('SAA', selected)
         self.assertIn('SAB', selected)
 
+    def test_probe_disables_drag_and_filters_recent_inputs_after_static_frame(self):
+        selected = []
+        agent = StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'map', allow_drag=False,
+                             generator=lambda image,prompt,allowed:(selected.extend(allowed) or 'LAB'))
+        agent.menu_actions = 10
+        agent.history = ['LAA','RAB']
+        agent.frame_feedback = 'little_visible_change'
+        self.assertEqual(agent.choose(screenshot())[0], 'LAB')
+        self.assertNotIn('SAA', selected)
+        self.assertNotIn('LAA', selected)
+        self.assertNotIn('RAB', selected)
+        self.assertIn('RAC', selected)
+
     def test_invalid_or_unallowed_answer_never_executes(self):
         agent=StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'test screen', generator=lambda image,prompt,allowed:'DELETE /')
         with self.assertRaises(ValueError): agent.choose(screenshot())

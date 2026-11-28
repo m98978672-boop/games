@@ -250,7 +250,7 @@ jobs:
           gh release download frontline-qwen-home --pattern adapter.tar.gz --dir "$RUNNER_TEMP/kvenya-release"
           python youtube-bot/prepare_kvenya_adapter.py "$RUNNER_TEMP/kvenya-release/adapter.tar.gz" "$RUNNER_TEMP/kvenya-adapter"
       - name: Test action validation
-        run: python -m unittest youtube-bot/tests/test_strategy_desktop.py youtube-bot/tests/test_strategy_qwen.py youtube-bot/tests/test_warzone_menu_ocr.py
+        run: python -m unittest youtube-bot/tests/test_strategy_desktop.py youtube-bot/tests/test_strategy_qwen.py youtube-bot/tests/test_warzone_menu_ocr.py youtube-bot/tests/test_warzone_visual_feedback.py
       - name: Install capture inspector
         run: sudo apt-get update && sudo apt-get install -y ffmpeg tesseract-ocr
       - name: Build isolated Warzone desktop

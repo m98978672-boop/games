@@ -16,6 +16,7 @@ summary = {'seconds': info['format']['duration'], 'bytes': info['format']['size'
            'width': stream['width'], 'height': stream['height'], 'fps': stream['avg_frame_rate'],
            'model_actions': [x['action'] for x in trace['actions']],
            'ocr_menus': [[item['label'] for item in x.get('ocr_menu', [])] for x in trace['actions']],
+           'frame_feedback': [x.get('frame_feedback', {}).get('assessment') for x in trace['actions']],
            'victory_verified': False,
            'commentary_present': any(s['codec_type'] == 'audio' for s in info['streams'])}
 print('::notice::Private Warzone capture: ' + json.dumps(summary, ensure_ascii=True), flush=True)
