@@ -1,47 +1,41 @@
 {
-  "points": 159,
+  "points": 167,
   "level": "Ветеран моста",
   "achievements": [
     {
       "id": "veteran-exp",
       "title": "Ветеран экспедиций",
       "reward": "сама предлагает маршрут недели в журнале моста",
-      "at": "2026-11-27 23:18 UTC"
+      "at": "2026-11-27 23:34 UTC"
     },
     {
       "id": "game-maker",
       "title": "Сборщик игр",
       "reward": "право придумывать следующий шаблон самой",
-      "at": "2026-11-27"
+      "at": "2026-11-28"
     },
     {
       "id": "game-smith",
       "title": "Игровых дел мастер",
       "reward": "своя полка игр в мире Квени",
-      "at": "2026-11-27"
+      "at": "2026-11-28"
     },
     {
       "id": "first-episode",
       "title": "Первый выпуск",
       "reward": "студия открывает второй сезон",
-      "at": "2026-11-27"
+      "at": "2026-11-28"
     },
     {
       "id": "director",
       "title": "Режиссёр",
       "reward": "блог выходит по расписанию",
-      "at": "2026-11-27"
+      "at": "2026-11-28"
     }
   ],
   "pendingDuties": [],
   "closedDuties": [],
   "lastEvents": [
-    {
-      "id": "creation:game:zvezdny-dozhd",
-      "at": "2026-11-23",
-      "delta": 12,
-      "text": "собрала свою игру «Звёздный дождь» из библиотеки "
-    },
     {
       "id": "creation:game:zmeika",
       "at": "2026-11-23",
@@ -83,11 +77,15 @@
       "at": "2026-11-27 23:05 UTC",
       "delta": 8,
       "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
+    },
+    {
+      "id": "creation:episode:ep-20261128-match",
+      "at": "2026-11-28 00:09 UTC",
+      "delta": 8,
+      "text": "собрала выпуск блога «Квеня играет в Clumsy Bird: честный матч глазами» "
     }
   ],
   "eventIds": [
-    "20261124-0514-colinhuang314-github-io:played",
-    "20261124-0514-colinhuang314-github-io:video",
     "20261127-2305-colinhuang314-github-io:played",
     "20261127-2305-colinhuang314-github-io:video",
     "20261127-2322-colinhuang314-github-io:played",
@@ -96,6 +94,8 @@
     "20261127-2337-colinhuang314-github-io:video",
     "20261127-2351-colinhuang314-github-io:played",
     "20261127-2351-colinhuang314-github-io:video",
+    "20261128-0009-colinhuang314-github-io:played",
+    "20261128-0009-colinhuang314-github-io:video",
     "creation:game:ptica-i-truby",
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
@@ -104,15 +104,16 @@
     "creation:episode:ep-20261123-7-truby",
     "creation:episode:ep-20261123-match",
     "creation:episode:ep-20261124-match",
-    "creation:episode:ep-20261127-match"
+    "creation:episode:ep-20261127-match",
+    "creation:episode:ep-20261128-match"
   ],
   "reportsCounted": 5,
   "playedCount": 5,
   "bestStepsEver": 0,
   "gamesMade": 3,
-  "episodesMade": 6,
+  "episodesMade": 7,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-27 23:51 UTC",
+  "updatedAt": "2026-11-28 00:09 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -184,6 +185,8 @@
     "20261127-2337-colinhuang314-github-io:video",
     "20261127-2351-colinhuang314-github-io:played",
     "20261127-2351-colinhuang314-github-io:video",
+    "20261128-0009-colinhuang314-github-io:played",
+    "20261128-0009-colinhuang314-github-io:video",
     "creation:episode:ep-20261123-2-truby",
     "creation:episode:ep-20261123-4-truby",
     "creation:episode:ep-20261123-5-truby",
@@ -191,6 +194,7 @@
     "creation:episode:ep-20261123-match",
     "creation:episode:ep-20261124-match",
     "creation:episode:ep-20261127-match",
+    "creation:episode:ep-20261128-match",
     "creation:game:ptica-i-truby",
     "creation:game:zmeika",
     "creation:game:zvezdny-dozhd"
