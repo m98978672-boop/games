@@ -68,6 +68,19 @@ class StrategyQwenTests(unittest.TestCase):
         agent.campaign_selected = True
         self.assertEqual(agent.choose(screenshot()), ('SELECT_CC', {'type':'click','at':(400,250),'button':'left'}))
         self.assertEqual(agent.choose(screenshot()), ('MOVE_CD', {'type':'click','at':(560,250),'button':'right'}))
+    def test_repeated_semantic_intent_is_temporarily_removed(self):
+        seen = []
+        def choose(image, prompt, allowed):
+            seen.append(allowed)
+            return 'MOVE' if 'MOVE' in allowed else 'CC'
+        agent = StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'map',
+                             generator=choose, allow_drag=False, semantic_mission=True)
+        agent.campaign_selected = True
+        agent.history = ['SELECT_BB', 'SELECT_CC']
+        self.assertEqual(agent.choose(screenshot())[0], 'MOVE_CC')
+        self.assertNotIn('SELECT', seen[0])
+        self.assertIn('MOVE', seen[0])
+
     def test_semantic_selection_rejects_unpermitted_target(self):
         replies = iter(['SELECT', 'AA'])  # The top margin is outside the map area.
         agent = StrategyQwen(menu_scanner=lambda image:[], observer=lambda image:'map',
