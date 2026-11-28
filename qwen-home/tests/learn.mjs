@@ -426,5 +426,12 @@ check('маршрут к остатку проходит пустые места
 check('одна ссылка — один исход: первое наблюдение не переписывается',
   expNow.includes("if e.get('from') == fr and e.get('choice') == choice and e.get('to') != to:"));
 
+check('случайный лабиринт: пометки «нервности» восстанавливаются из памяти',
+  expNow.includes('conflicting = set()') && expNow.includes("edge['shaky'] = True")
+  && expNow.includes('def has_shaky'));
+check('случайный лабиринт: повторный проход по направлению, но не бесконечно',
+  expNow.includes('def direction_to_open') && expNow.includes('attempts < 6')
+  && expNow.includes('attempts=attempts[0]'));
+
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

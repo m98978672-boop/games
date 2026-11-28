@@ -1128,6 +1128,51 @@ class StoryMap:
                        for label in (to.get('options') or []))
         return False            # куда ведёт — неизвестно, значит не «новое»
 
+    def direction_to_open(self, start_key):
+        """Первый шаг к месту с остатком БЕЗ учёта того, что там уже были.
+
+        В случайном лабиринте путь зависит от удачи, но направление — нет:
+        «bushes» из парка ведёт в кусты всегда, просто кусты иногда водой в
+        тупик. Значит повторять надо именно направление, а не наугад.
+        """
+        from collections import deque
+        if not start_key or start_key not in self.nodes:
+            return None
+
+        def has_left(k):
+            n = self.nodes.get(k) or {}
+            tk = n.get('text_key')
+            return any(not (k, label) in self.tried
+                       and not (tk and (tk, label) in self.tried)
+                       for label in (n.get('options') or []))
+
+        q = deque([(start_key, None)])
+        seen = {start_key}
+        while q:
+            cur, first = q.popleft()
+            for e in self.edges:
+                if e.get('from') != cur:
+                    continue
+                step = first if first is not None else e.get('choice')
+                if has_left(e['to']):
+                    return step
+                if e['to'] in seen:
+                    continue
+                seen.add(e['to'])
+                q.append((e['to'], step))
+        return None
+
+    def has_shaky(self):
+        """Есть ли в карте ссылки, которые вели в разные места.
+
+        Это признак СЛУЧАЙНОГО лабиринта: в Lost Spot «Turn left» из кустов
+        ведёт то в тупик, то на развилку — 24 раза в тупик и 1 раз на развилку
+        на одних и тех же данных. В таком месте повторный проход — не петля,
+        а единственный способ попасть в нужную ветку (83% шагов всех прогонов
+        — возврат в уже виденное место).
+        """
+        return any(e.get('shaky') for e in self.edges)
+
     def route_to_open(self, start_key):
         """Куда идти, чтобы добрать непройденное: первый шаг кратчайшего пути.
 
@@ -1379,9 +1424,23 @@ class StoryMap:
         # Рёбра, которые ведут из мест, которых в карте нет, — мусор прошлых
         # прогонов (накопилось 174 из 311, и половина графа была нерабочей:
         # маршрут к остатку не находился). Такие рёбра не берём.
+        # Пометки «нервности» в кэш не кладём, а ВОССТАНАВЛИВАЕМ: если одна
+        # ссылка из одного места ведёт в разные места, это случайный лабиринт,
+        # и его надо разыгрывать. Иначе has_shaky() после загрузки врёт (False),
+        # и она сдаётся, хотя до развилки можно дойти повторным проходом.
+        conflicting = set()
+        first_to = {}
+        for e in (data.get('links') or []):
+            key = (e.get('from'), e.get('choice'))
+            if key in first_to and first_to[key] != e.get('to'):
+                conflicting.add(key)
+            first_to.setdefault(key, e.get('to'))
         for e in (data.get('links') or []):
             if e.get('from') in self.nodes and e.get('to') in self.nodes and e not in self.edges:
-                self.edges.append(e)
+                edge = dict(e)
+                if (e.get('from'), e.get('choice')) in conflicting:
+                    edge['shaky'] = True
+                self.edges.append(edge)
         for pair in (data.get('tried') or []):
             if len(pair) == 2:
                 self.tried.add((pair[0], pair[1]))
@@ -1401,7 +1460,8 @@ class StoryMap:
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
-                story_map=None, energy=0, came_from=None, came_from_key=None):
+                story_map=None, energy=0, came_from=None, came_from_key=None,
+                attempts=0):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
     visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
@@ -1460,6 +1520,23 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                 if (c.get('label') or '') == step:
                     return c, False
         elif step is None and story_map.remaining() > 0 and energy > -2:
+            # В случайном лабиринте «маршрута нет» не значит «делать нечего»:
+            # нужная ветка открывается с шансом, и его надо разыгрывать.
+            # Но только по «нервным» местам и только пока подходов не много —
+            # иначе это тот самый вечный цикл на 400 шагов.
+            if story_map.has_shaky() and attempts < 6:
+                # Сначала пробуем НАПРАВЛЕНИЕ к остатку (даже если там уже
+                # были: в случайном лабиринте именно повторный проход и
+                # открывает нужную ветку), потом — любой не-обратный ход.
+                want = story_map.direction_to_open(passage)
+                for c in choices:
+                    if want and (c.get('label') or '') == want:
+                        return c, False
+                revisit = [c for c in choices
+                           if not story_map.is_loop(passage, c.get('label'), came_from, came_from_key)]
+                if revisit:
+                    return (revisit[0] if rng is None
+                            else revisit[rng.randrange(len(revisit))]), False
             return None, False          # идти некуда: честно кончаем заход
         # step == '' — остаток здесь же; дальше возьмём свои варианты
 
@@ -1696,6 +1773,9 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         last_place = ['']  # откуда пришли — чтобы видеть обратные ходы
         prev_key = ['']    # ключ предыдущего места: ребро пишем ИМ
         text_key_full = ['']  # текст текущего места (для записи ребра)
+        # Сколько раз за этот заход пробовали пройти случайный лабиринт заново.
+        # Ограничено, чтобы «нервные» рёбра не вернули вечный цикл на 400 шагов.
+        attempts = [0]
         last_text = ['']   # прошлый текст: ловим «страница не сменилась»
         same_text = [0]
         prev_place = ['']  # место предыдущего шага
@@ -1760,7 +1840,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                           my_key, sight['visits'],
                                           story_map=story_map, energy=sight.get('energy', 0),
                                           came_from=last_place[0],
-                                          came_from_key=prev_place[0])
+                                          came_from_key=prev_place[0],
+                                          attempts=attempts[0])
                 if pick is None:
                     # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
                     # а не крутимся. Следующий заход начнётся с начала и пойдёт
@@ -1788,6 +1869,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 prev_key[0] = my_key
                 if fresh:
                     fresh_moves += 1
+                if not fresh and sight['visits'] > 1:
+                    attempts[0] += 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
                              'fresh': fresh, 'energy': sight.get('energy', 0),
                              'finds': sight.get('finds', []), 'clues': sight.get('clues', 0),
