@@ -6,7 +6,7 @@
       "id": "veteran-exp",
       "title": "Ветеран экспедиций",
       "reward": "сама предлагает маршрут недели в журнале моста",
-      "at": "2026-11-28 14:41 UTC"
+      "at": "2026-11-28 14:58 UTC"
     },
     {
       "id": "game-maker",
@@ -86,8 +86,6 @@
     }
   ],
   "eventIds": [
-    "20261128-1418-colinhuang314-github-io:played",
-    "20261128-1418-colinhuang314-github-io:video",
     "20261128-1435-colinhuang314-github-io:played",
     "20261128-1435-colinhuang314-github-io:video",
     "20261128-1451-colinhuang314-github-io:played",
@@ -96,6 +94,8 @@
     "20261128-1507-colinhuang314-github-io:video",
     "20261128-1523-colinhuang314-github-io:played",
     "20261128-1523-colinhuang314-github-io:video",
+    "20261128-1541-colinhuang314-github-io:played",
+    "20261128-1541-colinhuang314-github-io:video",
     "creation:game:ptica-i-truby",
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
@@ -111,7 +111,7 @@
   "gamesMade": 3,
   "episodesMade": 5,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-28 15:23 UTC",
+  "updatedAt": "2026-11-28 15:41 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -213,6 +213,8 @@
     "20261128-1507-colinhuang314-github-io:video",
     "20261128-1523-colinhuang314-github-io:played",
     "20261128-1523-colinhuang314-github-io:video",
+    "20261128-1541-colinhuang314-github-io:played",
+    "20261128-1541-colinhuang314-github-io:video",
     "creation:episode:ep-20261123-2-truby",
     "creation:episode:ep-20261123-4-truby",
     "creation:episode:ep-20261123-5-truby",
