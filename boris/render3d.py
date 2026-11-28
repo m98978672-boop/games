@@ -641,6 +641,95 @@ def cat_house(x, z, yaw=0.0, s=1.0, glow=1.0, night=False, snow_roof=0.0):
     return f
 
 
+CARD = (186, 142, 94)
+CARD_D = (150, 110, 70)
+CARD_I = (116, 84, 54)
+
+def room_faces(night=False, lamp=0.0):
+    """Комната человека: пол, стены, окно со снегом, коврик, растение, миска, лампа."""
+    f = []
+    wall = (206, 188, 168) if not night else (132, 116, 112)
+    wall_d = (188, 170, 150) if not night else (104, 92, 90)
+    f += quad((-2.6, 0, -1.2), (2.6, 0, -1.2), (2.6, 0, 3.8), (-2.6, 0, 3.8), (150, 116, 82))
+    for i2 in range(-2, 3):
+        f += quad((i2*0.9-0.02, 0.004, -1.2), (i2*0.9+0.02, 0.004, -1.2),
+                  (i2*0.9+0.02, 0.004, 3.8), (i2*0.9-0.02, 0.004, 3.8), (132, 100, 70))
+    f += quad((-2.6, 0, 3.8), (2.6, 0, 3.8), (2.6, 2.7, 3.8), (-2.6, 2.7, 3.8), wall)
+    for sx in (-1, 1):
+        f += quad((sx*2.6, 0, 1.6), (sx*2.6, 0, 3.8), (sx*2.6, 2.7, 3.8), (sx*2.6, 2.7, 1.6), wall_d)
+        f += quad((sx*2.6, 0, -0.6), (sx*2.6, 0, 1.6), (sx*2.6, 2.7, 1.6), (sx*2.6, 2.7, -0.6), wall_d)
+    f += quad((-2.6, 2.7, -1.2), (2.6, 2.7, -1.2), (2.6, 2.7, 3.8), (-2.6, 2.7, 3.8), (176, 156, 138))
+    f += quad((-2.6, 0.0, 3.78), (2.6, 0.0, 3.78), (2.6, 0.30, 3.78), (-2.6, 0.30, 3.78), (226, 214, 196))
+    wz = 3.76
+    f += quad((-1.10, 1.00, wz), (1.10, 1.00, wz), (1.10, 2.20, wz), (-1.10, 2.20, wz), (86, 60, 48))
+    f += quad((-0.98, 1.12, wz-0.010), (0.98, 1.12, wz-0.010), (0.98, 2.08, wz-0.010), (-0.98, 2.08, wz-0.010),
+              (188, 210, 226) if not night else (66, 70, 104))
+    f += quad((-0.98, 1.12, wz-0.020), (0.98, 1.12, wz-0.020), (0.98, 1.40, wz-0.020), (-0.98, 1.40, wz-0.020), (240, 244, 250))
+    for dx in (-0.7, -0.15, 0.45, 0.8):
+        f += quad((dx, 1.62, wz-0.020), (dx+0.06, 1.62, wz-0.020), (dx+0.06, 1.68, wz-0.020), (dx, 1.68, wz-0.020), (246, 248, 252))
+    f += quad((-0.025, 1.12, wz-0.015), (0.025, 1.12, wz-0.015), (0.025, 2.08, wz-0.015), (-0.025, 2.08, wz-0.015), (86, 60, 48))
+    f += quad((-1.16, 2.20, wz-0.03), (1.16, 2.20, wz-0.03), (1.16, 2.28, wz-0.03), (-1.16, 2.28, wz-0.03), (120, 90, 62))
+    f += quad((-1.30, 0.010, 0.7), (1.30, 0.010, 0.7), (1.45, 0.010, 2.9), (-1.45, 0.010, 2.9), (146, 92, 88))
+    f += quad((-1.10, 0.014, 0.92), (1.10, 0.014, 0.92), (1.22, 0.014, 2.68), (-1.22, 0.014, 2.68), (168, 110, 104))
+    f += box((-2.05, 0.20, 3.15), (0.22, 0.40, 0.22), (168, 108, 78))
+    f += puff_ball(-2.05, 0.78, 3.15, 0.36, (74, 118, 70))
+    f += puff_ball(-2.18, 1.00, 3.05, 0.22, (86, 132, 80))
+    f += box((2.05, 0.07, 3.25), (0.22, 0.13, 0.22), (196, 120, 96))
+    f += quad((-2.00, 1.50, 3.77), (-1.40, 1.50, 3.77), (-1.40, 2.05, 3.77), (-2.00, 2.05, 3.77), (120, 90, 62))
+    f += quad((-1.93, 1.57, 3.765), (-1.47, 1.57, 3.765), (-1.47, 1.98, 3.765), (-1.93, 1.98, 3.765), (214, 190, 150))
+    if lamp > 0:
+        f += box((2.25, 0.85, 3.30), (0.045, 0.85, 0.045), (90, 70, 60))
+        f += quad((1.99, 1.70, 3.30), (2.51, 1.70, 3.30), (2.51, 2.04, 3.30), (1.99, 2.04, 3.30), (255, 214, 140), True)
+        f += quad((2.25, 1.70, 3.04), (2.25, 1.70, 3.56), (2.25, 2.04, 3.56), (2.25, 2.04, 3.04), (255, 214, 140), True)
+        f += quad((1.30, 0.016, 2.30), (2.55, 0.016, 2.30), (2.55, 0.016, 3.70), (1.30, 0.016, 3.70), (196, 150, 110))
+    return f
+
+def cardboard_box(cx, cz, yaw=0.0, w=1.10, h=0.80, d=1.00, flap=1.0, cut=0, tilt=0.0):
+    """Картонная коробка: 4 стенки, клапаны (flap 0 — закрыта крышей, 1 — раскрыты),
+    cut: 0 — целая, 1 — окно спереди, 2 — плюс боковые окна."""
+    f = []
+    hw, hd = w/2.0, d/2.0
+    def T(p):
+        p = rx(p, tilt, (0, 0, 0))
+        p = ry(p, yaw)
+        return (p[0]+cx, p[1], p[2]+cz)
+    f += [([T(p) for p in q], c, False, True) for q, c in (
+        ([(-hw, 0, hd), (hw, 0, hd), (hw, h, hd), (-hw, h, hd)], CARD_D),
+        ([(-hw, 0, -hd), (-hw, 0, hd), (-hw, h, hd), (-hw, h, -hd)], CARD),
+        ([(hw, 0, -hd), (hw, 0, hd), (hw, h, hd), (hw, h, -hd)], CARD))]
+    if cut < 1:
+        f += [([T(p) for p in [(-hw, 0, -hd), (hw, 0, -hd), (hw, h, -hd), (-hw, h, -hd)]], CARD, False, True)]
+    else:
+        ow, oh, oy = w*0.30, h*0.30, h*0.52
+        f += [([T(p) for p in q], CARD, False, True) for q in (
+            [(-hw, 0, -hd), (hw, 0, -hd), (hw, oy-oh, -hd), (-hw, oy-oh, -hd)],
+            [(-hw, oy+oh, -hd), (hw, oy+oh, -hd), (hw, h, -hd), (-hw, h, -hd)],
+            [(-hw, oy-oh, -hd), (-ow, oy-oh, -hd), (-ow, oy+oh, -hd), (-hw, oy+oh, -hd)],
+            [(ow, oy-oh, -hd), (hw, oy-oh, -hd), (hw, oy+oh, -hd), (ow, oy+oh, -hd)])]
+    if cut >= 2:
+        ow2, oh2, oy2 = d*0.26, h*0.26, h*0.62
+        for sx in (-1, 1):
+            f += [([T(p) for p in q], CARD, False, True) for q in (
+                [(sx*hw, 0, -hd), (sx*hw, 0, hd), (sx*hw, oy2-oh2, hd), (sx*hw, oy2-oh2, -hd)],
+                [(sx*hw, oy2+oh2, -hd), (sx*hw, oy2+oh2, hd), (sx*hw, h, hd), (sx*hw, h, -hd)],
+                [(sx*hw, oy2-oh2, -hd), (sx*hw, oy2-oh2, -ow2), (sx*hw, oy2+oh2, -ow2), (sx*hw, oy2+oh2, -hd)],
+                [(sx*hw, oy2-oh2, ow2), (sx*hw, oy2-oh2, hd), (sx*hw, oy2+oh2, hd), (sx*hw, oy2+oh2, ow2)])]
+    f += [([T(p) for p in [(-hw+0.03, 0.04, -hd+0.03), (hw-0.03, 0.04, -hd+0.03),
+                           (hw-0.03, 0.04, hd-0.03), (-hw+0.03, 0.04, hd-0.03)]], CARD_I, False, False)]
+    fl = 0.42*h + 0.10
+    for sz in (-1, 1):
+        oz = sz*(hd - fl + 2*fl*flap)
+        oy = h + 0.012*(1-flap) - 0.22*fl*flap
+        f += [([T(p) for p in [(-hw, h, sz*hd), (hw, h, sz*hd), (hw, oy, oz), (-hw, oy, oz)]],
+               CARD_D if sz > 0 else CARD, False, True)]
+    for sx in (-1, 1):
+        ox = sx*(hw - fl + 2*fl*flap)
+        oy = h + 0.014*(1-flap) - 0.22*fl*flap
+        f += [([T(p) for p in [(sx*hw, h, -hd), (sx*hw, h, hd), (ox, oy, hd), (ox, oy, -hd)]], CARD, False, True)]
+    f += [([T(p) for p in [(-0.16, 0.16, -hd-0.006), (0.16, 0.16, -hd-0.006),
+                           (0.16, 0.40, -hd-0.006), (-0.16, 0.40, -hd-0.006)]], (226, 214, 190), False, False)]
+    return f
+
 def render_frame(k, t, ovl_imgs, ot=None):
     S = B.scenes[k] if k < len(B.scenes) else {}
     faces, grid, shadow, lines = [], True, None, []
@@ -2422,6 +2511,231 @@ def render_frame(k, t, ovl_imgs, ot=None):
         faces += quad((-1.10, 0.555, 3.12), (-0.60, 0.555, 3.12), (-0.60, 0.555, 3.56), (-1.10, 0.555, 3.56), (204, 212, 224))
         faces += quad((0.60, 0.555, 3.12), (1.10, 0.555, 3.12), (1.10, 0.555, 3.56), (0.60, 0.555, 3.56), (204, 212, 224))
         cam = make_cam((0.0, 1.05, -0.20), (0.0, 0.90, 3.30))
+    elif k == 48:
+        # ЭП8 ч1 · утро: коробка приехала, Борис обходит и нюхает
+        sky = sky_img("room_d", (168, 178, 190), (206, 206, 202))
+        grid = False
+        faces += room_faces()
+        bx = -3.0 + 3.3 * smooth(0.6, 3.2, t)
+        bz = 2.10
+        faces += cardboard_box(bx, bz, yaw=0.10*math.sin(t*0.9), flap=0.85)
+        if t < 3.6:
+            px, pz = 1.70, 1.30
+            walkv = None
+            yawv = math.atan2(bx-px, bz-pz)
+        else:
+            ang = 0.05 + 2.20 * (1 - smooth(3.6, 8.2, t))
+            px = 0.30 + 0.85*math.sin(ang)
+            pz = bz - 0.75*math.cos(ang)
+            walkv = t*1.6 if t < 8.6 else None
+            yawv = math.atan2(0.30-px, bz-pz)
+        sniff = 1.0 if 8.6 < t < 10.4 else 0.0
+        BB = dict(x=px, z=pz, yaw=yawv, walk=walkv, head_pitch=0.35*sniff,
+                  tail_t=t*(1.0+0.6*sniff), blink=blink(t), ear_tw=0.4 if 9.0 < t < 9.4 else 0.0, painted=True)
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        M = dict(x=-0.70, z=1.55, yaw=math.atan2(0.30+0.70, bz-1.55), sit=1.0,
+                 head_yaw=0.25*math.sin(t*0.5), tail_t=t*0.6+1.0, blink=blink(t+0.7), grey=True)
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        shadow = [(px, pz), (-0.70, 1.55)]
+        cam = make_cam((0.10, 0.98, -0.80), (0.10, 0.64, 1.95))
+    elif k == 49:
+        # ЭП8 ч1 · примерка: Борис запрыгивает и садится, Мурка привстаёт заглянуть
+        sky = sky_img("room_d", (168, 178, 190), (206, 206, 202))
+        grid = False
+        faces += room_faces()
+        faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=0.85)
+        if t < 2.0:
+            blift, bzp = 0.0, 0.85
+            bsit = 0.0
+        elif t < 2.8:
+            u = (t-2.0)/0.8
+            blift = 0.55*math.sin(math.pi*u)
+            bzp = 0.85 + 1.25*u
+            bsit = 0.0
+        else:
+            blift, bzp, bsit = 0.50, 2.10, 1.0
+        BB = dict(x=0.30, z=bzp, yaw=0.0, lift=blift, sit=bsit,
+                  head_pitch=0.10 if t > 2.8 else -0.10, tail_t=t*1.1,
+                  blink=blink(t), ear_tw=0.4 if 3.2 < t < 3.6 else 0.0, painted=True)
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        mv = smooth(4.0, 6.5, t)
+        mx = -1.10 + 0.35*mv
+        mz = 1.40 + 0.10*mv
+        rearv = 0.55*smooth(6.8, 7.5, t)*(1-smooth(10.5, 11.2, t))
+        M = dict(x=mx, z=mz, yaw=math.atan2(0.30-mx, 2.10-mz), walk=t*1.5 if 4.0 < t < 6.5 else None,
+                 rear=rearv, pitch=-0.45*rearv, lift=0.10*rearv, head_pitch=-0.15*rearv,
+                 tail_t=t*0.7+2.0, blink=blink(t+1.3), grey=True)
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        shadow = [(0.30, bzp), (mx, mz)]
+        cam = make_cam((0.15, 0.92, -0.35), (0.30, 0.66, 2.00))
+    elif k == 50:
+        # ЭП8 ч1 · вечер: Борис спит в коробке, Мурка клубком, лампа горит
+        sky = sky_img("room_n", (52, 46, 78), (122, 92, 96))
+        grid = False
+        faces += room_faces(night=True, lamp=1.0)
+        faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=0.85)
+        BB = dict(x=0.30, z=2.10, yaw=0.10*math.sin(t*0.3), sit=1.0, lift=0.50,
+                  head_pitch=0.38, tail_t=t*0.5, blink=0.12, painted=True)
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        M = dict(x=-0.75, z=1.35, yaw=0.7, sit=1.0, head_pitch=0.42,
+                 tail_t=t*0.4+2.0, blink=0.12, grey=True)
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        for i in range(3):
+            su = (t*0.35 + i*0.33) % 1.0
+            faces += puff_ball(0.62+0.06*i, 1.10+0.55*su, 1.95-0.12*su, 0.030+0.026*su, (226, 228, 238))
+        shadow = [(0.30, 2.10), (-0.75, 1.35)]
+        cam = make_cam((0.0, 0.88, -0.30), (0.20, 0.64, 2.00))
+    elif k == 51:
+        # ЭП8 ч2 · утро: место занято Муркой, Борис возмущается
+        sky = sky_img("room_d", (168, 178, 190), (206, 206, 202))
+        grid = False
+        faces += room_faces()
+        faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=0.85)
+        M = dict(x=0.30, z=2.10, yaw=0.0, sit=1.0, lift=0.50, grey=True,
+                 head_yaw=0.30*math.sin(t*0.5), tail_t=t*0.8+1.0, blink=blink(t+0.4))
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        wv = smooth(1.0, 3.8, t)
+        bxp = -1.60 + 1.05*wv
+        bzp = 1.15 + 0.20*wv
+        hop = 0.14*math.sin(math.pi*(t-6.4)/0.6) if 6.4 < t < 7.0 else 0.0
+        BB = dict(x=bxp, z=bzp, yaw=math.atan2(0.30-bxp, 2.10-bzp), walk=t*1.5 if 1.0 < t < 3.8 else None,
+                  lift=hop, head_pitch=-0.10*hop, tail_t=t*2.4, blink=blink(t),
+                  ear_tw=0.5 if 5.2 < t < 5.6 else 0.0, painted=True)
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        shadow = [(0.30, 2.10), (bxp, bzp)]
+        cam = make_cam((0.05, 0.95, -0.50), (0.0, 0.66, 2.00))
+    elif k == 52:
+        # ЭП8 ч2 · музыкальные стулья: круги вокруг коробки, Барсик садится молча
+        sky = sky_img("room_d", (168, 178, 190), (206, 206, 202))
+        grid = False
+        faces += room_faces()
+        faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=0.85)
+        wstop = min(t, 8.0)
+        wa = wstop*1.05
+        bpx = 0.30 + 1.35*math.sin(wa)
+        bpz = 2.10 - 1.25*math.cos(wa)
+        mpx = 0.30 + 1.35*math.sin(wa+math.pi)
+        mpz = 2.10 - 1.25*math.cos(wa+math.pi)
+        BB = dict(x=bpx, z=bpz, yaw=math.atan2(-math.cos(wa), math.sin(wa))+math.pi/2, walk=t*1.7 if t < 8.0 else None,
+                  head_yaw=0.5*smooth(8.0, 8.8, t)*math.atan2(0.30-bpx, 2.10-bpz), tail_t=t*1.4, blink=blink(t), painted=True)
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        M = dict(x=mpx, z=mpz, yaw=math.atan2(math.cos(wa), -math.sin(wa))+math.pi/2, walk=t*1.7 if t < 8.0 else None,
+                 head_yaw=0.5*smooth(8.0, 8.8, t)*math.atan2(0.30-mpx, 2.10-mpz), tail_t=t*1.2+2.0, blink=blink(t+0.9), grey=True)
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        if t < 6.2:
+            kv = smooth(3.5, 6.2, t)
+            kx = 2.70 - 1.75*kv
+            kz = 2.90 - 0.55*kv
+            klift, ksit = 0.0, 0.0
+        elif t < 6.9:
+            u = (t-6.2)/0.7
+            kx = 0.95 - 0.65*u
+            kz = 2.35 - 0.25*u
+            klift, ksit = 0.5*math.sin(math.pi*u), 0.0
+        else:
+            kx, kz, klift, ksit = 0.30, 2.10, 0.50, 1.0
+        BK = dict(x=kx, z=kz, yaw=math.atan2(0.30-kx, 2.10-kz), walk=t*1.4 if 3.5 < t < 6.2 else None,
+                  lift=klift, sit=ksit, tail_t=t*0.9+4.0, blink=blink(t+1.7), black=True)
+        cf, cl = cat_faces(BK); faces += cf; lines += cl
+        shadow = [(bpx, bpz), (mpx, mpz), (kx, kz)]
+        cam = make_cam((0.10, 1.10, -0.85), (0.0, 0.72, 2.00))
+    elif k == 53:
+        # ЭП8 ч2 · коробка с Барсиком уезжает по полу и возвращается победителем
+        sky = sky_img("room_d", (168, 178, 190), (206, 206, 202))
+        grid = False
+        faces += room_faces()
+        u = smooth(1.2, 4.0, t)
+        b = smooth(4.0, 4.8, t)*(1-smooth(4.8, 5.6, t))
+        sx = 0.30 + 1.30*u - 0.30*b
+        syaw = 0.12*math.sin(t*10)*smooth(1.2, 4.4, t)*(1-smooth(4.4, 5.2, t))
+        faces += cardboard_box(sx, 2.10, yaw=syaw, flap=0.85)
+        startl = smooth(4.0, 4.5, t)*(1-smooth(5.5, 6.2, t))
+        BK = dict(x=sx, z=2.10, yaw=syaw, sit=1.0, lift=0.50, black=True,
+                  head_pitch=-0.25*startl, ear_tw=0.5 if 4.0 < t < 4.6 else 0.0,
+                  tail_t=t*1.6*startl + t*0.6, blink=blink(t+0.3))
+        cf, cl = cat_faces(BK); faces += cf; lines += cl
+        h1 = 0.30*math.sin(math.pi*(t-1.2)/0.8) if 1.2 < t < 2.0 else 0.0
+        w1 = smooth(6.5, 9.0, t)
+        bxp = -0.60 - 0.30*(1-w1) + (sx-0.95-(-0.90))*w1
+        bzp = 1.10 + 0.35*w1
+        BB = dict(x=bxp, z=bzp, yaw=math.atan2(sx-bxp, 2.10-bzp), lift=h1, walk=t*1.6 if 6.5 < t < 9.0 else None,
+                  head_pitch=0.20*w1, tail_t=t*1.3, blink=blink(t), painted=True)
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        h2 = 0.30*math.sin(math.pi*(t-1.4)/0.8) if 1.4 < t < 2.2 else 0.0
+        mxp = -0.35 - 0.35*(1-w1) + (sx-0.55-(-0.70))*w1
+        mpz = 2.95 + 0.25*(1-w1)
+        M = dict(x=mxp, z=mpz, yaw=math.atan2(sx-mxp, 2.10-mpz), lift=h2, walk=t*1.6 if 6.5 < t < 9.0 else None,
+                 head_pitch=0.20*w1, tail_t=t*1.1+3.0, blink=blink(t+1.1), grey=True)
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        shadow = [(sx, 2.10), (bxp, bzp), (mxp, mpz)]
+        cam = make_cam((0.15, 1.00, -0.70), (0.45, 0.68, 2.10))
+    elif k == 54:
+        # ЭП8 ч3 · человек вырезает окно: клапаны в крышу, проём спереди, обрезки
+        sky = sky_img("room_d", (168, 178, 190), (206, 206, 202))
+        grid = False
+        faces += room_faces()
+        flapv = 0.85 - 0.80*smooth(1.0, 2.4, t)
+        cutv = 1 if smooth(3.4, 3.9, t) > 0.5 else 0
+        faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=flapv, cut=cutv)
+        for i in range(4):
+            if 3.4 < t < 4.8 + 0.2*i:
+                cu = clamp01((t-3.4)/1.3)
+                cxx = 0.30 + (i-1.5)*0.24
+                cyy = 0.75 - 0.62*cu*cu
+                faces += quad((cxx-0.06, cyy, 1.52-0.10*cu), (cxx+0.06, cyy, 1.52-0.10*cu),
+                              (cxx+0.06, cyy+0.09, 1.52-0.10*cu), (cxx-0.06, cyy+0.09, 1.52-0.10*cu), CARD_D)
+        wv = smooth(5.0, 7.0, t)
+        bxp = -1.00 + 1.30*wv
+        bzp = 1.25 - 0.20*wv
+        BB = dict(x=bxp, z=bzp, yaw=math.atan2(0.30-bxp, 2.10-bzp), walk=t*1.5 if 5.0 < t < 7.0 else None,
+                  head_pitch=0.30*smooth(7.2, 7.8, t), tail_t=t*1.0, blink=blink(t),
+                  ear_tw=0.4 if 3.5 < t < 3.9 else 0.0, painted=True)
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        M = dict(x=-1.60, z=1.60, yaw=math.atan2(0.30+1.60, 2.10-1.60), sit=1.0,
+                 head_yaw=0.3*math.sin(t*0.6), tail_t=t*0.6+1.0, blink=blink(t+0.5), grey=True)
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        shadow = [(bxp, bzp), (-1.60, 1.60)]
+        cam = make_cam((0.05, 0.92, -0.45), (0.20, 0.66, 2.00))
+    elif k == 55:
+        # ЭП8 ч3 · заселение: Мурка головой в окно, Борис на крыше, Барсик в очереди
+        sky = sky_img("room_d", (168, 178, 190), (206, 206, 202))
+        grid = False
+        faces += room_faces()
+        faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=0.05, cut=2)
+        M = dict(x=0.30, z=1.28, yaw=0.0, sit=1.0, lift=0.05, grey=True,
+                 head_pitch=0.05, head_yaw=0.15*math.sin(t*0.7), tail_t=t*0.9+1.0, blink=blink(t+0.2))
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        BB = dict(x=0.30, z=2.10, yaw=0.15*math.sin(t*0.4), sit=1.0, lift=0.82, painted=True,
+                  head_yaw=0.35*math.sin(t*0.5), tail_t=t*0.8, blink=blink(t))
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        BK = dict(x=1.05, z=1.35, yaw=math.atan2(0.30-1.05, 2.10-1.35), sit=1.0, black=True,
+                  head_yaw=0.2*math.sin(t*0.6+2.0), tail_t=t*0.7+4.0, blink=blink(t+1.4))
+        cf, cl = cat_faces(BK); faces += cf; lines += cl
+        shadow = [(0.30, 1.28), (0.30, 2.10), (1.05, 1.35)]
+        cam = make_cam((0.05, 0.98, -0.50), (0.20, 0.70, 2.00))
+    elif k == 56:
+        # ЭП8 ч3 · вечер: окна дома светятся, все мурчат, финал
+        sky = sky_img("room_n", (52, 46, 78), (122, 92, 96))
+        grid = False
+        faces += room_faces(night=True, lamp=1.0)
+        faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=0.05, cut=2)
+        faces += quad((-0.03, 0.18, 1.66), (0.63, 0.18, 1.66), (0.63, 0.62, 1.66), (-0.03, 0.62, 1.66), (255, 206, 128), True)
+        for sxx in (-0.25, 0.85):
+            faces += quad((sxx, 0.30, 2.05), (sxx, 0.30, 2.55), (sxx, 0.68, 2.55), (sxx, 0.68, 2.05), (255, 206, 128), True)
+        M = dict(x=0.30, z=1.28, yaw=0.0, sit=1.0, lift=0.05, grey=True,
+                 head_pitch=0.05, head_yaw=0.12*math.sin(t*0.5), tail_t=t*0.5+1.0, blink=0.25)
+        cf, cl = cat_faces(M); faces += cf; lines += cl
+        BB = dict(x=0.30, z=2.10, yaw=0.0, sit=1.0, lift=0.82, painted=True,
+                  head_pitch=0.35, tail_t=t*0.4, blink=0.12)
+        cf, cl = cat_faces(BB); faces += cf; lines += cl
+        BK = dict(x=1.05, z=2.30, yaw=0.7, sit=1.0, black=True,
+                  head_pitch=0.45, tail_t=t*0.4+4.0, blink=0.12)
+        cf, cl = cat_faces(BK); faces += cf; lines += cl
+        for i in range(2):
+            su = (t*0.4 + i*0.5) % 1.0
+            faces += puff_ball(0.75+0.10*i, 1.00+0.45*su, 1.80-0.10*su, 0.028+0.022*su, (232, 226, 220))
+        shadow = [(0.30, 1.28), (0.30, 2.10), (1.05, 2.30)]
+        cam = make_cam((0.0, 0.88, -0.35), (0.20, 0.66, 2.00))
     else:
         sky = sky_img("studio", (118, 118, 121), (162, 162, 164))
         cam = make_cam((0, 0.8, -2.6), (0, 0.4, 0))
