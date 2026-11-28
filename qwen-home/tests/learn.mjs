@@ -327,6 +327,9 @@ const schedPolicy = await readFile(path.join(home, '..', 'youtube-bot', 'schedul
 check('расписание ютуба не откачено: политика тайм-слотов на месте',
   schedPolicy.includes('def ') && schedPolicy.length > 500);
 const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8');
+
+check('условный остаток не гоняет 12 одинаковых заходов: честный стоп',
+  expNow.includes('stuck_places') && expNow.includes('повторные заходы их не откроют'));
 check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
   expNow.includes('remaining') && expNow.includes('routeKey')
   && expNow.includes('memo_from') && expNow.includes('план захода')
