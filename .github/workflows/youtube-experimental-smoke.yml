@@ -240,6 +240,15 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
+      - name: Diagnose Warzone menu frame from private recording
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          mkdir -p "$RUNNER_TEMP/menu-diagnostic"
+          gh run download 46126784092 --name warzone-private-46126784092 --dir "$RUNNER_TEMP/menu-diagnostic"
+          ffmpeg -v error -sseof -2 -i "$RUNNER_TEMP/menu-diagnostic/capture.mp4" -frames:v 1 -vf scale=400:-2 -q:v 5 "$RUNNER_TEMP/menu-diagnostic/frame.jpg"
+          python youtube-bot/warzone_probe/frame_notice.py "$RUNNER_TEMP/menu-diagnostic/frame.jpg"
       - name: Install model dependencies
         run: pip install -r youtube-bot/requirements-autopilot.txt "torchvision>=0.20,<1.0" "transformers==5.5.4" "peft==0.19.1" "accelerate==1.13.0"
       - name: Fetch and validate the pinned Kvenya adapter
