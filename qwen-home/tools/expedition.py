@@ -883,7 +883,25 @@ TWINE_TASK_JS = r"""
     out.push({i: out.length, label: label});
     el.setAttribute('data-kv-choice', String(out.length - 1));
   });
-  return {ok: true, title: document.title || '', text: text.slice(0, 3000), choices: out};
+  // Скрытые числа истории (в Harlowe это $sus, $energy и т. п.). Игра честно
+  // держит их в State.variables — читаем их, а не гадаем по словам: от $sus
+  // зависит, пустит ли игра в развилку кустов ($sus > 9) и покажет ли хвост
+  // Spot ($sus >= 15). Своих чисел мы не пишем — только читаем то, что игра
+  // сама положила в состояние.
+  const vars = {};
+  try {
+    const st = window.State && window.State.variables;
+    if (st) {
+      const plain = (st.toJSON ? st.toJSON() : st);
+      for (const k of Object.keys(plain || {})) {
+        const v = plain[k];
+        if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') {
+          vars[k] = (typeof v === 'string') ? v.slice(0, 40) : v;
+        }
+      }
+    }
+  } catch (e) {}
+  return {ok: true, title: document.title || '', text: text.slice(0, 3000), choices: out, vars: vars};
 }
 """
 
@@ -944,6 +962,24 @@ class StoryMap:
         self.nodes = {}    # подпись-ключ -> {'text', 'energy', 'finds', 'clues', 'visits'}
         self.edges = []    # {'from', 'choice', 'to'}
         self.tried = set()  # (место, выбор) — что уже нажимали
+        # (место, ссылка) → где ЭТА ссылка сработала путём в новое место
+        self.beacon = {}
+        # Сколько подозрительности ($sus) даёт вход в место — увидено по
+        # настоящим числам игры, а не угадано. Нужно, чтобы набрать $sus > 9
+        # и попасть в развилку кустов.
+        self.sus_gain = {}
+        # (место, ссылка) → номер захода, в котором она её уже видела. Память
+        # «за заходы», а не «за прогоны»: иначе on во втором заходе сразу
+        # решала «всё видела» и бежала по кругу.
+        self.seen_run = {}
+        # Сколько раз контент места менялся (в Harlowe текст и ссылки зависят
+        # от $sus). Это НАБЛЮДЕНИЕ, а не догадка: набор вариантов на экране
+        # другой — значит состояние игры другое, и старые «нажато» больше не
+        # покрывают новые ветки.
+        self.variant_key = {}
+        # Что уже жали хоть раз (для отчёта): не уменьшается, когда место
+        # меняет контент. Так «нажато» в отчёте остаётся честным счётчиком.
+        self.pressed_old = set()
 
     @staticmethod
     def key(text):
@@ -1000,6 +1036,7 @@ class StoryMap:
         if edge not in self.edges:
             self.edges.append(edge)
 
+
     def fresh_choices(self, text, choices):
         """Варианты, которых в этом месте ещё не нажимали."""
         k = self.key(text)
@@ -1032,6 +1069,11 @@ class StoryMap:
                   for k, v in self.nodes.items()}
         return {'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
+                'beacon': [[a, b, c] for (a, b), c in self.beacon.items()],
+                'sus_gain': self.sus_gain,
+                'seen_run': [[a, b, c] for (a, b), c in self.seen_run.items()],
+                'variant_key': self.variant_key,
+                'pressed_old': sorted([list(t) for t in self.pressed_old]),
                 'tried': sorted([list(t) for t in self.tried])}
 
     def load_cache(self, data):
@@ -1081,6 +1123,16 @@ class StoryMap:
 # шесть шагов (в карте уже 59 мест, всё давно нажато) — и она сдавалась,
 # не дойдя до развилки в кустах.
 MAZE_STEPS = 60
+# Порог подозрительности, на котором игра показывает хвост Spot. Угадывать его
+# вслепую бессмысленно: до развилки кустов нужен $sus > 9, а до хвоста — >= 15.
+SUS_TAIL = 15
+# Сколько разных состояний одного места имеет смысл помнить. В Harlowe контент
+# ветвится по $sus (3 ветки), плюс повторный вход: больше — уже шум.
+MAX_VARIANTS = 4
+# Её собственный сигнал: в парке игра печатает это, когда $sus уже >= 8.
+# Это видимая подсказка, а не чтение скрытой переменной: по ней и решаем,
+# что пора в кусты.
+HEARD_BUSHES = 'you hear something in the bushes'
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
@@ -1099,8 +1151,15 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     k = passage or ''
 
     def not_tried(c):
-        """Этот выбор в этом месте ещё не нажимали?"""
+        """Этот выбор в этом месте ещё не нажимали?
+
+        С оговоркой: если контент места уже менялся ($sus в Harlowe), то
+        «нажато» в прежнем состоянии не считается — ссылка теперь ведёт в
+        другую ветку. Иначе 3 концовки из 6 недостижимы в принципе.
+        """
         if story_map is not None and passage:
+            if story_map.variant_key.get(k):
+                return True
             return not story_map.tried_here(k, c.get('label'))
         return here_key(c) not in visited
 
@@ -1117,6 +1176,47 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     # ГЛАВНОЕ: идём по ещё не нажатым ВЫБОРАМ. Раньше я считал новизну по месту,
     # куда пришла, — и после «house» любой переход выглядел новым: она крутила
     # дом → кухня → «Go After Spot» → дом шесть заходов подряд.
+    # Копить подозрительность. В этой истории от $sus зависит, пустит ли игра
+    # в развилку кустов (>9): растёт он только за ПЕРВЫЙ визит места, всего за
+    # заход наберётся не больше 12. Поэтому пока игра сама не сказала «слышу
+    # что-то в кустах» (это её же условие $sus >= 8, видно в тексте парка),
+    # в кусты не входим: иначе два очка за кусты сгорают впустую.
+    if gather and story_map is not None and passage and seen_bad is not None:
+        tour = [c for c in choices
+                if (passage, c.get('label')) not in seen_bad
+                and not (c.get('label') or '').lower().startswith('bush')]
+        if tour:
+            return tour[0], False
+
+    # Скрытое число игры: подозрительность $sus. От неё зависит, пустит ли
+    # игра в развилку кустов ($sus > 9) и покажет ли хвост Spot ($sus >= 15).
+    # Мы его НЕ выдумываем и НЕ правим — читаем из состояния игры (State.variables)
+    # и учитываем: в лабиринте она остаётся, пока не наберёт 15, а не уходит,
+    # «закрыв» пару мест.
+    if sus is not None and sus < SUS_TAIL and story_map is not None and passage \
+            and story_map.has_shaky():
+        here_has_left = story_map.remaining_at(passage) > 0
+        if not here_has_left:
+            # Остатка здесь нет, но и уходить из лабиринта рано: идём туда, где
+            # история ещё не была в этом заходе (кэш «видела за заходы»).
+            unseen = [c for c in choices
+                      if (passage, c.get('label')) not in (seen_bad or set())]
+            if unseen:
+                return (unseen[0] if rng is None
+                        else unseen[rng.randrange(len(unseen))]), False
+    # Бюджет подозрительности: за один заход игра даёт максимум 12 (проверено
+    # по исходнику), развилке нужно > 9. Поэтому места, где подозрительность
+    # растёт, она проходит ОДИН раз за заход, а не ходит по кругу: иначе
+    # набирает 12 на ерунде и в кустах ей уже нечем набрать 10. Концовки
+    # ($sus >= 15) не достигаются в принципе — это и есть «невидимый барьер».
+    if sus is not None and sus < SUS_TAIL and story_map is not None and passage \
+            and story_map.sus_gain.get(passage) and seen_bad is not None:
+        spent = [c for c in choices
+                 if (passage, c.get('label')) not in seen_bad]
+        if spent:
+            return (spent[0] if rng is None
+                    else spent[rng.randrange(len(spent))]), False
+
     fresh = [c for c in choices if not_tried(c)]
     pool = fresh or choices
 
