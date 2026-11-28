@@ -420,7 +420,7 @@ check('откат не вернулся: доставка отчёта умее�
   expWf.includes('allow-unrelated-histories'));
 
 check('маршрут к остатку проходит пустые места насквозь, но целью их не считает',
-  expNow.includes("return step") && expNow.includes('if has_left(dst):')
+  expNow.includes('return step             # цель — только там, где есть остаток')
   && expNow.includes("return (bool(n1.get('text')) and n1.get('text') == n2.get('text'))"));
 
 check('одна ссылка — один исход: первое наблюдение не переписывается',
@@ -437,27 +437,10 @@ check('в случайном лабиринте усталость не отме
   expNow.includes('and attempts < MAZE_STEPS):') && expNow.includes('def has_shaky_at'));
 check('предел стоит на топтании, а не на каждом повторном визите',
   expNow.includes('MAZE_STEPS = 60')
-  && expNow.includes('if len(story_map.nodes) > places_seen[0]:')
+  && expNow.includes("attempts[0] = 0 if fresh else attempts[0] + 1")
   && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
-check('условный остаток не заманивает маршрут: помечаем «не сейчас»',
-  expNow.includes('def note_unreachable') && expNow.includes("if n.get('not_now'):"));
-check('круг из нажатых шагов прерывается: не больше 3 заходов в один пассаж',
-  expNow.includes('run_visits[my_key] > 3') && expNow.includes('4-й раз в одном пассаже'));
-check('маршрут предпочитает ненажатый шаг нажатому',
-  expNow.includes("if not self.tried_here(cur, e.get('choice')):") && expNow.includes('alt = step'));
-check('дом мамы: ветка $sus >= 17 не теряется — свой текст места различает ветки',
-  expNow.includes('def own_text') && expNow.includes("node.setdefault('own', own_text(text))")
-  && expNow.includes("'own': v.get('own') or ''"));
-check('маяк помнит все исходы ссылки, а не первый',
-  expNow.includes('if to not in self.beacon[(fr, choice)]:'));
-check('место меняет контент по $sus — старые «нажато» не закрывают новые ветки',
-  expNow.includes('MAX_VARIANTS') && expNow.includes('def forget_tried')
-  && expNow.includes("self.variant_key[k] = vk") && expNow.includes('def forget_tried')
-  && expNow.includes("'variant_key': self.variant_key"));
-check('нажато в отчёте не уменьшается, когда место меняет контент',
-  expNow.includes('len(self.tried | self.pressed_old)') && expNow.includes('self.pressed_old.add'));
 check('подозрительность копится по сигналу самой игры, а не в кустах наугад',
   expNow.includes('HEARD_BUSHES') && expNow.includes('gather_now')
   && expNow.includes('and not (c.get(\'label\') or \'\').lower().startswith(\'bush\')'));
@@ -471,10 +454,9 @@ check('эхо лабиринта кончает заход, а заходов х
   expNow.includes("report.step('эхо лабиринта'") && expNow.includes('story_map.is_echo(text, labels)')
   && expNow.includes('runs=12'));
 check('маяк: карта помнит ссылку, которая привела в место с остатком, и идёт ею',
-  expNow.includes('self.beacon = {}') && expNow.includes('self.beacon[(fr, choice)].append(to)')
-  && expNow.includes('for t in (story_map.beacon.get((passage, lbl)) or [])')
+  expNow.includes('self.beacon = {}') && expNow.includes('self.beacon[(fr, choice)] = to')
   && expNow.includes('def remaining_at') && expNow.includes('want_by_beacon')
-  && expNow.includes("'beacon': [[a, b, list(c)] for (a, b), c in self.beacon.items()]"));
+  && expNow.includes("'beacon': [[a, b, c] for (a, b), c in self.beacon.items()]"));
 check('у разыгрывания прохода предел тоже MAZE_STEPS, а не 6',
   expNow.includes('story_map.has_shaky() and attempts < MAZE_STEPS'));
 

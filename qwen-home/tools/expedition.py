@@ -980,14 +980,6 @@ class StoryMap:
         # «за заходы», а не «за прогоны»: иначе on во втором заходе сразу
         # решала «всё видела» и бежала по кругу.
         self.seen_run = {}
-        # Сколько раз контент места менялся (в Harlowe текст и ссылки зависят
-        # от $sus). Это НАБЛЮДЕНИЕ, а не догадка: набор вариантов на экране
-        # другой — значит состояние игры другое, и старые «нажато» больше не
-        # покрывают новые ветки.
-        self.variant_key = {}
-        # Что уже жали хоть раз (для отчёта): не уменьшается, когда место
-        # меняет контент. Так «нажато» в отчёте остаётся честным счётчиком.
-        self.pressed_old = set()
 
     @staticmethod
     def key(text, context=None, options=None):
@@ -1106,26 +1098,6 @@ class StoryMap:
             self.nodes[k] = node
         node['visits'] += 1
         node['text_key'] = bare_k
-        # СВОЙ текст пассажа: у Harlowe первая фраза — это и есть содержимое
-        # ветки ($sus меняет её), а названия ссылок дописываются следом.
-        # Без этого дом мамы схлопывался в одно место, и «What were you
-        # doing?» (ветка $sus >= 17) оставалась непройденной навсегда.
-        node.setdefault('own', own_text(text))
-        # Смена контента места: тот же пассаж показал ДРУГОЙ набор вариантов.
-        # В Harlowe так ветвятся все развилки по $sus (Aisles, Playground,
-        # Concrete, Receptionist, Waiter, House). Раньше метка «нажато»
-        # оставалась навсегда, и на новом $sus она не могла нажать ту же
-        # ссылку, которая теперь ведёт в другую ветку: 3 концовки из 6.
-        vk = '\u241f'.join(sorted(o for o in (options or []) if o))
-        prev_vk = self.variant_key.get(k)
-        if prev_vk and vk and prev_vk != vk:
-            seen_variants = node.setdefault('variants', [])
-            if len(seen_variants) < MAX_VARIANTS:
-                seen_variants.append(vk)
-                self.forget_tried(k)
-            node.pop('not_now', None)
-        if vk:
-            self.variant_key[k] = vk
         # Настоящий ключ узла: набор вариантов на входе может отличаться от
         # того, с которым место впервые попало в карту. Всё, что метит «нажато»
         # или ищет рёбра, обязано пользоваться ЭТИМ ключом, иначе отметки
@@ -1256,28 +1228,16 @@ class StoryMap:
             n = self.nodes.get(k) or {}
             tk = n.get('text_key')
             for label in (n.get('options') or []):
-                left_here = (not (k, label) in self.tried
-                             and not (tk and (tk, label) in self.tried))
-                if not left_here:
+                if (k, label) in self.beacon:
+                    # Маяк говорит: эта ссылка уже приводила в новое место.
+                    # «Нажато» — про место, где жали, а не про то, куда
+                    # ссылка ведёт; в случайном лабиринте это разные вещи.
+                    if self.remaining_at(self.beacon[(k, label)]) > 0:
+                        return True
                     continue
-                # Маяк — про то, куда ССЫЛКА ведёт, а не про остаток здесь.
-                # Раньше он поднимал «остаток здесь» даже у нажатой ссылки,
-                # и маршрут заканчивался ничем: в доме мамы «What were you
-                # doing?» был нажат, а карта считала место непройденным, и
-                # заходы 5–9 честно обрывались «идти некуда».
-                targets = self.beacon.get((k, label)) or []
-                if not targets or any(same_place(t, k) for t in targets):
+                if not (k, label) in self.tried and not (tk and (tk, label) in self.tried):
                     return True
             return False
-
-        def same_place(k1, k2):
-            """Это одно и то же место? (ключ узла или ключ текста)"""
-            if k1 == k2:
-                return True
-            n1, n2 = self.nodes.get(k1) or {}, self.nodes.get(k2) or {}
-            if n1.get('text_key') and n1.get('text_key') == n2.get('text_key'):
-                return True
-            return bool(n1.get('text')) and n1.get('text') == n2.get('text')
 
         if has_left(start_key):
             # Остаток прямо здесь: маршрут не нужен, пусть цикл берёт свои
@@ -1307,40 +1267,17 @@ class StoryMap:
         # пропадал совсем, и она сдавалась через 3 шага вместо 22.
         ordered = ([e for e in self.edges if not e.get('shaky')]
                    + [e for e in self.edges if e.get('shaky')])
-        alt = None
         q = deque([(start_key, None)])
         while q:
             cur, first = q.popleft()
             for e in ordered:
-                if e.get('from') != cur:
+                if e.get('from') != cur or any(same(e['to'], v) for v in seen):
                     continue
-                # Все известные исходы ссылки (маяк), а не только записанное
-                # ребро: в Harlowe одна ссылка ведёт в разные пассажи, и
-                # непройденная ветка живёт в «другом» исходе той же ссылки.
-                dests = [e['to']] + list(self.beacon.get((cur, e.get('choice'))) or [])
-                for dst in dests:
-                    if any(same(dst, v) for v in seen):
-                        continue
-                    step = first if first is not None else e.get('choice')
-                    if has_left(dst):
-                        # Путь найден. Если этот шаг уже нажат, а есть равный
-                        # путь ненажатым — запомним его и поищем ещё: иначе
-                        # маршрут ведёт по кругу нажатым («leave» → больница →
-                        # «receptionist» → тот же узел), и заход не кончается.
-                        if not self.tried_here(cur, e.get('choice')):
-                            return step
-                        if alt is None:
-                            alt = step
-                        continue
-                    seen.add(dst)
-                    q.append((dst, step))
-        if alt is not None:
-            return alt
-        # Маршрута по рёбрам нет, а остаток есть — в карте бывает, что место
-        # достижимо только через «другой исход» ссылки. Направление всё равно
-        # полезнее, чем «идти некуда».
-        if self.remaining() > 0:
-            return self.direction_to_open(start_key)
+                step = first if first is not None else e.get('choice')
+                if has_left(e['to']):
+                    return step             # цель — только там, где есть остаток
+                seen.add(e['to'])
+                q.append((e['to'], step))
         return None                         # остатка в достижимой части карты нет
 
     def mark_open(self, text, choices, context=None):
@@ -1379,15 +1316,13 @@ class StoryMap:
             same = self.text_key_index().get(self.key(dst_text))
             if same:
                 to = same
-        # Маяк: куда ЭТА ссылка ведёт на самом деле. В Harlowe одна ссылка
-        # ведёт в разные пассажи (по $sus, по числу визитов), и «нажато» про
-        # место, где жали, ничего не говорит о том, куда она приведёт сейчас.
-        # Маяк помнит ВСЕ виденные цели: по ним и находим непройденную ветку.
+        # Маяк: куда ЭТА ссылка ведёт на самом деле. В случайном лабиринте
+        # «нажато» и «приводит в новое место» — разные вещи: ссылка «bushes»
+        # из парка один раз дала «You already checked here», и карта решила,
+        # что в кустах делать нечего. Маяк помнит цель, где остаток есть.
         # Пишем ДО проверки «нервности»: она выходит из функции раньше.
-        if to in self.nodes:
-            self.beacon.setdefault((fr, choice), [])
-            if to not in self.beacon[(fr, choice)]:
-                self.beacon[(fr, choice)].append(to)
+        if to in self.nodes and self.remaining_at(to) > 0:
+            self.beacon[(fr, choice)] = to
         # Одна ссылка в Harlowe может вести в РАЗНЫЕ пассажи (зависит от того,
         # что уже видано). Наблюдали «Go around the corner» → развилка, потом
         # → тупик. Первое наблюдение решает — остальные не пишем.
@@ -1441,35 +1376,6 @@ class StoryMap:
         # если совпадает текст без вариантов (набор мог смениться).
         return any(tk == k and label == lb for tk, lb in self.tried)
 
-    def note_unreachable(self, k):
-        """Остаток в месте есть, но СЕЙЧАС его не достать: у пассажа ветки.
-
-        В Harlowe «House» при $sus 10–16 предлагает «But I was trying to find
-        Spot!», а при >= 17 — «What were you doing?». Карта помнит оба
-        варианта и потому считает место непройденным, но нажатия нет только
-        потому, что игра показывает другую ветку. Без этой пометки маршрут
-        ведёт в такое место и там кончается: 12 заходов по 27 шагов.
-        """
-        n = self.nodes.get(k)
-        if n is not None:
-            n['not_now'] = True
-
-    def forget_tried(self, k):
-        """Снять «нажато» у места, чей контент изменился.
-
-        Это не подделка прогресса: нажатия в ПРЕЖНЕМ состоянии игры ничего не
-        говорят о нынешнем — та же ссылка теперь ведёт в другую ветку. Счётчик
-        нажатий для отчёта живёт отдельно (pressed), поэтому честность не
-        страдает.
-        """
-        node = self.nodes.get(k) or {}
-        for extra in (k, node.get('text_key')):
-            if not extra:
-                continue
-            for label in list(node.get('options') or []):
-                self.tried.discard((extra, label))
-                self.pressed_old.add((k, label))
-
     def mark_tried(self, k, label):
         """Запомнить нажатие: и под ключом места, и под ключом текста.
 
@@ -1492,10 +1398,8 @@ class StoryMap:
             self.sus_gain[where] = gain
 
     def remaining_at(self, k):
-        """Сколько вариантов в ЭТОМ месте ещё не нажато (сейчас доступных)."""
+        """Сколько вариантов в ЭТОМ месте ещё не нажато."""
         n = self.nodes.get(k) or {}
-        if n.get('not_now'):
-            return 0
         return sum(1 for label in (n.get('options') or [])
                    if not self.tried_here(k, label))
 
@@ -1536,9 +1440,7 @@ class StoryMap:
 
     def summary(self):
         return {'remaining': self.remaining(), 'places': len(self.nodes), 'links': len(self.edges),
-                # Нажато — накопленное за все состояния места: снятие отметки
-                # при смене контента не должно выглядеть «меньше нажала».
-                'tried': len(self.tried | self.pressed_old),
+                'tried': len(self.tried),
                 'energetic': sum(1 for n in self.nodes.values() if n.get('energy', 0) > 0),
                 'tired': sum(1 for n in self.nodes.values() if n.get('energy', 0) < 0),
                 'finds': sorted({f for n in self.nodes.values() for f in n.get('finds', [])})}
@@ -1552,20 +1454,13 @@ class StoryMap:
                       # Без него после загрузки памяти отметки «нажато»
                       # терялись, и один и тот же выбор жался 68 раз подряд.
                       'text_key': v.get('text_key') or k,
-                      'variants': (v.get('variants') or [])[:MAX_VARIANTS],
-                      # Свой текст (первая фраза): им различаются ветки одного
-                      # пассажа. Без него после загрузки ветки склеиваются.
-                      'own': v.get('own') or '',
-                      'not_now': bool(v.get('not_now')),
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
         return {'schema': 'text+options-v4', 'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
-                'beacon': [[a, b, list(c)] for (a, b), c in self.beacon.items()],
+                'beacon': [[a, b, c] for (a, b), c in self.beacon.items()],
                 'sus_gain': self.sus_gain,
                 'seen_run': [[a, b, c] for (a, b), c in self.seen_run.items()],
-                'variant_key': self.variant_key,
-                'pressed_old': sorted([list(t) for t in self.pressed_old]),
                 'tried': sorted([list(t) for t in self.tried])}
 
     # v4: место — один текст без названий ссылок (Harlowe дописывает их прямо
@@ -1614,18 +1509,11 @@ class StoryMap:
             if len(pair) == 2:
                 self.tried.add((pair[0], pair[1]))
         for item in (data.get('beacon') or []):
-            if len(item) == 3 and item[0] in self.nodes:
-                targets = item[2] if isinstance(item[2], list) else [item[2]]
-                self.beacon[(item[0], item[1])] = [t for t in targets if t in self.nodes]
+            if len(item) == 3 and item[0] in self.nodes and item[2] in self.nodes:
+                self.beacon[(item[0], item[1])] = item[2]
         for k, v in (data.get('sus_gain') or {}).items():
             if k in self.nodes and isinstance(v, (int, float)) and v > 0:
                 self.sus_gain[k] = int(v)
-        for pair in (data.get('pressed_old') or []):
-            if len(pair) == 2:
-                self.pressed_old.add((pair[0], pair[1]))
-        for k, v in (data.get('variant_key') or {}).items():
-            if k in self.nodes and isinstance(v, str):
-                self.variant_key[k] = v
         for item in (data.get('seen_run') or []):
             if len(item) == 3 and item[0] in self.nodes:
                 self.seen_run[(item[0], item[1])] = int(item[2])
@@ -1652,9 +1540,6 @@ MAZE_STEPS = 60
 # Порог подозрительности, на котором игра показывает хвост Spot. Угадывать его
 # вслепую бессмысленно: до развилки кустов нужен $sus > 9, а до хвоста — >= 15.
 SUS_TAIL = 15
-# Сколько разных состояний одного места имеет смысл помнить. В Harlowe контент
-# ветвится по $sus (3 ветки), плюс повторный вход: больше — уже шум.
-MAX_VARIANTS = 4
 # Её собственный сигнал: в парке игра печатает это, когда $sus уже >= 8.
 # Это видимая подсказка, а не чтение скрытой переменной: по ней и решаем,
 # что пора в кусты.
@@ -1678,12 +1563,7 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
     k = passage or ''
 
     def not_tried(c):
-        """Этот выбор в этом месте ещё не нажимали?
-
-        Свежесть снимается НЕ здесь, а в момент смены контента (forget_tried):
-        иначе все варианты навсегда «свежие», и она 418 шагов ходит
-        «качели ↔ горка», потому что заход не кончается.
-        """
+        """Этот выбор в этом месте ещё не нажимали?"""
         if story_map is not None and passage:
             return not story_map.tried_here(k, c.get('label'))
         return here_key(c) not in visited
@@ -1745,16 +1625,6 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                     else spent[rng.randrange(len(spent))]), False
 
     fresh = [c for c in choices if not_tried(c)]
-    # «Свежий, но назад» — не находка, а круг. На ПОВТОРНОМ визите (в этом
-    # заходе тут уже были) вариант, ведущий туда, откуда пришли, прогрессом не
-    # считается: иначе карта честно держит «остаток здесь» и крутит пару
-    # «диван ↔ нога отдыхает» 40 шагов подряд, а заход кончается ничем.
-    if fresh and story_map is not None and passage and seen_bad is not None \
-            and any((passage, c.get('label')) in seen_bad for c in choices):
-        fwd = [c for c in fresh
-               if not story_map.is_loop(passage, c.get('label'),
-                                        came_from, came_from_key)]
-        fresh = fwd       # пусто — значит здесь делать нечего, дальше пойдёт маршрут
     pool = fresh or choices
 
     # Когда остаток мал, добираем его, а не бегаем наугад: сначала варианты,
@@ -1801,8 +1671,8 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             # нажато, но маяк помнит, что эта ссылка приводила в место с
             # остатком. Тогда идём именно ею, а не наугад по вариантам.
             want_by_beacon = [lbl for lbl in (c.get('label') or '' for c in choices)
-                              if any(story_map.remaining_at(t) > 0
-                                     for t in (story_map.beacon.get((passage, lbl)) or []))]
+                              if (passage, lbl) in story_map.beacon
+                              and story_map.remaining_at(story_map.beacon[(passage, lbl)]) > 0]
             for c in choices:
                 if want_by_beacon and (c.get('label') or '') == want_by_beacon[0]:
                     return c, False
@@ -1857,23 +1727,6 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
 
     pick = pool[0] if rng is None else pool[rng.randrange(len(pool))]
     return pick, bool(fresh)
-
-
-def own_text(text):
-    """Свой текст пассажа — первая фраза, без названий ссылок и без «↶».
-
-    У Harlowe «bushes → Park» на первом входе даёт целый абзац, а на повторном
-    короткое «You already checked here. back to park». Первая фраза различает
-    и ветки одного пассажа по $sus, и повторный вход.
-    """
-    t = ' '.join((text or '').replace('↶', ' ').split())
-    if not t:
-        return ''
-    for stop in ('. ', '! ', '? '):
-        i = t.find(stop)
-        if 8 <= i <= 110:
-            return t[:i + 1].lower()
-    return t[:80].lower()
 
 
 def is_rest(label):
@@ -2072,10 +1925,6 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         sus_now = [None]   # подозрительность из самой игры (скрытая переменная)
         # Что уже видела В ЭТОМ заходе: нужно, чтобы возвращаться в место
         # стоило только туда, где история ещё не была.
-        # Сколько мест знала карта на прошлом шаге — по этому видно, топчется
-        # ли она (см. счётчик топтания ниже).
-        places_seen = [len(story_map.nodes)]
-        run_visits = {}   # сколько раз были в пассаже за этот заход
         vars_logged = [False]
         # Копим подозрительность, пока игра сама не скажет, что в кустах
         # что-то есть (её условие $sus >= 8, напечатанное в парке).
@@ -2172,39 +2021,15 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                     report.step('стоп-кран',
                                 f'топчется в одном месте {len(trail)} шагов и новых мест нет — прекращаю заход')
                     break
-                # Один и тот же пассаж больше 3 раз за заход — это не поиск, а
-                # круг. В Harlowe ссылка ведёт в разные места при разном $sus,
-                # и маршрут по известным рёбрам может честно вернуть нажатый
-                # шаг: тогда выходим из круга другим путём, а если и его нет —
-                # кончаем заход.
-                run_visits[my_key] = run_visits.get(my_key, 0) + 1
-                if run_visits[my_key] > 3:
-                    other = [c for c in choices
-                             if (my_key, c.get('label')) not in seen_bad]
-                    if not other:
-                        report.step('стоп-кран',
-                                    f'4-й раз в одном пассаже за заход — это круг, прекращаю честно')
-                        break
-                    pick, fresh = other[0], True
-                else:
-                    pick, fresh = pick_choice(choices, visited, rng,
-                                              my_key, sight['visits'],
-                                              story_map=story_map, energy=sight.get('energy', 0),
-                                              came_from=last_place[0],
-                                              came_from_key=prev_place[0],
-                                              attempts=attempts[0],
-                                              seen_bad=seen_bad, sus=sus_now[0],
-                                              gather=gather_now[0])
+                pick, fresh = pick_choice(choices, visited, rng,
+                                          my_key, sight['visits'],
+                                          story_map=story_map, energy=sight.get('energy', 0),
+                                          came_from=last_place[0],
+                                          came_from_key=prev_place[0],
+                                          attempts=attempts[0],
+                                          seen_bad=seen_bad, sus=sus_now[0],
+                                          gather=gather_now[0])
                 if pick is None:
-                    # Прежде чем кончать заход: если у места ЧИСЛИТСЯ остаток,
-                    # но игра сейчас показывает другую ветку ($sus), помечаем
-                    # его «не сейчас» — иначе маршрут ведёт сюда же и кончается.
-                    if (story_map.remaining_at(my_key) > 0
-                            or any(not story_map.tried_here(my_key, l) for l in labels)):
-                        story_map.note_unreachable(my_key)
-                        report.step('ветка недоступна сейчас',
-                                    'в этом месте остаток есть, но игра показывает другую ветку — '
-                                    'пометила и ищу остаток в других местах')
                     # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
                     # а не крутимся. Следующий заход начнётся с начала и пойдёт
                     # по маршруту к остатку в других местах.
@@ -2238,16 +2063,10 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 # ссылками): раньше счётчик рос на каждом повторном визите
                 # в доме, лимит 6 сгорал до кустов, и она сдавалась там, где
                 # надо было разыгрывать проход.
-                # Топтание: шаги подряд, не открывшие ни одного нового МЕСТА.
-                # Считаем по числу мест в карте, а не по флагу fresh: после
-                # того как место меняет контент по $sus, свежими выглядят ВСЕ
-                # варианты, и счётчик по fresh не рос — она 418 шагов ходила
-                # «качели ↔ горка», а заход не кончался вовсе.
-                if len(story_map.nodes) > places_seen[0]:
-                    places_seen[0] = len(story_map.nodes)
-                    attempts[0] = 0
-                else:
-                    attempts[0] += 1
+                # Топтание: шаги подряд, не открывшие ни одного нового места.
+                # Сбрасывается, как только нашлось новое, — иначе дальняя дорога
+                # к остатку съедала предел ещё до кустов.
+                attempts[0] = 0 if fresh else attempts[0] + 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
                              'fresh': fresh, 'energy': sight.get('energy', 0),
                              'finds': sight.get('finds', []), 'clues': sight.get('clues', 0),
