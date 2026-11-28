@@ -1306,6 +1306,7 @@ class StoryMap:
         # пропадал совсем, и она сдавалась через 3 шага вместо 22.
         ordered = ([e for e in self.edges if not e.get('shaky')]
                    + [e for e in self.edges if e.get('shaky')])
+        alt = None
         q = deque([(start_key, None)])
         while q:
             cur, first = q.popleft()
@@ -1321,9 +1322,24 @@ class StoryMap:
                         continue
                     step = first if first is not None else e.get('choice')
                     if has_left(dst):
-                        return step         # цель — только там, где есть остаток
+                        # Путь найден. Если этот шаг уже нажат, а есть равный
+                        # путь ненажатым — запомним его и поищем ещё: иначе
+                        # маршрут ведёт по кругу нажатым («leave» → больница →
+                        # «receptionist» → тот же узел), и заход не кончается.
+                        if not self.tried_here(cur, e.get('choice')):
+                            return step
+                        if alt is None:
+                            alt = step
+                        continue
                     seen.add(dst)
                     q.append((dst, step))
+        if alt is not None:
+            return alt
+        # Маршрута по рёбрам нет, а остаток есть — в карте бывает, что место
+        # достижимо только через «другой исход» ссылки. Направление всё равно
+        # полезнее, чем «идти некуда».
+        if self.remaining() > 0:
+            return self.direction_to_open(start_key)
         return None                         # остатка в достижимой части карты нет
 
     def mark_open(self, text, choices, context=None):
@@ -2032,6 +2048,7 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         # Сколько мест знала карта на прошлом шаге — по этому видно, топчется
         # ли она (см. счётчик топтания ниже).
         places_seen = [len(story_map.nodes)]
+        run_visits = {}   # сколько раз были в пассаже за этот заход
         vars_logged = [False]
         # Копим подозрительность, пока игра сама не скажет, что в кустах
         # что-то есть (её условие $sus >= 8, напечатанное в парке).
@@ -2128,14 +2145,29 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                     report.step('стоп-кран',
                                 f'топчется в одном месте {len(trail)} шагов и новых мест нет — прекращаю заход')
                     break
-                pick, fresh = pick_choice(choices, visited, rng,
-                                          my_key, sight['visits'],
-                                          story_map=story_map, energy=sight.get('energy', 0),
-                                          came_from=last_place[0],
-                                          came_from_key=prev_place[0],
-                                          attempts=attempts[0],
-                                          seen_bad=seen_bad, sus=sus_now[0],
-                                          gather=gather_now[0])
+                # Один и тот же пассаж больше 3 раз за заход — это не поиск, а
+                # круг. В Harlowe ссылка ведёт в разные места при разном $sus,
+                # и маршрут по известным рёбрам может честно вернуть нажатый
+                # шаг: тогда выходим из круга другим путём, а если и его нет —
+                # кончаем заход.
+                run_visits[my_key] = run_visits.get(my_key, 0) + 1
+                if run_visits[my_key] > 3:
+                    other = [c for c in choices
+                             if (my_key, c.get('label')) not in seen_bad]
+                    if not other:
+                        report.step('стоп-кран',
+                                    f'4-й раз в одном пассаже за заход — это круг, прекращаю честно')
+                        break
+                    pick, fresh = other[0], True
+                else:
+                    pick, fresh = pick_choice(choices, visited, rng,
+                                              my_key, sight['visits'],
+                                              story_map=story_map, energy=sight.get('energy', 0),
+                                              came_from=last_place[0],
+                                              came_from_key=prev_place[0],
+                                              attempts=attempts[0],
+                                              seen_bad=seen_bad, sus=sus_now[0],
+                                              gather=gather_now[0])
                 if pick is None:
                     # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
                     # а не крутимся. Следующий заход начнётся с начала и пойдёт
