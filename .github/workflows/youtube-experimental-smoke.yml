@@ -228,7 +228,7 @@ jobs:
   warzone-private-probe:
     # This branch-only dispatch runs the untrusted game in a networkless container.
     # It produces a private diagnostic capture, never a review or an upload.
-    if: ${{ false }} # One-shot diagnostic only.
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/arena/5da71980-games' }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     permissions:
@@ -277,22 +277,3 @@ jobs:
           retention-days: 3
 
 
-  inspect-last-warzone:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/arena/5da71980-games' }}
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Inspect last private action screenshot
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p "$RUNNER_TEMP/capture"
-          gh run download 46159402828 --name warzone-private-46159402828 --dir "$RUNNER_TEMP/capture"
-          python -m pip install 'Pillow>=10.4,<13.0'
-          python -c 'from PIL import Image; import os; p=os.environ["RUNNER_TEMP"]+"/capture/"; im=Image.open(p+"frame-24.png"); im.thumbnail((400,300)); im.save(p+"frame.jpg",quality=65)'
-          python youtube-bot/warzone_probe/frame_notice.py "$RUNNER_TEMP/capture/frame.jpg"
