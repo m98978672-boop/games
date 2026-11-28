@@ -187,6 +187,7 @@ WC.game = (function () {
           reactToEvent(worker, 'delivered');
           contractChanges(WC.contracts.record(api.contracts, api.sim.state.stats, api.sim.state.time, 'delivered', order));
           challengeEvent('delivered', order, result, w.id);
+          careerEvent('delivered', order, result);
           emit('delivered', { worker: worker, order: order, result: result });
         },
         onInjury: function (w, injury) {
@@ -207,6 +208,7 @@ WC.game = (function () {
           reactToEvent(worker, 'loaded');
           contractChanges(WC.contracts.record(api.contracts, api.sim.state.stats, api.sim.state.time, 'loaded', order));
           challengeEvent('loaded', order, result, w.id);
+          careerEvent('loaded', order, result);
           emit('loaded', { worker: worker, order: order, result: result });
         },
         onDropped: function (w, order, outcome) {
@@ -271,6 +273,37 @@ WC.game = (function () {
     return result;
   }
 
+  function careerEvent(event, order, result) {
+    if (S.shiftEnded || api.sim.state.time > cfg.shiftRealSeconds) return;
+    var update = WC.career.record(api.career, event, order, result);
+    if (update.scoreBonus) api.sim.state.stats.score += update.scoreBonus;
+    if (update.completed) { pushLog('Заказчик карьеры: условие выполнено, награда в конце смены', 'good'); emit('career-objective', {}); }
+  }
+  function enableCareer() {
+    if (!api.ready || !api.sim || S.shiftEnded) return {ok:false, reason:'Начните действующую смену'};
+    var result=WC.career.enable(api.career, api.sim.state.stats);
+    if (result.ok) { pushLog('Карьера склада началась: выберите заказчика', 'good'); WC.save.autosave(api); }
+    return result;
+  }
+  function careerOffer(id) {
+    if (!api.ready || !api.sim || S.shiftEnded) return {ok:false, reason:'Смена не активна'};
+    var result=WC.career.chooseOffer(api.career,id);
+    if (result.ok) { pushLog('Заказчик: ' + WC.career.offers.find(function (o) { return o.id===id; }).name, 'info'); WC.save.autosave(api); }
+    return result;
+  }
+  function careerUpgrade(id) {
+    if (!api.ready || !api.sim) return {ok:false, reason:'Склад ещё не запущен'};
+    var result=WC.career.buy(api.career,id);
+    if (result.ok) { pushLog('Куплено улучшение карьеры за ' + result.cost + ' кредитов; действует со следующей смены', 'good'); WC.save.autosave(api); }
+    return result;
+  }
+  function careerMode(id) {
+    if (!api.ready || !api.sim) return {ok:false, reason:'Склад ещё не запущен'};
+    var result=WC.career.setMode(api.career,id);
+    if (result.ok) { pushLog('Выбран режим следующей смены: ' + WC.career.modes.find(function (m) { return m.id===id; }).name, 'info'); WC.save.autosave(api); }
+    return result;
+  }
+
   // Ручной вызов конкретного дока не меняет очередность автоматических рейсов.
   function callTruck(kind) {
     if (!api.ready || !api.sim || S.shiftEnded) return { ok: false, reason: 'Смена не активна' };
@@ -283,6 +316,29 @@ WC.game = (function () {
     pushLog('Вызвана фура ' + truck.plate + ': ' + (kind === 'load' ? 'загрузка' : 'разгрузка') + ', мест: ' + truck.total, 'info');
     WC.save.autosave(api);
     return { ok: true, truck: truck };
+  }
+
+  function scheduleTruck(kind, delay) {
+    if (!api.ready || !api.sim || S.shiftEnded) return {ok:false,reason:'Смена не активна'};
+    var result=WC.schedule.schedule(api.schedule,kind,delay,api.sim.state.time,cfg.shiftRealSeconds);
+    if (result.ok) { pushLog('Запланирован вызов фуры: ' + (kind==='load'?'загрузка':'разгрузка') + ' через ' + delay + ' с', 'info'); WC.save.autosave(api); }
+    return result;
+  }
+  function cancelScheduledTruck(kind) {
+    if (!api.ready || !api.sim || S.shiftEnded) return {ok:false,reason:'Смена не активна'};
+    var result=WC.schedule.cancel(api.schedule,kind);
+    if (result.ok) { pushLog('Запланированный вызов фуры отменён', 'info'); WC.save.autosave(api); }
+    return result;
+  }
+  function processScheduledTrucks() {
+    var due;
+    while ((due=WC.schedule.takeDue(api.schedule,api.sim.state.time)).length) {
+      var kind=due[0], result=callTruck(kind);
+      if (!result.ok) pushLog('Запланированный вызов (' + (kind==='load'?'загрузка':'разгрузка') + ') не состоялся: ' + result.reason, 'warn');
+      emit('scheduled-truck',{kind:kind,ok:result.ok,reason:result.reason || ''});
+      // callTruck сохраняет успех; здесь сохраняем также неудавшийся вызов.
+      WC.save.autosave(api);
+    }
   }
 
   // Не награждаем за принудительный отъезд. Отгрузка, которой не хватило
@@ -301,6 +357,7 @@ WC.game = (function () {
 
   function createSim() {
     api.contracts = WC.contracts.create();
+    api.schedule = WC.schedule.create();
     api.challenges = WC.challenges.create();
     api.dialogueState = WC.dialogue.create(0);
     socialRng = window.WarehouseSim.createRng(cfg.seed + 7719);
@@ -313,6 +370,7 @@ WC.game = (function () {
       truckEvery: cfg.truckEvery,
       firstTruckDelay: cfg.firstTruckDelay,
     });
+    if (api.career && api.career.enabled) api.sim.state.spawnEvery = WC.career.spawnInterval(api.career, cfg.orderSpawnEvery);
     api.crewTarget = cfg.crew.length;
     api.crew = cfg.crew.map(function (member, i) {
       return window.WarehouseWorker.createWorker({
@@ -887,6 +945,7 @@ WC.game = (function () {
     api.deaths = [];
     api.day = 1;
     api.needsCleanup = false;
+    if (api.career.enabled) WC.career.begin(api.career, {dropped:0,ruined:0,missed:0});
     createSim();
     if (WC.world && WC.world.state.ready) WC.world.attachCrew({ api: api });
     S.paused = false;
@@ -904,6 +963,9 @@ WC.game = (function () {
     if (S.shiftEnded) return;
     contractChanges(WC.contracts.finish(api.contracts, api.sim.state.time));
     WC.challenges.finish(api.challenges);
+    if (api.schedule.load || api.schedule.unload) { api.schedule=WC.schedule.create(); pushLog('Запланированные вызовы отменены: смена завершена', 'warn'); }
+    var careerReport = WC.career.settle(api.career, api.sim.state.stats);
+    if (careerReport) pushLog('Карьера: выручка ' + careerReport.gross + ', награда ' + careerReport.bonus + ', штрафы ' + careerReport.penalties + ', баланс ' + careerReport.balance, 'good');
     S.shiftEnded = true;
     S.paused = true;
     setPaused(true);
@@ -916,6 +978,7 @@ WC.game = (function () {
     var stats = api.sim.state.stats;
     return {
       score: Math.round(stats.score),
+      career: JSON.parse(JSON.stringify(api.career)),
       contracts: api.contracts.items.map(function (i) { var d = WC.contracts.definitions.find(function (x) { return x.id === i.id; }); return { id: i.id, title: d.title, status: i.status, progress: i.progress, goal: d.goal, reward: i.status === 'completed' ? d.reward : 0, reason: i.reason }; }),
       challenges: api.challenges.items.map(function (i) { var d = WC.challenges.definitions.find(function (x) { return x.id === i.id; }); return { id:i.id, title:d.title, status:i.status, progress:i.progress, goal:d.goal, reward:i.status === 'completed' ? d.reward : 0 }; }),
       lighting: api.shiftMode,
@@ -982,6 +1045,7 @@ WC.game = (function () {
       guard += 1;
       api.sim.syncActors(api.crew.concat(api.staff), step);
       api.sim.step(step);
+      if (api.sim.state.time < cfg.shiftRealSeconds) processScheduledTrucks();
       stepStaff(step);
       stepPair(step);
       api.crew.forEach(function (worker) {
@@ -1007,7 +1071,7 @@ WC.game = (function () {
   // Только данные: функции, ссылки окружения и тела Cannon живут в фабриках.
   function captureCheckpoint() {
     return JSON.parse(JSON.stringify({
-      version: 2, contracts: api.contracts, challenges: api.challenges, shiftMode: api.shiftMode, dialogueState: api.dialogueState, runtime: S, warehouse: api.sim.captureCheckpoint(),
+      version: 2, schedule: api.schedule, career: api.career, contracts: api.contracts, challenges: api.challenges, shiftMode: api.shiftMode, dialogueState: api.dialogueState, runtime: S, warehouse: api.sim.captureCheckpoint(),
       crew: api.crew.map(function (worker) {
         return { state: worker.state, brain: api.envs[worker.id].brain,
           rng: api.envs[worker.id].rng.getState() };
@@ -1043,6 +1107,8 @@ WC.game = (function () {
         !Number.isInteger(saved.crewTarget) || saved.crewTarget < 0 || saved.crewTarget > 8 ||
         !saved.warehouse || !saved.warehouse.state) throw new Error('Повреждён снимок смены');
     // Снимки v2, созданные до появления ночного режима, считаются дневными.
+    var restoredSchedule = saved.schedule == null ? WC.schedule.create() : WC.schedule.validate(saved.schedule);
+    var restoredCareer = saved.career == null ? WC.career.create() : WC.career.validate(saved.career);
     var restoredContracts = saved.contracts == null ? WC.contracts.create() : WC.contracts.validate(saved.contracts);
     var restoredChallenges = saved.challenges == null ? WC.challenges.create() : WC.challenges.validate(saved.challenges);
     var restoredMode = saved.shiftMode == null ? 'day' : saved.shiftMode;
@@ -1115,6 +1181,8 @@ WC.game = (function () {
     });
     api.sim.restoreCheckpoint(saved.warehouse, workers.map(function (worker) { return worker.state; }));
     api.shiftMode = restoredMode;
+    api.schedule = restoredSchedule;
+    api.career = restoredCareer;
     api.contracts = restoredContracts;
     api.challenges = restoredChallenges;
     api.dialogueState = saved.dialogueState == null ? WC.dialogue.create(saved.warehouse.state.time) : WC.dialogue.validate(saved.dialogueState);
@@ -1138,6 +1206,7 @@ WC.game = (function () {
   function boot() {
     cfg = WC.CONFIG;
     api.ready = false;
+    api.career = WC.career.create();
     var loaded = WC.save.load();
     if (loaded) {
       api.best = { score: loaded.bestScore || 0, delivered: loaded.bestDelivered || 0 };
@@ -1160,6 +1229,7 @@ WC.game = (function () {
           WC.save.protect();
           api.brains = brainsBeforeRestore;
           api.shiftMode = 'day';
+          api.career = WC.career.create();
           api.staff = []; api.purchases = { medic: 0, watchman: 0 }; api.deaths = []; api.log = [];
           Object.assign(S, { time: 0, paused: false, speed: 1, shiftEnded: false, autosaveClock: 0, accumulator: 0, totalReal: 0 });
           createSim();
@@ -1215,10 +1285,16 @@ WC.game = (function () {
     setShippingPriority: setShippingPriority,
     callTruck: callTruck,
     dispatchTruck: dispatchTruck,
+    scheduleTruck: scheduleTruck,
+    cancelScheduledTruck: cancelScheduledTruck,
     acceptContract: acceptContract,
     cancelContract: cancelContract,
     acceptChallenge: acceptChallenge,
     cancelChallenge: cancelChallenge,
+    enableCareer: enableCareer,
+    careerOffer: careerOffer,
+    careerUpgrade: careerUpgrade,
+    careerMode: careerMode,
     buyStaff: buyStaff,
     hireWorker: hireWorker,
     staffCost: staffCost,
