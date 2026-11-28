@@ -328,6 +328,8 @@ check('расписание ютуба не откачено: политика �
   schedPolicy.includes('def ') && schedPolicy.length > 500);
 const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8');
 
+check('нажатие записывается под всеми ключами места, а не под двумя',
+  expNow.includes('for other_k, other in self.nodes.items():') && expNow.includes('self.bare_key(node.get(\'text\'))'));
 check('условный остаток не гоняет 12 одинаковых заходов: честный стоп',
   expNow.includes('stuck_places') && expNow.includes('повторные заходы их не откроют'));
 check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',

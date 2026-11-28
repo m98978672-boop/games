@@ -1377,15 +1377,24 @@ class StoryMap:
         return any(tk == k and label == lb for tk, lb in self.tried)
 
     def mark_tried(self, k, label):
-        """Запомнить нажатие: и под ключом места, и под ключом текста.
+        """Запомнить нажатие — под ВСЕМИ ключами этого места.
 
-        Второе нужно, потому что одно место живёт под ключом, собранным в
-        первый раз, а спрашивают про него иногда под другим набором вариантов.
+        Одно место живёт под несколькими ключами: ключ узла (с набором
+        вариантов), ключ текста и ключ «текст без вариантов». Раньше метка
+        ложилась только под первые два, и нажатое «Get up» терялось: место
+        выглядело непройденным и держало остаток, а заход 12 раз упирался в
+        него («диван ↔ нога отдыхает»).
         """
         self.tried.add((k, label))
         node = self.nodes.get(k) or {}
-        for extra in ((node.get('text_key'),
-                       self.bare_key(node.get('text'), node.get('options')))):
+        keys = {node.get('text_key'),
+                self.bare_key(node.get('text'), node.get('options')),
+                self.bare_key(node.get('text'))}
+        for other_k, other in self.nodes.items():
+            if other.get('text_key') and node.get('text_key') \
+                    and other.get('text_key') == node.get('text_key'):
+                keys.add(other_k)
+        for extra in keys:
             if extra and extra != k:
                 self.tried.add((extra, label))
 
