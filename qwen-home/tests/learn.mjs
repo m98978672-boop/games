@@ -441,6 +441,12 @@ check('предел стоит на топтании, а не на каждом 
   && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
+check('скрытое число игры читается, а не выдумывается: $sus из State.variables',
+  expNow.includes('window.State && window.State.variables') && expNow.includes('vars: vars')
+  && expNow.includes('SUS_TAIL = 15') && expNow.includes('def note_sus'));
+check('подозрительность тратится с умом: места с прибавкой один раз за заход',
+  expNow.includes('and story_map.sus_gain.get(passage) and seen_bad is not None')
+  && expNow.includes('story_map.seen_run[(my_key, pick[\'label\'])] = run'));
 check('эхо лабиринта кончает заход, а заходов хватает на повторный проход',
   expNow.includes("report.step('эхо лабиринта'") && expNow.includes('story_map.is_echo(text, labels)')
   && expNow.includes('runs=12'));
