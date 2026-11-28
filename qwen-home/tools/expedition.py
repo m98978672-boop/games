@@ -972,6 +972,8 @@ class StoryMap:
         self.tried = set()  # (место, выбор) — что уже нажимали
         # (место, ссылка) → где ЭТА ссылка сработала путём в новое место
         self.beacon = {}
+        # Пройденные пути к финалу: [(список выборов, чем кончилось)].
+        self.ending_routes = []
         # Сколько подозрительности ($sus) даёт вход в место — увидено по
         # настоящим числам игры, а не угадано. Нужно, чтобы набрать $sus > 9
         # и попасть в развилку кустов.
@@ -1457,6 +1459,9 @@ class StoryMap:
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
         return {'schema': 'text+options-v4', 'places': places,
+                # Пути к финалу, которые она уже прошла: в следующем прогоне
+                # можно пройти их снова и снова увидеть концовки.
+                'ending_routes': self.ending_routes[:10],
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
                 'beacon': [[a, b, c] for (a, b), c in self.beacon.items()],
                 'sus_gain': self.sus_gain,
@@ -1511,6 +1516,10 @@ class StoryMap:
         for item in (data.get('beacon') or []):
             if len(item) == 3 and item[0] in self.nodes and item[2] in self.nodes:
                 self.beacon[(item[0], item[1])] = item[2]
+        for item in (data.get('ending_routes') or []):
+            if isinstance(item, dict) and item.get('choices'):
+                self.ending_routes.append({'choices': list(item['choices'])[:40],
+                                           'end': item.get('end', '')[:200]})
         for k, v in (data.get('sus_gain') or {}).items():
             if k in self.nodes and isinstance(v, (int, float)) and v > 0:
                 self.sus_gain[k] = int(v)
@@ -1548,7 +1557,7 @@ HEARD_BUSHES = 'you hear something in the bushes'
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                 story_map=None, energy=0, came_from=None, came_from_key=None,
-                attempts=0, seen_bad=None, sus=None, gather=False):
+                attempts=0, seen_bad=None, sus=None, gather=False, replay=None):
     """Какой вариант выбрать: сначала тот, где история ещё не была.
 
     visited — множество пар «пассаж+подпись». Если есть карта (story_map), она
@@ -1570,6 +1579,15 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
 
     def here_key(c):
         return (k, c.get('key', c.get('label', '')))
+
+    # Повтор известного пути к финалу: память помнит дорогу — идём по ней.
+    # Иначе с полной картой она сразу говорит «всё пройдено» и не доходит до
+    # концовок, которые уже видела (прогон 20261128-1629: 0 финалов).
+    if replay:
+        want = replay[0]
+        for c in choices:
+            if (c.get('label') or '') == want:
+                return c, False
 
     # Диалог подтверждения: сначала «OK», а не «Cancel». «Cancel» и «door» в
     # этом окне — не ветки истории, а служебные кнопки: оставлять их в остатке
@@ -1930,6 +1948,11 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
         # что-то есть (её условие $sus >= 8, напечатанное в парке).
         gather_now = [True]
         seen_bad = {(k, l) for (k, l), r in story_map.seen_run.items() if r == run}
+        # Повтор известного пути: в каждом заходе свой (1-й — первый известный,
+        # 2-й — второй...). Так прогон снова проходит дорогу и снова видит
+        # концовку: с полной картой она иначе сразу говорит «всё пройдено».
+        replay_left = (list(story_map.ending_routes[(run - 1) % len(story_map.ending_routes)]['choices'])
+                       if story_map.ending_routes else [])
         last_text = ['']   # прошлый текст: ловим «страница не сменилась»
         same_text = [0]
         prev_place = ['']  # место предыдущего шага
@@ -2028,7 +2051,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                           came_from_key=prev_place[0],
                                           attempts=attempts[0],
                                           seen_bad=seen_bad, sus=sus_now[0],
-                                          gather=gather_now[0])
+                                          gather=gather_now[0],
+                                          replay=replay_left)
                 if pick is None:
                     # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
                     # а не крутимся. Следующий заход начнётся с начала и пойдёт
@@ -2036,6 +2060,10 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                     report.step('идти некуда',
                                 f'заход {run}: в этом месте всё нажато, остаток — в других местах карты')
                     break
+                if replay_left and replay_left[0] == pick['label']:
+                    replay_left.pop(0)     # идём по известной дороге дальше
+                elif replay_left:
+                    replay_left = []       # дорога свернула — дальше как обычно
                 story_map.mark_tried(my_key, pick['label'])
                 visited.add((my_key, pick['label']))
                 # «Видела этот переход в этом заходе» — для возврата в лабиринт.
@@ -2103,6 +2131,8 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 # Чем кончился заход: последние выборы перед финалом. Экран у
                 # всех концовок один, поэтому путь и есть различитель.
                 tail = [p2['choice'] for p2 in path[-4:]]
+                story_map.ending_routes.append({'choices': [p2['choice'] for p2 in path][-40:],
+                                                'end': (text or '')[:200]})
                 endings.append({'run': run, 'n': moves, 'text': run_end,
                                 'route': ' → '.join(tail),
                                 'routeKey': hashlib.sha1('|'.join(tail).encode('utf-8')).hexdigest()[:12]})
