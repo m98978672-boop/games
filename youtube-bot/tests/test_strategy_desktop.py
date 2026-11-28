@@ -29,7 +29,7 @@ class StrategyDesktopTests(unittest.TestCase):
         with patch('strategy_desktop.subprocess.run', side_effect=runner) as run:
             desktop=IsolatedStrategyDesktop(display=':93',window_id=123,game_pid=42,isolation_acknowledged=True)
             desktop.act({'type':'click','at':[400,300],'button':'left'})
-            self.assertEqual(run.call_args.args[0],['xdotool','click','--window','123','1'])
+            self.assertEqual(run.call_args.args[0],['xdotool','click','1'])
             from PIL import Image, ImageGrab
             with patch('PIL.ImageGrab.grab', return_value=Image.new('RGB',(800,600))) as grab:
                 self.assertTrue(desktop.screenshot().startswith(b'\x89PNG'))

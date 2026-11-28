@@ -76,9 +76,13 @@ class IsolatedStrategyDesktop:
         action = validate_action(raw)
         self._verify_window()
         window = str(self.window_id)
+        # XTest input reaches SDL games; --window on click/key uses synthetic
+        # XSendEvent, which SDL may ignore. The dedicated display is isolated.
+        if action['type'] != 'wait':
+            self._run('windowfocus', '--sync', window)
         if action['type'] == 'click':
             self._run('mousemove', '--window', window, *map(str, action['at']))
-            self._run('click', '--window', window, '1' if action['button'] == 'left' else '3')
+            self._run('click', '1' if action['button'] == 'left' else '3')
         elif action['type'] == 'drag':
             self._run('mousemove', '--window', window, *map(str, action['start']))
             self._run('mousedown', '1')
@@ -87,7 +91,7 @@ class IsolatedStrategyDesktop:
             finally:
                 self._run('mouseup', '1')
         elif action['type'] == 'key':
-            self._run('key', '--window', window, '--clearmodifiers', KEYS[action['key']])
+            self._run('key', '--clearmodifiers', KEYS[action['key']])
         else:
             time.sleep(.25)
 
