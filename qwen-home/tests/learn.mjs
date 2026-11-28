@@ -434,7 +434,9 @@ check('случайный лабиринт: повторный проход по
   && expNow.includes('attempts=attempts[0]'));
 
 check('в случайном лабиринте усталость не отменяет попытку прохода',
-  expNow.includes('if not (story_map.has_shaky() and attempts < 6):'));
+  expNow.includes('and attempts < 6):') && expNow.includes('def has_shaky_at'));
+check('подходы считаются в лабиринте, а не на каждом повторном визите',
+  expNow.includes("if not fresh and (story_map.has_shaky_at(my_key) or story_map.has_shaky()):"));
 
 console.log(`\nДом Qwen: ${passed} проверок пройдено${process.exitCode ? ' (есть провалы)' : ''}.`);
 process.exit(process.exitCode || 0);

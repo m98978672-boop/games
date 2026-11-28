@@ -1162,6 +1162,10 @@ class StoryMap:
                 q.append((e['to'], step))
         return None
 
+    def has_shaky_at(self, k):
+        """Есть ли у ЭТОГО места ссылки, которые вели в разные места."""
+        return any(e.get('shaky') and e.get('from') == k for e in self.edges)
+
     def has_shaky(self):
         """Есть ли в карте ссылки, которые вели в разные места.
 
@@ -1556,7 +1560,8 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
             # единственный способ попасть в нужную ветку: идём, пока подходов
             # мало. Раньше здесь стоял ещё и energy > -2, и вымотанная она
             # сдавалась ровно там, где надо было разыгрывать проход.
-            if not (story_map.has_shaky() and attempts < 6):
+            if not ((story_map.has_shaky() or story_map.has_shaky_at(passage))
+                    and attempts < 6):
                 return None, False      # тут делать нечего — пусть заход закончится
 
     # осторожность: вымотана — сначала передохнуть, даже если отдых уже нажимала.
@@ -1876,7 +1881,11 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                 prev_key[0] = my_key
                 if fresh:
                     fresh_moves += 1
-                if not fresh and sight['visits'] > 1:
+                # Считаем только подходы в САМОМ лабиринте (место с «нервными»
+                # ссылками): раньше счётчик рос на каждом повторном визите
+                # в доме, лимит 6 сгорал до кустов, и она сдавалась там, где
+                # надо было разыгрывать проход.
+                if not fresh and (story_map.has_shaky_at(my_key) or story_map.has_shaky()):
                     attempts[0] += 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
                              'fresh': fresh, 'energy': sight.get('energy', 0),
