@@ -486,10 +486,19 @@ def draw_grid(dr, cam, n=7, step=1.0, zmax=16):
         if a and b: dr.line([a[0], a[1], b[0], b[1]], fill=(105, 105, 107), width=2)
 
 def draw_shadow(dr, cam, x, z, r=0.35, col=(95, 95, 97)):
-    c = project((x, 0.012, z), cam)
-    e = project((x+r, 0.012, z), cam)
-    if c and e:
-        rx_ = abs(e[0]-c[0]); dr.ellipse([c[0]-rx_, c[1]-rx_*0.32, c[0]+rx_, c[1]+rx_*0.32], fill=col)
+    """Контактная тень: полигон по плоскости пола (корректный перспективный скос)
+    с мягким двухслойным краем вместо экранного эллипса."""
+    outer, inner = [], []
+    for k in range(16):
+        a = math.radians(360.0*k/16.0)
+        ca, sa = math.cos(a), math.sin(a)
+        po = project((x + r*ca, 0.010, z + r*0.78*sa), cam)
+        pi = project((x + r*0.66*ca, 0.010, z + r*0.52*sa), cam)
+        if not po or not pi:
+            return
+        outer.append((po[0], po[1])); inner.append((pi[0], pi[1]))
+    dr.polygon(outer, fill=tuple(min(255, c+22) for c in col))
+    dr.polygon(inner, fill=col)
 
 # ---------- пролог: голуби, рука, лавка, сердечки, краска ----------
 PGREY = (152, 158, 170); PGREY_D = (110, 116, 130); PBEAK = (228, 178, 92)
