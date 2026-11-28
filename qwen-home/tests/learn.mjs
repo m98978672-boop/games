@@ -441,6 +441,12 @@ check('предел стоит на топтании, а не на каждом 
   && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
+check('место меняет контент по $sus — старые «нажато» не закрывают новые ветки',
+  expNow.includes('MAX_VARIANTS') && expNow.includes('def forget_tried')
+  && expNow.includes("self.variant_key[k] = vk") && expNow.includes('if story_map.variant_key.get(k):')
+  && expNow.includes("'variant_key': self.variant_key"));
+check('нажато в отчёте не уменьшается, когда место меняет контент',
+  expNow.includes('len(self.tried | self.pressed_old)') && expNow.includes('self.pressed_old.add'));
 check('подозрительность копится по сигналу самой игры, а не в кустах наугад',
   expNow.includes('HEARD_BUSHES') && expNow.includes('gather_now')
   && expNow.includes('and not (c.get(\'label\') or \'\').lower().startswith(\'bush\')'));

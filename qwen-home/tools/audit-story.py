@@ -148,6 +148,8 @@ def audit(src=None):
             ('скрытые числа игры читаются из состояния', 'window.State && window.State.variables' in e),
             ('цена места в подозрительности — увидена по числам игры', 'def note_sus' in e),
             ('подозрительность копится по сигналу игры', 'HEARD_BUSHES' in e and 'gather_now' in e),
+            ('контент места меняется — старые «нажато» не мешают', 'def forget_tried' in e),
+            ('нажато в отчёте не уменьшается', 'len(self.tried | self.pressed_old)' in e),
         ]),
     ]
     out = []
