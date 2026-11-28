@@ -1123,6 +1123,7 @@ class StoryMap:
             if len(seen_variants) < MAX_VARIANTS:
                 seen_variants.append(vk)
                 self.forget_tried(k)
+            node.pop('not_now', None)
         if vk:
             self.variant_key[k] = vk
         # Настоящий ключ узла: набор вариантов на входе может отличаться от
@@ -1440,6 +1441,19 @@ class StoryMap:
         # если совпадает текст без вариантов (набор мог смениться).
         return any(tk == k and label == lb for tk, lb in self.tried)
 
+    def note_unreachable(self, k):
+        """Остаток в месте есть, но СЕЙЧАС его не достать: у пассажа ветки.
+
+        В Harlowe «House» при $sus 10–16 предлагает «But I was trying to find
+        Spot!», а при >= 17 — «What were you doing?». Карта помнит оба
+        варианта и потому считает место непройденным, но нажатия нет только
+        потому, что игра показывает другую ветку. Без этой пометки маршрут
+        ведёт в такое место и там кончается: 12 заходов по 27 шагов.
+        """
+        n = self.nodes.get(k)
+        if n is not None:
+            n['not_now'] = True
+
     def forget_tried(self, k):
         """Снять «нажато» у места, чей контент изменился.
 
@@ -1478,8 +1492,10 @@ class StoryMap:
             self.sus_gain[where] = gain
 
     def remaining_at(self, k):
-        """Сколько вариантов в ЭТОМ месте ещё не нажато."""
+        """Сколько вариантов в ЭТОМ месте ещё не нажато (сейчас доступных)."""
         n = self.nodes.get(k) or {}
+        if n.get('not_now'):
+            return 0
         return sum(1 for label in (n.get('options') or [])
                    if not self.tried_here(k, label))
 
@@ -1540,6 +1556,7 @@ class StoryMap:
                       # Свой текст (первая фраза): им различаются ветки одного
                       # пассажа. Без него после загрузки ветки склеиваются.
                       'own': v.get('own') or '',
+                      'not_now': bool(v.get('not_now')),
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
         return {'schema': 'text+options-v4', 'places': places,
@@ -1728,6 +1745,16 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                     else spent[rng.randrange(len(spent))]), False
 
     fresh = [c for c in choices if not_tried(c)]
+    # «Свежий, но назад» — не находка, а круг. На ПОВТОРНОМ визите (в этом
+    # заходе тут уже были) вариант, ведущий туда, откуда пришли, прогрессом не
+    # считается: иначе карта честно держит «остаток здесь» и крутит пару
+    # «диван ↔ нога отдыхает» 40 шагов подряд, а заход кончается ничем.
+    if fresh and story_map is not None and passage and seen_bad is not None \
+            and any((passage, c.get('label')) in seen_bad for c in choices):
+        fwd = [c for c in fresh
+               if not story_map.is_loop(passage, c.get('label'),
+                                        came_from, came_from_key)]
+        fresh = fwd       # пусто — значит здесь делать нечего, дальше пойдёт маршрут
     pool = fresh or choices
 
     # Когда остаток мал, добираем его, а не бегаем наугад: сначала варианты,
@@ -2169,6 +2196,15 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
                                               seen_bad=seen_bad, sus=sus_now[0],
                                               gather=gather_now[0])
                 if pick is None:
+                    # Прежде чем кончать заход: если у места ЧИСЛИТСЯ остаток,
+                    # но игра сейчас показывает другую ветку ($sus), помечаем
+                    # его «не сейчас» — иначе маршрут ведёт сюда же и кончается.
+                    if (story_map.remaining_at(my_key) > 0
+                            or any(not story_map.tried_here(my_key, l) for l in labels)):
+                        story_map.note_unreachable(my_key)
+                        report.step('ветка недоступна сейчас',
+                                    'в этом месте остаток есть, но игра показывает другую ветку — '
+                                    'пометила и ищу остаток в других местах')
                     # Здесь всё нажато и всё ведёт назад: честно кончаем заход,
                     # а не крутимся. Следующий заход начнётся с начала и пойдёт
                     # по маршруту к остатку в других местах.

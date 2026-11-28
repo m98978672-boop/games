@@ -149,6 +149,7 @@ def audit(src=None):
             ('цена места в подозрительности — увидена по числам игры', 'def note_sus' in e),
             ('подозрительность копится по сигналу игры', 'HEARD_BUSHES' in e and 'gather_now' in e),
             ('контент места меняется — старые «нажато» не мешают', 'def forget_tried' in e),
+            ('условный остаток не заманивает маршрут', 'def note_unreachable' in e),
             ('круг по нажатым шагам прерывается', 'run_visits[my_key] > 3' in e),
             ('свой текст места различает ветки и едет в кэш', 'def own_text' in e and "'own': v.get('own') or ''" in e),
             ('нажато в отчёте не уменьшается', 'len(self.tried | self.pressed_old)' in e),
