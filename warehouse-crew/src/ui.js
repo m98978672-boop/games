@@ -92,6 +92,10 @@ window.WC = window.WC || {};
     dom.shopBalance = q('shop-balance');
     dom.shopList = q('shop-list');
     dom.staffList = q('staff-list');
+    dom.challengeList = q('challenge-list');
+    dom.challengeActive = q('challenge-active');
+    dom.challengeCount = q('challenge-count');
+    dom.challengeGroup = q('challenge-group');
     dom.contractsList = q('contracts-list');
     dom.contractsCount = q('contracts-count');
   }
@@ -1354,6 +1358,7 @@ window.WC = window.WC || {};
         U.el('p', { class: 'report-note', text: ended ? 'Итоги завершённой смены.' : 'Снимок на момент открытия. Смена не ставится на паузу; нажмите «Обновить» для новых данных.' }),
         U.el('div', { class: 'vitals-grid' }, [
           vital('Очки', U.money(summary.score), 'баланс после покупок'),
+          vital('Испытания', String(summary.challenges.filter(function (c) { return c.status === 'completed'; }).length), 'выполнено за смену'),
           vital('Контракты', String(summary.contracts.filter(function (c) { return c.status === 'completed'; }).length), 'выполнено за смену'),
           vital('На стеллаж', String(summary.delivered), 'доставлено'),
           vital('Качество', summary.quality + ' %', 'повреждения и срок'),
@@ -1371,6 +1376,8 @@ window.WC = window.WC || {};
         WC.save.isProtected() ? U.el('p', { class: 'report-note report-warning', text: 'Сохранение защищено от перезаписи: текущая смена не записывается в браузер.' }) : null,
         U.el('h3', { class: 'report-heading', text: 'Контракты смены' }),
         U.el('div', { class: 'report-people' }, summary.contracts.map(function (c) { return U.el('p', { class: 'report-note', text: c.title + ': ' + ({available:'не взят', active:'в работе', completed:'выполнен', failed:'не выполнен', cancelled:'отменён'})[c.status] + ' · ' + c.progress + '/' + c.goal + (c.reward ? ' · +' + c.reward + ' очков' : '') + (c.reason ? ' · ' + c.reason : '') }); })),
+        U.el('h3', { class: 'report-heading', text: 'Испытания смены' }),
+        U.el('div', { class: 'report-people' }, summary.challenges.filter(function (c) { return c.status !== 'available'; }).map(function (c) { return U.el('p', { class:'report-note', text:c.title + ': ' + ({active:'в работе',completed:'выполнено',failed:'смена завершена',cancelled:'отменено'})[c.status] + ' · ' + c.progress + '/' + c.goal + (c.reward ? ' · +' + c.reward + ' очков' : '') }); })),
         U.el('h3', { class: 'report-heading', text: 'Бригада сейчас (' + summary.crew.length + ')' }),
         U.el('div', { class: 'report-people' }, crewRows.length ? crewRows : [U.el('p', { class: 'report-note', text: 'Рабочих в бригаде нет.' })]),
         U.el('h3', { class: 'report-heading', text: 'Персонал (' + summary.staff.length + ')' }),
@@ -1420,6 +1427,39 @@ window.WC = window.WC || {};
       dom.contractsList.appendChild(U.el('article', { class: 'contract-card contract-' + i.status }, children));
     });
     if (focused) { var button = dom.contractsList.querySelector('[data-contract="' + focused + '"]'); if (button) button.focus({ preventScroll: true }); }
+  }
+
+  function renderChallenges() {
+    if (!dom.challengeList || !game.api.challenges) return;
+    var items = game.api.challenges.items;
+    var active = items.filter(function (i) { return i.status === 'active'; });
+    dom.challengeCount.textContent = active.length + ' / ' + WC.challenges.maxActive;
+    var key = JSON.stringify(items) + ':' + dom.challengeGroup.value + ':' + game.state.shiftEnded;
+    if (uiState.challengeKey === key) return;
+    uiState.challengeKey = key;
+    dom.challengeActive.textContent = active.length ? 'В работе: ' + active.map(function (i) {
+      var d = WC.challenges.definitions.find(function (x) { return x.id === i.id; });
+      return d.title + ' ' + i.progress + '/' + d.goal;
+    }).join(' · ') : 'Нет активных испытаний';
+    var focused = document.activeElement && document.activeElement.getAttribute('data-challenge');
+    dom.challengeList.innerHTML = '';
+    var labels = { available:'Доступно', active:'В работе', completed:'Выполнено', failed:'Смена завершена', cancelled:'Отменено' };
+    items.forEach(function (i) {
+      var d = WC.challenges.definitions.find(function (x) { return x.id === i.id; });
+      if (dom.challengeGroup.value !== 'all' && dom.challengeGroup.value !== d.group && i.status !== 'active') return;
+      var children = [U.el('div', { class:'contract-head' }, [U.el('b', { text:d.title }), U.el('span', { text:'+' + d.reward + ' очков' })]),
+        U.el('p', { text:d.group + ' · ' + d.description }), U.el('div', { class:'contract-progress', text:labels[i.status] + ' · ' + i.progress + ' / ' + d.goal })];
+      if (!game.state.shiftEnded && (i.status === 'available' || i.status === 'active')) children.push(U.el('button', {
+        type:'button', class:'queue-more', 'data-challenge':i.id, text:i.status === 'active' ? 'Отменить' : 'Взять испытание', onclick:function () {
+          if (!game.api.challenges || game.api.challenges.items.indexOf(i) < 0) { uiState.challengeKey = ''; renderChallenges(); return; }
+          var result = i.status === 'active' ? game.cancelChallenge(i.id) : game.acceptChallenge(i.id);
+          if (!result.ok) U.toast(result.reason, 'bad', 2400);
+          renderChallenges();
+        }
+      }));
+      dom.challengeList.appendChild(U.el('article', { class:'contract-card contract-' + i.status }, children));
+    });
+    if (focused) { var button = dom.challengeList.querySelector('[data-challenge="' + focused + '"]'); (button || dom.challengeGroup).focus({ preventScroll:true }); }
   }
 
   function renderShop() {
@@ -1787,6 +1827,7 @@ window.WC = window.WC || {};
 
   function init() {
     cacheDom();
+    if (dom.challengeGroup) dom.challengeGroup.addEventListener('change', renderChallenges);
     syncLightingControls();
     syncVoiceButton();
     if (WC.layout) WC.layout.init();
@@ -1803,6 +1844,8 @@ window.WC = window.WC || {};
     renderTrucks();
     renderStock();
     renderShop();
+    renderContracts();
+    renderChallenges();
     renderNews(true);
     U.$$('[data-view]').forEach(function (button) {
       button.classList.toggle('on', button.getAttribute('data-view') === WC.world.getMode());
@@ -1810,7 +1853,12 @@ window.WC = window.WC || {};
     game.api.onEvent = function (type, payload) {
       if (type === 'dialogue') {
         showDialogue(payload);
+      } else if (type === 'challenge') {
+        var d = WC.challenges.definitions.find(function (item) { return item.id === payload.id; });
+        U.toast('Испытание «' + d.title + '» выполнено: +' + payload.reward, 'good', 3000);
       } else if (type === 'restart') {
+        uiState.challengeKey = '';
+        renderChallenges();
         uiState.journalFilter = 'all';
         uiState.journalVisibleLimit = 12;
         U.$$('[data-journal-filter]').forEach(function (item) { item.setAttribute('aria-pressed', item.getAttribute('data-journal-filter') === 'all' ? 'true' : 'false'); });
@@ -1883,6 +1931,7 @@ window.WC = window.WC || {};
     renderOrders();
     renderShop();
     renderContracts();
+    renderChallenges();
     renderNews(false);
     if (uiState.inspectorOpen) renderInspector();
     if (uiState.sideAt == null || now - uiState.sideAt > 900) {

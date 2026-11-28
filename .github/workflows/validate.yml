@@ -270,6 +270,7 @@ jobs:
           node tests/dialogue.test.mjs
           node tests/safety.test.mjs
           node tests/contracts.test.mjs
+          node tests/challenges.test.mjs
           node tests/checkpoint.test.mjs
           node tests/save-status.test.mjs
           # boot-jsdom честно пропускается без зависимостей — ставим их
