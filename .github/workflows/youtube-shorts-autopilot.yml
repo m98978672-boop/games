@@ -666,7 +666,7 @@ jobs:
             .conclusion == "success" and .event == "workflow_dispatch"
             and .path == ".github/workflows/youtube-shorts-autopilot.yml"
             and .head_repository.full_name == $repo
-            and (.head_branch == "main" or .head_branch == "arena/7d9fee46-games")' >/dev/null
+            and (.head_branch == "main" or .head_branch == "arena/7d9fee46-games" or (.head_branch == "arena/5da71980-games" and .id == 46079017190 and .head_sha == "a8f4bd050e6bdc448531aaafd425a21c42bdb943"))' >/dev/null
           gh run download "$CAPTURE_RUN" --name "voiced-steam-review-$CAPTURE_RUN" --dir "$RUNNER_TEMP/saved-review"
       - name: Verify and schedule the exact video through the existing uploader
         run: |
