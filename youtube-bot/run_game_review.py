@@ -8,13 +8,18 @@ import os
 import re
 import sys
 import uuid
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from game_reviews import generate_game_review, generate_long_narration, youtube_description, ensure_editorial_quality, make_review_title, occasionally_ask_viewers
 from renderer import render_long_review, render_short
-from schedule_policy import manual_publish_time, next_publish_slot, resolve_manual_after_render, CHANNEL_TZ
+from schedule_policy import (
+    CHANNEL_TZ, manual_publish_time, reserve_slot_before_render, resolve_manual_after_render,
+    settle_slot_after_render,
+)
 from steam_catalog import download_screenshots, load_steam_games
 from review_slot_state import QueueStateUnknown, UncertainSlot
 
@@ -58,28 +63,67 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
     if video_format not in {"short", "long"}:
         raise ValueError("video_format must be short or long")
     manual_time = os.getenv("MANUAL_PUBLISH_AT", "").strip()
-    requested = manual_publish_time(manual_time) if manual_time else None  # Validate before rendering.
+    requested = manual_publish_time(manual_time) if manual_time and not preview else None
+    reserved = None
+    if not preview:
+        from publish_to_supabase import read_queue
+        from review_slot_state import assess, booked_slots
+        try:
+            jobs = read_queue()
+            taken = booked_slots(jobs)
+        except Exception as exc:  # Never guess a free slot.
+            raise QueueStateUnknown(
+                f"Could not read the publication queue; no review was rendered or uploaded. {exc}"
+            ) from exc
+        if requested is None:
+            reserved = reserve_slot_before_render(video_format, occupied=taken)
+            missing, _ = assess([reserved], jobs)
+            if not missing:
+                raise RuntimeError('Automatic publication slot already has a nearby scheduled video; no review was rendered or uploaded.')
+        else:
+            missing, _ = assess([requested], jobs)
+            if not missing:
+                raise OccupiedReviewSlot(
+                    f"Requested publication slot {requested.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow "
+                    "already has a video; no review was rendered or uploaded. Choose another time. "
+                    "Nothing was uploaded, so YouTube Studio does not need checking."
+                )
     history_path = DATA_DIR / "recent-games.json"
     previous = recent_games(history_path)
     if not preview and os.getenv('REQUIRE_SHARED_TOPIC_HISTORY') == 'true':
         previous = list(set(previous) | set(authoritative_topic_history()))
     # Deliberately source only games listed by Steam's live public shelves; never
     # silently switch back to the repository's own community games.
+    stage_start = time.perf_counter()
     games = load_steam_games(recent_game_ids=previous)
+    print(f"Steam source collection: {time.perf_counter() - stage_start:.1f}s", flush=True)
+    stage_start = time.perf_counter()
     review = generate_game_review(
         games,
         recent_game_ids=previous,
         seed=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     )
+    print(f"Review planning: {time.perf_counter() - stage_start:.1f}s", flush=True)
     output = output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     workdir = output.parent / f"{output.stem}-work"
+    preparation_start = time.perf_counter()
+    screenshot_urls = list(review.get("screenshots", []))
     if video_format == "long":
-        review["scenes"] = generate_long_narration(review)
-        ensure_editorial_quality(review["scenes"])
-    review["screenshot_paths"] = download_screenshots(
-        list(review.get("screenshots", [])), workdir / "steam-assets", limit=6,
-    )
+        # Network-only artwork retrieval does not depend on the narration. Keep
+        # generation and all quality gates unchanged; never render or publish if
+        # either required operation fails. A separate worker cannot mutate review.
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="steam-artwork") as pool:
+            screenshots = pool.submit(download_screenshots, screenshot_urls, workdir / "steam-assets", limit=6)
+            scenes = generate_long_narration(review)
+            ensure_editorial_quality(scenes)
+            screenshot_paths = screenshots.result()
+        review["scenes"] = scenes
+    else:
+        screenshot_paths = download_screenshots(screenshot_urls, workdir / "steam-assets", limit=6)
+    review["screenshot_paths"] = screenshot_paths
+    print(f"Preparation (narration and artwork): {time.perf_counter() - preparation_start:.1f}s", flush=True)
+    render_start = time.perf_counter()
     if video_format == "long":
         review["format"] = "game-review-long"
         rendered = render_long_review(review, output, workdir)
@@ -87,7 +131,8 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
     else:
         review["format"] = "game-review"
         rendered = render_short(review, output, workdir)
-        title = review["title"][:100]
+        title = make_review_title(review["game_title"])
+    print(f"Video rendering: {time.perf_counter() - render_start:.1f}s", flush=True)
     # Selection memory is updated only by the publisher after confirmed upload.
     # Slow rendering may consume the lead time. Preserve the chosen slot if it
     # still works; otherwise explicitly report a safe one-off delay. Never
@@ -101,7 +146,22 @@ def run(output: Path, *, video_format: str = "short", preview: bool = False) -> 
             print(f"Requested Moscow time {manual_time} became too close during rendering; "
                   f"rescheduled once to {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow.", file=sys.stderr)
     else:
-        scheduled = next_publish_slot(video_format=video_format)
+        scheduled, adjusted = settle_slot_after_render(reserved, video_format)
+        if adjusted:
+            print("The reserved slot passed during rendering; moved once to the next regular "
+                  f"{video_format} slot {scheduled.astimezone(CHANNEL_TZ):%Y-%m-%d %H:%M} Moscow. "
+                  "No recurring times changed.", file=sys.stderr)
+    if not preview:
+        # Rendering may take hours. Re-read the queue for the final slot, which
+        # may have changed or been booked meanwhile. This is advisory, not an
+        # atomic reservation: the publisher must still enforce its uniqueness.
+        try:
+            latest_jobs = read_queue()
+        except Exception as exc:  # noqa: BLE001 - never guess after rendering
+            raise QueueStateUnknown("Could not recheck the publication queue after rendering; no upload was started.") from exc
+        missing, _ = assess([scheduled], latest_jobs)
+        if not missing:
+            raise RuntimeError("Final publication slot already has a nearby scheduled video; no upload was started.")
     source_description = youtube_description(review)
     description = (
         source_description
