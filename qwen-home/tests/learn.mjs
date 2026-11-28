@@ -327,6 +327,9 @@ const schedPolicy = await readFile(path.join(home, '..', 'youtube-bot', 'schedul
 check('расписание ютуба не откачено: политика тайм-слотов на месте',
   schedPolicy.includes('def ') && schedPolicy.length > 500);
 const expNow = await readFile(path.join(home, 'tools', 'expedition.py'), 'utf8');
+check('известный путь к финалу повторяется: память помнит дорогу',
+  expNow.includes("'ending_routes': self.ending_routes[:10]")
+  && expNow.includes('if replay:') && expNow.includes('replay=replay_left'));
 check('экспедиция не откачена: остаток, концовки по пути, память карты, план захода',
   expNow.includes('remaining') && expNow.includes('routeKey')
   && expNow.includes('memo_from') && expNow.includes('план захода')
