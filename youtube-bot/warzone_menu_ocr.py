@@ -10,10 +10,11 @@ import subprocess
 from collections import defaultdict
 
 # Navigation options only, not game actions or an instruction script.
-LABELS = ('single player', 'multi player', 'tutorial', 'options', 'quit',
-          'new campaign', 'start skirmish game', 'load campaign game',
-          'load skirmish game', 'challenges', 'easy', 'normal', 'hard',
-          'insane', 'start game', 'continue', 'return', 'back')
+# User requested the story campaign, not skirmishes or tutorials.  The OCR
+# candidates are assistance; the model still chooses whether and what to click.
+LABELS = ('single player', 'new campaign', 'load campaign game',
+          'easy', 'normal', 'hard', 'insane', 'start game', 'continue',
+          'return', 'back')
 
 
 def candidates_from_tsv(text):

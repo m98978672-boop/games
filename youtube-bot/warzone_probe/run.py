@@ -29,8 +29,10 @@ def run(out):
             time.sleep(1)
         else: raise RuntimeError('Warzone desktop did not become ready')
         agent = StrategyQwen()
-        for index in range(12):
+        for index in range(24):
             shot = call('exec', CONTAINER, 'python3', '/app/container.py', 'screenshot', capture=True).stdout
+            if index in (0, 7, 15, 23):
+                (out / f'frame-{index + 1:02}.png').write_bytes(shot)
             action, command = agent.choose(shot)
             at = round(time.monotonic()-start, 2)
             call('exec', CONTAINER, 'python3', '/app/container.py', 'action', json.dumps(command), capture=True)

@@ -11,12 +11,13 @@ class MenuOCRTests(unittest.TestCase):
         rows = [
           '5\t1\t1\t1\t1\t1\t320\t260\t70\t30\t88\tSingle',
           '5\t1\t1\t1\t1\t2\t395\t260\t70\t30\t92\tPlayer',
-          '5\t1\t1\t1\t2\t1\t350\t300\t100\t30\t90\tTutorial',
+          '5\t1\t1\t1\t2\t1\t350\t300\t40\t30\t90\tNew',
+          '5\t1\t1\t1\t2\t2\t395\t300\t90\t30\t90\tCampaign',
           '5\t1\t2\t1\t3\t1\t20\t20\t80\t30\t99\tDELETE',
           '5\t1\t3\t1\t4\t1\t790\t20\t60\t30\t99\tQuit',
         ]
         self.assertEqual(candidates_from_tsv(HEADER+'\n'.join(rows)),
-                         [{'label':'single player','at':(392,275)}, {'label':'tutorial','at':(400,315)}])
+                         [{'label':'single player','at':(392,275)}, {'label':'new campaign','at':(417,315)}])
     def test_empty_and_untrusted_are_not_actions(self):
         self.assertEqual(candidates_from_tsv(HEADER), [])
         with self.assertRaises(ValueError): candidates_from_tsv('x'*1_000_001)
