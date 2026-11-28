@@ -41,10 +41,11 @@
         history: Array.isArray(parsed.history) ? parsed.history.filter((id) => videoById(id)).slice(0, 100) : [],
         progress: parsed.progress && typeof parsed.progress === 'object' ? parsed.progress : {},
         liked: Array.isArray(parsed.liked) ? parsed.liked.filter((id) => videoById(id)) : [],
-        later: Array.isArray(parsed.later) ? parsed.later.filter((id) => videoById(id)) : []
+        later: Array.isArray(parsed.later) ? parsed.later.filter((id) => videoById(id)) : [],
+        autoplay: !!parsed.autoplay
       };
     } catch (_) {
-      return { history: [], progress: {}, liked: [], later: [] };
+      return { history: [], progress: {}, liked: [], later: [], autoplay: false };
     }
   }
 
@@ -150,7 +151,9 @@
       search: '<circle cx="10.8" cy="10.8" r="6.4"/><path d="m16 16 4 4"/>',
       dots: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
       check: '<path d="m5 12 4 4L19 6"/>',
-      close: '<path d="m6 6 12 12M18 6 6 18"/>'
+      close: '<path d="m6 6 12 12M18 6 6 18"/>',
+      repeat: '<path d="M17 2.8l3 3-3 3M20 5.8H8a4 4 0 0 0-4 4v1M7 21.2l-3-3 3-3M4 18.2h12a4 4 0 0 0 4-4v-1"/>',
+      expand: '<path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/>'
     };
     return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || ''}</svg>`;
   }
@@ -189,6 +192,7 @@
         ${video.badge ? `<span class="video-badge ${video.category === 'meme' ? 'badge-new' : ''}">${esc(video.badge)}</span>` : ''}
         ${video.category === 'shorts' ? '<span class="shorts-mark" aria-label="Вертикальное видео"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M11.2 2.3 5.7 5.5a2.3 2.3 0 0 0 .1 4l3.6 2-2.2 1.3a1.6 1.6 0 1 0 1.6 2.7l3.9-2.2a3.1 3.1 0 0 0-.1-5.5L9.2 5.7l3.6-2a.8.8 0 0 0-1.6-1.4Z"/></svg></span>' : ''}
         <span class="duration-pill">${formatTime(video.duration)}</span>
+        ${video.part ? `<span class="part-pill">Часть ${video.part}/${video.parts}</span>` : ''}
         ${value ? `<span class="thumb-progress" style="--progress:${value}%"><i></i></span>` : ''}
         <span class="thumb-play" aria-hidden="true">${icon('play')}</span>
       </span>`;
@@ -237,24 +241,25 @@
   }
 
   function homeMarkup(list) {
-    const featured = videoById('baltika-0-prologue') || videos[0];
+    const byOrder = videos.slice().sort((a, b) => a.order - b.order);
+    const featured = byOrder.find((v) => v.badge === 'НОВОЕ') || byOrder[0] || null;
     const feature = featured && !query && activeCategory === 'all' ? `
       <section class="feature-hero" aria-label="Премьера: ${esc(featured.title)}">
         <div class="feature-copy">
           <span class="eyebrow"><span class="eyebrow-pulse"></span> НОВОЕ · ПРЕМЬЕРА</span>
-          <p class="feature-overline">ПОХОЖДЕНИЯ БАЛТИКИ 0</p>
-          <h1>Ожившая банка.<br><em>Большие похождения.</em></h1>
-          <p class="feature-description">Пролог мемного мультфильма: пропавший холодильник, ночная Газель и командиры в банках. Сатира в вымышленной вселенной — не репортаж.</p>
-          <div class="feature-meta"><span>Мультфильм</span><i></i><span>1:13</span><i></i><span>9:16</span></div>
+          <p class="feature-overline">${esc(featured.channel)}</p>
+          <h1>${esc(featured.title)}</h1>
+          <p class="feature-description">${esc(featured.description)}</p>
+          <div class="feature-meta"><span>${featured.format === '9:16' ? 'Shorts · 9:16' : 'Полный экран'}</span><i></i><span>${formatTime(featured.duration)}</span><i></i><span>${featured.part ? 'Часть ' + featured.part + ' из ' + featured.parts : esc(featured.badge || featured.category)}</span></div>
           <div class="feature-actions">
-            <button class="primary-watch" type="button" data-watch="${esc(featured.id)}">${icon('play')} Смотреть пролог</button>
+            <button class="primary-watch" type="button" data-watch="${esc(featured.id)}">${icon('play')} Смотреть</button>
             <button class="feature-save" type="button" data-toggle="later" data-id="${esc(featured.id)}">${icon(state.later.includes(featured.id) ? 'check' : 'bookmark')} ${state.later.includes(featured.id) ? 'В библиотеке' : 'Смотреть позже'}</button>
           </div>
         </div>
-        <button class="feature-art" type="button" data-watch="${esc(featured.id)}" aria-label="Смотреть пролог Балтика 0">
+        <button class="feature-art" type="button" data-watch="${esc(featured.id)}" aria-label="Смотреть: ${esc(featured.title)}">
           <img src="${esc(featured.poster)}" alt="Обложка мультфильма Похождения Балтики 0" fetchpriority="high">
           <span class="feature-art-play">${icon('play')}</span>
-          <span class="feature-art-label">НОВЫЙ ПРОЛОГ</span>
+          <span class="feature-art-label">${esc(featured.badge || 'НОВОЕ')}</span>
         </button>
         <div class="feature-orbit" aria-hidden="true"></div>
       </section>` : '';
@@ -372,6 +377,8 @@
             <div class="player-header-actions">
               ${prev ? `<button class="icon-button player-nav-button" type="button" data-player-move="-1" aria-label="Предыдущее видео" title="Предыдущее видео">${icon('arrow')}</button>` : ''}
               ${next ? `<button class="icon-button player-nav-button" type="button" data-player-move="1" aria-label="Следующее видео" title="Следующее видео">${icon('arrow')}</button>` : ''}
+              <button class="icon-button player-auto${state.autoplay ? ' is-on' : ''}" type="button" data-autoplay aria-label="Смотреть подряд" aria-pressed="${state.autoplay ? 'true' : 'false'}" title="Смотреть подряд">${icon('repeat')}</button>
+              <button class="icon-button player-fs" type="button" data-fs aria-label="Полный экран" title="Полный экран">${icon('expand')}</button>
               <a class="icon-button player-download" href="${esc(video.file)}" download="${esc(video.file.split('/').pop())}" aria-label="Скачать видео" title="Скачать">${icon('download')}</a>
               <button class="icon-button player-close" type="button" data-close-player aria-label="Закрыть видео" title="Закрыть">${icon('close')}</button>
             </div>
@@ -396,6 +403,7 @@
             </div>
             <aside class="up-next">
               <div class="up-next-heading"><div><strong>Следом</strong><span>В этой подборке</span></div>${next ? `<button type="button" data-player-move="1" aria-label="Следующее видео">${icon('arrow')}</button>` : ''}</div>
+              ${video.part ? `<div class="parts-row" aria-label="Части эпизода">${videos.filter((v) => v.series === video.series && v.part).sort((a, b) => a.part - b.part).map((v) => `<button class="part-chip${v.id === video.id ? ' is-current' : ''}" type="button" data-watch="${esc(v.id)}">Часть ${v.part}</button>`).join('')}</div>` : ''}
               ${next ? `<button class="up-next-card" type="button" data-watch="${esc(next.id)}">${posterMarkup(next, 'up-next-thumb')}<span class="up-next-copy"><strong>${esc(next.title)}</strong><small>${esc(next.channel)} · ${formatTime(next.duration)}</small></span></button>` : `<p class="up-next-end">Вы дошли до конца подборки.</p>`}
               <div class="player-note">Все видео воспроизводятся из файлов проекта. История и списки сохранены только в этом браузере.</div>
             </aside>
@@ -453,7 +461,12 @@
     videoElement.addEventListener('ended', () => {
       state.progress[id] = { current: 0, duration: videoElement.duration || video.duration, updatedAt: Date.now(), completed: true };
       saveState();
-      showToast('Видео просмотрено');
+      if (state.autoplay && player && player.index < player.neighbors.length - 1) {
+        showToast('Смотрим подряд: следующее видео');
+        window.setTimeout(() => { if (player && player.videoId === id) movePlayer(1); }, 1100);
+      } else {
+        showToast('Видео просмотрено');
+      }
     });
     videoElement.addEventListener('error', () => {
       showToast('Не удалось открыть видео. Проверьте, что сайт запущен из корня проекта.');
@@ -553,6 +566,15 @@
     }
   }
 
+  function toggleFullscreen() {
+    const media = document.querySelector('.modal-media');
+    if (!media) return;
+    try {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (media.requestFullscreen) media.requestFullscreen();
+    } catch (_) { showToast('Полный экран недоступен'); }
+  }
+
   function updateSidebarToggle() {
     const button = document.getElementById('sidebarToggle');
     if (!button) return;
@@ -623,6 +645,19 @@
       event.stopPropagation();
       return;
     }
+    if (event.target.closest('[data-autoplay]')) {
+      state.autoplay = !state.autoplay;
+      saveState();
+      const btn = event.target.closest('[data-autoplay]');
+      btn.classList.toggle('is-on', state.autoplay);
+      btn.setAttribute('aria-pressed', state.autoplay ? 'true' : 'false');
+      showToast(state.autoplay ? 'Смотреть подряд: включено' : 'Смотреть подряд: выключено');
+      return;
+    }
+    if (event.target.closest('[data-fs]')) {
+      toggleFullscreen();
+      return;
+    }
     if (event.target.closest('[data-share]')) {
       shareVideo(event.target.closest('[data-share]').dataset.share);
       return;
@@ -674,6 +709,13 @@
       const typing = target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'VIDEO'].includes(target.tagName));
       if (!typing && event.key === 'ArrowRight' && player.index < player.neighbors.length - 1) movePlayer(1);
       if (!typing && event.key === 'ArrowLeft' && player.index > 0) movePlayer(-1);
+      const vid = document.getElementById('activeVideo');
+      if (!typing && vid && (event.key === ' ' || event.key.toLowerCase() === 'k')) {
+        event.preventDefault();
+        if (vid.paused) vid.play(); else vid.pause();
+      }
+      if (!typing && vid && event.key.toLowerCase() === 'm') vid.muted = !vid.muted;
+      if (!typing && event.key.toLowerCase() === 'f') toggleFullscreen();
     }
   });
 
