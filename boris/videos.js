@@ -20,6 +20,9 @@ window.VIDEO_CATALOG = [
     file: "boris_ep08_part3_shorts.mp4", poster: "thumb_ep08c.png", duration: 51,
     format: "9:16", category: "shorts", series: "ep08", channel: "Канал Бориса", badge: "НОВОЕ", order: 2, part: 3, parts: 3
   },
+  
+  
+  
   {
     id: "ep07-part1",
     title: "Эпизод 7 — Первый снег",

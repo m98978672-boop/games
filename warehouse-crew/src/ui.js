@@ -92,6 +92,15 @@ window.WC = window.WC || {};
     dom.shopBalance = q('shop-balance');
     dom.shopList = q('shop-list');
     dom.staffList = q('staff-list');
+    dom.scheduleList = q('schedule-list');
+    dom.scheduleDelay = q('schedule-delay');
+    dom.dispatchAdvice = q('dispatch-advice');
+    dom.careerContent = q('career-content');
+    dom.careerStatus = q('career-status');
+    dom.challengeList = q('challenge-list');
+    dom.challengeActive = q('challenge-active');
+    dom.challengeCount = q('challenge-count');
+    dom.challengeGroup = q('challenge-group');
     dom.contractsList = q('contracts-list');
     dom.contractsCount = q('contracts-count');
   }
@@ -1354,6 +1363,7 @@ window.WC = window.WC || {};
         U.el('p', { class: 'report-note', text: ended ? 'Итоги завершённой смены.' : 'Снимок на момент открытия. Смена не ставится на паузу; нажмите «Обновить» для новых данных.' }),
         U.el('div', { class: 'vitals-grid' }, [
           vital('Очки', U.money(summary.score), 'баланс после покупок'),
+          vital('Испытания', String(summary.challenges.filter(function (c) { return c.status === 'completed'; }).length), 'выполнено за смену'),
           vital('Контракты', String(summary.contracts.filter(function (c) { return c.status === 'completed'; }).length), 'выполнено за смену'),
           vital('На стеллаж', String(summary.delivered), 'доставлено'),
           vital('Качество', summary.quality + ' %', 'повреждения и срок'),
@@ -1369,8 +1379,11 @@ window.WC = window.WC || {};
         ]),
         U.el('p', { class: 'report-note', text: 'Качество учитывает повреждения и срок у учитываемых уложенных и испорченных заказов. Если таких нет, показывается 100%. Отчёт JSON — не сохранение для продолжения игры.' }),
         WC.save.isProtected() ? U.el('p', { class: 'report-note report-warning', text: 'Сохранение защищено от перезаписи: текущая смена не записывается в браузер.' }) : null,
+        summary.career.enabled ? U.el('p', {class:'report-note', text:'Карьера: ' + summary.career.shifts + ' смен · ' + summary.career.balance + ' кредитов · репутация ' + summary.career.reputation + (summary.career.won ? ' · цель достигнута' : '')}) : null,
         U.el('h3', { class: 'report-heading', text: 'Контракты смены' }),
         U.el('div', { class: 'report-people' }, summary.contracts.map(function (c) { return U.el('p', { class: 'report-note', text: c.title + ': ' + ({available:'не взят', active:'в работе', completed:'выполнен', failed:'не выполнен', cancelled:'отменён'})[c.status] + ' · ' + c.progress + '/' + c.goal + (c.reward ? ' · +' + c.reward + ' очков' : '') + (c.reason ? ' · ' + c.reason : '') }); })),
+        U.el('h3', { class: 'report-heading', text: 'Испытания смены' }),
+        U.el('div', { class: 'report-people' }, summary.challenges.filter(function (c) { return c.status !== 'available'; }).map(function (c) { return U.el('p', { class:'report-note', text:c.title + ': ' + ({active:'в работе',completed:'выполнено',failed:'смена завершена',cancelled:'отменено'})[c.status] + ' · ' + c.progress + '/' + c.goal + (c.reward ? ' · +' + c.reward + ' очков' : '') }); })),
         U.el('h3', { class: 'report-heading', text: 'Бригада сейчас (' + summary.crew.length + ')' }),
         U.el('div', { class: 'report-people' }, crewRows.length ? crewRows : [U.el('p', { class: 'report-note', text: 'Рабочих в бригаде нет.' })]),
         U.el('h3', { class: 'report-heading', text: 'Персонал (' + summary.staff.length + ')' }),
@@ -1420,6 +1433,129 @@ window.WC = window.WC || {};
       dom.contractsList.appendChild(U.el('article', { class: 'contract-card contract-' + i.status }, children));
     });
     if (focused) { var button = dom.contractsList.querySelector('[data-contract="' + focused + '"]'); if (button) button.focus({ preventScroll: true }); }
+  }
+
+  function renderSchedule() {
+    if (!dom.scheduleList || !game.api.schedule) return;
+    var state=game.api.schedule, now=game.sim.state.time;
+    var key=JSON.stringify(state) + ':' + Math.floor(now) + ':' + game.state.shiftEnded;
+    if (uiState.scheduleKey===key) return;
+    uiState.scheduleKey=key;
+    var focused=document.activeElement && document.activeElement.getAttribute('data-schedule');
+    dom.scheduleList.innerHTML='';
+    ['unload','load'].forEach(function (kind) {
+      var item=state[kind], title=kind==='load'?'Загрузка':'Разгрузка';
+      var children=[U.el('p',{text:title + ': ' + (item ? 'через ' + Math.max(0,Math.ceil(item.due-now)) + ' с' : 'не запланировано')})];
+      if (!game.state.shiftEnded) children.push(U.el('button',{type:'button',class:'queue-more','data-schedule':kind,text:item ? 'Отменить вызов' : 'Запланировать',onclick:function () {
+        if (game.api.schedule!==state || game.api.schedule[kind]!==item) { uiState.scheduleKey=''; renderSchedule(); return; }
+        var result=item ? game.cancelScheduledTruck(kind) : game.scheduleTruck(kind,Number(dom.scheduleDelay.value));
+        if (!result.ok) U.toast(result.reason,'bad',2600); renderSchedule();
+      }}));
+      dom.scheduleList.appendChild(U.el('div',{class:'career-option'},children));
+    });
+    if (focused) { var next=dom.scheduleList.querySelector('[data-schedule="' + focused + '"]'); (next || q('schedule-details').querySelector('summary')).focus({preventScroll:true}); }
+  }
+
+  function renderDispatchAdvice() {
+    if (!dom.dispatchAdvice || !game.sim) return;
+    var data=WC.dispatchAdvice.analyse(game.sim.state,game.api.crew,game.sim.truckWindow,game.state.paused,game.state.shiftEnded);
+    var key=JSON.stringify(data);
+    if (uiState.dispatchKey===key) return;
+    uiState.dispatchKey=key;
+    var focused=document.activeElement && document.activeElement.getAttribute('data-advice');
+    dom.dispatchAdvice.innerHTML='';
+    data.cards.forEach(function (card) {
+      var children=[U.el('p',{text:card.text})];
+      var targets={queue:'[data-order-filter="all"]',dock:'#dock-heading',crew:'#safety-heading',report:'#btn-report'};
+      var labels={queue:'К очереди',dock:'К докам',crew:'К бригаде',report:'К отчёту'};
+      if (card.target) children.push(U.el('button',{type:'button',class:'queue-more','data-advice':card.id,text:labels[card.target],onclick:function () {
+        var target=document.querySelector(targets[card.target]);
+        if (target) { if (target.scrollIntoView) target.scrollIntoView({block:'nearest'}); target.focus({preventScroll:true}); }
+      }}));
+      dom.dispatchAdvice.appendChild(U.el('article',{class:'contract-card advice-' + card.tone},children));
+    });
+    if (focused) { var button=dom.dispatchAdvice.querySelector('[data-advice="' + focused + '"]'); if (button) button.focus({preventScroll:true}); }
+  }
+
+  function renderCareer() {
+    var state=game.api.career;
+    if (!dom.careerContent || !state) return;
+    dom.careerStatus.textContent=state.enabled ? state.balance + ' кр. · репутация ' + state.reputation : 'не начата';
+    var key=JSON.stringify(state) + ':' + game.state.shiftEnded;
+    if (uiState.careerKey===key) return;
+    uiState.careerKey=key;
+    var focused=document.activeElement && document.activeElement.getAttribute('data-career-action');
+    dom.careerContent.innerHTML='';
+    function button(label, action, run) {
+      return U.el('button', {type:'button', class:'queue-more', 'data-career-action':action, text:label, onclick:function () {
+        if (game.api.career !== state || game.api.career.current !== current) { uiState.careerKey=''; renderCareer(); return; }
+        var result=run(); if (!result.ok) U.toast(result.reason,'bad',2600); renderCareer();
+      }});
+    }
+    var current=state.current;
+    if (!state.enabled) {
+      dom.careerContent.appendChild(U.el('p',{class:'contract-help',text:'Начните карьеру: за работу начисляются отдельные кредиты, а заказчики влияют на репутацию. Данные сохраняются между сменами.'}));
+      if (!game.state.shiftEnded) dom.careerContent.appendChild(button('Начать карьеру','start',function () { return game.enableCareer(); }));
+      return;
+    }
+    var status=state.won ? 'Цель карьеры выполнена — свободная игра продолжается.' : 'Цель: 5 завершённых смен, 20 укладок и репутация 60.';
+    dom.careerContent.appendChild(U.el('p',{class:'contract-help',text:status + ' Смен: ' + state.shifts + '/5 · укладок: ' + state.totalDelivered + '/20 · репутация: ' + state.reputation + '/60.'}));
+    dom.careerContent.appendChild(U.el('p',{class:'contract-help',text:'Текущая смена: укладки ' + current.delivered + ', отгрузки ' + current.loaded + ', идеальные укладки ' + current.perfect + '. Режим: ' + WC.career.modes.find(function (m) { return m.id===current.mode; }).name + '.'}));
+    var offer=WC.career.offers.find(function (o) { return o.id===current.offer; });
+    dom.careerContent.appendChild(U.el('h3',{class:'career-heading',text:'Заказчик смены'}));
+    if (offer) {
+      dom.careerContent.appendChild(U.el('p',{class:'contract-help',text:offer.name + ': ' + current.progress + '/' + offer.goal + ' · ' + offer.description + ' Награда ' + offer.reward + ' кредитов при завершении смены.'}));
+    } else if (!game.state.shiftEnded) {
+      dom.careerContent.appendChild(U.el('p',{class:'contract-help',text:'Выберите одного заказчика; засчитываются действия после выбора.'}));
+      WC.career.offers.forEach(function (o) { dom.careerContent.appendChild(U.el('div',{class:'career-option'},[
+        U.el('p',{text:o.name + ': ' + o.description + ' +' + o.reward + ' кр.'}),
+        button('Выбрать','offer-'+o.id,function () { return game.careerOffer(o.id); })])); });
+    } else dom.careerContent.appendChild(U.el('p',{class:'contract-help',text:'Заказчик не выбран.'}));
+    dom.careerContent.appendChild(U.el('h3',{class:'career-heading',text:'Режим следующей смены'}));
+    WC.career.modes.forEach(function (m) { dom.careerContent.appendChild(U.el('div',{class:'career-option'},[
+      U.el('p',{text:m.name + (state.nextMode===m.id ? ' · выбран' : '') + ': ' + m.description}),
+      button(state.nextMode===m.id ? 'Выбран' : 'Выбрать','mode-'+m.id,function () { return game.careerMode(m.id); })])); });
+    dom.careerContent.appendChild(U.el('h3',{class:'career-heading',text:'Развитие на следующие смены'}));
+    WC.career.upgrades.forEach(function (u) { var level=state.upgrades[u.id], cost=60*(level+1);
+      dom.careerContent.appendChild(U.el('div',{class:'career-option'},[U.el('p',{text:u.name + ' · ' + level + '/3. ' + u.description}),
+        level<3 ? button('Купить за ' + cost + ' кр.','upgrade-'+u.id,function () { return game.careerUpgrade(u.id); }) : U.el('span',{text:'Максимум'})])); });
+    dom.careerContent.appendChild(U.el('h3',{class:'career-heading',text:'Последние смены'}));
+    if (!state.history.length) dom.careerContent.appendChild(U.el('p',{class:'contract-help',text:'Завершённых смен карьеры пока нет.'}));
+    state.history.slice(0,5).forEach(function (h) { dom.careerContent.appendChild(U.el('p',{class:'contract-help',text:'№' + h.shift + ': укладки ' + h.delivered + ', загрузки ' + h.loaded + ', выручка ' + h.gross + ', заказчик +' + h.bonus + ', штрафы ' + h.penalties + ', итоговый баланс ' + h.balance + ' кр.'})); });
+    if (focused) { var next=dom.careerContent.querySelector('[data-career-action="' + focused + '"]'); (next || q('career-board').querySelector('summary')).focus({preventScroll:true}); }
+  }
+
+  function renderChallenges() {
+    if (!dom.challengeList || !game.api.challenges) return;
+    var items = game.api.challenges.items;
+    var active = items.filter(function (i) { return i.status === 'active'; });
+    dom.challengeCount.textContent = active.length + ' / ' + WC.challenges.maxActive;
+    var key = JSON.stringify(items) + ':' + dom.challengeGroup.value + ':' + game.state.shiftEnded;
+    if (uiState.challengeKey === key) return;
+    uiState.challengeKey = key;
+    dom.challengeActive.textContent = active.length ? 'В работе: ' + active.map(function (i) {
+      var d = WC.challenges.definitions.find(function (x) { return x.id === i.id; });
+      return d.title + ' ' + i.progress + '/' + d.goal;
+    }).join(' · ') : 'Нет активных испытаний';
+    var focused = document.activeElement && document.activeElement.getAttribute('data-challenge');
+    dom.challengeList.innerHTML = '';
+    var labels = { available:'Доступно', active:'В работе', completed:'Выполнено', failed:'Смена завершена', cancelled:'Отменено' };
+    items.forEach(function (i) {
+      var d = WC.challenges.definitions.find(function (x) { return x.id === i.id; });
+      if (dom.challengeGroup.value !== 'all' && dom.challengeGroup.value !== d.group && i.status !== 'active') return;
+      var children = [U.el('div', { class:'contract-head' }, [U.el('b', { text:d.title }), U.el('span', { text:'+' + d.reward + ' очков' })]),
+        U.el('p', { text:d.group + ' · ' + d.description }), U.el('div', { class:'contract-progress', text:labels[i.status] + ' · ' + i.progress + ' / ' + d.goal })];
+      if (!game.state.shiftEnded && (i.status === 'available' || i.status === 'active')) children.push(U.el('button', {
+        type:'button', class:'queue-more', 'data-challenge':i.id, text:i.status === 'active' ? 'Отменить' : 'Взять испытание', onclick:function () {
+          if (!game.api.challenges || game.api.challenges.items.indexOf(i) < 0) { uiState.challengeKey = ''; renderChallenges(); return; }
+          var result = i.status === 'active' ? game.cancelChallenge(i.id) : game.acceptChallenge(i.id);
+          if (!result.ok) U.toast(result.reason, 'bad', 2400);
+          renderChallenges();
+        }
+      }));
+      dom.challengeList.appendChild(U.el('article', { class:'contract-card contract-' + i.status }, children));
+    });
+    if (focused) { var button = dom.challengeList.querySelector('[data-challenge="' + focused + '"]'); (button || dom.challengeGroup).focus({ preventScroll:true }); }
   }
 
   function renderShop() {
@@ -1787,6 +1923,7 @@ window.WC = window.WC || {};
 
   function init() {
     cacheDom();
+    if (dom.challengeGroup) dom.challengeGroup.addEventListener('change', renderChallenges);
     syncLightingControls();
     syncVoiceButton();
     if (WC.layout) WC.layout.init();
@@ -1803,6 +1940,11 @@ window.WC = window.WC || {};
     renderTrucks();
     renderStock();
     renderShop();
+    renderContracts();
+    renderChallenges();
+    renderCareer();
+    renderDispatchAdvice();
+    renderSchedule();
     renderNews(true);
     U.$$('[data-view]').forEach(function (button) {
       button.classList.toggle('on', button.getAttribute('data-view') === WC.world.getMode());
@@ -1810,7 +1952,20 @@ window.WC = window.WC || {};
     game.api.onEvent = function (type, payload) {
       if (type === 'dialogue') {
         showDialogue(payload);
+      } else if (type === 'scheduled-truck') {
+        U.toast(payload.ok ? 'Запланированная фура вызвана' : 'Фура не вызвана: ' + payload.reason, payload.ok ? 'good' : 'warn', 3000);
+      } else if (type === 'career-objective') {
+        U.toast('Условие заказчика выполнено: выплата в конце смены', 'good', 3000);
+      } else if (type === 'challenge') {
+        var d = WC.challenges.definitions.find(function (item) { return item.id === payload.id; });
+        U.toast('Испытание «' + d.title + '» выполнено: +' + payload.reward, 'good', 3000);
       } else if (type === 'restart') {
+        uiState.challengeKey = '';
+        uiState.careerKey = '';
+        uiState.scheduleKey = '';
+        renderSchedule();
+        renderChallenges();
+        renderCareer();
         uiState.journalFilter = 'all';
         uiState.journalVisibleLimit = 12;
         U.$$('[data-journal-filter]').forEach(function (item) { item.setAttribute('aria-pressed', item.getAttribute('data-journal-filter') === 'all' ? 'true' : 'false'); });
@@ -1883,6 +2038,10 @@ window.WC = window.WC || {};
     renderOrders();
     renderShop();
     renderContracts();
+    renderChallenges();
+    renderCareer();
+    renderDispatchAdvice();
+    renderSchedule();
     renderNews(false);
     if (uiState.inspectorOpen) renderInspector();
     if (uiState.sideAt == null || now - uiState.sideAt > 900) {

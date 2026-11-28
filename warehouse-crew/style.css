@@ -1242,3 +1242,18 @@ body.view-map #scene { filter: saturate(0.92) contrast(1.04); }
 :root[data-device="desktop"] .truck-cargo-notes { font-size: calc(11px * var(--ui)); }
 :root[data-device="desktop"] .shop-shortcut { min-height: calc(34px * var(--ui)); font-size: calc(12px * var(--ui)); }
 :root[data-device="desktop"] .bottom-bar .chip { font-size: calc(11px * var(--ui)); }
+
+/* Доска испытаний компактна до открытия и пригодна для клавиатуры и touch. */
+#challenge-board summary { cursor: pointer; padding: 9px 0; font-weight: 700; color: var(--accent, #80c9ed); }
+#challenge-group, #schedule-delay { display: block; width: 100%; margin: 6px 0 10px; padding: 8px; color: #eef6fa; background: #182b3b; border: 1px solid #668095; border-radius: 6px; }
+#challenge-board label, .challenge-active { font-size: 12px; line-height: 1.4; color: #c6d6de; }
+.challenge-active { margin-top: 7px; overflow-wrap: anywhere; }
+
+#career-board summary { cursor:pointer; padding:9px 0; font-weight:700; color:var(--accent, #80c9ed); }
+.career-heading { font-size:13px; margin:12px 0 6px; }
+.career-option { padding:8px; margin:5px 0; border:1px solid rgba(184,204,218,.24); border-radius:9px; background:rgba(255,255,255,.04); }
+.career-option p { font-size:12px; line-height:1.4; margin:0 0 6px; }
+.career-option button { min-height:40px; }
+
+.advice-warn { border-color:rgba(239,174,80,.65); }
+.advice-good { border-color:rgba(108,196,154,.5); }

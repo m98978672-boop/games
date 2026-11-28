@@ -1046,9 +1046,23 @@ class StoryMap:
         # Рёбра, которые ведут из мест, которых в карте нет, — мусор прошлых
         # прогонов (накопилось 174 из 311, и половина графа была нерабочей:
         # маршрут к остатку не находился). Такие рёбра не берём.
+        # Пометки «нервности» в кэш не кладём, а ВОССТАНАВЛИВАЕМ: если одна
+        # ссылка из одного места ведёт в разные места, это случайный лабиринт,
+        # и его надо разыгрывать. Иначе has_shaky() после загрузки врёт (False),
+        # и она сдаётся, хотя до развилки можно дойти повторным проходом.
+        conflicting = set()
+        first_to = {}
+        for e in (data.get('links') or []):
+            key = (e.get('from'), e.get('choice'))
+            if key in first_to and first_to[key] != e.get('to'):
+                conflicting.add(key)
+            first_to.setdefault(key, e.get('to'))
         for e in (data.get('links') or []):
             if e.get('from') in self.nodes and e.get('to') in self.nodes and e not in self.edges:
-                self.edges.append(e)
+                edge = dict(e)
+                if (e.get('from'), e.get('choice')) in conflicting:
+                    edge['shaky'] = True
+                self.edges.append(edge)
         for pair in (data.get('tried') or []):
             if len(pair) == 2:
                 self.tried.add((pair[0], pair[1]))
@@ -1060,6 +1074,13 @@ class StoryMap:
                   'text': v.get('text', '')[:120]}
                  for k, v in list(self.nodes.items())[:80]]
         return {'places': nodes, 'links': self.edges[:200], **self.summary()}
+
+
+# Сколько шагов подряд без новых мест допустимо в одном заходе. Это предел
+# именно на ТОПТАНИЕ: раньше лимит стоял на «подходах» и сгорал за первые же
+# шесть шагов (в карте уже 59 мест, всё давно нажато) — и она сдавалась,
+# не дойдя до развилки в кустах.
+MAZE_STEPS = 60
 
 
 def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
@@ -1352,6 +1373,14 @@ def read_story(page, seconds, out, report, shot, runs=6):
                 pending = {'from': text, 'choice': pick['label'], 'done': False, 'from_key': my_key}
                 if fresh:
                     fresh_moves += 1
+                # Считаем только подходы в САМОМ лабиринте (место с «нервными»
+                # ссылками): раньше счётчик рос на каждом повторном визите
+                # в доме, лимит 6 сгорал до кустов, и она сдавалась там, где
+                # надо было разыгрывать проход.
+                # Топтание: шаги подряд, не открывшие ни одного нового места.
+                # Сбрасывается, как только нашлось новое, — иначе дальняя дорога
+                # к остатку съедала предел ещё до кустов.
+                attempts[0] = 0 if fresh else attempts[0] + 1
                 path.append({'run': run, 'n': moves, 'choice': pick['label'],
                              'fresh': fresh, 'energy': sight.get('energy', 0),
                              'finds': sight.get('finds', []), 'clues': sight.get('clues', 0),
