@@ -523,7 +523,7 @@ def run(url, seconds, out, task_keys='', interval_ms=0, memo_from=None):
                             f"история «{(story_probe.get('title') or '')[:60]}»: текст и варианты выбора, играю чтением, а не кадрами")
                 shot('03-story.png')
                 visited = set()
-                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=6, memo_from=memo_from)
+                story = read_story(page, int(deadline - time.monotonic()), out, report, shot, runs=12, memo_from=memo_from)
                 report.data['story'] = story
                 mp = story.get('map') or {}
                 fresh = sum(1 for q in (story.get('path') or []) if q.get('fresh'))
@@ -952,6 +952,8 @@ class StoryMap:
         self.nodes = {}    # подпись-ключ -> {'text', 'energy', 'finds', 'clues', 'visits'}
         self.edges = []    # {'from', 'choice', 'to'}
         self.tried = set()  # (место, выбор) — что уже нажимали
+        # (место, ссылка) → где ЭТА ссылка сработала путём в новое место
+        self.beacon = {}
 
     @staticmethod
     def key(text, context=None, options=None):
@@ -1200,6 +1202,13 @@ class StoryMap:
             n = self.nodes.get(k) or {}
             tk = n.get('text_key')
             for label in (n.get('options') or []):
+                if (k, label) in self.beacon:
+                    # Маяк говорит: эта ссылка уже приводила в новое место.
+                    # «Нажато» — про место, где жали, а не про то, куда
+                    # ссылка ведёт; в случайном лабиринте это разные вещи.
+                    if self.remaining_at(self.beacon[(k, label)]) > 0:
+                        return True
+                    continue
                 if not (k, label) in self.tried and not (tk and (tk, label) in self.tried):
                     return True
             return False
@@ -1281,6 +1290,13 @@ class StoryMap:
             same = self.text_key_index().get(self.key(dst_text))
             if same:
                 to = same
+        # Маяк: куда ЭТА ссылка ведёт на самом деле. В случайном лабиринте
+        # «нажато» и «приводит в новое место» — разные вещи: ссылка «bushes»
+        # из парка один раз дала «You already checked here», и карта решила,
+        # что в кустах делать нечего. Маяк помнит цель, где остаток есть.
+        # Пишем ДО проверки «нервности»: она выходит из функции раньше.
+        if to in self.nodes and self.remaining_at(to) > 0:
+            self.beacon[(fr, choice)] = to
         # Одна ссылка в Harlowe может вести в РАЗНЫЕ пассажи (зависит от того,
         # что уже видано). Наблюдали «Go around the corner» → развилка, потом
         # → тупик. Первое наблюдение решает — остальные не пишем.
@@ -1293,6 +1309,7 @@ class StoryMap:
         edge = {'from': fr, 'choice': choice, 'to': to}
         if edge not in self.edges:
             self.edges.append(edge)
+
 
     def fresh_choices(self, text, choices):
         """Варианты, которых в этом месте ещё не нажимали."""
@@ -1345,6 +1362,12 @@ class StoryMap:
                        self.bare_key(node.get('text'), node.get('options')))):
             if extra and extra != k:
                 self.tried.add((extra, label))
+
+    def remaining_at(self, k):
+        """Сколько вариантов в ЭТОМ месте ещё не нажато."""
+        n = self.nodes.get(k) or {}
+        return sum(1 for label in (n.get('options') or [])
+                   if not self.tried_here(k, label))
 
     def remaining(self):
         """Сколько вариантов в известных местах ещё не нажато.
@@ -1401,6 +1424,7 @@ class StoryMap:
                   for k, v in self.nodes.items()}
         return {'schema': 'text+options-v4', 'places': places,
                 'links': [{'from': e['from'], 'choice': e['choice'], 'to': e['to']} for e in self.edges],
+                'beacon': [[a, b, c] for (a, b), c in self.beacon.items()],
                 'tried': sorted([list(t) for t in self.tried])}
 
     # v4: место — один текст без названий ссылок (Harlowe дописывает их прямо
@@ -1448,6 +1472,9 @@ class StoryMap:
         for pair in (data.get('tried') or []):
             if len(pair) == 2:
                 self.tried.add((pair[0], pair[1]))
+        for item in (data.get('beacon') or []):
+            if len(item) == 3 and item[0] in self.nodes and item[2] in self.nodes:
+                self.beacon[(item[0], item[1])] = item[2]
         # Флаг open застывает: после загрузки пересчитываем его по нажатиям,
         # иначе маршрут к остатку считает закрытые места открытыми.
         for k, node in self.nodes.items():
@@ -1549,6 +1576,16 @@ def pick_choice(choices, visited, rng=None, passage=None, times_here=0,
                     return (revisit[0] if rng is None
                             else revisit[rng.randrange(len(revisit))]), False
             return None, False          # идти некуда: честно кончаем заход
+        if not step and story_map.remaining() > 0:
+            # «Остаток здесь же» может значить и «через маяк»: в карте всё
+            # нажато, но маяк помнит, что эта ссылка приводила в место с
+            # остатком. Тогда идём именно ею, а не наугад по вариантам.
+            want_by_beacon = [lbl for lbl in (c.get('label') or '' for c in choices)
+                              if (passage, lbl) in story_map.beacon
+                              and story_map.remaining_at(story_map.beacon[(passage, lbl)]) > 0]
+            for c in choices:
+                if want_by_beacon and (c.get('label') or '') == want_by_beacon[0]:
+                    return c, False
         # step == '' — остаток здесь же; дальше возьмём свои варианты
 
     # Петля (ведёт туда же, откуда пришла) — в самом конце. Здесь важна
@@ -1822,6 +1859,17 @@ def read_story(page, seconds, out, report, shot, runs=6, memo_from=None):
             # Сначала варианты, потом место в карту: набор вариантов — часть
             # ключа (по нему различаются пассажи с одинаковым текстом).
             sight = story_map.see(text, here_ctx, labels, parent_key=prev_place[0])   # зрение
+            # «Уже проверено» в лабиринте — это не тупик истории, а признак, что
+            # лабиринт в этом заходе уже пройден: Harlowe запоминает вход и
+            # второй раз пускает в тот же пассаж только эхом. Раньше она
+            # тратила 40 шагов на «bushes ↔ back to park», хотя надо было
+            # начать заход заново и пройти лабиринт ещё раз — заходов мало.
+            if (story_map.is_echo(text, labels) and story_map.has_shaky()
+                    and story_map.remaining() > 0):
+                report.step('эхо лабиринта',
+                            f'заход {run}: история говорит «уже проверено» — лабиринт в этом '
+                            'заходе пройден, начинаю заход заново, чтобы пройти его ещё раз')
+                break
             my_key = sight.get('key') or story_map.key(text, here_ctx, labels)
             if pending.get('from') and not pending.get('done'):
                 # пришли из предыдущего пассажа: записываем ребро карты, зная

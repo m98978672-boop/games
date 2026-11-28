@@ -293,10 +293,10 @@ check('карта истории помнится между прогонами:
   expPy.includes('def to_cache') && expPy.includes('def load_cache') && expPy.includes('hashlib.sha1')
   && expWf.includes('storymap.json') && expWf.includes('--memo')
   // иначе карта грузится, но до чтения истории не доходит: «name memo_from is not defined»
-  && expPy.includes('runs=6, memo_from=memo_from'));
+  && expPy.includes('runs=12, memo_from=memo_from'));
 
-check('долгая история: окно до 10 минут и до шести заходов, а не 180 секунд',
-  expPy.includes('min(600, seconds)') && expPy.includes('runs=6') && !expPy.includes('min(180, seconds)'));
+check('долгая история: окно до 10 минут и до двенадцати заходов, а не 180 секунд',
+  expPy.includes('min(600, seconds)') && expPy.includes('runs=12') && !expPy.includes('min(180, seconds)'));
 
 check('длинный прогон доносит отчёт: причина падения видна, видео не больше 8 МБ',
   expWf.includes('trap ') && expWf.includes('scale=640:-2,fps=12') && expWf.includes('Пережатое видео всё ещё'));
@@ -441,6 +441,13 @@ check('предел стоит на топтании, а не на каждом 
   && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
+check('эхо лабиринта кончает заход, а заходов хватает на повторный проход',
+  expNow.includes("report.step('эхо лабиринта'") && expNow.includes('story_map.is_echo(text, labels)')
+  && expNow.includes('runs=12'));
+check('маяк: карта помнит ссылку, которая привела в место с остатком, и идёт ею',
+  expNow.includes('self.beacon = {}') && expNow.includes('self.beacon[(fr, choice)] = to')
+  && expNow.includes('def remaining_at') && expNow.includes('want_by_beacon')
+  && expNow.includes("'beacon': [[a, b, c] for (a, b), c in self.beacon.items()]"));
 check('у разыгрывания прохода предел тоже MAZE_STEPS, а не 6',
   expNow.includes('story_map.has_shaky() and attempts < MAZE_STEPS'));
 
