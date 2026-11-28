@@ -1178,23 +1178,22 @@ class StoryMap:
         # место не считаем — иначе маршрут возвращался в тупик, где всё
         # нажато, и до развилки с остатком она не доходила.
         seen = {start_key}
-        # Сначала идём по надёжным рёбрам: «нервные» (одна ссылка вела в разные
-        # места) — только если других путей нет. Иначе маршрут к развилке в
-        # кустах упирался в state-зависимую ссылку и в игре не срабатывал.
-        for shaky_pass in (False, True):
-            q = deque([(start_key, None)])
-            while q:
-                cur, first = q.popleft()
-                for e in self.edges:
-                    if bool(e.get('shaky')) != shaky_pass:
-                        continue
-                    if e.get('from') != cur or any(same(e['to'], v) for v in seen):
-                        continue
-                    step = first if first is not None else e.get('choice')
-                    if has_left(e['to']):
-                        return step         # цель — только там, где есть остаток
-                    seen.add(e['to'])
-                    q.append((e['to'], step))
+        # «Нервные» рёбра (одна ссылка вела в разные места) не запрещаем, а
+        # отодвигаем: обычные идут первыми. Запрет был ошибкой — маршрут
+        # пропадал совсем, и она сдавалась через 3 шага вместо 22.
+        ordered = ([e for e in self.edges if not e.get('shaky')]
+                   + [e for e in self.edges if e.get('shaky')])
+        q = deque([(start_key, None)])
+        while q:
+            cur, first = q.popleft()
+            for e in ordered:
+                if e.get('from') != cur or any(same(e['to'], v) for v in seen):
+                    continue
+                step = first if first is not None else e.get('choice')
+                if has_left(e['to']):
+                    return step             # цель — только там, где есть остаток
+                seen.add(e['to'])
+                q.append((e['to'], step))
         return None                         # остатка в достижимой части карты нет
 
     def mark_open(self, text, choices, context=None):
