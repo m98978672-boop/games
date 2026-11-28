@@ -442,7 +442,8 @@ check('предел стоит на топтании, а не на каждом 
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
 check('дом мамы: ветка $sus >= 17 не теряется — свой текст места различает ветки',
-  expNow.includes('def own_text') && expNow.includes("node.setdefault('own', own_text(text))"));
+  expNow.includes('def own_text') && expNow.includes("node.setdefault('own', own_text(text))")
+  && expNow.includes("'own': v.get('own') or ''"));
 check('маяк помнит все исходы ссылки, а не первый',
   expNow.includes('if to not in self.beacon[(fr, choice)]:'));
 check('место меняет контент по $sus — старые «нажато» не закрывают новые ветки',
