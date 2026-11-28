@@ -1,13 +1,7 @@
 {
-  "points": 151,
-  "level": "Ветеран моста",
+  "points": 99,
+  "level": "Странник",
   "achievements": [
-    {
-      "id": "veteran-exp",
-      "title": "Ветеран экспедиций",
-      "reward": "сама предлагает маршрут недели в журнале моста",
-      "at": "2026-11-28 15:31 UTC"
-    },
     {
       "id": "game-maker",
       "title": "Сборщик игр",
@@ -86,16 +80,8 @@
     }
   ],
   "eventIds": [
-    "20261128-1507-colinhuang314-github-io:played",
-    "20261128-1507-colinhuang314-github-io:video",
-    "20261128-1523-colinhuang314-github-io:played",
-    "20261128-1523-colinhuang314-github-io:video",
-    "20261128-1541-colinhuang314-github-io:played",
-    "20261128-1541-colinhuang314-github-io:video",
-    "20261128-1557-colinhuang314-github-io:played",
-    "20261128-1557-colinhuang314-github-io:video",
-    "20261128-1613-colinhuang314-github-io:played",
-    "20261128-1613-colinhuang314-github-io:video",
+    "20261128-1629-colinhuang314-github-io:played",
+    "20261128-1629-colinhuang314-github-io:video",
     "creation:game:ptica-i-truby",
     "creation:game:zvezdny-dozhd",
     "creation:game:zmeika",
@@ -105,13 +91,13 @@
     "creation:episode:ep-20261123-match",
     "creation:episode:ep-20261124-match"
   ],
-  "reportsCounted": 5,
-  "playedCount": 5,
+  "reportsCounted": 1,
+  "playedCount": 1,
   "bestStepsEver": 0,
   "gamesMade": 3,
   "episodesMade": 5,
   "ownWantsDone": 0,
-  "updatedAt": "2026-11-28 16:16 UTC",
+  "updatedAt": "2026-11-28 16:29 UTC",
   "seenJournal": [
     "20261122-2158-ellisonleao-github-io:played",
     "20261122-2158-ellisonleao-github-io:video",
@@ -219,6 +205,8 @@
     "20261128-1557-colinhuang314-github-io:video",
     "20261128-1613-colinhuang314-github-io:played",
     "20261128-1613-colinhuang314-github-io:video",
+    "20261128-1629-colinhuang314-github-io:played",
+    "20261128-1629-colinhuang314-github-io:video",
     "creation:episode:ep-20261123-2-truby",
     "creation:episode:ep-20261123-4-truby",
     "creation:episode:ep-20261123-5-truby",
