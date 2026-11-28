@@ -111,6 +111,9 @@ def disc(cx, cy, cz, r, squash=1.0):
 def B4(c, s, col):
     return [(q, col, False, False) for q, _c, _e in box(c, s, col)]
 
+AUDIT = False
+CAT_BOXES = []
+
 def cat_faces(P):
     """P: x,z,yaw,lift,pitch,walk,head_yaw,head_pitch,sit,rear,tp,tail_t,blink,detach,paper,crouch,grey,ear_tw"""
     faces, lines = [], []
@@ -234,6 +237,11 @@ def cat_faces(P):
               GREEN: (242, 202, 74), BLACK: (34, 32, 38), PINK: (140, 100, 110),
               PURP: (46, 44, 52), WHITE: (84, 80, 88)}
         faces = [(q, bm.get(c, c), e, ol) for q, c, e, ol in faces]
+    if AUDIT:
+        xs = [p[0] for q, c, e, o in faces for p in q]
+        ys = [p[1] for q, c, e, o in faces for p in q]
+        zs = [p[2] for q, c, e, o in faces for p in q]
+        CAT_BOXES.append((min(xs), max(xs), min(ys), max(ys), min(zs), max(zs)))
     return faces, lines
 
 
@@ -2525,18 +2533,18 @@ def render_frame(k, t, ovl_imgs, ot=None):
             yawv = math.atan2(bx-px, bz-pz)
         else:
             ang = 0.05 + 2.20 * (1 - smooth(3.6, 8.2, t))
-            px = 0.30 + 0.85*math.sin(ang)
-            pz = bz - 0.75*math.cos(ang)
+            px = 0.30 + 1.05*math.sin(ang)
+            pz = bz - 0.95*math.cos(ang)
             walkv = t*1.6 if t < 8.6 else None
             yawv = math.atan2(0.30-px, bz-pz)
         sniff = 1.0 if 8.6 < t < 10.4 else 0.0
         BB = dict(x=px, z=pz, yaw=yawv, walk=walkv, head_pitch=0.35*sniff,
                   tail_t=t*(1.0+0.6*sniff), blink=blink(t), ear_tw=0.4 if 9.0 < t < 9.4 else 0.0, painted=True)
         cf, cl = cat_faces(BB); faces += cf; lines += cl
-        M = dict(x=-0.70, z=1.55, yaw=math.atan2(0.30+0.70, bz-1.55), sit=1.0,
+        M = dict(x=-0.70, z=1.18, yaw=math.atan2(0.30+0.70, bz-1.18), sit=1.0,
                  head_yaw=0.25*math.sin(t*0.5), tail_t=t*0.6+1.0, blink=blink(t+0.7), grey=True)
         cf, cl = cat_faces(M); faces += cf; lines += cl
-        shadow = [(px, pz), (-0.70, 1.55)]
+        shadow = [(px, pz), (-0.70, 1.18)]
         cam = make_cam((0.10, 0.98, -0.80), (0.10, 0.64, 1.95))
     elif k == 49:
         # ЭП8 ч1 · примерка: Борис запрыгивает и садится, Мурка привстаёт заглянуть
@@ -2549,7 +2557,7 @@ def render_frame(k, t, ovl_imgs, ot=None):
             bsit = 0.0
         elif t < 2.8:
             u = (t-2.0)/0.8
-            blift = 0.55*math.sin(math.pi*u)
+            blift = 1.05*math.sin(math.pi*u)
             bzp = 0.85 + 1.25*u
             bsit = 0.0
         else:
@@ -2614,24 +2622,24 @@ def render_frame(k, t, ovl_imgs, ot=None):
         wa = wstop*1.05
         bpx = 0.30 + 1.35*math.sin(wa)
         bpz = 2.10 - 1.25*math.cos(wa)
-        mpx = 0.30 + 1.35*math.sin(wa+math.pi)
-        mpz = 2.10 - 1.25*math.cos(wa+math.pi)
+        mpx = 0.30 + 1.35*math.sin(wa+math.pi+0.9)
+        mpz = 2.10 - 1.25*math.cos(wa+math.pi+0.9)
         BB = dict(x=bpx, z=bpz, yaw=math.atan2(-math.cos(wa), math.sin(wa))+math.pi/2, walk=t*1.7 if t < 8.0 else None,
                   head_yaw=0.5*smooth(8.0, 8.8, t)*math.atan2(0.30-bpx, 2.10-bpz), tail_t=t*1.4, blink=blink(t), painted=True)
         cf, cl = cat_faces(BB); faces += cf; lines += cl
-        M = dict(x=mpx, z=mpz, yaw=math.atan2(math.cos(wa), -math.sin(wa))+math.pi/2, walk=t*1.7 if t < 8.0 else None,
+        M = dict(x=mpx, z=mpz, yaw=math.atan2(math.cos(wa+0.9), -math.sin(wa+0.9))+math.pi/2, walk=t*1.7 if t < 8.0 else None,
                  head_yaw=0.5*smooth(8.0, 8.8, t)*math.atan2(0.30-mpx, 2.10-mpz), tail_t=t*1.2+2.0, blink=blink(t+0.9), grey=True)
         cf, cl = cat_faces(M); faces += cf; lines += cl
         if t < 6.2:
             kv = smooth(3.5, 6.2, t)
-            kx = 2.70 - 1.75*kv
-            kz = 2.90 - 0.55*kv
+            kx = 2.90 - 1.75*kv
+            kz = 3.00 - 0.50*kv
             klift, ksit = 0.0, 0.0
         elif t < 6.9:
             u = (t-6.2)/0.7
-            kx = 0.95 - 0.65*u
-            kz = 2.35 - 0.25*u
-            klift, ksit = 0.5*math.sin(math.pi*u), 0.0
+            kx = 1.15 - 0.85*u
+            kz = 2.50 - 0.40*u
+            klift, ksit = 0.95*math.sin(math.pi*u), 0.0
         else:
             kx, kz, klift, ksit = 0.30, 2.10, 0.50, 1.0
         BK = dict(x=kx, z=kz, yaw=math.atan2(0.30-kx, 2.10-kz), walk=t*1.4 if 3.5 < t < 6.2 else None,
@@ -2656,14 +2664,14 @@ def render_frame(k, t, ovl_imgs, ot=None):
         cf, cl = cat_faces(BK); faces += cf; lines += cl
         h1 = 0.30*math.sin(math.pi*(t-1.2)/0.8) if 1.2 < t < 2.0 else 0.0
         w1 = smooth(6.5, 9.0, t)
-        bxp = -0.60 - 0.30*(1-w1) + (sx-0.95-(-0.90))*w1
-        bzp = 1.10 + 0.35*w1
+        bxp = -0.60 - 0.30*(1-w1) + (sx-1.05-(-0.90))*w1
+        bzp = 1.10 + 0.20*w1
         BB = dict(x=bxp, z=bzp, yaw=math.atan2(sx-bxp, 2.10-bzp), lift=h1, walk=t*1.6 if 6.5 < t < 9.0 else None,
                   head_pitch=0.20*w1, tail_t=t*1.3, blink=blink(t), painted=True)
         cf, cl = cat_faces(BB); faces += cf; lines += cl
         h2 = 0.30*math.sin(math.pi*(t-1.4)/0.8) if 1.4 < t < 2.2 else 0.0
-        mxp = -0.35 - 0.35*(1-w1) + (sx-0.55-(-0.70))*w1
-        mpz = 2.95 + 0.25*(1-w1)
+        mxp = -0.35 - 0.35*(1-w1) + (sx-0.45-(-0.70))*w1
+        mpz = 2.95 + 0.30*(1-w1)
         M = dict(x=mxp, z=mpz, yaw=math.atan2(sx-mxp, 2.10-mpz), lift=h2, walk=t*1.6 if 6.5 < t < 9.0 else None,
                  head_pitch=0.20*w1, tail_t=t*1.1+3.0, blink=blink(t+1.1), grey=True)
         cf, cl = cat_faces(M); faces += cf; lines += cl
@@ -2702,16 +2710,16 @@ def render_frame(k, t, ovl_imgs, ot=None):
         grid = False
         faces += room_faces()
         faces += cardboard_box(0.30, 2.10, yaw=0.0, flap=0.05, cut=2)
-        M = dict(x=0.30, z=1.28, yaw=0.0, sit=1.0, lift=0.05, grey=True,
+        M = dict(x=0.30, z=1.16, yaw=0.0, sit=1.0, lift=0.05, grey=True,
                  head_pitch=0.05, head_yaw=0.15*math.sin(t*0.7), tail_t=t*0.9+1.0, blink=blink(t+0.2))
         cf, cl = cat_faces(M); faces += cf; lines += cl
-        BB = dict(x=0.30, z=2.10, yaw=0.15*math.sin(t*0.4), sit=1.0, lift=0.82, painted=True,
+        BB = dict(x=0.30, z=2.10, yaw=0.15*math.sin(t*0.4), sit=1.0, lift=0.80, painted=True,
                   head_yaw=0.35*math.sin(t*0.5), tail_t=t*0.8, blink=blink(t))
         cf, cl = cat_faces(BB); faces += cf; lines += cl
-        BK = dict(x=1.05, z=1.35, yaw=math.atan2(0.30-1.05, 2.10-1.35), sit=1.0, black=True,
+        BK = dict(x=1.15, z=1.28, yaw=math.atan2(0.30-1.15, 2.10-1.28), sit=1.0, black=True,
                   head_yaw=0.2*math.sin(t*0.6+2.0), tail_t=t*0.7+4.0, blink=blink(t+1.4))
         cf, cl = cat_faces(BK); faces += cf; lines += cl
-        shadow = [(0.30, 1.28), (0.30, 2.10), (1.05, 1.35)]
+        shadow = [(0.30, 1.16), (0.30, 2.10), (1.15, 1.28)]
         cam = make_cam((0.05, 0.98, -0.50), (0.20, 0.70, 2.00))
     elif k == 56:
         # ЭП8 ч3 · вечер: окна дома светятся, все мурчат, финал
@@ -2722,19 +2730,19 @@ def render_frame(k, t, ovl_imgs, ot=None):
         faces += quad((-0.03, 0.18, 1.66), (0.63, 0.18, 1.66), (0.63, 0.62, 1.66), (-0.03, 0.62, 1.66), (255, 206, 128), True)
         for sxx in (-0.25, 0.85):
             faces += quad((sxx, 0.30, 2.05), (sxx, 0.30, 2.55), (sxx, 0.68, 2.55), (sxx, 0.68, 2.05), (255, 206, 128), True)
-        M = dict(x=0.30, z=1.28, yaw=0.0, sit=1.0, lift=0.05, grey=True,
+        M = dict(x=0.30, z=1.16, yaw=0.0, sit=1.0, lift=0.05, grey=True,
                  head_pitch=0.05, head_yaw=0.12*math.sin(t*0.5), tail_t=t*0.5+1.0, blink=0.25)
         cf, cl = cat_faces(M); faces += cf; lines += cl
-        BB = dict(x=0.30, z=2.10, yaw=0.0, sit=1.0, lift=0.82, painted=True,
+        BB = dict(x=0.30, z=2.10, yaw=0.0, sit=1.0, lift=0.80, painted=True,
                   head_pitch=0.35, tail_t=t*0.4, blink=0.12)
         cf, cl = cat_faces(BB); faces += cf; lines += cl
-        BK = dict(x=1.05, z=2.30, yaw=0.7, sit=1.0, black=True,
+        BK = dict(x=1.20, z=2.35, yaw=0.7, sit=1.0, black=True,
                   head_pitch=0.45, tail_t=t*0.4+4.0, blink=0.12)
         cf, cl = cat_faces(BK); faces += cf; lines += cl
         for i in range(2):
             su = (t*0.4 + i*0.5) % 1.0
             faces += puff_ball(0.75+0.10*i, 1.00+0.45*su, 1.80-0.10*su, 0.028+0.022*su, (232, 226, 220))
-        shadow = [(0.30, 1.28), (0.30, 2.10), (1.05, 2.30)]
+        shadow = [(0.30, 1.16), (0.30, 2.10), (1.20, 2.35)]
         cam = make_cam((0.0, 0.88, -0.35), (0.20, 0.66, 2.00))
     else:
         sky = sky_img("studio", (118, 118, 121), (162, 162, 164))
