@@ -420,7 +420,7 @@ check('откат не вернулся: доставка отчёта умее�
   expWf.includes('allow-unrelated-histories'));
 
 check('маршрут к остатку проходит пустые места насквозь, но целью их не считает',
-  expNow.includes('return step         # цель — только там, где есть остаток')
+  expNow.includes("return step") && expNow.includes('if has_left(dst):')
   && expNow.includes("return (bool(n1.get('text')) and n1.get('text') == n2.get('text'))"));
 
 check('одна ссылка — один исход: первое наблюдение не переписывается',
@@ -441,6 +441,10 @@ check('предел стоит на топтании, а не на каждом 
   && expNow.includes('if attempts[0] >= MAZE_STEPS:'));
 check('в лабиринте стоп-кран по двум местам не срабатывает раньше предела',
   expNow.includes('and new_places == 0 and not story_map.has_shaky()):'));
+check('круг из нажатых шагов прерывается: не больше 3 заходов в один пассаж',
+  expNow.includes('run_visits[my_key] > 3') && expNow.includes('4-й раз в одном пассаже'));
+check('маршрут предпочитает ненажатый шаг нажатому',
+  expNow.includes("if not self.tried_here(cur, e.get('choice')):") && expNow.includes('alt = step'));
 check('дом мамы: ветка $sus >= 17 не теряется — свой текст места различает ветки',
   expNow.includes('def own_text') && expNow.includes("node.setdefault('own', own_text(text))")
   && expNow.includes("'own': v.get('own') or ''"));
