@@ -2768,6 +2768,20 @@ def render_frame(k, t, ovl_imgs, ot=None):
     img = sky.copy()
     dr = ImageDraw.Draw(img)
     if grid: draw_grid(dr, cam)
+    if shadow:
+        shs = shadow if (shadow and isinstance(shadow[0], (list, tuple))) else [shadow]
+        for sh in shs:
+            x, z = sh[0], sh[1]
+            r = sh[2] if len(sh) > 2 else 0.35
+            col = sh[3] if len(sh) > 3 else (95, 95, 97)
+            lite = tuple(min(255, c+22) for c in col)
+            outer, inner = [], []
+            for kk in range(16):
+                a = math.radians(360.0*kk/16.0)
+                ca, sa = math.cos(a), math.sin(a)
+                outer.append((x + r*ca, 0.010, z + r*0.78*sa))
+                inner.append((x + r*0.66*ca, 0.010, z + r*0.52*sa))
+            faces = [(outer, lite, True, False), (inner, col, True, False)] + faces
     proj = []
     for item in faces:
         q, col, emis = item[0], item[1], item[2]
@@ -2791,10 +2805,6 @@ def render_frame(k, t, ovl_imgs, ot=None):
         dr.polygon(poly, fill=col, outline=col)
         if ol:
             dr.line(poly + [poly[0]], fill=(36, 36, 40), width=2, joint="curve")
-    if shadow:
-        shs = shadow if (shadow and isinstance(shadow[0], (list, tuple))) else [shadow]
-        for sh in shs:
-            draw_shadow(dr, cam, sh[0], sh[1], *(sh[2:] if len(sh) > 2 else ()))
     for pa, pb in lines:
         qa, qb = project(pa, cam), project(pb, cam)
         if qa and qb:
