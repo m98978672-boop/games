@@ -34,7 +34,8 @@ def run(out):
             action, command = agent.choose(shot)
             at = round(time.monotonic()-start, 2)
             call('exec', CONTAINER, 'python3', '/app/container.py', 'action', json.dumps(command), capture=True)
-            trace.append({'step': index+1, 'elapsed_seconds': at, 'action': action, 'command': command})
+            trace.append({'step': index+1, 'elapsed_seconds': at, 'action': action, 'command': command,
+                          'ocr_menu': agent.last_menu, 'model_observation': agent.last_observation})
             print(f'Action {index+1}: {action} at {at}s', flush=True)
             time.sleep(2)
     finally:
