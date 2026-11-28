@@ -1521,6 +1521,9 @@ class StoryMap:
                       # терялись, и один и тот же выбор жался 68 раз подряд.
                       'text_key': v.get('text_key') or k,
                       'variants': (v.get('variants') or [])[:MAX_VARIANTS],
+                      # Свой текст (первая фраза): им различаются ветки одного
+                      # пассажа. Без него после загрузки ветки склеиваются.
+                      'own': v.get('own') or '',
                       'options': (v.get('options') or [])[:8]}
                   for k, v in self.nodes.items()}
         return {'schema': 'text+options-v4', 'places': places,
