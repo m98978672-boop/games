@@ -265,7 +265,7 @@ jobs:
         if: always()
         run: |
           if [ -f "$RUNNER_TEMP/warzone-private/capture.mp4" ]; then
-            python youtube-bot/warzone_probe/inspect.py "$RUNNER_TEMP/warzone-private"
+            python youtube-bot/warzone_probe/inspect_capture.py "$RUNNER_TEMP/warzone-private"
           fi
       - name: Save private diagnostic material, including failures
         if: always()
